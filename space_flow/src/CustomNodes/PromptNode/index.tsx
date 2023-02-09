@@ -1,0 +1,15 @@
+import { Handle, Position } from 'reactflow';
+
+
+export default function PromptNode({data}){
+    console.log(data.template)
+    return(
+        <div 
+        className='prompt-Node relative bg-white h-16 w-40 border rounded-sm solid border-black flex flex-col justify-center'>
+            <Handle type='target' position={Position.Left}></Handle>
+            <label className='absolute text-sm -top-3 left-1 bg-white w-14 text-center'> Prompt</label>
+            <div className='w-full h-10 truncate bg-slate-50 text-xs'> {data.template}</div>
+            <Handle type='source' position={Position.Right}></Handle>
+        </div>
+    )
+}
