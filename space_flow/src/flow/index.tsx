@@ -21,9 +21,6 @@ export default function Flow(){
     const reactFlowWrapper = useRef(null)
     const [nodes,setNodes,onNodesChange] =  useNodesState([])
     const [edges,setEdges, onEdgesChange] = useEdgesState([])
-    //allow iteractive with the react flow
-    // const onNodesChange = useCallback( (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),[] );
-    // const onEdgesChange = useCallback( (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),[] );
     const [reactFlowInstance,setReactFlowInstance] = useState(null)
     const onConnect = useCallback((params)=>setEdges((eds)=>addEdge(params,eds)),[])
     const onDragOver = useCallback((event) => {
@@ -36,9 +33,7 @@ export default function Flow(){
         
             const reactflowBounds = reactFlowWrapper.current.getBoundingClientRect();
             const type = event.dataTransfer.getData('application/reactflow');
-            let json = JSON.parse(event.dataTransfer.getData('json'))
-            const data = {...json}
-            data.onClick = console.log("clicked")
+            let data = JSON.parse(event.dataTransfer.getData('json'))
             // check if the dropped element is valid
             if (typeof type === 'undefined' || !type) {
               return;
@@ -59,10 +54,10 @@ export default function Flow(){
 
     return (
         //need parent component with width and height
-        <div className='w-full h-full'>
+        <div className='w-full h-full flex flex-row'>
             <ReactFlowProvider>
             <Sidebar/>
-            <div className='w-full h-full' ref={reactFlowWrapper}>
+            <div className='w-screen h-full' ref={reactFlowWrapper}>
             <ReactFlow 
             nodes={nodes}
             edges={edges}

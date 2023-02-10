@@ -1,10 +1,13 @@
 import Flow from "./flow";
 import "./App.css";
+import PopUpProvider from "./context/popUpContext";
 function App() {
   return (
-    <div className="w-screen h-screen">
-      <Flow></Flow>
-    </div>
+    <PopUpProvider>
+      <div className="w-screen h-screen">
+        <Flow></Flow>
+      </div>
+    </PopUpProvider>
   );
 }
 
