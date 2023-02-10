@@ -9,7 +9,7 @@ export function Sidebar(){
     }
 
     return(
-    <div className="h-full w-48 bg-slate-200 absolute z-10 flex flex-col">
+    <div className="h-full w-48 bg-slate-200 flex flex-col">
         <div className="w-full text-center border border-black cursor-grab" onDragStart={(event)=>onDragStart(event,'promptNode')}> prompt Node</div>
     </div>
     )

@@ -1,10 +1,13 @@
 import { Handle, Position } from "reactflow";
+import { useContext } from "react";
+import { PopUpContext } from "../../context/popUpContext";
+
 
 export default function PromptNode({ data }) {
-    console.log(data)
+  const {openPopUp} = useContext(PopUpContext)
   return (
     <div
-      onClick={()=>data.onClick()}
+      onClick={()=>openPopUp(<div className="absolute top-1/2 left-1/2">teste</div>)}
       className="prompt-Node relative bg-white h-16 w-40 border rounded-sm solid border-black flex flex-col justify-center"
     >
       <Handle type="target" position={Position.Left}></Handle>
