@@ -1,7 +1,6 @@
 import "reactflow/dist/style.css";
 import { useState, useRef, useEffect, useContext } from "react";
 import { ReactFlowProvider } from "reactflow";
-import "./CustomNodes/inputTextFolder/inputText.css";
 import "./App.css";
 import { useLocation } from "react-router-dom";
 import ErrorAlert from "./alerts/error";
