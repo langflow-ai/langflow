@@ -8,7 +8,7 @@ export default function PromptNode({ data }) {
   return (
     <div
       onClick={()=>openPopUp(<div className="absolute top-1/2 left-1/2">teste</div>)}
-      className="prompt-Node relative bg-white h-16 w-40 border rounded-sm solid border-black flex flex-col justify-center"
+      className="prompt-node relative bg-white h-16 w-40 border rounded-sm solid border-black flex flex-col justify-center"
     >
       <Handle type="source" position={Position.Left}></Handle>
       <label className="absolute cursor-grab text-sm -top-3 left-1 bg-white w-14 text-center">
