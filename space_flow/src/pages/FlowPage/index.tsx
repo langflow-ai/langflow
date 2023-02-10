@@ -6,7 +6,6 @@ import ReactFlow, {
   useEdgesState,
   useNodesState,
 } from "reactflow";
-import TextUpdaterNode from "../../CustomNodes/inputTextFolder";
 import PromptNode from "../../CustomNodes/PromptNode";
 import ModelNode from "../../CustomNodes/ModelNode";
 import { locationContext } from "../../contexts/locationContext";
@@ -16,7 +15,6 @@ import ChainNode from "../../CustomNodes/ChainNode";
 import ValidatorNode from "../../CustomNodes/ValidatorNode";
 
 const nodeTypes = {
-  textUpdater: TextUpdaterNode,
   promptNode: PromptNode,
   modelNode: ModelNode,
   chainNode: ChainNode,
@@ -37,10 +35,11 @@ export default function FlowPage() {
   
   const getId = () => `dndnode_${id++}`;
 
-  const { setExtraComponent } = useContext(locationContext);
+  const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
 
   useEffect(() => {
     setExtraComponent(ExtraSidebar);
+    setExtraNavigation({title: "Nodes"})
   }, []);
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
