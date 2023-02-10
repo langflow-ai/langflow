@@ -11,21 +11,30 @@ import PromptNode from "../../CustomNodes/PromptNode";
 import ModelNode from "../../CustomNodes/ModelNode";
 import { locationContext } from "../../contexts/locationContext";
 import { ExtraSidebar } from "./components/extraSidebarComponent";
+import AgentNode from "../../CustomNodes/AgentNode";
+import ChainNode from "../../CustomNodes/ChainNode";
+import ValidatorNode from "../../CustomNodes/ValidatorNode";
+
+const nodeTypes = {
+  textUpdater: TextUpdaterNode,
+  promptNode: PromptNode,
+  modelNode: ModelNode,
+  chainNode: ChainNode,
+  agentNode: AgentNode,
+  validatorNode: ValidatorNode,
+};
 
 export default function FlowPage() {
   // outside component to avoid render trigger
 
   const reactFlowWrapper = useRef(null);
-  const nodeTypes = {
-    textUpdater: TextUpdaterNode,
-    promptNode: PromptNode,
-    modelNode: ModelNode,
-  };
 
   const rfStyle = {
     backgroundCOlor: "#B8CEFF",
   };
+
   let id = 0;
+  
   const getId = () => `dndnode_${id++}`;
 
   const { setExtraComponent } = useContext(locationContext);
