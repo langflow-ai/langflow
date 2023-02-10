@@ -18,8 +18,8 @@ export function Sidebar(){
 
     return(
     <div className="h-full w-48 bg-slate-200 flex flex-col">
-        <div className="w-full text-center border border-black cursor-grab" onDragStart={(event)=>onDragStart(event,'promptNode')}> prompt Node</div>
-        <div className="w-full text-center border border-black cursor-grab" onDragStart={(event)=>onDragStart(event,'modelNode')}> Model Node</div>
+        <div className="w-full text-center border border-black cursor-grab" draggable onDragStart={(event)=>onDragStart(event,'promptNode')}> prompt Node</div>
+        <div draggable className="w-full text-center border border-black cursor-grab" onDragStart={(event)=>onDragStart(event,'modelNode')}> Model Node</div>
     </div>
     )
 }

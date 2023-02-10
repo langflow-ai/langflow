@@ -45,7 +45,7 @@ export default function Flow(){
                 id:getId(),
                 type,
                 position,
-                data
+                data:{...data,delete:()=>console.log("asdsdsadad")}
             }
             setNodes((nds)=>nds.concat(newNode))
 
