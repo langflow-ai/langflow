@@ -7,8 +7,9 @@ import '../CustomNodes/inputTextFolder/inputText.css'
 import PromptNode from '../CustomNodes/PromptNode';
 import { prompt } from '../data_assets/prompt';
 import { Sidebar } from '../components/sidebar';
+import ModelNode from '../CustomNodes/ModelNode';
     // outside component to avoid render trigger
-    const nodeTypes = {textUpdater:TextUpdaterNode, promptNode:PromptNode}
+    const nodeTypes = {textUpdater:TextUpdaterNode, promptNode:PromptNode,modelNode:ModelNode}
 
     const rfStyle={
         backgroundCOlor:"#B8CEFF"
