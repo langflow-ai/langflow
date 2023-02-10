@@ -1,6 +1,6 @@
 import { Handle, Position } from "reactflow";
 import { useContext } from "react";
-import { PopUpContext } from "../../context/popUpContext";
+import { PopUpContext } from "../../contexts/popUpContext";
 
 
 export default function PromptNode({ data }) {
