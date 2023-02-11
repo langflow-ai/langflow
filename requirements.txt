@@ -1,0 +1,4 @@
+langchain==0.0.82
+openai==0.26.5
+fastapi==0.91.0
+
