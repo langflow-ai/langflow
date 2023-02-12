@@ -13,6 +13,7 @@ import { ExtraSidebar } from "./components/extraSidebarComponent";
 import AgentNode from "../../CustomNodes/AgentNode";
 import ChainNode from "../../CustomNodes/ChainNode";
 import ValidatorNode from "../../CustomNodes/ValidatorNode";
+import MemoryNode from "../../CustomNodes/MemoryNode";
 
 const nodeTypes = {
   promptNode: PromptNode,
@@ -20,6 +21,7 @@ const nodeTypes = {
   chainNode: ChainNode,
   agentNode: AgentNode,
   validatorNode: ValidatorNode,
+  memoryNode:MemoryNode
 };
 
 export default function FlowPage() {

@@ -1,4 +1,4 @@
-import { Bars2Icon, CommandLineIcon, LightBulbIcon, LinkIcon, RocketLaunchIcon, ShieldCheckIcon, ViewColumnsIcon } from "@heroicons/react/24/outline";
+import { Bars2Icon, CommandLineIcon, CpuChipIcon, LightBulbIcon, LinkIcon, RocketLaunchIcon, ShieldCheckIcon, ViewColumnsIcon } from "@heroicons/react/24/outline";
 import { llm_chain } from "../../../../data_assets/llm_chain";
 import { prompt } from "../../../../data_assets/prompt";
 import DisclosureComponent from "../DisclosureComponent";
@@ -21,6 +21,9 @@ export function ExtraSidebar() {
       json = JSON.stringify({ content: "" });
     }
     if (nodeType === "validatorNode") {
+      json = JSON.stringify({ content: "" });
+    }
+    if (nodeType === "memoryNode") {
       json = JSON.stringify({ content: "" });
     }
     event.dataTransfer.setData("json", json);
@@ -77,6 +80,18 @@ export function ExtraSidebar() {
           onDragStart={(event) => onDragStart(event, "validatorNode")}
         >
           <span className="text-black">Validator</span>
+          <Bars2Icon className="w-6 text-gray-400" />
+        </div>
+      </DisclosureComponent>
+      <DisclosureComponent
+        button={{ title: "Memories", Icon: CpuChipIcon }}
+      >
+        <div
+          draggable
+          className="flex justify-between text-sm p-4 items-center h-12 m-2 border-dashed border-gray-400 rounded-md border-2 cursor-grab"
+          onDragStart={(event) => onDragStart(event, "memoryNode")}
+        >
+          <span className="text-black">Memory</span>
           <Bars2Icon className="w-6 text-gray-400" />
         </div>
       </DisclosureComponent>
