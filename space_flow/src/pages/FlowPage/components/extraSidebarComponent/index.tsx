@@ -1,4 +1,4 @@
-import { Bars2Icon, CommandLineIcon, CpuChipIcon, LightBulbIcon, LinkIcon, RocketLaunchIcon, ShieldCheckIcon, ViewColumnsIcon } from "@heroicons/react/24/outline";
+import { Bars2Icon, CommandLineIcon, CpuChipIcon, LightBulbIcon, LinkIcon, RocketLaunchIcon, WrenchScrewdriverIcon, ViewColumnsIcon } from "@heroicons/react/24/outline";
 import { llm_chain } from "../../../../data_assets/llm_chain";
 import { prompt } from "../../../../data_assets/prompt";
 import DisclosureComponent from "../DisclosureComponent";
@@ -20,7 +20,7 @@ export function ExtraSidebar() {
     if (nodeType === "agentNode") {
       json = JSON.stringify({ content: "" });
     }
-    if (nodeType === "validatorNode") {
+    if (nodeType === "toolNode") {
       json = JSON.stringify({ content: "" });
     }
     if (nodeType === "memoryNode") {
@@ -72,14 +72,14 @@ export function ExtraSidebar() {
         </div>
       </DisclosureComponent>
       <DisclosureComponent
-        button={{ title: "Validators", Icon: ShieldCheckIcon }}
+        button={{ title: "Tools", Icon: WrenchScrewdriverIcon }}
       >
         <div
           draggable
           className="flex justify-between text-sm p-4 items-center h-12 m-2 border-dashed border-gray-400 rounded-md border-2 cursor-grab"
-          onDragStart={(event) => onDragStart(event, "validatorNode")}
+          onDragStart={(event) => onDragStart(event, "toolNode")}
         >
-          <span className="text-black">Validator</span>
+          <span className="text-black">tools</span>
           <Bars2Icon className="w-6 text-gray-400" />
         </div>
       </DisclosureComponent>

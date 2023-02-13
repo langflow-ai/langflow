@@ -1,7 +1,7 @@
 import { Transition } from "@headlessui/react";
 import { Handle, Position } from "reactflow";
 
-export default function ValidatorNode({ data }) {
+export default function ToolsNode({ data }) {
   console.log(data);
   return (
     <Transition
@@ -20,9 +20,9 @@ export default function ValidatorNode({ data }) {
       >
         <Handle type="source" position={Position.Left}></Handle>
         <label className="absolute cursor-grab text-sm -top-3 left-1 bg-white w-14 text-center">
-          Validator
+          Tools
         </label>
-        <div className="w-full h-min text-xs text-center">validator data</div>
+        <div className="w-full h-min text-xs text-center">Tools data</div>
         <Handle type="target" position={Position.Right}></Handle>
       </div>
     </Transition>

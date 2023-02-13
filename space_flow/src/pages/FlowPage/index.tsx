@@ -12,25 +12,26 @@ import { locationContext } from "../../contexts/locationContext";
 import { ExtraSidebar } from "./components/extraSidebarComponent";
 import AgentNode from "../../CustomNodes/AgentNode";
 import ChainNode from "../../CustomNodes/ChainNode";
-import ValidatorNode from "../../CustomNodes/ValidatorNode";
+import ToolsNode from "../../CustomNodes/ToolsNode";
 import MemoryNode from "../../CustomNodes/MemoryNode";
 import axios from "axios";
-import {getPrompts, getChains,getAgents,getMemories} from "../../controllers/jsonConverter";
+import {getPrompts, getChains,getAgents,getMemories} from "../../controllers/NodesServices";
+import { generateUiNode } from "../../controllers/UiGenerator";
 
 const nodeTypes = {
   promptNode: PromptNode,
   modelNode: ModelNode,
   chainNode: ChainNode,
   agentNode: AgentNode,
-  validatorNode: ValidatorNode,
+  toolNode: ToolsNode,
   memoryNode:MemoryNode
 };
 
 export default function FlowPage() {
-  getPrompts().then(result=>console.log(result))
-  getChains().then(result=>console.log(result))
-  getAgents().then(result=>console.log(result))
-  getMemories().then(result=>console.log(result))
+  getPrompts().then(result=>result.forEach(prompt=>console.log(generateUiNode(prompt))))
+  // getChains().then(result=>console.log(result))
+  // getAgents().then(result=>console.log(result))
+  // getMemories().then(result=>console.log(result))
 
   // outside component to avoid render trigger
 
