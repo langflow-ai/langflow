@@ -14,6 +14,8 @@ import AgentNode from "../../CustomNodes/AgentNode";
 import ChainNode from "../../CustomNodes/ChainNode";
 import ValidatorNode from "../../CustomNodes/ValidatorNode";
 import MemoryNode from "../../CustomNodes/MemoryNode";
+import axios from "axios";
+import {getPrompts, getChains,getAgents,getMemories} from "../../controllers/jsonConverter";
 
 const nodeTypes = {
   promptNode: PromptNode,
@@ -25,6 +27,11 @@ const nodeTypes = {
 };
 
 export default function FlowPage() {
+  getPrompts().then(result=>console.log(result))
+  getChains().then(result=>console.log(result))
+  getAgents().then(result=>console.log(result))
+  getMemories().then(result=>console.log(result))
+
   // outside component to avoid render trigger
 
   const reactFlowWrapper = useRef(null);
