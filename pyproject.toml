@@ -1,17 +1,17 @@
 [tool.poetry]
 name = "expert-backend"
-version = "0.1.0"
+version = "0.0.3"
 description = ""
 authors = ["Ibis Prevedello <ibiscp@gmail.com>"]
 readme = "README.md"
-packages = [{include = "expert_backend"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
 openai = "^0.26.5"
 fastapi = "^0.91.0"
-langchain = {path = "../langchain", develop = true}
 uvicorn = "^0.20.0"
+beautifulsoup4 = "^4.11.2"
+langchain = {path = "../langchain", develop = true}
 
 
 [tool.poetry.group.dev.dependencies]
