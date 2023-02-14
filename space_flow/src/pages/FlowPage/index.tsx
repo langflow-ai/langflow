@@ -12,8 +12,11 @@ import { locationContext } from "../../contexts/locationContext";
 import { ExtraSidebar } from "./components/extraSidebarComponent";
 import AgentNode from "../../CustomNodes/AgentNode";
 import ChainNode from "../../CustomNodes/ChainNode";
-import ValidatorNode from "../../CustomNodes/ValidatorNode";
+import ToolsNode from "../../CustomNodes/ToolsNode";
 import MemoryNode from "../../CustomNodes/MemoryNode";
+import axios from "axios";
+import {getPrompts, getChains,getAgents,getMemories, getModels,getTools} from "../../controllers/NodesServices";
+import { generateUiNode } from "../../controllers/UiGenerator";
 import Chat from "../../components/chatComponent";
 
 const nodeTypes = {
@@ -21,11 +24,18 @@ const nodeTypes = {
   modelNode: ModelNode,
   chainNode: ChainNode,
   agentNode: AgentNode,
-  validatorNode: ValidatorNode,
+  toolNode: ToolsNode,
   memoryNode:MemoryNode
 };
 
 export default function FlowPage() {
+  // getPrompts().then(result=>result.forEach(prompt=>console.log(prompt)))
+  // getChains().then(result=>console.log(result))
+  // getAgents().then(result=>console.log(result))
+  // getMemories().then(result=>console.log(result))
+  // getModels().then(result=>result.forEach(model=>console.log(model)))
+  getTools().then(result=>result.forEach(tool=>console.log(tool)))
+
   // outside component to avoid render trigger
 
   const reactFlowWrapper = useRef(null);
