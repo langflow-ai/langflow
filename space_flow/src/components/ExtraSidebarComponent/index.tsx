@@ -20,7 +20,7 @@ export default function ExtraSidebar() {
           isStackedOpen ? "w-60" : "w-0 "
         } flex-shrink-0 flex overflow-hidden flex-col border-r transition-all duration-500`}
       >
-        <div className="w-60 overflow-hidden scrollbar-hide h-full">
+        <div className="w-60 overflow-y-auto scrollbar-hide h-full">
           <div className="flex pt-4 px-4 justify-between align-middle w-full">
             <span className="text-gray-900 text-lg ml-2 font-semibold">
               {extraNavigation.title}
