@@ -7,7 +7,7 @@ import {
 import { Handle, Position } from "reactflow";
 import Dropdown from "../../components/dropdownComponent";
 import Input from "../../components/inputComponent";
-import { nodeColors, nodeIcons } from "../../utils";
+import { nodeColors, nodeIcons, snakeToNormalCase } from "../../utils";
 import Tooltip from "../../components/TooltipComponent";
 import { useEffect } from "react";
 
@@ -48,7 +48,7 @@ export default function GenericNode({ data }) {
                 onSelect={() => {}}
               />
             ) : data.node.template[t].type === "str" ? (
-              <Input title={t} placeholder="pleicerolder" onChange={() => {}} />
+              <Input title={snakeToNormalCase(t)} placeholder="pleicerolder" onChange={() => {}} />
             ) : (
               <></>
             )}
@@ -59,10 +59,10 @@ export default function GenericNode({ data }) {
 
       <div className="flex w-full justify-between items-center bg-gray-50 gap-2 border-t text-gray-600 p-4 text-sm">
         <button onClick={data.onDelete}>
-          <TrashIcon className="w-6 h-6"></TrashIcon>
+          <TrashIcon className="w-6 h-6 hover:text-red-500"></TrashIcon>
         </button>
         <button onClick={data.onRun}>
-          <PlayIcon className="w-6 h-6"></PlayIcon>
+          <PlayIcon className="w-6 h-6 hover:text-green-500"></PlayIcon>
         </button>
       </div>
       <Handle
