@@ -1,4 +1,4 @@
-import { RocketLaunchIcon, LinkIcon, CpuChipIcon, LightBulbIcon, CommandLineIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
+import { RocketLaunchIcon, LinkIcon, CpuChipIcon, LightBulbIcon, CommandLineIcon, ShieldCheckIcon, WrenchScrewdriverIcon } from "@heroicons/react/24/outline";
 
 export function classNames(...classes) {
     return classes.filter(Boolean).join(" ");
@@ -55,7 +55,7 @@ export function classNames(...classes) {
     model: "#4266BE",
     chain: "#6344BE",
     agent: "#903BBE",
-    validator: "#DB3392",
+    tool: "#DB3392",
     memory: "#FF3434",
   } */
 
@@ -64,7 +64,7 @@ export function classNames(...classes) {
     model: "#4266BE",
     chain: "#903BBE",
     agent: "#FF3434",
-    validator: "#FEBB35",
+    tool: "#FEBB35",
     memory: "#FFFF33",
   } */
 
@@ -73,7 +73,7 @@ export function classNames(...classes) {
     model: "#35ADAE",
     chain: "#903BBE",
     agent: "#DB3392",
-    validator: "#FF9135",
+    tool: "#FF9135",
     memory: "#FFDC35",
   } */
 
@@ -82,7 +82,7 @@ export function classNames(...classes) {
     model: "#35ADAE",
     chain: "#903BBE",
     agent: "#DB3392",
-    validator: "#FF3434",
+    tool: "#FF3434",
     memory: "#FF9135",
   } */
 
@@ -91,7 +91,7 @@ export function classNames(...classes) {
     model: "#35ADAE",
     chain: "#FFDC35",
     agent: "#903BBE",
-    validator: "#FF3434",
+    tool: "#FF3434",
     memory: "#FF9135",
   }
 
@@ -102,7 +102,7 @@ export function classNames(...classes) {
     memory: CpuChipIcon,
     model: LightBulbIcon,
     prompt: CommandLineIcon,
-    validator: ShieldCheckIcon,
+    tool: WrenchScrewdriverIcon,
   }
   
   export const bgColors = {
