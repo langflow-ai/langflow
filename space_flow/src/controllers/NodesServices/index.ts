@@ -49,3 +49,13 @@ export async function getTools() {
   });
   return Promise.all(promises);
 }
+
+export async function getModels() {
+  const promises = (await axios.get("http://localhost:5003/list/llms")).data.map(async (value, index) => {
+    const prompt = await axios.get("http://localhost:5003/templates/llm", {
+      params: { name: value },
+    });
+    return { name: value, type: "modelNode", ...prompt.data };
+  });
+  return Promise.all(promises);
+}
