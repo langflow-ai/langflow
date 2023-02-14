@@ -9,15 +9,15 @@ import ReactFlow, {
 import PromptNode from "../../CustomNodes/PromptNode";
 import ModelNode from "../../CustomNodes/ModelNode";
 import { locationContext } from "../../contexts/locationContext";
-import { ExtraSidebar } from "./components/extraSidebarComponent";
+import ExtraSidebar from "./components/extraSidebarComponent";
 import AgentNode from "../../CustomNodes/AgentNode";
 import ChainNode from "../../CustomNodes/ChainNode";
 import ToolsNode from "../../CustomNodes/ToolsNode";
 import MemoryNode from "../../CustomNodes/MemoryNode";
 import axios from "axios";
-import {getPrompts, getChains,getAgents,getMemories, getModels,getTools} from "../../controllers/NodesServices";
 import { generateUiNode } from "../../controllers/UiGenerator";
 import Chat from "../../components/chatComponent";
+import { getAll } from "../../controllers/NodesServices";
 
 const nodeTypes = {
   promptNode: PromptNode,
@@ -34,9 +34,10 @@ export default function FlowPage() {
   // getAgents().then(result=>console.log(result))
   // getMemories().then(result=>console.log(result))
   // getModels().then(result=>result.forEach(model=>console.log(model)))
-  getTools().then(result=>result.forEach(tool=>console.log(tool)))
 
   // outside component to avoid render trigger
+
+  
 
   const reactFlowWrapper = useRef(null);
 
@@ -51,9 +52,9 @@ export default function FlowPage() {
   const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
 
   useEffect(() => {
-    setExtraComponent(ExtraSidebar);
+    setExtraComponent(<ExtraSidebar />);
     setExtraNavigation({title: "Nodes"})
-  }, []);
+  }, [setExtraComponent, setExtraNavigation]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
