@@ -18,6 +18,7 @@ import axios from "axios";
 import { generateUiNode } from "../../controllers/UiGenerator";
 import Chat from "../../components/chatComponent";
 import { getAll } from "../../controllers/NodesServices";
+import GenericNode from "../../CustomNodes/GenericNode";
 
 const nodeTypes = {
   promptNode: PromptNode,
@@ -25,7 +26,8 @@ const nodeTypes = {
   chainNode: ChainNode,
   agentNode: AgentNode,
   toolNode: ToolsNode,
-  memoryNode:MemoryNode
+  memoryNode:MemoryNode,
+  genericNode:GenericNode,
 };
 
 export default function FlowPage() {
@@ -72,12 +74,8 @@ export default function FlowPage() {
       event.preventDefault();
 
       const reactflowBounds = reactFlowWrapper.current.getBoundingClientRect();
-      const type = event.dataTransfer.getData("application/reactflow");
       let data = JSON.parse(event.dataTransfer.getData("json"));
       // check if the dropped element is valid
-      if (typeof type === "undefined" || !type) {
-        return;
-      }
 
       const position = reactFlowInstance.project({
         x: event.clientX - reactflowBounds.left,
@@ -85,9 +83,9 @@ export default function FlowPage() {
       });
       const newNode = {
         id: getId(),
-        type,
+        type: 'genericNode',
         position,
-        data: { ...data, delete: () => console.log("asdsdsadad") },
+        data: { ...data, onDelete: () => console.log("asdsdsadad"), onRun: () => {} },
       };
       setNodes((nds) => nds.concat(newNode));
     },

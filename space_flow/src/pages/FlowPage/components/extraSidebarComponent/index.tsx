@@ -14,29 +14,9 @@ export default function ExtraSidebar() {
     getAll().then((d) => { setData(d.data);});
   }, []);
 
-  function onDragStart(event: React.DragEvent<any>, nodeType) {
-    let json;
-    event.dataTransfer.setData("application/reactflow", nodeType);
+  function onDragStart(event: React.DragEvent<any>, data) {
     event.dataTransfer.effectAllowed = "move";
-    if (nodeType === "promptNode") {
-      json = JSON.stringify(prompt);
-    }
-    if (nodeType === "modelNode") {
-      json = JSON.stringify(llm_chain);
-    }
-    if (nodeType === "chainNode") {
-      json = JSON.stringify({ content: "" });
-    }
-    if (nodeType === "agentNode") {
-      json = JSON.stringify({ content: "" });
-    }
-    if (nodeType === "toolNode") {
-      json = JSON.stringify({ content: "" });
-    }
-    if (nodeType === "memoryNode") {
-      json = JSON.stringify({ content: "" });
-    }
-    event.dataTransfer.setData("json", json);
+    event.dataTransfer.setData("json", JSON.stringify(data));
   }
 
   return (
@@ -51,7 +31,7 @@ export default function ExtraSidebar() {
                 draggable
                 className={" cursor-grab border-l-8 rounded-l-md"}
                 style={{ borderLeftColor: nodeColors[d] }}
-                onDragStart={(event) => onDragStart(event, "promptNode")}
+                onDragStart={(event) => onDragStart(event, {type: d, name:t, node: data[d][t]})}
               >
                 <div className="flex w-full justify-between text-sm px-4 py-3 items-center border-dashed border-gray-400 border-l-0 rounded-md rounded-l-none border-2">
                   <span className="text-black w-36 truncate">{t}</span>
