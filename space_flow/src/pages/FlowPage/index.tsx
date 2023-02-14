@@ -6,14 +6,8 @@ import ReactFlow, {
   useEdgesState,
   useNodesState,
 } from "reactflow";
-import PromptNode from "../../CustomNodes/PromptNode";
-import ModelNode from "../../CustomNodes/ModelNode";
 import { locationContext } from "../../contexts/locationContext";
 import ExtraSidebar from "./components/extraSidebarComponent";
-import AgentNode from "../../CustomNodes/AgentNode";
-import ChainNode from "../../CustomNodes/ChainNode";
-import ToolsNode from "../../CustomNodes/ToolsNode";
-import MemoryNode from "../../CustomNodes/MemoryNode";
 import axios from "axios";
 import { generateUiNode } from "../../controllers/UiGenerator";
 import Chat from "../../components/chatComponent";
@@ -21,12 +15,6 @@ import { getAll } from "../../controllers/NodesServices";
 import GenericNode from "../../CustomNodes/GenericNode";
 
 const nodeTypes = {
-  promptNode: PromptNode,
-  modelNode: ModelNode,
-  chainNode: ChainNode,
-  agentNode: AgentNode,
-  toolNode: ToolsNode,
-  memoryNode:MemoryNode,
   genericNode:GenericNode,
 };
 
