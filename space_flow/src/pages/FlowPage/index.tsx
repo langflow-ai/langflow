@@ -15,7 +15,7 @@ import ChainNode from "../../CustomNodes/ChainNode";
 import ToolsNode from "../../CustomNodes/ToolsNode";
 import MemoryNode from "../../CustomNodes/MemoryNode";
 import axios from "axios";
-import {getPrompts, getChains,getAgents,getMemories} from "../../controllers/NodesServices";
+import {getPrompts, getChains,getAgents,getMemories, getModels,getTools} from "../../controllers/NodesServices";
 import { generateUiNode } from "../../controllers/UiGenerator";
 
 const nodeTypes = {
@@ -28,10 +28,12 @@ const nodeTypes = {
 };
 
 export default function FlowPage() {
-  getPrompts().then(result=>result.forEach(prompt=>console.log(generateUiNode(prompt))))
+  // getPrompts().then(result=>result.forEach(prompt=>console.log(prompt)))
   // getChains().then(result=>console.log(result))
   // getAgents().then(result=>console.log(result))
   // getMemories().then(result=>console.log(result))
+  // getModels().then(result=>result.forEach(model=>console.log(model)))
+  getTools().then(result=>result.forEach(tool=>console.log(tool)))
 
   // outside component to avoid render trigger
 
