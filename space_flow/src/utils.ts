@@ -1,4 +1,4 @@
-import { RocketLaunchIcon, LinkIcon, CpuChipIcon, LightBulbIcon, CommandLineIcon, ShieldCheckIcon, WrenchScrewdriverIcon } from "@heroicons/react/24/outline";
+import { RocketLaunchIcon, LinkIcon, CpuChipIcon, LightBulbIcon, CommandLineIcon, WrenchScrewdriverIcon } from "@heroicons/react/24/outline";
 
 export function classNames(...classes) {
     return classes.filter(Boolean).join(" ");
