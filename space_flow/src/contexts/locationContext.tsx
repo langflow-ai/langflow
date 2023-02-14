@@ -23,7 +23,7 @@ const initialValue= {
     setShowSideBar:()=>{},
     extraNavigation: {title:""},
     setExtraNavigation:()=>{},
-    extraComponent: null,
+    extraComponent: <></>,
     setExtraComponent:()=>{},
 }
 
@@ -36,7 +36,7 @@ export function LocationProvider({children}){
     const [isStackedOpen,setIsStackedOpen] = useState(initialValue.isStackedOpen)
     const [showSideBar,setShowSideBar] = useState(initialValue.showSideBar)
     const [extraNavigation, setExtraNavigation] = useState({title:""})
-    const [extraComponent, setExtraComponent] = useState(null)
+    const [extraComponent, setExtraComponent] = useState(<></>)
     return (
         <locationContext.Provider value={{isStackedOpen,setIsStackedOpen,atual,setAtual, showSideBar, setShowSideBar,extraNavigation, setExtraNavigation, extraComponent, setExtraComponent}}>
             {children}

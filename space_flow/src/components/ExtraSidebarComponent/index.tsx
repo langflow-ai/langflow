@@ -120,7 +120,7 @@ export default function ExtraSidebar() {
                 </nav>
               </div>
             ) : (
-              <>{extraComponent}</>
+              extraComponent
             )}
           </div>
         </div>

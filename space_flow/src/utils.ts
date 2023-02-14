@@ -87,22 +87,22 @@ export function classNames(...classes) {
   } */
 
   export const nodeColors = {
-    prompt: "#7C7C7C",
-    model: "#35ADAE",
-    chain: "#FFDC35",
-    agent: "#903BBE",
-    tool: "#FF3434",
-    memory: "#FF9135",
+    prompts: "#7C7C7C",
+    llms: "#35ADAE",
+    chains: "#FFDC35",
+    agents: "#903BBE",
+    tools: "#FF3434",
+    memories: "#FF9135",
   }
 
 
   export const nodeIcons = {
-    agent: RocketLaunchIcon,
-    chain: LinkIcon,
-    memory: CpuChipIcon,
-    model: LightBulbIcon,
-    prompt: CommandLineIcon,
-    tool: WrenchScrewdriverIcon,
+    agents: RocketLaunchIcon,
+    chains: LinkIcon,
+    memories: CpuChipIcon,
+    llms: LightBulbIcon,
+    prompts: CommandLineIcon,
+    tools: WrenchScrewdriverIcon,
   }
   
   export const bgColors = {
