@@ -1,12 +1,4 @@
-import {
-  Bars2Icon,
-  CommandLineIcon,
-  CpuChipIcon,
-  LightBulbIcon,
-  LinkIcon,
-  RocketLaunchIcon,
-  ShieldCheckIcon,
-} from "@heroicons/react/24/outline";
+import { Bars2Icon, CommandLineIcon, CpuChipIcon, LightBulbIcon, LinkIcon, RocketLaunchIcon, WrenchScrewdriverIcon, ViewColumnsIcon } from "@heroicons/react/24/outline";
 import { llm_chain } from "../../../../data_assets/llm_chain";
 import { prompt } from "../../../../data_assets/prompt";
 import DisclosureComponent from "../DisclosureComponent";
@@ -29,7 +21,7 @@ export function ExtraSidebar() {
     if (nodeType === "agentNode") {
       json = JSON.stringify({ content: "" });
     }
-    if (nodeType === "validatorNode") {
+    if (nodeType === "toolNode") {
       json = JSON.stringify({ content: "" });
     }
     if (nodeType === "memoryNode") {
@@ -90,7 +82,7 @@ export function ExtraSidebar() {
         </div>
       </DisclosureComponent>
       <DisclosureComponent
-        button={{ title: "Validators", Icon: ShieldCheckIcon }}
+        button={{ title: "Tools", Icon: WrenchScrewdriverIcon }}
       >
         <div className="p-2">
           <div draggable className={" cursor-grab border-l-8 rounded-l-md"} style={{borderLeftColor: nodeColors['validator']}} onDragStart={(event) => onDragStart(event, "promptNode")}>
