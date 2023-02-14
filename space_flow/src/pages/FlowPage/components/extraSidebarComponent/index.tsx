@@ -32,28 +32,30 @@ export default function ExtraSidebar() {
           key={i}
           button={{ title: toFirstUpperCase(d), Icon: nodeIcons[d] }}
         >
-          {Object.keys(data[d]).map((t, k) => (
-            <div key={k} className="p-2 pb-0">
-              <div
-                draggable
-                className={" cursor-grab border-l-8 rounded-l-md"}
-                style={{ borderLeftColor: nodeColors[d] }}
-                onDragStart={(event) =>
-                  onDragStart(event, {
-                    type: d,
-                    name: t,
-                    types: types,
-                    node: data[d][t],
-                  })
-                }
-              >
-                <div className="flex w-full justify-between text-sm px-4 py-3 items-center border-dashed border-gray-400 border-l-0 rounded-md rounded-l-none border-2">
-                  <span className="text-black w-36 truncate">{t}</span>
-                  <Bars2Icon className="w-6 h-6 text-gray-400" />
+          <div className="p-2 flex flex-col gap-2">
+            {Object.keys(data[d]).map((t, k) => (
+              <div key={k}>
+                <div
+                  draggable
+                  className={" cursor-grab border-l-8 rounded-l-md"}
+                  style={{ borderLeftColor: nodeColors[d] }}
+                  onDragStart={(event) =>
+                    onDragStart(event, {
+                      type: d,
+                      name: t,
+                      types: types,
+                      node: data[d][t],
+                    })
+                  }
+                >
+                  <div className="flex w-full justify-between text-sm px-4 py-3 items-center border-dashed border-gray-400 border-l-0 rounded-md rounded-l-none border-2">
+                    <span className="text-black w-36 truncate">{t}</span>
+                    <Bars2Icon className="w-6 h-6 text-gray-400" />
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </DisclosureComponent>
       ))}
     </div>
