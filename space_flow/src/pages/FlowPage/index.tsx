@@ -14,6 +14,7 @@ import AgentNode from "../../CustomNodes/AgentNode";
 import ChainNode from "../../CustomNodes/ChainNode";
 import ValidatorNode from "../../CustomNodes/ValidatorNode";
 import MemoryNode from "../../CustomNodes/MemoryNode";
+import Chat from "../../components/chatComponent";
 
 const nodeTypes = {
   promptNode: PromptNode,
@@ -99,6 +100,7 @@ export default function FlowPage() {
         <Background />
         <Controls></Controls>
       </ReactFlow>
+      <Chat />
     </div>
   );
 }
