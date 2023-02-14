@@ -1,6 +1,4 @@
-import { Bars2Icon, ChartBarIcon } from "@heroicons/react/24/outline";
-import { llm_chain } from "../../../../data_assets/llm_chain";
-import { prompt } from "../../../../data_assets/prompt";
+import { Bars2Icon } from "@heroicons/react/24/outline";
 import DisclosureComponent from "../DisclosureComponent";
 import { nodeColors, nodeIcons, toFirstUpperCase } from "../../../../utils";
 import { useEffect, useState } from "react";

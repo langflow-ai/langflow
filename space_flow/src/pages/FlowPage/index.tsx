@@ -8,10 +8,7 @@ import ReactFlow, {
 } from "reactflow";
 import { locationContext } from "../../contexts/locationContext";
 import ExtraSidebar from "./components/extraSidebarComponent";
-import axios from "axios";
-import { generateUiNode } from "../../controllers/UiGenerator";
 import Chat from "../../components/chatComponent";
-import { getAll } from "../../controllers/NodesServices";
 import GenericNode from "../../CustomNodes/GenericNode";
 
 const nodeTypes = {
@@ -30,10 +27,6 @@ export default function FlowPage() {
   
 
   const reactFlowWrapper = useRef(null);
-
-  const rfStyle = {
-    backgroundCOlor: "#B8CEFF",
-  };
 
   let id = 0;
   

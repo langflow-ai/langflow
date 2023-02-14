@@ -1,5 +1,4 @@
 import {
-  CommandLineIcon,
   ArrowUpRightIcon,
   TrashIcon,
   PlayIcon,
@@ -9,7 +8,6 @@ import Dropdown from "../../components/dropdownComponent";
 import Input from "../../components/inputComponent";
 import { nodeColors, nodeIcons, snakeToNormalCase } from "../../utils";
 import Tooltip from "../../components/TooltipComponent";
-import { useEffect } from "react";
 
 export default function GenericNode({ data }) {
   const Icon = nodeIcons[data.type];
