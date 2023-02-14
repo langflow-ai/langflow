@@ -1,3 +1,5 @@
+import { RocketLaunchIcon, LinkIcon, CpuChipIcon, LightBulbIcon, CommandLineIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
+
 export function classNames(...classes) {
     return classes.filter(Boolean).join(" ");
   }
@@ -22,8 +24,86 @@ export function classNames(...classes) {
     pink: "text-pink-700",
     rose: "text-rose-700",
     black: "text-black-700",
-    gray: "bg-gray-700",
+    gray: "text-gray-700",
   };
+
+  export const borderLColors = {
+    white: "border-l-white",
+    red: "border-l-red-500",
+    orange: "border-l-orange-500",
+    amber: "border-l-amber-500",
+    yellow: "border-l-yellow-500",
+    lime: "border-l-lime-500",
+    green: "border-l-green-500",
+    emerald: "border-l-emerald-500",
+    teal: "border-l-teal-500",
+    cyan: "border-l-cyan-500",
+    sky: "border-l-sky-500",
+    blue: "border-l-blue-500",
+    indigo: "border-l-indigo-500",
+    violet: "border-l-violet-500",
+    purple: "border-l-purple-500",
+    fuchsia: "border-l-fuchsia-500",
+    pink: "border-l-pink-500",
+    rose: "border-l-rose-500",
+    black: "border-l-black-500",
+    gray: "border-l-gray-500",
+  };
+
+  /* export const nodeColors = {
+    prompt: "#35ADAE",
+    model: "#4266BE",
+    chain: "#6344BE",
+    agent: "#903BBE",
+    validator: "#DB3392",
+    memory: "#FF3434",
+  } */
+
+  /* export const nodeColors = {
+    prompt: "#36D635",
+    model: "#4266BE",
+    chain: "#903BBE",
+    agent: "#FF3434",
+    validator: "#FEBB35",
+    memory: "#FFFF33",
+  } */
+
+  /* export const nodeColors = {
+    prompt: "#36D635",
+    model: "#35ADAE",
+    chain: "#903BBE",
+    agent: "#DB3392",
+    validator: "#FF9135",
+    memory: "#FFDC35",
+  } */
+
+  /* export const nodeColors = {
+    prompt: "#36D635",
+    model: "#35ADAE",
+    chain: "#903BBE",
+    agent: "#DB3392",
+    validator: "#FF3434",
+    memory: "#FF9135",
+  } */
+
+  export const nodeColors = {
+    prompt: "#7C7C7C",
+    model: "#35ADAE",
+    chain: "#FFDC35",
+    agent: "#903BBE",
+    validator: "#FF3434",
+    memory: "#FF9135",
+  }
+
+
+  export const nodeIcons = {
+    agent: RocketLaunchIcon,
+    chain: LinkIcon,
+    memory: CpuChipIcon,
+    model: LightBulbIcon,
+    prompt: CommandLineIcon,
+    validator: ShieldCheckIcon,
+  }
   
   export const bgColors = {
     white: "bg-white",
