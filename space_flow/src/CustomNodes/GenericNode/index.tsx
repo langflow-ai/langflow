@@ -8,17 +8,21 @@ import { Handle, Position } from "reactflow";
 import Dropdown from "../../components/dropdownComponent";
 import Input from "../../components/inputComponent";
 import { nodeColors, nodeIcons } from "../../utils";
+import Tooltip from "../../components/TooltipComponent";
+import { useEffect } from "react";
 
 export default function GenericNode({ data }) {
   const Icon = nodeIcons[data.type];
   return (
     <div className="prompt-node relative bg-white w-96 rounded-lg solid border flex flex-col justify-center">
-      <Handle
-        type="source"
-        position={Position.Left}
-        id="b"
-        className="bg-gray-400 w-3 h-3 -ml-0.5"
-      ></Handle>
+      <Tooltip title="teste">
+        <Handle
+          type="source"
+          position={Position.Left}
+          id="b"
+          className="bg-gray-400 w-3 h-3 -ml-0.5"
+        ></Handle>
+      </Tooltip>
       <div className="w-full flex items-center justify-between p-4 bg-gray-50 border-b ">
         <div className="flex items-center gap-4 text-lg">
           <Icon
@@ -44,11 +48,7 @@ export default function GenericNode({ data }) {
                 onSelect={() => {}}
               />
             ) : data.node.template[t].type === "str" ? (
-              <Input
-                title={t}
-                placeholder="pleicerolder"
-                onChange={() => {}}
-              />
+              <Input title={t} placeholder="pleicerolder" onChange={() => {}} />
             ) : (
               <></>
             )}
