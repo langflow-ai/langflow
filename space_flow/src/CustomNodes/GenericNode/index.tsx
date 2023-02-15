@@ -18,7 +18,7 @@ export default function GenericNode({ data }) {
           type="source"
           position={Position.Left}
           id="b"
-          className="h-10 w-3 !bg-teal-500 rounded-sm -ml-0.5"
+          className="bg-gray-400 w-4 h-4 rounded-full"
         ></Handle>
       </Tooltip>
       <div className="w-full flex items-center justify-between p-4 bg-gray-50 border-b ">
@@ -67,7 +67,7 @@ export default function GenericNode({ data }) {
         type="target"
         position={Position.Right}
         id="b"
-        className="h-10 w-3 rounded-sm -mr-0.5"
+        className="bg-gray-400 w-4 h-4 rounded-full"
         style={{ background: nodeColors[data.type] }}
       ></Handle>
     </div>
