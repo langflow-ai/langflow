@@ -40,7 +40,7 @@ export default function FlowPage() {
       console.log(params)
       console.log(reactFlowInstance.getNodes())
       console.log(getConnectedNodes(params,reactFlowInstance.getNodes()))
-      setEdges((eds) => addEdge({...params,style:{stroke:"red"}}, eds))
+      setEdges((eds) => addEdge({...params}, eds))
     },
     [reactFlowInstance]
   );
