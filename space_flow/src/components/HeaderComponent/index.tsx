@@ -45,7 +45,7 @@ export default function Header({user, userNavigation}){
           <div className="min-w-0 flex-1 ml-5">
             <Breadcrumb />
           </div>
-          <div className="ml-10 flex shrink-0 items-center space-x-10 pr-4">
+          {/* <div className="ml-10 flex shrink-0 items-center space-x-10 pr-4">
             <div className="flex items-center space-x-8">
               <span className="inline-flex">
                 <button type="button" {...triggerProps} className="-mx-1 rounded-full bg-white p-1 text-gray-400 hover:text-gray-500 relative" onClick={()=>{setNotificationCenter(false);setIsOpen(true)}}>
@@ -102,7 +102,7 @@ export default function Header({user, userNavigation}){
                   </Transition>
                 </Menu>
               </div>
-            </div>
+            </div> */}
           </div>
         </header>
     )
