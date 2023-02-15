@@ -10,7 +10,7 @@ import { locationContext } from "../../contexts/locationContext";
 import ExtraSidebar from "./components/extraSidebarComponent";
 import Chat from "../../components/chatComponent";
 import GenericNode from "../../CustomNodes/GenericNode";
-
+import connection from "./components/connection";
 const nodeTypes = {
   genericNode:GenericNode,
 };
@@ -83,6 +83,7 @@ export default function FlowPage() {
         onConnect={onConnect}
         onInit={setReactFlowInstance}
         nodeTypes={nodeTypes}
+        connectionLineComponent={connection}
         onDragOver={onDragOver}
         onDrop={onDrop}
         fitView

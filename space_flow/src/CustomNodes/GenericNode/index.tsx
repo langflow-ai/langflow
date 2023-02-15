@@ -10,6 +10,7 @@ import { nodeColors, nodeIcons, snakeToNormalCase } from "../../utils";
 import Tooltip from "../../components/TooltipComponent";
 
 export default function GenericNode({ data }) {
+  console.log(data)
   const Icon = nodeIcons[data.type];
   return (
     <div className="prompt-node relative bg-white w-96 rounded-lg solid border flex flex-col justify-center">
@@ -46,7 +47,7 @@ export default function GenericNode({ data }) {
                 onSelect={() => {}}
               />
             ) : data.node.template[t].type === "str" ? (
-              <Input title={snakeToNormalCase(t)} placeholder="pleicerolder" onChange={() => {}} />
+              <Input title={snakeToNormalCase(t)} value={data.node.template[t].value} placeholder={data.node.template[t].placeholder??"aasas"} onChange={() => {}} />
             ) : (
               <></>
             )}
