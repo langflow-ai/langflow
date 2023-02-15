@@ -1,6 +1,6 @@
 import { Bars2Icon } from "@heroicons/react/24/outline";
 import DisclosureComponent from "../DisclosureComponent";
-import { nodeColors, nodeIcons, toFirstUpperCase } from "../../../../utils";
+import { nodeColors, nodeIcons, nodeNames, toFirstUpperCase } from "../../../../utils";
 import { useEffect, useState } from "react";
 import { getAll } from "../../../../controllers/NodesServices";
 
@@ -30,7 +30,7 @@ export default function ExtraSidebar() {
       {Object.keys(data).map((d, i) => (
         <DisclosureComponent
           key={i}
-          button={{ title: toFirstUpperCase(d), Icon: nodeIcons[d] }}
+          button={{ title: nodeNames[d], Icon: nodeIcons[d] }}
         >
           <div className="p-2 flex flex-col gap-2">
             {Object.keys(data[d]).map((t, k) => (

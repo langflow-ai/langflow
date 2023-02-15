@@ -96,6 +96,15 @@ export function classNames(...classes) {
     memories: "#FF9135",
   }
 
+  export const nodeNames = {
+    prompts: "Prompts",
+    llms: "LLMs",
+    chains: "Chains",
+    agents: "Agents",
+    tools: "Tools",
+    memories: "Memories",
+  }
+
 
   export const nodeIcons = {
     agents: RocketLaunchIcon,
