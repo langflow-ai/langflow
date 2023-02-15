@@ -11,19 +11,12 @@ import ExtraSidebar from "./components/extraSidebarComponent";
 import Chat from "../../components/chatComponent";
 import GenericNode from "../../CustomNodes/GenericNode";
 import connection from "./components/connection";
+import { getConnectedNodes } from "../../utils";
 const nodeTypes = {
   genericNode:GenericNode,
 };
 
 export default function FlowPage() {
-  // getPrompts().then(result=>result.forEach(prompt=>console.log(prompt)))
-  // getChains().then(result=>console.log(result))
-  // getAgents().then(result=>console.log(result))
-  // getMemories().then(result=>console.log(result))
-  // getModels().then(result=>result.forEach(model=>console.log(model)))
-
-  // outside component to avoid render trigger
-
   
 
   const reactFlowWrapper = useRef(null);
@@ -43,8 +36,13 @@ export default function FlowPage() {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
   const onConnect = useCallback(
-    (params) => setEdges((eds) => addEdge(params, eds)),
-    []
+    (params) => {
+      console.log(params)
+      console.log(reactFlowInstance.getNodes())
+      console.log(getConnectedNodes(params,reactFlowInstance.getNodes()))
+      setEdges((eds) => addEdge({...params,style:{stroke:"red"}}, eds))
+    },
+    [reactFlowInstance]
   );
   const onDragOver = useCallback((event) => {
     event.preventDefault();
