@@ -10,7 +10,6 @@ import { nodeColors, nodeIcons, snakeToNormalCase } from "../../utils";
 import Tooltip from "../../components/TooltipComponent";
 
 export default function GenericNode({ data }) {
-  console.log(data)
   const Icon = nodeIcons[data.type];
   return (
     <div className="prompt-node relative bg-white w-96 rounded-lg solid border flex flex-col justify-center">

@@ -1,4 +1,5 @@
 import { RocketLaunchIcon, LinkIcon, CpuChipIcon, LightBulbIcon, CommandLineIcon, WrenchScrewdriverIcon } from "@heroicons/react/24/outline";
+import { Edge, Node } from "reactflow";
 
 export function classNames(...classes) {
     return classes.filter(Boolean).join(" ");
@@ -291,3 +292,10 @@ export function classNames(...classes) {
     return Math.round(x * Math.pow(10, decimals))/Math.pow(10, decimals)
   }
   
+
+  export function getConnectedNodes(edge:Edge,nodes:Array<Node>):Array<Node>{
+    const sourceId = edge.source;
+    const targetId = edge.target;
+    const connectedNodes = nodes.filter(node=>node.id===sourceId||node.id===targetId)
+    return connectedNodes
+  }
