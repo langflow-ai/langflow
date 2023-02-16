@@ -74,7 +74,7 @@ export default function FlowPage() {
         id: newId,
         type: data.name === 'str' ? 'inputNode' : (data.name === 'chatInput' ? 'chatInputNode' : (data.name === 'chatOutput' ? 'chatOutputNode' : (data.name === 'bool' ? 'booleanNode' : 'genericNode'))),
         position,
-        data: { ...data, input: '', enabled: false, instance: reactFlowInstance, onDelete: () => {setNodes(reactFlowInstance.getNodes().filter((n)=>n.id !== newId))} },
+        data: { ...data, id: newId, input: '', enabled: false, reactFlowInstance, onDelete: () => {setNodes(reactFlowInstance.getNodes().filter((n)=>n.id !== newId))} },
       };
       setNodes((nds) => nds.concat(newNode));
     },

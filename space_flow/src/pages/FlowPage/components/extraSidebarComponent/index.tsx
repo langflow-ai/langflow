@@ -71,7 +71,6 @@ export default function ExtraSidebar() {
                   onDragStart(event, {
                     type: 'elements',
                     name: 'str',
-                    types: types
                   })
                 }
               >
