@@ -9,7 +9,8 @@ export default function ChatInputNode({ data }) {
       <Handle
         type="target"
         position={Position.Right}
-        id="b"
+        id={data.name}
+        isValidConnection={({sourceHandle, targetHandle}) => (targetHandle === sourceHandle || data.types[targetHandle] === sourceHandle || sourceHandle === 'str')}
         className="-mr-1 bg-transparent border-solid border-l-8 border-l-blue-600 border-y-transparent border-y-8 border-r-0 rounded-none"
       ></Handle>
       <div className="flex gap-3 text-lg font-medium text-white items-center">

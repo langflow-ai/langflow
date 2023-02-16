@@ -9,8 +9,9 @@ export default function ChatOutputNode({ data }) {
         <div className="prompt-node relative rounded-lg solid border flex justify-center align-center py-3 px-6 bg-blue-600">
         <Handle
           type="source"
+          isConnectable={false}
           position={Position.Left}
-          id="b"
+          id="str"
           className="ml-1 bg-transparent border-solid border-l-8 border-l-white border-y-transparent border-y-8 border-r-0 rounded-none"
         ></Handle>
         <div className="flex gap-3 text-lg font-medium text-white items-center">
