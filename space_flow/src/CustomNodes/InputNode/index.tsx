@@ -32,7 +32,8 @@ export default function InputNode({ data }) {
       <Handle
         type="target"
         position={Position.Right}
-        id="b"
+        id={data.name}
+        isValidConnection={({sourceHandle, targetHandle}) => (targetHandle === sourceHandle || data.types[targetHandle] === sourceHandle || sourceHandle === 'str')}
         className="-mr-1 bg-transparent border-solid border-l-8 border-y-transparent border-y-8 border-r-0 rounded-none"
         style={{borderLeftColor: nodeColors[data.type]}}
       ></Handle>

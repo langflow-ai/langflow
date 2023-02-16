@@ -44,9 +44,9 @@ export default function FlowPage() {
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
   const onConnect = useCallback(
     (params) => {
-      console.log(params)
+      /* console.log(params)
       console.log(reactFlowInstance.getNodes())
-      console.log(getConnectedNodes(params,reactFlowInstance.getNodes()))
+      console.log(getConnectedNodes(params,reactFlowInstance.getNodes())) */
       setEdges((eds) => addEdge({...params}, eds))
     },
     [reactFlowInstance]
@@ -72,7 +72,7 @@ export default function FlowPage() {
         id: newId,
         type: data.name === 'str' ? 'inputNode' : (data.name === 'chatInput' ? 'chatInputNode' : (data.name === 'chatOutput' ? 'chatOutputNode' : 'genericNode')),
         position,
-        data: { ...data, onDelete: () => {setNodes(reactFlowInstance.getNodes().filter((n)=>n.id !== newId))} },
+        data: { ...data, instance: reactFlowInstance, onDelete: () => {setNodes(reactFlowInstance.getNodes().filter((n)=>n.id !== newId))} },
       };
       setNodes((nds) => nds.concat(newNode));
     },

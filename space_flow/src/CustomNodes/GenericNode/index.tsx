@@ -13,16 +13,6 @@ export default function GenericNode({ data }) {
   const Icon = nodeIcons[data.type];
   return (
     <div className="prompt-node relative bg-white w-96 rounded-lg solid border flex flex-col justify-center">
-      <Tooltip title="teste">
-        <Handle
-          type="source"
-          position={Position.Left}
-          id="b"
-          isConnectable={false}
-          className="ml-1 bg-transparent border-solid border-l-8 border-y-transparent border-y-8 border-r-0 rounded-none"
-          style={{borderLeftColor: nodeColors[data.type]}}
-        ></Handle>
-      </Tooltip>
       <div className="w-full flex items-center justify-between p-4 bg-gray-50 border-b ">
         <div className="flex items-center gap-4 text-lg">
           <Icon
@@ -39,18 +29,15 @@ export default function GenericNode({ data }) {
         </div>
         {Object.keys(data.node.template).map((t, idx) => (
           <div key={idx} className="w-full mt-5">
-            {data.node.template[t].type === "dropdown" ? (
-              <Dropdown
-                title={data.node.template[t].title}
-                value={data.node.template[t].options[0]}
-                options={data.node.template[t].options}
-                onSelect={() => {}}
-              />
-            ) : data.node.template[t].type === "str" ? (
-              <></>
-            ) : (
-              <></>
-            )}
+            <Tooltip title={t + ": " + data.node.template[t].type}>
+              <Handle
+                type="source"
+                position={Position.Left}
+                id={data.node.template[t].type}
+                className="ml-1 bg-transparent border-solid border-l-8 border-y-transparent border-y-8 border-r-0 rounded-none"
+                style={{borderLeftColor: nodeColors[data.type], marginTop: ((idx*30)-50) + "px"}}
+            ></Handle>
+            </Tooltip>
           </div>
         ))}
         <div className="w-full mt-5"></div>
@@ -64,7 +51,8 @@ export default function GenericNode({ data }) {
       <Handle
         type="target"
         position={Position.Right}
-        id="b"
+        id={data.name}
+        isValidConnection={({sourceHandle, targetHandle}) => (targetHandle === sourceHandle || data.types[targetHandle] === sourceHandle || sourceHandle === 'str')}
         className="-mr-1 bg-transparent border-solid border-l-8 border-y-transparent border-y-8 border-r-0 rounded-none"
         style={{borderLeftColor: nodeColors[data.type]}}
       ></Handle>
