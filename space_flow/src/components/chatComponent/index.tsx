@@ -6,7 +6,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useState } from "react";
 
-export default function Chat() {
+export default function Chat({nodes, edges}) {
   const [open, setOpen] = useState(true);
   return (
     <>
@@ -53,7 +53,7 @@ export default function Chat() {
                   placeholder="Send a message..."
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                  <button>
+                  <button onClick={() => {console.log(nodes, edges)}}>
                     <PaperAirplaneIcon
                       className="h-5 w-5 text-gray-400 hover:text-gray-600"
                       aria-hidden="true"

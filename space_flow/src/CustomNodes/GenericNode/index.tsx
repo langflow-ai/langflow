@@ -18,7 +18,9 @@ export default function GenericNode({ data }) {
           type="source"
           position={Position.Left}
           id="b"
-          className="bg-gray-400 w-4 h-4 rounded-full"
+          isConnectable={false}
+          className="ml-1 bg-transparent border-solid border-l-8 border-y-transparent border-y-8 border-r-0 rounded-none"
+          style={{borderLeftColor: nodeColors[data.type]}}
         ></Handle>
       </Tooltip>
       <div className="w-full flex items-center justify-between p-4 bg-gray-50 border-b ">
@@ -29,7 +31,6 @@ export default function GenericNode({ data }) {
           />
           {data.name}
         </div>
-        <ArrowUpRightIcon className="w-4 h-4" />
       </div>
 
       <div className="w-full p-5 h-full">
@@ -46,7 +47,7 @@ export default function GenericNode({ data }) {
                 onSelect={() => {}}
               />
             ) : data.node.template[t].type === "str" ? (
-              <Input title={snakeToNormalCase(t)} value={data.node.template[t].value} placeholder={data.node.template[t].placeholder??"aasas"} onChange={() => {}} />
+              <></>
             ) : (
               <></>
             )}
@@ -59,16 +60,13 @@ export default function GenericNode({ data }) {
         <button onClick={data.onDelete}>
           <TrashIcon className="w-6 h-6 hover:text-red-500"></TrashIcon>
         </button>
-        <button onClick={data.onRun}>
-          <PlayIcon className="w-6 h-6 hover:text-green-500"></PlayIcon>
-        </button>
       </div>
       <Handle
         type="target"
         position={Position.Right}
         id="b"
-        className="bg-gray-400 w-4 h-4 rounded-full"
-        style={{ background: nodeColors[data.type] }}
+        className="-mr-1 bg-transparent border-solid border-l-8 border-y-transparent border-y-8 border-r-0 rounded-none"
+        style={{borderLeftColor: nodeColors[data.type]}}
       ></Handle>
     </div>
   );
