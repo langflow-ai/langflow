@@ -5,20 +5,32 @@ import {
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { useState } from "react";
+import { sendAll } from "../../controllers/NodesServices";
 
-export default function Chat({nodes, edges}) {
+const _ = require("lodash");
+
+export default function Chat({ nodes, edges }) {
   const [open, setOpen] = useState(true);
+  const [chatValue, setChatValue] = useState("");
+  const [chatHistory, setChatHistory] = useState([]);
+  const addChatHistory = (message, isSend) => {
+    setChatHistory((old) => {
+      let newChat = _.cloneDeep(old);
+      newChat.push({ message, isSend });
+      return newChat;
+    });
+  };
   return (
     <>
       <Transition
         show={open}
         appear={true}
-        enter='transition ease-out duration-300'
-        enterFrom='translate-y-96'
-        enterTo='translate-y-0'
-        leave='transition ease-in duration-300'
-        leaveFrom='translate-y-0'
-        leaveTo='translate-y-96'
+        enter="transition ease-out duration-300"
+        enterFrom="translate-y-96"
+        enterTo="translate-y-0"
+        leave="transition ease-in duration-300"
+        leaveFrom="translate-y-0"
+        leaveTo="translate-y-96"
       >
         <div className="w-[400px] absolute bottom-0 right-6">
           <div className="border h-full rounded-xl rounded-b-none bg-white shadow">
@@ -27,33 +39,58 @@ export default function Chat({nodes, edges}) {
                 <ChatBubbleBottomCenterTextIcon className="h-8 w-8 mt-1 text-blue-600" />
                 Chat
               </div>
-              <button onClick={() => {setOpen(false)}}>
+              <button
+                onClick={() => {
+                  setOpen(false);
+                }}
+              >
                 <XMarkIcon className="h-6 w-6 text-gray-600" />
               </button>
             </div>
             <div className="w-full h-[400px] flex gap-3 mb-auto overflow-y-auto flex-col bg-gray-50 p-3 py-5">
-              <div className="w-full text-start">
-                <div className="text-start inline-block bg-gray-200 rounded-xl p-3 overflow-hidden w-fit max-w-[280px] px-5 text-sm font-normal rounded-tl-none">
-                  Lorem Ipsum is simply dummy text of the printing and
-                  typesetting industry.
+              {chatHistory.map((c, i) => (
+                <div key={i}>
+                  {c.isSend ? (
+                    <div className="w-full text-start">
+                      <div className="text-start inline-block bg-gray-200 rounded-xl p-3 overflow-hidden w-fit max-w-[280px] px-5 text-sm font-normal rounded-tl-none">
+                        {c.message}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-full text-end">
+                      <div className="text-start inline-block bg-blue-600 rounded-xl p-3 overflow-hidden w-fit max-w-[280px] px-5 text-sm text-white font-normal rounded-tr-none">
+                        {c.message}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-              <div className="w-full text-end">
-                <div className="text-start inline-block bg-blue-600 rounded-xl p-3 overflow-hidden w-fit max-w-[280px] px-5 text-sm text-white font-normal rounded-tr-none">
-                  Lorem Ipsum has been the industry's standard dummy text ever
-                  since the 1500s
-                </div>
-              </div>
+              ))}
             </div>
             <div className="w-full bg-white border-t flex items-center justify-between p-3">
               <div className="relative w-full mt-1 rounded-md shadow-sm">
                 <input
                   type="text"
+                  value={chatValue}
+                  onChange={(e) => {
+                    setChatValue(e.target.value);
+                  }}
                   className="form-input block w-full rounded-md border-gray-300 pr-10 sm:text-sm"
                   placeholder="Send a message..."
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                  <button onClick={() => {console.log(nodes, edges)}}>
+                  <button
+                    onClick={async () => {
+                      let message = chatValue;
+                      setChatValue("");
+                      addChatHistory(message, true);
+                      let returnValue = await sendAll({
+                        message,
+                        nodes,
+                        edges,
+                      });
+                      addChatHistory(returnValue, false);
+                    }}
+                  >
                     <PaperAirplaneIcon
                       className="h-5 w-5 text-gray-400 hover:text-gray-600"
                       aria-hidden="true"
@@ -66,23 +103,27 @@ export default function Chat({nodes, edges}) {
         </div>
       </Transition>
       <Transition
-      show={!open}
-      appear={true}
-      enter='transition ease-out duration-300'
-      enterFrom='translate-y-96'
-      enterTo='translate-y-0'
-      leave='transition ease-in duration-300'
-      leaveFrom='translate-y-0'
-      leaveTo='translate-y-96'
-    >
-      <div className="absolute bottom-0 right-6">
+        show={!open}
+        appear={true}
+        enter="transition ease-out duration-300"
+        enterFrom="translate-y-96"
+        enterTo="translate-y-0"
+        leave="transition ease-in duration-300"
+        leaveFrom="translate-y-0"
+        leaveTo="translate-y-96"
+      >
+        <div className="absolute bottom-0 right-6">
           <div className="border flex justify-center align-center py-2 px-4 rounded-xl rounded-b-none bg-white shadow">
-              <button onClick={()=>{setOpen(true)}}>
+            <button
+              onClick={() => {
+                setOpen(true);
+              }}
+            >
               <div className="flex gap-3 text-lg font-medium items-center">
                 <ChatBubbleBottomCenterTextIcon className="h-8 w-8 mt-1 text-blue-600" />
                 Chat
               </div>
-              </button>
+            </button>
           </div>
         </div>
       </Transition>
