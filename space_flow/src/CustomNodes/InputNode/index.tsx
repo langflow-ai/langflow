@@ -1,6 +1,6 @@
 import { Bars3CenterLeftIcon, TrashIcon } from "@heroicons/react/24/outline";
 import Input from "../../components/inputComponent";
-import { nodeColors, nodeIcons, snakeToNormalCase } from "../../utils";
+import { isValidConnection, nodeColors, nodeIcons, snakeToNormalCase } from "../../utils";
 import { Handle, Position } from "reactflow";
 import { useEffect } from "react";
 
@@ -34,7 +34,7 @@ export default function InputNode({ data }) {
         type="target"
         position={Position.Right}
         id={data.name}
-        isValidConnection={({sourceHandle, targetHandle}) => (targetHandle === sourceHandle || data.types[targetHandle] === sourceHandle || sourceHandle === 'str')}
+        isValidConnection={(connection) => isValidConnection(data,connection)}
         className="-mr-1 bg-transparent border-solid border-l-8 border-y-transparent border-y-8 border-r-0 rounded-none"
         style={{borderLeftColor: nodeColors[data.type]}}
       ></Handle>

@@ -6,8 +6,9 @@ import {
 import { Handle, Position } from "reactflow";
 import Dropdown from "../../components/dropdownComponent";
 import Input from "../../components/inputComponent";
-import { nodeColors, nodeIcons, snakeToNormalCase } from "../../utils";
+import { isValidConnection, nodeColors, nodeIcons, snakeToNormalCase } from "../../utils";
 import Tooltip from "../../components/TooltipComponent";
+import { useEffect } from "react";
 
 export default function GenericNode({ data }) {
   const Icon = nodeIcons[data.type];
@@ -36,12 +37,8 @@ export default function GenericNode({ data }) {
               <Handle
                 type="source"
                 position={Position.Left}
-                id={data.node.template[t].type}
-                isValidConnection={({ sourceHandle, targetHandle }) =>
-                  targetHandle === sourceHandle ||
-                  data.types[targetHandle] === sourceHandle ||
-                  sourceHandle === "str"
-                }
+                id={data.node.template[t].type + "|" + t + "|" + data.id}
+                isValidConnection={(connection) => isValidConnection(data,connection)}
                 className="ml-1 bg-transparent border-solid border-l-8 border-y-transparent border-y-8 border-r-0 rounded-none"
                 style={{
                   borderLeftColor: (nodeColors[(data.types[data.node.template[t].type] ?? data.node.template[t].type)]) ?? "gray",
@@ -58,11 +55,7 @@ export default function GenericNode({ data }) {
           type="target"
           position={Position.Right}
           id={data.name}
-          isValidConnection={({ sourceHandle, targetHandle }) =>
-            targetHandle === sourceHandle ||
-            data.types[targetHandle] === sourceHandle ||
-            sourceHandle === "str"
-          }
+          isValidConnection={(connection) => isValidConnection(data,connection)}
           className="-mr-1 bg-transparent border-solid border-l-8 border-y-transparent border-y-8 border-r-0 rounded-none"
           style={{ borderLeftColor: nodeColors[data.type] }}
         ></Handle>
