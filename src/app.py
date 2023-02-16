@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from endpoints import router as endpoints_router
 from list import router as list_router
-from templates import router as templates_router
+from signature import router as signatures_router
 
 
 def create_app():
@@ -9,7 +9,7 @@ def create_app():
     app = FastAPI()
     app.include_router(endpoints_router)
     app.include_router(list_router)
-    app.include_router(templates_router)
+    app.include_router(signatures_router)
     return app
 
 
