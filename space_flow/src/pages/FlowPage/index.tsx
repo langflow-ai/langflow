@@ -16,11 +16,13 @@ import { getConnectedNodes } from "../../utils";
 import ChatInputNode from "../../CustomNodes/ChatInputNode";
 import ChatOutputNode from "../../CustomNodes/ChatOutputNode";
 import InputNode from "../../CustomNodes/InputNode";
+import BooleanNode from "../../CustomNodes/BooleanNode";
 const nodeTypes = {
   genericNode:GenericNode,
   inputNode: InputNode,
   chatInputNode:ChatInputNode,
   chatOutputNode:ChatOutputNode,
+  booleanNode: BooleanNode,
 };
 
 export default function FlowPage() {
@@ -70,9 +72,9 @@ export default function FlowPage() {
       let newId = getId();
       const newNode = {
         id: newId,
-        type: data.name === 'str' ? 'inputNode' : (data.name === 'chatInput' ? 'chatInputNode' : (data.name === 'chatOutput' ? 'chatOutputNode' : 'genericNode')),
+        type: data.name === 'str' ? 'inputNode' : (data.name === 'chatInput' ? 'chatInputNode' : (data.name === 'chatOutput' ? 'chatOutputNode' : (data.name === 'bool' ? 'booleanNode' : 'genericNode'))),
         position,
-        data: { ...data, instance: reactFlowInstance, onDelete: () => {setNodes(reactFlowInstance.getNodes().filter((n)=>n.id !== newId))} },
+        data: { ...data, input: '', enabled: false, instance: reactFlowInstance, onDelete: () => {setNodes(reactFlowInstance.getNodes().filter((n)=>n.id !== newId))} },
       };
       setNodes((nds) => nds.concat(newNode));
     },

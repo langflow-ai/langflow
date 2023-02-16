@@ -13,7 +13,7 @@ export default function GenericNode({ data }) {
   const Icon = nodeIcons[data.type];
   return (
     <div className="prompt-node relative bg-white w-96 rounded-lg solid border flex flex-col justify-center">
-      <div className="w-full flex items-center justify-between p-4 bg-gray-50 border-b ">
+      <div className="w-full flex items-center justify-between p-4 gap-8 bg-gray-50 border-b ">
         <div className="flex items-center gap-4 text-lg">
           <Icon
             className="w-10 h-10 p-1 text-white rounded"
@@ -21,15 +21,18 @@ export default function GenericNode({ data }) {
           />
           {data.name}
         </div>
+        <button onClick={data.onDelete}>
+          <TrashIcon className="w-6 h-6 hover:text-red-500"></TrashIcon>
+        </button>
       </div>
 
       <div className="w-full p-5 h-full">
-        <div className="w-full text-gray-500 text-sm truncate">
+        <div className="w-full text-gray-500 text-sm">
           {data.node.description}
         </div>
         {Object.keys(data.node.template).map((t, idx) => (
           <div key={idx} className="w-full mt-5">
-            <Tooltip title={t + ": " + data.node.template[t].type}>
+            <Tooltip title={t + ": " + data.node.template[t].type + (data.node.template[t].list ? " list" : "") + (data.node.template[t].required ? " (required)" : "")}>
               <Handle
                 type="source"
                 position={Position.Left}
@@ -41,7 +44,7 @@ export default function GenericNode({ data }) {
                 }
                 className="ml-1 bg-transparent border-solid border-l-8 border-y-transparent border-y-8 border-r-0 rounded-none"
                 style={{
-                  borderLeftColor: nodeColors[data.type],
+                  borderLeftColor: (nodeColors[(data.types[data.node.template[t].type] ?? data.node.template[t].type)]) ?? "gray",
                   marginTop: idx * 30 - 50 + "px",
                 }}
               ></Handle>
@@ -49,12 +52,6 @@ export default function GenericNode({ data }) {
           </div>
         ))}
         <div className="w-full mt-5"></div>
-      </div>
-
-      <div className="flex w-full justify-between items-center bg-gray-50 gap-2 border-t text-gray-600 p-4 text-sm">
-        <button onClick={data.onDelete}>
-          <TrashIcon className="w-6 h-6 hover:text-red-500"></TrashIcon>
-        </button>
       </div>
       <Tooltip title={"Output: " + data.name}>
         <Handle
