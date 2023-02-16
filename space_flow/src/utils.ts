@@ -1,4 +1,4 @@
-import { RocketLaunchIcon, LinkIcon, CpuChipIcon, LightBulbIcon, CommandLineIcon, WrenchScrewdriverIcon } from "@heroicons/react/24/outline";
+import { RocketLaunchIcon, LinkIcon, CpuChipIcon, LightBulbIcon, CommandLineIcon, WrenchScrewdriverIcon, ComputerDesktopIcon } from "@heroicons/react/24/outline";
 import { Edge, Node } from "reactflow";
 
 export function classNames(...classes) {
@@ -94,6 +94,7 @@ export function classNames(...classes) {
     agents: "#903BBE",
     tools: "#FF3434",
     memories: "#FF9135",
+    elements: "#6344BE"
   }
 
   export const nodeNames = {
@@ -103,6 +104,7 @@ export function classNames(...classes) {
     agents: "Agents",
     tools: "Tools",
     memories: "Memories",
+    elements: "Elements",
   }
 
 
@@ -113,6 +115,7 @@ export function classNames(...classes) {
     llms: LightBulbIcon,
     prompts: CommandLineIcon,
     tools: WrenchScrewdriverIcon,
+    elements: ComputerDesktopIcon
   }
   
   export const bgColors = {

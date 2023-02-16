@@ -2,6 +2,7 @@ import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import ReactFlow, {
   Background,
   Controls,
+  Edge,
   addEdge,
   useEdgesState,
   useNodesState,
@@ -12,8 +13,14 @@ import Chat from "../../components/chatComponent";
 import GenericNode from "../../CustomNodes/GenericNode";
 import connection from "./components/connection";
 import { getConnectedNodes } from "../../utils";
+import ChatInputNode from "../../CustomNodes/ChatInputNode";
+import ChatOutputNode from "../../CustomNodes/ChatOutputNode";
+import InputNode from "../../CustomNodes/InputNode";
 const nodeTypes = {
   genericNode:GenericNode,
+  inputNode: InputNode,
+  chatInputNode:ChatInputNode,
+  chatOutputNode:ChatOutputNode,
 };
 
 export default function FlowPage() {
@@ -60,11 +67,12 @@ export default function FlowPage() {
         x: event.clientX - reactflowBounds.left,
         y: event.clientY - reactflowBounds.top,
       });
+      let newId = getId();
       const newNode = {
-        id: getId(),
-        type: 'genericNode',
+        id: newId,
+        type: data.name === 'str' ? 'inputNode' : (data.name === 'chatInput' ? 'chatInputNode' : (data.name === 'chatOutput' ? 'chatOutputNode' : 'genericNode')),
         position,
-        data: { ...data, onDelete: () => console.log("asdsdsadad"), onRun: () => {} },
+        data: { ...data, onDelete: () => {setNodes(reactFlowInstance.getNodes().filter((n)=>n.id !== newId))} },
       };
       setNodes((nds) => nds.concat(newNode));
     },
@@ -89,7 +97,7 @@ export default function FlowPage() {
         <Background />
         <Controls></Controls>
       </ReactFlow>
-      <Chat />
+      <Chat nodes={nodes} edges={edges}/>
     </div>
   );
 }
