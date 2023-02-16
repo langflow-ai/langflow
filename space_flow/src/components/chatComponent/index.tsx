@@ -94,9 +94,9 @@ export default function Chat({ reactFlowInstance }) {
                         addChatHistory(message, true);
                         sendAll({
                           message,
-                          nodes: reactFlowInstance.getNodes(),
-                          edges: reactFlowInstance.getEdges(),
-                        }).then((r) => {addChatHistory(r, false)});
+                          nodes: JSON.stringify(reactFlowInstance.getNodes()),
+                          edges: JSON.stringify(reactFlowInstance.getEdges()),
+                        }).then((r) => {addChatHistory(r.data.messsage, false)});
                       } else {
                         setErrorData({title: 'Error sending message', list:['There are required fields not filled yet.']})
                       }
