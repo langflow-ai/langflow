@@ -6,5 +6,5 @@ export async function getAll() {
 
 export async function sendAll(data) {
     console.log(data);
-    return await axios.post("http://localhost:5003/send", JSON.stringify(data));
+    return await axios.post("http://localhost:5003/load", data);
 }
