@@ -79,16 +79,15 @@ export default function Chat({ nodes, edges }) {
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3">
                   <button
-                    onClick={async () => {
+                    onClick={() => {
                       let message = chatValue;
                       setChatValue("");
                       addChatHistory(message, true);
-                      let returnValue = await sendAll({
+                      sendAll({
                         message,
                         nodes,
                         edges,
-                      });
-                      addChatHistory(returnValue, false);
+                      }).then((r) => {addChatHistory(r, false)});
                     }}
                   >
                     <PaperAirplaneIcon
