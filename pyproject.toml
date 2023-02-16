@@ -16,6 +16,7 @@ langchain = {path = "../langchain", develop = true}
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
+ipykernel = "^6.21.2"
 
 [build-system]
 requires = ["poetry-core"]
