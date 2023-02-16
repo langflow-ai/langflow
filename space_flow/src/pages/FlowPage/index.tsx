@@ -17,6 +17,7 @@ import ChatInputNode from "../../CustomNodes/ChatInputNode";
 import ChatOutputNode from "../../CustomNodes/ChatOutputNode";
 import InputNode from "../../CustomNodes/InputNode";
 import BooleanNode from "../../CustomNodes/BooleanNode";
+import { alertContext } from "../../contexts/alertContext";
 const nodeTypes = {
   genericNode:GenericNode,
   inputNode: InputNode,
@@ -35,6 +36,7 @@ export default function FlowPage() {
   const getId = () => `dndnode_${id++}`;
 
   const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
+  const {setErrorData} = useContext(alertContext);
 
   useEffect(() => {
     setExtraComponent(<ExtraSidebar />);
@@ -60,23 +62,27 @@ export default function FlowPage() {
   const onDrop = useCallback(
     (event) => {
       event.preventDefault();
-
+      
       const reactflowBounds = reactFlowWrapper.current.getBoundingClientRect();
       let data = JSON.parse(event.dataTransfer.getData("json"));
-      // check if the dropped element is valid
-
-      const position = reactFlowInstance.project({
-        x: event.clientX - reactflowBounds.left,
-        y: event.clientY - reactflowBounds.top,
-      });
-      let newId = getId();
-      const newNode = {
-        id: newId,
-        type: data.name === 'str' ? 'inputNode' : (data.name === 'chatInput' ? 'chatInputNode' : (data.name === 'chatOutput' ? 'chatOutputNode' : (data.name === 'bool' ? 'booleanNode' : 'genericNode'))),
-        position,
-        data: { ...data, id: newId, input: '', enabled: false, reactFlowInstance, onDelete: () => {setNodes(reactFlowInstance.getNodes().filter((n)=>n.id !== newId))} },
-      };
-      setNodes((nds) => nds.concat(newNode));
+      if(data.name !== 'chatInput' || (data.name === 'chatInput' && !reactFlowInstance.getNodes().some((n) => (n.type === 'chatInputNode')))){
+        const position = reactFlowInstance.project({
+          x: event.clientX - reactflowBounds.left,
+          y: event.clientY - reactflowBounds.top,
+        });
+        let newId = getId();
+        const newNode = {
+          id: newId,
+          type: data.name === 'str' ? 'inputNode' : (data.name === 'chatInput' ? 'chatInputNode' : (data.name === 'chatOutput' ? 'chatOutputNode' : (data.name === 'bool' ? 'booleanNode' : 'genericNode'))),
+          position,
+          data: { ...data, id: newId, input: '', enabled: false, reactFlowInstance, onDelete: () => {setNodes(reactFlowInstance.getNodes().filter((n)=>n.id !== newId))} },
+        };
+        setNodes((nds) => nds.concat(newNode));
+      } else {
+        setErrorData({title: 'Error creating node', list:["There can't be more than one chat input."]})
+      }
+      
+      
     },
     [reactFlowInstance]
   );
