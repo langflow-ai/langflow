@@ -2,11 +2,12 @@ import { Bars3CenterLeftIcon, TrashIcon } from "@heroicons/react/24/outline";
 import Input from "../../components/inputComponent";
 import { nodeColors, nodeIcons, snakeToNormalCase } from "../../utils";
 import { Handle, Position } from "reactflow";
+import { useEffect } from "react";
 
 export default function InputNode({ data }) {
   return (
     <div className="prompt-node relative bg-white w-96 rounded-lg solid border flex flex-col justify-center">
-      <div className="w-full flex items-center justify-between p-4 bg-gray-50 border-b ">
+      <div className="w-full flex items-center justify-between p-4 gap-8 bg-gray-50 border-b ">
         <div className="flex items-center gap-4 text-lg">
           <Bars3CenterLeftIcon
             className="w-10 h-10 p-1 text-white rounded"
@@ -14,6 +15,13 @@ export default function InputNode({ data }) {
           />
           String
         </div>
+        <button
+          onClick={() => {
+            data.onDelete(data);
+          }}
+        >
+          <TrashIcon className="text-gray-600 w-6 h-6 hover:text-red-500"></TrashIcon>
+        </button>
       </div>
       <div className="w-full p-5 h-full">
         <Input
@@ -21,13 +29,6 @@ export default function InputNode({ data }) {
             data.text = e;
           }}
         />
-      </div>
-
-      <div className="flex w-full justify-between items-center bg-gray-50 gap-2 border-t text-gray-600 p-4 text-sm">
-        <button onClick={() => {data.onDelete(data)}}>
-          <TrashIcon className="w-6 h-6 hover:text-red-500"></TrashIcon>
-        </button>
-        <button onClick={data.onRun}></button>
       </div>
       <Handle
         type="target"
