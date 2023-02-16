@@ -4,15 +4,17 @@ import {
   PaperAirplaneIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { sendAll } from "../../controllers/NodesServices";
+import { alertContext } from "../../contexts/alertContext";
 
 const _ = require("lodash");
 
-export default function Chat({ nodes, edges }) {
+export default function Chat({ reactFlowInstance }) {
   const [open, setOpen] = useState(true);
   const [chatValue, setChatValue] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
+  const {setErrorData} = useContext(alertContext);
   const addChatHistory = (message, isSend) => {
     setChatHistory((old) => {
       let newChat = _.cloneDeep(old);
@@ -20,6 +22,12 @@ export default function Chat({ nodes, edges }) {
       return newChat;
     });
   };
+  function validateNodes(){
+    if(reactFlowInstance.getNodes().some((n) => (n.data.node && Object.keys(n.data.node.template).some((t: any) => (n.data.node.template[t].required && !reactFlowInstance.getEdges().some((e) => (e.sourceHandle.split('|')[1] === t && e.sourceHandle.split('|')[2] === n.id))))))){
+      return false;
+    }
+    return true;
+  }
   return (
     <>
       <Transition
@@ -80,14 +88,19 @@ export default function Chat({ nodes, edges }) {
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3">
                   <button
                     onClick={() => {
-                      let message = chatValue;
-                      setChatValue("");
-                      addChatHistory(message, true);
-                      sendAll({
-                        message,
-                        nodes,
-                        edges,
-                      }).then((r) => {addChatHistory(r, false)});
+                      if(validateNodes()){
+                        let message = chatValue;
+                        setChatValue("");
+                        addChatHistory(message, true);
+                        sendAll({
+                          message,
+                          nodes: reactFlowInstance.getNodes(),
+                          edges: reactFlowInstance.getEdges(),
+                        }).then((r) => {addChatHistory(r, false)});
+                      } else {
+                        setErrorData({title: 'Error sending message', list:['There are required fields not filled yet.']})
+                      }
+                      
                     }}
                   >
                     <PaperAirplaneIcon

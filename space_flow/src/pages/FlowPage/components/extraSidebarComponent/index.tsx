@@ -71,6 +71,7 @@ export default function ExtraSidebar() {
                   onDragStart(event, {
                     type: 'elements',
                     name: 'str',
+                    types,
                   })
                 }
               >
@@ -89,6 +90,7 @@ export default function ExtraSidebar() {
                   onDragStart(event, {
                     type: 'elements',
                     name: 'chatInput',
+                    types,
                   })
                 }
               >
@@ -107,6 +109,7 @@ export default function ExtraSidebar() {
                   onDragStart(event, {
                     type: 'elements',
                     name: 'chatOutput',
+                    types,
                   })
                 }
               >
@@ -125,6 +128,7 @@ export default function ExtraSidebar() {
                   onDragStart(event, {
                     type: 'elements',
                     name: 'bool',
+                    types,
                   })
                 }
               >

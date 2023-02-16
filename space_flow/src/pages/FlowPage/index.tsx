@@ -99,7 +99,7 @@ export default function FlowPage() {
         <Background />
         <Controls></Controls>
       </ReactFlow>
-      <Chat nodes={nodes} edges={edges}/>
+      <Chat reactFlowInstance={reactFlowInstance}/>
     </div>
   );
 }
