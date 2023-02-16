@@ -31,6 +31,13 @@ export default function Chat({ reactFlowInstance }) {
     }
     return true;
   }
+  function validateChatNodes(){
+    console.log(reactFlowInstance.getNodes());
+    if(!reactFlowInstance.getNodes().some((n)=> (n.type === 'chatOutputNode')) || !reactFlowInstance.getNodes().some((n)=> (n.type === 'chatInputNode'))){
+      return false;
+    }
+    return true;
+  }
   const ref = useRef(null);
   return (
     <>
@@ -95,14 +102,19 @@ export default function Chat({ reactFlowInstance }) {
                     onClick={() => {
                       if(chatValue !== ""){
                         if(validateNodes()){
-                          let message = chatValue;
-                          setChatValue("");
-                          addChatHistory(message, true);
-                          sendAll({
-                            message,
-                            nodes: JSON.stringify(reactFlowInstance.getNodes()),
-                            edges: JSON.stringify(reactFlowInstance.getEdges()),
-                          }).then((r) => {addChatHistory(r.data.messsage, false);});
+                          if(validateChatNodes()){
+                            let message = chatValue;
+                            setChatValue("");
+                            addChatHistory(message, true);
+                            sendAll({
+                              message,
+                              nodes: JSON.stringify(reactFlowInstance.getNodes()),
+                              edges: JSON.stringify(reactFlowInstance.getEdges()),
+                            }).then((r) => {addChatHistory(r.data.messsage, false);});
+                          } else {
+                            setErrorData({title: 'Error sending message', list:['Chat nodes are missing.']})
+                          }
+                        
                         } else {
                           setErrorData({title: 'Error sending message', list:['There are required fields not filled yet.']})
                         }
