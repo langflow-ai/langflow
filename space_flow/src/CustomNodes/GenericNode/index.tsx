@@ -34,9 +34,17 @@ export default function GenericNode({ data }) {
                 type="source"
                 position={Position.Left}
                 id={data.node.template[t].type}
+                isValidConnection={({ sourceHandle, targetHandle }) =>
+                  targetHandle === sourceHandle ||
+                  data.types[targetHandle] === sourceHandle ||
+                  sourceHandle === "str"
+                }
                 className="ml-1 bg-transparent border-solid border-l-8 border-y-transparent border-y-8 border-r-0 rounded-none"
-                style={{borderLeftColor: nodeColors[data.type], marginTop: ((idx*30)-50) + "px"}}
-            ></Handle>
+                style={{
+                  borderLeftColor: nodeColors[data.type],
+                  marginTop: idx * 30 - 50 + "px",
+                }}
+              ></Handle>
             </Tooltip>
           </div>
         ))}
@@ -48,14 +56,20 @@ export default function GenericNode({ data }) {
           <TrashIcon className="w-6 h-6 hover:text-red-500"></TrashIcon>
         </button>
       </div>
-      <Handle
-        type="target"
-        position={Position.Right}
-        id={data.name}
-        isValidConnection={({sourceHandle, targetHandle}) => (targetHandle === sourceHandle || data.types[targetHandle] === sourceHandle || sourceHandle === 'str')}
-        className="-mr-1 bg-transparent border-solid border-l-8 border-y-transparent border-y-8 border-r-0 rounded-none"
-        style={{borderLeftColor: nodeColors[data.type]}}
-      ></Handle>
+      <Tooltip title={"Output: " + data.name}>
+        <Handle
+          type="target"
+          position={Position.Right}
+          id={data.name}
+          isValidConnection={({ sourceHandle, targetHandle }) =>
+            targetHandle === sourceHandle ||
+            data.types[targetHandle] === sourceHandle ||
+            sourceHandle === "str"
+          }
+          className="-mr-1 bg-transparent border-solid border-l-8 border-y-transparent border-y-8 border-r-0 rounded-none"
+          style={{ borderLeftColor: nodeColors[data.type] }}
+        ></Handle>
+      </Tooltip>
     </div>
   );
 }
