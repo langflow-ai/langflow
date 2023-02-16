@@ -4,7 +4,7 @@ import {
   PaperAirplaneIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { sendAll } from "../../controllers/NodesServices";
 import { alertContext } from "../../contexts/alertContext";
 
@@ -22,12 +22,16 @@ export default function Chat({ reactFlowInstance }) {
       return newChat;
     });
   };
+  useEffect(()=>{
+    ref.current.scrollIntoView({behavior: 'smooth'});
+  }, [chatHistory])
   function validateNodes(){
     if(reactFlowInstance.getNodes().some((n) => (n.data.node && Object.keys(n.data.node.template).some((t: any) => (n.data.node.template[t].required && !reactFlowInstance.getEdges().some((e) => (e.sourceHandle.split('|')[1] === t && e.sourceHandle.split('|')[2] === n.id))))))){
       return false;
     }
     return true;
   }
+  const ref = useRef(null);
   return (
     <>
       <Transition
@@ -55,7 +59,7 @@ export default function Chat({ reactFlowInstance }) {
                 <XMarkIcon className="h-6 w-6 text-gray-600" />
               </button>
             </div>
-            <div className="w-full h-[400px] flex gap-3 mb-auto overflow-y-auto flex-col bg-gray-50 p-3 py-5">
+            <div  className="w-full h-[400px] flex gap-3 mb-auto overflow-y-auto scrollbar-hide flex-col bg-gray-50 p-3 py-5">
               {chatHistory.map((c, i) => (
                 <div key={i}>
                   {c.isSend ? (
@@ -73,6 +77,7 @@ export default function Chat({ reactFlowInstance }) {
                   )}
                 </div>
               ))}
+              <div ref={ref}></div>
             </div>
             <div className="w-full bg-white border-t flex items-center justify-between p-3">
               <div className="relative w-full mt-1 rounded-md shadow-sm">
@@ -88,18 +93,23 @@ export default function Chat({ reactFlowInstance }) {
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3">
                   <button
                     onClick={() => {
-                      if(validateNodes()){
-                        let message = chatValue;
-                        setChatValue("");
-                        addChatHistory(message, true);
-                        sendAll({
-                          message,
-                          nodes: JSON.stringify(reactFlowInstance.getNodes()),
-                          edges: JSON.stringify(reactFlowInstance.getEdges()),
-                        }).then((r) => {addChatHistory(r.data.messsage, false)});
+                      if(chatValue !== ""){
+                        if(validateNodes()){
+                          let message = chatValue;
+                          setChatValue("");
+                          addChatHistory(message, true);
+                          sendAll({
+                            message,
+                            nodes: JSON.stringify(reactFlowInstance.getNodes()),
+                            edges: JSON.stringify(reactFlowInstance.getEdges()),
+                          }).then((r) => {addChatHistory(r.data.messsage, false);});
+                        } else {
+                          setErrorData({title: 'Error sending message', list:['There are required fields not filled yet.']})
+                        }
                       } else {
-                        setErrorData({title: 'Error sending message', list:['There are required fields not filled yet.']})
+                        setErrorData({title: 'Error sending message', list:['The message cannot be empty.']})
                       }
+                      
                       
                     }}
                   >
