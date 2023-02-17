@@ -6,6 +6,7 @@ import {
   CommandLineIcon,
   WrenchScrewdriverIcon,
   ComputerDesktopIcon,
+  Bars3CenterLeftIcon,
 } from "@heroicons/react/24/outline";
 import { Edge, Node } from "reactflow";
 
@@ -96,13 +97,14 @@ export const borderLColors = {
   } */
 
 export const nodeColors = {
-  prompts: "#7C7C7C",
-  llms: "#35ADAE",
-  chains: "#FFDC35",
+  prompts: "#4367BF",
+  llms: "#6344BE",
+  chains: "#FE7500",
   agents: "#903BBE",
   tools: "#FF3434",
   memories: "#FF9135",
-  elements: "#6344BE",
+  advanced: "#000000",
+  chat: "#2563EB",
 };
 
 export const nodeNames = {
@@ -112,7 +114,9 @@ export const nodeNames = {
   agents: "Agents",
   tools: "Tools",
   memories: "Memories",
-  elements: "Elements",
+  advanced: "Advanced",
+  chat: "Chat",
+
 };
 
 export const nodeIcons = {
@@ -122,7 +126,8 @@ export const nodeIcons = {
   llms: LightBulbIcon,
   prompts: CommandLineIcon,
   tools: WrenchScrewdriverIcon,
-  elements: ComputerDesktopIcon,
+  advanced: ComputerDesktopIcon,
+  chat: Bars3CenterLeftIcon,
 };
 
 export const bgColors = {
