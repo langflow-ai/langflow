@@ -14,7 +14,7 @@ export default function ExtraSidebar() {
     });
     console.log(acc);
     return acc;
-  }, {str: 'elements', bool: 'elements'});
+  }, {str: 'advanced', bool: 'advanced', chatOutput: 'chat', chatInput: 'chat'});
 
   useEffect(() => {
     getAll().then((d) => {
@@ -62,36 +62,17 @@ export default function ExtraSidebar() {
         </DisclosureComponent>
       ))}
       <DisclosureComponent
-          button={{ title: nodeNames['elements'], Icon: nodeIcons['elements'] }}
+          button={{ title: nodeNames['chat'], Icon: nodeIcons['chat'] }}
         >
           <div className="p-2 flex flex-col gap-2">
             <div>
               <div
                 draggable
                 className={" cursor-grab border-l-8 rounded-l-md"}
-                style={{ borderLeftColor: nodeColors['elements'] }}
+                style={{ borderLeftColor: nodeColors['chat'] }}
                 onDragStart={(event) =>
                   onDragStart(event, {
-                    type: 'elements',
-                    name: 'str',
-                    types,
-                  })
-                }
-              >
-                <div className="flex w-full justify-between text-sm px-4 py-3 items-center border-dashed border-gray-400 border-l-0 rounded-md rounded-l-none border-2">
-                  <span className="text-black w-36 truncate">String</span>
-                  <Bars2Icon className="w-6 h-6 text-gray-400" />
-                </div>
-              </div>
-            </div>
-            <div>
-              <div
-                draggable
-                className={" cursor-grab border-l-8 rounded-l-md"}
-                style={{ borderLeftColor: nodeColors['elements'] }}
-                onDragStart={(event) =>
-                  onDragStart(event, {
-                    type: 'elements',
+                    type: 'chat',
                     name: 'chatInput',
                     types,
                   })
@@ -107,10 +88,10 @@ export default function ExtraSidebar() {
               <div
                 draggable
                 className={" cursor-grab border-l-8 rounded-l-md"}
-                style={{ borderLeftColor: nodeColors['elements'] }}
+                style={{ borderLeftColor: nodeColors['chat'] }}
                 onDragStart={(event) =>
                   onDragStart(event, {
-                    type: 'elements',
+                    type: 'chat',
                     name: 'chatOutput',
                     types,
                   })
@@ -122,14 +103,39 @@ export default function ExtraSidebar() {
                 </div>
               </div>
             </div>
+            </div>
+        </DisclosureComponent>
+      <DisclosureComponent
+          button={{ title: nodeNames['advanced'], Icon: nodeIcons['advanced'] }}
+        >
+          <div className="p-2 flex flex-col gap-2">
             <div>
               <div
                 draggable
                 className={" cursor-grab border-l-8 rounded-l-md"}
-                style={{ borderLeftColor: nodeColors['elements'] }}
+                style={{ borderLeftColor: nodeColors['advanced'] }}
                 onDragStart={(event) =>
                   onDragStart(event, {
-                    type: 'elements',
+                    type: 'advanced',
+                    name: 'str',
+                    types,
+                  })
+                }
+              >
+                <div className="flex w-full justify-between text-sm px-4 py-3 items-center border-dashed border-gray-400 border-l-0 rounded-md rounded-l-none border-2">
+                  <span className="text-black w-36 truncate">String</span>
+                  <Bars2Icon className="w-6 h-6 text-gray-400" />
+                </div>
+              </div>
+            </div>
+            <div>
+              <div
+                draggable
+                className={" cursor-grab border-l-8 rounded-l-md"}
+                style={{ borderLeftColor: nodeColors['advanced'] }}
+                onDragStart={(event) =>
+                  onDragStart(event, {
+                    type: 'advanced',
                     name: 'bool',
                     types,
                   })
@@ -143,6 +149,7 @@ export default function ExtraSidebar() {
             </div>
             </div>
         </DisclosureComponent>
+        
     </div>
   );
 }

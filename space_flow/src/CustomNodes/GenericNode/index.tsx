@@ -1,19 +1,11 @@
 import {
-  ArrowUpRightIcon,
   TrashIcon,
-  PlayIcon,
 } from "@heroicons/react/24/outline";
-import { Handle, Position } from "reactflow";
-import Dropdown from "../../components/dropdownComponent";
-import Input from "../../components/inputComponent";
 import {
-  isValidConnection,
   nodeColors,
   nodeIcons,
   snakeToNormalCase,
 } from "../../utils";
-import Tooltip from "../../components/TooltipComponent";
-import { useEffect, useRef, useState } from "react";
 import ParameterComponent from "./components/parameterComponent";
 
 export default function GenericNode({ data }) {
@@ -24,8 +16,8 @@ export default function GenericNode({ data }) {
       <div className="w-full flex items-center justify-between p-4 gap-8 bg-gray-50 border-b ">
         <div className="w-full flex items-center truncate gap-4 text-lg">
           <Icon
-            className="w-10 h-10 p-1 text-white rounded"
-            style={{ background: nodeColors[data.type] }}
+            className="w-10 h-10 p-1 rounded"
+            style={{ color: nodeColors[data.type] }}
           />
           <div className="truncate">{data.name}</div>
         </div>
@@ -34,7 +26,7 @@ export default function GenericNode({ data }) {
         </button>
       </div>
 
-      <div className="w-full h-full py-5 pointer-events-none">
+      <div className="w-full h-full py-5">
         <div className="w-full text-gray-500 px-5 text-sm">
           {data.node.description}
         </div>
@@ -61,6 +53,7 @@ export default function GenericNode({ data }) {
                       snakeToNormalCase(t) +
                       (data.node.template[t].required ? " (required)" : "")
                     }
+                    name={t}
                     tooltipTitle={
                       "Type: " +
                       data.node.template[t].type +
@@ -69,6 +62,7 @@ export default function GenericNode({ data }) {
                     }
                     id={data.node.template[t].type + "|" + t + "|" + data.id}
                     left={true}
+                    type={data.node.template[t].type}
                   />
                 ) : (
                   <></>
@@ -82,6 +76,7 @@ export default function GenericNode({ data }) {
             title={data.name + " | " + data.node.base_class}
             tooltipTitle={"Type: str"}
             id={data.name + "|" + data.node.base_class + "|" + data.id}
+            type={'str'}
             left={false}
           />
         </>

@@ -1,5 +1,6 @@
 import { Transition } from "@headlessui/react";
 import {
+  Bars3CenterLeftIcon,
   ChatBubbleBottomCenterTextIcon,
   PaperAirplaneIcon,
   XMarkIcon,
@@ -7,6 +8,7 @@ import {
 import { useContext, useEffect, useRef, useState } from "react";
 import { sendAll } from "../../controllers/NodesServices";
 import { alertContext } from "../../contexts/alertContext";
+import { nodeColors } from "../../utils";
 
 const _ = require("lodash");
 
@@ -26,7 +28,8 @@ export default function Chat({ reactFlowInstance }) {
     ref.current.scrollIntoView({behavior: 'smooth'});
   }, [chatHistory])
   function validateNodes(){
-    if(reactFlowInstance.getNodes().some((n) => (n.data.node && Object.keys(n.data.node.template).some((t: any) => (n.data.node.template[t].required && !reactFlowInstance.getEdges().some((e) => (e.sourceHandle.split('|')[1] === t && e.sourceHandle.split('|')[2] === n.id))))))){
+    console.log(reactFlowInstance.getNodes());
+    if(reactFlowInstance.getNodes().some((n) => (n.data.node && Object.keys(n.data.node.template).some((t: any) => ((n.data.node.template[t].required && n.data.node.template[t].value === "") && (n.data.node.template[t].required && !reactFlowInstance.getEdges().some((e) => (e.sourceHandle.split('|')[1] === t && e.sourceHandle.split('|')[2] === n.id)))))))){
       return false;
     }
     return true;
@@ -55,7 +58,7 @@ export default function Chat({ reactFlowInstance }) {
           <div className="border h-full rounded-xl rounded-b-none bg-white shadow">
             <div className="flex justify-between items-center px-5 py-3 border-b">
               <div className="flex gap-3 text-xl font-medium items-center">
-                <ChatBubbleBottomCenterTextIcon className="h-8 w-8 mt-1 text-blue-600" />
+                <Bars3CenterLeftIcon className="h-8 w-8 mt-1" style={{color: nodeColors['chat']}} />
                 Chat
               </div>
               <button
@@ -77,7 +80,7 @@ export default function Chat({ reactFlowInstance }) {
                     </div>
                   ) : (
                     <div className="w-full text-end">
-                      <div className="text-start inline-block bg-blue-600 rounded-xl p-3 overflow-hidden w-fit max-w-[280px] px-5 text-sm text-white font-normal rounded-tr-none">
+                      <div style={{color: nodeColors['chat']}} className="text-start inline-block rounded-xl p-3 overflow-hidden w-fit max-w-[280px] px-5 text-sm text-white font-normal rounded-tr-none">
                         {c.message}
                       </div>
                     </div>
@@ -154,7 +157,7 @@ export default function Chat({ reactFlowInstance }) {
               }}
             >
               <div className="flex gap-3 text-lg font-medium items-center">
-                <ChatBubbleBottomCenterTextIcon className="h-8 w-8 mt-1 text-blue-600" />
+                <Bars3CenterLeftIcon className="h-8 w-8 mt-1" style={{color: nodeColors['chat']}}/>
                 Chat
               </div>
             </button>
