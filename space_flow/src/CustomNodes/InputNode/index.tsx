@@ -44,6 +44,7 @@ export default function InputNode({ data }) {
       </div>
       <div className="w-full p-5 h-full">
         <InputComponent
+        disabled={false}
           value=""
           onChange={(e) => {
             data.text = e;

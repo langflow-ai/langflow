@@ -26,7 +26,7 @@ export default function BooleanNode({ data }) {
         </button>
       </div>
       <div className="w-full flex justify-center p-5 h-full">
-        <ToggleComponent enabled={enabled} setEnabled={(x) => {setEnabled(x); data.enabled = x}} />
+        <ToggleComponent enabled={enabled} disabled={false} setEnabled={(x) => {setEnabled(x); data.enabled = x}} />
       </div>
       <Handle
         type="target"
