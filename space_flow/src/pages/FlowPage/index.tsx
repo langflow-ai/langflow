@@ -100,7 +100,6 @@ export default function FlowPage() {
         connectionLineComponent={connection}
         onDragOver={onDragOver}
         onDrop={onDrop}
-        fitView
       >
         <Background />
         <Controls></Controls>
