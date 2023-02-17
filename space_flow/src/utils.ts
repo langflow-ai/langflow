@@ -305,6 +305,7 @@ export function toFirstUpperCase(str: string) {
 }
 
 export function snakeToNormalCase(str: string) {
+  console.log(str);
   return str
     .split("_")
     .map((word, index) => {
@@ -334,9 +335,9 @@ export function isValidConnection(
   { source, target, sourceHandle, targetHandle }
 ) {
   if (
-    targetHandle === sourceHandle.split("|")[0] ||
-    sourceHandle.split("|")[0] === "str" ||
-    data.types[targetHandle] === sourceHandle.split("|")[0]
+    targetHandle.split('|')[0] === sourceHandle.split("|")[0] ||
+    targetHandle.split('|')[1] === sourceHandle.split("|")[0] ||
+    sourceHandle.split("|")[0] === "str"
   ) {
     let sourceNode = data.reactFlowInstance.getNode(source).data.node;
     if (!sourceNode) {

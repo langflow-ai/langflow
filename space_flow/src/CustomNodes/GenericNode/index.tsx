@@ -38,37 +38,50 @@ export default function GenericNode({ data }) {
         <div className="w-full text-gray-500 px-5 text-sm">
           {data.node.description}
         </div>
-        <div className="px-5 py-2 mt-2 text-center">Inputs:</div>
+
         <>
-          {Object.keys(data.node.template).map((t, idx) => (
-            <ParameterComponent
-              key={idx}
-              data={data}
-              color={
-                nodeColors[
-                  data.types[data.node.template[t].type] ??
-                    data.node.template[t].type
-                ] ?? "gray"
-              }
-              title={snakeToNormalCase(t)}
-              tooltipTitle={
-                t +
-                ": " +
-                data.node.template[t].type +
-                (data.node.template[t].list ? " list" : "") +
-                (data.node.template[t].required ? " (required)" : "")
-              }
-              id={data.node.template[t].type + "|" + t + "|" + data.id}
-              left={true}
-            />
-          ))}
+          {Object.keys(data.node.template)
+            .filter((t) => t.charAt(0) !== "_")
+            .map((t, idx) => (
+              <>
+                {idx === 0 ? (
+                  <div className="px-5 py-2 mt-2 text-center">Inputs:</div>
+                ) : (
+                  <></>
+                )}
+                {data.node.template[t].show ? (
+                  <ParameterComponent
+                    key={idx}
+                    data={data}
+                    color={
+                      nodeColors[data.types[data.node.template[t].type]] ??
+                      "black"
+                    }
+                    title={
+                      snakeToNormalCase(t) +
+                      (data.node.template[t].required ? " (required)" : "")
+                    }
+                    tooltipTitle={
+                      "Type: " +
+                      data.node.template[t].type +
+                      (data.node.template[t].list ? " list" : "") +
+                      (data.node.template[t].required ? " (required)" : "")
+                    }
+                    id={data.node.template[t].type + "|" + t + "|" + data.id}
+                    left={true}
+                  />
+                ) : (
+                  <></>
+                )}
+              </>
+            ))}
           <div className="px-5 py-2 mt-2 text-center">Output:</div>
           <ParameterComponent
             data={data}
             color={nodeColors[data.type]}
-            title={data.name}
-            tooltipTitle={"Output: " + data.name}
-            id={data.name}
+            title={data.name + " | " + data.node.base_class}
+            tooltipTitle={"Type: str"}
+            id={data.name + "|" + data.node.base_class + "|" + data.id}
             left={false}
           />
         </>
