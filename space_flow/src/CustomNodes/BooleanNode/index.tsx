@@ -1,4 +1,4 @@
-import { Bars3CenterLeftIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { Bars3CenterLeftIcon, CheckCircleIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { Input } from "@mui/material";
 import { Handle, Position } from "reactflow";
 import { isValidConnection, nodeColors } from "../../utils";
@@ -11,9 +11,9 @@ export default function BooleanNode({ data }) {
     <div className="prompt-node relative bg-white rounded-lg solid border flex flex-col justify-center">
       <div className="w-full flex items-center justify-between gap-8 p-4 bg-gray-50 border-b ">
         <div className="flex items-center gap-4 text-lg">
-          <Bars3CenterLeftIcon
-            className="w-10 h-10 p-1 text-white rounded"
-            style={{ background: nodeColors[data.type] }}
+          <CheckCircleIcon
+            className="w-10 h-10 p-1 rounded"
+            style={{ color: nodeColors[data.type] }}
           />
           Boolean
         </div>

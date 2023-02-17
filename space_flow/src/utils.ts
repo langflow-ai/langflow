@@ -341,7 +341,7 @@ export function isValidConnection(
 ) {
   if (
     targetHandle.split('|')[0] === sourceHandle.split("|")[0] ||
-    targetHandle.split('|')[1] === sourceHandle.split("|")[0] ||
+    targetHandle.split('|').slice(2).some((t) => t === sourceHandle.split("|")[0]) ||
     sourceHandle.split("|")[0] === "str"
   ) {
     let sourceNode = data.reactFlowInstance.getNode(source).data.node;

@@ -29,8 +29,8 @@ export default function InputNode({ data }) {
       <div className="w-full flex items-center justify-between p-4 gap-8 bg-gray-50 border-b ">
         <div className="flex items-center gap-4 text-lg">
           <Bars3CenterLeftIcon
-            className="w-10 h-10 p-1 text-white rounded"
-            style={{ background: nodeColors[data.type] }}
+            className="w-10 h-10 p-1 rounded"
+            style={{ color: nodeColors[data.type] }}
           />
           String
         </div>
@@ -44,6 +44,7 @@ export default function InputNode({ data }) {
       </div>
       <div className="w-full p-5 h-full">
         <Input
+          value=""
           onChange={(e) => {
             data.text = e;
           }}

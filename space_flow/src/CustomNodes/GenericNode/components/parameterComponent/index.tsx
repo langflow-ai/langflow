@@ -18,6 +18,7 @@ export default function ParameterComponent({
   color,
   type,
   name = "",
+  required = false,
 }) {
   const ref = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
@@ -38,8 +39,8 @@ export default function ParameterComponent({
   return (
     <div ref={ref} className="w-full flex flex-wrap justify-between items-center bg-gray-50 mt-1 px-5 py-2">
       <>
-        <div className="text-sm truncate">{title}</div>
-        <Tooltip title={tooltipTitle}>
+        <div className="text-sm truncate">{title}<span className="text-red-600">{required ? " *" : ""}</span></div>
+        <Tooltip title={tooltipTitle + (required ? " (required)" : "")}>
           <Handle
             type={left ? "source" : "target"}
             position={left ? Position.Left : Position.Right}
@@ -60,6 +61,7 @@ export default function ParameterComponent({
         {left === true && type === "str" ? (
           <div className="mt-2 w-full">
             <Input
+            value={data.node.template[name].value ?? ""}
               onChange={(t) => {
                 data.node.template[name].value = t;
               }}
