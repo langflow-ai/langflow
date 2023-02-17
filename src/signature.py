@@ -24,8 +24,6 @@ router = APIRouter(
     tags=["signatures"],
 )
 
-KEYS_TO_REMOVE = ["name", "default_factory"]
-
 
 def build_template_from_function(name: str, dict: dict):
     classes = [item.__annotations__["return"].__name__ for item in dict.values()]
@@ -34,40 +32,37 @@ def build_template_from_function(name: str, dict: dict):
     if name not in classes:
         raise Exception(f"{name} not found.")
 
-    for k, v in dict.items():
+    for _type, v in dict.items():
         if v.__annotations__["return"].__name__ == name:
-            _type = k
             _class = v.__annotations__["return"]
 
             docs = util.get_class_doc(_class)
 
-            variables = {}
+            variables = {"_type": _type}
             for name, value in _class.__fields__.items():
+                if name in ["callback_manager", "requests_wrapper"]:
+                    continue
                 variables[name] = {}
                 for name_, value_ in value.__repr_args__():
-                    if name_ not in KEYS_TO_REMOVE:
+                    if name_ == "default_factory":
+                        try:
+                            variables[name]["default"] = util.get_default_factory(
+                                module=_class.__base__.__module__, function=value_
+                            )
+                        except:
+                            variables[name]["default"] = None
+                    elif name_ not in ["name"]:
                         variables[name][name_] = value_
-                variables[name]["placeholder"] = docs["Attributes"][name] if name in docs["Attributes"] else ""
+
+                variables[name]["placeholder"] = (
+                    docs["Attributes"][name] if name in docs["Attributes"] else ""
+                )
+
             return {
                 "template": util.format_dict(variables),
-                "_type": _type,
                 "description": docs["Description"],
+                "base_classes": util.get_base_classes(_class),
             }
-
-            # return {
-            #     "template": util.format_dict(
-            #         {
-            #             name: {
-            #                 name: value
-            #                 for (name, value) in value.__repr_args__()
-            #                 if name not in KEYS_TO_REMOVE
-            #             }
-            #             for name, value in _class.__fields__.items()
-            #         }
-            #     ),
-            #     "_type": _type,
-            #     "description": _class.__doc__,
-            # }
 
 
 def build_template_from_class(name: str, dict: dict):
@@ -77,41 +72,37 @@ def build_template_from_class(name: str, dict: dict):
     if name not in classes:
         raise Exception(f"{name} not found.")
 
-    for k, v in dict.items():
+    for _type, v in dict.items():
         if v.__name__ == name:
-            _type = k
             _class = v
 
             docs = util.get_class_doc(_class)
 
-            variables = {}
+            variables = {"_type": _type}
             for name, value in _class.__fields__.items():
+                if name in ["callback_manager"]:
+                    continue
                 variables[name] = {}
                 for name_, value_ in value.__repr_args__():
-                    if name_ not in KEYS_TO_REMOVE:
+                    if name_ == "default_factory":
+                        try:
+                            variables[name]["default"] = util.get_default_factory(
+                                module=_class.__base__.__module__, function=value_
+                            )
+                        except:
+                            variables[name]["default"] = None
+                    elif name_ not in ["name"]:
                         variables[name][name_] = value_
-                variables[name]["placeholder"] = docs["Attributes"][name] if name in docs["Attributes"] else ""
+
+                variables[name]["placeholder"] = (
+                    docs["Attributes"][name] if name in docs["Attributes"] else ""
+                )
 
             return {
                 "template": util.format_dict(variables),
-                "_type": _type,
                 "description": docs["Description"],
+                "base_classes": util.get_base_classes(_class),
             }
-
-            # return {
-            #     "template": util.format_dict(
-            #         {
-            #             name: {
-            #                 name: value
-            #                 for (name, value) in value.__repr_args__()
-            #                 if name not in KEYS_TO_REMOVE
-            #             }
-            #             for name, value in _class.__fields__.items()
-            #         }
-            #     ),
-            #     "_type": _type,
-            #     "description": _class.__doc__,
-            # }
 
 
 @router.get("/chain")
@@ -193,6 +184,16 @@ def tool(name: str):
         params = extra_keys
 
     return {
-        param: (type_dict[param] if param == "llm" else type_dict["str"])
-        for param in params
+        "template": {
+            param: (type_dict[param] if param == "llm" else type_dict["str"])
+            for param in params
+        },
+        **util.get_tool_params(util.get_tools_dict(name)),
+        "base_classes": ["Tool"],
     }
+
+
+#     {"template": signature.tool(tool), **values}
+#             for tool, values in tools.items()
+#         }
+# return {k: util.get_tool_params(v) for k, v in merged_dict.items()}

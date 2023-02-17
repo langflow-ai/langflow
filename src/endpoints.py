@@ -19,7 +19,7 @@ AGENT_TYPE = "conversational-react-description"
 
 @router.get("/")
 def get_all():
-    tools = list.list_tools()
+    # tools = list.list_tools()
     return {
         "chains": {chain: signature.chain(chain) for chain in list.list_chains()},
         "agents": {agent: signature.agent(agent) for agent in list.list_agents()},
@@ -41,11 +41,17 @@ def get_all():
         # },
         # "vectorstores": {"template": {}},
         # "docstores": {"template": {}},
-        "tools": {
-            tool: {"template": signature.tool(tool), **values}
-            for tool, values in tools.items()
-        },
+        # "tools": {
+        #     tool: {"template": signature.tool(tool), **values}
+        #     for tool, values in tools.items()
+        # },
+        "tools": {tool: signature.tool(tool) for tool in list.list_tools()},
     }
+
+
+@router.post("/load")
+def get_load(data: dict[str, str]) -> str:
+    return "Hello Otávio!"
 
 
 # @router.get("/chain")

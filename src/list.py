@@ -9,12 +9,7 @@ from langchain.chains.conversation import memory as memories
 from langchain import document_loaders
 from langchain import vectorstores
 from langchain import docstore
-from langchain.agents.load_tools import (
-    _BASE_TOOLS,
-    _LLM_TOOLS,
-    _EXTRA_LLM_TOOLS,
-    _EXTRA_OPTIONAL_TOOLS,
-)
+from langchain.agents.load_tools import get_all_tool_names
 import util
 
 
@@ -106,11 +101,4 @@ def list_memories():
 def list_tools():
     """List all load tools"""
 
-    merged_dict = {
-        **_BASE_TOOLS,
-        **_LLM_TOOLS,
-        **{k: v[0] for k, v in _EXTRA_LLM_TOOLS.items()},
-        **{k: v[0] for k, v in _EXTRA_OPTIONAL_TOOLS.items()},
-    }
-
-    return {k: util.get_tool_params(v) for k, v in merged_dict.items()}
+    return get_all_tool_names()
