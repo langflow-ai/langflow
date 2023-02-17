@@ -23,7 +23,7 @@ export default function ChatInputNode({ data }) {
       <Handle
         type="target"
         position={Position.Right}
-        id='str'
+        id={'str|str|'+data.id}
         isValidConnection={(connection) => isValidConnection(data,connection)}
         className="-mr-1 bg-transparent border-solid border-l-8 border-l-blue-600 border-y-transparent border-y-8 border-r-0 rounded-none"
       ></Handle>

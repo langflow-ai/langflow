@@ -10,13 +10,16 @@ export default function ExtraSidebar() {
   const types = Object.keys(data).reduce((acc, curr) => {
     Object.keys(data[curr]).forEach((c) => {
       acc[c] = curr;
+      acc[data[curr][c].base_class] = curr;
     });
+    console.log(acc);
     return acc;
   }, {str: 'elements', bool: 'elements'});
 
   useEffect(() => {
     getAll().then((d) => {
       setData(d.data);
+      console.log(d.data);
     });
   }, []);
 
