@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export default function Input({value, onChange}){
+export default function InputComponent({value, onChange}){
     const [myValue, setMyValue] = useState(value ?? "");
     return (
         <>

@@ -1,5 +1,5 @@
 import { Bars3CenterLeftIcon, TrashIcon } from "@heroicons/react/24/outline";
-import Input from "../../components/inputComponent";
+import InputComponent from "../../components/inputComponent";
 import {
   isValidConnection,
   nodeColors,
@@ -43,7 +43,7 @@ export default function InputNode({ data }) {
         </button>
       </div>
       <div className="w-full p-5 h-full">
-        <Input
+        <InputComponent
           value=""
           onChange={(e) => {
             data.text = e;

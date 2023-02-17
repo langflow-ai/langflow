@@ -6,7 +6,7 @@ import {
   snakeToNormalCase,
 } from "../../../../utils";
 import { useEffect, useRef, useState } from "react";
-import Input from "../../../../components/inputComponent";
+import InputComponent from "../../../../components/inputComponent";
 import ToggleComponent from "../../../../components/toggleComponent";
 
 export default function ParameterComponent({
@@ -60,7 +60,7 @@ export default function ParameterComponent({
         </Tooltip>
         {left === true && type === "str" ? (
           <div className="mt-2 w-full">
-            <Input
+            <InputComponent
             value={data.node.template[name].value ?? ""}
               onChange={(t) => {
                 data.node.template[name].value = t;
