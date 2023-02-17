@@ -8,6 +8,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import InputComponent from "../../../../components/inputComponent";
 import ToggleComponent from "../../../../components/toggleComponent";
+import InputListComponent from "../../../../components/inputListComponent";
 
 export default function ParameterComponent({
   left,
@@ -23,6 +24,12 @@ export default function ParameterComponent({
   const ref = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
+  function updatePos(){
+    if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
+      setPosition(ref.current.offsetTop + ref.current.clientHeight / 2);
+      updateNodeInternals(data.id);
+    }
+  }
   useEffect(() => {
     if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
       setPosition(ref.current.offsetTop + ref.current.clientHeight / 2);
@@ -60,12 +67,23 @@ export default function ParameterComponent({
         </Tooltip>
         {left === true && type === "str" ? (
           <div className="mt-2 w-full">
+            {/* data.node.template[name].list */false ? 
+            <InputListComponent
+            value={!data.node.template[name].value || data.node.template[name].value === "" ? [""] : data.node.template[name].value}
+              onChange={(t) => {
+                data.node.template[name].value = t;
+                updatePos();
+              }}
+            />
+            :
             <InputComponent
             value={data.node.template[name].value ?? ""}
               onChange={(t) => {
                 data.node.template[name].value = t;
               }}
             />
+            }
+            
           </div>
         ) : left === true && type === "bool" ? (
           <div className="mt-2">

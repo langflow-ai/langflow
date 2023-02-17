@@ -72,7 +72,7 @@ export default function GenericNode({ data }) {
           <ParameterComponent
             data={data}
             color={nodeColors[data.type]}
-            title={data.name +" |" + data.node.base_classes.map((b) => (" " + b))}
+            title={data.name}
             tooltipTitle={"Type: str"}
             id={data.name + "|" + data.id + data.node.base_classes.map((b) => ("|" + b))}
             type={'str'}
