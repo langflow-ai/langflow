@@ -24,12 +24,7 @@ export default function ParameterComponent({
   const ref = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
-  function updatePos(){
-    if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
-      setPosition(ref.current.offsetTop + ref.current.clientHeight / 2);
-      updateNodeInternals(data.id);
-    }
-  }
+  var _ = require('lodash');
   useEffect(() => {
     if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
       setPosition(ref.current.offsetTop + ref.current.clientHeight / 2);
@@ -42,6 +37,7 @@ export default function ParameterComponent({
   }, [data.id, position, updateNodeInternals]);
 
   const [enabled, setEnabled] = useState(data.node.template[name]?.value ?? false);
+  let disabled = data.reactFlowInstance.getEdges().some((e) => (e.sourceHandle === id));
 
   return (
     <div ref={ref} className="w-full flex flex-wrap justify-between items-center bg-gray-50 mt-1 px-5 py-2">
@@ -67,16 +63,17 @@ export default function ParameterComponent({
         </Tooltip>
         {left === true && type === "str" ? (
           <div className="mt-2 w-full">
-            {/* data.node.template[name].list */false ? 
+            {data.node.template[name].list ? 
             <InputListComponent
+            disabled={disabled}
             value={!data.node.template[name].value || data.node.template[name].value === "" ? [""] : data.node.template[name].value}
               onChange={(t) => {
                 data.node.template[name].value = t;
-                updatePos();
               }}
             />
             :
             <InputComponent
+            disabled={disabled}
             value={data.node.template[name].value ?? ""}
               onChange={(t) => {
                 data.node.template[name].value = t;
@@ -88,6 +85,7 @@ export default function ParameterComponent({
         ) : left === true && type === "bool" ? (
           <div className="mt-2">
             <ToggleComponent
+              disabled={disabled}
               enabled={enabled}
               setEnabled={(t) => {
                 data.node.template[name].value = t;

@@ -45,13 +45,25 @@ export default function FlowPage() {
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const onEdgesChangeMod = useCallback((s) => {
+    onEdgesChange(s);
+    setNodes((x) => {
+      let newX = _.cloneDeep(x);
+      return newX;
+    })
+  }, [_, onEdgesChange, setNodes])
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
+  var _ = require('lodash');
   const onConnect = useCallback(
     (params) => {
       /* console.log(params)
       console.log(reactFlowInstance.getNodes())
       console.log(getConnectedNodes(params,reactFlowInstance.getNodes())) */
       setEdges((eds) => addEdge({...params,className:"animate-pulse"}, eds))
+      setNodes((x) => {
+        let newX = _.cloneDeep(x);
+        return newX;
+      })
     },
     [reactFlowInstance]
   );
@@ -93,7 +105,7 @@ export default function FlowPage() {
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
+        onEdgesChange={onEdgesChangeMod}
         onConnect={onConnect}
         onInit={setReactFlowInstance}
         nodeTypes={nodeTypes}

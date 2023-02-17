@@ -1,19 +1,24 @@
 import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 var _ = require("lodash");
 
-export default function InputListComponent({ value, onChange }) {
+export default function InputListComponent({ value, onChange, disabled}) {
   const [inputList, setInputList] = useState(value ?? [""]);
-
+  useEffect(()=> {
+    if(disabled){
+        setInputList([""]);
+        onChange([""]);
+    }
+}, [disabled, onChange])
   return (
-    <div className="flex flex-col gap-3">
+    <div className={(disabled ? "pointer-events-none cursor-not-allowed" : "") + "flex flex-col gap-3"}>
       {inputList.map((i, idx) => (
         <div key={idx} className="w-full flex gap-3">
           <input
             type="text"
             value={i}
-            className="block w-full form-input rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            className={"block w-full form-input rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" + (disabled ? " bg-gray-200" : "")}
             placeholder="Type a text"
             onChange={(e) => {
               setInputList((old) => {
