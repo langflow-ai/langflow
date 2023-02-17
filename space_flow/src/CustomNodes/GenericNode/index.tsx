@@ -35,7 +35,7 @@ export default function GenericNode({ data }) {
           {Object.keys(data.node.template)
             .filter((t) => t.charAt(0) !== "_")
             .map((t, idx) => (
-              <>
+              <div key={idx}>
                 {idx === 0 ? (
                   <div className="px-5 py-2 mt-2 text-center">Inputs:</div>
                 ) : (
@@ -43,23 +43,22 @@ export default function GenericNode({ data }) {
                 )}
                 {data.node.template[t].show ? (
                   <ParameterComponent
-                    key={idx}
+                    
                     data={data}
                     color={
                       nodeColors[data.types[data.node.template[t].type]] ??
                       "black"
                     }
                     title={
-                      snakeToNormalCase(t) +
-                      (data.node.template[t].required ? " (required)" : "")
+                      snakeToNormalCase(t)
                     }
                     name={t}
                     tooltipTitle={
                       "Type: " +
                       data.node.template[t].type +
-                      (data.node.template[t].list ? " list" : "") +
-                      (data.node.template[t].required ? " (required)" : "")
+                      (data.node.template[t].list ? " list" : "")
                     }
+                    required={data.node.template[t].required}
                     id={data.node.template[t].type + "|" + t + "|" + data.id}
                     left={true}
                     type={data.node.template[t].type}
@@ -67,15 +66,15 @@ export default function GenericNode({ data }) {
                 ) : (
                   <></>
                 )}
-              </>
+              </div>
             ))}
           <div className="px-5 py-2 mt-2 text-center">Output:</div>
           <ParameterComponent
             data={data}
             color={nodeColors[data.type]}
-            title={data.name + " | " + data.node.base_class}
+            title={data.name +" |" + data.node.base_classes.map((b) => (" " + b))}
             tooltipTitle={"Type: str"}
-            id={data.name + "|" + data.node.base_class + "|" + data.id}
+            id={data.name + "|" + data.id + data.node.base_classes.map((b) => ("|" + b))}
             type={'str'}
             left={false}
           />

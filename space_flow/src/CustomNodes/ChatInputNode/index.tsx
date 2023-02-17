@@ -16,7 +16,7 @@ export default function ChatInputNode({ data }) {
             isValidConnection(data, connection)
           }
           className="ml-1 bg-transparent border-solid border-l-8 border-y-transparent border-y-8 border-r-0 rounded-none"
-          style={{ borderLeftColor: 'white' }}
+          style={{ borderLeftColor: nodeColors['chat'] }}
         ></Handle>
       </Tooltip>
         <Tooltip title={"Message: str"}>
