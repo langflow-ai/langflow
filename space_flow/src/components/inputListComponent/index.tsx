@@ -41,7 +41,6 @@ export default function InputListComponent({ value, onChange, disabled}) {
           : <button onClick={() => {setInputList((old) => {
             let newInputList = _.cloneDeep(old);
             newInputList.splice(idx, 1);
-            console.log(newInputList);
             return newInputList;
           });
           onChange(inputList);}}>

@@ -310,7 +310,6 @@ export function toFirstUpperCase(str: string) {
 }
 
 export function snakeToNormalCase(str: string) {
-  console.log(str);
   return str
     .split("_")
     .map((word, index) => {

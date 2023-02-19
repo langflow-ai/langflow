@@ -28,14 +28,12 @@ export default function Chat({ reactFlowInstance }) {
     ref.current.scrollIntoView({behavior: 'smooth'});
   }, [chatHistory])
   function validateNodes(){
-    console.log(reactFlowInstance.getNodes());
     if(reactFlowInstance.getNodes().some((n) => (n.data.node && Object.keys(n.data.node.template).some((t: any) => ((n.data.node.template[t].required && n.data.node.template[t].value === "") && (n.data.node.template[t].required && !reactFlowInstance.getEdges().some((e) => (e.sourceHandle.split('|')[1] === t && e.sourceHandle.split('|')[2] === n.id)))))))){
       return false;
     }
     return true;
   }
   function validateChatNodes(){
-    console.log(reactFlowInstance.getNodes());
     if(!reactFlowInstance.getNodes().some((n)=> (n.type === 'chatOutputNode')) || !reactFlowInstance.getNodes().some((n)=> (n.type === 'chatInputNode'))){
       return false;
     }
@@ -103,6 +101,7 @@ export default function Chat({ reactFlowInstance }) {
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3">
                   <button
                     onClick={() => {
+                      console.log(reactFlowInstance.toObject())
                       if(chatValue !== ""){
                         if(validateNodes()){
                           if(validateChatNodes()){
