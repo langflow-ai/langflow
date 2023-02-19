@@ -12,14 +12,14 @@ export default function ExtraSidebar() {
       acc[c] = curr;
       data[curr][c].base_classes?.forEach((b) => {acc[b] = curr;})
     });
-    console.log(acc);
+    // console.log(acc);
     return acc;
   }, {str: 'advanced', bool: 'advanced', chatOutput: 'chat', chatInput: 'chat'});
 
   useEffect(() => {
     getAll().then((d) => {
       setData(d.data);
-      console.log(d.data);
+      // console.log(d.data);
     });
   }, []);
 
