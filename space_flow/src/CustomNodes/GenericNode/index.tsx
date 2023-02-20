@@ -8,7 +8,7 @@ import {
 } from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
 import { typesContext } from "../../contexts/typesContext";
-import { useContext, useEffect } from "react";
+import { useContext } from "react";
 
 export default function GenericNode({ data }) {
   const {types} = useContext(typesContext);
@@ -49,6 +49,7 @@ export default function GenericNode({ data }) {
                     
                     data={data}
                     color={
+                      nodeColors[types[data.node.template[t].type]] ??
                       nodeColors[types[data.node.template[t].type]] ??
                       "black"
                     }

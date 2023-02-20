@@ -40,6 +40,31 @@ export default function ExtraSidebar() {
     });
   }, []);
 
+  useEffect(() => {
+    if(data){
+      setTypes(
+        Object.keys(data).reduce(
+          (acc, curr) => {
+            Object.keys(data[curr]).forEach((c) => {
+              acc[c] = curr;
+              data[curr][c].base_classes?.forEach((b) => {
+                acc[b] = curr;
+              });
+            });
+            // console.log(acc);
+            return acc;
+          },
+          {
+            str: "advanced",
+            bool: "advanced",
+            chatOutput: "chat",
+            chatInput: "chat",
+          }
+        )
+      );
+    }
+  }, [data, setTypes])
+
   function onDragStart(event: React.DragEvent<any>, data) {
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("json", JSON.stringify(data));
