@@ -12,7 +12,7 @@ export default function ChatInputNode({ data }) {
     <div className="prompt-node relative rounded-lg solid border flex justify-center align-center py-3 px-6 bg-gray-50" style={{color: nodeColors[types[data.type]]}}>
       <Tooltip title="Prefix: str">
         <Handle
-          type="source"
+          type="target"
           position={Position.Left}
           id={"str|Prefix|" + data.id}
           isValidConnection={(connection) =>
@@ -24,7 +24,7 @@ export default function ChatInputNode({ data }) {
       </Tooltip>
         <Tooltip title={"Message: str"}>
       <Handle
-        type="target"
+        type="source"
         position={Position.Right}
         id={'str|str|'+data.id}
         isValidConnection={(connection) => isValidConnection(data,connection)}
