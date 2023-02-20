@@ -73,7 +73,7 @@ export default function ParameterComponent({
               }}
             />
             :
-            !data.node.template[name].multiline ? (
+            data.node.template[name].multiline ? (
               <TextAreaComponent
                 disabled={disabled}
                 value={data.node.template[name].value ?? ""}
