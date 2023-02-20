@@ -7,9 +7,12 @@ import {
   snakeToNormalCase,
 } from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
+import { typesContext } from "../../contexts/typesContext";
+import { useContext } from "react";
 
 export default function GenericNode({ data }) {
   const Icon = nodeIcons[data.type];
+  const {types} = useContext(typesContext);
 
   return (
     <div className="prompt-node relative bg-white w-96 rounded-lg solid border flex flex-col justify-center">
@@ -46,7 +49,7 @@ export default function GenericNode({ data }) {
                     
                     data={data}
                     color={
-                      nodeColors[data.types[data.node.template[t].type]] ??
+                      nodeColors[types[data.node.template[t].type]] ??
                       "black"
                     }
                     title={
