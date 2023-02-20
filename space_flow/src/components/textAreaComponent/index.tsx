@@ -1,8 +1,11 @@
 import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
+import { PopUpContext } from "../../contexts/popUpContext";
+import TextAreaModal from "../../modals/textAreaModal";
 
 export default function TextAreaComponent({ value, onChange, disabled }) {
   const [myValue, setMyValue] = useState(value);
+  const { openPopUp } = useContext(PopUpContext);
   useEffect(() => {
     if (disabled) {
       setMyValue([""]);
@@ -20,7 +23,7 @@ export default function TextAreaComponent({ value, onChange, disabled }) {
         >
             {myValue !== "" ? myValue : 'Text empty'}
         </span>
-        <button onClick={()=>{}}>
+        <button onClick={()=>{openPopUp(<TextAreaModal value={myValue} setValue={(t) => {setMyValue(t); onChange(t);}}/>)}}>
             <ArrowTopRightOnSquareIcon className="w-6 h-6 hover:text-blue-600" />
         </button>
       </div>
