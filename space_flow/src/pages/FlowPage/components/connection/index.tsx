@@ -24,7 +24,6 @@ const ConnectionLineComponent = ({
   fromNode={},
 	connectionLineStyle = {} // provide a default value for connectionLineStyle
 }) => {
-//   console.log(fromNode)
 	return (
 		<g>
 			<path

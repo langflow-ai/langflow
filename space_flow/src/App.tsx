@@ -86,10 +86,10 @@ export default function App() {
 
   const userNavigation = [
     { name: "Your Projects", href: "/" },
-    {
-      name: "Account settings",
-      href: "http://localhost:4455/.ory/kratos/public/self-service/settings/browser",
-    },
+    // {
+    //   name: "Account settings",
+    //   href: "http://localhost:4455/.ory/kratos/public/self-service/settings/browser",
+    // },
     { name: "Sign out", href: "/" },
   ];
 
