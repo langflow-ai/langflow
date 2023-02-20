@@ -3,17 +3,19 @@ import { Input } from "@mui/material";
 import { Handle, Position } from "reactflow";
 import { isValidConnection, nodeColors } from "../../utils";
 import ToggleComponent from "../../components/toggleComponent";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
+import { typesContext } from "../../contexts/typesContext";
 
 export default function BooleanNode({ data }) {
   const [enabled, setEnabled] = useState(false);
+  const {types} = useContext(typesContext);
   return (
     <div className="prompt-node relative bg-white rounded-lg solid border flex flex-col justify-center">
       <div className="w-full flex items-center justify-between gap-8 p-4 bg-gray-50 border-b ">
         <div className="flex items-center gap-4 text-lg">
           <CheckCircleIcon
             className="w-10 h-10 p-1 rounded"
-            style={{ color: nodeColors[data.type] }}
+            style={{ color: nodeColors[types[data.type]] }}
           />
           Boolean
         </div>
@@ -26,15 +28,15 @@ export default function BooleanNode({ data }) {
         </button>
       </div>
       <div className="w-full flex justify-center p-5 h-full">
-        <ToggleComponent enabled={enabled} disabled={false} setEnabled={(x) => {setEnabled(x); data.enabled = x}} />
+        <ToggleComponent enabled={enabled} disabled={false} setEnabled={(x) => {setEnabled(x); data.value = x}} />
       </div>
       <Handle
         type="target"
         position={Position.Right}
-        id={data.name}
+        id={data.type}
         isValidConnection={(connection) => isValidConnection(data,connection)}
         className="-mr-1 bg-transparent border-solid border-l-8 border-y-transparent border-y-8 border-r-0 rounded-none"
-        style={{ borderLeftColor: nodeColors[data.type] }}
+        style={{ borderLeftColor: nodeColors[types[data.type]] }}
       ></Handle>
     </div>
   );

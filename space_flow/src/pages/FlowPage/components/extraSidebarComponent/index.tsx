@@ -17,18 +17,12 @@ export default function ExtraSidebar() {
   useEffect(() => {
     getAll().then((d) => {
       setData(d.data);
-      // console.log(d.data);
-    });
-  }, []);
-
-  useEffect(() => {
-    if(data){
       setTypes(
-        Object.keys(data).reduce(
+        Object.keys(d.data).reduce(
           (acc, curr) => {
-            Object.keys(data[curr]).forEach((c) => {
+            Object.keys(d.data[curr]).forEach((c) => {
               acc[c] = curr;
-              data[curr][c].base_classes?.forEach((b) => {
+              d.data[curr][c].base_classes?.forEach((b) => {
                 acc[b] = curr;
               });
             });
@@ -43,8 +37,8 @@ export default function ExtraSidebar() {
           }
         )
       );
-    }
-  }, [data, setTypes])
+    });
+  }, []);
 
   function onDragStart(event: React.DragEvent<any>, data) {
     event.dataTransfer.effectAllowed = "move";
@@ -67,8 +61,7 @@ export default function ExtraSidebar() {
                   style={{ borderLeftColor: nodeColors[d] }}
                   onDragStart={(event) =>
                     onDragStart(event, {
-                      type: d,
-                      name: t,
+                      type: t,
                       node: data[d][t],
                     })
                   }
@@ -94,8 +87,8 @@ export default function ExtraSidebar() {
               style={{ borderLeftColor: nodeColors["chat"] }}
               onDragStart={(event) =>
                 onDragStart(event, {
-                  type: "chat",
-                  name: "chatInput",
+                  type: "chatInput",
+                  node: {},
                 })
               }
             >
@@ -112,8 +105,8 @@ export default function ExtraSidebar() {
               style={{ borderLeftColor: nodeColors["chat"] }}
               onDragStart={(event) =>
                 onDragStart(event, {
-                  type: "chat",
-                  name: "chatOutput",
+                  type: "chatOutput",
+                  node: {},
                 })
               }
             >
@@ -136,8 +129,8 @@ export default function ExtraSidebar() {
               style={{ borderLeftColor: nodeColors["advanced"] }}
               onDragStart={(event) =>
                 onDragStart(event, {
-                  type: "advanced",
-                  name: "str",
+                  type: "str",
+                  node: {},
                 })
               }
             >
@@ -154,8 +147,8 @@ export default function ExtraSidebar() {
               style={{ borderLeftColor: nodeColors["advanced"] }}
               onDragStart={(event) =>
                 onDragStart(event, {
-                  type: "advanced",
-                  name: "bool",
+                  type: "bool",
+                  node: {},
                 })
               }
             >
