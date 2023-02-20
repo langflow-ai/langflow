@@ -113,7 +113,6 @@ export default function ExtraSidebar() {
               onDragStart={(event) =>
                 onDragStart(event, {
                   type: "chatInput",
-                  node: {},
                 })
               }
             >
@@ -131,7 +130,6 @@ export default function ExtraSidebar() {
               onDragStart={(event) =>
                 onDragStart(event, {
                   type: "chatOutput",
-                  node: {},
                 })
               }
             >
@@ -155,7 +153,6 @@ export default function ExtraSidebar() {
               onDragStart={(event) =>
                 onDragStart(event, {
                   type: "str",
-                  node: {},
                 })
               }
             >
@@ -173,7 +170,6 @@ export default function ExtraSidebar() {
               onDragStart={(event) =>
                 onDragStart(event, {
                   type: "bool",
-                  node: {},
                 })
               }
             >
