@@ -141,7 +141,7 @@ export default function FlowPage() {
         onDrop={onDrop}
       >
         <Background />
-        <Controls></Controls>
+        <Controls ></Controls>
       </ReactFlow>
       <Chat reactFlowInstance={reactFlowInstance} />
     </div>

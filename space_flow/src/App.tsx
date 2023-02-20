@@ -12,6 +12,8 @@ import { locationContext } from "./contexts/locationContext";
 import FlowPage from "./pages/FlowPage";
 import Sidebar from "./components/SidebarComponent";
 import Header from "./components/HeaderComponent";
+import { TabsProvider } from "./contexts/tabsContext";
+import { TabsManager } from "./pages/FlowPage/flowManager";
 
 export default function App() {
   var _ = require("lodash");
@@ -108,7 +110,9 @@ export default function App() {
           <main className="min-w-0 flex-1 border-t border-gray-200 flex">
             {/* Primary column */}
             <div className="w-full h-full">
-              <FlowPage />
+              <TabsProvider>
+                <TabsManager></TabsManager>
+              </TabsProvider>
             </div>
           </main>
         </div>
