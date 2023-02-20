@@ -23,19 +23,20 @@ export const TabsContext = createContext<TabsContextType>(TabsContextInitialValu
 
 export function TabsProvider({children}){
     const [tabIndex,setTabIndex] = useState(0)
-    const [flows,setFlows] = useState<Array<flow>>(JSON.parse(window.sessionStorage.getItem('tabs'))??[])
+    const [flows,setFlows] = useState<Array<flow>>([])
     function removeFlow(index:number){
         let newFlows = flows
-        newFlows.splice(index)
+        newFlows.splice(index,1)
         window.sessionStorage.setItem('tabs',JSON.stringify(newFlows))
         setFlows(newFlows)
     }
-    function addFlow(newFlow:flow){
-        let newFlows = [...flows,newFlow]
-        window.sessionStorage.setItem('tabs',JSON.stringify(newFlows))
-        setFlows(newFlows)
-        
-    }
+    function addFlow(newFlow: flow) {
+        setFlows(prevState => {
+          const newFlows = [...prevState, newFlow];
+          window.sessionStorage.setItem('tabs', JSON.stringify(newFlows));
+          return newFlows;
+        });
+      }
 
     return(
         <TabsContext.Provider value={{tabIndex,setTabIndex,flows,removeFlow,addFlow}}>
