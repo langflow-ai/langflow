@@ -8,11 +8,11 @@ import {
 } from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
 import { typesContext } from "../../contexts/typesContext";
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 
 export default function GenericNode({ data }) {
-  const Icon = nodeIcons[data.type];
   const {types} = useContext(typesContext);
+  const Icon = nodeIcons[types[data.type]];
 
   return (
     <div className="prompt-node relative bg-white w-96 rounded-lg solid border flex flex-col justify-center">
@@ -20,9 +20,9 @@ export default function GenericNode({ data }) {
         <div className="w-full flex items-center truncate gap-4 text-lg">
           <Icon
             className="w-10 h-10 p-1 rounded"
-            style={{ color: nodeColors[data.type] }}
+            style={{ color: nodeColors[types[data.type]] }}
           />
-          <div className="truncate">{data.name}</div>
+          <div className="truncate">{data.type}</div>
         </div>
         <button onClick={data.onDelete}>
           <TrashIcon className="w-6 h-6 hover:text-red-500"></TrashIcon>
@@ -74,10 +74,10 @@ export default function GenericNode({ data }) {
           <div className="px-5 py-2 mt-2 text-center">Output:</div>
           <ParameterComponent
             data={data}
-            color={nodeColors[data.type]}
-            title={data.name}
+            color={nodeColors[types[data.type]]}
+            title={data.type}
             tooltipTitle={"Type: str"}
-            id={data.name + "|" + data.id + data.node.base_classes.map((b) => ("|" + b))}
+            id={data.type + "|" + data.id + data.node.base_classes.map((b) => ("|" + b))}
             type={'str'}
             left={false}
           />

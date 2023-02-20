@@ -80,8 +80,8 @@ export default function FlowPage() {
       const reactflowBounds = reactFlowWrapper.current.getBoundingClientRect();
       let data = JSON.parse(event.dataTransfer.getData("json"));
       if (
-        data.name !== "chatInput" ||
-        (data.name === "chatInput" &&
+        data.type !== "chatInput" ||
+        (data.type === "chatInput" &&
           !reactFlowInstance.getNodes().some((n) => n.type === "chatInputNode"))
       ) {
         const position = reactFlowInstance.project({
@@ -89,24 +89,24 @@ export default function FlowPage() {
           y: event.clientY - reactflowBounds.top,
         });
         let newId = getId();
+        
         const newNode = {
           id: newId,
           type:
-            data.name === "str"
+            (data.type === "str"
               ? "inputNode"
-              : data.name === "chatInput"
+              : (data.type === "chatInput"
               ? "chatInputNode"
-              : data.name === "chatOutput"
+              : (data.type === "chatOutput"
               ? "chatOutputNode"
-              : data.name === "bool"
+              : (data.type === "bool"
               ? "booleanNode"
-              : "genericNode",
+              : "genericNode")))),
           position,
           data: {
             ...data,
             id: newId,
-            input: "",
-            enabled: false,
+            value: null,
             reactFlowInstance,
             onDelete: () => {
               setNodes(

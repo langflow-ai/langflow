@@ -7,10 +7,12 @@ import {
   snakeToNormalCase,
 } from "../../utils";
 import { Handle, Position } from "reactflow";
-import { useEffect } from "react";
+import { useContext, useEffect } from "react";
 import Tooltip from "../../components/TooltipComponent";
+import { typesContext } from "../../contexts/typesContext";
 
 export default function InputNode({ data }) {
+  const {types} = useContext(typesContext);
   return (
     <div className="prompt-node relative bg-white w-96 rounded-lg solid border flex flex-col justify-center">
       <Tooltip title="Prefix: str">
@@ -22,7 +24,7 @@ export default function InputNode({ data }) {
             isValidConnection(data, connection)
           }
           className="ml-1 bg-transparent border-solid border-l-8 border-y-transparent border-y-8 border-r-0 rounded-none"
-          style={{ borderLeftColor: nodeColors[data.type] }}
+          style={{ borderLeftColor: nodeColors[types[data.type]] }}
         ></Handle>
       </Tooltip>
 
@@ -30,7 +32,7 @@ export default function InputNode({ data }) {
         <div className="flex items-center gap-4 text-lg">
           <Bars3CenterLeftIcon
             className="w-10 h-10 p-1 rounded"
-            style={{ color: nodeColors[data.type] }}
+            style={{ color: nodeColors[types[data.type]] }}
           />
           String
         </div>
@@ -47,17 +49,17 @@ export default function InputNode({ data }) {
         disabled={false}
           value=""
           onChange={(e) => {
-            data.text = e;
+            data.value = e;
           }}
         />
       </div>
       <Handle
         type="target"
         position={Position.Right}
-        id={data.name}
+        id={data.type}
         isValidConnection={(connection) => isValidConnection(data, connection)}
         className="-mr-1 bg-transparent border-solid border-l-8 border-y-transparent border-y-8 border-r-0 rounded-none"
-        style={{ borderLeftColor: nodeColors[data.type] }}
+        style={{ borderLeftColor: nodeColors[types[data.type]] }}
       ></Handle>
     </div>
   );
