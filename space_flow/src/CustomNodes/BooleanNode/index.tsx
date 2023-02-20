@@ -31,7 +31,7 @@ export default function BooleanNode({ data }) {
         <ToggleComponent enabled={enabled} disabled={false} setEnabled={(x) => {setEnabled(x); data.value = x}} />
       </div>
       <Handle
-        type="target"
+        type="source"
         position={Position.Right}
         id={data.type}
         isValidConnection={(connection) => isValidConnection(data,connection)}
