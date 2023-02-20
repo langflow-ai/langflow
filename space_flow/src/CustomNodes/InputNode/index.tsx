@@ -10,9 +10,10 @@ import { Handle, Position } from "reactflow";
 import { useContext, useEffect } from "react";
 import Tooltip from "../../components/TooltipComponent";
 import { typesContext } from "../../contexts/typesContext";
+import TextAreaComponent from "../../components/textAreaComponent";
 
 export default function InputNode({ data }) {
-  const {types} = useContext(typesContext);
+  const { types } = useContext(typesContext);
   return (
     <div className="prompt-node relative bg-white w-96 rounded-lg solid border flex flex-col justify-center">
       <Tooltip title="Prefix: str">
@@ -45,13 +46,14 @@ export default function InputNode({ data }) {
         </button>
       </div>
       <div className="w-full p-5 h-full">
-        <InputComponent
-        disabled={false}
-          value=""
-          onChange={(e) => {
-            data.value = e;
-          }}
-        />
+        
+          <InputComponent
+            disabled={false}
+            value=""
+            onChange={(e) => {
+              data.value = e;
+            }}
+          />
       </div>
       <Handle
         type="target"
