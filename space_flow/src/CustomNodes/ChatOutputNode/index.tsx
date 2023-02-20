@@ -12,7 +12,7 @@ export default function ChatOutputNode({ data }) {
     <div className="prompt-node relative rounded-lg solid border flex justify-center align-center py-3 px-6 bg-gray-50" style={{color: nodeColors[types[data.type]]}}>
       <Tooltip title="Message: str">
         <Handle
-          type="source"
+          type="target"
           isValidConnection={(connection) => isValidConnection(data,connection)}
           position={Position.Left}
           id={"str|output|"+data.id}

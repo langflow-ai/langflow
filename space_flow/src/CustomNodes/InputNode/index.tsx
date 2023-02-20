@@ -18,7 +18,7 @@ export default function InputNode({ data }) {
     <div className="prompt-node relative bg-white w-96 rounded-lg solid border flex flex-col justify-center">
       <Tooltip title="Prefix: str">
         <Handle
-          type="source"
+          type="target"
           position={Position.Left}
           id={"str|Prefix|" + data.id}
           isValidConnection={(connection) =>
@@ -56,7 +56,7 @@ export default function InputNode({ data }) {
           />
       </div>
       <Handle
-        type="target"
+        type="source"
         position={Position.Right}
         id={data.type}
         isValidConnection={(connection) => isValidConnection(data, connection)}

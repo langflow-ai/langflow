@@ -329,7 +329,7 @@ export function getConnectedNodes(edge: Edge, nodes: Array<Node>): Array<Node> {
   const sourceId = edge.source;
   const targetId = edge.target;
   const connectedNodes = nodes.filter(
-    (node) => node.id === sourceId || node.id === targetId
+    (node) => node.id === targetId || node.id === sourceId
   );
   return connectedNodes;
 }
@@ -339,25 +339,25 @@ export function isValidConnection(
   { source, target, sourceHandle, targetHandle }
 ) {
   if (
-    targetHandle.split('|')[0] === sourceHandle.split("|")[0] ||
-    targetHandle.split('|').slice(2).some((t) => t === sourceHandle.split("|")[0]) ||
-    sourceHandle.split("|")[0] === "str"
+    sourceHandle.split('|')[0] === targetHandle.split("|")[0] ||
+    sourceHandle.split('|').slice(2).some((t) => t === targetHandle.split("|")[0]) ||
+    targetHandle.split("|")[0] === "str"
   ) {
-    let sourceNode = data.reactFlowInstance.getNode(source).data.node;
-    if (!sourceNode) {
+    let targetNode = data.reactFlowInstance.getNode(target).data.node;
+    if (!targetNode) {
       if (
         !data.reactFlowInstance
           .getEdges()
-          .find((e) => e.sourceHandle === sourceHandle)
+          .find((e) => e.targetHandle === targetHandle)
       ) {
         return true;
       }
     } else if (
-      (!sourceNode.template[sourceHandle.split("|")[1]].list &&
+      (!targetNode.template[targetHandle.split("|")[1]].list &&
         !data.reactFlowInstance
           .getEdges()
-          .find((e) => e.sourceHandle === sourceHandle)) ||
-      sourceNode.template[sourceHandle.split("|")[1]].list
+          .find((e) => e.targetHandle === targetHandle)) ||
+      targetNode.template[targetHandle.split("|")[1]].list
     ) {
       return true;
     }
