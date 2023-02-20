@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import InputComponent from "../../../../components/inputComponent";
 import ToggleComponent from "../../../../components/toggleComponent";
 import InputListComponent from "../../../../components/inputListComponent";
+import TextAreaComponent from "../../../../components/textAreaComponent";
 
 export default function ParameterComponent({
   left,
@@ -72,6 +73,15 @@ export default function ParameterComponent({
               }}
             />
             :
+            !data.node.template[name].multiline ? (
+              <TextAreaComponent
+                disabled={disabled}
+                value={data.node.template[name].value ?? ""}
+                onChange={(t) => {
+                  data.node.template[name].value = t;
+                }}
+              />
+            ) : 
             <InputComponent
             disabled={disabled}
             value={data.node.template[name].value ?? ""}
