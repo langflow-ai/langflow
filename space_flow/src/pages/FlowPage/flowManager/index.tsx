@@ -1,52 +1,27 @@
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import FlowPage from '..';
-import 'react-tabs/style/react-tabs.css';
+import { TabsContext } from '../../../contexts/tabsContext';
+import TabComponent from './tabComponent';
+var _ = require("lodash");
 
-interface FlowTabProps {
-  flow:any;
-}
-
-function FlowTab() {
-  return (
-    <FlowPage></FlowPage>
-  );
-}
-
-function App() {
-  const [flows, setFlows] = useState([]); // Start with one flow
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  function onElementsChange(flowIndex: number, elements: any[]) {
-    setFlows((prevFlows) => {
-      const newFlows = [...prevFlows];
-      newFlows[flowIndex] = elements;
-      return newFlows;
-    });
+export function TabsManager(){
+  const {flows,addFlow} = useContext(TabsContext);
+  if(flows.length===0){
+    addFlow({name:"untitled",flow:null,id:_.uniqueId()})
   }
 
-  function addTab() {
-    setFlows([...flows, []]); // Add a new flow to the state
-    setActiveIndex(flows.length); // Activate the new tab
-  }
-
-  return (
-    <Tabs selectedIndex={activeIndex} onSelect={setActiveIndex}>
+  return(
+    <Tabs className="h-full w-full flex flex-col">
       <TabList>
-        {flows.map((flow, index) => (
-          <Tab key={index}>Flow {index + 1}</Tab>
-        ))}
-        <button onClick={addTab}>+</button> {/* Render the plus button */}
+        {flows.map(flow=><Tab key={flow.id}><TabComponent>{flow.name}</TabComponent></Tab>)}
+        <Tab><button>+</button></Tab>
       </TabList>
-
-      {flows.map((flow, index) => (
-        <TabPanel key={index}>
-          <FlowTab />
-        </TabPanel>
-      ))}
+      {flows.map(flow=><TabPanel key={flow.id} className="h-full w-full"><FlowPage></FlowPage></TabPanel>)}
     </Tabs>
-  );
+  )
 }
+
 /*
 tabs initial logic
 TO DO
