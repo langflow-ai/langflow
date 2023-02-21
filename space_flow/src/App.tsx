@@ -98,7 +98,7 @@ export default function App() {
   return (
     //need parent component with width and height
     <div className="h-full flex flex-col">
-      <ReactFlowProvider>
+      
         <div className="flex grow-0 shrink basis-auto">
           <Header userNavigation={userNavigation} user={user}></Header>
         </div>
@@ -146,7 +146,6 @@ export default function App() {
             </div>
           ))}
         </div>
-      </ReactFlowProvider>
     </div>
   );
 }
