@@ -1,4 +1,4 @@
-import { useContext, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import FlowPage from '..';
 import { TabsContext } from '../../../contexts/tabsContext';
@@ -6,19 +6,22 @@ import TabComponent from './tabComponent';
 var _ = require("lodash");
 
 export function TabsManager(){
-  const {flows,addFlow} = useContext(TabsContext);
-  if(flows.length===0){
-    addFlow({name:"untitled",flow:null,id:_.uniqueId()})
-  }
-
+  const {flows,addFlow,tabIndex,setTabIndex} = useContext(TabsContext);
+  useEffect(()=>{
+    if(flows.length===0){
+      addFlow({name:"untitled",flow:null,id:_.uniqueId()})
+      addFlow({name:"untitle",flow:null,id:_.uniqueId()})
+    }
+  },[])
+  
   return(
-    <Tabs className="h-full w-full flex flex-col">
-      <TabList>
-        {flows.map(flow=><Tab key={flow.id}><TabComponent>{flow.name}</TabComponent></Tab>)}
-        <Tab><button>+</button></Tab>
-      </TabList>
-      {flows.map(flow=><TabPanel key={flow.id} className="h-full w-full"><FlowPage></FlowPage></TabPanel>)}
-    </Tabs>
+    <div className="h-full w-full flex flex-col">
+      <div className="w-full flex pr-2 flex-row gap-2">
+        {flows.map((flow,index)=>{
+          return(<TabComponent key={index}>{flow.name}</TabComponent>)
+        })}
+      </div>
+    </div>
   )
 }
 
