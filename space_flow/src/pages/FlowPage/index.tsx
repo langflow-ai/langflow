@@ -136,6 +136,7 @@ export default function FlowPage() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChangeMod}
         onConnect={onConnect}
+        onLoad={setReactFlowInstance}
         onInit={setReactFlowInstance}
         nodeTypes={nodeTypes}
         connectionLineComponent={connection}
