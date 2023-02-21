@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from langchain import chains
 from langchain import agents
@@ -15,8 +15,6 @@ from langchain.agents.load_tools import (
     _EXTRA_OPTIONAL_TOOLS,
 )
 import util
-import list
-import inspect
 
 # build router
 router = APIRouter(
@@ -25,14 +23,16 @@ router = APIRouter(
 )
 
 
-def build_template_from_function(name: str, dict: dict):
-    classes = [item.__annotations__["return"].__name__ for item in dict.values()]
+def build_template_from_function(name: str, type_to_loader_dict: dict):
+    classes = [
+        item.__annotations__["return"].__name__ for item in type_to_loader_dict.values()
+    ]
 
     # Raise error if name is not in chains
     if name not in classes:
-        raise Exception(f"{name} not found.")
+        raise ValueError(f"{name} not found")
 
-    for _type, v in dict.items():
+    for _type, v in type_to_loader_dict.items():
         if v.__annotations__["return"].__name__ == name:
             _class = v.__annotations__["return"]
 
@@ -49,7 +49,7 @@ def build_template_from_function(name: str, dict: dict):
                             variables[name]["default"] = util.get_default_factory(
                                 module=_class.__base__.__module__, function=value_
                             )
-                        except:
+                        except Exception:
                             variables[name]["default"] = None
                     elif name_ not in ["name"]:
                         variables[name][name_] = value_
@@ -65,14 +65,14 @@ def build_template_from_function(name: str, dict: dict):
             }
 
 
-def build_template_from_class(name: str, dict: dict):
-    classes = [item.__name__ for item in dict.values()]
+def build_template_from_class(name: str, type_to_cls_dict: dict):
+    classes = [item.__name__ for item in type_to_cls_dict.values()]
 
     # Raise error if name is not in chains
     if name not in classes:
-        raise Exception(f"{name} not found.")
+        raise ValueError(f"{name} not found.")
 
-    for _type, v in dict.items():
+    for _type, v in type_to_cls_dict.items():
         if v.__name__ == name:
             _class = v
 
@@ -89,7 +89,7 @@ def build_template_from_class(name: str, dict: dict):
                             variables[name]["default"] = util.get_default_factory(
                                 module=_class.__base__.__module__, function=value_
                             )
-                        except:
+                        except Exception:
                             variables[name]["default"] = None
                     elif name_ not in ["name"]:
                         variables[name][name_] = value_
@@ -106,23 +106,39 @@ def build_template_from_class(name: str, dict: dict):
 
 
 @router.get("/chain")
-def chain(name: str):
-    return build_template_from_function(name, chains.loading.type_to_loader_dict)
+def get_chain(name: str):
+    """Get the signature of a chain."""
+    try:
+        return build_template_from_function(name, chains.loading.type_to_loader_dict)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Chain not found") from exc
 
 
 @router.get("/agent")
-def agent(name: str):
-    return build_template_from_class(name, agents.loading.AGENT_TO_CLASS)
+def get_agent(name: str):
+    """Get the signature of an agent."""
+    try:
+        return build_template_from_class(name, agents.loading.AGENT_TO_CLASS)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Agent not found") from exc
 
 
 @router.get("/prompt")
-def prompt(name: str):
-    return build_template_from_function(name, prompts.loading.type_to_loader_dict)
+def get_prompt(name: str):
+    """Get the signature of a prompt."""
+    try:
+        return build_template_from_function(name, prompts.loading.type_to_loader_dict)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Prompt not found") from exc
 
 
 @router.get("/llm")
-def llm(name: str):
-    return build_template_from_class(name, llms.type_to_cls_dict)
+def get_llm(name: str):
+    """Get the signature of an llm."""
+    try:
+        return build_template_from_class(name, llms.type_to_cls_dict)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="LLM not found") from exc
 
 
 # @router.get("/utility")
@@ -138,8 +154,12 @@ def llm(name: str):
 
 
 @router.get("/memory")
-def memory(name: str):
-    return build_template_from_class(name, memories.type_to_cls_dict)
+def get_memory(name: str):
+    """Get the signature of a memory."""
+    try:
+        return build_template_from_class(name, memories.type_to_cls_dict)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Memory not found") from exc
 
 
 # @router.get("/document_loader")
@@ -155,10 +175,11 @@ def memory(name: str):
 
 
 @router.get("/tool")
-def tool(name: str):
+def get_tool(name: str):
+    """Get the signature of a tool."""
     # Raise error if name is not in tools
     if name not in get_all_tool_names():
-        raise Exception(f"Tool {name} not found.")
+        raise HTTPException(status_code=404, detail=f"Tool {name} not found.")
 
     type_dict = {
         "str": {

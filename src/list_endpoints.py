@@ -22,6 +22,7 @@ router = APIRouter(
 
 @router.get("/")
 def read_items():
+    """List all components"""
     return [
         "chains",
         "agents",

@@ -35,6 +35,7 @@ def get_default_factory(module: str, function: str):
 
 
 def get_tools_dict(name: Optional[str] = None):
+    """Get the tools dictionary."""
     tools = {
         **_BASE_TOOLS,
         **_LLM_TOOLS,

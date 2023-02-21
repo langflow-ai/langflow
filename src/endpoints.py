@@ -1,44 +1,43 @@
-from fastapi import APIRouter, FastAPI
-from langchain import OpenAI
-from langchain.agents import initialize_agent
-from interface import (
-    DictableChain,
-    DictableConversationalAgent,
-    DictableMemory,
-    DictableTool,
-)
+from fastapi import APIRouter
 import signature
-import list
+import list_endpoints
 
 # build router
 router = APIRouter()
 
 
 def get_type_list():
-    all = get_all()
+    all_types = get_all()
 
-    all.pop("tools")
+    all_types.pop("tools")
 
-    for key, value in all.items():
-        all[key] = [item["template"]["_type"] for item in value.values()]
+    for key, value in all_types.items():
+        all_types[key] = [item["template"]["_type"] for item in value.values()]
 
-    return all
+    return all_types
 
 
 @router.get("/")
 def get_all():
     return {
-        "chains": {chain: signature.chain(chain) for chain in list.list_chains()},
-        "agents": {agent: signature.agent(agent) for agent in list.list_agents()},
-        "prompts": {prompt: signature.prompt(prompt) for prompt in list.list_prompts()},
-        "llms": {llm: signature.llm(llm) for llm in list.list_llms()},
+        "chains": {
+            chain: signature.chain(chain) for chain in list_endpoints.list_chains()
+        },
+        "agents": {
+            agent: signature.agent(agent) for agent in list_endpoints.list_agents()
+        },
+        "prompts": {
+            prompt: signature.prompt(prompt) for prompt in list_endpoints.list_prompts()
+        },
+        "llms": {llm: signature.llm(llm) for llm in list_endpoints.list_llms()},
         # "utilities": {
         #     "template": {
         #         # utility: templates.utility(utility) for utility in list.list_utilities()
         #     }
         # },
         "memories": {
-            memory: signature.memory(memory) for memory in list.list_memories()
+            memory: signature.memory(memory)
+            for memory in list_endpoints.list_memories()
         },
         # "document_loaders": {
         #     "template": {
@@ -52,7 +51,7 @@ def get_all():
         #     tool: {"template": signature.tool(tool), **values}
         #     for tool, values in tools.items()
         # },
-        "tools": {tool: signature.tool(tool) for tool in list.list_tools()},
+        "tools": {tool: signature.tool(tool) for tool in list_endpoints.list_tools()},
     }
 
 

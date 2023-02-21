@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from endpoints import router as endpoints_router
-from list import router as list_router
+from list_endpoints import router as list_router
 from signature import router as signatures_router
 from fastapi.middleware.cors import CORSMiddleware
 
