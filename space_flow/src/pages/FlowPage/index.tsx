@@ -5,6 +5,7 @@ import ReactFlow, {
   addEdge,
   useEdgesState,
   useNodesState,
+  ReactFlowProvider,
 } from "reactflow";
 import { locationContext } from "../../contexts/locationContext";
 import ExtraSidebar from "./components/extraSidebarComponent";
@@ -128,6 +129,7 @@ export default function FlowPage() {
 
   return (
     <div className="w-full h-full" ref={reactFlowWrapper}>
+      <ReactFlowProvider>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -144,6 +146,7 @@ export default function FlowPage() {
         <Controls ></Controls>
       </ReactFlow>
       <Chat reactFlowInstance={reactFlowInstance} />
+      </ReactFlowProvider>
     </div>
   );
 }
