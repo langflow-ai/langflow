@@ -16,8 +16,11 @@ export default function ChatOutputNode({ data }) {
           isValidConnection={(connection) => isValidConnection(data,connection)}
           position={Position.Left}
           id={"str|output|"+data.id}
-          className="ml-1 bg-transparent border-solid border-l-8 border-y-transparent border-y-8 border-r-0 rounded-none"
-          style={{borderLeftColor: nodeColors['chat']}}
+          className={"-ml-0.5 w-3 h-3 rounded-full border-2 bg-white"
+          }
+          style={{
+            borderColor: nodeColors[types[data.type]],
+          }}
         ></Handle>
       </Tooltip>
 
