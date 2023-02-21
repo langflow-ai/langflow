@@ -16,9 +16,19 @@ export function TabsManager(){
   
   return(
     <div className="h-full w-full flex flex-col">
-      <div className="w-full flex pr-2 flex-row gap-2">
+      <div className="w-full flex pr-2 flex-row text-center items-center">
         {flows.map((flow,index)=>{
-          return(<TabComponent key={index}>{flow.name}</TabComponent>)
+          return(<TabComponent selected={index===tabIndex} key={index}><div onClick={()=>setTabIndex(index)}>{flow.name}</div></TabComponent>)
+        })}
+      </div>
+      <div className='w-full h-full'>
+        {flows.map((flow,index)=>{
+          return(
+            <div key={index} className={'w-full h-full'} style={{display:index!==tabIndex?"none":""}}>
+              
+                <FlowPage></FlowPage>
+            </div>
+          )
         })}
       </div>
     </div>
