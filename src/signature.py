@@ -167,7 +167,7 @@ def tool(name: str):
             "list": False,
             "show": True,
             "placeholder": "",
-            "default": "",
+            "value": "",
         },
         "llm": {"type": "BaseLLM", "required": True, "list": False, "show": True},
     }
@@ -183,11 +183,14 @@ def tool(name: str):
         _, extra_keys = _EXTRA_OPTIONAL_TOOLS[name]
         params = extra_keys
 
+    template = {
+        param: (type_dict[param] if param == "llm" else type_dict["str"])
+        for param in params
+    }
+    template["_type"] = name
+
     return {
-        "template": {
-            param: (type_dict[param] if param == "llm" else type_dict["str"])
-            for param in params
-        },
+        "template": template,
         **util.get_tool_params(util.get_tools_dict(name)),
         "base_classes": ["Tool"],
     }
