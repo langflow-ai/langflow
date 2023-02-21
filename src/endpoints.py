@@ -12,14 +12,21 @@ import list
 
 # build router
 router = APIRouter()
-AGENT_TYPE = "conversational-react-description"
-# define endpoints -> /chain, /agent, /memory, /prompt
-# return a dict
+
+
+def get_type_list():
+    all = get_all()
+
+    all.pop("tools")
+
+    for key, value in all.items():
+        all[key] = [item["template"]["_type"] for item in value.values()]
+
+    return all
 
 
 @router.get("/")
 def get_all():
-    # tools = list.list_tools()
     return {
         "chains": {chain: signature.chain(chain) for chain in list.list_chains()},
         "agents": {agent: signature.agent(agent) for agent in list.list_agents()},
@@ -49,30 +56,12 @@ def get_all():
     }
 
 
-@router.post("/load")
-def get_load(data: dict[str, str]) -> str:
-    return "Hello Otávio!"
+@router.post("/predict")
+def get_load(data: dict[str, str]):
+    a = get_type_list()
 
+    # Build json
 
-# @router.get("/chain")
-# def get_chain():
-#     llm = OpenAI(temperature=0)
-#     chain = DictableChain(llm=llm)
-#     return chain.to_dict()
+    # if type in a["prompts"]:
 
-
-# @router.get("/agent")
-# def get_agent():
-#     tools = [DictableTool(name="test", description="test", func=lambda x: x)]
-#     llm = OpenAI(temperature=0)
-#     return initialize_agent(llm=llm, tools=tools, memory=DictableMemory()).__dict__
-
-
-# @router.get("/memory")
-# def get_memory():
-#     return DictableMemory().to_dict()
-
-
-# @router.get("/prompt")
-# def get_prompt():
-#     return {"template": "template", "input_variables": "input_variables"}
+    return a

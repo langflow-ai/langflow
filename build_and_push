@@ -1,5 +1,5 @@
 #! /bin/bash
 
 poetry remove langchain
-docker build -t ibiscp/expert:v0.0.11 . && docker push ibiscp/expert:v0.0.11
+docker build -t ibiscp/expert:v0.0.12 . && docker push ibiscp/expert:v0.0.12
 poetry add --editable ../langchain

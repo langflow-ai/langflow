@@ -157,15 +157,25 @@ def format_dict(d):
         # Show if required
         value["show"] = bool(
             (value["required"] and key not in ["input_variables"])
-            or key in ["allowed_tools", "verbose", "Memory", "memory", "prefix"]
+            or key
+            in ["allowed_tools", "verbose", "Memory", "memory", "prefix", "examples"]
             or "api_key" in key
         )
 
+        # Add multline
+        if key in ["suffix", "prefix", "template", "examples"]:
+            value["multline"] = True
+        else:
+            value["multline"] = False
+
         # Replace default value with actual value
-        if _type in ["str", "bool"]:
-            value["value"] = value.get("default", "")
-            if "default" in value:
-                value.pop("default")
+        # if _type in ["str", "bool"]:
+        #     value["value"] = value.get("default", "")
+        #     if "default" in value:
+        #         value.pop("default")
+        if "default" in value:
+            value["value"] = value["default"]
+            value.pop("default")
 
     # Filter out keys that should not be shown
     return (
