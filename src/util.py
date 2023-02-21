@@ -123,7 +123,8 @@ def get_class_doc(class_name):
 
 def format_dict(d):
     """
-    Formats a dictionary by removing certain keys and modifying the values of other keys.
+    Formats a dictionary by removing certain keys and modifying the
+    values of other keys.
 
     Args:
         d: the dictionary to format
@@ -164,11 +165,7 @@ def format_dict(d):
         )
 
         # Add multline
-        if key in ["suffix", "prefix", "template", "examples"]:
-            value["multline"] = True
-        else:
-            value["multline"] = False
-
+        value["multline"] = key in ["suffix", "prefix", "template", "examples"]
         # Replace default value with actual value
         # if _type in ["str", "bool"]:
         #     value["value"] = value.get("default", "")
