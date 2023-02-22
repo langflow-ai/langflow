@@ -172,8 +172,14 @@ def get_memory(name: str):
 @router.get("/tool")
 def get_tool(name: str):
     """Get the signature of a tool."""
+
+    all_tools = {
+        util.get_tool_params(util.get_tools_dict(tool))["name"]: tool
+        for tool in get_all_tool_names()
+    }
+
     # Raise error if name is not in tools
-    if name not in get_all_tool_names():
+    if name not in all_tools.keys():
         raise HTTPException(status_code=404, detail=f"Tool {name} not found.")
 
     type_dict = {
@@ -188,26 +194,28 @@ def get_tool(name: str):
         "llm": {"type": "BaseLLM", "required": True, "list": False, "show": True},
     }
 
-    if name in _BASE_TOOLS:
+    tool_type = all_tools[name]
+
+    if tool_type in _BASE_TOOLS:
         params = []
-    elif name in _LLM_TOOLS:
+    elif tool_type in _LLM_TOOLS:
         params = ["llm"]
-    elif name in _EXTRA_LLM_TOOLS:
-        _, extra_keys = _EXTRA_LLM_TOOLS[name]
+    elif tool_type in _EXTRA_LLM_TOOLS:
+        _, extra_keys = _EXTRA_LLM_TOOLS[tool_type]
         params = ["llm"] + extra_keys
-    elif name in _EXTRA_OPTIONAL_TOOLS:
-        _, extra_keys = _EXTRA_OPTIONAL_TOOLS[name]
+    elif tool_type in _EXTRA_OPTIONAL_TOOLS:
+        _, extra_keys = _EXTRA_OPTIONAL_TOOLS[tool_type]
         params = extra_keys
 
     template = {
         param: (type_dict[param] if param == "llm" else type_dict["str"])
         for param in params
     }
-    template["_type"] = name
+    template["_type"] = tool_type
 
     return {
         "template": template,
-        **util.get_tool_params(util.get_tools_dict(name)),
+        **util.get_tool_params(util.get_tools_dict(tool_type)),
         "base_classes": ["Tool"],
     }
 

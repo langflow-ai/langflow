@@ -6,6 +6,7 @@ from langchain import prompts
 from langchain import llms
 from langchain.chains.conversation import memory as memories
 from langchain.agents.load_tools import get_all_tool_names
+import util
 
 
 # build router
@@ -97,4 +98,7 @@ def list_memories():
 def list_tools():
     """List all load tools"""
 
-    return get_all_tool_names()
+    return [
+        util.get_tool_params(util.get_tools_dict(tool))["name"]
+        for tool in get_all_tool_names()
+    ]

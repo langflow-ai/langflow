@@ -135,6 +135,8 @@ def format_dict(d):
 
     # Process remaining keys
     for key, value in d.items():
+        if key == "examples":
+            pass
         if key == "_type":
             continue
         _type = value["type"]
@@ -176,6 +178,4 @@ def format_dict(d):
             value.pop("default")
 
     # Filter out keys that should not be shown
-    return (
-        d  # {key: value for key, value in d.items() if key == "_type" or value["show"]}
-    )
+    return d
