@@ -11,8 +11,8 @@ openai = "^0.26.5"
 fastapi = "^0.91.0"
 uvicorn = "^0.20.0"
 beautifulsoup4 = "^4.11.2"
-langchain = {path = "../langchain", develop = true}
 google-search-results = "^2.4.1"
+langchain = {path = "../langchain", develop = true}
 
 
 [tool.poetry.group.dev.dependencies]

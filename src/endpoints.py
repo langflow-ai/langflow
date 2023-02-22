@@ -3,6 +3,9 @@ import signature
 import list_endpoints
 import payload
 from langchain.agents.loading import load_agent_executor_from_config
+from langchain.chains.loading import load_chain_from_config
+from langchain.llms.loading import load_llm_from_config
+
 from langchain.prompts.loading import load_prompt_from_config
 from typing import Any
 
@@ -81,12 +84,23 @@ def get_load(data: dict[str, Any]):
     if extracted_json["_type"] in type_list["agents"]:
         loaded = load_agent_executor_from_config(extracted_json)
 
-        return loaded.run(message)
+        return {"result": loaded.run(message)}
+    elif extracted_json["_type"] in type_list["chains"]:
+        loaded = load_chain_from_config(extracted_json)
 
-    elif extracted_json["_type"] in type_list["prompts"]:
-        loaded = load_prompt_from_config(extracted_json)
-        print(loaded.format(product=''))
-        return extracted_json
+        return {"result": loaded.run(message)}
+    elif extracted_json["_type"] in type_list["llms"]:
+        loaded = load_llm_from_config(extracted_json)
+
+        return {"result": loaded(message)}
+    else:
+        return {"result": "Error: Type should be either agent, chain or llm"}
+
+    # elif extracted_json["_type"] in type_list["prompts"]:
+    #     loaded = load_prompt_from_config(extracted_json)
+    #     print(loaded.format(product=''))
+
+    #     return {'result': loaded.format(product=message)}
 
     # if type in a["prompts"]:
 
