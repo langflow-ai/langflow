@@ -6,6 +6,7 @@ import ReactFlow, {
   useEdgesState,
   useNodesState,
   ReactFlowProvider,
+  useReactFlow,
 } from "reactflow";
 import { locationContext } from "../../contexts/locationContext";
 import ExtraSidebar from "./components/extraSidebarComponent";
@@ -17,6 +18,7 @@ import ChatOutputNode from "../../CustomNodes/ChatOutputNode";
 import InputNode from "../../CustomNodes/InputNode";
 import BooleanNode from "../../CustomNodes/BooleanNode";
 import { alertContext } from "../../contexts/alertContext";
+import { TabsContext } from "../../contexts/tabsContext";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -28,7 +30,10 @@ const nodeTypes = {
 
 var _ = require("lodash");
 
-export default function FlowPage() {
+export default function FlowPage({flow}) {
+  console.log(flow?.data)
+
+  const {updateFlow} =  useContext(TabsContext)
   const reactFlowWrapper = useRef(null);
 
   const getId = () => `dndnode_${_.uniqueId()}`;
@@ -36,9 +41,20 @@ export default function FlowPage() {
   const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
   const { setErrorData } = useContext(alertContext);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState(flow?.data?.nodes || []);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(flow?.data?.edges || []);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
+  const { setViewport } = useReactFlow();
+
+  if(flow?.data && reactFlowInstance){
+    setViewport(flow.data.viewport)
+  }
+  useEffect(()=>{
+    if(reactFlowInstance){
+      flow.data =reactFlowInstance.toObject() 
+      updateFlow(flow)
+    }
+  },[nodes,edges])
 
   useEffect(() => {
     setExtraComponent(<ExtraSidebar />);
@@ -129,7 +145,6 @@ export default function FlowPage() {
 
   return (
     <div className="w-full h-full" ref={reactFlowWrapper}>
-      <ReactFlowProvider>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -147,7 +162,6 @@ export default function FlowPage() {
         <Controls ></Controls>
       </ReactFlow>
       <Chat reactFlowInstance={reactFlowInstance} />
-      </ReactFlowProvider>
     </div>
   );
 }
