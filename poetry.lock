@@ -269,6 +269,17 @@ optional = false
 python-versions = ">=3.7"
 
 [[package]]
+name = "google-search-results"
+version = "2.4.1"
+description = "Scrape and search localized results from Google, Bing, Baidu, Yahoo, Yandex, Ebay, Homedepot, youtube at scale using SerpApi.com"
+category = "main"
+optional = false
+python-versions = ">=3.5"
+
+[package.dependencies]
+requests = "*"
+
+[[package]]
 name = "greenlet"
 version = "2.0.2"
 description = "Lightweight in-process concurrent programming"
@@ -933,7 +944,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "ffc4b17c403dab7f934d2c026b83757cc40066a79d64ab27842908b40b0bedeb"
+content-hash = "a8de7c079509305c680e1408fc12648c5ccda4963d55cc6d5a31758dad702688"
 
 [metadata.files]
 aiohttp = [
@@ -1281,6 +1292,9 @@ frozenlist = [
     {file = "frozenlist-1.3.3-cp39-cp39-win32.whl", hash = "sha256:efa568b885bca461f7c7b9e032655c0c143d305bf01c30caf6db2854a4532b38"},
     {file = "frozenlist-1.3.3-cp39-cp39-win_amd64.whl", hash = "sha256:cfe33efc9cb900a4c46f91a5ceba26d6df370ffddd9ca386eb1d4f0ad97b9ea9"},
     {file = "frozenlist-1.3.3.tar.gz", hash = "sha256:58bcc55721e8a90b88332d6cd441261ebb22342e238296bb330968952fbb3a6a"},
+]
+google-search-results = [
+    {file = "google_search_results-2.4.1.tar.gz", hash = "sha256:021746fc21c0b0786e61a2d103d93a08c5c84e204d3f93cd4d589e0e117614a7"},
 ]
 greenlet = [
     {file = "greenlet-2.0.2-cp27-cp27m-macosx_10_14_x86_64.whl", hash = "sha256:bdfea8c661e80d3c1c99ad7c3ff74e6e87184895bbaca6ee8cc61209f8b9b85d"},
