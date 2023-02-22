@@ -3,10 +3,10 @@ import { useContext } from "react";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { classNames } from "../../../../utils";
 
-export default function TabComponent({ children, selected, id }) {
+export default function TabComponent({ children, selected, id, onClick}) {
 	const { removeFlow, flows } = useContext(TabsContext);
 	return (
-		<div
+		<div onClick={onClick}
 			className={classNames(
 				selected ? " shadow-lg" : "bg-gray-300",
 				"flex border-t border-l border-r border-black rounded-t-md shadow-sm cursor-pointer"

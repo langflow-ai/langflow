@@ -9,10 +9,11 @@ var _ = require("lodash");
 
 export function TabsManager() {
 	const { flows, addFlow, tabIndex, setTabIndex } = useContext(TabsContext);
+  const [inputMode,setInputMode] = useState(false)
 	useEffect(() => {
 		if (flows.length === 0) {
-			addFlow({ name: "untitled", data: null, id: _.uniqueId() });
-			addFlow({ name: "untitle", data: null, id: _.uniqueId() });
+      const id = _.uniqueId()
+			addFlow({ name: "flow "+id, data: null, id });
 		}
 	}, []);
 
@@ -22,12 +23,14 @@ export function TabsManager() {
 				{flows.map((flow, index) => {
           console.log(tabIndex)
 					return (
-						<TabComponent selected={index === tabIndex} key={index} id={flow.id}>
-							<div onClick={() => setTabIndex(index)}>{flow.name}</div>
+						<TabComponent onClick={() => setTabIndex(index)} selected={index === tabIndex} key={index} id={flow.id}>
+							<div onClick={()=>setInputMode(true)}>{flow.name}</div>
 						</TabComponent>
 					);
 				})}
-        <div onClick={()=>addFlow({ name: "untitled", data: null, id: _.uniqueId() })} className="cursor-pointer"><PlusIcon color="black" width={24}></PlusIcon></div>
+        <div onClick={()=>{
+          const id = _.uniqueId()
+          addFlow({ name: "flow"+id, data: null, id})}} className="cursor-pointer"><PlusIcon color="black" width={24}></PlusIcon></div>
 			</div>
 			<div className="w-full h-full">
 				<ReactFlowProvider>
