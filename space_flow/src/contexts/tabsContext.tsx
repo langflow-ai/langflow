@@ -6,7 +6,7 @@ type TabsContextType={
     tabIndex:number;
     setTabIndex:(index:number)=>void;
     flows:Array<flow>
-    removeFlow:(index:number)=>void;
+    removeFlow:(id:string)=>void;
     addFlow:(newFlow:flow)=>void;
     updateFlow:(newFLow:flow)=>void;
 }
@@ -15,7 +15,7 @@ const TabsContextInitialValue = {
     tabIndex : 0,
     setTabIndex:(index:number)=>{},
     flows:[],
-    removeFlow:(index:number)=>{},
+    removeFlow:(id:string)=>{},
     addFlow:(newFlow:flow)=>{},
     updateFlow:(newFLow:flow)=>{}
     
@@ -27,11 +27,24 @@ export const TabsContext = createContext<TabsContextType>(TabsContextInitialValu
 export function TabsProvider({children}){
     const [tabIndex,setTabIndex] = useState(0)
     const [flows,setFlows] = useState<Array<flow>>([])
-    function removeFlow(index:number){
-        let newFlows = flows
-        newFlows.splice(index,1)
-        window.sessionStorage.setItem('tabs',JSON.stringify(newFlows))
-        setFlows(newFlows)
+    function removeFlow(id:string){
+        setFlows(prevState=>{
+            const newFlows = [...prevState];
+            const index = newFlows.findIndex(flow=>flow.id===id)
+            if(index!==-1){
+                newFlows.splice(index,1)
+            }
+            if(index===tabIndex){
+                if(tabIndex===0){
+                    //
+                }
+                else{
+                    setTabIndex(tabIndex-1)
+                }
+            }
+            window.sessionStorage.setItem('tabs', JSON.stringify(newFlows));
+            return newFlows;
+        })
     }
     function addFlow(newFlow: flow) {
         setFlows(prevState => {
