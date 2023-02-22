@@ -1,3 +1,4 @@
+import { PlusIcon } from "@heroicons/react/24/outline";
 import { useContext, useEffect, useState } from "react";
 import { Tab, Tabs, TabList, TabPanel } from "react-tabs";
 import { ReactFlowProvider } from "reactflow";
@@ -19,12 +20,14 @@ export function TabsManager() {
 		<div className="h-full w-full flex flex-col">
 			<div className="w-full flex pr-2 flex-row text-center items-center">
 				{flows.map((flow, index) => {
+          console.log(tabIndex)
 					return (
-						<TabComponent selected={index === tabIndex} key={index}>
+						<TabComponent selected={index === tabIndex} key={index} id={flow.id}>
 							<div onClick={() => setTabIndex(index)}>{flow.name}</div>
 						</TabComponent>
 					);
 				})}
+        <div onClick={()=>addFlow({ name: "untitled", data: null, id: _.uniqueId() })} className="cursor-pointer"><PlusIcon color="black" width={24}></PlusIcon></div>
 			</div>
 			<div className="w-full h-full">
 				<ReactFlowProvider>

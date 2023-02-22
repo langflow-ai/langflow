@@ -50,7 +50,7 @@ export default function FlowPage({flow}) {
     setViewport(flow.data.viewport)
   }
   useEffect(()=>{
-    if(reactFlowInstance){
+    if(reactFlowInstance && flow){
       flow.data =reactFlowInstance.toObject() 
       updateFlow(flow)
     }
