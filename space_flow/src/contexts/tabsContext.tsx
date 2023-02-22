@@ -1,6 +1,6 @@
 import { createContext, useState } from "react";
 
-type flow={name:string,id:string,flow:any}
+type flow={name:string,id:string,data:any}
 
 type TabsContextType={
     tabIndex:number;
@@ -8,6 +8,7 @@ type TabsContextType={
     flows:Array<flow>
     removeFlow:(index:number)=>void;
     addFlow:(newFlow:flow)=>void;
+    updateFlow:(newFLow:flow)=>void;
 }
 
 const TabsContextInitialValue = {
@@ -15,7 +16,9 @@ const TabsContextInitialValue = {
     setTabIndex:(index:number)=>{},
     flows:[],
     removeFlow:(index:number)=>{},
-    addFlow:(newFlow:flow)=>{}
+    addFlow:(newFlow:flow)=>{},
+    updateFlow:(newFLow:flow)=>{}
+    
 
 }
 
@@ -37,9 +40,20 @@ export function TabsProvider({children}){
           return newFlows;
         });
       }
+    function updateFlow(newFlow:flow){
+        setFlows(prevState=>{
+            const newFlows = [...prevState];
+            const index = newFlows.findIndex(flow=>flow.id===newFlow.id)
+            if(index!==-1){
+                newFlows[index].data = newFlow.data
+            }
+            window.sessionStorage.setItem('tabs', JSON.stringify(newFlows));
+            return newFlows;
+        });
+    }
 
     return(
-        <TabsContext.Provider value={{tabIndex,setTabIndex,flows,removeFlow,addFlow}}>
+        <TabsContext.Provider value={{tabIndex,setTabIndex,flows,removeFlow,addFlow,updateFlow}}>
             {children}
         </TabsContext.Provider>
     )
