@@ -44,11 +44,15 @@ export default function FlowPage({flow}) {
   const [nodes, setNodes, onNodesChange] = useNodesState(flow?.data?.nodes || []);
   const [edges, setEdges, onEdgesChange] = useEdgesState(flow?.data?.edges || []);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
-  const { setViewport } = useReactFlow();
+  const { setViewport} = useReactFlow();
 
-  if(flow?.data && reactFlowInstance){
-    setViewport(flow.data.viewport)
-  }
+  
+  useEffect(()=>{
+    if(flow?.data && reactFlowInstance){
+      setViewport(flow.data.viewport)
+    }
+  },[nodes,edges,flow,])
+
   useEffect(()=>{
     if(reactFlowInstance && flow){
       flow.data =reactFlowInstance.toObject() 
@@ -152,6 +156,7 @@ export default function FlowPage({flow}) {
     <div className="w-full h-full" ref={reactFlowWrapper}>
       <ReactFlow
         nodes={nodes}
+        onMove={()=>updateFlow({...flow,data:reactFlowInstance.toObject()})}
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChangeMod}
