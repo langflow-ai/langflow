@@ -56,6 +56,11 @@ export default function FlowPage({flow}) {
     }
   },[nodes,edges])
 
+  useEffect(()=>{
+    setNodes(flow?.data?.nodes || [])
+    setEdges(flow?.data?.edges || [])
+  },[flow])
+
   useEffect(() => {
     setExtraComponent(<ExtraSidebar />);
     setExtraNavigation({ title: "Nodes" });
