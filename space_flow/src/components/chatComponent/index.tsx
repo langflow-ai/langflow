@@ -18,13 +18,11 @@ export default function Chat({ reactFlowInstance }) {
   const [chatHistory, setChatHistory] = useState([]);
   const {setErrorData} = useContext(alertContext);
   const addChatHistory = (message, isSend) => {
-    console.log(message);
     setChatHistory((old) => {
       let newChat = _.cloneDeep(old);
       newChat.push({ message, isSend });
       return newChat;
     });
-    console.log(chatHistory);
   };
   useEffect(()=>{
     ref.current.scrollIntoView({behavior: 'smooth'});
@@ -80,7 +78,7 @@ export default function Chat({ reactFlowInstance }) {
                     </div>
                   ) : (
                     <div className="w-full text-end">
-                      <div style={{color: nodeColors['chat']}} className="text-start inline-block rounded-xl p-3 overflow-hidden w-fit max-w-[280px] px-5 text-sm text-white font-normal rounded-tr-none">
+                      <div style={{backgroundColor: nodeColors['chat']}} className="text-start inline-block rounded-xl p-3 overflow-hidden w-fit max-w-[280px] px-5 text-sm text-white font-normal rounded-tr-none">
                         {c.message}
                       </div>
                     </div>
@@ -111,7 +109,6 @@ export default function Chat({ reactFlowInstance }) {
                             setChatValue("");
                             addChatHistory(message, true);
                             sendAll({...reactFlowInstance.toObject(),message}).then((r) => {addChatHistory(r.data.result, false);});
-                            addChatHistory('teste', false);
                           } else {
                             setErrorData({title: 'Error sending message', list:['Chat nodes are missing.']})
                           }
