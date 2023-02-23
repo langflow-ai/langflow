@@ -56,12 +56,10 @@ export default function FlowPage({flow}) {
     console.log(flow);
     setNodes(flow?.data?.nodes ?? [])
     setEdges(flow?.data?.edges ?? [])
-  },[flow])
-
-  useEffect(() => {
-    console.log(nodes);
-    console.log(edges);
-  }, [edges, nodes])
+    if(reactFlowInstance){
+      reactFlowInstance.setViewport(flow?.data?.viewport ?? {x: 1, y: 0, zoom: 1});
+    }
+  },[flow, reactFlowInstance, setEdges, setNodes])
 
   useEffect(() => {
     setExtraComponent(<ExtraSidebar />);
@@ -153,7 +151,6 @@ export default function FlowPage({flow}) {
     <div className="w-full h-full" ref={reactFlowWrapper}>
       <ReactFlow
         nodes={nodes}
-        defaultViewport={flow?.data?.viewport ?? {x: 1, y: 0, zoom: 1}}
         onMove={()=>updateFlow({...flow,data:reactFlowInstance.toObject()})}
         edges={edges}
         onNodesChange={onNodesChange}
