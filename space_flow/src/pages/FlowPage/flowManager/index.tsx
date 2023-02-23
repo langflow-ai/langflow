@@ -10,7 +10,7 @@ export function TabsManager() {
   const { flows, addFlow, tabIndex, setTabIndex } = useContext(TabsContext);
   useEffect(() => {
     if (flows.length === 0) {
-      addFlow(example);
+      addFlow();
     }
   }, [addFlow, flows.length]);
 
