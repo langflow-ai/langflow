@@ -50,6 +50,7 @@ export default function FlowPage({ flow }) {
   const [edges, setEdges, onEdgesChange] = useEdgesState(
     flow.data?.edges ?? []
   );
+  const {setViewport} = useReactFlow()
 
   useEffect(() => {
     if (reactFlowInstance && flow) {
@@ -62,7 +63,7 @@ export default function FlowPage({ flow }) {
     setNodes(flow?.data?.nodes ?? []);
     setEdges(flow?.data?.edges ?? []);
     if (reactFlowInstance) {
-      reactFlowInstance.setViewport(
+      setViewport(
         flow?.data?.viewport ?? { x: 1, y: 0, zoom: 1 }
       );
     }

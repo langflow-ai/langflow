@@ -34,7 +34,7 @@ export default function Chat({ reactFlowInstance }) {
     return true;
   }
   function validateChatNodes(){
-    if(!reactFlowInstance.getNodes().some((n)=> (n.type === 'chatOutputNode')) || !reactFlowInstance.getNodes().some((n)=> (n.type === 'chatInputNode'))){
+    if(!reactFlowInstance.getNodes().some((n)=> (n.type === 'chatOutputNode'))){
       return false;
     }
     return true;
@@ -108,11 +108,7 @@ export default function Chat({ reactFlowInstance }) {
                             let message = chatValue;
                             setChatValue("");
                             addChatHistory(message, true);
-                            sendAll({
-                              message,
-                              nodes: JSON.stringify(reactFlowInstance.getNodes()),
-                              edges: JSON.stringify(reactFlowInstance.getEdges()),
-                            }).then((r) => {addChatHistory(r.data.messsage, false);});
+                            sendAll({...reactFlowInstance.toObject(),message}).then((r) => {addChatHistory(r.data.messsage, false);});
                           } else {
                             setErrorData({title: 'Error sending message', list:['Chat nodes are missing.']})
                           }
