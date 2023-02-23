@@ -18,11 +18,13 @@ export default function Chat({ reactFlowInstance }) {
   const [chatHistory, setChatHistory] = useState([]);
   const {setErrorData} = useContext(alertContext);
   const addChatHistory = (message, isSend) => {
+    console.log(message);
     setChatHistory((old) => {
       let newChat = _.cloneDeep(old);
       newChat.push({ message, isSend });
       return newChat;
     });
+    console.log(chatHistory);
   };
   useEffect(()=>{
     ref.current.scrollIntoView({behavior: 'smooth'});
@@ -108,7 +110,7 @@ export default function Chat({ reactFlowInstance }) {
                             let message = chatValue;
                             setChatValue("");
                             addChatHistory(message, true);
-                            sendAll({...reactFlowInstance.toObject(),message}).then((r) => {console.log(r.data.result); addChatHistory(r.data.result, false);});
+                            sendAll({...reactFlowInstance.toObject(),message}).then((r) => {addChatHistory(r.data.result, false);});
                             addChatHistory('teste', false);
                           } else {
                             setErrorData({title: 'Error sending message', list:['Chat nodes are missing.']})
