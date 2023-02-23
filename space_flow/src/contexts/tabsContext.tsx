@@ -1,4 +1,4 @@
-import { createContext, useState } from "react";
+import { createContext, useEffect, useState } from "react";
 
 type flow={name:string,id:string,data:any}
 
@@ -7,8 +7,8 @@ type TabsContextType={
     setTabIndex:(index:number)=>void;
     flows:Array<flow>
     removeFlow:(id:string)=>void;
-    addFlow:(newFlow:flow)=>void;
-    updateFlow:(newFLow:flow)=>void;
+    addFlow:()=>void;
+    updateFlow:(newFlow:flow)=>void;
 }
 
 const TabsContextInitialValue = {
@@ -16,8 +16,8 @@ const TabsContextInitialValue = {
     setTabIndex:(index:number)=>{},
     flows:[],
     removeFlow:(id:string)=>{},
-    addFlow:(newFlow:flow)=>{},
-    updateFlow:(newFLow:flow)=>{}
+    addFlow:()=>{},
+    updateFlow:(newFlow:flow)=>{}
     
 
 }
@@ -27,6 +27,22 @@ export const TabsContext = createContext<TabsContextType>(TabsContextInitialValu
 export function TabsProvider({children}){
     const [tabIndex,setTabIndex] = useState(0)
     const [flows,setFlows] = useState<Array<flow>>([])
+    const [id, setId] = useState(0);
+    useEffect(() => {
+        if(flows.length !== 0)
+            window.localStorage.setItem('tabsData', JSON.stringify({tabIndex, flows, id}));
+    }, [flows, id, tabIndex]);
+
+    useEffect(() => {
+        let cookie = window.localStorage.getItem('tabsData');
+        if(cookie){
+            let cookieObject = JSON.parse(cookie);
+            setTabIndex(cookieObject.tabIndex);
+            setFlows(cookieObject.flows)
+            setId(cookieObject.id)
+        }
+    }, [])
+    
     function removeFlow(id:string){
         setFlows(prevState=>{
             const newFlows = [...prevState];
@@ -42,14 +58,14 @@ export function TabsProvider({children}){
                 }
                 
             }
-            window.sessionStorage.setItem('tabs', JSON.stringify(newFlows));
             return newFlows;
-        })
+        });
     }
-    function addFlow(newFlow: flow) {
+    function addFlow() {
+        let newFlow: flow = {name: "flow"+id, id: id.toString(), data:null}
+        setId((old) => old+1);
         setFlows(prevState => {
             const newFlows = [...prevState, newFlow];
-            window.sessionStorage.setItem('tabs', JSON.stringify(newFlows));
             return newFlows;
         });
         setTabIndex(flows.length);
@@ -62,7 +78,6 @@ export function TabsProvider({children}){
                 newFlows[index].data = newFlow.data
                 newFlows[index].name = newFlow.name
             }
-            window.sessionStorage.setItem('tabs', JSON.stringify(newFlows));
             return newFlows;
         });
     }

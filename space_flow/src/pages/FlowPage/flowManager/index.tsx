@@ -9,14 +9,13 @@ export function TabsManager() {
   const { flows, addFlow, tabIndex, setTabIndex } = useContext(TabsContext);
   useEffect(() => {
     if (flows.length === 0) {
-      const id = _.uniqueId();
-      addFlow({ name: "flow " + id, data: null, id });
+      addFlow();
     }
-  }, []);
+  }, [addFlow, flows.length]);
 
   return (
     <div className="h-full w-full flex flex-col">
-      <div className="w-full flex pr-2 flex-row text-center items-center bg-gray-100">
+      <div className="w-full flex pr-2 flex-row text-center items-center bg-gray-100 px-2">
         {flows.map((flow, index) => {
           return (
             <TabComponent
@@ -29,17 +28,19 @@ export function TabsManager() {
         })}
         <TabComponent
           onClick={() => {
-            const id = _.uniqueId();
-            addFlow({ name: "flow" + id, data: null, id });
+            addFlow();
           }}
           selected={false}
-          key={0}
           flow={null}
         />
       </div>
       <div className="w-full h-full">
         <ReactFlowProvider>
-          <FlowPage flow={flows[tabIndex]}></FlowPage>
+          {flows[tabIndex] ? (
+            <FlowPage flow={flows[tabIndex]}></FlowPage>
+          ) : (
+            <></>
+          )}
         </ReactFlowProvider>
       </div>
     </div>

@@ -5,10 +5,11 @@ import {
   nodeColors,
   snakeToNormalCase,
 } from "../../../../utils";
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import InputComponent from "../../../../components/inputComponent";
 import ToggleComponent from "../../../../components/toggleComponent";
 import InputListComponent from "../../../../components/inputListComponent";
+import { typesContext } from "../../../../contexts/typesContext";
 
 export default function ParameterComponent({
   left,
@@ -37,7 +38,8 @@ export default function ParameterComponent({
   }, [data.id, position, updateNodeInternals]);
 
   const [enabled, setEnabled] = useState(data.node.template[name]?.value ?? false);
-  let disabled = data.reactFlowInstance.getEdges().some((e) => (e.sourceHandle === id));
+  const {reactFlowInstance} = useContext(typesContext);
+  let disabled = reactFlowInstance?.getEdges().some((e) => (e.sourceHandle === id)) ?? false;
 
   return (
     <div ref={ref} className="w-full flex flex-wrap justify-between items-center bg-gray-50 mt-1 px-5 py-2">

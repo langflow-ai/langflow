@@ -19,6 +19,7 @@ import InputNode from "../../CustomNodes/InputNode";
 import BooleanNode from "../../CustomNodes/BooleanNode";
 import { alertContext } from "../../contexts/alertContext";
 import { TabsContext } from "../../contexts/tabsContext";
+import { typesContext } from "../../contexts/typesContext";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -31,9 +32,9 @@ const nodeTypes = {
 var _ = require("lodash");
 
 export default function FlowPage({flow}) {
-  console.log(flow?.data)
 
   const {updateFlow} =  useContext(TabsContext)
+  const {reactFlowInstance, setReactFlowInstance} = useContext(typesContext);
   const reactFlowWrapper = useRef(null);
 
   const getId = () => `dndnode_${_.uniqueId()}`;
@@ -41,29 +42,26 @@ export default function FlowPage({flow}) {
   const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
   const { setErrorData } = useContext(alertContext);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(flow?.data?.nodes || []);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(flow?.data?.edges || []);
-  const [reactFlowInstance, setReactFlowInstance] = useState(null);
-  const { setViewport} = useReactFlow();
-
-  
-  useEffect(()=>{
-    if(flow?.data && reactFlowInstance){
-      setViewport(flow.data.viewport)
-    }
-  },[nodes, edges, flow, reactFlowInstance, setViewport])
+  const [nodes, setNodes, onNodesChange] = useNodesState(flow.data?.nodes ?? []);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(flow.data?.edges ?? []);
 
   useEffect(()=>{
     if(reactFlowInstance && flow){
-      flow.data =reactFlowInstance.toObject() 
-      updateFlow(flow)
+      flow.data = reactFlowInstance.toObject();
+      updateFlow(flow);
     }
   },[nodes,edges])
 
   useEffect(()=>{
-    setNodes(flow?.data?.nodes || [])
-    setEdges(flow?.data?.edges || [])
+    console.log(flow);
+    setNodes(flow?.data?.nodes ?? [])
+    setEdges(flow?.data?.edges ?? [])
   },[flow])
+
+  useEffect(() => {
+    console.log(nodes);
+    console.log(edges);
+  }, [edges, nodes])
 
   useEffect(() => {
     setExtraComponent(<ExtraSidebar />);
@@ -133,7 +131,6 @@ export default function FlowPage({flow}) {
             ...data,
             id: newId,
             value: null,
-            reactFlowInstance,
             onDelete: () => {
               setNodes(
                 reactFlowInstance.getNodes().filter((n) => n.id !== newId)
@@ -156,6 +153,7 @@ export default function FlowPage({flow}) {
     <div className="w-full h-full" ref={reactFlowWrapper}>
       <ReactFlow
         nodes={nodes}
+        defaultViewport={flow?.data?.viewport ?? {x: 1, y: 0, zoom: 1}}
         onMove={()=>updateFlow({...flow,data:reactFlowInstance.toObject()})}
         edges={edges}
         onNodesChange={onNodesChange}
