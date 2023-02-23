@@ -7,7 +7,7 @@ type TabsContextType={
     setTabIndex:(index:number)=>void;
     flows:Array<flow>
     removeFlow:(id:string)=>void;
-    addFlow:()=>void;
+    addFlow:(flowData?:any)=>void;
     updateFlow:(newFlow:flow)=>void;
     nodeId:number;
 }
@@ -17,7 +17,7 @@ const TabsContextInitialValue = {
     setTabIndex:(index:number)=>{},
     flows:[],
     removeFlow:(id:string)=>{},
-    addFlow:()=>{},
+    addFlow:(flowData?:any)=>{},
     updateFlow:(newFlow:flow)=>{},
     nodeId:0,
     
@@ -65,8 +65,9 @@ export function TabsProvider({children}){
             return newFlows;
         });
     }
-    function addFlow() {
-        let newFlow: flow = {name: "flow"+id, id: id.toString(), data:null}
+    function addFlow(flowData?:flow) {
+        const data = flowData?flowData:null
+        let newFlow: flow = {name: "flow"+id, id: id.toString(), data}
         setId((old) => old+1);
         setFlows(prevState => {
             const newFlows = [...prevState, newFlow];

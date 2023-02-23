@@ -3,13 +3,14 @@ import { ReactFlowProvider } from "reactflow";
 import FlowPage from "..";
 import { TabsContext } from "../../../contexts/tabsContext";
 import TabComponent from "./tabComponent";
+import { example } from "../../../data_assets/example";
 var _ = require("lodash");
 
 export function TabsManager() {
   const { flows, addFlow, tabIndex, setTabIndex } = useContext(TabsContext);
   useEffect(() => {
     if (flows.length === 0) {
-      addFlow();
+      addFlow(example);
     }
   }, [addFlow, flows.length]);
 
