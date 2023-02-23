@@ -110,9 +110,7 @@ export default function App() {
           <main className="min-w-0 flex-1 border-t border-gray-200 flex">
             {/* Primary column */}
             <div className="w-full h-full">
-              <TabsProvider>
                 <TabsManager></TabsManager>
-              </TabsProvider>
             </div>
           </main>
         </div>
