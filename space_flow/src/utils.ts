@@ -335,18 +335,18 @@ export function getConnectedNodes(edge: Edge, nodes: Array<Node>): Array<Node> {
 }
 
 export function isValidConnection(
-  data,
-  { source, target, sourceHandle, targetHandle }
+  { source, target, sourceHandle, targetHandle },
+  reactFlowInstance
 ) {
   if (
     sourceHandle.split('|')[0] === targetHandle.split("|")[0] ||
     sourceHandle.split('|').slice(2).some((t) => t === targetHandle.split("|")[0]) ||
     targetHandle.split("|")[0] === "str"
   ) {
-    let targetNode = data.reactFlowInstance.getNode(target).data.node;
+    let targetNode = reactFlowInstance.getNode(target).data.node;
     if (!targetNode) {
       if (
-        !data.reactFlowInstance
+        !reactFlowInstance
           .getEdges()
           .find((e) => e.targetHandle === targetHandle)
       ) {
@@ -354,7 +354,7 @@ export function isValidConnection(
       }
     } else if (
       (!targetNode.template[targetHandle.split("|")[1]].list &&
-        !data.reactFlowInstance
+        !reactFlowInstance
           .getEdges()
           .find((e) => e.targetHandle === targetHandle)) ||
       targetNode.template[targetHandle.split("|")[1]].list

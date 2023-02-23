@@ -5,6 +5,8 @@ import ReactFlow, {
   addEdge,
   useEdgesState,
   useNodesState,
+  ReactFlowProvider,
+  useReactFlow,
 } from "reactflow";
 import { locationContext } from "../../contexts/locationContext";
 import ExtraSidebar from "./components/extraSidebarComponent";
@@ -16,6 +18,8 @@ import ChatOutputNode from "../../CustomNodes/ChatOutputNode";
 import InputNode from "../../CustomNodes/InputNode";
 import BooleanNode from "../../CustomNodes/BooleanNode";
 import { alertContext } from "../../contexts/alertContext";
+import { TabsContext } from "../../contexts/tabsContext";
+import { typesContext } from "../../contexts/typesContext";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -27,17 +31,44 @@ const nodeTypes = {
 
 var _ = require("lodash");
 
-export default function FlowPage() {
+export default function FlowPage({ flow }) {
+  let { updateFlow, nodeId } = useContext(TabsContext);
+  const { types, reactFlowInstance, setReactFlowInstance } =
+    useContext(typesContext);
   const reactFlowWrapper = useRef(null);
 
-  const getId = () => `dndnode_${_.uniqueId()}`;
+  function getId(){
+    console.log(nodeId);
+    nodeId = nodeId+1
+    return `dndnode_}`+nodeId;
+  };
 
   const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
   const { setErrorData } = useContext(alertContext);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [reactFlowInstance, setReactFlowInstance] = useState(null);
+  const [nodes, setNodes, onNodesChange] = useNodesState(
+    flow.data?.nodes ?? []
+  );
+  const [edges, setEdges, onEdgesChange] = useEdgesState(
+    flow.data?.edges ?? []
+  );
+
+  useEffect(() => {
+    if (reactFlowInstance && flow) {
+      flow.data = reactFlowInstance.toObject();
+      updateFlow(flow);
+    }
+  }, [nodes, edges]);
+
+  useEffect(() => {
+    setNodes(flow?.data?.nodes ?? []);
+    setEdges(flow?.data?.edges ?? []);
+    if (reactFlowInstance) {
+      reactFlowInstance.setViewport(
+        flow?.data?.viewport ?? { x: 1, y: 0, zoom: 1 }
+      );
+    }
+  }, [flow, reactFlowInstance, setEdges, setNodes]);
 
   useEffect(() => {
     setExtraComponent(<ExtraSidebar />);
@@ -89,30 +120,24 @@ export default function FlowPage() {
           y: event.clientY - reactflowBounds.top,
         });
         let newId = getId();
-        
+
         const newNode = {
           id: newId,
           type:
-            (data.type === "str"
+            data.type === "str"
               ? "inputNode"
-              : (data.type === "chatInput"
+              : data.type === "chatInput"
               ? "chatInputNode"
-              : (data.type === "chatOutput"
+              : data.type === "chatOutput"
               ? "chatOutputNode"
-              : (data.type === "bool"
+              : data.type === "bool"
               ? "booleanNode"
-              : "genericNode")))),
+              : "genericNode",
           position,
           data: {
             ...data,
             id: newId,
             value: null,
-            reactFlowInstance,
-            onDelete: () => {
-              setNodes(
-                reactFlowInstance.getNodes().filter((n) => n.id !== newId)
-              );
-            },
           },
         };
         setNodes((nds) => nds.concat(newNode));
@@ -128,22 +153,32 @@ export default function FlowPage() {
 
   return (
     <div className="w-full h-full" ref={reactFlowWrapper}>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChangeMod}
-        onConnect={onConnect}
-        onInit={setReactFlowInstance}
-        nodeTypes={nodeTypes}
-        connectionLineComponent={connection}
-        onDragOver={onDragOver}
-        onDrop={onDrop}
-      >
-        <Background />
-        <Controls></Controls>
-      </ReactFlow>
-      <Chat reactFlowInstance={reactFlowInstance} />
+      {Object.keys(types).length > 0 ? (
+        <>
+          <ReactFlow
+            nodes={nodes}
+            onMove={() =>
+              updateFlow({ ...flow, data: reactFlowInstance.toObject() })
+            }
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChangeMod}
+            onConnect={onConnect}
+            onLoad={setReactFlowInstance}
+            onInit={setReactFlowInstance}
+            nodeTypes={nodeTypes}
+            connectionLineComponent={connection}
+            onDragOver={onDragOver}
+            onDrop={onDrop}
+          >
+            <Background />
+            <Controls></Controls>
+          </ReactFlow>
+          <Chat reactFlowInstance={reactFlowInstance} />
+        </>
+      ) : (
+        <></>
+      )}
     </div>
   );
 }
