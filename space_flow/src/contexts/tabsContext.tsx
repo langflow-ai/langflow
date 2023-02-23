@@ -1,4 +1,4 @@
-import { createContext, useEffect, useState } from "react";
+import { createContext, useEffect, useState, useRef } from "react";
 
 type flow={name:string,id:string,data:any}
 
@@ -9,7 +9,7 @@ type TabsContextType={
     removeFlow:(id:string)=>void;
     addFlow:(flowData?:any)=>void;
     updateFlow:(newFlow:flow)=>void;
-    nodeId:number;
+    incrementNodeId:()=>number,
 }
 
 const TabsContextInitialValue = {
@@ -19,31 +19,38 @@ const TabsContextInitialValue = {
     removeFlow:(id:string)=>{},
     addFlow:(flowData?:any)=>{},
     updateFlow:(newFlow:flow)=>{},
-    nodeId:0,
+    incrementNodeId:()=>0,
     
 
 }
 
 export const TabsContext = createContext<TabsContextType>(TabsContextInitialValue)
 
+let _ = require('lodash');
+
 export function TabsProvider({children}){
     const [tabIndex,setTabIndex] = useState(0)
     const [flows,setFlows] = useState<Array<flow>>([])
     const [id, setId] = useState(0);
-    let nodeId = 0;
+
+    const newNodeId = useRef(0);
+    function incrementNodeId(){
+        newNodeId.current = newNodeId.current + 1;
+        return newNodeId.current;
+    }
     useEffect(() => {
         if(flows.length !== 0)
-            window.localStorage.setItem('tabsData', JSON.stringify({tabIndex, flows, id, nodeId}));
-    }, [flows, id, nodeId, tabIndex]);
+            window.localStorage.setItem('tabsData', JSON.stringify({tabIndex, flows, id, nodeId: newNodeId.current}));
+    }, [flows, id, tabIndex, newNodeId]);
 
     useEffect(() => {
         let cookie = window.localStorage.getItem('tabsData');
         if(cookie){
             let cookieObject = JSON.parse(cookie);
             setTabIndex(cookieObject.tabIndex);
-            setFlows(cookieObject.flows)
-            setId(cookieObject.id)
-            nodeId = cookieObject.nodeId
+            setFlows(cookieObject.flows); 
+            setId(cookieObject.id);
+            newNodeId.current= cookieObject.nodeId;
         }
     }, [])
     
@@ -88,7 +95,7 @@ export function TabsProvider({children}){
     }
 
     return(
-        <TabsContext.Provider value={{tabIndex,setTabIndex,flows, nodeId,removeFlow,addFlow,updateFlow}}>
+        <TabsContext.Provider value={{tabIndex,setTabIndex,flows,incrementNodeId, removeFlow,addFlow,updateFlow}}>
             {children}
         </TabsContext.Provider>
     )
