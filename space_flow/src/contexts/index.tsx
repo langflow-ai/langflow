@@ -1,3 +1,4 @@
+import { CookiesProvider } from "react-cookie";
 import { AlertProvider } from "./alertContext";
 import { LocationProvider } from "./locationContext";
 import PopUpProvider from "./popUpContext";
@@ -7,15 +8,17 @@ import { TypesProvider } from "./typesContext";
 export default function ContextWrapper({ children }) {
   return (
     <>
-      <LocationProvider>
-        <PopUpProvider>
-          <TypesProvider>
-            <TabsProvider>
-              <AlertProvider>{children}</AlertProvider>
-            </TabsProvider>
-          </TypesProvider>
-        </PopUpProvider>
-      </LocationProvider>
+      <CookiesProvider>
+        <LocationProvider>
+          <PopUpProvider>
+            <TypesProvider>
+              <TabsProvider>
+                <AlertProvider>{children}</AlertProvider>
+              </TabsProvider>
+            </TypesProvider>
+          </PopUpProvider>
+        </LocationProvider>
+      </CookiesProvider>
     </>
   );
 }
