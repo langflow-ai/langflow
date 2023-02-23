@@ -1,8 +1,8 @@
 <!-- Title -->
 
-# LangFlow
+# ⛓️ LangFlow
 
-A no-code flow builder for langchain
+~ A no-code flow builder for langchain ~
 
 <p>
 <img alt="GitHub Contributors" src="https://img.shields.io/github/contributors/logspace-ai/langflow" />
