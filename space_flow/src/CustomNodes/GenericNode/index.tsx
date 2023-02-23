@@ -11,8 +11,9 @@ import { typesContext } from "../../contexts/typesContext";
 import { useContext } from "react";
 
 export default function GenericNode({ data }) {
-  const {types} = useContext(typesContext);
+  const {types, deleteNode} = useContext(typesContext);
   const Icon = nodeIcons[types[data.type]];
+
 
   return (
     <div className="prompt-node relative bg-white w-96 rounded-lg solid border flex flex-col justify-center">
@@ -24,7 +25,7 @@ export default function GenericNode({ data }) {
           />
           <div className="truncate">{data.type}</div>
         </div>
-        <button onClick={data.onDelete}>
+        <button onClick={() => {deleteNode(data.id)}}>
           <TrashIcon className="w-6 h-6 hover:text-red-500"></TrashIcon>
         </button>
       </div>

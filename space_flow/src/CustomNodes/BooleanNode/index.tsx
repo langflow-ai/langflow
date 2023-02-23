@@ -8,7 +8,7 @@ import { typesContext } from "../../contexts/typesContext";
 
 export default function BooleanNode({ data }) {
   const [enabled, setEnabled] = useState(false);
-  const {types} = useContext(typesContext);
+  const {types, deleteNode} = useContext(typesContext);
   return (
     <div className="prompt-node relative bg-white rounded-lg solid border flex flex-col justify-center">
       <div className="w-full flex items-center justify-between gap-8 p-4 bg-gray-50 border-b ">
@@ -21,7 +21,7 @@ export default function BooleanNode({ data }) {
         </div>
         <button
           onClick={() => {
-            data.onDelete(data);
+            deleteNode(data.id);
           }}
         >
           <TrashIcon className="text-gray-600 w-6 h-6 hover:text-red-500"></TrashIcon>

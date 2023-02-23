@@ -12,6 +12,8 @@ import { locationContext } from "./contexts/locationContext";
 import FlowPage from "./pages/FlowPage";
 import Sidebar from "./components/SidebarComponent";
 import Header from "./components/HeaderComponent";
+import { TabsProvider } from "./contexts/tabsContext";
+import { TabsManager } from "./pages/FlowPage/flowManager";
 
 export default function App() {
   var _ = require("lodash");
@@ -96,7 +98,7 @@ export default function App() {
   return (
     //need parent component with width and height
     <div className="h-full flex flex-col">
-      <ReactFlowProvider>
+      
         <div className="flex grow-0 shrink basis-auto">
           <Header userNavigation={userNavigation} user={user}></Header>
         </div>
@@ -108,7 +110,7 @@ export default function App() {
           <main className="min-w-0 flex-1 border-t border-gray-200 flex">
             {/* Primary column */}
             <div className="w-full h-full">
-              <FlowPage />
+                <TabsManager></TabsManager>
             </div>
           </main>
         </div>
@@ -142,7 +144,6 @@ export default function App() {
             </div>
           ))}
         </div>
-      </ReactFlowProvider>
     </div>
   );
 }

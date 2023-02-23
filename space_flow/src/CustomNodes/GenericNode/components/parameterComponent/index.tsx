@@ -5,11 +5,12 @@ import {
   nodeColors,
   snakeToNormalCase,
 } from "../../../../utils";
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import InputComponent from "../../../../components/inputComponent";
 import ToggleComponent from "../../../../components/toggleComponent";
 import InputListComponent from "../../../../components/inputListComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
+import { typesContext } from "../../../../contexts/typesContext";
 
 export default function ParameterComponent({
   left,
@@ -38,7 +39,8 @@ export default function ParameterComponent({
   }, [data.id, position, updateNodeInternals]);
 
   const [enabled, setEnabled] = useState(data.node.template[name]?.value ?? false);
-  let disabled = data.reactFlowInstance.getEdges().some((e) => (e.targetHandle === id));
+  const {reactFlowInstance} = useContext(typesContext);
+  let disabled = reactFlowInstance?.getEdges().some((e) => (e.targetHandle === id)) ?? false;
 
   return (
     <div ref={ref} className="w-full flex flex-wrap justify-between items-center bg-gray-50 mt-1 px-5 py-2">
@@ -50,7 +52,7 @@ export default function ParameterComponent({
             position={left ? Position.Left : Position.Right}
             id={id}
             isValidConnection={(connection) =>
-              isValidConnection(data, connection)
+              isValidConnection(connection,reactFlowInstance)
             }
             className={
               (left ? "-ml-0.5 " : "-mr-0.5 ") +
