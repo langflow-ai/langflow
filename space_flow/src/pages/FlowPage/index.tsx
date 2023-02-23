@@ -32,15 +32,15 @@ const nodeTypes = {
 var _ = require("lodash");
 
 export default function FlowPage({ flow }) {
-  const { updateFlow, nodeId, setNodeId } = useContext(TabsContext);
+  let { updateFlow, nodeId } = useContext(TabsContext);
   const { types, reactFlowInstance, setReactFlowInstance } =
     useContext(typesContext);
   const reactFlowWrapper = useRef(null);
 
-  const getId = () => {
+  function getId(){
     console.log(nodeId);
-    setNodeId(old => old + 1);
-    return `dndnode_${nodeId}`;
+    nodeId = nodeId+1
+    return `dndnode_}`+nodeId;
   };
 
   const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
