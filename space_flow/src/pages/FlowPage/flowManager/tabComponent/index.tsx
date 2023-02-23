@@ -13,7 +13,7 @@ export default function TabComponent({ selected, flow, onClick }) {
       {flow ? (
         !selected ? (
           <div
-            className="flex justify-between select-none truncate w-44 items-center px-4 my-2 mt-3 border-x border-gray-300 -ml-px"
+            className="flex justify-between select-none truncate w-44 items-center px-4 my-2 mt-3 border-x border-t border-t-transparent border-gray-300 -ml-px"
             onClick={onClick}
           >
             {flow.name}
@@ -68,7 +68,7 @@ export default function TabComponent({ selected, flow, onClick }) {
       ) : (
         <div className="h-full py-2 pt-3 flex justify-center items-center">
           <button
-            className="px-3 h-full border-gray-300 -ml-px"
+            className="px-3 flex items-center h-full mb-1 border-gray-300 -ml-px border-t border-t-transparent"
             onClick={onClick}
           >
             <PlusIcon className="h-5" />
