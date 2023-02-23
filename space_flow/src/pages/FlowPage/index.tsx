@@ -51,7 +51,7 @@ export default function FlowPage({flow}) {
     if(flow?.data && reactFlowInstance){
       setViewport(flow.data.viewport)
     }
-  },[nodes,edges,flow,])
+  },[nodes, edges, flow, reactFlowInstance, setViewport])
 
   useEffect(()=>{
     if(reactFlowInstance && flow){

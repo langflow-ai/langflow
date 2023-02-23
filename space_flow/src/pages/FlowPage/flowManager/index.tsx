@@ -1,10 +1,8 @@
-import { useContext, useEffect, useState } from "react";
-import { Tab, Tabs, TabList, TabPanel } from "react-tabs";
+import { useContext, useEffect } from "react";
 import { ReactFlowProvider } from "reactflow";
 import FlowPage from "..";
 import { TabsContext } from "../../../contexts/tabsContext";
 import TabComponent from "./tabComponent";
-import { PlusIcon } from "@heroicons/react/24/outline";
 var _ = require("lodash");
 
 export function TabsManager() {
