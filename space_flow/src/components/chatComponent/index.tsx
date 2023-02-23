@@ -108,7 +108,7 @@ export default function Chat({ reactFlowInstance }) {
                             let message = chatValue;
                             setChatValue("");
                             addChatHistory(message, true);
-                            sendAll({...reactFlowInstance.toObject(),message}).then((r) => {console.log(r); addChatHistory((r.data)['result'], false);});
+                            sendAll({...reactFlowInstance.toObject(),message}).then((r) => {console.log(r.data.result); addChatHistory(r.data.result, false);});
                           } else {
                             setErrorData({title: 'Error sending message', list:['Chat nodes are missing.']})
                           }
