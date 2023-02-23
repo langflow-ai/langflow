@@ -8,6 +8,7 @@ type typesContextType=
     deleteNode:(idx:number)=>void;
     types: {};
     setTypes:(newState:{})=>void;
+
 }
 
 const initialValue= {

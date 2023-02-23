@@ -9,6 +9,8 @@ type TabsContextType={
     removeFlow:(id:string)=>void;
     addFlow:()=>void;
     updateFlow:(newFlow:flow)=>void;
+    setNodeId:(newState:any)=>void;
+    nodeId:number;
 }
 
 const TabsContextInitialValue = {
@@ -17,7 +19,9 @@ const TabsContextInitialValue = {
     flows:[],
     removeFlow:(id:string)=>{},
     addFlow:()=>{},
-    updateFlow:(newFlow:flow)=>{}
+    updateFlow:(newFlow:flow)=>{},
+    setNodeId:(newState:any)=>{},
+    nodeId:0,
     
 
 }
@@ -28,10 +32,11 @@ export function TabsProvider({children}){
     const [tabIndex,setTabIndex] = useState(0)
     const [flows,setFlows] = useState<Array<flow>>([])
     const [id, setId] = useState(0);
+    const [nodeId, setNodeId] = useState(0);
     useEffect(() => {
         if(flows.length !== 0)
-            window.localStorage.setItem('tabsData', JSON.stringify({tabIndex, flows, id}));
-    }, [flows, id, tabIndex]);
+            window.localStorage.setItem('tabsData', JSON.stringify({tabIndex, flows, id, nodeId}));
+    }, [flows, id, nodeId, tabIndex]);
 
     useEffect(() => {
         let cookie = window.localStorage.getItem('tabsData');
@@ -40,6 +45,7 @@ export function TabsProvider({children}){
             setTabIndex(cookieObject.tabIndex);
             setFlows(cookieObject.flows)
             setId(cookieObject.id)
+            setNodeId(cookieObject.nodeId)
         }
     }, [])
     
@@ -83,7 +89,7 @@ export function TabsProvider({children}){
     }
 
     return(
-        <TabsContext.Provider value={{tabIndex,setTabIndex,flows,removeFlow,addFlow,updateFlow}}>
+        <TabsContext.Provider value={{tabIndex,setTabIndex,flows,setNodeId, nodeId,removeFlow,addFlow,updateFlow}}>
             {children}
         </TabsContext.Provider>
     )
