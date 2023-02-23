@@ -5,7 +5,7 @@ import { TabsContext } from "../../../../contexts/tabsContext";
 var _ = require("lodash");
 
 export default function TabComponent({ selected, flow, onClick }) {
-  const { removeFlow, updateFlow } = useContext(TabsContext);
+  const { removeFlow, updateFlow,flows } = useContext(TabsContext);
   const [isRename, setIsRename] = useState(false);
   const [value, setValue] = useState("");
   return (
@@ -61,7 +61,7 @@ export default function TabComponent({ selected, flow, onClick }) {
                 removeFlow(flow.id);
               }}
             >
-              <XMarkIcon className="h-4 hover:bg-gray-100 rounded-full" />
+              {flows.length>1&& <XMarkIcon className="h-4 hover:bg-gray-100 rounded-full" />}
             </button>
           </div>
         )
