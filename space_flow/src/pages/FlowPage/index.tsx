@@ -133,11 +133,6 @@ export default function FlowPage({ flow }) {
             ...data,
             id: newId,
             value: null,
-            onDelete: () => {
-              setNodes(
-                reactFlowInstance.getNodes().filter((n) => n.id !== newId)
-              );
-            },
           },
         };
         setNodes((nds) => nds.concat(newNode));
@@ -153,7 +148,7 @@ export default function FlowPage({ flow }) {
 
   return (
     <div className="w-full h-full" ref={reactFlowWrapper}>
-      {Object.keys(types).length > 4 ? (
+      {Object.keys(types).length > 0 ? (
         <>
           <ReactFlow
             nodes={nodes}

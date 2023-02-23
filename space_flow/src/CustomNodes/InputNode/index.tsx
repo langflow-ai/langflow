@@ -12,7 +12,7 @@ import Tooltip from "../../components/TooltipComponent";
 import { typesContext } from "../../contexts/typesContext";
 
 export default function InputNode({ data }) {
-  const {types} = useContext(typesContext);
+  const {types, deleteNode} = useContext(typesContext);
   return (
     <div className="prompt-node relative bg-white w-96 rounded-lg solid border flex flex-col justify-center">
       <Tooltip title="Prefix: str">
@@ -38,7 +38,7 @@ export default function InputNode({ data }) {
         </div>
         <button
           onClick={() => {
-            data.onDelete(data);
+            deleteNode(data.id)
           }}
         >
           <TrashIcon className="text-gray-600 w-6 h-6 hover:text-red-500"></TrashIcon>
