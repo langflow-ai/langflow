@@ -51,7 +51,7 @@ export default function ParameterComponent({
             position={left ? Position.Left : Position.Right}
             id={id}
             isValidConnection={(connection) =>
-              isValidConnection(data, connection)
+              isValidConnection(connection,reactFlowInstance)
             }
             className={
               (left ? "-ml-0.5 " : "-mr-0.5 ") +
