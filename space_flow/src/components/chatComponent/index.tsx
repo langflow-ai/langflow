@@ -34,7 +34,7 @@ export default function Chat({ reactFlowInstance }) {
     return true;
   }
   function validateChatNodes(){
-    if(!reactFlowInstance.getNodes().some((n)=> (n.type === 'chatOutputNode')) || !reactFlowInstance.getNodes().some((n)=> (n.type === 'chatInputNode'))){
+    if(!reactFlowInstance.getNodes().some((n)=> (n.type === 'chatOutputNode'))){
       return false;
     }
     return true;
