@@ -59,6 +59,7 @@ export function TabsProvider({children}){
             const index = newFlows.findIndex(flow=>flow.id===newFlow.id)
             if(index!==-1){
                 newFlows[index].data = newFlow.data
+                newFlows[index].name = newFlow.name
             }
             window.sessionStorage.setItem('tabs', JSON.stringify(newFlows));
             return newFlows;
