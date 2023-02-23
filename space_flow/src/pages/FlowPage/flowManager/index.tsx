@@ -20,7 +20,6 @@ export function TabsManager() {
     <div className="h-full w-full flex flex-col">
       <div className="w-full flex pr-2 flex-row text-center items-center bg-gray-100">
         {flows.map((flow, index) => {
-          console.log(tabIndex);
           return (
             <TabComponent
               onClick={() => setTabIndex(index)}

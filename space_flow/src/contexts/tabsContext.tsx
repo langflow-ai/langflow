@@ -30,17 +30,17 @@ export function TabsProvider({children}){
     function removeFlow(id:string){
         setFlows(prevState=>{
             const newFlows = [...prevState];
-            const index = newFlows.findIndex(flow=>flow.id===id)
-            if(index!==-1){
-                newFlows.splice(index,1)
-            }
-            if(index===tabIndex){
-                if(tabIndex===0){
-                    //
+            const index = newFlows.findIndex(flow=>flow.id===id);
+            if(index >= 0){
+                if(index===tabIndex){
+                    setTabIndex(flows.length-2);
+                    newFlows.splice(index,1);
+                } else {
+                    let flowId = flows[tabIndex].id;
+                    newFlows.splice(index,1);
+                    setTabIndex(newFlows.findIndex(flow=>flow.id === flowId));
                 }
-                else{
-                    setTabIndex(tabIndex-1)
-                }
+                
             }
             window.sessionStorage.setItem('tabs', JSON.stringify(newFlows));
             return newFlows;
@@ -48,10 +48,11 @@ export function TabsProvider({children}){
     }
     function addFlow(newFlow: flow) {
         setFlows(prevState => {
-          const newFlows = [...prevState, newFlow];
-          window.sessionStorage.setItem('tabs', JSON.stringify(newFlows));
-          return newFlows;
+            const newFlows = [...prevState, newFlow];
+            window.sessionStorage.setItem('tabs', JSON.stringify(newFlows));
+            return newFlows;
         });
+        setTabIndex(flows.length);
       }
     function updateFlow(newFlow:flow){
         setFlows(prevState=>{
