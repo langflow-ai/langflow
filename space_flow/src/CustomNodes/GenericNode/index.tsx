@@ -12,7 +12,9 @@ import { useContext } from "react";
 
 export default function GenericNode({ data }) {
   const {types} = useContext(typesContext);
+  console.log(types, data.type)
   const Icon = nodeIcons[types[data.type]];
+
 
   return (
     <div className="prompt-node relative bg-white w-96 rounded-lg solid border flex flex-col justify-center">
