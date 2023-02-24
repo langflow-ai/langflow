@@ -102,14 +102,14 @@ export default function Chat({flow, reactFlowInstance }) {
               {chatHistory.map((c, i) => (
                 <div key={i}>
                   {c.isSend ? (
-                    <div className="w-full text-start">
-                      <div className="text-start inline-block bg-gray-200 rounded-xl p-3 overflow-hidden w-fit max-w-[280px] px-5 text-sm font-normal rounded-tl-none">
+                    <div className="w-full text-end">
+                      <div className="text-start inline-block bg-gray-200 rounded-xl p-3 overflow-hidden w-fit max-w-[280px] px-5 text-sm font-normal rounded-tr-none">
                         {c.message}
                       </div>
                     </div>
                   ) : (
-                    <div className="w-full text-end">
-                      <div style={{backgroundColor: nodeColors['chat']}} className="text-start inline-block rounded-xl p-3 overflow-hidden w-fit max-w-[280px] px-5 text-sm text-white font-normal rounded-tr-none">
+                    <div className="w-full text-start">
+                      <div style={{backgroundColor: nodeColors['chat']}} className="text-start inline-block rounded-xl p-3 overflow-hidden w-fit max-w-[280px] px-5 text-sm text-white font-normal rounded-tl-none">
                         {c.message}
                       </div>
                     </div>
