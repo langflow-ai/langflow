@@ -1,6 +1,6 @@
 import { createContext, useEffect, useState, useRef } from "react";
 
-type flow={name:string,id:string,data:any}
+type flow={name:string,id:string,data:any,chat:Array<{message:string,isSend:boolean}>}
 
 type TabsContextType={
     tabIndex:number;
@@ -74,7 +74,7 @@ export function TabsProvider({children}){
     }
     function addFlow(flowData?:flow) {
         const data = flowData?flowData:null
-        let newFlow: flow = {name: "flow"+id, id: id.toString(), data}
+        let newFlow: flow = {name: "flow"+id, id: id.toString(), data,chat:[]}
         setId((old) => old+1);
         setFlows(prevState => {
             const newFlows = [...prevState, newFlow];

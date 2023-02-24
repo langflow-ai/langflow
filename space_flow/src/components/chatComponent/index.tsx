@@ -9,13 +9,15 @@ import { useContext, useEffect, useRef, useState } from "react";
 import { sendAll } from "../../controllers/NodesServices";
 import { alertContext } from "../../contexts/alertContext";
 import { nodeColors } from "../../utils";
+import { TabsContext } from "../../contexts/tabsContext";
 
 const _ = require("lodash");
 
-export default function Chat({ reactFlowInstance }) {
+export default function Chat({flow, reactFlowInstance }) {
+  const {updateFlow} = useContext(TabsContext)
   const [open, setOpen] = useState(true);
   const [chatValue, setChatValue] = useState("");
-  const [chatHistory, setChatHistory] = useState([]);
+  const [chatHistory, setChatHistory] = useState(flow.chat);
   const {setErrorData} = useContext(alertContext);
   const addChatHistory = (message, isSend) => {
     setChatHistory((old) => {
@@ -23,7 +25,13 @@ export default function Chat({ reactFlowInstance }) {
       newChat.push({ message, isSend });
       return newChat;
     });
+    updateFlow({..._.cloneDeep(flow),chat:chatHistory})
+
   };
+  useEffect(()=>{
+    // setChatHistory(flow.chat)
+    console.log(flow.chat)
+  },[flow])
   useEffect(()=>{
     ref.current.scrollIntoView({behavior: 'smooth'});
   }, [chatHistory])
@@ -40,6 +48,28 @@ export default function Chat({ reactFlowInstance }) {
     return true;
   }
   const ref = useRef(null);
+
+  function sendMessage(){
+    console.log(reactFlowInstance.toObject())
+    if(chatValue !== ""){
+      if(validateNodes()){
+        if(validateChatNodes()){
+          let message = chatValue;
+          setChatValue("");
+          addChatHistory(message, true);
+          sendAll({...reactFlowInstance.toObject(),message}).then((r) => {addChatHistory(r.data.result, false);});
+        } else {
+          setErrorData({title: 'Error sending message', list:['Chat nodes are missing.']})
+        }
+      
+      } else {
+        setErrorData({title: 'Error sending message', list:['There are required fields not filled yet.']})
+      }
+    } else {
+      setErrorData({title: 'Error sending message', list:['The message cannot be empty.']})
+    }  
+  }
+
   return (
     <>
       <Transition
@@ -90,6 +120,11 @@ export default function Chat({ reactFlowInstance }) {
             <div className="w-full bg-white border-t flex items-center justify-between p-3">
               <div className="relative w-full mt-1 rounded-md shadow-sm">
                 <input
+                onKeyDown={(event)=>{
+                  if(event.key==='Enter'){
+                    sendMessage()
+                  }
+                }}
                   type="text"
                   value={chatValue}
                   onChange={(e) => {
@@ -100,28 +135,7 @@ export default function Chat({ reactFlowInstance }) {
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3">
                   <button
-                    onClick={() => {
-                      console.log(reactFlowInstance.toObject())
-                      if(chatValue !== ""){
-                        if(validateNodes()){
-                          if(validateChatNodes()){
-                            let message = chatValue;
-                            setChatValue("");
-                            addChatHistory(message, true);
-                            sendAll({...reactFlowInstance.toObject(),message}).then((r) => {addChatHistory(r.data.result, false);});
-                          } else {
-                            setErrorData({title: 'Error sending message', list:['Chat nodes are missing.']})
-                          }
-                        
-                        } else {
-                          setErrorData({title: 'Error sending message', list:['There are required fields not filled yet.']})
-                        }
-                      } else {
-                        setErrorData({title: 'Error sending message', list:['The message cannot be empty.']})
-                      }
-                      
-                      
-                    }}
+                    onClick={() => sendMessage()}
                   >
                     <PaperAirplaneIcon
                       className="h-5 w-5 text-gray-400 hover:text-gray-600"

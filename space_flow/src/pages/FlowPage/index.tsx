@@ -173,7 +173,7 @@ export default function FlowPage({ flow }) {
             <Background />
             <Controls></Controls>
           </ReactFlow>
-          <Chat reactFlowInstance={reactFlowInstance} />
+          <Chat flow={flow} reactFlowInstance={reactFlowInstance} />
         </>
       ) : (
         <></>
