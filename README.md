@@ -19,7 +19,7 @@
 
 ![LangFlow Logo](https://github.com/logspace-ai/langflow/blob/main/img/llm_simple_flow.png)
 
-LangFlow is a no-code flow maker for LangChain, designed to provide an intuitive interface for building custom AI pipelines. With LangFlow, users can easily create custom flows using a drag-and-drop interface, combining the capabilities of LangChain with external tools.
+LangFlow is a no-code flow builder for LangChain, designed to provide a drag-and-drop UI, combining the capabilities of LangChain with reactFlow and a chat interface.
 
 ## 📦 Installation
 
