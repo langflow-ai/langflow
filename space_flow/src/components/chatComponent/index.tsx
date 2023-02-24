@@ -34,7 +34,8 @@ export default function Chat({flow, reactFlowInstance }) {
     console.log(flow.chat)
   },[flow])
   useEffect(()=>{
-    ref.current.scrollIntoView({behavior: 'smooth'});
+    if(ref.current)
+      ref.current.scrollIntoView({behavior: 'smooth'});
   }, [chatHistory])
   function validateNodes(){
     if(reactFlowInstance.getNodes().some((n) => (n.data.node && Object.keys(n.data.node.template).some((t: any) => ((n.data.node.template[t].required && n.data.node.template[t].value === "") && (n.data.node.template[t].required && !reactFlowInstance.getEdges().some((e) => (e.sourceHandle.split('|')[1] === t && e.sourceHandle.split('|')[2] === n.id)))))))){
