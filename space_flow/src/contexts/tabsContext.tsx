@@ -83,12 +83,14 @@ export function TabsProvider({children}){
         setTabIndex(flows.length);
       }
     function updateFlow(newFlow:flow){
+        console.log(newFlow)
         setFlows(prevState=>{
             const newFlows = [...prevState];
             const index = newFlows.findIndex(flow=>flow.id===newFlow.id)
             if(index!==-1){
                 newFlows[index].data = newFlow.data
                 newFlows[index].name = newFlow.name
+                newFlows[index].chat = newFlow.chat
             }
             return newFlows;
         });
