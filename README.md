@@ -23,11 +23,7 @@ LangFlow is a no-code flow builder for LangChain, designed to provide a drag-and
 
 ## 📦 Installation
 
-To get started with LangFlow, you first need to install the LangChain library. You can do this using the following command:
-
-`pip install langchain`
-
-You can also install LangFlow via pip:
+You can install LangFlow from pip:
 
 `pip install langflow`
 
@@ -38,7 +34,7 @@ Next, set the `OPENAI_API_KEY` environment variable using one of the following m
 
 ## 🎨 Creating Flows
 
-Creating flows with LangFlow is easy, thanks to its intuitive drag-and-drop interface. Simply drag components from the sidebar onto the canvas, and connect them together to create your custom NLP pipeline. LangFlow provides a range of pre-built components to choose from, including LLMs, prompt serializers, document loaders, and more.
+Creating flows with LangFlow is easy, thanks to its intuitive drag-and-drop interface. Simply drag components from the sidebar onto the canvas, and connect them together to create your custom NLP pipeline. LangFlow provides a range of pre-built components to choose from, including LLMs, prompt serializers, agents, and chains.
 
 ## 💻 Examples
 
