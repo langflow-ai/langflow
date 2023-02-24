@@ -25,11 +25,12 @@ export default function Chat({flow, reactFlowInstance }) {
       newChat.push({ message, isSend });
       return newChat;
     });
-    updateFlow({..._.cloneDeep(flow),chat:chatHistory})
-
   };
   useEffect(()=>{
-    // setChatHistory(flow.chat)
+    updateFlow({..._.cloneDeep(flow),chat:chatHistory})
+  },[chatHistory])
+  useEffect(()=>{
+    setChatHistory(flow.chat)
     console.log(flow.chat)
   },[flow])
   useEffect(()=>{
