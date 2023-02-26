@@ -10,6 +10,7 @@ type TabsContextType={
     addFlow:(flowData?:any)=>void;
     updateFlow:(newFlow:flow)=>void;
     incrementNodeId:()=>number,
+    downloadFlow:()=>void
 }
 
 const TabsContextInitialValue = {
@@ -20,7 +21,7 @@ const TabsContextInitialValue = {
     addFlow:(flowData?:any)=>{},
     updateFlow:(newFlow:flow)=>{},
     incrementNodeId:()=>0,
-    
+    downloadFlow:()=>{}
 
 }
 
@@ -53,6 +54,14 @@ export function TabsProvider({children}){
             newNodeId.current= cookieObject.nodeId;
         }
     }, [])
+
+    function downloadFlow(){
+        const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(JSON.stringify(flows[tabIndex]))}`
+        const link = document.createElement('a')
+        link.href = jsonString
+        link.download = `${flows[tabIndex].name}.json`
+        link.click()
+    }
     
     function removeFlow(id:string){
         setFlows(prevState=>{
@@ -97,7 +106,7 @@ export function TabsProvider({children}){
     }
 
     return(
-        <TabsContext.Provider value={{tabIndex,setTabIndex,flows,incrementNodeId, removeFlow,addFlow,updateFlow}}>
+        <TabsContext.Provider value={{tabIndex,setTabIndex,flows,incrementNodeId, removeFlow,addFlow,updateFlow, downloadFlow}}>
             {children}
         </TabsContext.Provider>
     )
