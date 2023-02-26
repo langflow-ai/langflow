@@ -49,7 +49,7 @@ export default function ExtraSidebar() {
   }
 
   return (
-    <div className="mt-4">
+    <div className="mt-4 w-full">
       {Object.keys(data).map((d, i) => (
         <DisclosureComponent
           key={i}

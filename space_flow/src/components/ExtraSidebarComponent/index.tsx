@@ -1,11 +1,13 @@
 import { Disclosure } from "@headlessui/react";
-import { ChevronLeftIcon } from "@heroicons/react/24/outline";
+import { ArrowUpTrayIcon, ChevronLeftIcon } from "@heroicons/react/24/outline";
 import { useContext } from "react";
 import { Link } from "react-router-dom";
 import { classNames } from "../../utils";
 import { locationContext } from "../../contexts/locationContext";
+import { TabsContext } from "../../contexts/tabsContext";
 
 export default function ExtraSidebar() {
+  const {uploadFlow} = useContext(TabsContext)
   const {
     atual,
     isStackedOpen,
@@ -20,7 +22,7 @@ export default function ExtraSidebar() {
           isStackedOpen ? "w-60" : "w-0 "
         } flex-shrink-0 flex overflow-hidden flex-col border-r transition-all duration-500`}
       >
-        <div className="w-60 overflow-y-auto scrollbar-hide h-full">
+        <div className="w-60 overflow-y-auto scrollbar-hide h-full flex flex-col items-start">
           <div className="flex pt-4 px-4 justify-between align-middle w-full">
             <span className="text-gray-900 text-lg ml-2 font-semibold">
               {extraNavigation.title}
@@ -32,7 +34,7 @@ export default function ExtraSidebar() {
               <ChevronLeftIcon className="h-6 w-6"></ChevronLeftIcon>
             </button>
           </div>
-          <div className="flex flex-grow flex-col">
+          <div className="flex flex-grow flex-col w-full">
             {extraNavigation.options ? (
               <div className="p-4">
                 <nav className="flex-1 space-y-1">
@@ -122,6 +124,10 @@ export default function ExtraSidebar() {
             ) : (
               extraComponent
             )}
+            {/* need to convert to multi stackbar logic */}
+          </div>
+          <div className="w-full  flex content-center justify-center mt-auto mb-8">
+          <button onClick={()=>uploadFlow()} className="flex content-center justify-center py-3 px-6 border rounded-lg border-blue-500 text-blue-500 hover:text-white hover:bg-blue-500"><span>import flow</span><ArrowUpTrayIcon className=" ml-2 w-5 h-5"/>  </button>
           </div>
         </div>
       </aside>

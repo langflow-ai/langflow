@@ -10,7 +10,8 @@ type TabsContextType={
     addFlow:(flowData?:any)=>void;
     updateFlow:(newFlow:flow)=>void;
     incrementNodeId:()=>number,
-    downloadFlow:()=>void
+    downloadFlow:()=>void,
+    uploadFlow:()=>void
 }
 
 const TabsContextInitialValue = {
@@ -21,7 +22,8 @@ const TabsContextInitialValue = {
     addFlow:(flowData?:any)=>{},
     updateFlow:(newFlow:flow)=>{},
     incrementNodeId:()=>0,
-    downloadFlow:()=>{}
+    downloadFlow:()=>{},
+    uploadFlow:()=>{}
 
 }
 
@@ -62,6 +64,18 @@ export function TabsProvider({children}){
         link.download = `${flows[tabIndex].name}.json`
         link.click()
     }
+    function uploadFlow(){
+        const input = document.createElement('input')
+        input.type='file'
+        input.onchange = (e:Event)=>{
+            if((e.target as HTMLInputElement).files[0].type === "application/json"){
+                const file = (e.target as HTMLInputElement).files[0];
+                file.text().then(text =>addFlow(JSON.parse(text))) 
+            }
+        }
+        input.click()
+        
+    }
     
     function removeFlow(id:string){
         setFlows(prevState=>{
@@ -82,8 +96,8 @@ export function TabsProvider({children}){
         });
     }
     function addFlow(flowData?:flow) {
-        const data = flowData?flowData:null
-        let newFlow: flow = {name: "flow"+id, id: id.toString(), data,chat:[]}
+        const data = flowData?.data?flowData:null
+        let newFlow: flow = {name:flowData?flowData.name:"flow"+id, id: id.toString(), data,chat:flowData?flowData.chat:[]}
         setId((old) => old+1);
         setFlows(prevState => {
             const newFlows = [...prevState, newFlow];
@@ -106,7 +120,7 @@ export function TabsProvider({children}){
     }
 
     return(
-        <TabsContext.Provider value={{tabIndex,setTabIndex,flows,incrementNodeId, removeFlow,addFlow,updateFlow, downloadFlow}}>
+        <TabsContext.Provider value={{tabIndex,setTabIndex,flows,incrementNodeId, removeFlow,addFlow,updateFlow, downloadFlow, uploadFlow}}>
             {children}
         </TabsContext.Provider>
     )
