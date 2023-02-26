@@ -26,6 +26,7 @@ export default function Chat({flow, reactFlowInstance }) {
       return newChat;
     });
   };
+  //bug here why??
   useEffect(()=>{
     updateFlow({..._.cloneDeep(flow),chat:chatHistory})
   },[chatHistory])
