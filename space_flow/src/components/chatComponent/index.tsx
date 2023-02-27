@@ -15,6 +15,7 @@ const _ = require("lodash");
 
 export default function Chat({flow, reactFlowInstance }) {
   const {updateFlow} = useContext(TabsContext)
+  const [saveChat,setSaveChat] = useState(false)
   const [open, setOpen] = useState(true);
   const [chatValue, setChatValue] = useState("");
   const [chatHistory, setChatHistory] = useState(flow.chat);
@@ -25,14 +26,16 @@ export default function Chat({flow, reactFlowInstance }) {
       newChat.push({ message, isSend });
       return newChat;
     });
+    setSaveChat(chat=>!chat)
   };
   //bug here why??
   useEffect(()=>{
+    console.log("flow")
     updateFlow({..._.cloneDeep(flow),chat:chatHistory})
-  },[chatHistory])
+  },[saveChat])
   useEffect(()=>{
     setChatHistory(flow.chat)
-    console.log(flow.chat)
+    // console.log(flow.chat)
   },[flow])
   useEffect(()=>{
     if(ref.current)
