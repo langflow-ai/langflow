@@ -9,7 +9,7 @@ import { TabsContext } from "../../contexts/tabsContext";
 export default function ExtraSidebar() {
   const {uploadFlow} = useContext(TabsContext)
   const {
-    atual,
+    current,
     isStackedOpen,
     setIsStackedOpen,
     extraNavigation,
@@ -44,7 +44,7 @@ export default function ExtraSidebar() {
                         <Link
                           to={item.href}
                           className={classNames(
-                            item.href.split("/")[2] === atual[4]
+                            item.href.split("/")[2] === current[4]
                               ? "bg-gray-100 text-gray-900"
                               : "bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900",
                             "group w-full flex items-center pl-2 py-2 text-sm font-medium rounded-md"
@@ -52,7 +52,7 @@ export default function ExtraSidebar() {
                         >
                           <item.icon
                             className={classNames(
-                              item.href.split("/")[2] === atual[4]
+                              item.href.split("/")[2] === current[4]
                                 ? "text-gray-500"
                                 : "text-gray-400 group-hover:text-gray-500",
                               "mr-3 flex-shrink-0 h-6 w-6"
@@ -71,7 +71,7 @@ export default function ExtraSidebar() {
                           <>
                             <Disclosure.Button
                               className={classNames(
-                                item.href.split("/")[2] === atual[4]
+                                item.href.split("/")[2] === current[4]
                                   ? "bg-gray-100 text-gray-900"
                                   : "bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900",
                                 "group w-full flex items-center pl-2 pr-1 py-2 text-left text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -104,7 +104,7 @@ export default function ExtraSidebar() {
                                   key={subItem.name}
                                   to={subItem.href}
                                   className={classNames(
-                                    subItem.href.split("/")[3] === atual[5]
+                                    subItem.href.split("/")[3] === current[5]
                                       ? "bg-gray-100 text-gray-900"
                                       : "bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900",
                                     "group flex w-full items-center rounded-md py-2 pl-11 pr-2 text-sm font-medium"

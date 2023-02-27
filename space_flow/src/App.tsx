@@ -18,14 +18,14 @@ import { TabsManager } from "./pages/FlowPage/flowManager";
 export default function App() {
 	var _ = require("lodash");
 
-	let { setAtual, setShowSideBar, setIsStackedOpen } =
+	let { setCurrent, setShowSideBar, setIsStackedOpen } =
 		useContext(locationContext);
 	let location = useLocation();
 	useEffect(() => {
-		setAtual(location.pathname.replace(/\/$/g, "").split("/"));
+		setCurrent(location.pathname.replace(/\/$/g, "").split("/"));
 		setShowSideBar(true);
 		setIsStackedOpen(true);
-	}, [location.pathname, setAtual, setIsStackedOpen, setShowSideBar]);
+	}, [location.pathname, setCurrent, setIsStackedOpen, setShowSideBar]);
 
 	const {
 		errorData,
