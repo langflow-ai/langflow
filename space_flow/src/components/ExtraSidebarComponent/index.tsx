@@ -126,9 +126,9 @@ export default function ExtraSidebar() {
             )}
             {/* need to convert to multi stackbar logic */}
           </div>
-          <div className="w-full  flex content-center justify-center mt-auto mb-8">
+          {/* <div className="w-full  flex content-center justify-center mt-auto mb-8">
           <button onClick={()=>uploadFlow()} className="flex content-center justify-center py-3 px-6 border rounded-lg border-blue-500 text-blue-500 hover:text-white hover:bg-blue-500"><span>import flow</span><ArrowUpTrayIcon className=" ml-2 w-5 h-5"/>  </button>
-          </div>
+          </div> */}
         </div>
       </aside>
     </>
