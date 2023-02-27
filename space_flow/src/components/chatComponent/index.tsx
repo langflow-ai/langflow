@@ -28,14 +28,12 @@ export default function Chat({flow, reactFlowInstance }) {
     });
     setSaveChat(chat=>!chat)
   };
-  //bug here why??
   useEffect(()=>{
     console.log("flow")
     updateFlow({..._.cloneDeep(flow),chat:chatHistory})
   },[saveChat])
   useEffect(()=>{
     setChatHistory(flow.chat)
-    // console.log(flow.chat)
   },[flow])
   useEffect(()=>{
     if(ref.current)
