@@ -1,6 +1,5 @@
 import "reactflow/dist/style.css";
-import { useState, useRef, useEffect, useContext } from "react";
-import { ReactFlowProvider } from "reactflow";
+import { useState, useEffect, useContext } from "react";
 import "./App.css";
 import { useLocation } from "react-router-dom";
 import ErrorAlert from "./alerts/error";
@@ -9,10 +8,8 @@ import SuccessAlert from "./alerts/success";
 import ExtraSidebar from "./components/ExtraSidebarComponent";
 import { alertContext } from "./contexts/alertContext";
 import { locationContext } from "./contexts/locationContext";
-import FlowPage from "./pages/FlowPage";
 import Sidebar from "./components/SidebarComponent";
 import Header from "./components/HeaderComponent";
-import { TabsProvider } from "./contexts/tabsContext";
 import { TabsManager } from "./pages/FlowPage/flowManager";
 
 export default function App() {
