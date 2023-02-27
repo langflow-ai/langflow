@@ -44,7 +44,7 @@ export default function FlowPage({ flow }) {
 	const reactFlowWrapper = useRef(null);
 
 	function getId() {
-		return `dndnode_}` + incrementNodeId();
+		return `dndnode_` + incrementNodeId();
 	}
 
 	const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
