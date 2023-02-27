@@ -5,6 +5,7 @@ import { TabsProvider } from "./tabsContext";
 import { TypesProvider } from "./typesContext";
 
 export default function ContextWrapper({ children }) {
+  //element to wrap all context
   return (
     <>
       <LocationProvider>
