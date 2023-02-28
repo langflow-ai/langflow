@@ -1,0 +1,3012 @@
+{
+    "chains": {
+      "APIChain": {
+        "template": {
+          "memory": {
+            "type": "Memory",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "api_request_chain": {
+            "type": "LLMChain",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "api_answer_chain": {
+            "type": "LLMChain",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "requests_wrapper": {
+            "type": "RequestsWrapper",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "api_docs": {
+            "type": "str",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "question_key": {
+            "type": "str",
+            "required": false,
+            "default": "question",
+            "list": false,
+            "show": false
+          },
+          "output_key": {
+            "type": "str",
+            "required": false,
+            "default": "output",
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "api_chain"
+      },
+      "HypotheticalDocumentEmbedder": {
+        "template": {
+          "memory": {
+            "type": "Memory",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "base_embeddings": {
+            "type": "Embeddings",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "llm_chain": {
+            "type": "LLMChain",
+            "required": true,
+            "list": false,
+            "show": true
+          }
+        },
+        "_type": "hyde_chain"
+      },
+      "LLMChain": {
+        "template": {
+          "memory": {
+            "type": "Memory",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "prompt": {
+            "type": "BasePromptTemplate",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "llm": {
+            "type": "BaseLLM",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "output_key": {
+            "type": "str",
+            "required": false,
+            "default": "text",
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "llm_chain"
+      },
+      "LLMBashChain": {
+        "template": {
+          "memory": {
+            "type": "Memory",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "llm": {
+            "type": "BaseLLM",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "input_key": {
+            "type": "str",
+            "required": false,
+            "default": "question",
+            "list": false,
+            "show": false
+          },
+          "output_key": {
+            "type": "str",
+            "required": false,
+            "default": "answer",
+            "list": false,
+            "show": false
+          },
+          "prompt": {
+            "type": "BasePromptTemplate",
+            "required": false,
+            "default": {
+              "input_variables": [
+                "question"
+              ],
+              "output_parser": null,
+              "template": "If someone asks you to perform a task, your job is to come up with a series of bash commands that will perform the task. There is no need to put \"#!/bin/bash\" in your answer. Make sure to reason step by step, using this format:\n\nQuestion: \"copy the files in the directory named 'target' into a new directory at the same level as target called 'myNewDirectory'\"\n\nI need to take the following actions:\n- List all files in the directory\n- Create a new directory\n- Copy the files from the first directory into the second directory\n```bash\nls\nmkdir myNewDirectory\ncp -r target/* myNewDirectory\n```\n\nThat is the format. Begin!\n\nQuestion: {question}",
+              "template_format": "f-string",
+              "validate_template": true,
+              "_type": "prompt"
+            },
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "llm_bash_chain"
+      },
+      "LLMCheckerChain": {
+        "template": {
+          "memory": {
+            "type": "Memory",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "llm": {
+            "type": "BaseLLM",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "create_draft_answer_prompt": {
+            "type": "PromptTemplate",
+            "required": false,
+            "default": {
+              "input_variables": [
+                "question"
+              ],
+              "output_parser": null,
+              "template": "{question}\n\n",
+              "template_format": "f-string",
+              "validate_template": true,
+              "_type": "prompt"
+            },
+            "list": false,
+            "show": false
+          },
+          "list_assertions_prompt": {
+            "type": "PromptTemplate",
+            "required": false,
+            "default": {
+              "input_variables": [
+                "statement"
+              ],
+              "output_parser": null,
+              "template": "Here is a statement:\n{statement}\nMake a bullet point list of the assumptions you made when producing the above statement.\n\n",
+              "template_format": "f-string",
+              "validate_template": true,
+              "_type": "prompt"
+            },
+            "list": false,
+            "show": false
+          },
+          "check_assertions_prompt": {
+            "type": "PromptTemplate",
+            "required": false,
+            "default": {
+              "input_variables": [
+                "assertions"
+              ],
+              "output_parser": null,
+              "template": "Here is a bullet point list of assertions:\n{assertions}\nFor each assertion, determine whether it is true or false. If it is false, explain why.\n\n",
+              "template_format": "f-string",
+              "validate_template": true,
+              "_type": "prompt"
+            },
+            "list": false,
+            "show": false
+          },
+          "revised_answer_prompt": {
+            "type": "PromptTemplate",
+            "required": false,
+            "default": {
+              "input_variables": [
+                "checked_assertions",
+                "question"
+              ],
+              "output_parser": null,
+              "template": "{checked_assertions}\n\nQuestion: In light of the above assertions and checks, how would you answer the question '{question}'?\n\nAnswer:",
+              "template_format": "f-string",
+              "validate_template": true,
+              "_type": "prompt"
+            },
+            "list": false,
+            "show": false
+          },
+          "input_key": {
+            "type": "str",
+            "required": false,
+            "default": "query",
+            "list": false,
+            "show": false
+          },
+          "output_key": {
+            "type": "str",
+            "required": false,
+            "default": "result",
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "llm_checker_chain"
+      },
+      "LLMMathChain": {
+        "template": {
+          "memory": {
+            "type": "Memory",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "llm": {
+            "type": "BaseLLM",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "prompt": {
+            "type": "BasePromptTemplate",
+            "required": false,
+            "default": {
+              "input_variables": [
+                "question"
+              ],
+              "output_parser": null,
+              "template": "You are GPT-3, and you can't do math.\n\nYou can do basic math, and your memorization abilities are impressive, but you can't do any complex calculations that a human could not do in their head. You also have an annoying tendency to just make up highly specific, but wrong, answers.\n\nSo we hooked you up to a Python 3 kernel, and now you can execute code. If anyone gives you a hard math problem, just use this format and we’ll take care of the rest:\n\nQuestion: ${{Question with hard calculation.}}\n```python\n${{Code that prints what you need to know}}\n```\n```output\n${{Output of your code}}\n```\nAnswer: ${{Answer}}\n\nOtherwise, use this simpler format:\n\nQuestion: ${{Question without hard calculation}}\nAnswer: ${{Answer}}\n\nBegin.\n\nQuestion: What is 37593 * 67?\n\n```python\nprint(37593 * 67)\n```\n```output\n2518731\n```\nAnswer: 2518731\n\nQuestion: {question}\n",
+              "template_format": "f-string",
+              "validate_template": true,
+              "_type": "prompt"
+            },
+            "list": false,
+            "show": false
+          },
+          "input_key": {
+            "type": "str",
+            "required": false,
+            "default": "question",
+            "list": false,
+            "show": false
+          },
+          "output_key": {
+            "type": "str",
+            "required": false,
+            "default": "answer",
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "llm_math_chain"
+      },
+      "LLMRequestsChain": {
+        "template": {
+          "memory": {
+            "type": "Memory",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "llm_chain": {
+            "type": "LLMChain",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "requests_wrapper": {
+            "type": "RequestsWrapper",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "text_length": {
+            "type": "int",
+            "required": false,
+            "default": 8000,
+            "list": false,
+            "show": false
+          },
+          "requests_key": {
+            "type": "str",
+            "required": false,
+            "default": "requests_result",
+            "list": false,
+            "show": false
+          },
+          "input_key": {
+            "type": "str",
+            "required": false,
+            "default": "url",
+            "list": false,
+            "show": false
+          },
+          "output_key": {
+            "type": "str",
+            "required": false,
+            "default": "output",
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "llm_requests_chain"
+      },
+      "ConversationChain": {
+        "template": {
+          "memory": {
+            "type": "Memory",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "prompt": {
+            "type": "BasePromptTemplate",
+            "required": false,
+            "default": {
+              "input_variables": [
+                "history",
+                "input"
+              ],
+              "output_parser": null,
+              "template": "The following is a friendly conversation between a human and an AI. The AI is talkative and provides lots of specific details from its context. If the AI does not know the answer to a question, it truthfully says it does not know.\n\nCurrent conversation:\n{history}\nHuman: {input}\nAI:",
+              "template_format": "f-string",
+              "validate_template": true,
+              "_type": "prompt"
+            },
+            "list": false,
+            "show": false
+          },
+          "llm": {
+            "type": "BaseLLM",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "output_key": {
+            "type": "str",
+            "required": false,
+            "default": "response",
+            "list": false,
+            "show": false
+          },
+          "input_key": {
+            "type": "str",
+            "required": false,
+            "default": "input",
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "llm_conversation_chain"
+      },
+      "PALChain": {
+        "template": {
+          "memory": {
+            "type": "Memory",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "llm": {
+            "type": "BaseLLM",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "prompt": {
+            "type": "BasePromptTemplate",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "stop": {
+            "type": "str",
+            "required": false,
+            "default": "\n\n",
+            "list": false,
+            "show": false
+          },
+          "get_answer_expr": {
+            "type": "str",
+            "required": false,
+            "default": "print(solution())",
+            "list": false,
+            "show": false
+          },
+          "python_globals": {
+            "type": "dict[str, Any]",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "python_locals": {
+            "type": "dict[str, Any]",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "output_key": {
+            "type": "str",
+            "required": false,
+            "default": "result",
+            "list": false,
+            "show": false
+          },
+          "return_intermediate_steps": {
+            "type": "bool",
+            "required": false,
+            "default": false,
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "pal_chain"
+      },
+      "QAWithSourcesChain": {
+        "template": {
+          "memory": {
+            "type": "Memory",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "combine_documents_chain": {
+            "type": "BaseCombineDocumentsChain",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "question_key": {
+            "type": "str",
+            "required": false,
+            "default": "question",
+            "list": false,
+            "show": false
+          },
+          "input_docs_key": {
+            "type": "str",
+            "required": false,
+            "default": "docs",
+            "list": false,
+            "show": false
+          },
+          "answer_key": {
+            "type": "str",
+            "required": false,
+            "default": "answer",
+            "list": false,
+            "show": false
+          },
+          "sources_answer_key": {
+            "type": "str",
+            "required": false,
+            "default": "sources",
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "qa_with_sources_chain"
+      },
+      "StuffDocumentsChain": {
+        "template": {
+          "memory": {
+            "type": "Memory",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "input_key": {
+            "type": "str",
+            "required": false,
+            "default": "input_documents",
+            "list": false,
+            "show": false
+          },
+          "output_key": {
+            "type": "str",
+            "required": false,
+            "default": "output_text",
+            "list": false,
+            "show": false
+          },
+          "llm_chain": {
+            "type": "LLMChain",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "document_prompt": {
+            "type": "BasePromptTemplate",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "document_variable_name": {
+            "type": "str",
+            "required": true,
+            "list": false,
+            "show": true
+          }
+        },
+        "_type": "stuff_documents_chain"
+      },
+      "MapReduceDocumentsChain": {
+        "template": {
+          "memory": {
+            "type": "Memory",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "input_key": {
+            "type": "str",
+            "required": false,
+            "default": "input_documents",
+            "list": false,
+            "show": false
+          },
+          "output_key": {
+            "type": "str",
+            "required": false,
+            "default": "output_text",
+            "list": false,
+            "show": false
+          },
+          "llm_chain": {
+            "type": "LLMChain",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "combine_document_chain": {
+            "type": "BaseCombineDocumentsChain",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "collapse_document_chain": {
+            "type": "BaseCombineDocumentsChain",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "document_variable_name": {
+            "type": "str",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "return_intermediate_steps": {
+            "type": "bool",
+            "required": false,
+            "default": false,
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "map_reduce_documents_chain"
+      },
+      "MapRerankDocumentsChain": {
+        "template": {
+          "memory": {
+            "type": "Memory",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "input_key": {
+            "type": "str",
+            "required": false,
+            "default": "input_documents",
+            "list": false,
+            "show": false
+          },
+          "output_key": {
+            "type": "str",
+            "required": false,
+            "default": "output_text",
+            "list": false,
+            "show": false
+          },
+          "llm_chain": {
+            "type": "LLMChain",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "document_variable_name": {
+            "type": "str",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "rank_key": {
+            "type": "str",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "answer_key": {
+            "type": "str",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "metadata_keys": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": true,
+            "show": false
+          },
+          "return_intermediate_steps": {
+            "type": "bool",
+            "required": false,
+            "default": false,
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "map_rerank_documents_chain"
+      },
+      "RefineDocumentsChain": {
+        "template": {
+          "memory": {
+            "type": "Memory",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "input_key": {
+            "type": "str",
+            "required": false,
+            "default": "input_documents",
+            "list": false,
+            "show": false
+          },
+          "output_key": {
+            "type": "str",
+            "required": false,
+            "default": "output_text",
+            "list": false,
+            "show": false
+          },
+          "initial_llm_chain": {
+            "type": "LLMChain",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "refine_llm_chain": {
+            "type": "LLMChain",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "document_variable_name": {
+            "type": "str",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "initial_response_name": {
+            "type": "str",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "document_prompt": {
+            "type": "BasePromptTemplate",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "return_intermediate_steps": {
+            "type": "bool",
+            "required": false,
+            "default": false,
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "refine_documents_chain"
+      },
+      "SQLDatabaseChain": {
+        "template": {
+          "memory": {
+            "type": "Memory",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "llm": {
+            "type": "BaseLLM",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "database": {
+            "type": "SQLDatabase",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "prompt": {
+            "type": "BasePromptTemplate",
+            "required": false,
+            "default": {
+              "input_variables": [
+                "input",
+                "table_info",
+                "dialect",
+                "top_k"
+              ],
+              "output_parser": null,
+              "template": "Given an input question, first create a syntactically correct {dialect} query to run, then look at the results of the query and return the answer. Unless the user specifies in his question a specific number of examples he wishes to obtain, always limit your query to at most {top_k} results using the LIMIT clause. You can order the results by a relevant column to return the most interesting examples in the database.\n\nNever query for all the columns from a specific table, only ask for a the few relevant columns given the question.\n\nPay attention to use only the column names that you can see in the schema description. Be careful to not query for columns that do not exist. Also, pay attention to which column is in which table.\n\nUse the following format:\n\nQuestion: \"Question here\"\nSQLQuery: \"SQL Query to run\"\nSQLResult: \"Result of the SQLQuery\"\nAnswer: \"Final answer here\"\n\nOnly use the tables listed below.\n\n{table_info}\n\nQuestion: {input}",
+              "template_format": "f-string",
+              "validate_template": true,
+              "_type": "prompt"
+            },
+            "list": false,
+            "show": false
+          },
+          "top_k": {
+            "type": "int",
+            "required": false,
+            "default": 5,
+            "list": false,
+            "show": false
+          },
+          "input_key": {
+            "type": "str",
+            "required": false,
+            "default": "query",
+            "list": false,
+            "show": false
+          },
+          "output_key": {
+            "type": "str",
+            "required": false,
+            "default": "result",
+            "list": false,
+            "show": false
+          },
+          "return_intermediate_steps": {
+            "type": "bool",
+            "required": false,
+            "default": false,
+            "list": false,
+            "show": false
+          },
+          "return_direct": {
+            "type": "bool",
+            "required": false,
+            "default": false,
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "sql_database_chain"
+      },
+      "VectorDBQAWithSourcesChain": {
+        "template": {
+          "memory": {
+            "type": "Memory",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "combine_documents_chain": {
+            "type": "BaseCombineDocumentsChain",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "question_key": {
+            "type": "str",
+            "required": false,
+            "default": "question",
+            "list": false,
+            "show": false
+          },
+          "input_docs_key": {
+            "type": "str",
+            "required": false,
+            "default": "docs",
+            "list": false,
+            "show": false
+          },
+          "answer_key": {
+            "type": "str",
+            "required": false,
+            "default": "answer",
+            "list": false,
+            "show": false
+          },
+          "sources_answer_key": {
+            "type": "str",
+            "required": false,
+            "default": "sources",
+            "list": false,
+            "show": false
+          },
+          "vectorstore": {
+            "type": "VectorStore",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "k": {
+            "type": "int",
+            "required": false,
+            "default": 4,
+            "list": false,
+            "show": false
+          },
+          "reduce_k_below_max_tokens": {
+            "type": "bool",
+            "required": false,
+            "default": false,
+            "list": false,
+            "show": false
+          },
+          "max_tokens_limit": {
+            "type": "int",
+            "required": false,
+            "default": 3375,
+            "list": false,
+            "show": false
+          },
+          "search_kwargs": {
+            "type": "dict[str, Any]",
+            "required": false,
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "vector_db_qa_with_sources_chain"
+      },
+      "VectorDBQA": {
+        "template": {
+          "memory": {
+            "type": "Memory",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "vectorstore": {
+            "type": "VectorStore",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "k": {
+            "type": "int",
+            "required": false,
+            "default": 4,
+            "list": false,
+            "show": false
+          },
+          "combine_documents_chain": {
+            "type": "BaseCombineDocumentsChain",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "input_key": {
+            "type": "str",
+            "required": false,
+            "default": "query",
+            "list": false,
+            "show": false
+          },
+          "output_key": {
+            "type": "str",
+            "required": false,
+            "default": "result",
+            "list": false,
+            "show": false
+          },
+          "return_source_documents": {
+            "type": "bool",
+            "required": false,
+            "default": false,
+            "list": false,
+            "show": false
+          },
+          "search_kwargs": {
+            "type": "dict[str, Any]",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "search_type": {
+            "type": "str",
+            "required": false,
+            "default": "similarity",
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "vector_db_qa"
+      }
+    },
+    "agents": {
+      "ZeroShotAgent": {
+        "template": {
+          "llm_chain": {
+            "type": "LLMChain",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "allowed_tools": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": true,
+            "show": true
+          },
+          "return_values": {
+            "type": "str",
+            "required": false,
+            "default": [
+              "output"
+            ],
+            "list": true,
+            "show": false
+          }
+        },
+        "_type": "zero-shot-react-description"
+      },
+      "ReActDocstoreAgent": {
+        "template": {
+          "llm_chain": {
+            "type": "LLMChain",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "allowed_tools": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": true,
+            "show": true
+          },
+          "return_values": {
+            "type": "str",
+            "required": false,
+            "default": [
+              "output"
+            ],
+            "list": true,
+            "show": false
+          },
+          "i": {
+            "type": "int",
+            "required": false,
+            "default": 1,
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "react-docstore"
+      },
+      "SelfAskWithSearchAgent": {
+        "template": {
+          "llm_chain": {
+            "type": "LLMChain",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "allowed_tools": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": true,
+            "show": true
+          },
+          "return_values": {
+            "type": "str",
+            "required": false,
+            "default": [
+              "output"
+            ],
+            "list": true,
+            "show": false
+          }
+        },
+        "_type": "self-ask-with-search"
+      },
+      "ConversationalAgent": {
+        "template": {
+          "llm_chain": {
+            "type": "LLMChain",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "allowed_tools": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": true,
+            "show": true
+          },
+          "return_values": {
+            "type": "str",
+            "required": false,
+            "default": [
+              "output"
+            ],
+            "list": true,
+            "show": false
+          },
+          "ai_prefix": {
+            "type": "str",
+            "required": false,
+            "default": "AI",
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "conversational-react-description"
+      }
+    },
+    "prompts": {
+      "PromptTemplate": {
+        "template": {
+          "input_variables": {
+            "type": "str",
+            "required": true,
+            "list": true,
+            "show": true
+          },
+          "output_parser": {
+            "type": "BaseOutputParser",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "template": {
+            "type": "str",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "template_format": {
+            "type": "str",
+            "required": false,
+            "default": "f-string",
+            "list": false,
+            "show": false
+          },
+          "validate_template": {
+            "type": "bool",
+            "required": false,
+            "default": true,
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "prompt"
+      },
+      "FewShotPromptTemplate": {
+        "template": {
+          "input_variables": {
+            "type": "str",
+            "required": true,
+            "list": true,
+            "show": true
+          },
+          "output_parser": {
+            "type": "BaseOutputParser",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "examples": {
+            "type": "dict",
+            "required": false,
+            "default": null,
+            "list": true,
+            "show": false
+          },
+          "example_selector": {
+            "type": "BaseExampleSelector",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "example_prompt": {
+            "type": "PromptTemplate",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "suffix": {
+            "type": "str",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "example_separator": {
+            "type": "str",
+            "required": false,
+            "default": "\n\n",
+            "list": false,
+            "show": false
+          },
+          "prefix": {
+            "type": "str",
+            "required": false,
+            "default": "",
+            "list": false,
+            "show": false
+          },
+          "template_format": {
+            "type": "str",
+            "required": false,
+            "default": "f-string",
+            "list": false,
+            "show": false
+          },
+          "validate_template": {
+            "type": "bool",
+            "required": false,
+            "default": true,
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "few_shot"
+      }
+    },
+    "llms": {
+      "AI21": {
+        "template": {
+          "cache": {
+            "type": "bool",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "model": {
+            "type": "str",
+            "required": false,
+            "default": "j1-jumbo",
+            "list": false,
+            "show": false
+          },
+          "temperature": {
+            "type": "float",
+            "required": false,
+            "default": 0.7,
+            "list": false,
+            "show": false
+          },
+          "maxTokens": {
+            "type": "int",
+            "required": false,
+            "default": 256,
+            "list": false,
+            "show": false
+          },
+          "minTokens": {
+            "type": "int",
+            "required": false,
+            "default": 0,
+            "list": false,
+            "show": false
+          },
+          "topP": {
+            "type": "float",
+            "required": false,
+            "default": 1.0,
+            "list": false,
+            "show": false
+          },
+          "presencePenalty": {
+            "type": "AI21PenaltyData",
+            "required": false,
+            "default": {
+              "scale": 0,
+              "applyToWhitespaces": true,
+              "applyToPunctuations": true,
+              "applyToNumbers": true,
+              "applyToStopwords": true,
+              "applyToEmojis": true
+            },
+            "list": false,
+            "show": false
+          },
+          "countPenalty": {
+            "type": "AI21PenaltyData",
+            "required": false,
+            "default": {
+              "scale": 0,
+              "applyToWhitespaces": true,
+              "applyToPunctuations": true,
+              "applyToNumbers": true,
+              "applyToStopwords": true,
+              "applyToEmojis": true
+            },
+            "list": false,
+            "show": false
+          },
+          "frequencyPenalty": {
+            "type": "AI21PenaltyData",
+            "required": false,
+            "default": {
+              "scale": 0,
+              "applyToWhitespaces": true,
+              "applyToPunctuations": true,
+              "applyToNumbers": true,
+              "applyToStopwords": true,
+              "applyToEmojis": true
+            },
+            "list": false,
+            "show": false
+          },
+          "numResults": {
+            "type": "int",
+            "required": false,
+            "default": 1,
+            "list": false,
+            "show": false
+          },
+          "logitBias": {
+            "type": "dict[str, float]",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "ai21_api_key": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "base_url": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "ai21"
+      },
+      "Anthropic": {
+        "template": {
+          "cache": {
+            "type": "bool",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "client": {
+            "type": "Any",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "model": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "max_tokens_to_sample": {
+            "type": "int",
+            "required": false,
+            "default": 256,
+            "list": false,
+            "show": false
+          },
+          "temperature": {
+            "type": "float",
+            "required": false,
+            "default": 1.0,
+            "list": false,
+            "show": false
+          },
+          "top_k": {
+            "type": "int",
+            "required": false,
+            "default": 0,
+            "list": false,
+            "show": false
+          },
+          "top_p": {
+            "type": "float",
+            "required": false,
+            "default": 1,
+            "list": false,
+            "show": false
+          },
+          "anthropic_api_key": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "HUMAN_PROMPT": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "AI_PROMPT": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "anthropic"
+      },
+      "CerebriumAI": {
+        "template": {
+          "cache": {
+            "type": "bool",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "endpoint_url": {
+            "type": "str",
+            "required": false,
+            "default": "",
+            "list": false,
+            "show": false
+          },
+          "model_kwargs": {
+            "type": "dict[str, Any]",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "cerebriumai_api_key": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "cerebriumai"
+      },
+      "Cohere": {
+        "template": {
+          "cache": {
+            "type": "bool",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "client": {
+            "type": "Any",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "model": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "max_tokens": {
+            "type": "int",
+            "required": false,
+            "default": 256,
+            "list": false,
+            "show": false
+          },
+          "temperature": {
+            "type": "float",
+            "required": false,
+            "default": 0.75,
+            "list": false,
+            "show": false
+          },
+          "k": {
+            "type": "int",
+            "required": false,
+            "default": 0,
+            "list": false,
+            "show": false
+          },
+          "p": {
+            "type": "int",
+            "required": false,
+            "default": 1,
+            "list": false,
+            "show": false
+          },
+          "frequency_penalty": {
+            "type": "int",
+            "required": false,
+            "default": 0,
+            "list": false,
+            "show": false
+          },
+          "presence_penalty": {
+            "type": "int",
+            "required": false,
+            "default": 0,
+            "list": false,
+            "show": false
+          },
+          "cohere_api_key": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "stop": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": true,
+            "show": false
+          }
+        },
+        "_type": "cohere"
+      },
+      "ForefrontAI": {
+        "template": {
+          "cache": {
+            "type": "bool",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "endpoint_url": {
+            "type": "str",
+            "required": false,
+            "default": "",
+            "list": false,
+            "show": false
+          },
+          "temperature": {
+            "type": "float",
+            "required": false,
+            "default": 0.7,
+            "list": false,
+            "show": false
+          },
+          "length": {
+            "type": "int",
+            "required": false,
+            "default": 256,
+            "list": false,
+            "show": false
+          },
+          "top_p": {
+            "type": "float",
+            "required": false,
+            "default": 1.0,
+            "list": false,
+            "show": false
+          },
+          "top_k": {
+            "type": "int",
+            "required": false,
+            "default": 40,
+            "list": false,
+            "show": false
+          },
+          "repetition_penalty": {
+            "type": "int",
+            "required": false,
+            "default": 1,
+            "list": false,
+            "show": false
+          },
+          "forefrontai_api_key": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "base_url": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "forefrontai"
+      },
+      "GooseAI": {
+        "template": {
+          "cache": {
+            "type": "bool",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "client": {
+            "type": "Any",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "model_name": {
+            "type": "str",
+            "required": false,
+            "default": "gpt-neo-20b",
+            "list": false,
+            "show": false
+          },
+          "temperature": {
+            "type": "float",
+            "required": false,
+            "default": 0.7,
+            "list": false,
+            "show": false
+          },
+          "max_tokens": {
+            "type": "int",
+            "required": false,
+            "default": 256,
+            "list": false,
+            "show": false
+          },
+          "top_p": {
+            "type": "float",
+            "required": false,
+            "default": 1,
+            "list": false,
+            "show": false
+          },
+          "min_tokens": {
+            "type": "int",
+            "required": false,
+            "default": 1,
+            "list": false,
+            "show": false
+          },
+          "frequency_penalty": {
+            "type": "float",
+            "required": false,
+            "default": 0,
+            "list": false,
+            "show": false
+          },
+          "presence_penalty": {
+            "type": "float",
+            "required": false,
+            "default": 0,
+            "list": false,
+            "show": false
+          },
+          "n": {
+            "type": "int",
+            "required": false,
+            "default": 1,
+            "list": false,
+            "show": false
+          },
+          "model_kwargs": {
+            "type": "dict[str, Any]",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "logit_bias": {
+            "type": "dict[str, float]",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "gooseai_api_key": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "gooseai"
+      },
+      "HuggingFaceHub": {
+        "template": {
+          "cache": {
+            "type": "bool",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "client": {
+            "type": "Any",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "repo_id": {
+            "type": "str",
+            "required": false,
+            "default": "gpt2",
+            "list": false,
+            "show": false
+          },
+          "task": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "model_kwargs": {
+            "type": "dict",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "huggingfacehub_api_token": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "huggingface_hub"
+      },
+      "NLPCloud": {
+        "template": {
+          "cache": {
+            "type": "bool",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "client": {
+            "type": "Any",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "model_name": {
+            "type": "str",
+            "required": false,
+            "default": "finetuned-gpt-neox-20b",
+            "list": false,
+            "show": false
+          },
+          "temperature": {
+            "type": "float",
+            "required": false,
+            "default": 0.7,
+            "list": false,
+            "show": false
+          },
+          "min_length": {
+            "type": "int",
+            "required": false,
+            "default": 1,
+            "list": false,
+            "show": false
+          },
+          "max_length": {
+            "type": "int",
+            "required": false,
+            "default": 256,
+            "list": false,
+            "show": false
+          },
+          "length_no_input": {
+            "type": "bool",
+            "required": false,
+            "default": true,
+            "list": false,
+            "show": false
+          },
+          "remove_input": {
+            "type": "bool",
+            "required": false,
+            "default": true,
+            "list": false,
+            "show": false
+          },
+          "remove_end_sequence": {
+            "type": "bool",
+            "required": false,
+            "default": true,
+            "list": false,
+            "show": false
+          },
+          "bad_words": {
+            "type": "str",
+            "required": false,
+            "default": [],
+            "list": true,
+            "show": false
+          },
+          "top_p": {
+            "type": "int",
+            "required": false,
+            "default": 1,
+            "list": false,
+            "show": false
+          },
+          "top_k": {
+            "type": "int",
+            "required": false,
+            "default": 50,
+            "list": false,
+            "show": false
+          },
+          "repetition_penalty": {
+            "type": "float",
+            "required": false,
+            "default": 1.0,
+            "list": false,
+            "show": false
+          },
+          "length_penalty": {
+            "type": "float",
+            "required": false,
+            "default": 1.0,
+            "list": false,
+            "show": false
+          },
+          "do_sample": {
+            "type": "bool",
+            "required": false,
+            "default": true,
+            "list": false,
+            "show": false
+          },
+          "num_beams": {
+            "type": "int",
+            "required": false,
+            "default": 1,
+            "list": false,
+            "show": false
+          },
+          "early_stopping": {
+            "type": "bool",
+            "required": false,
+            "default": false,
+            "list": false,
+            "show": false
+          },
+          "num_return_sequences": {
+            "type": "int",
+            "required": false,
+            "default": 1,
+            "list": false,
+            "show": false
+          },
+          "nlpcloud_api_key": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "nlpcloud"
+      },
+      "OpenAI": {
+        "template": {
+          "cache": {
+            "type": "bool",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "client": {
+            "type": "Any",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "model_name": {
+            "type": "str",
+            "required": false,
+            "default": "text-davinci-003",
+            "list": false,
+            "show": false
+          },
+          "temperature": {
+            "type": "float",
+            "required": false,
+            "default": 0.7,
+            "list": false,
+            "show": false
+          },
+          "max_tokens": {
+            "type": "int",
+            "required": false,
+            "default": 256,
+            "list": false,
+            "show": false
+          },
+          "top_p": {
+            "type": "float",
+            "required": false,
+            "default": 1,
+            "list": false,
+            "show": false
+          },
+          "frequency_penalty": {
+            "type": "float",
+            "required": false,
+            "default": 0,
+            "list": false,
+            "show": false
+          },
+          "presence_penalty": {
+            "type": "float",
+            "required": false,
+            "default": 0,
+            "list": false,
+            "show": false
+          },
+          "n": {
+            "type": "int",
+            "required": false,
+            "default": 1,
+            "list": false,
+            "show": false
+          },
+          "best_of": {
+            "type": "int",
+            "required": false,
+            "default": 1,
+            "list": false,
+            "show": false
+          },
+          "model_kwargs": {
+            "type": "dict[str, Any]",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "openai_api_key": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "batch_size": {
+            "type": "int",
+            "required": false,
+            "default": 20,
+            "list": false,
+            "show": false
+          },
+          "request_timeout": {
+            "type": "Union[float, Tuple[float, float], NoneType]",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "logit_bias": {
+            "type": "dict[str, float]",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "max_retries": {
+            "type": "int",
+            "required": false,
+            "default": 6,
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "openai"
+      },
+      "Petals": {
+        "template": {
+          "cache": {
+            "type": "bool",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "client": {
+            "type": "Any",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "tokenizer": {
+            "type": "Any",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "model_name": {
+            "type": "str",
+            "required": false,
+            "default": "bigscience/bloom-petals",
+            "list": false,
+            "show": false
+          },
+          "temperature": {
+            "type": "float",
+            "required": false,
+            "default": 0.7,
+            "list": false,
+            "show": false
+          },
+          "max_new_tokens": {
+            "type": "int",
+            "required": false,
+            "default": 256,
+            "list": false,
+            "show": false
+          },
+          "top_p": {
+            "type": "float",
+            "required": false,
+            "default": 0.9,
+            "list": false,
+            "show": false
+          },
+          "top_k": {
+            "type": "int",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "do_sample": {
+            "type": "bool",
+            "required": false,
+            "default": true,
+            "list": false,
+            "show": false
+          },
+          "max_length": {
+            "type": "int",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "model_kwargs": {
+            "type": "dict[str, Any]",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "huggingface_api_key": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "petals"
+      },
+      "HuggingFacePipeline": {
+        "template": {
+          "cache": {
+            "type": "bool",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "pipeline": {
+            "type": "Any",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "model_id": {
+            "type": "str",
+            "required": false,
+            "default": "gpt2",
+            "list": false,
+            "show": false
+          },
+          "model_kwargs": {
+            "type": "dict",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "huggingface_pipeline"
+      },
+      "AzureOpenAI": {
+        "template": {
+          "cache": {
+            "type": "bool",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "verbose": {
+            "type": "bool",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "client": {
+            "type": "Any",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "model_name": {
+            "type": "str",
+            "required": false,
+            "default": "text-davinci-003",
+            "list": false,
+            "show": false
+          },
+          "temperature": {
+            "type": "float",
+            "required": false,
+            "default": 0.7,
+            "list": false,
+            "show": false
+          },
+          "max_tokens": {
+            "type": "int",
+            "required": false,
+            "default": 256,
+            "list": false,
+            "show": false
+          },
+          "top_p": {
+            "type": "float",
+            "required": false,
+            "default": 1,
+            "list": false,
+            "show": false
+          },
+          "frequency_penalty": {
+            "type": "float",
+            "required": false,
+            "default": 0,
+            "list": false,
+            "show": false
+          },
+          "presence_penalty": {
+            "type": "float",
+            "required": false,
+            "default": 0,
+            "list": false,
+            "show": false
+          },
+          "n": {
+            "type": "int",
+            "required": false,
+            "default": 1,
+            "list": false,
+            "show": false
+          },
+          "best_of": {
+            "type": "int",
+            "required": false,
+            "default": 1,
+            "list": false,
+            "show": false
+          },
+          "model_kwargs": {
+            "type": "dict[str, Any]",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "openai_api_key": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "batch_size": {
+            "type": "int",
+            "required": false,
+            "default": 20,
+            "list": false,
+            "show": false
+          },
+          "request_timeout": {
+            "type": "Union[float, Tuple[float, float], NoneType]",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "logit_bias": {
+            "type": "dict[str, float]",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "max_retries": {
+            "type": "int",
+            "required": false,
+            "default": 6,
+            "list": false,
+            "show": false
+          },
+          "deployment_name": {
+            "type": "str",
+            "required": false,
+            "default": "",
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "azure"
+      }
+    },
+    "memories": {
+      "CombinedMemory": {
+        "template": {
+          "memories": {
+            "type": "Memory",
+            "required": true,
+            "list": true,
+            "show": true
+          }
+        },
+        "_type": "combined"
+      },
+      "ConversationBufferMemory": {
+        "template": {
+          "human_prefix": {
+            "type": "str",
+            "required": false,
+            "default": "Human",
+            "list": false,
+            "show": false
+          },
+          "ai_prefix": {
+            "type": "str",
+            "required": false,
+            "default": "AI",
+            "list": false,
+            "show": false
+          },
+          "buffer": {
+            "type": "str",
+            "required": false,
+            "default": "",
+            "list": false,
+            "show": false
+          },
+          "output_key": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "input_key": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "memory_key": {
+            "type": "str",
+            "required": false,
+            "default": "history",
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "conversation_buffer"
+      },
+      "ConversationBufferWindowMemory": {
+        "template": {
+          "human_prefix": {
+            "type": "str",
+            "required": false,
+            "default": "Human",
+            "list": false,
+            "show": false
+          },
+          "ai_prefix": {
+            "type": "str",
+            "required": false,
+            "default": "AI",
+            "list": false,
+            "show": false
+          },
+          "buffer": {
+            "type": "str",
+            "required": false,
+            "list": true,
+            "show": false
+          },
+          "memory_key": {
+            "type": "str",
+            "required": false,
+            "default": "history",
+            "list": false,
+            "show": false
+          },
+          "output_key": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "input_key": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "k": {
+            "type": "int",
+            "required": false,
+            "default": 5,
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "conversation_buffer_window"
+      },
+      "ConversationSummaryMemory": {
+        "template": {
+          "buffer": {
+            "type": "str",
+            "required": false,
+            "default": "",
+            "list": false,
+            "show": false
+          },
+          "human_prefix": {
+            "type": "str",
+            "required": false,
+            "default": "Human",
+            "list": false,
+            "show": false
+          },
+          "ai_prefix": {
+            "type": "str",
+            "required": false,
+            "default": "AI",
+            "list": false,
+            "show": false
+          },
+          "llm": {
+            "type": "BaseLLM",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "prompt": {
+            "type": "BasePromptTemplate",
+            "required": false,
+            "default": {
+              "input_variables": [
+                "summary",
+                "new_lines"
+              ],
+              "output_parser": null,
+              "template": "Progressively summarize the lines of conversation provided, adding onto the previous summary returning a new summary.\n\nEXAMPLE\nCurrent summary:\nThe human asks what the AI thinks of artificial intelligence. The AI thinks artificial intelligence is a force for good.\n\nNew lines of conversation:\nHuman: Why do you think artificial intelligence is a force for good?\nAI: Because artificial intelligence will help humans reach their full potential.\n\nNew summary:\nThe human asks what the AI thinks of artificial intelligence. The AI thinks artificial intelligence is a force for good because it will help humans reach their full potential.\nEND OF EXAMPLE\n\nCurrent summary:\n{summary}\n\nNew lines of conversation:\n{new_lines}\n\nNew summary:",
+              "template_format": "f-string",
+              "validate_template": true,
+              "_type": "prompt"
+            },
+            "list": false,
+            "show": false
+          },
+          "memory_key": {
+            "type": "str",
+            "required": false,
+            "default": "history",
+            "list": false,
+            "show": false
+          },
+          "output_key": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "input_key": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "conversation_summary"
+      },
+      "ConversationEntityMemory": {
+        "template": {
+          "buffer": {
+            "type": "str",
+            "required": false,
+            "default": [],
+            "list": true,
+            "show": false
+          },
+          "human_prefix": {
+            "type": "str",
+            "required": false,
+            "default": "Human",
+            "list": false,
+            "show": false
+          },
+          "ai_prefix": {
+            "type": "str",
+            "required": false,
+            "default": "AI",
+            "list": false,
+            "show": false
+          },
+          "llm": {
+            "type": "BaseLLM",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "entity_extraction_prompt": {
+            "type": "BasePromptTemplate",
+            "required": false,
+            "default": {
+              "input_variables": [
+                "history",
+                "input"
+              ],
+              "output_parser": null,
+              "template": "You are an AI assistant reading the transcript of a conversation between an AI and a human. Extract all of the proper nouns from the last line of conversation. As a guideline, a proper noun is generally capitalized. You should definitely extract all names and places.\n\nThe conversation history is provided just in case of a coreference (e.g. \"What do you know about him\" where \"him\" is defined in a previous line) -- ignore items mentioned there that are not in the last line.\n\nReturn the output as a single comma-separated list, or NONE if there is nothing of note to return (e.g. the user is just issuing a greeting or having a simple conversation).\n\nEXAMPLE\nConversation history:\nPerson #1: how's it going today?\nAI: \"It's going great! How about you?\"\nPerson #1: good! busy working on Langchain. lots to do.\nAI: \"That sounds like a lot of work! What kind of things are you doing to make Langchain better?\"\nLast line:\nPerson #1: i'm trying to improve Langchain's interfaces, the UX, its integrations with various products the user might want ... a lot of stuff.\nOutput: Langchain\nEND OF EXAMPLE\n\nEXAMPLE\nConversation history:\nPerson #1: how's it going today?\nAI: \"It's going great! How about you?\"\nPerson #1: good! busy working on Langchain. lots to do.\nAI: \"That sounds like a lot of work! What kind of things are you doing to make Langchain better?\"\nLast line:\nPerson #1: i'm trying to improve Langchain's interfaces, the UX, its integrations with various products the user might want ... a lot of stuff. I'm working with Person #2.\nOutput: Langchain, Person #2\nEND OF EXAMPLE\n\nConversation history (for reference only):\n{history}\nLast line of conversation (for extraction):\nHuman: {input}\n\nOutput:",
+              "template_format": "f-string",
+              "validate_template": true,
+              "_type": "prompt"
+            },
+            "list": false,
+            "show": false
+          },
+          "entity_summarization_prompt": {
+            "type": "BasePromptTemplate",
+            "required": false,
+            "default": {
+              "input_variables": [
+                "entity",
+                "summary",
+                "history",
+                "input"
+              ],
+              "output_parser": null,
+              "template": "You are an AI assistant helping a human keep track of facts about relevant people, places, and concepts in their life. Update the summary of the provided entity in the \"Entity\" section based on the last line of your conversation with the human. If you are writing the summary for the first time, return a single sentence.\nThe update should only include facts that are relayed in the last line of conversation about the provided entity, and should only contain facts about the provided entity.\n\nIf there is no new information about the provided entity or the information is not worth noting (not an important or relevant fact to remember long-term), return the existing summary unchanged.\n\nFull conversation history (for context):\n{history}\n\nEntity to summarize:\n{entity}\n\nExisting summary of {entity}:\n{summary}\n\nLast line of conversation:\nHuman: {input}\nUpdated summary:",
+              "template_format": "f-string",
+              "validate_template": true,
+              "_type": "prompt"
+            },
+            "list": false,
+            "show": false
+          },
+          "output_key": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "input_key": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "store": {
+            "type": "dict[str, Union[str, NoneType]]",
+            "required": false,
+            "default": {},
+            "list": false,
+            "show": false
+          },
+          "entity_cache": {
+            "type": "str",
+            "required": false,
+            "default": [],
+            "list": true,
+            "show": false
+          },
+          "k": {
+            "type": "int",
+            "required": false,
+            "default": 3,
+            "list": false,
+            "show": false
+          },
+          "chat_history_key": {
+            "type": "str",
+            "required": false,
+            "default": "history",
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "conversation_entity"
+      },
+      "ConversationSummaryBufferMemory": {
+        "template": {
+          "buffer": {
+            "type": "str",
+            "required": false,
+            "list": true,
+            "show": false
+          },
+          "max_token_limit": {
+            "type": "int",
+            "required": false,
+            "default": 2000,
+            "list": false,
+            "show": false
+          },
+          "moving_summary_buffer": {
+            "type": "str",
+            "required": false,
+            "default": "",
+            "list": false,
+            "show": false
+          },
+          "llm": {
+            "type": "BaseLLM",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "prompt": {
+            "type": "BasePromptTemplate",
+            "required": false,
+            "default": {
+              "input_variables": [
+                "summary",
+                "new_lines"
+              ],
+              "output_parser": null,
+              "template": "Progressively summarize the lines of conversation provided, adding onto the previous summary returning a new summary.\n\nEXAMPLE\nCurrent summary:\nThe human asks what the AI thinks of artificial intelligence. The AI thinks artificial intelligence is a force for good.\n\nNew lines of conversation:\nHuman: Why do you think artificial intelligence is a force for good?\nAI: Because artificial intelligence will help humans reach their full potential.\n\nNew summary:\nThe human asks what the AI thinks of artificial intelligence. The AI thinks artificial intelligence is a force for good because it will help humans reach their full potential.\nEND OF EXAMPLE\n\nCurrent summary:\n{summary}\n\nNew lines of conversation:\n{new_lines}\n\nNew summary:",
+              "template_format": "f-string",
+              "validate_template": true,
+              "_type": "prompt"
+            },
+            "list": false,
+            "show": false
+          },
+          "memory_key": {
+            "type": "str",
+            "required": false,
+            "default": "history",
+            "list": false,
+            "show": false
+          },
+          "human_prefix": {
+            "type": "str",
+            "required": false,
+            "default": "Human",
+            "list": false,
+            "show": false
+          },
+          "ai_prefix": {
+            "type": "str",
+            "required": false,
+            "default": "AI",
+            "list": false,
+            "show": false
+          },
+          "output_key": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "input_key": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "conversation_summary_buffer"
+      },
+      "ConversationKGMemory": {
+        "template": {
+          "k": {
+            "type": "int",
+            "required": false,
+            "default": 2,
+            "list": false,
+            "show": false
+          },
+          "buffer": {
+            "type": "str",
+            "required": false,
+            "list": true,
+            "show": false
+          },
+          "kg": {
+            "type": "NetworkxEntityGraph",
+            "required": false,
+            "list": false,
+            "show": false
+          },
+          "knowledge_extraction_prompt": {
+            "type": "BasePromptTemplate",
+            "required": false,
+            "default": {
+              "input_variables": [
+                "history",
+                "input"
+              ],
+              "output_parser": null,
+              "template": "You are a networked intelligence helping a human track knowledge triples about all relevant people, things, concepts, etc. and integrating them with your knowledge stored within your weights as well as that stored in a knowledge graph. Extract all of the knowledge triples from the last line of conversation. A knowledge triple is a clause that contains a subject, a predicate, and an object. The subject is the entity being described, the predicate is the property of the subject that is being described, and the object is the value of the property.\n\nEXAMPLE\nConversation history:\nPerson #1: Did you hear aliens landed in Area 51?\nAI: No, I didn't hear that. What do you know about Area 51?\nPerson #1: It's a secret military base in Nevada.\nAI: What do you know about Nevada?\nLast line of conversation:\nPerson #1: It's a state in the US. It's also the number 1 producer of gold in the US.\n\nOutput: (Nevada, is a, state)<|>(Nevada, is in, US)<|>(Nevada, is the number 1 producer of, gold)\nEND OF EXAMPLE\n\nEXAMPLE\nConversation history:\nPerson #1: Hello.\nAI: Hi! How are you?\nPerson #1: I'm good. How are you?\nAI: I'm good too.\nLast line of conversation:\nPerson #1: I'm going to the store.\n\nOutput: NONE\nEND OF EXAMPLE\n\nEXAMPLE\nConversation history:\nPerson #1: What do you know about Descartes?\nAI: Descartes was a French philosopher, mathematician, and scientist who lived in the 17th century.\nPerson #1: The Descartes I'm referring to is a standup comedian and interior designer from Montreal.\nAI: Oh yes, He is a comedian and an interior designer. He has been in the industry for 30 years. His favorite food is baked bean pie.\nPerson #1: Oh huh. I know Descartes likes to drive antique scooters and play the mandolin.\nLast line of conversation:\nOutput: (Descartes, likes to drive, antique scooters)<|>(Descartes, plays, mandolin)\nEND OF EXAMPLE\n\nConversation history (for reference only):\n{history}\nLast line of conversation (for extraction):\nHuman: {input}\n\nOutput:",
+              "template_format": "f-string",
+              "validate_template": true,
+              "_type": "prompt"
+            },
+            "list": false,
+            "show": false
+          },
+          "entity_extraction_prompt": {
+            "type": "BasePromptTemplate",
+            "required": false,
+            "default": {
+              "input_variables": [
+                "history",
+                "input"
+              ],
+              "output_parser": null,
+              "template": "You are an AI assistant reading the transcript of a conversation between an AI and a human. Extract all of the proper nouns from the last line of conversation. As a guideline, a proper noun is generally capitalized. You should definitely extract all names and places.\n\nThe conversation history is provided just in case of a coreference (e.g. \"What do you know about him\" where \"him\" is defined in a previous line) -- ignore items mentioned there that are not in the last line.\n\nReturn the output as a single comma-separated list, or NONE if there is nothing of note to return (e.g. the user is just issuing a greeting or having a simple conversation).\n\nEXAMPLE\nConversation history:\nPerson #1: how's it going today?\nAI: \"It's going great! How about you?\"\nPerson #1: good! busy working on Langchain. lots to do.\nAI: \"That sounds like a lot of work! What kind of things are you doing to make Langchain better?\"\nLast line:\nPerson #1: i'm trying to improve Langchain's interfaces, the UX, its integrations with various products the user might want ... a lot of stuff.\nOutput: Langchain\nEND OF EXAMPLE\n\nEXAMPLE\nConversation history:\nPerson #1: how's it going today?\nAI: \"It's going great! How about you?\"\nPerson #1: good! busy working on Langchain. lots to do.\nAI: \"That sounds like a lot of work! What kind of things are you doing to make Langchain better?\"\nLast line:\nPerson #1: i'm trying to improve Langchain's interfaces, the UX, its integrations with various products the user might want ... a lot of stuff. I'm working with Person #2.\nOutput: Langchain, Person #2\nEND OF EXAMPLE\n\nConversation history (for reference only):\n{history}\nLast line of conversation (for extraction):\nHuman: {input}\n\nOutput:",
+              "template_format": "f-string",
+              "validate_template": true,
+              "_type": "prompt"
+            },
+            "list": false,
+            "show": false
+          },
+          "llm": {
+            "type": "BaseLLM",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "human_prefix": {
+            "type": "str",
+            "required": false,
+            "default": "Human",
+            "list": false,
+            "show": false
+          },
+          "ai_prefix": {
+            "type": "str",
+            "required": false,
+            "default": "AI",
+            "list": false,
+            "show": false
+          },
+          "output_key": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "input_key": {
+            "type": "str",
+            "required": false,
+            "default": null,
+            "list": false,
+            "show": false
+          },
+          "memory_key": {
+            "type": "str",
+            "required": false,
+            "default": "history",
+            "list": false,
+            "show": false
+          }
+        },
+        "_type": "conversation_kg"
+      }
+    },
+    "tools": {
+      "python_repl": {
+        "template": {},
+        "name": "Python REPL",
+        "description": "A Python shell. Use this to execute python commands. Input should be a valid python command. If you expect output it should be printed out."
+      },
+      "requests": {
+        "template": {},
+        "name": "Requests",
+        "description": "A portal to the internet. Use this when you need to get specific content from a site. Input should be a specific url, and the output will be all the text on that page."
+      },
+      "terminal": {
+        "template": {},
+        "name": "Terminal",
+        "description": "Executes commands in a terminal. Input should be valid commands, and the output will be any output from running that command."
+      },
+      "pal-math": {
+        "template": {
+          "llm": {
+            "type": "BaseLLM",
+            "required": true,
+            "list": false,
+            "show": true
+          }
+        },
+        "name": "PAL-MATH",
+        "description": "A language model that is really good at solving complex word math problems. Input should be a fully worded hard word math problem."
+      },
+      "pal-colored-objects": {
+        "template": {
+          "llm": {
+            "type": "BaseLLM",
+            "required": true,
+            "list": false,
+            "show": true
+          }
+        },
+        "name": "PAL-COLOR-OBJ",
+        "description": "A language model that is really good at reasoning about position and the color attributes of objects. Input should be a fully worded hard reasoning problem. Make sure to include all information about the objects AND the final question you want to answer."
+      },
+      "llm-math": {
+        "template": {
+          "llm": {
+            "type": "BaseLLM",
+            "required": true,
+            "list": false,
+            "show": true
+          }
+        },
+        "name": "Calculator",
+        "description": "Useful for when you need to answer questions about math."
+      },
+      "open-meteo-api": {
+        "template": {
+          "llm": {
+            "type": "BaseLLM",
+            "required": true,
+            "list": false,
+            "show": true
+          }
+        },
+        "name": "Open Meteo API",
+        "description": "Useful for when you want to get weather information from the OpenMeteo API. The input should be a question in natural language that this API can answer."
+      },
+      "news-api": {
+        "template": {
+          "llm": {
+            "type": "BaseLLM",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "news_api_key": {
+            "type": "str",
+            "required": true,
+            "list": false,
+            "show": true
+          }
+        },
+        "name": "News API",
+        "description": "Use this when you want to get information about the top headlines of current news stories. The input should be a question in natural language that this API can answer."
+      },
+      "tmdb-api": {
+        "template": {
+          "llm": {
+            "type": "BaseLLM",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "tmdb_bearer_token": {
+            "type": "str",
+            "required": true,
+            "list": false,
+            "show": true
+          }
+        },
+        "name": "TMDB API",
+        "description": "Useful for when you want to get information from The Movie Database. The input should be a question in natural language that this API can answer."
+      },
+      "wolfram-alpha": {
+        "template": {
+          "wolfram_alpha_appid": {
+            "type": "str",
+            "required": true,
+            "list": false,
+            "show": true
+          }
+        },
+        "name": "Wolfram Alpha",
+        "description": "A wrapper around Wolfram Alpha. Useful for when you need to answer questions about Math, Science, Technology, Culture, Society and Everyday Life. Input should be a search query."
+      },
+      "google-search": {
+        "template": {
+          "google_api_key": {
+            "type": "str",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "google_cse_id": {
+            "type": "str",
+            "required": true,
+            "list": false,
+            "show": true
+          }
+        },
+        "name": "Google Search",
+        "description": "A wrapper around Google Search. Useful for when you need to answer questions about current events. Input should be a search query."
+      },
+      "serpapi": {
+        "template": {
+          "serpapi_api_key": {
+            "type": "str",
+            "required": true,
+            "list": false,
+            "show": true
+          },
+          "aiosession": {
+            "type": "str",
+            "required": true,
+            "list": false,
+            "show": true
+          }
+        },
+        "name": "Search",
+        "description": "A search engine. Useful for when you need to answer questions about current events. Input should be a search query."
+      }
+    }
+  }
