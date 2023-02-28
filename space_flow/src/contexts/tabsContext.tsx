@@ -1,4 +1,5 @@
 import { createContext, useEffect, useState, useRef } from "react";
+import { example } from "../data_assets/example";
 
 type flow = {
 	name: string;
@@ -108,13 +109,13 @@ export function TabsProvider({ children }) {
 			return newFlows;
 		});
 	}
-	function addFlow(flowData?: flow) {
-		const data = flowData?.data ? flowData : null;
+	function addFlow(flow?: flow) {
+		const data = flow?.data ? flow.data : null;
 		let newFlow: flow = {
-			name: flowData ? flowData.name : "flow" + id,
+			name: flow ? flow.name : "flow" + id,
 			id: id.toString(),
 			data,
-			chat: flowData ? flowData.chat : [],
+			chat: flow ? flow.chat : [],
 		};
 		setId((old) => old + 1);
 		setFlows((prevState) => {
