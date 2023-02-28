@@ -167,7 +167,7 @@ def format_dict(d):
         )
 
         # Add multline
-        value["multline"] = key in ["suffix", "prefix", "template", "examples"]
+        value["multiline"] = key in ["suffix", "prefix", "template", "examples"]
         # Replace default value with actual value
         # if _type in ["str", "bool"]:
         #     value["value"] = value.get("default", "")
