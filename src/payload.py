@@ -52,22 +52,32 @@ def build_json(root, nodes, edges):
     for key, value in final_dict.items():
         if key == "_type":
             continue
+        # elif key == "prompt":
+        #     pass
 
         module_type = value["type"]
-        if module_type == "Tool":
-            pass
-        if module_type in ["str", "bool", "int", "float"]:
+        # if module_type == "Tool":
+        #     pass
+        if module_type in ["str", "bool", "int", "float", "Any"]:
             value = value["value"]
         elif "dict" in module_type:
             value = {}
         else:
             # if value['list']:
-            children = [
-                c
-                for c in local_nodes
-                if module_type
-                in [c["data"]["type"]] + c["data"]["node"]["base_classes"]
-            ]
+            print(key)
+            children = []
+            for c in local_nodes:
+                module_types = [c["data"]["type"]]
+                if "node" in c["data"]:
+                    module_types += c["data"]["node"]["base_classes"]
+                if module_type in module_types:
+                    children.append(c)
+            # children = [
+            #     c
+            #     for c in local_nodes
+            #     if module_type
+            #     in [c["data"]["type"]] + c["data"]["node"]["base_classes"]
+            # ]
             # else:
             #     children = next((c for c in local_nodes if type in [c['data']['type']] + c['data']['node']['base_classes']), None)
             if value["required"] and not children:
