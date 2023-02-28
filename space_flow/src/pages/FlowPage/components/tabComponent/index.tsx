@@ -6,7 +6,7 @@ import { TabsContext } from "../../../../contexts/tabsContext";
 var _ = require("lodash");
 
 export default function TabComponent({ selected, flow, onClick }) {
-	const { removeFlow, updateFlow, flows, downloadFlow } =
+	const { removeFlow, updateFlow, flows } =
 		useContext(TabsContext);
 	const [isRename, setIsRename] = useState(false);
 	const [value, setValue] = useState("");

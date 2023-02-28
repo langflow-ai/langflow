@@ -10,7 +10,7 @@ import { alertContext } from "./contexts/alertContext";
 import { locationContext } from "./contexts/locationContext";
 import Sidebar from "./components/SidebarComponent";
 import Header from "./components/HeaderComponent";
-import { TabsManager } from "./pages/FlowPage/flowManager";
+import TabsManagerComponent from "./pages/FlowPage/components/tabsManagerComponent";
 
 export default function App() {
 	var _ = require("lodash");
@@ -105,7 +105,7 @@ export default function App() {
 				<main className="min-w-0 flex-1 border-t border-gray-200 flex">
 					{/* Primary column */}
 					<div className="w-full h-full">
-						<TabsManager></TabsManager>
+						<TabsManagerComponent></TabsManagerComponent>
 					</div>
 				</main>
 			</div>
