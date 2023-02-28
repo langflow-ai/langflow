@@ -45,7 +45,7 @@ export default function Header({user, userNavigation}){
           <div className="min-w-0 flex-1 ml-5">
             <Breadcrumb />
           </div>
-          {/* <div className="ml-10 flex shrink-0 items-center space-x-10 pr-4">
+          <div className="ml-10 flex shrink-0 items-center space-x-10 pr-4">
             <div className="flex items-center space-x-8">
               <span className="inline-flex">
                 <button type="button" {...triggerProps} className="-mx-1 rounded-full bg-white p-1 text-gray-400 hover:text-gray-500 relative" onClick={()=>{setNotificationCenter(false);setIsOpen(true)}}>
@@ -56,7 +56,7 @@ export default function Header({user, userNavigation}){
                 </button>{renderLayer(<div {...layerProps}><AlertDropdown closeFunction={()=>setIsOpen(false)} open={isOpen}></AlertDropdown></div>)}
               </span>
 
-              <Menu as="div" className="relative inline-block text-left">
+              {/* <Menu as="div" className="relative inline-block text-left">
                 <Menu.Button className="flex rounded-full bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2">
                   <span className="sr-only">Open user menu</span>
                   <img className="h-8 w-8 rounded-full" src={user.imageUrl} alt="" />
@@ -100,9 +100,9 @@ export default function Header({user, userNavigation}){
                       </div>
                     </Menu.Items>
                   </Transition>
-                </Menu>
+                </Menu> */}
               </div>
-            </div> */}
+            </div>
           </div>
         </header>
     )
