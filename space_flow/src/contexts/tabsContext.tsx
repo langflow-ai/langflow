@@ -76,7 +76,7 @@ export function TabsProvider({ children }) {
 		link.download = `${flows[tabIndex].name}.json`;
 		link.click();
 	}
-	//upload is always empty, don't know why
+	
 	function uploadFlow() {
 		const input = document.createElement("input");
 		input.type = "file";
