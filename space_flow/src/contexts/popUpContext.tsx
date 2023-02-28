@@ -1,32 +1,33 @@
 import { createContext } from "react";
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
+//context to set JSX element on the DOM
 export const PopUpContext = createContext({
-    openPopUp: (popUpElement: JSX.Element) => {},
-    closePopUp: () => {}
+  openPopUp: (popUpElement: JSX.Element) => {},
+	closePopUp: () => {},
 });
 
 interface PopUpProviderProps {
-  children: React.ReactNode;
+	children: React.ReactNode;
 }
 
 const PopUpProvider = ({ children }: PopUpProviderProps) => {
-  const [popUpElement, setPopUpElement] = useState<JSX.Element | null>(null);
+	const [popUpElement, setPopUpElement] = useState<JSX.Element | null>(null);
 
-  const openPopUp = (element: JSX.Element) => {
-    setPopUpElement(element);
-  };
+	const openPopUp = (element: JSX.Element) => {
+		setPopUpElement(element);
+	};
 
-  const closePopUp = () => {
-    setPopUpElement(null);
-  };
+	const closePopUp = () => {
+		setPopUpElement(null);
+	};
 
-  return (
-    <PopUpContext.Provider value={{ openPopUp, closePopUp }}>
-      {children}
-      {popUpElement}
-    </PopUpContext.Provider>
-  );
+	return (
+		<PopUpContext.Provider value={{ openPopUp, closePopUp }}>
+			{children}
+			{popUpElement}
+		</PopUpContext.Provider>
+	);
 };
 
 export default PopUpProvider;

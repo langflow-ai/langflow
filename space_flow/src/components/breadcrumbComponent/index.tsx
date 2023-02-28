@@ -22,7 +22,7 @@ function getPages(atual){
 }
 
 export default function Breadcrumb(){
-  let {atual} = useContext(locationContext);
+  let {current} = useContext(locationContext);
     return (
         <div>
             <nav className="flex ml-2" aria-label="Breadcrumb">
@@ -35,7 +35,7 @@ export default function Breadcrumb(){
                     </Link>
                   </div>
                 </li>
-                  {getPages(atual).map((page) => (
+                  {getPages(current).map((page) => (
                     <li key={page.href}>
                       <div className="flex items-center">
                         <ChevronRightIcon className="h-5 w-5 flex-shrink-0 text-gray-400" aria-hidden="true" />
