@@ -13,7 +13,6 @@ import { locationContext } from "../../contexts/locationContext";
 import ExtraSidebar from "./components/extraSidebarComponent";
 import Chat from "../../components/chatComponent";
 import GenericNode from "../../CustomNodes/GenericNode";
-import connection from "./components/connection";
 import ChatInputNode from "../../CustomNodes/ChatInputNode";
 import ChatOutputNode from "../../CustomNodes/ChatOutputNode";
 import InputNode from "../../CustomNodes/InputNode";
@@ -25,6 +24,7 @@ import {
 	ArrowDownTrayIcon,
 	ArrowUpTrayIcon,
 } from "@heroicons/react/24/outline";
+import ConnectionLineComponent from "./components/ConnectionLineComponent";
 
 const nodeTypes = {
 	genericNode: GenericNode,
@@ -170,7 +170,7 @@ export default function FlowPage({ flow }) {
 						onLoad={setReactFlowInstance}
 						onInit={setReactFlowInstance}
 						nodeTypes={nodeTypes}
-						connectionLineComponent={connection}
+						connectionLineComponent={ConnectionLineComponent}
 						onDragOver={onDragOver}
 						onDrop={onDrop}
 					>
