@@ -21,7 +21,7 @@ export default function Sidebar() {
       <div className="w-20 h-full">
         <nav
           aria-label="Sidebar"
-          className="h-full overflow-y-auto bg-gray-800"
+          className="h-full overflow-y-auto bg-slate-800 dark:bg-slate-900"
         >
           <div className="flex flex-col h-full justify-between">
             <div className="relative flex w-20 flex-col space-y-3 p-3">
