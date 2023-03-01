@@ -11,6 +11,7 @@ import { locationContext } from "./contexts/locationContext";
 import Sidebar from "./components/SidebarComponent";
 import Header from "./components/HeaderComponent";
 import TabsManagerComponent from "./pages/FlowPage/components/tabsManagerComponent";
+import { darkContext } from "./contexts/darkContext";
 
 export default function App() {
 	var _ = require("lodash");
@@ -23,6 +24,8 @@ export default function App() {
 		setShowSideBar(true);
 		setIsStackedOpen(true);
 	}, [location.pathname, setCurrent, setIsStackedOpen, setShowSideBar]);
+
+	const {dark} = useContext(darkContext);
 
 	const {
 		errorData,
@@ -93,7 +96,7 @@ export default function App() {
 
 	return (
 		//need parent component with width and height
-		<div className="h-full flex flex-col">
+		<div className={(dark ? "dark " : "") + "h-full flex flex-col"}>
 			<div className="flex grow-0 shrink basis-auto">
 				<Header userNavigation={userNavigation} user={user}></Header>
 			</div>
