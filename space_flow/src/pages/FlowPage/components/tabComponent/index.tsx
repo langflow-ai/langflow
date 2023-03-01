@@ -15,7 +15,7 @@ export default function TabComponent({ selected, flow, onClick }) {
 			{flow ? (
 				!selected ? (
 					<div
-						className="flex justify-between select-none truncate w-44 items-center px-4 my-1.5 border-x border-t border-t-transparent border-gray-300 -ml-px"
+						className="dark:text-white flex justify-between select-none truncate w-44 items-center px-4 my-1.5 border-x border-x-gray-300 dark:border-x-slate-600 -ml-px"
 						onClick={onClick}
 					>
 						{flow.name}
@@ -25,11 +25,11 @@ export default function TabComponent({ selected, flow, onClick }) {
 								removeFlow(flow.id);
 							}}
 						>
-							<XMarkIcon className="h-4 hover:bg-white rounded-full" />
+							<XMarkIcon className="h-4 hover:bg-white dark:hover:bg-slate-600 rounded-full" />
 						</button>
 					</div>
 				) : (
-					<div className="bg-white flex select-none justify-between w-44 items-center border border-b-0 border-gray-300 px-4 py-1.5 rounded-t-xl -ml-px">
+					<div className="bg-white dark:text-white dark:bg-slate-700 flex select-none justify-between w-44 items-center border border-b-0 border-gray-300 dark:border-slate-600 px-4 py-1.5 rounded-t-xl -ml-px">
 						{isRename ? (
 							<input
 								autoFocus
@@ -70,7 +70,7 @@ export default function TabComponent({ selected, flow, onClick }) {
 							}}
 						>
 							{flows.length > 1 && (
-								<XMarkIcon className="h-4 hover:bg-gray-100 rounded-full" />
+								<XMarkIcon className="h-4 hover:bg-gray-100 dark:hover:bg-slate-600 rounded-full" />
 							)}
 						</button>
 					</div>
@@ -78,10 +78,10 @@ export default function TabComponent({ selected, flow, onClick }) {
 			) : (
 				<div className="h-full py-1.5 flex justify-center items-center">
 					<button
-						className="px-3 flex items-center h-full pb-0.5 pt-0.5 border-gray-300 -ml-px border-t border-t-transparent"
+						className="px-3 flex items-center h-full pb-0.5 pt-0.5 border-x-gray-300 dark:border-x-slate-600 dark:text-white -ml-px"
 						onClick={onClick}
 					>
-						<PlusIcon className="h-5 rounded-full hover:bg-white" />
+						<PlusIcon className="h-5 rounded-full hover:bg-white dark:hover:bg-slate-600" />
 					</button>
 				</div>
 			)}

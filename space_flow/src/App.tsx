@@ -105,7 +105,7 @@ export default function App() {
 				<ExtraSidebar />
 
 				{/* Main area */}
-				<main className="min-w-0 flex-1 border-t border-gray-200 flex">
+				<main className="min-w-0 flex-1 border-t border-gray-200 dark:border-slate-700 flex">
 					{/* Primary column */}
 					<div className="w-full h-full">
 						<TabsManagerComponent></TabsManagerComponent>
