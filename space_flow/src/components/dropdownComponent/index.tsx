@@ -1,9 +1,10 @@
 import { Listbox, Transition } from "@headlessui/react";
 import { ChevronUpDownIcon, CheckIcon } from "@heroicons/react/24/outline";
 import { Fragment } from "react";
+import { DropDownComponentType } from "../../types/components";
 import { classNames } from "../../utils";
 
-export default function Dropdown({title, value, options, onSelect}) {
+export default function Dropdown({title, value, options, onSelect}:DropDownComponentType) {
   return (
     <>
       <Listbox value={value} onChange={onSelect}>

@@ -5,10 +5,11 @@ import { isValidConnection, nodeColors } from "../../utils";
 import ToggleComponent from "../../components/toggleComponent";
 import { useContext, useEffect, useState } from "react";
 import { typesContext } from "../../contexts/typesContext";
+import { NodeDataType } from "../../types/flow";
 
-export default function BooleanNode({ data }) {
+export default function BooleanNode({ data }:{data:NodeDataType}) {
   const [enabled, setEnabled] = useState(false);
-  const {types, deleteNode} = useContext(typesContext);
+  const {types, deleteNode, reactFlowInstance} = useContext(typesContext);
   return (
     <div className="prompt-node relative bg-white rounded-lg solid border flex flex-col justify-center">
       <div className="w-full flex items-center justify-between gap-8 p-4 bg-gray-50 border-b ">
@@ -34,7 +35,7 @@ export default function BooleanNode({ data }) {
         type="source"
         position={Position.Right}
         id={data.type}
-        isValidConnection={(connection) => isValidConnection(data,connection)}
+        isValidConnection={(connection) => isValidConnection(connection,reactFlowInstance)}
         className="-mr-1 bg-transparent border-solid border-l-8 border-y-transparent border-y-8 border-r-0 rounded-none"
         style={{ borderLeftColor: nodeColors[types[data.type]] }}
       ></Handle>

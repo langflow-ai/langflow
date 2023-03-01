@@ -1,15 +1,14 @@
-import { Dialog, Menu, Transition } from "@headlessui/react";
-import { XMarkIcon, ClipboardDocumentListIcon, PlusIcon, ChevronDownIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { Dialog, Transition } from "@headlessui/react";
+import { XMarkIcon, ClipboardDocumentListIcon } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useRef, useState } from "react";
-import { taskTypeMap, textColors, classNames, bgColors } from "../../utils";
 import { PopUpContext } from "../../contexts/popUpContext";
 
-export default function TextAreaModal({value, setValue}){
+export default function TextAreaModal({value, setValue}:{setValue:(value:string)=>void,value:string|string[]}){
     const [open, setOpen] = useState(true);
     const [myValue, setMyValue] = useState(value);
     const { closePopUp } = useContext(PopUpContext);
     const ref = useRef();
-    function setModalOpen(x){
+    function setModalOpen(x:boolean){
         setOpen(x);
         if(x === false){
             setTimeout(() => {closePopUp()}, 300);

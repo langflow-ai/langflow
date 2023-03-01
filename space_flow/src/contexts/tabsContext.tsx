@@ -1,16 +1,16 @@
-import { createContext, useEffect, useState, useRef } from "react";
-import {flow} from "../types/flow"
+import { createContext, useEffect, useState, useRef, ReactNode } from "react";
+import {FlowType} from "../types/flow"
 import { TabsContextType } from "../types/tabs";
 
 
 
-const TabsContextInitialValue = {
+const TabsContextInitialValue:TabsContextType = {
 	tabIndex: 0,
 	setTabIndex: (index: number) => {},
 	flows: [],
 	removeFlow: (id: string) => {},
 	addFlow: (flowData?: any) => {},
-	updateFlow: (newFlow: flow) => {},
+	updateFlow: (newFlow: FlowType) => {},
 	incrementNodeId: () => 0,
 	downloadFlow: () => {},
 	uploadFlow: () => {},
@@ -22,9 +22,9 @@ export const TabsContext = createContext<TabsContextType>(
 
 let _ = require("lodash");
 
-export function TabsProvider({ children }) {
+export function TabsProvider({ children }:{children:ReactNode}) {
 	const [tabIndex, setTabIndex] = useState(0);
-	const [flows, setFlows] = useState<Array<flow>>([]);
+	const [flows, setFlows] = useState<Array<FlowType>>([]);
 	const [id, setId] = useState(0);
 
 	const newNodeId = useRef(0);
@@ -96,9 +96,9 @@ export function TabsProvider({ children }) {
 			return newFlows;
 		});
 	}
-	function addFlow(flow?: flow) {
+	function addFlow(flow?: FlowType) {
 		const data = flow?.data ? flow.data : null;
-		let newFlow: flow = {
+		let newFlow: FlowType = {
 			name: flow ? flow.name : "flow" + id,
 			id: id.toString(),
 			data,
@@ -111,8 +111,7 @@ export function TabsProvider({ children }) {
 		});
 		setTabIndex(flows.length);
 	}
-	function updateFlow(newFlow: flow) {
-		console.log(newFlow);
+	function updateFlow(newFlow: FlowType) {
 		setFlows((prevState) => {
 			const newFlows = [...prevState];
 			const index = newFlows.findIndex((flow) => flow.id === newFlow.id);

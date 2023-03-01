@@ -1,7 +1,6 @@
 import { Transition } from "@headlessui/react";
 import {
   Bars3CenterLeftIcon,
-  ChatBubbleBottomCenterTextIcon,
   PaperAirplaneIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
@@ -10,17 +9,18 @@ import { sendAll } from "../../controllers/NodesServices";
 import { alertContext } from "../../contexts/alertContext";
 import { nodeColors } from "../../utils";
 import { TabsContext } from "../../contexts/tabsContext";
+import { ChatType } from "../../types/chat";
 
 const _ = require("lodash");
 
-export default function Chat({flow, reactFlowInstance }) {
+export default function Chat({flow, reactFlowInstance }:ChatType) {
   const {updateFlow} = useContext(TabsContext)
   const [saveChat,setSaveChat] = useState(false)
   const [open, setOpen] = useState(true);
   const [chatValue, setChatValue] = useState("");
   const [chatHistory, setChatHistory] = useState(flow.chat);
   const {setErrorData} = useContext(alertContext);
-  const addChatHistory = (message, isSend) => {
+  const addChatHistory = (message:string, isSend:boolean) => {
     setChatHistory((old) => {
       let newChat = _.cloneDeep(old);
       newChat.push({ message, isSend });
@@ -29,7 +29,6 @@ export default function Chat({flow, reactFlowInstance }) {
     setSaveChat(chat=>!chat)
   };
   useEffect(()=>{
-    console.log("flow")
     updateFlow({..._.cloneDeep(flow),chat:chatHistory})
   },[saveChat])
   useEffect(()=>{
@@ -54,7 +53,6 @@ export default function Chat({flow, reactFlowInstance }) {
   const ref = useRef(null);
 
   function sendMessage(){
-    console.log(reactFlowInstance.toObject())
     if(chatValue !== ""){
       if(validateNodes()){
         if(validateChatNodes()){

@@ -2,11 +2,12 @@ import { ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import { PlusIcon, XMarkIcon } from "@heroicons/react/24/solid";
 import { useContext, useRef, useState } from "react";
 import { TabsContext } from "../../../../contexts/tabsContext";
+import { FlowType } from "../../../../types/flow";
 
 var _ = require("lodash");
 
-export default function TabComponent({ selected, flow, onClick }) {
-	const { removeFlow, updateFlow, flows, downloadFlow } =
+export default function TabComponent({ selected, flow, onClick }:{flow:FlowType,selected:boolean,onClick:()=>void}) {
+	const { removeFlow, updateFlow, flows } =
 		useContext(TabsContext);
 	const [isRename, setIsRename] = useState(false);
 	const [value, setValue] = useState("");

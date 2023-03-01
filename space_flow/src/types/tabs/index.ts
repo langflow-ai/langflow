@@ -1,12 +1,12 @@
-import { flow } from "../flow";
+import { FlowType } from "../flow";
 
 export type TabsContextType = {
 	tabIndex: number;
 	setTabIndex: (index: number) => void;
-	flows: Array<flow>;
+	flows: Array<FlowType>;
 	removeFlow: (id: string) => void;
 	addFlow: (flowData?: any) => void;
-	updateFlow: (newFlow: flow) => void;
+	updateFlow: (newFlow: FlowType) => void;
 	incrementNodeId: () => number;
 	downloadFlow: () => void;
 	uploadFlow: () => void;

@@ -9,8 +9,10 @@ import {
 import ParameterComponent from "./components/parameterComponent";
 import { typesContext } from "../../contexts/typesContext";
 import { useContext } from "react";
+import { NodeDataType} from "../../types/flow";
+import { APITemplateType, TemplateVariableType } from "../../types/api";
 
-export default function GenericNode({ data }) {
+export default function GenericNode({ data}:{data:NodeDataType}) {
   const {types, deleteNode} = useContext(typesContext);
   const Icon = nodeIcons[types[data.type]];
 
@@ -38,7 +40,7 @@ export default function GenericNode({ data }) {
         <>
           {Object.keys(data.node.template)
             .filter((t) => t.charAt(0) !== "_")
-            .map((t, idx) => (
+            .map((t:string, idx) => (
               <div key={idx}>
                 {idx === 0 ? (
                   <div className="px-5 py-2 mt-2 text-center">Inputs:</div>

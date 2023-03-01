@@ -1,8 +1,9 @@
 import { Switch } from "@headlessui/react";
 import { classNames } from "../../utils";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { ToggleComponentType } from "../../types/components";
 
-export default function ToggleComponent({ enabled, setEnabled, disabled }) {
+export default function ToggleComponent({ enabled, setEnabled, disabled }:ToggleComponentType) {
   useEffect(()=> {
     if(disabled){
         setEnabled(false);
@@ -12,7 +13,7 @@ export default function ToggleComponent({ enabled, setEnabled, disabled }) {
     <div className={disabled ? "pointer-events-none cursor-not-allowed" : ""}>
       <Switch
         checked={enabled}
-        onChange={(x) => {
+        onChange={(x:boolean) => {
           setEnabled(x);
         }}
         className={classNames(

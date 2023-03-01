@@ -1,8 +1,9 @@
 import { Transition } from "@headlessui/react";
 import { CheckCircleIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
+import { SuccessAlertType } from "../../types/alerts";
 
-export default function SuccessAlert({ title, id, removeAlert }) {
+export default function SuccessAlert({ title, id, removeAlert }:SuccessAlertType) {
   const [show, setShow] = useState(true);
   useEffect(() => {
     if(show){

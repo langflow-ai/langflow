@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { InputComponentType } from "../../types/components";
 
-export default function InputComponent({value, onChange, disabled}){
+export default function InputComponent({value, onChange, disabled}: InputComponentType){
     const [myValue, setMyValue] = useState(value ?? "");
     useEffect(()=> {
         if(disabled){

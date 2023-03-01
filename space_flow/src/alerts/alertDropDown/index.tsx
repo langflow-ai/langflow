@@ -1,30 +1,16 @@
 import { useContext } from "react";
 import { alertContext } from "../../contexts/alertContext";
 import {
-  CheckCircleIcon,
-  InformationCircleIcon,
-  XCircleIcon,
   XMarkIcon,
 } from "@heroicons/react/24/solid";
-import { Link } from "react-router-dom";
 import { Transition } from "@headlessui/react";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import SingleAlert from "./components/singleAlertComponent";
+import { AlertDropdownType } from "../../types/alerts";
 
-type AlertDropdownProps = {
-  closeFunction: () => void;
-  open?: boolean;
-};
 
-export type alertDropdownItem = {
-  type: "notice" | "error" | "success";
-  title: string;
-  link?: string;
-  list?: Array<string>;
-  id: string;
-};
 
-export default function AlertDropdown({closeFunction, open}: AlertDropdownProps) {
+export default function AlertDropdown({closeFunction, open}: AlertDropdownType) {
   const {
     notificationList,
     clearNotificationList,
