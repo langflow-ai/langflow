@@ -1,16 +1,10 @@
-import { createContext, useState } from "react";
-import { ReactFlowInstance } from "reactflow";
+import { createContext, ReactNode, useState } from "react";
+import { Node} from "reactflow";
+import { typesContextType } from "../types/typesContext";
 
 //context to share types adn functions from nodes to flow
-type typesContextType = {
-	reactFlowInstance: ReactFlowInstance;
-	setReactFlowInstance: any;
-	deleteNode: (idx: number) => void;
-	types: {};
-	setTypes: (newState: {}) => void;
-};
 
-const initialValue = {
+const initialValue:typesContextType = {
 	reactFlowInstance: null,
 	setReactFlowInstance: () => {},
 	deleteNode: () => {},
@@ -20,12 +14,12 @@ const initialValue = {
 
 export const typesContext = createContext<typesContextType>(initialValue);
 
-export function TypesProvider({ children }) {
+export function TypesProvider({ children }:{children:ReactNode}) {
 	const [types, setTypes] = useState({});
 	const [reactFlowInstance, setReactFlowInstance] = useState(null);
-	function deleteNode(idx) {
+	function deleteNode(idx:string) {
 		reactFlowInstance.setNodes(
-			reactFlowInstance.getNodes().filter((n) => n.id !== idx)
+			reactFlowInstance.getNodes().filter((n:Node) => n.id !== idx)
 		);
 	}
 	return (

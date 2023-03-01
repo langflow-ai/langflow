@@ -2,10 +2,12 @@ import { XCircleIcon, XMarkIcon, InformationCircleIcon, CheckCircleIcon } from "
 import { Link } from "react-router-dom";
 import { Transition } from "@headlessui/react";
 import { useState } from "react";
+import { SingleAlertComponentType } from "../../../../types/alerts";
 
-export default function SingleAlert({ dropItem, removeAlert }) {
+export default function SingleAlert({ dropItem, removeAlert}:SingleAlertComponentType) {
     const [show, setShow] = useState(true);
     const type = dropItem.type;
+    console.log(dropItem.id)
 
     return (
         <Transition
@@ -20,7 +22,7 @@ export default function SingleAlert({ dropItem, removeAlert }) {
       leaveTo={"transform translate-x-[-100%]"}
     >
         {type === "error"? 
-          <div className="flex bg-red-50 rounded-md p-4 mb-2" key={dropItem.index}>
+          <div className="flex bg-red-50 rounded-md p-4 mb-2" key={dropItem.id}>
             <div className="flex-shrink-0">
               <XCircleIcon
                 className="h-5 w-5 text-red-400"
@@ -48,7 +50,7 @@ export default function SingleAlert({ dropItem, removeAlert }) {
                 <button
                   type="button"
                   onClick={() => {
-                    setShow(false); setTimeout(() => {removeAlert(dropItem.index);}, 500);
+                    setShow(false); setTimeout(() => {removeAlert(dropItem.id);}, 500);
                   }}
                   className="inline-flex rounded-md bg-red-50 p-1.5 text-red-500"
                 >
@@ -59,7 +61,7 @@ export default function SingleAlert({ dropItem, removeAlert }) {
             </div>
           </div>
         :(type === "notice" ?
-          <div className="flex rounded-md p-4 bg-blue-50 mb-2" key={dropItem.index}>
+          <div className="flex rounded-md p-4 bg-blue-50 mb-2" key={dropItem.id}>
             <div className="flex-shrink-0">
               <InformationCircleIcon
                 className="h-5 w-5 text-blue-400"
@@ -86,7 +88,7 @@ export default function SingleAlert({ dropItem, removeAlert }) {
                 <button
                   type="button"
                   onClick={() => {
-                    setShow(false); setTimeout(() => {removeAlert(dropItem.index);}, 500);
+                    setShow(false); setTimeout(() => {removeAlert(dropItem.id);}, 500);
                   }}
                   className="inline-flex rounded-md bg-blue-50 p-1.5 text-blue-500"
                 >
@@ -97,7 +99,7 @@ export default function SingleAlert({ dropItem, removeAlert }) {
             </div>
           </div>
         :
-        <div className="flex bg-green-50 p-4 mb-2" key={dropItem.index}>
+        <div className="flex bg-green-50 p-4 mb-2" key={dropItem.id}>
             <div className="flex-shrink-0">
               <CheckCircleIcon
                 className="h-5 w-5 text-green-400"
@@ -114,7 +116,7 @@ export default function SingleAlert({ dropItem, removeAlert }) {
                 <button
                   type="button"
                   onClick={() => {
-                    setShow(false); setTimeout(() => {removeAlert(dropItem.index);}, 500);
+                    setShow(false); setTimeout(() => {removeAlert(dropItem.id);}, 500);
                   }}
                   className="inline-flex rounded-md bg-green-50 p-1.5 text-green-500"
                 >

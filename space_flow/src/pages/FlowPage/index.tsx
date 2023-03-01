@@ -7,6 +7,8 @@ import ReactFlow, {
 	useNodesState,
 	useReactFlow,
 	ControlButton,
+	EdgeChange,
+	Connection,
 } from "reactflow";
 import { locationContext } from "../../contexts/locationContext";
 import ExtraSidebar from "./components/extraSidebarComponent";
@@ -24,6 +26,8 @@ import {
 	ArrowDownTrayIcon,
 	ArrowUpTrayIcon,
 } from "@heroicons/react/24/outline";
+import { FlowType, NodeType } from "../../types/flow";
+import { APIClassType } from "../../types/api";
 
 const nodeTypes = {
 	genericNode: GenericNode,
@@ -35,7 +39,7 @@ const nodeTypes = {
 
 var _ = require("lodash");
 
-export default function FlowPage({ flow }) {
+export default function FlowPage({ flow }:{flow:FlowType}) {
 	let { updateFlow, incrementNodeId, downloadFlow, uploadFlow } =
 		useContext(TabsContext);
 	const { types, reactFlowInstance, setReactFlowInstance } =
@@ -78,7 +82,7 @@ export default function FlowPage({ flow }) {
 	}, [setExtraComponent, setExtraNavigation]);
 
 	const onEdgesChangeMod = useCallback(
-		(s) => {
+		(s:EdgeChange[]) => {
 			onEdgesChange(s);
 			setNodes((x) => {
 				let newX = _.cloneDeep(x);
@@ -89,7 +93,7 @@ export default function FlowPage({ flow }) {
 	);
 
 	const onConnect = useCallback(
-		(params) => {
+		(params:Connection) => {
 			setEdges((eds) =>
 				addEdge({ ...params, className: "animate-pulse" }, eds)
 			);
@@ -101,17 +105,17 @@ export default function FlowPage({ flow }) {
 		[setEdges, setNodes]
 	);
 
-	const onDragOver = useCallback((event) => {
+	const onDragOver = useCallback((event:React.DragEvent) => {
 		event.preventDefault();
 		event.dataTransfer.dropEffect = "move";
 	}, []);
 
 	const onDrop = useCallback(
-		(event) => {
+		(event:React.DragEvent) => {
 			event.preventDefault();
 
 			const reactflowBounds = reactFlowWrapper.current.getBoundingClientRect();
-			let data = JSON.parse(event.dataTransfer.getData("json"));
+			let data:{type:string,node?:APIClassType} = JSON.parse(event.dataTransfer.getData("json"));
 			if (
 				data.type !== "chatInput" ||
 				(data.type === "chatInput" &&
@@ -123,7 +127,7 @@ export default function FlowPage({ flow }) {
 				});
 				let newId = getId();
 
-				const newNode = {
+				const newNode:NodeType = {
 					id: newId,
 					type:
 						data.type === "str"
