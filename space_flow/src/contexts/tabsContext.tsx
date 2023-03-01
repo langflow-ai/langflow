@@ -1,24 +1,8 @@
 import { createContext, useEffect, useState, useRef } from "react";
-import { example } from "../data_assets/example";
+import {flow} from "../types/flow"
+import { TabsContextType } from "../types/tabs";
 
-type flow = {
-	name: string;
-	id: string;
-	data: any;
-	chat: Array<{ message: string; isSend: boolean }>;
-};
 
-type TabsContextType = {
-	tabIndex: number;
-	setTabIndex: (index: number) => void;
-	flows: Array<flow>;
-	removeFlow: (id: string) => void;
-	addFlow: (flowData?: any) => void;
-	updateFlow: (newFlow: flow) => void;
-	incrementNodeId: () => number;
-	downloadFlow: () => void;
-	uploadFlow: () => void;
-};
 
 const TabsContextInitialValue = {
 	tabIndex: 0,
@@ -76,7 +60,7 @@ export function TabsProvider({ children }) {
 		link.download = `${flows[tabIndex].name}.json`;
 		link.click();
 	}
-	
+
 	function uploadFlow() {
 		const input = document.createElement("input");
 		input.type = "file";
@@ -84,14 +68,17 @@ export function TabsProvider({ children }) {
 			if ((e.target as HTMLInputElement).files[0].type === "application/json") {
 				const file = (e.target as HTMLInputElement).files[0];
 				file.text().then((text) => {
-                    console.log(JSON.parse(text),"json from upload")
 					addFlow(JSON.parse(text));
 				});
 			}
 		};
 		input.click();
 	}
-
+	/**
+	 * Removes a flow from an array of flows based on its id.
+	 * Updates the state of flows and tabIndex using setFlows and setTabIndex hooks.
+	 * @param {string} id - The id of the flow to remove.
+	 */
 	function removeFlow(id: string) {
 		setFlows((prevState) => {
 			const newFlows = [...prevState];
