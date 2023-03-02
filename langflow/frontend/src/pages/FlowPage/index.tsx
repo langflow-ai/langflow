@@ -63,9 +63,10 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 			updateFlow(flow);
 		}
 	// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [nodes, edges, reactFlowInstance, flow]);
+	}, [nodes, edges]);
 
 	useEffect(() => {
+		console.log('oi')
 		setNodes(flow?.data?.nodes ?? []);
 		setEdges(flow?.data?.edges ?? []);
 		if (reactFlowInstance) {
