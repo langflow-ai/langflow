@@ -69,9 +69,9 @@ export default function ExtraSidebar() {
                     })
                   }
                 >
-                  <div className="flex w-full justify-between text-sm px-4 py-3 items-center border-dashed border-gray-400 border-l-0 rounded-md rounded-l-none border-2">
-                    <span className="text-black w-36 truncate">{t}</span>
-                    <Bars2Icon className="w-6 h-6 text-gray-400" />
+                  <div className="flex w-full justify-between text-sm px-4 py-3 items-center border-dashed border-gray-400 dark:border-gray-600 border-l-0 rounded-md rounded-l-none border-2">
+                    <span className="text-black dark:text-white w-36 truncate">{t}</span>
+                    <Bars2Icon className="w-6 h-6 text-gray-400 dark:text-gray-600" />
                   </div>
                 </div>
               </div>
@@ -94,9 +94,9 @@ export default function ExtraSidebar() {
                 })
               }
             >
-              <div className="flex w-full justify-between text-sm px-4 py-3 items-center border-dashed border-gray-400 border-l-0 rounded-md rounded-l-none border-2">
-                <span className="text-black w-36 truncate">Chat Input</span>
-                <Bars2Icon className="w-6 h-6 text-gray-400" />
+              <div className="flex w-full justify-between text-sm px-4 py-3 items-center border-dashed border-gray-400 dark:border-gray-600 border-l-0 rounded-md rounded-l-none border-2">
+                <span className="text-black dark:text-white w-36 truncate">Chat Input</span>
+                <Bars2Icon className="w-6 h-6 text-gray-400 dark:text-gray-600" />
               </div>
             </div>
           </div>
@@ -111,9 +111,9 @@ export default function ExtraSidebar() {
                 })
               }
             >
-              <div className="flex w-full justify-between text-sm px-4 py-3 items-center border-dashed border-gray-400 border-l-0 rounded-md rounded-l-none border-2">
-                <span className="text-black w-36 truncate">Chat Output</span>
-                <Bars2Icon className="w-6 h-6 text-gray-400" />
+              <div className="flex w-full justify-between text-sm px-4 py-3 items-center dark:border-gray-600 border-dashed border-gray-400 border-l-0 rounded-md rounded-l-none border-2">
+                <span className="text-black dark:text-white w-36 truncate">Chat Output</span>
+                <Bars2Icon className="w-6 h-6 text-gray-400 dark:text-gray-600" />
               </div>
             </div>
           </div>
@@ -134,9 +134,9 @@ export default function ExtraSidebar() {
                 })
               }
             >
-              <div className="flex w-full justify-between text-sm px-4 py-3 items-center border-dashed border-gray-400 border-l-0 rounded-md rounded-l-none border-2">
-                <span className="text-black w-36 truncate">String</span>
-                <Bars2Icon className="w-6 h-6 text-gray-400" />
+              <div className="flex w-full justify-between text-sm px-4 py-3 items-center border-dashed dark:border-gray-600 border-gray-400 border-l-0 rounded-md rounded-l-none border-2">
+                <span className="text-black dark:text-white w-36 truncate">String</span>
+                <Bars2Icon className="w-6 h-6 text-gray-400 dark:text-gray-600" />
               </div>
             </div>
           </div>
@@ -151,9 +151,9 @@ export default function ExtraSidebar() {
                 })
               }
             >
-              <div className="flex w-full justify-between text-sm px-4 py-3 items-center border-dashed border-gray-400 border-l-0 rounded-md rounded-l-none border-2">
-                <span className="text-black w-36 truncate">Boolean</span>
-                <Bars2Icon className="w-6 h-6 text-gray-400" />
+              <div className="flex w-full justify-between text-sm px-4 py-3 items-center border-dashed dark:border-gray-600 border-gray-400 border-l-0 rounded-md rounded-l-none border-2">
+                <span className="text-black dark:text-white w-36 truncate">Boolean</span>
+                <Bars2Icon className="w-6 h-6 text-gray-400 dark:text-gray-600" />
               </div>
             </div>
           </div>

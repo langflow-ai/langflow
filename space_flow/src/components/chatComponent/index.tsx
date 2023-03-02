@@ -88,9 +88,9 @@ export default function Chat({flow, reactFlowInstance }) {
         leaveTo="translate-y-96"
       >
         <div className="w-[400px] absolute bottom-0 right-6">
-          <div className="border h-full rounded-xl rounded-b-none bg-white shadow">
-            <div className="flex justify-between items-center px-5 py-3 border-b">
-              <div className="flex gap-3 text-xl font-medium items-center">
+          <div className="border dark:border-gray-700 h-full rounded-xl rounded-b-none bg-white dark:bg-gray-800 shadow">
+            <div className="flex justify-between items-center px-5 py-3 border-b dark:border-b-gray-700">
+              <div className="flex gap-3 text-xl dark:text-white font-medium items-center">
                 <Bars3CenterLeftIcon className="h-8 w-8 mt-1" style={{color: nodeColors['chat']}} />
                 Chat
               </div>
@@ -99,21 +99,21 @@ export default function Chat({flow, reactFlowInstance }) {
                   setOpen(false);
                 }}
               >
-                <XMarkIcon className="h-6 w-6 text-gray-600" />
+                <XMarkIcon className="h-6 w-6 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
               </button>
             </div>
-            <div  className="w-full h-[400px] flex gap-3 mb-auto overflow-y-auto scrollbar-hide flex-col bg-gray-50 p-3 py-5">
+            <div  className="w-full h-[400px] flex gap-3 mb-auto overflow-y-auto scrollbar-hide flex-col bg-gray-50 dark:bg-gray-900 p-3 py-5">
               {chatHistory.map((c, i) => (
                 <div key={i}>
-                  {c.isSend ? (
+                  {!c.isSend ? (
                     <div className="w-full text-end">
-                      <div className="text-start inline-block bg-gray-200 rounded-xl p-3 overflow-hidden w-fit max-w-[280px] px-5 text-sm font-normal rounded-tr-none">
+                      <div style={{backgroundColor: nodeColors['chat']}} className="text-start inline-block text-white rounded-xl p-3 overflow-hidden w-fit max-w-[280px] px-5 text-sm font-normal rounded-tr-none">
                         {c.message}
                       </div>
                     </div>
                   ) : (
                     <div className="w-full text-start">
-                      <div style={{backgroundColor: nodeColors['chat']}} className="text-start inline-block rounded-xl p-3 overflow-hidden w-fit max-w-[280px] px-5 text-sm text-white font-normal rounded-tl-none">
+                      <div className="text-start inline-block rounded-xl p-3 overflow-hidden w-fit max-w-[280px] px-5 text-sm text-black dark:text-white dark:bg-gray-700 bg-gray-200 font-normal rounded-tl-none">
                         {c.message}
                       </div>
                     </div>
@@ -122,7 +122,7 @@ export default function Chat({flow, reactFlowInstance }) {
               ))}
               <div ref={ref}></div>
             </div>
-            <div className="w-full bg-white border-t flex items-center justify-between p-3">
+            <div className="w-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex items-center justify-between p-3">
               <div className="relative w-full mt-1 rounded-md shadow-sm">
                 <input
                 onKeyDown={(event)=>{
@@ -135,7 +135,7 @@ export default function Chat({flow, reactFlowInstance }) {
                   onChange={(e) => {
                     setChatValue(e.target.value);
                   }}
-                  className="form-input block w-full rounded-md border-gray-300 pr-10 sm:text-sm"
+                  className="form-input block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white pr-10 sm:text-sm"
                   placeholder="Send a message..."
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3">
@@ -143,7 +143,7 @@ export default function Chat({flow, reactFlowInstance }) {
                     onClick={() => sendMessage()}
                   >
                     <PaperAirplaneIcon
-                      className="h-5 w-5 text-gray-400 hover:text-gray-600"
+                      className="h-5 w-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                       aria-hidden="true"
                     />
                   </button>
@@ -164,7 +164,7 @@ export default function Chat({flow, reactFlowInstance }) {
         leaveTo="translate-y-96"
       >
         <div className="absolute bottom-0 right-6">
-          <div className="border flex justify-center align-center py-2 px-4 rounded-xl rounded-b-none bg-white shadow">
+          <div className="border flex justify-center align-center py-2 px-4 rounded-xl rounded-b-none bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white shadow">
             <button
               onClick={() => {
                 setOpen(true);

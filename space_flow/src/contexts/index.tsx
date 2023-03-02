@@ -1,4 +1,5 @@
 import { AlertProvider } from "./alertContext";
+import { DarkProvider } from "./darkContext";
 import { LocationProvider } from "./locationContext";
 import PopUpProvider from "./popUpContext";
 import { TabsProvider } from "./tabsContext";
@@ -8,15 +9,17 @@ export default function ContextWrapper({ children }) {
   //element to wrap all context
   return (
     <>
-      <LocationProvider>
-        <PopUpProvider>
-          <TypesProvider>
-            <TabsProvider>
-              <AlertProvider>{children}</AlertProvider>
-            </TabsProvider>
-          </TypesProvider>
-        </PopUpProvider>
-      </LocationProvider>
+      <DarkProvider>
+        <LocationProvider>
+          <PopUpProvider>
+            <TypesProvider>
+              <TabsProvider>
+                <AlertProvider>{children}</AlertProvider>
+              </TabsProvider>
+            </TypesProvider>
+          </PopUpProvider>
+        </LocationProvider>
+      </DarkProvider>
     </>
   );
 }

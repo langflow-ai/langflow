@@ -67,7 +67,7 @@ export default function AlertDropdown({closeFunction, open}: AlertDropdownProps)
             <SingleAlert key={index} dropItem={alertItem} removeAlert={removeFromNotificationList} />
           ))
         :
-        <div className="h-full w-full pb-16 text-slate-500 flex justify-center items-center">
+        <div className="h-full w-full pb-16 text-gray-500 flex justify-center items-center">
           No new notifications
           </div>
         }

@@ -10,7 +10,8 @@ import { alertContext } from "./contexts/alertContext";
 import { locationContext } from "./contexts/locationContext";
 import Sidebar from "./components/SidebarComponent";
 import Header from "./components/HeaderComponent";
-import { TabsManager } from "./pages/FlowPage/flowManager";
+import TabsManagerComponent from "./pages/FlowPage/components/tabsManagerComponent";
+import { darkContext } from "./contexts/darkContext";
 
 export default function App() {
 	var _ = require("lodash");
@@ -23,6 +24,8 @@ export default function App() {
 		setShowSideBar(true);
 		setIsStackedOpen(true);
 	}, [location.pathname, setCurrent, setIsStackedOpen, setShowSideBar]);
+
+	const {dark} = useContext(darkContext);
 
 	const {
 		errorData,
@@ -102,10 +105,10 @@ export default function App() {
 				<ExtraSidebar />
 
 				{/* Main area */}
-				<main className="min-w-0 flex-1 border-t border-gray-200 flex">
+				<main className="min-w-0 flex-1 border-t border-gray-200 dark:border-gray-700 flex">
 					{/* Primary column */}
 					<div className="w-full h-full">
-						<TabsManager></TabsManager>
+						<TabsManagerComponent></TabsManagerComponent>
 					</div>
 				</main>
 			</div>
