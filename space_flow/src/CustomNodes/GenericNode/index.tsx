@@ -16,8 +16,8 @@ export default function GenericNode({ data }) {
 
 
   return (
-    <div className="prompt-node relative bg-white dark:bg-slate-900 w-96 rounded-lg solid border dark:border-slate-700 flex flex-col justify-center">
-      <div className="w-full dark:text-white flex items-center justify-between p-4 gap-8 bg-gray-50 rounded-t-lg dark:bg-slate-800 border-b dark:border-b-slate-700 ">
+    <div className="prompt-node relative bg-white dark:bg-gray-900 w-96 rounded-lg solid border dark:border-gray-700 flex flex-col justify-center">
+      <div className="w-full dark:text-white flex items-center justify-between p-4 gap-8 bg-gray-50 rounded-t-lg dark:bg-gray-800 border-b dark:border-b-gray-700 ">
         <div className="w-full flex items-center truncate gap-4 text-lg">
           <Icon
             className="w-10 h-10 p-1 rounded"
@@ -26,7 +26,7 @@ export default function GenericNode({ data }) {
           <div className="truncate">{data.type}</div>
         </div>
         <button onClick={() => {deleteNode(data.id)}}>
-          <TrashIcon className="w-6 h-6 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-500"></TrashIcon>
+          <TrashIcon className="w-6 h-6 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-500"></TrashIcon>
         </button>
       </div>
 

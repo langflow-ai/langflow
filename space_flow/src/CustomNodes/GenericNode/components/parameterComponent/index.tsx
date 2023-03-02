@@ -43,7 +43,7 @@ export default function ParameterComponent({
   let disabled = reactFlowInstance?.getEdges().some((e) => (e.targetHandle === id)) ?? false;
 
   return (
-    <div ref={ref} className="w-full flex flex-wrap justify-between items-center bg-gray-50 dark:bg-slate-800 dark:text-white mt-1 px-5 py-2">
+    <div ref={ref} className="w-full flex flex-wrap justify-between items-center bg-gray-50 dark:bg-gray-800 dark:text-white mt-1 px-5 py-2">
       <>
         <div className="text-sm truncate">{title}<span className="text-red-600">{required ? " *" : ""}</span></div>
         <Tooltip title={tooltipTitle + (required ? " (required)" : "")}>
@@ -56,7 +56,7 @@ export default function ParameterComponent({
             }
             className={
               (left ? "-ml-0.5 " : "-mr-0.5 ") +
-              "w-3 h-3 rounded-full border-2 bg-white dark:bg-slate-800"
+              "w-3 h-3 rounded-full border-2 bg-white dark:bg-gray-800"
             }
             style={{
               borderColor: color,

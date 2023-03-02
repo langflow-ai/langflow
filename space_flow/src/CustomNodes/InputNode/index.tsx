@@ -15,7 +15,7 @@ import TextAreaComponent from "../../components/textAreaComponent";
 export default function InputNode({ data }) {
   const {types, deleteNode} = useContext(typesContext);
   return (
-    <div className="prompt-node relative bg-white dark:bg-slate-900 w-96 rounded-lg solid border dark:border-slate-700 flex flex-col justify-center">
+    <div className="prompt-node relative bg-white dark:bg-gray-900 w-96 rounded-lg solid border dark:border-gray-700 flex flex-col justify-center">
       <Tooltip title="Prefix: str">
         <Handle
           type="target"
@@ -24,14 +24,14 @@ export default function InputNode({ data }) {
           isValidConnection={(connection) =>
             isValidConnection(data, connection)
           }
-          className={"-ml-0.5 w-3 h-3 rounded-full border-2 bg-white dark:bg-slate-800"}
+          className={"-ml-0.5 w-3 h-3 rounded-full border-2 bg-white dark:bg-gray-800"}
           style={{
             borderColor: nodeColors[types[data.type]],
           }}
         ></Handle>
       </Tooltip>
 
-      <div className="w-full flex items-center justify-between p-4 gap-8 bg-gray-50 dark:bg-slate-800 dark:text-white border-b dark:border-b-slate-700 ">
+      <div className="w-full flex items-center justify-between p-4 gap-8 bg-gray-50 dark:bg-gray-800 dark:text-white border-b dark:border-b-gray-700 ">
         <div className="flex items-center gap-4 text-lg">
           <Bars3CenterLeftIcon
             className="w-10 h-10 p-1 rounded"
@@ -62,7 +62,7 @@ export default function InputNode({ data }) {
         position={Position.Right}
         id={data.type}
         isValidConnection={(connection) => isValidConnection(data, connection)}
-        className={"-mr-0.5 w-3 h-3 rounded-full border-2 bg-white dark:bg-slate-800"}
+        className={"-mr-0.5 w-3 h-3 rounded-full border-2 bg-white dark:bg-gray-800"}
         style={{
           borderColor: nodeColors[types[data.type]],
         }}

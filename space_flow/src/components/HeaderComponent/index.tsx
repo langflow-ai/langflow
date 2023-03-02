@@ -28,7 +28,7 @@ export default function Header({user, userNavigation}){
   })
   const {dark, setDark} = useContext(darkContext);
     return (
-    <header className="relative flex h-16 w-full shrink-0 items-center bg-white dark:bg-slate-800">
+    <header className="relative flex h-16 w-full shrink-0 items-center bg-white dark:bg-gray-800">
         {/* Logo area */}
         <div className="static shrink-0">
           <a

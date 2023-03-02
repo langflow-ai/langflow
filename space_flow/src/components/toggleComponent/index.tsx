@@ -16,7 +16,7 @@ export default function ToggleComponent({ enabled, setEnabled, disabled }) {
           setEnabled(x);
         }}
         className={classNames(
-          enabled ? "bg-indigo-600" : "bg-gray-200 dark:bg-slate-600",
+          enabled ? "bg-indigo-600" : "bg-gray-200 dark:bg-gray-600",
           "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out "
         )}
       >
@@ -24,7 +24,7 @@ export default function ToggleComponent({ enabled, setEnabled, disabled }) {
         <span
           className={classNames(
             enabled ? "translate-x-5" : "translate-x-0",
-            "pointer-events-none relative inline-block h-5 w-5 transform rounded-full  shadow ring-0 transition duration-200 ease-in-out", disabled ? "bg-gray-200 dark:bg-slate-600" : "bg-white dark:bg-slate-800"
+            "pointer-events-none relative inline-block h-5 w-5 transform rounded-full  shadow ring-0 transition duration-200 ease-in-out", disabled ? "bg-gray-200 dark:bg-gray-600" : "bg-white dark:bg-gray-800"
           )}
         >
           <span
