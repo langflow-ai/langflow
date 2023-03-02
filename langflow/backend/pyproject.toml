@@ -1,9 +1,9 @@
 [tool.poetry]
-name = "expert-backend"
-version = "0.0.3"
+name = "langflow"
+version = "0.0.17"
 description = ""
 authors = ["Ibis Prevedello <ibiscp@gmail.com>"]
-readme = "README.md"
+# readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -13,8 +13,6 @@ uvicorn = "^0.20.0"
 beautifulsoup4 = "^4.11.2"
 google-search-results = "^2.4.1"
 google-api-python-client = "^2.79.0"
-langchain = {path = "../langchain", develop = true}
-
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"

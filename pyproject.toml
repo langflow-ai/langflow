@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "0.1.0"
+version = "0.0.1"
 description = "A Python package with a built-in web application"
 authors = ["Ibis Prevedello <ibiscp@gmail.com>"]
 packages = [
