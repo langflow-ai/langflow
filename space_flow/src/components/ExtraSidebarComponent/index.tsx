@@ -1,10 +1,9 @@
 import { Disclosure } from "@headlessui/react";
-import { ArrowUpTrayIcon, ChevronLeftIcon } from "@heroicons/react/24/outline";
+import { ChevronLeftIcon } from "@heroicons/react/24/outline";
 import { useContext } from "react";
 import { Link } from "react-router-dom";
 import { classNames } from "../../utils";
 import { locationContext } from "../../contexts/locationContext";
-import { TabsContext } from "../../contexts/tabsContext";
 
 export default function ExtraSidebar() {
   const {

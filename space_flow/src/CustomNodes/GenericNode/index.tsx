@@ -10,7 +10,6 @@ import ParameterComponent from "./components/parameterComponent";
 import { typesContext } from "../../contexts/typesContext";
 import { useContext } from "react";
 import { NodeDataType} from "../../types/flow";
-import { APITemplateType, TemplateVariableType } from "../../types/api";
 
 export default function GenericNode({ data}:{data:NodeDataType}) {
   const {types, deleteNode} = useContext(typesContext);

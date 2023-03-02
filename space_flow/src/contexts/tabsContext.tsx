@@ -20,8 +20,6 @@ export const TabsContext = createContext<TabsContextType>(
 	TabsContextInitialValue
 );
 
-let _ = require("lodash");
-
 export function TabsProvider({ children }:{children:ReactNode}) {
 	const [tabIndex, setTabIndex] = useState(0);
 	const [flows, setFlows] = useState<Array<FlowType>>([]);

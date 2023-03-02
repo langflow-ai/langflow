@@ -2,14 +2,13 @@ import SidebarButton from "./sidebarButton";
 import { BsPlusSquare } from "react-icons/bs";
 import { classNames } from "../../utils";
 import { ChevronRightIcon } from "@heroicons/react/24/outline";
-import { useContext, useState } from "react";
+import { useContext } from "react";
 import { sidebarNavigation } from "../../entities/sidebarNav";
 import { locationContext } from "../../contexts/locationContext";
 
 export default function Sidebar() {
   let { showSideBar, isStackedOpen, setIsStackedOpen } =
     useContext(locationContext);
-  const [newProjectOpen, setNewProjectOpen] = useState(false);
   let current = false;
   return (
     <div
@@ -33,7 +32,6 @@ export default function Sidebar() {
               <button
                 key="New Project"
                 onClick={() => {
-                  setNewProjectOpen(true);
                 }}
                 className={classNames(
                   current

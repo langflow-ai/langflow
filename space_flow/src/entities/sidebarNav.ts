@@ -1,10 +1,5 @@
 import {
-  BoltIcon,
-  Cog6ToothIcon,
   HomeIcon,
-  LightBulbIcon,
-  RocketLaunchIcon,
-  TableCellsIcon,
 } from '@heroicons/react/24/outline'
 
 

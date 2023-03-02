@@ -1,9 +1,8 @@
-import { Bars3CenterLeftIcon, CheckCircleIcon, TrashIcon } from "@heroicons/react/24/outline";
-import { Input } from "@mui/material";
+import { CheckCircleIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { Handle, Position } from "reactflow";
 import { isValidConnection, nodeColors } from "../../utils";
 import ToggleComponent from "../../components/toggleComponent";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useState } from "react";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
 

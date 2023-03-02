@@ -1,7 +1,6 @@
-import { Bars3CenterLeftIcon, ChatBubbleBottomCenterTextIcon } from "@heroicons/react/24/outline";
+import { Bars3CenterLeftIcon } from "@heroicons/react/24/outline";
 import { Handle, Position } from "reactflow";
-import InputComponent from "../../components/inputComponent";
-import { isValidConnection, nodeColors, snakeToNormalCase } from "../../utils";
+import { isValidConnection, nodeColors } from "../../utils";
 import Tooltip from "../../components/TooltipComponent";
 import { useContext } from "react";
 import { typesContext } from "../../contexts/typesContext";

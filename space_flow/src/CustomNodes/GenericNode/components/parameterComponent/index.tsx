@@ -2,8 +2,6 @@ import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import Tooltip from "../../../../components/TooltipComponent";
 import {
   isValidConnection,
-  nodeColors,
-  snakeToNormalCase,
 } from "../../../../utils";
 import { useContext, useEffect, useRef, useState } from "react";
 import InputComponent from "../../../../components/inputComponent";
@@ -27,7 +25,6 @@ export default function ParameterComponent({
   const ref = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
-  var _ = require('lodash');
   useEffect(() => {
     if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
       setPosition(ref.current.offsetTop + ref.current.clientHeight / 2);
