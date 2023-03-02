@@ -8,9 +8,9 @@ import {
   ComputerDesktopIcon,
   Bars3CenterLeftIcon,
 } from "@heroicons/react/24/outline";
-import { Edge, Node } from "reactflow";
+import { Connection, Edge, Node, ReactFlowInstance } from "reactflow";
 
-export function classNames(...classes) {
+export function classNames(...classes:Array<string>) {
   return classes.filter(Boolean).join(" ");
 }
 
@@ -60,43 +60,7 @@ export const borderLColors = {
   gray: "border-l-gray-500",
 };
 
-/* export const nodeColors = {
-    prompt: "#35ADAE",
-    model: "#4266BE",
-    chain: "#6344BE",
-    agent: "#903BBE",
-    tool: "#DB3392",
-    memory: "#FF3434",
-  } */
-
-/* export const nodeColors = {
-    prompt: "#36D635",
-    model: "#4266BE",
-    chain: "#903BBE",
-    agent: "#FF3434",
-    tool: "#FEBB35",
-    memory: "#FFFF33",
-  } */
-
-/* export const nodeColors = {
-    prompt: "#36D635",
-    model: "#35ADAE",
-    chain: "#903BBE",
-    agent: "#DB3392",
-    tool: "#FF9135",
-    memory: "#FFDC35",
-  } */
-
-/* export const nodeColors = {
-    prompt: "#36D635",
-    model: "#35ADAE",
-    chain: "#903BBE",
-    agent: "#DB3392",
-    tool: "#FF3434",
-    memory: "#FF9135",
-  } */
-
-export const nodeColors = {
+export const nodeColors: {[char: string]: string} = {
   prompts: "#4367BF",
   llms: "#6344BE",
   chains: "#FE7500",
@@ -107,7 +71,7 @@ export const nodeColors = {
   chat: "#2563EB",
 };
 
-export const nodeNames = {
+export const nodeNames:{[char: string]: string} = {
   prompts: "Prompts",
   llms: "LLMs",
   chains: "Chains",
@@ -119,7 +83,7 @@ export const nodeNames = {
 
 };
 
-export const nodeIcons = {
+export const nodeIcons:{[char: string]: React.ForwardRefExoticComponent<React.SVGProps<SVGSVGElement>>} = {
   agents: RocketLaunchIcon,
   chains: LinkIcon,
   memories: CpuChipIcon,
@@ -220,7 +184,7 @@ export const taskTypeMap: { [key: string]: string } = {
   MULTICLASS_CLASSIFICATION: "Multiclass Classification",
 };
 
-const charWidths = {
+const charWidths:{[char: string]: number} = {
   " ": 0.2,
   "!": 0.2,
   '"': 0.3,
@@ -262,7 +226,7 @@ for (let i = 97; i <= 122; i++) {
   charWidths[String.fromCharCode(i)] = 0.5;
 }
 
-export function measureTextWidth(text: string, fontSize) {
+export function measureTextWidth(text: string, fontSize:number) {
   let wordWidth = 0;
   for (let j = 0; j < text.length; j++) {
     let char = text[j];
@@ -272,7 +236,7 @@ export function measureTextWidth(text: string, fontSize) {
   return wordWidth;
 }
 
-export function measureTextHeight(text: string, width, fontSize) {
+export function measureTextHeight(text: string, width:number, fontSize:number) {
   const charHeight = fontSize;
   const lineHeight = charHeight * 1.5;
   const words = text.split(" ");
@@ -321,7 +285,7 @@ export function snakeToNormalCase(str: string) {
     .join(" ");
 }
 
-export function roundNumber(x, decimals) {
+export function roundNumber(x:number, decimals:number) {
   return Math.round(x * Math.pow(10, decimals)) / Math.pow(10, decimals);
 }
 
@@ -335,9 +299,10 @@ export function getConnectedNodes(edge: Edge, nodes: Array<Node>): Array<Node> {
 }
 
 export function isValidConnection(
-  { source, target, sourceHandle, targetHandle },
-  reactFlowInstance
+  { source, target, sourceHandle, targetHandle }:Connection,
+  reactFlowInstance:ReactFlowInstance
 ) {
+  console.log(target)
   if (
     sourceHandle.split('|')[0] === targetHandle.split("|")[0] ||
     sourceHandle.split('|').slice(2).some((t) => t === targetHandle.split("|")[0]) ||

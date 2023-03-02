@@ -1,9 +1,10 @@
 import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
+import { InputListComponentType } from "../../types/components";
 
 var _ = require("lodash");
 
-export default function InputListComponent({ value, onChange, disabled}) {
+export default function InputListComponent({ value, onChange, disabled}:InputListComponentType) {
   const [inputList, setInputList] = useState(value ?? [""]);
   useEffect(()=> {
     if(disabled){

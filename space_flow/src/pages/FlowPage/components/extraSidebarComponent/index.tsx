@@ -1,39 +1,40 @@
-import { Bars2Icon, ComputerDesktopIcon } from "@heroicons/react/24/outline";
+import { Bars2Icon } from "@heroicons/react/24/outline";
 import DisclosureComponent from "../DisclosureComponent";
 import {
   nodeColors,
   nodeIcons,
   nodeNames,
-  toFirstUpperCase,
 } from "../../../../utils";
 import { useContext, useEffect, useState } from "react";
 import { getAll } from "../../../../controllers/NodesServices";
 import { typesContext } from "../../../../contexts/typesContext";
+import { APIClassType, APIKindType, APIObjectType } from "../../../../types/api";
 
 export default function ExtraSidebar() {
   const [data, setData] = useState({});
   const { setTypes} = useContext(typesContext);
 
-  async function getTypes(){
-    let d = await getAll();
-    setData(d.data);
+  async function getTypes():Promise<void>{
+    const initialValue:{[char: string]: string} = {
+      str: "advanced",
+      bool: "advanced",
+      chatOutput: "chat",
+      chatInput: "chat",
+    }
+    let result = await getAll();
+    setData(result.data);
     setTypes(
-      Object.keys(d.data).reduce(
+      Object.keys(result.data).reduce(
         (acc, curr) => {
-          Object.keys(d.data[curr]).forEach((c) => {
+          Object.keys(result.data[curr]).forEach((c:keyof APIKindType) => {
             acc[c] = curr;
-            d.data[curr][c].base_classes?.forEach((b) => {
+            result.data[curr][c].base_classes?.forEach((b) => {
               acc[b] = curr;
             });
           });
           return acc;
         },
-        {
-          str: "advanced",
-          bool: "advanced",
-          chatOutput: "chat",
-          chatInput: "chat",
-        }
+        initialValue
       )
     );
   }
@@ -43,20 +44,20 @@ export default function ExtraSidebar() {
   }, []);
 
 
-  function onDragStart(event: React.DragEvent<any>, data) {
+  function onDragStart(event: React.DragEvent<any>, data:{type:string,node?:APIClassType}) {
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("json", JSON.stringify(data));
   }
 
   return (
     <div className="mt-4 w-full">
-      {Object.keys(data).map((d, i) => (
+      {Object.keys(data).map((d:keyof APIObjectType, i) => (
         <DisclosureComponent
           key={i}
           button={{ title: nodeNames[d], Icon: nodeIcons[d] }}
         >
           <div className="p-2 flex flex-col gap-2">
-            {Object.keys(data[d]).map((t, k) => (
+            {Object.keys(data[d]).map((t: string, k) => (
               <div key={k}>
                 <div
                   draggable

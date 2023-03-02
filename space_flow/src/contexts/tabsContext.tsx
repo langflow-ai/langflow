@@ -1,32 +1,16 @@
-import { createContext, useEffect, useState, useRef } from "react";
-import { example } from "../data_assets/example";
+import { createContext, useEffect, useState, useRef, ReactNode } from "react";
+import {FlowType} from "../types/flow"
+import { TabsContextType } from "../types/tabs";
 
-type flow = {
-	name: string;
-	id: string;
-	data: any;
-	chat: Array<{ message: string; isSend: boolean }>;
-};
 
-type TabsContextType = {
-	tabIndex: number;
-	setTabIndex: (index: number) => void;
-	flows: Array<flow>;
-	removeFlow: (id: string) => void;
-	addFlow: (flowData?: any) => void;
-	updateFlow: (newFlow: flow) => void;
-	incrementNodeId: () => number;
-	downloadFlow: () => void;
-	uploadFlow: () => void;
-};
 
-const TabsContextInitialValue = {
+const TabsContextInitialValue:TabsContextType = {
 	tabIndex: 0,
 	setTabIndex: (index: number) => {},
 	flows: [],
 	removeFlow: (id: string) => {},
 	addFlow: (flowData?: any) => {},
-	updateFlow: (newFlow: flow) => {},
+	updateFlow: (newFlow: FlowType) => {},
 	incrementNodeId: () => 0,
 	downloadFlow: () => {},
 	uploadFlow: () => {},
@@ -38,9 +22,9 @@ export const TabsContext = createContext<TabsContextType>(
 
 let _ = require("lodash");
 
-export function TabsProvider({ children }) {
+export function TabsProvider({ children }:{children:ReactNode}) {
 	const [tabIndex, setTabIndex] = useState(0);
-	const [flows, setFlows] = useState<Array<flow>>([]);
+	const [flows, setFlows] = useState<Array<FlowType>>([]);
 	const [id, setId] = useState(0);
 
 	const newNodeId = useRef(0);
@@ -76,7 +60,7 @@ export function TabsProvider({ children }) {
 		link.download = `${flows[tabIndex].name}.json`;
 		link.click();
 	}
-	
+
 	function uploadFlow() {
 		const input = document.createElement("input");
 		input.type = "file";
@@ -84,14 +68,17 @@ export function TabsProvider({ children }) {
 			if ((e.target as HTMLInputElement).files[0].type === "application/json") {
 				const file = (e.target as HTMLInputElement).files[0];
 				file.text().then((text) => {
-                    console.log(JSON.parse(text),"json from upload")
 					addFlow(JSON.parse(text));
 				});
 			}
 		};
 		input.click();
 	}
-
+	/**
+	 * Removes a flow from an array of flows based on its id.
+	 * Updates the state of flows and tabIndex using setFlows and setTabIndex hooks.
+	 * @param {string} id - The id of the flow to remove.
+	 */
 	function removeFlow(id: string) {
 		setFlows((prevState) => {
 			const newFlows = [...prevState];
@@ -109,9 +96,9 @@ export function TabsProvider({ children }) {
 			return newFlows;
 		});
 	}
-	function addFlow(flow?: flow) {
+	function addFlow(flow?: FlowType) {
 		const data = flow?.data ? flow.data : null;
-		let newFlow: flow = {
+		let newFlow: FlowType = {
 			name: flow ? flow.name : "flow" + id,
 			id: id.toString(),
 			data,
@@ -124,8 +111,7 @@ export function TabsProvider({ children }) {
 		});
 		setTabIndex(flows.length);
 	}
-	function updateFlow(newFlow: flow) {
-		console.log(newFlow);
+	function updateFlow(newFlow: FlowType) {
 		setFlows((prevState) => {
 			const newFlows = [...prevState];
 			const index = newFlows.findIndex((flow) => flow.id === newFlow.id);

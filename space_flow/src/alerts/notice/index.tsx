@@ -2,8 +2,9 @@ import { Transition } from "@headlessui/react";
 import { InformationCircleIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { NoticeAlertType } from "../../types/alerts";
 
-export default function NoticeAlert({ title, link = "", id, removeAlert }) {
+export default function NoticeAlert({ title, link = "", id, removeAlert }:NoticeAlertType) {
   const [show, setShow] = useState(true);
   useEffect(() => {
     if(show){

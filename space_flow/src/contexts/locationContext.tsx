@@ -1,4 +1,4 @@
-import { createContext, useState } from "react";
+import { createContext, ReactNode, useState } from "react";
 
 //types for location context
 type locationContextType = {
@@ -50,7 +50,7 @@ const initialValue = {
 
 export const locationContext = createContext<locationContextType>(initialValue);
 
-export function LocationProvider({ children }) {
+export function LocationProvider({ children }:{children:ReactNode}) {
 	const [current, setCurrent] = useState(initialValue.current);
 	const [isStackedOpen, setIsStackedOpen] = useState(
 		initialValue.isStackedOpen

@@ -39,7 +39,7 @@ export default function App() {
 		setSuccessOpen,
 	} = useContext(alertContext);
 
-	const [alertsList, setAlertsList] = useState([]);
+	const [alertsList, setAlertsList] = useState<Array<{type:string,data:{title:string,list?:Array<string>,link?:string},id:string}>>([]);
 
 	useEffect(() => {
 		if (errorOpen && errorData) {
@@ -72,33 +72,17 @@ export default function App() {
 		}
 	}, [errorData, errorOpen, noticeData, noticeOpen, successData, successOpen]);
 
-	const removeAlert = (id: number) => {
+	const removeAlert = (id: string) => {
 		setAlertsList((prevAlertsList) =>
 			prevAlertsList.filter((alert) => alert.id !== id)
 		);
 	};
 
-	const user = {
-		name: "Whitney Francis",
-		email: "whitney.francis@example.com",
-		imageUrl:
-			"https://images.unsplash.com/photo-1517365830460-955ce3ccd263?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-	};
-
-	const userNavigation = [
-		{ name: "Your Projects", href: "/" },
-		// {
-		//   name: "Account settings",
-		//   href: "http://localhost:4455/.ory/kratos/public/self-service/settings/browser",
-		// },
-		{ name: "Sign out", href: "/" },
-	];
-
 	return (
 		//need parent component with width and height
 		<div className="h-full flex flex-col">
 			<div className="flex grow-0 shrink basis-auto">
-				<Header userNavigation={userNavigation} user={user}></Header>
+				<Header></Header>
 			</div>
 			<div className="flex grow shrink basis-auto min-h-0 flex-1 overflow-hidden">
 				<Sidebar />
