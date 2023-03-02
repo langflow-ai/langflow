@@ -13,7 +13,7 @@ export default function ChatInputNode({ data }) {
   const { types } = useContext(typesContext);
   return (
     <div
-      className="prompt-node relative rounded-lg solid border flex justify-center align-center py-3 px-6 bg-gray-50"
+      className="prompt-node relative rounded-lg solid border flex justify-center align-center py-3 px-6 bg-gray-50 dark:bg-gray-800 dark:border-gray-700"
       style={{ color: nodeColors[types[data.type]] }}
     >
       <Tooltip title="Prefix: str">
@@ -24,7 +24,7 @@ export default function ChatInputNode({ data }) {
           }
           position={Position.Left}
           id={"str|Prefix|" + data.id}
-          className={"-ml-0.5 w-3 h-3 rounded-full border-2 bg-white"}
+          className={"-ml-0.5 w-3 h-3 rounded-full border-2 bg-white dark:bg-gray-800"}
           style={{
             borderColor: nodeColors[types[data.type]],
           }}
@@ -38,7 +38,7 @@ export default function ChatInputNode({ data }) {
           }
           position={Position.Right}
           id={"str|str|" + data.id}
-          className={"-mr-0.5  w-3 h-3 rounded-full border-2 bg-white"}
+          className={"-mr-0.5  w-3 h-3 rounded-full border-2 bg-white dark:bg-gray-800"}
           style={{
             borderColor: nodeColors[types[data.type]],
           }}

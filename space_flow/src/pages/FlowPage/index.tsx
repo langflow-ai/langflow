@@ -13,7 +13,6 @@ import { locationContext } from "../../contexts/locationContext";
 import ExtraSidebar from "./components/extraSidebarComponent";
 import Chat from "../../components/chatComponent";
 import GenericNode from "../../CustomNodes/GenericNode";
-import connection from "./components/connection";
 import ChatInputNode from "../../CustomNodes/ChatInputNode";
 import ChatOutputNode from "../../CustomNodes/ChatOutputNode";
 import InputNode from "../../CustomNodes/InputNode";
@@ -25,6 +24,7 @@ import {
 	ArrowDownTrayIcon,
 	ArrowUpTrayIcon,
 } from "@heroicons/react/24/outline";
+import ConnectionLineComponent from "./components/ConnectionLineComponent";
 
 const nodeTypes = {
 	genericNode: GenericNode,
@@ -170,21 +170,19 @@ export default function FlowPage({ flow }) {
 						onLoad={setReactFlowInstance}
 						onInit={setReactFlowInstance}
 						nodeTypes={nodeTypes}
-						connectionLineComponent={connection}
+						connectionLineComponent={ConnectionLineComponent}
 						onDragOver={onDragOver}
 						onDrop={onDrop}
 					>
-						<Background />
-						<Controls>
+						<Background className="dark:bg-gray-900"/>
+						<Controls className="[&>button]:text-black  [&>button]:dark:bg-gray-800 hover:[&>button]:dark:bg-gray-700 [&>button]:dark:text-gray-400 [&>button]:dark:fill-gray-400 [&>button]:dark:border-gray-600">
 							<ControlButton
-								className="text-black hover:text-blue-500"
 								onClick={() => uploadFlow()}
 							>
 								<ArrowUpTrayIcon />
 							</ControlButton>
 
 							<ControlButton
-								className="text-black hover:text-blue-500"
 								onClick={() => downloadFlow()}
 							>
 								<ArrowDownTrayIcon />

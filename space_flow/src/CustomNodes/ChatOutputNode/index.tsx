@@ -9,14 +9,14 @@ import { typesContext } from "../../contexts/typesContext";
 export default function ChatOutputNode({ data }) {
   const {types} = useContext(typesContext);
   return (
-    <div className="prompt-node relative rounded-lg solid border flex justify-center align-center py-3 px-6 bg-gray-50" style={{color: nodeColors[types[data.type]]}}>
+    <div className="prompt-node relative rounded-lg solid border flex justify-center align-center py-3 px-6 bg-gray-50 dark:bg-gray-800 dark:border-gray-700" style={{color: nodeColors[types[data.type]]}}>
       <Tooltip title="Message: str">
         <Handle
           type="target"
           isValidConnection={(connection) => isValidConnection(data,connection)}
           position={Position.Left}
           id={"str|output|"+data.id}
-          className={"-ml-0.5 w-3 h-3 rounded-full border-2 bg-white"
+          className={"-ml-0.5 w-3 h-3 rounded-full border-2 bg-white dark:bg-gray-800"
           }
           style={{
             borderColor: nodeColors[types[data.type]],

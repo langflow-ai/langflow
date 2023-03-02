@@ -1,12 +1,10 @@
 import { useContext, useEffect } from "react";
 import { ReactFlowProvider } from "reactflow";
-import FlowPage from "..";
-import { TabsContext } from "../../../contexts/tabsContext";
-import TabComponent from "./tabComponent";
-import { example } from "../../../data_assets/example";
-var _ = require("lodash");
+import TabComponent from "../tabComponent";
+import { TabsContext } from "../../../../contexts/tabsContext";
+import FlowPage from "../..";
 
-export function TabsManager() {
+export default function TabsManagerComponent() {
   const { flows, addFlow, tabIndex, setTabIndex } = useContext(TabsContext);
   useEffect(() => {
     if (flows.length === 0) {
@@ -16,7 +14,7 @@ export function TabsManager() {
 
   return (
     <div className="h-full w-full flex flex-col">
-      <div className="w-full flex pr-2 flex-row text-center items-center bg-gray-100 px-2">
+      <div className="w-full flex pr-2 flex-row text-center items-center bg-gray-100 dark:bg-gray-800 px-2">
         {flows.map((flow, index) => {
           return (
             <TabComponent
