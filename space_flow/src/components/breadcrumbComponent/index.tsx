@@ -11,7 +11,7 @@ const breadcrumbNameMap: { [key: string]: string } = {
 };
 
 
-function getPages(atual){
+function getPages(atual:string[]){
   let pages = [];
   for(let i = 2; i <= atual.length; i++){
     let to = '/' + atual.slice(1,i).join('/');

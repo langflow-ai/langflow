@@ -1,5 +1,5 @@
-import { createContext, useState } from "react";
-import { alertDropdownItem } from "../alerts/alertDropDown";
+import { createContext, ReactNode, useState } from "react";
+import { AlertItemType } from "../types/alerts";
 
 var _ = require("lodash");
 
@@ -19,14 +19,14 @@ type alertContextType = {
 	setSuccessOpen: (newState: boolean) => void;
 	notificationCenter: boolean;
 	setNotificationCenter: (newState: boolean) => void;
-	notificationList: Array<alertDropdownItem>;
-	pushNotificationList: (Object) => void;
+	notificationList: Array<AlertItemType>;
+	pushNotificationList: (Object:AlertItemType) => void;
 	clearNotificationList: () => void;
-	removeFromNotificationList: (index: number) => void;
+	removeFromNotificationList: (index: string) => void;
 };
 
 //initial values to alertContextType
-const initialValue = {
+const initialValue:alertContextType = {
 	errorData: { title: "", list: [] },
 	setErrorData: () => {},
 	errorOpen: false,
@@ -49,7 +49,7 @@ const initialValue = {
 
 export const alertContext = createContext<alertContextType>(initialValue);
 
-export function AlertProvider({ children }) {
+export function AlertProvider({ children }:{children:ReactNode}) {
 	const [errorData, setErrorDataState] = useState<{
 		title: string;
 		list?: Array<string>;
@@ -66,7 +66,7 @@ export function AlertProvider({ children }) {
 	const [successOpen, setSuccessOpen] = useState(false);
 	const [notificationCenter, setNotificationCenter] = useState(false);
 	const [notificationList, setNotificationList] = useState([]);
-	const pushNotificationList = (notification: alertDropdownItem) => {
+	const pushNotificationList = (notification: AlertItemType) => {
 		setNotificationList((old) => {
 			let newNotificationList = _.cloneDeep(old);
 			newNotificationList.unshift(notification);
@@ -114,7 +114,7 @@ export function AlertProvider({ children }) {
 	function clearNotificationList() {
 		setNotificationList([]);
 	}
-	function removeFromNotificationList(index: number) {
+	function removeFromNotificationList(index: string) {
 		setNotificationList((prevAlertsList) =>
 			prevAlertsList.filter((alert) => alert.id !== index)
 		);

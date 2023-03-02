@@ -1,16 +1,15 @@
 import {
   Bars3CenterLeftIcon,
-  ChatBubbleBottomCenterTextIcon,
 } from "@heroicons/react/24/outline";
-import InputComponent from "../../components/inputComponent";
-import { isValidConnection, nodeColors, snakeToNormalCase } from "../../utils";
+import { isValidConnection, nodeColors } from "../../utils";
 import { Handle, Position } from "reactflow";
 import Tooltip from "../../components/TooltipComponent";
 import { typesContext } from "../../contexts/typesContext";
 import { useContext } from "react";
+import { NodeDataType } from "../../types/flow";
 
-export default function ChatInputNode({ data }) {
-  const { types } = useContext(typesContext);
+export default function ChatInputNode({ data }:{data:NodeDataType}) {
+  const { types,reactFlowInstance } = useContext(typesContext);
   return (
     <div
       className="prompt-node relative rounded-lg solid border flex justify-center align-center py-3 px-6 bg-gray-50 dark:bg-gray-800 dark:border-gray-700"
@@ -20,7 +19,7 @@ export default function ChatInputNode({ data }) {
         <Handle
           type="target"
           isValidConnection={(connection) =>
-            isValidConnection(data, connection)
+            isValidConnection(connection,reactFlowInstance)
           }
           position={Position.Left}
           id={"str|Prefix|" + data.id}
@@ -34,7 +33,7 @@ export default function ChatInputNode({ data }) {
         <Handle
           type="source"
           isValidConnection={(connection) =>
-            isValidConnection(data, connection)
+            isValidConnection(connection,reactFlowInstance)
           }
           position={Position.Right}
           id={"str|str|" + data.id}

@@ -3,17 +3,16 @@ import InputComponent from "../../components/inputComponent";
 import {
   isValidConnection,
   nodeColors,
-  nodeIcons,
-  snakeToNormalCase,
 } from "../../utils";
 import { Handle, Position } from "reactflow";
-import { useContext, useEffect } from "react";
+import { useContext } from "react";
 import Tooltip from "../../components/TooltipComponent";
 import { typesContext } from "../../contexts/typesContext";
-import TextAreaComponent from "../../components/textAreaComponent";
+import { NodeDataType } from "../../types/flow";
 
-export default function InputNode({ data }) {
-  const {types, deleteNode} = useContext(typesContext);
+export default function InputNode({ data }:{data:NodeDataType}) {
+  console.log(data)
+  const {types, deleteNode,reactFlowInstance} = useContext(typesContext);
   return (
     <div className="prompt-node relative bg-white dark:bg-gray-900 w-96 rounded-lg solid border dark:border-gray-700 flex flex-col justify-center">
       <Tooltip title="Prefix: str">
@@ -22,7 +21,7 @@ export default function InputNode({ data }) {
           position={Position.Left}
           id={"str|Prefix|" + data.id}
           isValidConnection={(connection) =>
-            isValidConnection(data, connection)
+            isValidConnection(connection,reactFlowInstance)
           }
           className={"-ml-0.5 w-3 h-3 rounded-full border-2 bg-white dark:bg-gray-800"}
           style={{
@@ -61,7 +60,7 @@ export default function InputNode({ data }) {
         type="source"
         position={Position.Right}
         id={data.type}
-        isValidConnection={(connection) => isValidConnection(data, connection)}
+        isValidConnection={(connection) => isValidConnection(connection,reactFlowInstance)}
         className={"-mr-0.5 w-3 h-3 rounded-full border-2 bg-white dark:bg-gray-800"}
         style={{
           borderColor: nodeColors[types[data.type]],

@@ -11,6 +11,7 @@ import ToggleComponent from "../../../../components/toggleComponent";
 import InputListComponent from "../../../../components/inputListComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import { typesContext } from "../../../../contexts/typesContext";
+import { ParameterComponentType } from "../../../../types/components";
 
 export default function ParameterComponent({
   left,
@@ -22,7 +23,7 @@ export default function ParameterComponent({
   type,
   name = "",
   required = false,
-}) {
+}:ParameterComponentType) {
   const ref = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
@@ -70,7 +71,7 @@ export default function ParameterComponent({
             <InputListComponent
             disabled={disabled}
             value={!data.node.template[name].value || data.node.template[name].value === "" ? [""] : data.node.template[name].value}
-              onChange={(t) => {
+              onChange={(t:string[]) => {
                 data.node.template[name].value = t;
               }}
             />
@@ -79,7 +80,7 @@ export default function ParameterComponent({
               <TextAreaComponent
                 disabled={disabled}
                 value={data.node.template[name].value ?? ""}
-                onChange={(t) => {
+                onChange={(t:string) => {
                   data.node.template[name].value = t;
                 }}
               />

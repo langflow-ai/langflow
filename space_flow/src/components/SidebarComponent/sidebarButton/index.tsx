@@ -2,8 +2,9 @@ import { classNames } from "../../../utils"
 import { Link } from "react-router-dom"
 import { useContext } from "react"
 import { locationContext } from "../../../contexts/locationContext";
+import { sidebarNavigationItemType } from "../../../types/entities";
 
-export default function SidebarButton({item}){
+export default function SidebarButton({item}:{item:sidebarNavigationItemType}){
     let {current}= useContext(locationContext);
     return (
         <>
