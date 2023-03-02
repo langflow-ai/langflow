@@ -1,5 +1,3 @@
-import { CSSProperties, FC } from 'react';
-import { Node } from 'reactflow';
 import { ConnectionLineComponentProps } from 'reactflow';
 
 
@@ -7,12 +5,8 @@ import { ConnectionLineComponentProps } from 'reactflow';
 const ConnectionLineComponent = ({
 	fromX,
 	fromY,
-	fromPosition,
 	toX,
 	toY,
-	toPosition,
-	connectionLineType,
-  	fromNode,
 	connectionLineStyle = {} // provide a default value for connectionLineStyle
 }:ConnectionLineComponentProps) => {
 	return (
