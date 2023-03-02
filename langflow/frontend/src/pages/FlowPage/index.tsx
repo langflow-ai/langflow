@@ -62,7 +62,8 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 			flow.data = reactFlowInstance.toObject();
 			updateFlow(flow);
 		}
-	}, [nodes, edges, reactFlowInstance, flow, updateFlow]);
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [nodes, edges, reactFlowInstance, flow]);
 
 	useEffect(() => {
 		setNodes(flow?.data?.nodes ?? []);
