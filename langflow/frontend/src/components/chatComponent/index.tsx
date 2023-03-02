@@ -30,10 +30,11 @@ export default function Chat({flow, reactFlowInstance }:ChatType) {
   };
   useEffect(()=>{
     updateFlow({..._.cloneDeep(flow),chat:chatHistory})
-  },[chatHistory, flow, saveChat, updateFlow])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[chatHistory, flow])
   useEffect(()=>{
     setChatHistory(flow.chat)
-  },[flow])
+  },[flow.chat])
   useEffect(()=>{
     if(ref.current)
       ref.current.scrollIntoView({behavior: 'smooth'});
