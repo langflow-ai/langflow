@@ -1,4 +1,4 @@
-import { APIClassType } from './../api/index';
+import { APIClassType } from '../api/index';
 import { ReactFlowJsonObject, XYPosition } from "reactflow";
 
 export type FlowType = {

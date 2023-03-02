@@ -1,6 +1,5 @@
-import { Disclosure } from '@headlessui/react';
 import { ForwardRefExoticComponent, ReactElement, ReactNode } from 'react';
-import { NodeDataType } from "./../flow/index";
+import { NodeDataType } from "../flow/index";
 export type InputComponentType = {
 	value: string;
 	disabled?: boolean;
