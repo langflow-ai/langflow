@@ -25,8 +25,6 @@ export default function App() {
 		setIsStackedOpen(true);
 	}, [location.pathname, setCurrent, setIsStackedOpen, setShowSideBar]);
 
-	const {dark} = useContext(darkContext);
-
 	const {
 		errorData,
 		errorOpen,

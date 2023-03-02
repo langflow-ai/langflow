@@ -46,10 +46,6 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 		useContext(typesContext);
 	const reactFlowWrapper = useRef(null);
 
-	function getId() {
-		return `dndnode_` + incrementNodeId();
-	}
-
 	const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
 	const { setErrorData } = useContext(alertContext);
 
@@ -66,7 +62,7 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 			flow.data = reactFlowInstance.toObject();
 			updateFlow(flow);
 		}
-	}, [nodes, edges]);
+	}, [nodes, edges, reactFlowInstance, flow, updateFlow]);
 
 	useEffect(() => {
 		setNodes(flow?.data?.nodes ?? []);
@@ -74,7 +70,7 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 		if (reactFlowInstance) {
 			setViewport(flow?.data?.viewport ?? { x: 1, y: 0, zoom: 1 });
 		}
-	}, [flow, reactFlowInstance, setEdges, setNodes]);
+	}, [flow, reactFlowInstance, setEdges, setNodes, setViewport]);
 
 	useEffect(() => {
 		setExtraComponent(<ExtraSidebar />);
@@ -113,6 +109,10 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 	const onDrop = useCallback(
 		(event:React.DragEvent) => {
 			event.preventDefault();
+
+			function getId() {
+				return `dndnode_` + incrementNodeId();
+			}
 
 			const reactflowBounds = reactFlowWrapper.current.getBoundingClientRect();
 			let data:{type:string,node?:APIClassType} = JSON.parse(event.dataTransfer.getData("json"));
@@ -154,7 +154,7 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 				});
 			}
 		},
-		[reactFlowInstance, setErrorData, setNodes]
+		[incrementNodeId, reactFlowInstance, setErrorData, setNodes]
 	);
 
 	return (
