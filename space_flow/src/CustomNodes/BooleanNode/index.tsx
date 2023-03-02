@@ -10,8 +10,8 @@ export default function BooleanNode({ data }) {
   const [enabled, setEnabled] = useState(false);
   const {types, deleteNode} = useContext(typesContext);
   return (
-    <div className="prompt-node relative bg-white dark:bg-slate-900 rounded-lg solid border dark:border-slate-700 flex flex-col justify-center">
-      <div className="w-full flex items-center justify-between gap-8 p-4 bg-gray-50 dark:bg-slate-800 dark:text-white dark:border-b-slate-700 border-b ">
+    <div className="prompt-node relative bg-white dark:bg-gray-900 rounded-lg solid border dark:border-gray-700 flex flex-col justify-center">
+      <div className="w-full flex items-center justify-between gap-8 p-4 bg-gray-50 dark:bg-gray-800 dark:text-white dark:border-b-gray-700 border-b ">
         <div className="flex items-center gap-4 text-lg">
           <CheckCircleIcon
             className="w-10 h-10 p-1 rounded"
@@ -35,7 +35,7 @@ export default function BooleanNode({ data }) {
         position={Position.Right}
         id={data.type}
         isValidConnection={(connection) => isValidConnection(data,connection)}
-        className={"-mr-0.5 w-3 h-3 rounded-full border-2 bg-white dark:bg-slate-800"}
+        className={"-mr-0.5 w-3 h-3 rounded-full border-2 bg-white dark:bg-gray-800"}
         style={{
           borderColor: nodeColors[types[data.type]],
         }}

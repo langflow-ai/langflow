@@ -174,8 +174,8 @@ export default function FlowPage({ flow }) {
 						onDragOver={onDragOver}
 						onDrop={onDrop}
 					>
-						<Background className="dark:bg-slate-900"/>
-						<Controls className="[&>button]:text-black  [&>button]:dark:bg-slate-800 hover:[&>button]:dark:bg-slate-700 [&>button]:dark:text-slate-400 [&>button]:dark:fill-slate-400 [&>button]:dark:border-slate-600">
+						<Background className="dark:bg-gray-900"/>
+						<Controls className="[&>button]:text-black  [&>button]:dark:bg-gray-800 hover:[&>button]:dark:bg-gray-700 [&>button]:dark:text-gray-400 [&>button]:dark:fill-gray-400 [&>button]:dark:border-gray-600">
 							<ControlButton
 								onClick={() => uploadFlow()}
 							>
