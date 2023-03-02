@@ -11,7 +11,6 @@ import { locationContext } from "./contexts/locationContext";
 import Sidebar from "./components/SidebarComponent";
 import Header from "./components/HeaderComponent";
 import TabsManagerComponent from "./pages/FlowPage/components/tabsManagerComponent";
-import { darkContext } from "./contexts/darkContext";
 
 export default function App() {
 	var _ = require("lodash");
@@ -68,7 +67,7 @@ export default function App() {
 				return newAlertsList;
 			});
 		}
-	}, [errorData, errorOpen, noticeData, noticeOpen, successData, successOpen]);
+	}, [_, errorData, errorOpen, noticeData, noticeOpen, setErrorOpen, setNoticeOpen, setSuccessOpen, successData, successOpen]);
 
 	const removeAlert = (id: string) => {
 		setAlertsList((prevAlertsList) =>
