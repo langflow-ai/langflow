@@ -30,7 +30,7 @@ export default function Chat({flow, reactFlowInstance }:ChatType) {
   };
   useEffect(()=>{
     updateFlow({..._.cloneDeep(flow),chat:chatHistory})
-  },[saveChat])
+  },[chatHistory, flow, saveChat, updateFlow])
   useEffect(()=>{
     setChatHistory(flow.chat)
   },[flow])

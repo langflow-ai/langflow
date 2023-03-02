@@ -14,34 +14,33 @@ export default function ExtraSidebar() {
   const [data, setData] = useState({});
   const { setTypes} = useContext(typesContext);
 
-  async function getTypes():Promise<void>{
-    const initialValue:{[char: string]: string} = {
-      str: "advanced",
-      bool: "advanced",
-      chatOutput: "chat",
-      chatInput: "chat",
-    }
-    let result = await getAll();
-    setData(result.data);
-    setTypes(
-      Object.keys(result.data).reduce(
-        (acc, curr) => {
-          Object.keys(result.data[curr]).forEach((c:keyof APIKindType) => {
-            acc[c] = curr;
-            result.data[curr][c].base_classes?.forEach((b) => {
-              acc[b] = curr;
-            });
-          });
-          return acc;
-        },
-        initialValue
-      )
-    );
-  }
-
   useEffect(() => {
+    async function getTypes():Promise<void>{
+      const initialValue:{[char: string]: string} = {
+        str: "advanced",
+        bool: "advanced",
+        chatOutput: "chat",
+        chatInput: "chat",
+      }
+      let result = await getAll();
+      setData(result.data);
+      setTypes(
+        Object.keys(result.data).reduce(
+          (acc, curr) => {
+            Object.keys(result.data[curr]).forEach((c:keyof APIKindType) => {
+              acc[c] = curr;
+              result.data[curr][c].base_classes?.forEach((b) => {
+                acc[b] = curr;
+              });
+            });
+            return acc;
+          },
+          initialValue
+        )
+      );
+    }
     getTypes();
-  }, []);
+  }, [setTypes]);
 
 
   function onDragStart(event: React.DragEvent<any>, data:{type:string,node?:APIClassType}) {
