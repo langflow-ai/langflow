@@ -1,7 +1,12 @@
 #! /bin/bash
 
+cd langflow/frontend
 docker build -t logspace/frontend_build -f build.Dockerfile .
-poetry remove langchain
+cd ../backend
+docker build -t logspace/backend_build -f build.Dockerfile .
+
+cd ../../
 VERSION=$(toml get --toml-path pyproject.toml tool.poetry.version)
-docker build --build-arg VERSION=$VERSION -t ibiscp/langflow:$VERSION . && docker push ibiscp/langflow:$VERSION
-poetry add --editable ../../../langchain
+docker build --build-arg VERSION=$VERSION -t ibiscp/langflow:$VERSION .
+# docker push ibiscp/langflow:$VERSION
+# poetry add --editable ../../../langchain

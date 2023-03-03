@@ -5,7 +5,7 @@ description = "A Python package with a built-in web application"
 authors = ["Ibis Prevedello <ibiscp@gmail.com>"]
 packages = [
     { include = "langflow/cli.py" },
-    { include = "langflow/backend/*.py" }
+    # { include = "langflow/backend/*.py" }
 ]
 include = [{path= "langflow/frontend/build/*", format=["sdist", "wheel"]},
             {path= "langflow/frontend/build/static/js/*", format=["sdist", "wheel"]},
@@ -20,12 +20,10 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-openai = "^0.26.5"
-fastapi = "^0.91.0"
+# openai = "^0.26.5"
+# fastapi = "^0.91.0"
 uvicorn = "^0.20.0"
-beautifulsoup4 = "^4.11.2"
-google-search-results = "^2.4.1"
-google-api-python-client = "^2.79.0"
-langchain = {git = "https://github.com/ibiscp/langchain.git", rev = "ibis"}
-
-[tool.poetry.dev-dependencies]
+# beautifulsoup4 = "^4.11.2"
+# google-search-results = "^2.4.1"
+# google-api-python-client = "^2.79.0"
+# langchain = {git = "https://github.com/ibiscp/langchain.git", rev = "ibis"}
