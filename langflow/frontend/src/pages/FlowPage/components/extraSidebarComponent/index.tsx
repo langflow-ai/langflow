@@ -90,23 +90,6 @@ export default function ExtraSidebar() {
               style={{ borderLeftColor: nodeColors["chat"] }}
               onDragStart={(event) =>
                 onDragStart(event, {
-                  type: "chatInput",
-                })
-              }
-            >
-              <div className="flex w-full justify-between text-sm px-4 py-3 items-center border-dashed border-gray-400 dark:border-gray-600 border-l-0 rounded-md rounded-l-none border-2">
-                <span className="text-black dark:text-white w-36 truncate">Chat Input</span>
-                <Bars2Icon className="w-6 h-6 text-gray-400 dark:text-gray-600" />
-              </div>
-            </div>
-          </div>
-          <div>
-            <div
-              draggable
-              className={" cursor-grab border-l-8 rounded-l-md"}
-              style={{ borderLeftColor: nodeColors["chat"] }}
-              onDragStart={(event) =>
-                onDragStart(event, {
                   type: "chatOutput",
                 })
               }

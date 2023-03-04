@@ -134,8 +134,6 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 					type:
 						data.type === "str"
 							? "inputNode"
-							: data.type === "chatInput"
-							? "chatInputNode"
 							: data.type === "chatOutput"
 							? "chatOutputNode"
 							: data.type === "bool"
