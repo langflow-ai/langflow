@@ -15,10 +15,11 @@ app.mount(
     name="static",
 )
 
+
 def main():
     import uvicorn
 
-    uvicorn.run(app, host="localhost", port=8000)
+    uvicorn.run(app, host="localhost", port=80)
 
 
 if __name__ == "__main__":

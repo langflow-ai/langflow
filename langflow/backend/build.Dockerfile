@@ -1,8 +1,5 @@
-FROM logspace/backend_build as backend_build
-FROM logspace/frontend_build as frontend_build
-
 # `python-base` sets up all our shared environment variables
-FROM python:3.10-slim as langflow_build
+FROM python:3.10-slim
 
 # python
 ENV PYTHONUNBUFFERED=1 \
@@ -38,32 +35,20 @@ RUN apt-get update \
     # deps for installing poetry
     curl \
     # deps for building python deps
-    build-essential libpq-dev git
+    build-essential libpq-dev
 
 # install poetry - respects $POETRY_VERSION & $POETRY_HOME
 RUN curl -sSL https://install.python-poetry.org | python3 -
 
 # copy project requirement files here to ensure they will be cached.
 WORKDIR /app
-COPY pyproject.toml ./
-#poetry.lock 
+COPY poetry.lock pyproject.toml ./
 
-# Copy files from frontend
-COPY --from=frontend_build /app/build /app/langflow/frontend/build/
+# install runtime deps - uses $POETRY_VIRTUALENVS_IN_PROJECT internally
+RUN poetry install --without dev
+RUN poetry add "git+https://github.com/ibiscp/langchain.git#ibis"
 
-# Copy files from backend and install
-COPY --from=backend_build /app/dist/*.whl /app/dist/
+COPY *.py langflow/backend/
+RUN rm langflow/backend/dev.py
 
-# Copy cli.py
-COPY langflow/cli.py /app/langflow/
-
-# RUN pip install langflow-0.0.17-py3-none-any.whl
-RUN poetry install
-# RUN poetry add dist/langflow-0.0.17-py3-none-any.whl
-# RUN rm *.whl
-
-# RUN poetry build
-
-# EXPOSE 80
-
-# CMD [ "langchain" ]
+RUN poetry build
