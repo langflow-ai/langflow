@@ -76,7 +76,7 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 
 	useEffect(() => {
 		setExtraComponent(<ExtraSidebar />);
-		setExtraNavigation({ title: "Nodes" });
+		setExtraNavigation({ title: "Componets" });
 	}, [setExtraComponent, setExtraNavigation]);
 
 	const onEdgesChangeMod = useCallback(

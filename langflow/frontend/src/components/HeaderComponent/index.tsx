@@ -4,7 +4,6 @@ import {
     MoonIcon,
     SunIcon,
   } from '@heroicons/react/24/outline'
-import Breadcrumb from '../breadcrumbComponent'
 import { alertContext } from '../../contexts/alertContext'
 import { useLayer } from 'react-laag'
 import AlertDropdown from '../../alerts/alertDropDown'
@@ -25,25 +24,8 @@ export default function Header(){
   const {dark, setDark} = useContext(darkContext);
     return (
     <header className="relative flex h-16 w-full shrink-0 items-center bg-white dark:bg-gray-800">
-        {/* Logo area */}
-        <div className="static shrink-0">
-          <a
-            href="/"
-            className="flex h-16 items-center justify-center bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-600 w-20"
-          >
-            <img
-              className="h-8 w-auto"
-              src="https://tailwindui.com/img/logos/mark.svg?color=white"
-              alt="Your Company"
-            />
-          </a>
-        </div>
-
         {/* Desktop nav area */}
-        <div className="flex min-w-0 flex-1 items-center justify-between">
-          <div className="min-w-0 flex-1 ml-5">
-            <Breadcrumb />
-          </div>
+        <div className="flex min-w-0 flex-1  flex-row-reverse items-center justify-between">
           <div className="ml-10 flex shrink-0 items-center space-x-10 pr-4">
             <div className="flex items-center space-x-8">
               <span className="inline-flex gap-6">

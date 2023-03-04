@@ -20,7 +20,6 @@ export default function ExtraSidebar() {
         str: "advanced",
         bool: "advanced",
         chatOutput: "chat",
-        chatInput: "chat",
       }
       let result = await getAll();
       setData(result.data);
