@@ -1,0 +1,5 @@
+#! /bin/bash
+
+docker build -t logspace/frontend_build -f build.Dockerfile .
+docker build --build-arg VERSION=$VERSION -t logspace/langflow_frontend:$VERSION .
+docker push logspace/langflow_frontend:$VERSION
