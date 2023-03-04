@@ -18,93 +18,13 @@ router = APIRouter(
 )
 
 
-def build_template_from_function(name: str, type_to_loader_dict: dict):
-    classes = [
-        item.__annotations__["return"].__name__ for item in type_to_loader_dict.values()
-    ]
-
-    # Raise error if name is not in chains
-    if name not in classes:
-        raise ValueError(f"{name} not found")
-
-    for _type, v in type_to_loader_dict.items():
-        if v.__annotations__["return"].__name__ == name:
-            _class = v.__annotations__["return"]
-
-            docs = util.get_class_doc(_class)
-
-            variables = {"_type": _type}
-            for name, value in _class.__fields__.items():
-                if name in ["callback_manager", "requests_wrapper"]:
-                    continue
-                variables[name] = {}
-                for name_, value_ in value.__repr_args__():
-                    if name_ == "default_factory":
-                        try:
-                            variables[name]["default"] = util.get_default_factory(
-                                module=_class.__base__.__module__, function=value_
-                            )
-                        except Exception:
-                            variables[name]["default"] = None
-                    elif name_ not in ["name"]:
-                        variables[name][name_] = value_
-
-                variables[name]["placeholder"] = (
-                    docs["Attributes"][name] if name in docs["Attributes"] else ""
-                )
-
-            return {
-                "template": util.format_dict(variables),
-                "description": docs["Description"],
-                "base_classes": util.get_base_classes(_class),
-            }
-
-
-def build_template_from_class(name: str, type_to_cls_dict: dict):
-    classes = [item.__name__ for item in type_to_cls_dict.values()]
-
-    # Raise error if name is not in chains
-    if name not in classes:
-        raise ValueError(f"{name} not found.")
-
-    for _type, v in type_to_cls_dict.items():
-        if v.__name__ == name:
-            _class = v
-
-            docs = util.get_class_doc(_class)
-
-            variables = {"_type": _type}
-            for name, value in _class.__fields__.items():
-                if name in ["callback_manager"]:
-                    continue
-                variables[name] = {}
-                for name_, value_ in value.__repr_args__():
-                    if name_ == "default_factory":
-                        try:
-                            variables[name]["default"] = util.get_default_factory(
-                                module=_class.__base__.__module__, function=value_
-                            )
-                        except Exception:
-                            variables[name]["default"] = None
-                    elif name_ not in ["name"]:
-                        variables[name][name_] = value_
-
-                variables[name]["placeholder"] = (
-                    docs["Attributes"][name] if name in docs["Attributes"] else ""
-                )
-
-            return {
-                "template": util.format_dict(variables),
-                "description": docs["Description"],
-                "base_classes": util.get_base_classes(_class),
-            }
-
-
 @router.get("/chain")
 def get_chain(name: str):
     """Get the signature of a chain."""
     try:
-        return build_template_from_function(name, chains.loading.type_to_loader_dict)
+        return util.build_template_from_function(
+            name, chains.loading.type_to_loader_dict
+        )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail="Chain not found") from exc
 
@@ -113,7 +33,7 @@ def get_chain(name: str):
 def get_agent(name: str):
     """Get the signature of an agent."""
     try:
-        return build_template_from_class(name, agents.loading.AGENT_TO_CLASS)
+        return util.build_template_from_class(name, agents.loading.AGENT_TO_CLASS)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail="Agent not found") from exc
 
@@ -122,7 +42,9 @@ def get_agent(name: str):
 def get_prompt(name: str):
     """Get the signature of a prompt."""
     try:
-        return build_template_from_function(name, prompts.loading.type_to_loader_dict)
+        return util.build_template_from_function(
+            name, prompts.loading.type_to_loader_dict
+        )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail="Prompt not found") from exc
 
@@ -131,7 +53,7 @@ def get_prompt(name: str):
 def get_llm(name: str):
     """Get the signature of an llm."""
     try:
-        return build_template_from_class(name, llms.type_to_cls_dict)
+        return util.build_template_from_class(name, llms.type_to_cls_dict)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail="LLM not found") from exc
 
@@ -152,7 +74,7 @@ def get_llm(name: str):
 def get_memory(name: str):
     """Get the signature of a memory."""
     try:
-        return build_template_from_class(name, memories.type_to_cls_dict)
+        return util.build_template_from_class(name, memories.type_to_cls_dict)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail="Memory not found") from exc
 
@@ -173,10 +95,10 @@ def get_memory(name: str):
 def get_tool(name: str):
     """Get the signature of a tool."""
 
-    all_tools = {
-        util.get_tool_params(util.get_tools_dict(tool))["name"]: tool
-        for tool in get_all_tool_names()
-    }
+    all_tools = {}
+    for tool in get_all_tool_names():
+        if tool_params := util.get_tool_params(util.get_tools_dict(tool)):
+            all_tools[tool_params["name"]] = tool
 
     # Raise error if name is not in tools
     if name not in all_tools.keys():
@@ -185,7 +107,7 @@ def get_tool(name: str):
     type_dict = {
         "str": {
             "type": "str",
-            "required": True,
+            "required": False,
             "list": False,
             "show": True,
             "placeholder": "",
@@ -218,9 +140,3 @@ def get_tool(name: str):
         **util.get_tool_params(util.get_tools_dict(tool_type)),
         "base_classes": ["Tool"],
     }
-
-
-#     {"template": signature.tool(tool), **values}
-#             for tool, values in tools.items()
-#         }
-# return {k: util.get_tool_params(v) for k, v in merged_dict.items()}

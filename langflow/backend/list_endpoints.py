@@ -98,7 +98,15 @@ def list_memories():
 def list_tools():
     """List all load tools"""
 
-    return [
-        util.get_tool_params(util.get_tools_dict(tool))["name"]
-        for tool in get_all_tool_names()
-    ]
+    tools = []
+
+    for tool in get_all_tool_names():
+        if tool_params := util.get_tool_params(util.get_tools_dict(tool)):
+            tools.append(tool_params["name"])
+
+    return tools
+
+    # return [
+    #     util.get_tool_params(util.get_tools_dict(tool))["name"]
+    #     for tool in get_all_tool_names()
+    # ]

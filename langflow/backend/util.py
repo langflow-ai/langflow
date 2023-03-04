@@ -2,6 +2,8 @@ import ast
 import inspect
 import re
 import importlib
+
+from langchain.agents.load_tools import *
 from langchain.agents.load_tools import (
     _BASE_TOOLS,
     _LLM_TOOLS,
@@ -9,6 +11,88 @@ from langchain.agents.load_tools import (
     _EXTRA_OPTIONAL_TOOLS,
 )
 from typing import Optional
+
+
+def build_template_from_function(name: str, type_to_loader_dict: dict):
+    classes = [
+        item.__annotations__["return"].__name__ for item in type_to_loader_dict.values()
+    ]
+
+    # Raise error if name is not in chains
+    if name not in classes:
+        raise ValueError(f"{name} not found")
+
+    for _type, v in type_to_loader_dict.items():
+        if v.__annotations__["return"].__name__ == name:
+            _class = v.__annotations__["return"]
+
+            docs = get_class_doc(_class)
+
+            variables = {"_type": _type}
+            for name, value in _class.__fields__.items():
+                if name in ["callback_manager", "requests_wrapper"]:
+                    continue
+                variables[name] = {}
+                for name_, value_ in value.__repr_args__():
+                    if name_ == "default_factory":
+                        try:
+                            variables[name]["default"] = get_default_factory(
+                                module=_class.__base__.__module__, function=value_
+                            )
+                        except Exception:
+                            variables[name]["default"] = None
+                    elif name_ not in ["name"]:
+                        variables[name][name_] = value_
+
+                variables[name]["placeholder"] = (
+                    docs["Attributes"][name] if name in docs["Attributes"] else ""
+                )
+
+            return {
+                "template": format_dict(variables),
+                "description": docs["Description"],
+                "base_classes": get_base_classes(_class),
+            }
+
+
+def build_template_from_class(name: str, type_to_cls_dict: dict):
+    classes = [item.__name__ for item in type_to_cls_dict.values()]
+
+    # Raise error if name is not in chains
+    if name not in classes:
+        raise ValueError(f"{name} not found.")
+
+    for _type, v in type_to_cls_dict.items():
+        if v.__name__ == name:
+            _class = v
+
+            docs = get_class_doc(_class)
+
+            variables = {"_type": _type}
+            for name, value in _class.__fields__.items():
+                if name in ["callback_manager"]:
+                    continue
+                variables[name] = {}
+                for name_, value_ in value.__repr_args__():
+                    if name_ == "default_factory":
+                        try:
+                            variables[name]["default"] = get_default_factory(
+                                module=_class.__base__.__module__, function=value_
+                            )
+                        except Exception:
+                            variables[name]["default"] = None
+                    elif name_ not in ["name"]:
+                        variables[name][name_] = value_
+
+                variables[name]["placeholder"] = (
+                    docs["Attributes"][name] if name in docs["Attributes"] else ""
+                )
+
+            return {
+                "template": format_dict(variables),
+                "description": docs["Description"],
+                "base_classes": get_base_classes(_class),
+            }
 
 
 def get_base_classes(cls):
@@ -45,7 +129,7 @@ def get_tools_dict(name: Optional[str] = None):
     return tools[name] if name else tools
 
 
-def get_tool_params(func):
+def get_tool_params(func, **kwargs):
     # Parse the function code into an abstract syntax tree
     tree = ast.parse(inspect.getsource(func))
 
@@ -54,19 +138,35 @@ def get_tool_params(func):
         # Find the first return statement
         if isinstance(node, ast.Return):
             tool = node.value
-            if isinstance(tool, ast.Call) and tool.func.id == "Tool":
-                if tool.keywords:
-                    tool_params = {}
-                    for keyword in tool.keywords:
-                        if keyword.arg == "name":
-                            tool_params["name"] = ast.literal_eval(keyword.value)
-                        elif keyword.arg == "description":
-                            tool_params["description"] = ast.literal_eval(keyword.value)
-                    return tool_params
-                return {
-                    "name": ast.literal_eval(tool.args[0]),
-                    "description": ast.literal_eval(tool.args[2]),
-                }
+            if isinstance(tool, ast.Call):
+                if tool.func.id == "Tool":
+                    if tool.keywords:
+                        tool_params = {}
+                        for keyword in tool.keywords:
+                            if keyword.arg == "name":
+                                tool_params["name"] = ast.literal_eval(keyword.value)
+                            elif keyword.arg == "description":
+                                tool_params["description"] = ast.literal_eval(
+                                    keyword.value
+                                )
+                        return tool_params
+                    return {
+                        "name": ast.literal_eval(tool.args[0]),
+                        "description": ast.literal_eval(tool.args[2]),
+                    }
+                else:
+                    # get the class object from the return statement
+                    try:
+                        class_obj = eval(
+                            compile(ast.Expression(tool), "<string>", "eval")
+                        )
+                    except Exception:
+                        return None
+
+                    return {
+                        "name": getattr(class_obj, "name"),
+                        "description": getattr(class_obj, "description"),
+                    }
 
     # Return None if no return statement was found
     return None
@@ -162,7 +262,15 @@ def format_dict(d):
         value["show"] = bool(
             (value["required"] and key not in ["input_variables"])
             or key
-            in ["allowed_tools", "verbose", "Memory", "memory", "prefix", "examples"]
+            in [
+                "allowed_tools",
+                "verbose",
+                "Memory",
+                "memory",
+                "prefix",
+                "examples",
+                "temperature",
+            ]
             or "api_key" in key
         )
 
