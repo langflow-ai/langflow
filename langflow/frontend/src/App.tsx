@@ -8,7 +8,6 @@ import SuccessAlert from "./alerts/success";
 import ExtraSidebar from "./components/ExtraSidebarComponent";
 import { alertContext } from "./contexts/alertContext";
 import { locationContext } from "./contexts/locationContext";
-import Sidebar from "./components/SidebarComponent";
 import Header from "./components/HeaderComponent";
 import TabsManagerComponent from "./pages/FlowPage/components/tabsManagerComponent";
 
@@ -82,9 +81,7 @@ export default function App() {
 				<Header></Header>
 			</div>
 			<div className="flex grow shrink basis-auto min-h-0 flex-1 overflow-hidden">
-				<Sidebar />
 				<ExtraSidebar />
-
 				{/* Main area */}
 				<main className="min-w-0 flex-1 border-t border-gray-200 dark:border-gray-700 flex">
 					{/* Primary column */}
