@@ -7,6 +7,7 @@ from langchain import llms
 from langchain.chains.conversation import memory as memories
 from langchain.agents.load_tools import get_all_tool_names
 from langflow.backend import util
+from langflow.backend import customs
 
 
 # build router
@@ -52,10 +53,12 @@ def list_agents():
 @router.get("/prompts")
 def list_prompts():
     """List all prompt types"""
-    return [
+    custom_prompts = customs.get_custom_prompts()
+    library_prompts = [
         prompt.__annotations__["return"].__name__
         for prompt in prompts.loading.type_to_loader_dict.values()
     ]
+    return library_prompts + list(custom_prompts.keys())
 
 
 @router.get("/llms")

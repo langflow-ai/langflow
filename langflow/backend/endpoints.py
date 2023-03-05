@@ -9,6 +9,7 @@ from langchain.llms.loading import load_llm_from_config
 from langchain.prompts.loading import load_prompt_from_config
 from typing import Any
 
+
 # build router
 router = APIRouter()
 
@@ -26,6 +27,10 @@ def get_type_list():
 
 @router.get("/all")
 def get_all():
+    # library_prompts = {
+    #     prompt: signature.get_prompt(prompt) for prompt in list_endpoints.list_prompts()
+    # }
+    # custom_prompts = customs.get_custom_prompts()
     return {
         "chains": {
             chain: signature.get_chain(chain) for chain in list_endpoints.list_chains()
@@ -33,6 +38,7 @@ def get_all():
         "agents": {
             agent: signature.get_agent(agent) for agent in list_endpoints.list_agents()
         },
+        # "prompts": {**library_prompts, **custom_prompts},
         "prompts": {
             prompt: signature.get_prompt(prompt)
             for prompt in list_endpoints.list_prompts()
@@ -67,7 +73,21 @@ def get_all():
 
 @router.post("/predict")
 def get_load(data: dict[str, Any]):
+    # Get type list
     type_list = get_type_list()
+
+    # Substitute ZeroShotPromt with PromptTemplate
+    for node in data['nodes']:
+        if node["data"]["type"] == "ZeroShotPrompt":
+            # Build Prompt Template
+            tools = [
+                tool
+                for tool in data['nodes']
+                if tool["type"] != "chatOutputNode"
+                and "Tool" in tool["data"]["node"]["base_classes"]
+            ]
+            node["data"] = build_prompt_template(prompt=node["data"], tools=tools)
+            break
 
     # Add input variables
     data = payload.extract_input_variables(data)
@@ -96,12 +116,75 @@ def get_load(data: dict[str, Any]):
     else:
         return {"result": "Error: Type should be either agent, chain or llm"}
 
-    # elif extracted_json["_type"] in type_list["prompts"]:
-    #     loaded = load_prompt_from_config(extracted_json)
-    #     print(loaded.format(product=''))
 
-    #     return {'result': loaded.format(product=message)}
+def build_prompt_template(prompt, tools):
+    prefix = prompt["node"]["template"]["prefix"]["value"]
+    suffix = prompt["node"]["template"]["suffix"]["value"]
+    format_instructions = prompt["node"]["template"]["format_instructions"]["value"]
 
-    # if type in a["prompts"]:
+    tool_strings = "\n".join(
+        [
+            f"{tool['data']['node']['name']}: {tool['data']['node']['description']}"
+            for tool in tools
+        ]
+    )
+    tool_names = ", ".join([tool["data"]["node"]["name"] for tool in tools])
+    format_instructions = format_instructions.format(tool_names=tool_names)
+    value = "\n\n".join([prefix, tool_strings, format_instructions, suffix])
 
-    # return a
+    prompt["type"] = "PromptTemplate"
+    # prompt["value"] = value
+
+    prompt["node"] = {
+        "template": {
+            "_type": "prompt",
+            "input_variables": {
+                "type": "str",
+                "required": True,
+                "placeholder": "",
+                "list": True,
+                "show": False,
+                "multiline": False,
+            },
+            "output_parser": {
+                "type": "BaseOutputParser",
+                "required": False,
+                "placeholder": "",
+                "list": False,
+                "show": False,
+                "multline": False,
+                "value": None,
+            },
+            "template": {
+                "type": "str",
+                "required": True,
+                "placeholder": "",
+                "list": False,
+                "show": True,
+                "multiline": True,
+                "value": value,
+            },
+            "template_format": {
+                "type": "str",
+                "required": False,
+                "placeholder": "",
+                "list": False,
+                "show": False,
+                "multline": False,
+                "value": "f-string",
+            },
+            "validate_template": {
+                "type": "bool",
+                "required": False,
+                "placeholder": "",
+                "list": False,
+                "show": False,
+                "multline": False,
+                "value": True,
+            },
+        },
+        "description": "Schema to represent a prompt for an LLM.",
+        "base_classes": ["BasePromptTemplate"],
+    }
+
+    return prompt

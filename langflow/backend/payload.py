@@ -59,12 +59,16 @@ def build_json(root, nodes, edges):
         # if module_type == "Tool":
         #     pass
         if module_type in ["str", "bool", "int", "float", "Any"]:
+            # print(key)
+            # try:
             value = value["value"]
+            # except:
+            #     pass
         elif "dict" in module_type:
             value = {}
         else:
             # if value['list']:
-            print(key)
+            # print(key)
             children = []
             for c in local_nodes:
                 module_types = [c["data"]["type"]]
