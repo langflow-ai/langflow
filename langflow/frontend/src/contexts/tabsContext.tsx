@@ -1,10 +1,8 @@
 import { createContext, useEffect, useState, useRef, ReactNode } from "react";
-import {FlowType} from "../types/flow"
+import { FlowType } from "../types/flow";
 import { TabsContextType } from "../types/tabs";
 
-
-
-const TabsContextInitialValue:TabsContextType = {
+const TabsContextInitialValue: TabsContextType = {
 	tabIndex: 0,
 	setTabIndex: (index: number) => {},
 	flows: [],
@@ -20,7 +18,7 @@ export const TabsContext = createContext<TabsContextType>(
 	TabsContextInitialValue
 );
 
-export function TabsProvider({ children }:{children:ReactNode}) {
+export function TabsProvider({ children }: { children: ReactNode }) {
 	const [tabIndex, setTabIndex] = useState(0);
 	const [flows, setFlows] = useState<Array<FlowType>>([]);
 	const [id, setId] = useState(0);
@@ -31,6 +29,7 @@ export function TabsProvider({ children }:{children:ReactNode}) {
 		return newNodeId.current;
 	}
 	useEffect(() => {
+		//save tabs locally
 		if (flows.length !== 0)
 			window.localStorage.setItem(
 				"tabsData",
@@ -39,6 +38,7 @@ export function TabsProvider({ children }:{children:ReactNode}) {
 	}, [flows, id, tabIndex, newNodeId]);
 
 	useEffect(() => {
+		//get tabs locally saved
 		let cookie = window.localStorage.getItem("tabsData");
 		if (cookie) {
 			let cookieObject = JSON.parse(cookie);
@@ -49,27 +49,47 @@ export function TabsProvider({ children }:{children:ReactNode}) {
 		}
 	}, []);
 
+	/**
+	 * Downloads the current flow as a JSON file
+	 */
 	function downloadFlow() {
+		// create a data URI with the current flow data
 		const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
 			JSON.stringify(flows[tabIndex])
 		)}`;
+
+		// create a link element and set its properties
 		const link = document.createElement("a");
 		link.href = jsonString;
 		link.download = `${flows[tabIndex].name}.json`;
+
+		// simulate a click on the link element to trigger the download
 		link.click();
 	}
 
+	/**
+	 * Creates a file input and listens to a change event to upload a JSON flow file.
+	 * If the file type is application/json, the file is read and parsed into a JSON object.
+	 * The resulting JSON object is passed to the addFlow function.
+	 */
 	function uploadFlow() {
+		// create a file input
 		const input = document.createElement("input");
 		input.type = "file";
+		// add a change event listener to the file input
 		input.onchange = (e: Event) => {
+			// check if the file type is application/json
 			if ((e.target as HTMLInputElement).files[0].type === "application/json") {
+				// get the file from the file input
 				const file = (e.target as HTMLInputElement).files[0];
+				// read the file as text
 				file.text().then((text) => {
+					// parse the text into a JSON object
 					addFlow(JSON.parse(text));
 				});
 			}
 		};
+		// trigger the file input click event to open the file dialog
 		input.click();
 	}
 	/**
@@ -94,21 +114,38 @@ export function TabsProvider({ children }:{children:ReactNode}) {
 			return newFlows;
 		});
 	}
+	/**
+	 * Add a new flow to the list of flows.
+	 * @param flow Optional flow to add.
+	 */
 	function addFlow(flow?: FlowType) {
+		// Get data from the flow or set it to null if there's no flow provided.
 		const data = flow?.data ? flow.data : null;
+
+		// Create a new flow with a default name if no flow is provided.
 		let newFlow: FlowType = {
 			name: flow ? flow.name : "flow" + id,
 			id: id.toString(),
 			data,
 			chat: flow ? flow.chat : [],
 		};
+
+		// Increment the ID counter.
 		setId((old) => old + 1);
+
+		// Add the new flow to the list of flows.
 		setFlows((prevState) => {
 			const newFlows = [...prevState, newFlow];
 			return newFlows;
 		});
+
+		// Set the tab index to the new flow.
 		setTabIndex(flows.length);
 	}
+	/**
+	 * Updates an existing flow with new data
+	 * @param newFlow - The new flow object containing the updated data
+	 */
 	function updateFlow(newFlow: FlowType) {
 		setFlows((prevState) => {
 			const newFlows = [...prevState];
