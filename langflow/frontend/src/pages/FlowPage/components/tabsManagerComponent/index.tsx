@@ -7,6 +7,7 @@ import FlowPage from "../..";
 export default function TabsManagerComponent() {
   const { flows, addFlow, tabIndex, setTabIndex } = useContext(TabsContext);
   useEffect(() => {
+    //create the first flow
     if (flows.length === 0) {
       addFlow();
     }

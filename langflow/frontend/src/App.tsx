@@ -8,7 +8,6 @@ import SuccessAlert from "./alerts/success";
 import ExtraSidebar from "./components/ExtraSidebarComponent";
 import { alertContext } from "./contexts/alertContext";
 import { locationContext } from "./contexts/locationContext";
-import Sidebar from "./components/SidebarComponent";
 import Header from "./components/HeaderComponent";
 import TabsManagerComponent from "./pages/FlowPage/components/tabsManagerComponent";
 
@@ -36,38 +35,45 @@ export default function App() {
 		setSuccessOpen,
 	} = useContext(alertContext);
 
-	const [alertsList, setAlertsList] = useState<Array<{type:string,data:{title:string,list?:Array<string>,link?:string},id:string}>>([]);
+// Initialize state variable for the list of alerts
+const [alertsList, setAlertsList] = useState<Array<{type:string,data:{title:string,list?:Array<string>,link?:string},id:string}>>([]);
 
-	useEffect(() => {
-		if (errorOpen && errorData) {
-			setErrorOpen(false);
-			setAlertsList((old) => {
-				let newAlertsList = [
-					...old,
-					{ type: "error", data: _.cloneDeep(errorData), id: _.uniqueId() },
-				];
-				return newAlertsList;
-			});
-		} else if (noticeOpen && noticeData) {
-			setNoticeOpen(false);
-			setAlertsList((old) => {
-				let newAlertsList = [
-					...old,
-					{ type: "notice", data: _.cloneDeep(noticeData), id: _.uniqueId() },
-				];
-				return newAlertsList;
-			});
-		} else if (successOpen && successData) {
-			setSuccessOpen(false);
-			setAlertsList((old) => {
-				let newAlertsList = [
-					...old,
-					{ type: "success", data: _.cloneDeep(successData), id: _.uniqueId() },
-				];
-				return newAlertsList;
-			});
-		}
-	}, [_, errorData, errorOpen, noticeData, noticeOpen, setErrorOpen, setNoticeOpen, setSuccessOpen, successData, successOpen]);
+// Use effect hook to update alertsList when a new alert is added
+useEffect(() => {
+	// If there is an error alert open with data, add it to the alertsList
+	if (errorOpen && errorData) {
+		setErrorOpen(false);
+		setAlertsList((old) => {
+			let newAlertsList = [
+				...old,
+				{ type: "error", data: _.cloneDeep(errorData), id: _.uniqueId() },
+			];
+			return newAlertsList;
+		});
+	}
+	// If there is a notice alert open with data, add it to the alertsList
+	else if (noticeOpen && noticeData) {
+		setNoticeOpen(false);
+		setAlertsList((old) => {
+			let newAlertsList = [
+				...old,
+				{ type: "notice", data: _.cloneDeep(noticeData), id: _.uniqueId() },
+			];
+			return newAlertsList;
+		});
+	}
+	// If there is a success alert open with data, add it to the alertsList
+	else if (successOpen && successData) {
+		setSuccessOpen(false);
+		setAlertsList((old) => {
+			let newAlertsList = [
+				...old,
+				{ type: "success", data: _.cloneDeep(successData), id: _.uniqueId() },
+			];
+			return newAlertsList;
+		});
+	}
+}, [_, errorData, errorOpen, noticeData, noticeOpen, setErrorOpen, setNoticeOpen, setSuccessOpen, successData, successOpen]);
 
 	const removeAlert = (id: string) => {
 		setAlertsList((prevAlertsList) =>
@@ -82,9 +88,7 @@ export default function App() {
 				<Header></Header>
 			</div>
 			<div className="flex grow shrink basis-auto min-h-0 flex-1 overflow-hidden">
-				<Sidebar />
 				<ExtraSidebar />
-
 				{/* Main area */}
 				<main className="min-w-0 flex-1 border-t border-gray-200 dark:border-gray-700 flex">
 					{/* Primary column */}

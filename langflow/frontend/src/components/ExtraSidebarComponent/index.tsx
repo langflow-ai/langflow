@@ -25,12 +25,6 @@ export default function ExtraSidebar() {
             <span className="text-gray-900 dark:text-white text-lg ml-2 font-semibold">
               {extraNavigation.title}
             </span>
-            <button
-              className="text-gray-400 flex-shrink-0 inline-flex items-center justify-center rounded-lg"
-              onClick={() => setIsStackedOpen(false)}
-            >
-              <ChevronLeftIcon className="h-6 w-6"></ChevronLeftIcon>
-            </button>
           </div>
           <div className="flex flex-grow flex-col w-full">
             {extraNavigation.options ? (
