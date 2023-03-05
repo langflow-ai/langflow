@@ -1,4 +1,4 @@
-FROM logspace/backend_build as backend_build
+# FROM logspace/backend_build as backend_build
 FROM logspace/frontend_build as frontend_build
 
 # `python-base` sets up all our shared environment variables
@@ -41,29 +41,26 @@ RUN apt-get update \
     build-essential libpq-dev git
 
 # install poetry - respects $POETRY_VERSION & $POETRY_HOME
-RUN curl -sSL https://install.python-poetry.org | python3 -
+# RUN curl -sSL https://install.python-poetry.org | python3 -
 
 # copy project requirement files here to ensure they will be cached.
 WORKDIR /app
 COPY pyproject.toml ./
-#poetry.lock 
+# copy langflow
+COPY ./langflow ./langflow
 
 # Copy files from frontend
 COPY --from=frontend_build /app/build /app/langflow/frontend/build/
 
-# Copy files from backend and install
-COPY --from=backend_build /app/dist/*.whl /app/dist/
 
-# Copy cli.py
-COPY langflow/cli.py /app/langflow/
 
 # RUN pip install langflow-0.0.17-py3-none-any.whl
-RUN poetry install
+RUN pip install .
 # RUN poetry add dist/langflow-0.0.17-py3-none-any.whl
 # RUN rm *.whl
 
 # RUN poetry build
 
-# EXPOSE 80
+EXPOSE 5003
 
-# CMD [ "langchain" ]
+CMD [ "langflow" ]
