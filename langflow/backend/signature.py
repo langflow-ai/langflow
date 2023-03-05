@@ -10,6 +10,7 @@ from langchain.agents.load_tools import (
 from langchain.chains.conversation import memory as memories
 
 from langflow.backend import util
+from langflow.backend import customs
 
 # build router
 router = APIRouter(
@@ -42,6 +43,8 @@ def get_agent(name: str):
 def get_prompt(name: str):
     """Get the signature of a prompt."""
     try:
+        if name in customs.get_custom_prompts().keys():
+            return customs.get_custom_prompts()[name]
         return util.build_template_from_function(
             name, prompts.loading.type_to_loader_dict
         )
