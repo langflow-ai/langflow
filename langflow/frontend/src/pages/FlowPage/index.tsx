@@ -48,7 +48,6 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 
 	const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
 	const { setErrorData } = useContext(alertContext);
-
 	const [nodes, setNodes, onNodesChange] = useNodesState(
 		flow.data?.nodes ?? []
 	);
@@ -64,16 +63,15 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 		}
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [nodes, edges]);
-
+	//update flow when tabs change
 	useEffect(() => {
-		console.log('oi')
 		setNodes(flow?.data?.nodes ?? []);
 		setEdges(flow?.data?.edges ?? []);
 		if (reactFlowInstance) {
 			setViewport(flow?.data?.viewport ?? { x: 1, y: 0, zoom: 1 });
 		}
 	}, [flow, reactFlowInstance, setEdges, setNodes, setViewport]);
-
+	//set extra sidebar
 	useEffect(() => {
 		setExtraComponent(<ExtraSidebar />);
 		setExtraNavigation({ title: "Componets" });
@@ -111,24 +109,34 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 	const onDrop = useCallback(
 		(event:React.DragEvent) => {
 			event.preventDefault();
-
+	
+			// Helper function to generate a unique node ID
 			function getId() {
 				return `dndnode_` + incrementNodeId();
 			}
-
+	
+			// Get the current bounds of the ReactFlow wrapper element
 			const reactflowBounds = reactFlowWrapper.current.getBoundingClientRect();
+	
+			// Extract the data from the drag event and parse it as a JSON object
 			let data:{type:string,node?:APIClassType} = JSON.parse(event.dataTransfer.getData("json"));
+	
+			// If data type is not "chatInput" or if there are no "chatInputNode" nodes present in the ReactFlow instance, create a new node
 			if (
 				data.type !== "chatInput" ||
 				(data.type === "chatInput" &&
 					!reactFlowInstance.getNodes().some((n) => n.type === "chatInputNode"))
 			) {
+				// Calculate the position where the node should be created
 				const position = reactFlowInstance.project({
 					x: event.clientX - reactflowBounds.left,
 					y: event.clientY - reactflowBounds.top,
 				});
+	
+				// Generate a unique node ID
 				let newId = getId();
-
+	
+				// Create a new node object
 				const newNode:NodeType = {
 					id: newId,
 					type:
@@ -146,16 +154,21 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 						value: null,
 					},
 				};
+	
+				// Add the new node to the list of nodes in state
 				setNodes((nds) => nds.concat(newNode));
 			} else {
+				// If a chat input node already exists, set an error message
 				setErrorData({
 					title: "Error creating node",
 					list: ["There can't be more than one chat input."],
 				});
 			}
 		},
+		// Specify dependencies for useCallback
 		[incrementNodeId, reactFlowInstance, setErrorData, setNodes]
 	);
+	
 
 	return (
 		<div className="w-full h-full" ref={reactFlowWrapper}>
