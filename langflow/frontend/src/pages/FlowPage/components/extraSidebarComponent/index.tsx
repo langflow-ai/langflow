@@ -16,19 +16,26 @@ export default function ExtraSidebar() {
 
   useEffect(() => {
     async function getTypes():Promise<void>{
+      // Define an object with initial values for the types.
       const initialValue:{[char: string]: string} = {
         str: "advanced",
         bool: "advanced",
         chatOutput: "chat",
-        chatInput: "chat",
       }
+  
+      // Make an asynchronous API call to retrieve all data.
       let result = await getAll();
+  
+      // Update the state of the component with the retrieved data.
       setData(result.data);
+  
+      // Set the types by reducing over the keys of the result data and updating the accumulator.
       setTypes(
         Object.keys(result.data).reduce(
           (acc, curr) => {
             Object.keys(result.data[curr]).forEach((c:keyof APIKindType) => {
               acc[c] = curr;
+              // Add the base classes to the accumulator as well.
               result.data[curr][c].base_classes?.forEach((b) => {
                 acc[b] = curr;
               });
@@ -39,11 +46,13 @@ export default function ExtraSidebar() {
         )
       );
     }
+    // Call the getTypes function.
     getTypes();
   }, [setTypes]);
 
 
   function onDragStart(event: React.DragEvent<any>, data:{type:string,node?:APIClassType}) {
+    //start drag event
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("json", JSON.stringify(data));
   }
