@@ -20,6 +20,7 @@ export default function Header(){
     preferX: "left",
     triggerOffset: 10,
     containerOffset: 12,
+    overflowContainer:false,
     arrowOffset: 4,
   })
   const {dark, setDark} = useContext(darkContext);
@@ -42,7 +43,7 @@ export default function Header(){
                   {notificationCenter&&<div className='absolute top-[2px] w-2 h-2 rounded-full bg-red-600 right-[7px]'></div>}
                   
                   <BellIcon className="h-6 w-6" aria-hidden="true" />
-                </button>{renderLayer(<div {...layerProps}><AlertDropdown closeFunction={()=>setIsOpen(false)} open={isOpen}></AlertDropdown></div>)}
+                </button>{renderLayer(<div {...layerProps}></div>)}
               </span>
               </div>
             </div>
