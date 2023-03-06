@@ -16,12 +16,6 @@ export default function ExtraSidebar() {
 
   useEffect(() => {
     async function getTypes():Promise<void>{
-      // Define an object with initial values for the types.
-      const initialValue:{[char: string]: string} = {
-        str: "advanced",
-        bool: "advanced",
-        chatOutput: "chat",
-      }
   
       // Make an asynchronous API call to retrieve all data.
       let result = await getAll();
@@ -41,8 +35,7 @@ export default function ExtraSidebar() {
               });
             });
             return acc;
-          },
-          initialValue
+          },{}
         )
       );
     }
@@ -58,7 +51,7 @@ export default function ExtraSidebar() {
   }
 
   return (
-    <div className="mt-4 w-full">
+    <div className="mt-1 w-full">
       {Object.keys(data).map((d:keyof APIObjectType, i) => (
         <DisclosureComponent
           key={i}
@@ -88,69 +81,6 @@ export default function ExtraSidebar() {
           </div>
         </DisclosureComponent>
       ))}
-      <DisclosureComponent
-        button={{ title: nodeNames["chat"], Icon: nodeIcons["chat"] }}
-      >
-        <div className="p-2 flex flex-col gap-2">
-          <div>
-            <div
-              draggable
-              className={" cursor-grab border-l-8 rounded-l-md"}
-              style={{ borderLeftColor: nodeColors["chat"] }}
-              onDragStart={(event) =>
-                onDragStart(event, {
-                  type: "chatOutput",
-                })
-              }
-            >
-              <div className="flex w-full justify-between text-sm px-4 py-3 items-center dark:border-gray-600 border-dashed border-gray-400 border-l-0 rounded-md rounded-l-none border-2">
-                <span className="text-black dark:text-white w-36 truncate">Chat Output</span>
-                <Bars2Icon className="w-6 h-6 text-gray-400 dark:text-gray-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </DisclosureComponent>
-      <DisclosureComponent
-        button={{ title: nodeNames["advanced"], Icon: nodeIcons["advanced"] }}
-      >
-        <div className="p-2 flex flex-col gap-2">
-          <div>
-            <div
-              draggable
-              className={" cursor-grab border-l-8 rounded-l-md"}
-              style={{ borderLeftColor: nodeColors["advanced"] }}
-              onDragStart={(event) =>
-                onDragStart(event, {
-                  type: "str",
-                })
-              }
-            >
-              <div className="flex w-full justify-between text-sm px-4 py-3 items-center border-dashed dark:border-gray-600 border-gray-400 border-l-0 rounded-md rounded-l-none border-2">
-                <span className="text-black dark:text-white w-36 truncate">String</span>
-                <Bars2Icon className="w-6 h-6 text-gray-400 dark:text-gray-600" />
-              </div>
-            </div>
-          </div>
-          <div>
-            <div
-              draggable
-              className={" cursor-grab border-l-8 rounded-l-md"}
-              style={{ borderLeftColor: nodeColors["advanced"] }}
-              onDragStart={(event) =>
-                onDragStart(event, {
-                  type: "bool",
-                })
-              }
-            >
-              <div className="flex w-full justify-between text-sm px-4 py-3 items-center border-dashed dark:border-gray-600 border-gray-400 border-l-0 rounded-md rounded-l-none border-2">
-                <span className="text-black dark:text-white w-36 truncate">Boolean</span>
-                <Bars2Icon className="w-6 h-6 text-gray-400 dark:text-gray-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </DisclosureComponent>
     </div>
   );
 }
