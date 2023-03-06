@@ -22,6 +22,16 @@ module.exports = {
           '&::-webkit-scrollbar': {
             display: 'none'
           }
+        },
+        '.arrow-hide':{
+          '&::-webkit-inner-spin-button':{
+            '-webkit-appearance': 'none',
+            'margin': 0
+          },
+          '&::-webkit-outer-spin-button':{
+            '-webkit-appearance': 'none',
+            'margin': 0
+          },
         }
       }
       )

@@ -8,6 +8,7 @@ import InputListComponent from "../../../../components/inputListComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
+import FloatComponent from "../../../../components/floatComponent";
 
 export default function ParameterComponent({
 	left,
@@ -60,8 +61,11 @@ export default function ParameterComponent({
 							isValidConnection(connection, reactFlowInstance)
 						}
 						className={classNames(
-							(left ? "-ml-0.5 " : "-mr-0.5 "),
-								"w-3 h-3 rounded-full border-2 bg-white dark:bg-gray-800",left && (type==="str" || type==="bool")?"hidden":""
+							left ? "-ml-0.5 " : "-mr-0.5 ",
+							"w-3 h-3 rounded-full border-2 bg-white dark:bg-gray-800",
+							left && (type === "str" || type === "bool" || type === "float")
+								? "hidden"
+								: ""
 						)}
 						style={{
 							borderColor: color,
@@ -113,6 +117,14 @@ export default function ParameterComponent({
 							}}
 						/>
 					</div>
+				) : left === true && type === "float" ? (
+					<FloatComponent
+						disabled={disabled}
+						value={data.node.template[name].value ?? ""}
+						onChange={(t) => {
+							data.node.template[name].value = t;
+						}}
+					/>
 				) : (
 					<></>
 				)}
