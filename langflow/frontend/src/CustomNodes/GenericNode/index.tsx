@@ -2,6 +2,7 @@ import {
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import {
+  classNames,
   nodeColors,
   nodeIcons,
   snakeToNormalCase,
@@ -11,13 +12,13 @@ import { typesContext } from "../../contexts/typesContext";
 import { useContext } from "react";
 import { NodeDataType} from "../../types/flow";
 
-export default function GenericNode({ data}:{data:NodeDataType}) {
+export default function GenericNode({ data, selected}:{data:NodeDataType,selected:boolean}) {
   const {types, deleteNode} = useContext(typesContext);
   const Icon = nodeIcons[types[data.type]];
 
 
   return (
-    <div className="prompt-node relative bg-white dark:bg-gray-900 w-96 rounded-lg solid border dark:border-gray-700 flex flex-col justify-center">
+    <div className={ classNames(selected?"border border-blue-500":"border dark:border-gray-700","prompt-node relative bg-white dark:bg-gray-900 w-96 rounded-lg flex flex-col justify-center")}>
       <div className="w-full dark:text-white flex items-center justify-between p-4 gap-8 bg-gray-50 rounded-t-lg dark:bg-gray-800 border-b dark:border-b-gray-700 ">
         <div className="w-full flex items-center truncate gap-4 text-lg">
           <Icon
