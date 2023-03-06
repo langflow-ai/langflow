@@ -58,10 +58,6 @@ export default function TabComponent({ selected, flow, onClick }:{flow:FlowType,
 								>
 									{flow.name}
 								</span>
-								{/* <ArrowDownTrayIcon
-									onClick={() => downloadFlow()}
-									className="w-4 h-4 hover:text-blue-500 cursor-pointer"
-								/> */}
 							</div>
 						)}
 						<button
