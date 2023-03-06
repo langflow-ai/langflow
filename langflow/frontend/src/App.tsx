@@ -8,7 +8,6 @@ import SuccessAlert from "./alerts/success";
 import ExtraSidebar from "./components/ExtraSidebarComponent";
 import { alertContext } from "./contexts/alertContext";
 import { locationContext } from "./contexts/locationContext";
-import Header from "./components/HeaderComponent";
 import TabsManagerComponent from "./pages/FlowPage/components/tabsManagerComponent";
 
 export default function App() {
