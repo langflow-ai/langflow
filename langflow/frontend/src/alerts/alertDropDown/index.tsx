@@ -25,13 +25,13 @@ export default function AlertDropdown({}: AlertDropdownType) {
           Notifications
           <div className="flex gap-3 pr-2 ">
             <button
-              className="hover:text-black"
+              className="hover:text-red-500"
               onClick={() => {closePopUp(); setTimeout(clearNotificationList, 100)}}
             >
               <TrashIcon className="w-5 h-5" />
             </button>
             <button
-              className="hover:text-black"
+              className="hover:text-red-500"
               onClick={closePopUp}
             >
               <XMarkIcon className="h-6 w-6" />

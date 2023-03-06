@@ -14,7 +14,6 @@ export default function TabsManagerComponent() {
 	const { openPopUp } = useContext(PopUpContext);
 	const AlertWidth = 224
 	const { dark, setDark } = useContext(darkContext);
-	const [isOpen, setIsOpen] = useState(false);
 	const {notificationCenter, setNotificationCenter} = useContext(alertContext)
 	useEffect(() => {
 		//create the first flow
