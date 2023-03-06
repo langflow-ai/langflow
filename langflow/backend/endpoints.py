@@ -8,6 +8,9 @@ from langchain.llms.loading import load_llm_from_config
 
 from langchain.prompts.loading import load_prompt_from_config
 from typing import Any
+import io
+import contextlib
+import re
 
 
 # build router
@@ -77,12 +80,12 @@ def get_load(data: dict[str, Any]):
     type_list = get_type_list()
 
     # Substitute ZeroShotPromt with PromptTemplate
-    for node in data['nodes']:
+    for node in data["nodes"]:
         if node["data"]["type"] == "ZeroShotPrompt":
             # Build Prompt Template
             tools = [
                 tool
-                for tool in data['nodes']
+                for tool in data["nodes"]
                 if tool["type"] != "chatOutputNode"
                 and "Tool" in tool["data"]["node"]["base_classes"]
             ]
@@ -104,17 +107,28 @@ def get_load(data: dict[str, Any]):
     if extracted_json["_type"] in type_list["agents"]:
         loaded = load_agent_executor_from_config(extracted_json)
 
-        return {"result": loaded.run(message)}
+        with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
+            result = loaded.run(message)
+            thought = output_buffer.getvalue()
+            
     elif extracted_json["_type"] in type_list["chains"]:
         loaded = load_chain_from_config(extracted_json)
 
-        return {"result": loaded.run(message)}
+        with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
+            result = loaded.run(message)
+            thought = output_buffer.getvalue()
+
     elif extracted_json["_type"] in type_list["llms"]:
         loaded = load_llm_from_config(extracted_json)
 
-        return {"result": loaded(message)}
+        with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
+            result = loaded(message)
+            thought = output_buffer.getvalue()
     else:
-        return {"result": "Error: Type should be either agent, chain or llm"}
+        result = "Error: Type should be either agent, chain or llm"
+        thought = ""
+
+    return {"result": result, "thought": re.sub(r'\x1b\[([0-9,A-Z]{1,2}(;[0-9,A-Z]{1,2})?)?[m|K]', '', thought).strip()}
 
 
 def build_prompt_template(prompt, tools):
