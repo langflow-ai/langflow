@@ -15,6 +15,7 @@ export default function Header(){
   const {layerProps,renderLayer, triggerProps} = useLayer({
     isOpen,
     placement: "left-start",
+    auto:true,
     onOutsideClick:()=>setIsOpen(false),
     preferX: "left",
     triggerOffset: 10,
