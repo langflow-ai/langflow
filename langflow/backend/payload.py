@@ -58,12 +58,10 @@ def build_json(root, nodes, edges):
         module_type = value["type"]
         # if module_type == "Tool":
         #     pass
-        if module_type in ["str", "bool", "int", "float", "Any"]:
-            # print(key)
-            # try:
+        # if module_type in ["str", "bool", "int", "float", "Any"] or value["value"]:
+        #     value = value["value"]
+        if "value" in value and value["value"] is not None:
             value = value["value"]
-            # except:
-            #     pass
         elif "dict" in module_type:
             value = {}
         else:
