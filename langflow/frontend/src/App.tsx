@@ -85,7 +85,6 @@ useEffect(() => {
 		//need parent component with width and height
 		<div className="h-full flex flex-col">
 			<div className="flex grow-0 shrink basis-auto">
-				<Header></Header>
 			</div>
 			<div className="flex grow shrink basis-auto min-h-0 flex-1 overflow-hidden">
 				<ExtraSidebar />
