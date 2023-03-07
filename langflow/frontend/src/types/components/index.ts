@@ -1,4 +1,4 @@
-import { ForwardRefExoticComponent, ReactElement, ReactNode } from 'react';
+import { ForwardRefExoticComponent, ReactElement, ReactNode } from "react";
 import { NodeDataType } from "../flow/index";
 export type InputComponentType = {
 	value: string;
@@ -27,9 +27,17 @@ export type ParameterComponentType = {
 	name?: string;
 	tooltipTitle: string;
 };
-export type InputListComponentType = {value:string[],onChange:(value:string[])=>void,disabled:boolean}
+export type InputListComponentType = {
+	value: string[];
+	onChange: (value: string[]) => void;
+	disabled: boolean;
+};
 
-export type TextAreaComponentType = {disabled:boolean,onChange:(value:string[]|string)=>void,value:string[]|string}
+export type TextAreaComponentType = {
+	disabled: boolean;
+	onChange: (value: string[] | string) => void;
+	value: string[] | string;
+};
 
 export type DisclosureComponentType = {
 	children: ReactNode;
@@ -39,6 +47,12 @@ export type DisclosureComponentType = {
 		buttons?: {
 			Icon: ReactElement;
 			title: string;
-      onClick:(event?:React.MouseEvent)=>void;
+			onClick: (event?: React.MouseEvent) => void;
 		}[];
-	}};
+	};
+};
+export type FloatComponentType = {
+	value: string;
+	disabled?: boolean;
+	onChange: (value: string) => void;
+};

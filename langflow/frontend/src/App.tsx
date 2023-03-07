@@ -8,7 +8,6 @@ import SuccessAlert from "./alerts/success";
 import ExtraSidebar from "./components/ExtraSidebarComponent";
 import { alertContext } from "./contexts/alertContext";
 import { locationContext } from "./contexts/locationContext";
-import Header from "./components/HeaderComponent";
 import TabsManagerComponent from "./pages/FlowPage/components/tabsManagerComponent";
 
 export default function App() {
@@ -85,7 +84,6 @@ useEffect(() => {
 		//need parent component with width and height
 		<div className="h-full flex flex-col">
 			<div className="flex grow-0 shrink basis-auto">
-				<Header></Header>
 			</div>
 			<div className="flex grow shrink basis-auto min-h-0 flex-1 overflow-hidden">
 				<ExtraSidebar />
@@ -97,7 +95,8 @@ useEffect(() => {
 					</div>
 				</main>
 			</div>
-			<div className="flex z-50 flex-col-reverse fixed bottom-5 left-5">
+			<div></div>
+			<div className="flex z-40 flex-col-reverse fixed bottom-5 left-5">
 				{alertsList.map((alert) => (
 					<div key={alert.id}>
 						{alert.type === "error" ? (
@@ -127,6 +126,7 @@ useEffect(() => {
 					</div>
 				))}
 			</div>
+			<a target={"_blank"} href="https://logspace.ai/" className="absolute bottom-1 left-1 text-gray-500 text-xs cursor-pointer font-sans tracking-wide">Created by Logspace</a>
 		</div>
 	);
 }

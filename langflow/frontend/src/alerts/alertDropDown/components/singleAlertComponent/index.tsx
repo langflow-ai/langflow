@@ -22,7 +22,7 @@ export default function SingleAlert({ dropItem, removeAlert}:SingleAlertComponen
       leaveTo={"transform translate-x-[-100%]"}
     >
         {type === "error"? 
-          <div className="flex bg-red-50 rounded-md p-4 mb-2" key={dropItem.id}>
+          <div className="flex bg-red-50 rounded-md p-3 mb-2 mx-2" key={dropItem.id}>
             <div className="flex-shrink-0">
               <XCircleIcon
                 className="h-5 w-5 text-red-400"
@@ -61,7 +61,7 @@ export default function SingleAlert({ dropItem, removeAlert}:SingleAlertComponen
             </div>
           </div>
         :(type === "notice" ?
-          <div className="flex rounded-md p-4 bg-blue-50 mb-2" key={dropItem.id}>
+          <div className="flex rounded-md bg-blue-50 p-3 mb-2 mx-2" key={dropItem.id}>
             <div className="flex-shrink-0">
               <InformationCircleIcon
                 className="h-5 w-5 text-blue-400"
@@ -99,7 +99,7 @@ export default function SingleAlert({ dropItem, removeAlert}:SingleAlertComponen
             </div>
           </div>
         :
-        <div className="flex bg-green-50 p-4 mb-2" key={dropItem.id}>
+        <div className="flex bg-green-50 p-3 mb-2 mx-2 rounded-md" key={dropItem.id}>
             <div className="flex-shrink-0">
               <CheckCircleIcon
                 className="h-5 w-5 text-green-400"

@@ -68,7 +68,8 @@ export const nodeColors: {[char: string]: string} = {
   tools: "#FF3434",
   memories: "#FF9135",
   advanced: "#000000",
-  chat: "#2563EB",
+  chat: "#454173",
+  thought:"#272541"
 };
 
 export const nodeNames:{[char: string]: string} = {
