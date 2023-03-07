@@ -123,6 +123,10 @@ def get_load(data: dict[str, Any]):
         result = "Error: Type should be either agent, chain or llm"
         thought = ""
 
+    # Remove unnecessary data from response
+    begin = thought.rfind(message)
+    thought = thought[(begin + len(message)) :]
+
     return {
         "result": result,
         "thought": re.sub(
