@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "0.0.17"
+version = "0.0.19"
 description = "Backend for Langflow"
 authors = ["Ibis Prevedello <ibiscp@gmail.com>"]
 # packages = [

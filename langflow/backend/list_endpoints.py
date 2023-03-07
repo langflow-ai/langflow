@@ -8,6 +8,7 @@ from langchain.chains.conversation import memory as memories
 from langchain.agents.load_tools import get_all_tool_names
 from langflow.backend import util
 from langflow.backend import customs
+from langflow.backend import allowed_components
 
 
 # build router
@@ -26,7 +27,7 @@ def read_items():
         "prompts",
         "llms",
         # "utilities",
-        "memories",
+        # "memories",
         # "document_loaders",
         # "vectorstores",
         # "docstores",
@@ -40,6 +41,7 @@ def list_chains():
     return [
         chain.__annotations__["return"].__name__
         for chain in chains.loading.type_to_loader_dict.values()
+        if chain.__annotations__["return"].__name__ in allowed_components.CHAINS
     ]
 
 
@@ -47,7 +49,11 @@ def list_chains():
 def list_agents():
     """List all agent types"""
     # return list(agents.loading.AGENT_TO_CLASS.keys())
-    return [agent.__name__ for agent in agents.loading.AGENT_TO_CLASS.values()]
+    return [
+        agent.__name__
+        for agent in agents.loading.AGENT_TO_CLASS.values()
+        if agent.__name__ in allowed_components.AGENTS
+    ]
 
 
 @router.get("/prompts")
@@ -57,6 +63,7 @@ def list_prompts():
     library_prompts = [
         prompt.__annotations__["return"].__name__
         for prompt in prompts.loading.type_to_loader_dict.values()
+        if prompt.__annotations__["return"].__name__ in allowed_components.PROMPTS
     ]
     return library_prompts + list(custom_prompts.keys())
 
@@ -64,7 +71,11 @@ def list_prompts():
 @router.get("/llms")
 def list_llms():
     """List all llm types"""
-    return [llm.__name__ for llm in llms.type_to_cls_dict.values()]
+    return [
+        llm.__name__
+        for llm in llms.type_to_cls_dict.values()
+        if llm.__name__ in allowed_components.LLMS
+    ]
 
 
 @router.get("/memories")
@@ -104,7 +115,8 @@ def list_tools():
     tools = []
 
     for tool in get_all_tool_names():
-        if tool_params := util.get_tool_params(util.get_tools_dict(tool)):
+        tool_params = util.get_tool_params(util.get_tools_dict(tool))
+        if tool_params and tool_params["name"] in allowed_components.TOOLS:
             tools.append(tool_params["name"])
 
     return tools

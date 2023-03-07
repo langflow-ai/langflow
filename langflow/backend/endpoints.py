@@ -30,10 +30,6 @@ def get_type_list():
 
 @router.get("/all")
 def get_all():
-    # library_prompts = {
-    #     prompt: signature.get_prompt(prompt) for prompt in list_endpoints.list_prompts()
-    # }
-    # custom_prompts = customs.get_custom_prompts()
     return {
         "chains": {
             chain: signature.get_chain(chain) for chain in list_endpoints.list_chains()
@@ -41,7 +37,6 @@ def get_all():
         "agents": {
             agent: signature.get_agent(agent) for agent in list_endpoints.list_agents()
         },
-        # "prompts": {**library_prompts, **custom_prompts},
         "prompts": {
             prompt: signature.get_prompt(prompt)
             for prompt in list_endpoints.list_prompts()
@@ -110,7 +105,7 @@ def get_load(data: dict[str, Any]):
         with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
             result = loaded.run(message)
             thought = output_buffer.getvalue()
-            
+
     elif extracted_json["_type"] in type_list["chains"]:
         loaded = load_chain_from_config(extracted_json)
 
@@ -128,7 +123,12 @@ def get_load(data: dict[str, Any]):
         result = "Error: Type should be either agent, chain or llm"
         thought = ""
 
-    return {"result": result, "thought": re.sub(r'\x1b\[([0-9,A-Z]{1,2}(;[0-9,A-Z]{1,2})?)?[m|K]', '', thought).strip()}
+    return {
+        "result": result,
+        "thought": re.sub(
+            r"\x1b\[([0-9,A-Z]{1,2}(;[0-9,A-Z]{1,2})?)?[m|K]", "", thought
+        ).strip(),
+    }
 
 
 def build_prompt_template(prompt, tools):
@@ -147,7 +147,6 @@ def build_prompt_template(prompt, tools):
     value = "\n\n".join([prefix, tool_strings, format_instructions, suffix])
 
     prompt["type"] = "PromptTemplate"
-    # prompt["value"] = value
 
     prompt["node"] = {
         "template": {
