@@ -154,7 +154,7 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 									}}
 									type="text"
 									disabled={lockChat}
-									value={lockChat?"please wait for the response": chatValue}
+									value={lockChat?"Thinking...": chatValue}
 									onChange={(e) => {
 										setChatValue(e.target.value);
 									}}
