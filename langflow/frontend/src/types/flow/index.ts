@@ -5,7 +5,7 @@ export type FlowType = {
 	name: string;
 	id: string;
 	data: ReactFlowJsonObject;
-	chat: Array<{ message: string; isSend: boolean }>;
+	chat: Array<{ message: string; isSend: boolean, thinking?:string }>;
 };
 export type NodeType = {id:string,type:string,position:XYPosition,data:NodeDataType}
 export type NodeDataType = {type:string,node?:APIClassType,id:string,value:any}
