@@ -22,10 +22,18 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 	const [chatValue, setChatValue] = useState("");
 	const [chatHistory, setChatHistory] = useState(flow.chat);
 	const { setErrorData } = useContext(alertContext);
-	const addChatHistory = (message: string, isSend: boolean) => {
+	const addChatHistory = (
+		message: string,
+		isSend: boolean,
+		thinking?: string
+	) => {
 		setChatHistory((old) => {
 			let newChat = _.cloneDeep(old);
-			newChat.push({ message, isSend });
+			if (thinking) {
+				newChat.push({ message, isSend, thinking });
+			} else {
+				newChat.push({ message, isSend });
+			}
 			return newChat;
 		});
 		setSaveChat((chat) => !chat);
@@ -138,6 +146,15 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 												style={{ backgroundColor: nodeColors["chat"] }}
 												className="text-start inline-block text-white rounded-xl p-3 overflow-hidden w-fit max-w-[280px] px-5 text-sm font-normal rounded-tl-none"
 											>
+												{(c.thinking && c.thinking!=="") && (
+													<div
+														style={{ backgroundColor: nodeColors["thought"] }}
+														className="rounded text-start inline-block w-full text-gray-700 mb-1"
+													>
+														teste
+													</div>
+												)}
+												{(c.thinking && c.thinking!=="") && <br></br>}
 												{c.message}
 											</div>
 										</div>
@@ -167,16 +184,16 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 										setChatValue(e.target.value);
 									}}
 									className={classNames(
-										lockChat ? "bg-gray-500" : "dark:bg-gray-700",
+										lockChat ? "bg-gray-500 text-white" : "dark:bg-gray-700",
 										"form-input block w-full rounded-md border-gray-300 dark:border-gray-600  dark:text-white pr-10 sm:text-sm"
 									)}
-									placeholder="Send a message..."
+									placeholder={lockChat?"please wait for the response":"Send a message..."}
 								/>
 								<div className="absolute inset-y-0 right-0 flex items-center pr-3">
 									<button disabled={lockChat} onClick={() => sendMessage()}>
 										{lockChat ? (
 											<LockClosedIcon
-												className="h-5 w-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+												className="h-5 w-5 text-gray-400  dark:hover:text-gray-300"
 												aria-hidden="true"
 											/>
 										) : (
