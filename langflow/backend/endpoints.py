@@ -47,10 +47,10 @@ def get_all():
         #         # utility: templates.utility(utility) for utility in list.list_utilities()
         #     }
         # },
-        "memories": {
-            memory: signature.get_memory(memory)
-            for memory in list_endpoints.list_memories()
-        },
+        # "memories": {
+        #     memory: signature.get_memory(memory)
+        #     for memory in list_endpoints.list_memories()
+        # },
         # "document_loaders": {
         #     "template": {
         #         # memory: templates.document_loader(memory)

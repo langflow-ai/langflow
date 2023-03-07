@@ -235,10 +235,13 @@ def format_dict(d):
 
     # Process remaining keys
     for key, value in d.items():
-        if key == "examples":
-            pass
         if key == "_type":
             continue
+
+        # Set verbose to True
+        if key == "verbose":
+            value["default"] = True
+
         _type = value["type"]
 
         # Remove 'Optional' wrapper
@@ -260,7 +263,7 @@ def format_dict(d):
 
         # Show if required
         value["show"] = bool(
-            (value["required"] and key not in ["input_variables"])
+            (value["required"] and key not in ["input_variables", "verbose"])
             or key
             in [
                 "allowed_tools",
