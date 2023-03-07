@@ -1,0 +1,179 @@
+import { createContext, useEffect, useState, useRef, ReactNode } from "react";
+import { FlowType } from "../types/flow";
+import { TabsContextType } from "../types/tabs";
+
+const TabsContextInitialValue: TabsContextType = {
+	tabIndex: 0,
+	setTabIndex: (index: number) => {},
+	flows: [],
+	removeFlow: (id: string) => {},
+	addFlow: (flowData?: any) => {},
+	updateFlow: (newFlow: FlowType) => {},
+	incrementNodeId: () => 0,
+	downloadFlow: () => {},
+	uploadFlow: () => {},
+};
+
+export const TabsContext = createContext<TabsContextType>(
+	TabsContextInitialValue
+);
+
+export function TabsProvider({ children }: { children: ReactNode }) {
+	const [tabIndex, setTabIndex] = useState(0);
+	const [flows, setFlows] = useState<Array<FlowType>>([]);
+	const [id, setId] = useState(0);
+
+	const newNodeId = useRef(0);
+	function incrementNodeId() {
+		newNodeId.current = newNodeId.current + 1;
+		return newNodeId.current;
+	}
+	useEffect(() => {
+		//save tabs locally
+		if (flows.length !== 0)
+			window.localStorage.setItem(
+				"tabsData",
+				JSON.stringify({ tabIndex, flows, id, nodeId: newNodeId.current })
+			);
+	}, [flows, id, tabIndex, newNodeId]);
+
+	useEffect(() => {
+		//get tabs locally saved
+		let cookie = window.localStorage.getItem("tabsData");
+		if (cookie) {
+			let cookieObject = JSON.parse(cookie);
+			setTabIndex(cookieObject.tabIndex);
+			setFlows(cookieObject.flows);
+			setId(cookieObject.id);
+			newNodeId.current = cookieObject.nodeId;
+		}
+	}, []);
+
+	/**
+	 * Downloads the current flow as a JSON file
+	 */
+	function downloadFlow() {
+		// create a data URI with the current flow data
+		const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
+			JSON.stringify(flows[tabIndex])
+		)}`;
+
+		// create a link element and set its properties
+		const link = document.createElement("a");
+		link.href = jsonString;
+		link.download = `${flows[tabIndex].name}.json`;
+
+		// simulate a click on the link element to trigger the download
+		link.click();
+	}
+
+	/**
+	 * Creates a file input and listens to a change event to upload a JSON flow file.
+	 * If the file type is application/json, the file is read and parsed into a JSON object.
+	 * The resulting JSON object is passed to the addFlow function.
+	 */
+	function uploadFlow() {
+		// create a file input
+		const input = document.createElement("input");
+		input.type = "file";
+		// add a change event listener to the file input
+		input.onchange = (e: Event) => {
+			// check if the file type is application/json
+			if ((e.target as HTMLInputElement).files[0].type === "application/json") {
+				// get the file from the file input
+				const file = (e.target as HTMLInputElement).files[0];
+				// read the file as text
+				file.text().then((text) => {
+					// parse the text into a JSON object
+					addFlow(JSON.parse(text));
+				});
+			}
+		};
+		// trigger the file input click event to open the file dialog
+		input.click();
+	}
+	/**
+	 * Removes a flow from an array of flows based on its id.
+	 * Updates the state of flows and tabIndex using setFlows and setTabIndex hooks.
+	 * @param {string} id - The id of the flow to remove.
+	 */
+	function removeFlow(id: string) {
+		setFlows((prevState) => {
+			const newFlows = [...prevState];
+			const index = newFlows.findIndex((flow) => flow.id === id);
+			if (index >= 0) {
+				if (index === tabIndex) {
+					setTabIndex(flows.length - 2);
+					newFlows.splice(index, 1);
+				} else {
+					let flowId = flows[tabIndex].id;
+					newFlows.splice(index, 1);
+					setTabIndex(newFlows.findIndex((flow) => flow.id === flowId));
+				}
+			}
+			return newFlows;
+		});
+	}
+	/**
+	 * Add a new flow to the list of flows.
+	 * @param flow Optional flow to add.
+	 */
+	function addFlow(flow?: FlowType) {
+		// Get data from the flow or set it to null if there's no flow provided.
+		const data = flow?.data ? flow.data : null;
+
+		// Create a new flow with a default name if no flow is provided.
+		let newFlow: FlowType = {
+			name: flow ? flow.name : "flow" + id,
+			id: id.toString(),
+			data,
+			chat: flow ? flow.chat : [],
+		};
+
+		// Increment the ID counter.
+		setId((old) => old + 1);
+
+		// Add the new flow to the list of flows.
+		setFlows((prevState) => {
+			const newFlows = [...prevState, newFlow];
+			return newFlows;
+		});
+
+		// Set the tab index to the new flow.
+		setTabIndex(flows.length);
+	}
+	/**
+	 * Updates an existing flow with new data
+	 * @param newFlow - The new flow object containing the updated data
+	 */
+	function updateFlow(newFlow: FlowType) {
+		setFlows((prevState) => {
+			const newFlows = [...prevState];
+			const index = newFlows.findIndex((flow) => flow.id === newFlow.id);
+			if (index !== -1) {
+				newFlows[index].data = newFlow.data;
+				newFlows[index].name = newFlow.name;
+				newFlows[index].chat = newFlow.chat;
+			}
+			return newFlows;
+		});
+	}
+
+	return (
+		<TabsContext.Provider
+			value={{
+				tabIndex,
+				setTabIndex,
+				flows,
+				incrementNodeId,
+				removeFlow,
+				addFlow,
+				updateFlow,
+				downloadFlow,
+				uploadFlow,
+			}}
+		>
+			{children}
+		</TabsContext.Provider>
+	);
+}

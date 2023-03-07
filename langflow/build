@@ -1,0 +1,3 @@
+#! /bin/bash
+
+cd ../space_flow && npm run build

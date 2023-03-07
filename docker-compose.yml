@@ -1,0 +1,20 @@
+version: '3'
+
+services:
+  backend:
+    build:
+      context: ./
+      dockerfile: ./dev.Dockerfile
+    ports:
+      - "5003:5003"
+    volumes:
+      - ./:/app
+    environment:
+      - PYTHONPATH=/langflow  # add this line to set PYTHONPATH
+
+  frontend:
+    build: ./langflow/frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./langflow/frontend:/app
