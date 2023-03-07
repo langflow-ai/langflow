@@ -1,6 +1,6 @@
 import {
 	ChevronRightIcon,
-} from "@heroicons/react/24/outline";
+} from "@heroicons/react/24/solid";
 import { Disclosure } from "@headlessui/react";
 import { DisclosureComponentType } from "../../../../types/components";
 
@@ -31,7 +31,7 @@ export default function DisclosureComponent({
 									<ChevronRightIcon
 										className={`${
 											open ? "rotate-90 transform" : ""
-										} h-5 w-5 text-gray-800 dark:text-white`}
+										} h-4 w-4 text-gray-800 dark:text-white`}
 									/>
 								</Disclosure.Button>
 							</div>

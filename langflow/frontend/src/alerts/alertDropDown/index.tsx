@@ -20,21 +20,21 @@ export default function AlertDropdown({}: AlertDropdownType) {
   
 
   return (
-      <div className="z-10 py-2 pb-4 rounded-md bg-white ring-1 ring-black ring-opacity-5 shadow-lg focus:outline-none overflow-hidden w-[14rem] h-[28rem] flex flex-col">
+      <div className="z-10 py-3 pb-4 rounded-md bg-white ring-1 ring-black ring-opacity-5 shadow-lg focus:outline-none overflow-hidden w-[16rem] h-[28rem] flex flex-col">
         <div className="flex pl-3 flex-row justify-between text-md font-medium text-gray-800">
           Notifications
-          <div className="flex gap-3 pr-2 ">
+          <div className="flex gap-2 pr-3 ">
             <button
               className="hover:text-red-500"
               onClick={() => {closePopUp(); setTimeout(clearNotificationList, 100)}}
             >
-              <TrashIcon className="w-5 h-5" />
+              <TrashIcon className="w-[1.1rem] h-[1.1rem]" />
             </button>
             <button
               className="hover:text-red-500"
               onClick={closePopUp}
             >
-              <XMarkIcon className="h-6 w-6" />
+              <XMarkIcon className="h-5 w-5" />
             </button>
           </div>
         </div>

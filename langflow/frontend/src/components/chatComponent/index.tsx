@@ -11,6 +11,7 @@ import { alertContext } from "../../contexts/alertContext";
 import { classNames, nodeColors } from "../../utils";
 import { TabsContext } from "../../contexts/tabsContext";
 import { ChatType } from "../../types/chat";
+import ChatMessage from "./chatMessage";
 
 const _ = require("lodash");
 
@@ -25,12 +26,12 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 	const addChatHistory = (
 		message: string,
 		isSend: boolean,
-		thinking?: string
+		thought?: string
 	) => {
 		setChatHistory((old) => {
 			let newChat = _.cloneDeep(old);
-			if (thinking) {
-				newChat.push({ message, isSend, thinking });
+			if (thought) {
+				newChat.push({ message, isSend, thought });
 			} else {
 				newChat.push({ message, isSend });
 			}
@@ -88,7 +89,7 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 				sendAll({ ...reactFlowInstance.toObject(), message, chatHistory })
 					.then((r) => {
 						console.log(r.data);
-						addChatHistory(r.data.result, false);
+						addChatHistory(r.data.result, false,r.data.thought);
 						setLockChat(false);
 					})
 					.catch((error) => {
@@ -121,7 +122,7 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 				leaveFrom="translate-y-0"
 				leaveTo="translate-y-96"
 			>
-				<div className="w-[340px] absolute bottom-0 right-6">
+				<div className="w-[340px] absolute bottom-0 right-1">
 					<div className="border dark:border-gray-700 h-full rounded-xl rounded-b-none bg-white dark:bg-gray-800 shadow">
 						<div
 							onClick={() => {
@@ -139,33 +140,7 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 						</div>
 						<div className="w-full h-[400px] flex gap-3 mb-auto overflow-y-auto scrollbar-hide flex-col bg-gray-50 dark:bg-gray-900 p-3 py-5">
 							{chatHistory.map((c, i) => (
-								<div key={i}>
-									{!c.isSend ? (
-										<div className="w-full text-start">
-											<div
-												style={{ backgroundColor: nodeColors["chat"] }}
-												className="text-start inline-block text-white rounded-xl p-3 overflow-hidden w-fit max-w-[280px] px-5 text-sm font-normal rounded-tl-none"
-											>
-												{(c.thinking && c.thinking!=="") && (
-													<div
-														style={{ backgroundColor: nodeColors["thought"] }}
-														className="rounded text-start inline-block w-full text-gray-700 mb-1"
-													>
-														teste
-													</div>
-												)}
-												{(c.thinking && c.thinking!=="") && <br></br>}
-												{c.message}
-											</div>
-										</div>
-									) : (
-										<div className="w-full text-end">
-											<div className="text-start inline-block rounded-xl p-3 overflow-hidden w-fit max-w-[280px] px-5 text-sm text-black dark:text-white dark:bg-gray-700 bg-gray-200 font-normal rounded-tr-none">
-												{c.message}
-											</div>
-										</div>
-									)}
-								</div>
+                  <ChatMessage chat={c} key={i}/>
 							))}
 							<div ref={ref}></div>
 						</div>
@@ -179,7 +154,7 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 									}}
 									type="text"
 									disabled={lockChat}
-									value={chatValue}
+									value={lockChat?"please wait for the response": chatValue}
 									onChange={(e) => {
 										setChatValue(e.target.value);
 									}}
@@ -187,13 +162,13 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 										lockChat ? "bg-gray-500 text-white" : "dark:bg-gray-700",
 										"form-input block w-full rounded-md border-gray-300 dark:border-gray-600  dark:text-white pr-10 sm:text-sm"
 									)}
-									placeholder={lockChat?"please wait for the response":"Send a message..."}
+									placeholder={"Send a message..."}
 								/>
 								<div className="absolute inset-y-0 right-0 flex items-center pr-3">
 									<button disabled={lockChat} onClick={() => sendMessage()}>
 										{lockChat ? (
 											<LockClosedIcon
-												className="h-5 w-5 text-gray-400  dark:hover:text-gray-300"
+												className="h-5 w-5 text-gray-400  dark:hover:text-gray-300 animate-pulse"
 												aria-hidden="true"
 											/>
 										) : (
@@ -219,14 +194,14 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 				leaveFrom="translate-y-0"
 				leaveTo="translate-y-96"
 			>
-				<div className="absolute bottom-0 right-6">
+				<div className="absolute bottom-0 right-1">
 					<div className="border flex justify-center align-center py-1 px-3 rounded-xl rounded-b-none bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white shadow">
 						<button
 							onClick={() => {
 								setOpen(true);
 							}}
 						>
-							<div className="flex gap-3 text-lg font-medium items-center">
+							<div className="flex gap-3  items-center">
 								<Bars3CenterLeftIcon
 									className="h-6 w-6 mt-1"
 									style={{ color: nodeColors["chat"] }}
