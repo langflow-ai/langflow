@@ -1,7 +1,7 @@
 from fastapi import FastAPI
-from langflow.backend.endpoints import router as endpoints_router
-from langflow.backend.list_endpoints import router as list_router
-from langflow.backend.signature import router as signatures_router
+from api.endpoints import router as endpoints_router
+from api.list_endpoints import router as list_router
+from api.signature import router as signatures_router
 from fastapi.middleware.cors import CORSMiddleware
 
 
