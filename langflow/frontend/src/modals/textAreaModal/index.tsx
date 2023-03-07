@@ -59,17 +59,17 @@ export default function TextAreaModal({value, setValue}:{setValue:(value:string)
                   </button>
                 </div>
                 <div className="h-full w-full flex flex-col justify-center items-center">
-                  <div className="flex w-full pb-6 z-10 justify-center shadow-sm">
-                    <div className="mx-auto mt-8 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-gray-900 sm:mx-0 sm:h-10 sm:w-10">
+                  <div className="flex w-full pb-4 z-10 justify-center shadow-sm">
+                    <div className="mx-auto mt-4 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-gray-900 sm:mx-0 sm:h-10 sm:w-10">
                       <ClipboardDocumentListIcon
                         className="h-6 w-6 text-blue-600"
                         aria-hidden="true"
                       />
                     </div>
-                    <div className="mt-10 text-center sm:ml-4 sm:text-left">
+                    <div className="mt-4 text-center sm:ml-4 sm:text-left">
                       <Dialog.Title
                         as="h3"
-                        className="text-lg font-medium dark:text-white leading-6 text-gray-900"
+                        className="text-lg font-medium dark:text-white leading-10 text-gray-900"
                       >
                         Edit text
                       </Dialog.Title>

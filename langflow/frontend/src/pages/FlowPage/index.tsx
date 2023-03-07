@@ -14,10 +14,6 @@ import { locationContext } from "../../contexts/locationContext";
 import ExtraSidebar from "./components/extraSidebarComponent";
 import Chat from "../../components/chatComponent";
 import GenericNode from "../../CustomNodes/GenericNode";
-import ChatInputNode from "../../CustomNodes/ChatInputNode";
-import ChatOutputNode from "../../CustomNodes/ChatOutputNode";
-import InputNode from "../../CustomNodes/InputNode";
-import BooleanNode from "../../CustomNodes/BooleanNode";
 import { alertContext } from "../../contexts/alertContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
@@ -31,10 +27,6 @@ import { APIClassType } from "../../types/api";
 
 const nodeTypes = {
 	genericNode: GenericNode,
-	inputNode: InputNode,
-	chatInputNode: ChatInputNode,
-	chatOutputNode: ChatOutputNode,
-	booleanNode: BooleanNode,
 };
 
 var _ = require("lodash");
@@ -68,13 +60,13 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 		setNodes(flow?.data?.nodes ?? []);
 		setEdges(flow?.data?.edges ?? []);
 		if (reactFlowInstance) {
-			setViewport(flow?.data?.viewport ?? { x: 1, y: 0, zoom: 1 });
+			setViewport(flow?.data?.viewport ?? { x: 1, y: 0, zoom: 0.5 });
 		}
 	}, [flow, reactFlowInstance, setEdges, setNodes, setViewport]);
 	//set extra sidebar
 	useEffect(() => {
 		setExtraComponent(<ExtraSidebar />);
-		setExtraNavigation({ title: "Componets" });
+		setExtraNavigation({ title: "Components" });
 	}, [setExtraComponent, setExtraNavigation]);
 
 	const onEdgesChangeMod = useCallback(
@@ -139,14 +131,7 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 				// Create a new node object
 				const newNode:NodeType = {
 					id: newId,
-					type:
-						data.type === "str"
-							? "inputNode"
-							: data.type === "chatOutput"
-							? "chatOutputNode"
-							: data.type === "bool"
-							? "booleanNode"
-							: "genericNode",
+					type: "genericNode",
 					position,
 					data: {
 						...data,
