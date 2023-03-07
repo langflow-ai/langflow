@@ -12,7 +12,7 @@ import { alertContext } from "../../../../contexts/alertContext";
 export default function TabsManagerComponent() {
 	const { flows, addFlow, tabIndex, setTabIndex } = useContext(TabsContext);
 	const { openPopUp } = useContext(PopUpContext);
-	const AlertWidth = 224
+	const AlertWidth = 256
 	const { dark, setDark } = useContext(darkContext);
 	const {notificationCenter, setNotificationCenter} = useContext(alertContext)
 	useEffect(() => {

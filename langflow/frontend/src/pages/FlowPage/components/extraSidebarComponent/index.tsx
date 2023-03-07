@@ -71,9 +71,9 @@ export default function ExtraSidebar() {
                     })
                   }
                 >
-                  <div className="flex w-full justify-between text-sm px-4 py-3 items-center border-dashed border-gray-400 dark:border-gray-600 border-l-0 rounded-md rounded-l-none border-2">
-                    <span className="text-black dark:text-white w-36 truncate">{t}</span>
-                    <Bars2Icon className="w-6 h-6 text-gray-400 dark:text-gray-600" />
+                  <div className="flex w-full justify-between text-sm px-3 py-1 items-center border-dashed border-gray-400 dark:border-gray-600 border-l-0 rounded-md rounded-l-none border">
+                    <span className="text-black dark:text-white w-36 truncate text-xs">{t}</span>
+                    <Bars2Icon className="w-4 h-6  text-gray-400 dark:text-gray-600" />
                   </div>
                 </div>
               </div>

@@ -95,7 +95,8 @@ useEffect(() => {
 					</div>
 				</main>
 			</div>
-			<div className="flex z-50 flex-col-reverse fixed bottom-5 left-5">
+			<div></div>
+			<div className="flex z-40 flex-col-reverse fixed bottom-5 left-5">
 				{alertsList.map((alert) => (
 					<div key={alert.id}>
 						{alert.type === "error" ? (
@@ -125,6 +126,7 @@ useEffect(() => {
 					</div>
 				))}
 			</div>
+			<a target={"_blank"} href="https://logspace.ai/" className="absolute bottom-1 left-1 text-gray-500 text-xs cursor-pointer font-sans tracking-wide">Created by Logspace</a>
 		</div>
 	);
 }

@@ -60,7 +60,7 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 		setNodes(flow?.data?.nodes ?? []);
 		setEdges(flow?.data?.edges ?? []);
 		if (reactFlowInstance) {
-			setViewport(flow?.data?.viewport ?? { x: 1, y: 0, zoom: 1 });
+			setViewport(flow?.data?.viewport ?? { x: 1, y: 0, zoom: 0.5 });
 		}
 	}, [flow, reactFlowInstance, setEdges, setNodes, setViewport]);
 	//set extra sidebar
