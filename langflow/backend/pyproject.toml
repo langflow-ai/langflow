@@ -1,15 +1,15 @@
 [tool.poetry]
-name = "langflow"
+name = "langflow-backend"
 version = "0.0.21"
 description = "Backend for Langflow"
-authors = ["Ibis Prevedello <ibiscp@gmail.com>"]
-# packages = [
-#     { include = "*.py" }
-# ]
-# exclude = ['dev.py']
+authors = ["Ibis Prevedello <ibiscp@gmail.com>", "Gabriel Almeida <gabrielf.almeida90@gmail.com>"]
+packages = [
+    { include = "src" }
+]
+
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.9"
 openai = "^0.26.5"
 fastapi = "^0.91.0"
 uvicorn = "^0.20.0"
