@@ -6,8 +6,8 @@ from langchain import prompts
 from langchain import llms
 from langchain.chains.conversation import memory as memories
 from langchain.agents.load_tools import get_all_tool_names
-from utils import util, allowed_components
-from custom import customs
+from langflow_backend.utils import util, allowed_components
+from langflow_backend.custom import customs
 
 
 # build router
