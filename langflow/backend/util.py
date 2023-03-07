@@ -263,12 +263,11 @@ def format_dict(d):
 
         # Show if required
         value["show"] = bool(
-            (value["required"] and key not in ["input_variables", "verbose"])
+            (value["required"] and key not in ["input_variables"])
             or key
             in [
                 "allowed_tools",
-                "verbose",
-                "Memory",
+                # "Memory",
                 "memory",
                 "prefix",
                 "examples",
