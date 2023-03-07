@@ -113,8 +113,8 @@ def get_default_factory(module: str, function: str):
     pattern = r"<function (\w+)>"
 
     if match := re.search(pattern, function):
-        module = importlib.import_module(module)
-        return getattr(module, match[1])()
+        imported_module = importlib.import_module(module)
+        return getattr(imported_module, match[1])()
     return None
 
 

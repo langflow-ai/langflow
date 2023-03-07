@@ -1,3 +1,4 @@
+from typing import Any, Dict
 from fastapi import APIRouter, HTTPException
 from langchain import agents, chains, llms, prompts
 from langchain.agents.load_tools import (
@@ -131,11 +132,13 @@ def get_tool(name: str):
     elif tool_type in _EXTRA_OPTIONAL_TOOLS:
         _, extra_keys = _EXTRA_OPTIONAL_TOOLS[tool_type]
         params = extra_keys
+    else:
+        params = []
 
     template = {
         param: (type_dict[param] if param == "llm" else type_dict["str"])
         for param in params
-    }
+    }  # type: Dict[str, Any]
     template["_type"] = tool_type
 
     return {
