@@ -52,14 +52,7 @@ COPY ./langflow ./langflow
 # Copy files from frontend
 COPY --from=frontend_build /app/build /app/langflow/frontend/build/
 
-
-
-# RUN pip install langflow-0.0.17-py3-none-any.whl
 RUN pip install .
-# RUN poetry add dist/langflow-0.0.17-py3-none-any.whl
-# RUN rm *.whl
-
-# RUN poetry build
 
 EXPOSE 5003
 
