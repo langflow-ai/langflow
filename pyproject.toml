@@ -4,7 +4,8 @@ version = "0.0.1"
 description = "A Python package with a built-in web application"
 authors = ["Ibis Prevedello <ibiscp@gmail.com>", "Gabriel Almeida <gabrielf.almeida90@gmail.com>","Otávio Anovazzi <otavio2204@gmail.com>"]
 packages = [
-    { include = "langflow"}
+    { include = "langflow"},
+    { include = "langflow_backend", from = "langflow/backend"},
 ]
 include = ["langflow/frontend/build/*", "langflow/frontend/build/**/*"]
 exclude = ["langflow/frontend/node_modules/*", "langflow/frontend/src/*"]
@@ -23,5 +24,4 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.dependencies]
 python = "^3.9"
-langflow_backend = {path = "langflow/backend"}
 typer = "^0.7.0"
