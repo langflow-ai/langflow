@@ -62,18 +62,6 @@ def get_llm(name: str):
         raise HTTPException(status_code=404, detail="LLM not found") from exc
 
 
-# @router.get("/utility")
-# def utility(name: str):
-#     # Raise error if name is not in utilities
-#     if name not in utilities.__all__:
-#         raise Exception(f"Prompt {name} not found.")
-#     _class = getattr(utilities, name)
-#     return {
-#         name: {name: value for (name, value) in value.__repr_args__() if name != "name"}
-#         for name, value in _class.__fields__.items()
-#     }
-
-
 @router.get("/memory")
 def get_memory(name: str):
     """Get the signature of a memory."""
@@ -81,18 +69,6 @@ def get_memory(name: str):
         return util.build_template_from_class(name, memories.type_to_cls_dict)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail="Memory not found") from exc
-
-
-# @router.get("/document_loader")
-# def document_loader(name: str):
-#     # Raise error if name is not in document_loader
-#     if name not in document_loaders.__all__:
-#         raise Exception(f"Prompt {name} not found.")
-#     _class = getattr(document_loaders, name)
-#     return {
-#         name: {name: value for (name, value) in value.__repr_args__() if name != "name"}
-#         for name, value in _class.__fields__.items()
-#     }
 
 
 @router.get("/tool")

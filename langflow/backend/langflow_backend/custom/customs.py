@@ -2,6 +2,8 @@ from langchain.agents.mrkl import prompt
 
 
 def get_custom_prompts():
+    """Get custom prompts."""
+    
     return {
         "ZeroShotPrompt": {
             "template": {

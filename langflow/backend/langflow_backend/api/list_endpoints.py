@@ -25,11 +25,6 @@ def read_items():
         "agents",
         "prompts",
         "llms",
-        # "utilities",
-        # "memories",
-        # "document_loaders",
-        # "vectorstores",
-        # "docstores",
         "tools",
     ]
 
@@ -83,30 +78,6 @@ def list_memories():
     return [memory.__name__ for memory in memories.type_to_cls_dict.values()]
 
 
-# @router.get("/utilities")
-# def list_utilities():
-#     """List all utility types"""
-#     return list(utilities.__all__)
-
-
-# @router.get("/document_loaders")
-# def list_document_loaders():
-#     """List all document loader types"""
-#     return list(document_loaders.__all__)
-
-
-# @router.get("/vectorstores")
-# def list_vectorstores():
-#     """List all vector store types"""
-#     return list(vectorstores.__all__)
-
-
-# @router.get("/docstores")
-# def list_docstores():
-#     """List all document store types"""
-#     return list(docstore.__all__)
-
-
 @router.get("/tools")
 def list_tools():
     """List all load tools"""
@@ -119,8 +90,3 @@ def list_tools():
             tools.append(tool_params["name"])
 
     return tools
-
-    # return [
-    #     util.get_tool_params(util.get_tools_dict(tool))["name"]
-    #     for tool in get_all_tool_names()
-    # ]
