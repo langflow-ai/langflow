@@ -113,8 +113,8 @@ def get_default_factory(module: str, function: str):
     pattern = r"<function (\w+)>"
 
     if match := re.search(pattern, function):
-        module = importlib.import_module(module)
-        return getattr(module, match[1])()
+        imported_module = importlib.import_module(module)
+        return getattr(imported_module, match[1])()
     return None
 
 
@@ -235,10 +235,13 @@ def format_dict(d):
 
     # Process remaining keys
     for key, value in d.items():
-        if key == "examples":
-            pass
         if key == "_type":
             continue
+
+        # Set verbose to True
+        if key == "verbose":
+            value["default"] = True
+
         _type = value["type"]
 
         # Remove 'Optional' wrapper
@@ -264,8 +267,7 @@ def format_dict(d):
             or key
             in [
                 "allowed_tools",
-                "verbose",
-                "Memory",
+                # "Memory",
                 "memory",
                 "prefix",
                 "examples",
