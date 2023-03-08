@@ -4,6 +4,7 @@ export type InputComponentType = {
 	value: string;
 	disabled?: boolean;
 	onChange: (value: string) => void;
+	password: boolean;
 };
 export type ToggleComponentType = {
 	enabled: boolean;

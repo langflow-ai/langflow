@@ -101,6 +101,7 @@ export default function ParameterComponent({
 						) : (
 							<InputComponent
 								disabled={disabled}
+								password={data.node.template[name].password ?? true}
 								value={data.node.template[name].value ?? ""}
 								onChange={(t) => {
 									data.node.template[name].value = t;
