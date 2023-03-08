@@ -42,27 +42,6 @@ def get_all():
             for prompt in list_endpoints.list_prompts()
         },
         "llms": {llm: signature.get_llm(llm) for llm in list_endpoints.list_llms()},
-        # "utilities": {
-        #     "template": {
-        #         # utility: templates.utility(utility) for utility in list.list_utilities()
-        #     }
-        # },
-        # "memories": {
-        #     memory: signature.get_memory(memory)
-        #     for memory in list_endpoints.list_memories()
-        # },
-        # "document_loaders": {
-        #     "template": {
-        #         # memory: templates.document_loader(memory)
-        #         # for memory in list.list_document_loaders()
-        #     }
-        # },
-        # "vectorstores": {"template": {}},
-        # "docstores": {"template": {}},
-        # "tools": {
-        #     tool: {"template": signature.tool(tool), **values}
-        #     for tool, values in tools.items()
-        # },
         "tools": {
             tool: signature.get_tool(tool) for tool in list_endpoints.list_tools()
         },
