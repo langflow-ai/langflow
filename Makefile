@@ -21,7 +21,7 @@ build_frontend:
 build:
 	make install_frontend
 	make build_frontend
-	poetry build
+	poetry build --format sdist
 
 help:
 	@echo '----'
