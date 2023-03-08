@@ -10,8 +10,6 @@ packages = [
 include = ["langflow/frontend/build/*", "langflow/frontend/build/**/*"]
 exclude = ["langflow/frontend/node_modules/*", "langflow/frontend/src/*"]
 
-[tool.poetry.scripts]
-langflow = "langflow.cli:main"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.0.254"
@@ -25,3 +23,4 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.dependencies]
 python = "^3.9"
 typer = "^0.7.0"
+gunicorn = "^20.1.0"
