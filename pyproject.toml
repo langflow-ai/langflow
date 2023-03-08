@@ -2,7 +2,7 @@
 name = "langflow"
 version = "0.0.1"
 description = "A Python package with a built-in web application"
-authors = ["Ibis Prevedello <ibiscp@gmail.com>"]
+authors = ["Ibis Prevedello <ibiscp@gmail.com>", "Gabriel Almeida <gabrielf.almeida90@gmail.com>","Otávio Anovazzi <otavio2204@gmail.com>"]
 packages = [
     { include = "langflow"}
 ]
@@ -23,11 +23,5 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.dependencies]
 python = "^3.9"
-openai = "^0.26.5"
-fastapi = "^0.91.0"
-uvicorn = "^0.20.0"
-beautifulsoup4 = "^4.11.2"
-google-search-results = "^2.4.1"
-google-api-python-client = "^2.79.0"
-langchain = {git = "https://github.com/ibiscp/langchain.git", rev = "ibis"}
+langflow_backend = {path = "langflow/backend"}
 typer = "^0.7.0"
