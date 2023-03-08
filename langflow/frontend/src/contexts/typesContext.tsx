@@ -21,6 +21,7 @@ export function TypesProvider({ children }:{children:ReactNode}) {
 		reactFlowInstance.setNodes(
 			reactFlowInstance.getNodes().filter((n:Node) => n.id !== idx)
 		);
+		reactFlowInstance.setEdges(reactFlowInstance.getEdges().filter((ns) => ns.source !== idx && ns.target !== idx));
 	}
 	return (
 		<typesContext.Provider
