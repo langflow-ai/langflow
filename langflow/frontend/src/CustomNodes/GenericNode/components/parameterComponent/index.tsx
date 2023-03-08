@@ -52,6 +52,9 @@ export default function ParameterComponent({
 					{title}
 					<span className="text-red-600">{required ? " *" : ""}</span>
 				</div>
+				{left && (type === "str" || type === "bool" || type === "float") ?
+				<></>
+				:
 				<Tooltip title={tooltipTitle + (required ? " (required)" : "")}>
 					<Handle
 						type={left ? "target" : "source"}
@@ -62,10 +65,7 @@ export default function ParameterComponent({
 						}
 						className={classNames(
 							left ? "-ml-0.5 " : "-mr-0.5 ",
-							"w-3 h-3 rounded-full border-2 bg-white dark:bg-gray-800",
-							left && (type === "str" || type === "bool" || type === "float")
-								? "hidden"
-								: ""
+							"w-3 h-3 rounded-full border-2 bg-white dark:bg-gray-800"
 						)}
 						style={{
 							borderColor: color,
@@ -73,6 +73,8 @@ export default function ParameterComponent({
 						}}
 					></Handle>
 				</Tooltip>
+				}
+				
 				{left === true && type === "str" ? (
 					<div className="mt-2 w-full">
 						{data.node.template[name].list ? (
