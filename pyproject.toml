@@ -12,12 +12,17 @@ exclude = ["langflow/frontend/node_modules/*", "langflow/frontend/src/*"]
 [tool.poetry.scripts]
 langflow = "langflow.cli:main"
 
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.0.254"
+black = "^23.1.0"
+mypy = "^1.1.1"
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.9"
 openai = "^0.26.5"
 fastapi = "^0.91.0"
 uvicorn = "^0.20.0"

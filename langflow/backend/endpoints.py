@@ -47,10 +47,10 @@ def get_all():
         #         # utility: templates.utility(utility) for utility in list.list_utilities()
         #     }
         # },
-        "memories": {
-            memory: signature.get_memory(memory)
-            for memory in list_endpoints.list_memories()
-        },
+        # "memories": {
+        #     memory: signature.get_memory(memory)
+        #     for memory in list_endpoints.list_memories()
+        # },
         # "document_loaders": {
         #     "template": {
         #         # memory: templates.document_loader(memory)
@@ -122,6 +122,10 @@ def get_load(data: dict[str, Any]):
     else:
         result = "Error: Type should be either agent, chain or llm"
         thought = ""
+
+    # Remove unnecessary data from response
+    begin = thought.rfind(message)
+    thought = thought[(begin + len(message)) :]
 
     return {
         "result": result,
