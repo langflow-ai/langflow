@@ -11,6 +11,7 @@ def serve(
     workers: int = None,
     timeout: int = None,
 ):
+    app = create_app()
     # get the directory of the current file
     path = Path(__file__).parent
     static_files_dir = path / "frontend/build"
@@ -39,5 +40,4 @@ def main():
 
 
 if __name__ == "__main__":
-    app = create_app()
     main()
