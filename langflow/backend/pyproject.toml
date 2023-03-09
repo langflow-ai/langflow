@@ -1,12 +1,11 @@
 [tool.poetry]
 name = "langflow-backend"
-version = "0.0.21"
+version = "0.0.22"
 description = "Backend for Langflow"
 authors = ["Ibis Prevedello <ibiscp@gmail.com>", "Gabriel Almeida <gabrielf.almeida90@gmail.com>"]
 packages = [
     { include = "langflow_backend" },
 ]
-
 
 [tool.poetry.dependencies]
 python = "^3.9"
