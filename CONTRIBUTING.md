@@ -16,8 +16,7 @@ with bugs, improvements, and feature requests. There is a taxonomy of labels to 
 with sorting and discovery of issues of interest.
 
 If you're looking for help with your code, consider posting a question on the
-[GitHub Discussions board](https://github.com/logspace-ai/langflow/discussions) or
-[Stack Overflow](http://stackoverflow.com/questions/). Please
+[GitHub Discussions board](https://github.com/logspace-ai/langflow/discussions). Please
 understand that we won't be able to provide individual support via email. We
 also believe that help is much more valuable if it's **shared publicly**,
 so that more people can benefit from it.
