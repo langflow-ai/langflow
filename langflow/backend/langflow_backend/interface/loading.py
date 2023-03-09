@@ -12,11 +12,20 @@ def load_flow_from_json(path: str):
     with open(path, "r") as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]
-    edges = data_graph["edges"]
-    nodes = replace_zero_shot_prompt_with_prompt_template(data_graph["nodes"])
-    root = payload.get_root_node(data_graph)
-    extracted_json = payload.build_json(root, nodes, edges)
+    extracted_json = extract_json(data_graph)
     return load_langchain_type_from_config(config=extracted_json)
+
+
+def extract_json(data_graph):
+    nodes = data_graph["nodes"]
+    # Substitute ZeroShotPrompt with PromptTemplate
+    nodes = replace_zero_shot_prompt_with_prompt_template(nodes)
+    # Add input variables
+    nodes = payload.extract_input_variables(nodes)
+    # Nodes, edges and root node
+    edges = data_graph["edges"]
+    root = payload.get_root_node(nodes, edges)
+    return payload.build_json(root, nodes, edges)
 
 
 def replace_zero_shot_prompt_with_prompt_template(nodes):
@@ -40,9 +49,9 @@ def load_langchain_type_from_config(config: Dict[str, Any]):
     # Get type list
     type_list = get_type_list()
     if config["_type"] in type_list["agents"]:
-        return load_agent_executor_from_config(config).run
+        return load_agent_executor_from_config(config)
     elif config["_type"] in type_list["chains"]:
-        return load_chain_from_config(config).run
+        return load_chain_from_config(config)
     elif config["_type"] in type_list["llms"]:
         return load_llm_from_config(config)
     else:
