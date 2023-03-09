@@ -283,7 +283,7 @@ def format_dict(d, name: Optional[str] = None):
                 "temperature",
                 "model_name",
             ]
-            or any(text in key for text in ["password", "token", "api", "key"])
+            or "api_key" in key
         )
 
         # Add password field
