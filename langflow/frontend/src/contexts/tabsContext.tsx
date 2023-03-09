@@ -1,6 +1,7 @@
 import { createContext, useEffect, useState, useRef, ReactNode } from "react";
 import { FlowType } from "../types/flow";
 import { TabsContextType } from "../types/tabs";
+import { normalCaseToSnakeCase } from "../utils";
 
 const TabsContextInitialValue: TabsContextType = {
 	tabIndex: 0,
@@ -61,7 +62,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		// create a link element and set its properties
 		const link = document.createElement("a");
 		link.href = jsonString;
-		link.download = `${flows[tabIndex].name}.json`;
+		link.download = `${normalCaseToSnakeCase(flows[tabIndex].name)}.json`;
 
 		// simulate a click on the link element to trigger the download
 		link.click();
@@ -124,7 +125,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
 		// Create a new flow with a default name if no flow is provided.
 		let newFlow: FlowType = {
-			name: flow ? flow.name : "flow" + id,
+			name: flow ? flow.name : "New Flow " + id,
 			id: id.toString(),
 			data,
 			chat: flow ? flow.chat : [],

@@ -5,7 +5,7 @@ import {
 	PaperAirplaneIcon,
 	XMarkIcon,
 } from "@heroicons/react/24/outline";
-import { useContext, useEffect, useRef, useState } from "react";
+import { MouseEventHandler, useContext, useEffect, useRef, useState } from "react";
 import { sendAll } from "../../controllers/NodesServices";
 import { alertContext } from "../../contexts/alertContext";
 import { classNames, nodeColors } from "../../utils";
@@ -89,7 +89,7 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 				sendAll({ ...reactFlowInstance.toObject(), message, chatHistory })
 					.then((r) => {
 						console.log(r.data);
-						addChatHistory(r.data.result, false,r.data.thought);
+						addChatHistory(r.data.result, false, r.data.thought);
 						setLockChat(false);
 					})
 					.catch((error) => {
@@ -108,6 +108,10 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 				list: ["The message cannot be empty."],
 			});
 		}
+	}
+	function clearChat() {
+		setChatHistory([])
+		updateFlow({ ..._.cloneDeep(flow), chat: []});
 	}
 
 	return (
@@ -137,10 +141,18 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 								/>
 								Chat
 							</div>
+							<button className="hover:text-blue-500"
+								onClick={(e) => {
+									e.stopPropagation()
+									clearChat();
+								}}
+							>
+								clear
+							</button>
 						</div>
 						<div className="w-full h-[400px] flex gap-3 mb-auto overflow-y-auto scrollbar-hide flex-col bg-gray-50 dark:bg-gray-900 p-3 py-5">
 							{chatHistory.map((c, i) => (
-                  <ChatMessage chat={c} key={i}/>
+								<ChatMessage chat={c} key={i} />
 							))}
 							<div ref={ref}></div>
 						</div>
@@ -154,7 +166,7 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 									}}
 									type="text"
 									disabled={lockChat}
-									value={lockChat?"Thinking...": chatValue}
+									value={lockChat ? "Thinking..." : chatValue}
 									onChange={(e) => {
 										setChatValue(e.target.value);
 									}}

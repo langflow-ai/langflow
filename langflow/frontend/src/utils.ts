@@ -286,6 +286,18 @@ export function snakeToNormalCase(str: string) {
     .join(" ");
 }
 
+export function normalCaseToSnakeCase(str:string){
+  return str
+  .split(" ")
+  .map((word, index) => {
+    if (index === 0) {
+      return word[0].toUpperCase() + word.slice(1).toLowerCase();
+    }
+    return word.toLowerCase();
+  })
+  .join("_");
+}
+
 export function roundNumber(x:number, decimals:number) {
   return Math.round(x * Math.pow(10, decimals)) / Math.pow(10, decimals);
 }
@@ -303,7 +315,6 @@ export function isValidConnection(
   { source, target, sourceHandle, targetHandle }:Connection,
   reactFlowInstance:ReactFlowInstance
 ) {
-  console.log(target)
   if (
     sourceHandle.split('|')[0] === targetHandle.split("|")[0] ||
     sourceHandle.split('|').slice(2).some((t) => t === targetHandle.split("|")[0]) ||
