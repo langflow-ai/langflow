@@ -1,3 +1,4 @@
+import contextlib
 import re
 
 
@@ -6,7 +7,7 @@ def extract_input_variables(data):
     Extracts input variables from the template and adds them to the input_variables field.
     """
     for node in data["nodes"]:
-        try:
+        with contextlib.suppress(Exception):
             if "input_variables" in node["data"]["node"]["template"]:
                 if node["data"]["node"]["template"]["_type"] == "prompt":
                     variables = re.findall(
@@ -22,8 +23,6 @@ def extract_input_variables(data):
                 else:
                     variables = []
                 node["data"]["node"]["template"]["input_variables"]["value"] = variables
-        except:
-            pass
     return data
 
 
@@ -31,16 +30,16 @@ def get_root_node(data):
     """
     Returns the root node of the template.
     """
-    root = None
     incoming_edges = {edge["source"] for edge in data["edges"]}
-    for node in data["nodes"]:
-        if node["id"] not in incoming_edges:
-            root = node
-            break
-    return root
+    return next(
+        (node for node in data["nodes"] if node["id"] not in incoming_edges), None
+    )
 
 
 def build_json(root, nodes, edges):
+    """
+    Builds a json from the nodes and edges
+    """
     edge_ids = [edge["source"] for edge in edges if edge["target"] == root["id"]]
     local_nodes = [node for node in nodes if node["id"] in edge_ids]
 
@@ -71,9 +70,7 @@ def build_json(root, nodes, edges):
 
             if value["required"] and not children:
                 raise ValueError(f"No child with type {module_type} found")
-            values = [
-                build_json(child, nodes, edges) for child in children
-            ]
+            values = [build_json(child, nodes, edges) for child in children]
             value = list(values) if value["list"] else next(iter(values), None)
         final_dict[key] = value
     return final_dict

@@ -11,6 +11,7 @@ from langflow_backend.utils import payload
 
 
 def load_flow_from_json(path: str):
+    """Load flow from json file"""
     with open(path, "r") as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]
@@ -22,6 +23,7 @@ def load_flow_from_json(path: str):
 
 
 def replace_zero_shot_prompt_with_prompt_template(nodes):
+    """Replace ZeroShotPrompt with PromptTemplate"""
     for node in nodes:
         if node["data"]["type"] == "ZeroShotPrompt":
             # Build Prompt Template
@@ -37,6 +39,8 @@ def replace_zero_shot_prompt_with_prompt_template(nodes):
 
 
 def process_data_graph(data_graph: Dict[str, Any]):
+    """Process data graph by extracting input variables and replacing ZeroShotPrompt with PromptTemplate,
+    then run the graph and return the result and thought."""
     nodes = data_graph["nodes"]
     # Substitute ZeroShotPrompt with PromptTemplate
     nodes = replace_zero_shot_prompt_with_prompt_template(nodes)
@@ -64,6 +68,7 @@ def process_data_graph(data_graph: Dict[str, Any]):
 
 
 def load_langchain_type_from_config(config: Dict[str, Any]):
+    """Load langchain type from config"""
     # Get type list
     type_list = get_type_list()
     if config["_type"] in type_list["agents"]:
@@ -77,6 +82,7 @@ def load_langchain_type_from_config(config: Dict[str, Any]):
 
 
 def get_result_and_thought(extracted_json: Dict[str, Any], message: str):
+    """Get result and thought from extracted json"""
     # Get type list
     try:
         loaded = load_langchain_type_from_config(config=extracted_json)
@@ -90,6 +96,7 @@ def get_result_and_thought(extracted_json: Dict[str, Any], message: str):
 
 
 def build_prompt_template(prompt, tools):
+    """Build PromptTemplate from ZeroShotPrompt"""
     prefix = prompt["node"]["template"]["prefix"]["value"]
     suffix = prompt["node"]["template"]["suffix"]["value"]
     format_instructions = prompt["node"]["template"]["format_instructions"]["value"]
