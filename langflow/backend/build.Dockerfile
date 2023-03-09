@@ -43,12 +43,10 @@ RUN curl -sSL https://install.python-poetry.org | python3 -
 # copy project requirement files here to ensure they will be cached.
 WORKDIR /app
 COPY poetry.lock pyproject.toml ./
+COPY langflow_backend/ ./langflow_backend
 
-# install runtime deps - uses $POETRY_VIRTUALENVS_IN_PROJECT internally
+# poetry install
 RUN poetry install --without dev
-RUN poetry add "git+https://github.com/ibiscp/langchain.git#ibis"
 
-COPY *.py langflow/backend/
-RUN rm langflow/backend/dev.py
-
+# build wheel
 RUN poetry build -f wheel

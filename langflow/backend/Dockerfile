@@ -6,7 +6,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install git -y
 
 COPY --from=backend_build /app/dist/*.whl /app/
-RUN pip install langflow-*.whl
+RUN pip install langflow_backend-*.whl
 RUN rm *.whl
 
 EXPOSE 80
