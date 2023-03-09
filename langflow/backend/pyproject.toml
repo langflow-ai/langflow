@@ -20,6 +20,8 @@ langchain = {git = "https://github.com/ibiscp/langchain.git", rev = "ibis"}
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
 ipykernel = "^6.21.2"
+mypy = "^1.1.1"
+ruff = "^0.0.254"
 
 [build-system]
 requires = ["poetry-core"]
