@@ -35,9 +35,6 @@ def replace_zero_shot_prompt_with_prompt_template(nodes):
     return nodes
 
 
-
-
-
 def load_langchain_type_from_config(config: Dict[str, Any]):
     """Load langchain type from config"""
     # Get type list
@@ -50,9 +47,6 @@ def load_langchain_type_from_config(config: Dict[str, Any]):
         return load_llm_from_config(config)
     else:
         raise ValueError("Type should be either agent, chain or llm")
-
-
-
 
 
 def build_prompt_template(prompt, tools):

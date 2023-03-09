@@ -4,7 +4,8 @@ import re
 
 def extract_input_variables(data):
     """
-    Extracts input variables from the template and adds them to the input_variables field.
+    Extracts input variables from the template
+    and adds them to the input_variables field.
     """
     for node in data["nodes"]:
         with contextlib.suppress(Exception):
@@ -59,7 +60,6 @@ def build_json(root, nodes, edges):
         elif "dict" in module_type:
             value = {}
         else:
-
             children = []
             for c in local_nodes:
                 module_types = [c["data"]["type"]]
