@@ -1,7 +1,8 @@
-import { createContext, useEffect, useState, useRef, ReactNode } from "react";
+import { createContext, useEffect, useState, useRef, ReactNode, useContext } from "react";
 import { FlowType } from "../types/flow";
 import { TabsContextType } from "../types/tabs";
 import { normalCaseToSnakeCase } from "../utils";
+import { alertContext } from "./alertContext";
 
 const TabsContextInitialValue: TabsContextType = {
 	tabIndex: 0,
@@ -20,6 +21,7 @@ export const TabsContext = createContext<TabsContextType>(
 );
 
 export function TabsProvider({ children }: { children: ReactNode }) {
+	const {setNoticeData} = useContext(alertContext)
 	const [tabIndex, setTabIndex] = useState(0);
 	const [flows, setFlows] = useState<Array<FlowType>>([]);
 	const [id, setId] = useState(0);
@@ -66,6 +68,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
 		// simulate a click on the link element to trigger the download
 		link.click();
+		setNoticeData({title:"Warning: Critical data, including API keys, in JSON file. Keep secure and do not share."})
 	}
 
 	/**
