@@ -29,27 +29,31 @@ def build_template_from_function(name: str, type_to_loader_dict: dict):
             docs = get_class_doc(_class)
 
             variables = {"_type": _type}
-            for name, value in _class.__fields__.items():
-                if name in ["callback_manager", "requests_wrapper"]:
+            for class_field_items, value in _class.__fields__.items():
+                if class_field_items in ["callback_manager", "requests_wrapper"]:
                     continue
-                variables[name] = {}
+                variables[class_field_items] = {}
                 for name_, value_ in value.__repr_args__():
                     if name_ == "default_factory":
                         try:
-                            variables[name]["default"] = get_default_factory(
+                            variables[class_field_items][
+                                "default"
+                            ] = get_default_factory(
                                 module=_class.__base__.__module__, function=value_
                             )
                         except Exception:
-                            variables[name]["default"] = None
+                            variables[class_field_items]["default"] = None
                     elif name_ not in ["name"]:
-                        variables[name][name_] = value_
+                        variables[class_field_items][name_] = value_
 
-                variables[name]["placeholder"] = (
-                    docs["Attributes"][name] if name in docs["Attributes"] else ""
+                variables[class_field_items]["placeholder"] = (
+                    docs["Attributes"][class_field_items]
+                    if class_field_items in docs["Attributes"]
+                    else ""
                 )
 
             return {
-                "template": format_dict(variables),
+                "template": format_dict(variables, name),
                 "description": docs["Description"],
                 "base_classes": get_base_classes(_class),
             }
@@ -69,27 +73,31 @@ def build_template_from_class(name: str, type_to_cls_dict: dict):
             docs = get_class_doc(_class)
 
             variables = {"_type": _type}
-            for name, value in _class.__fields__.items():
-                if name in ["callback_manager"]:
+            for class_field_items, value in _class.__fields__.items():
+                if class_field_items in ["callback_manager"]:
                     continue
-                variables[name] = {}
+                variables[class_field_items] = {}
                 for name_, value_ in value.__repr_args__():
                     if name_ == "default_factory":
                         try:
-                            variables[name]["default"] = get_default_factory(
+                            variables[class_field_items][
+                                "default"
+                            ] = get_default_factory(
                                 module=_class.__base__.__module__, function=value_
                             )
                         except Exception:
-                            variables[name]["default"] = None
+                            variables[class_field_items]["default"] = None
                     elif name_ not in ["name"]:
-                        variables[name][name_] = value_
+                        variables[class_field_items][name_] = value_
 
-                variables[name]["placeholder"] = (
-                    docs["Attributes"][name] if name in docs["Attributes"] else ""
+                variables[class_field_items]["placeholder"] = (
+                    docs["Attributes"][class_field_items]
+                    if class_field_items in docs["Attributes"]
+                    else ""
                 )
 
             return {
-                "template": format_dict(variables),
+                "template": format_dict(variables, name),
                 "description": docs["Description"],
                 "base_classes": get_base_classes(_class),
             }
@@ -221,13 +229,14 @@ def get_class_doc(class_name):
     return data
 
 
-def format_dict(d):
+def format_dict(d, name: Optional[str] = None):
     """
     Formats a dictionary by removing certain keys and modifying the
     values of other keys.
 
     Args:
         d: the dictionary to format
+        name: the name of the class to format
 
     Returns:
         A new dictionary with the desired modifications applied.
@@ -272,12 +281,15 @@ def format_dict(d):
                 "prefix",
                 "examples",
                 "temperature",
+                "model_name",
             ]
             or any(text in key for text in ["password", "token", "api", "key"])
         )
 
         # Add password field
-        value["password"] = any(text in key for text in ["password", "token", "api", "key"])
+        value["password"] = any(
+            text in key for text in ["password", "token", "api", "key"]
+        )
 
         # Add multline
         value["multiline"] = key in ["suffix", "prefix", "template", "examples"]
@@ -286,5 +298,9 @@ def format_dict(d):
         if "default" in value:
             value["value"] = value["default"]
             value.pop("default")
+
+        # Add options to openai
+        if name == "OpenAI" and key == "model_name":
+            value["options"] = ["gpt-3.5-turbo", "text-davinci-003", "text-davinci-002"]
 
     return d
