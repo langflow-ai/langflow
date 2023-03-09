@@ -1,4 +1,5 @@
 import contextlib
+import json
 import re
 import io
 from typing import Any, Dict
@@ -7,6 +8,17 @@ from langchain.agents.loading import load_agent_executor_from_config
 from langchain.chains.loading import load_chain_from_config
 from langchain.llms.loading import load_llm_from_config
 from langflow_backend.utils import payload
+
+
+def load_flow_from_json(path: str):
+    with open(path, "r") as f:
+        flow_graph = json.load(f)
+    data_graph = flow_graph["data"]
+    edges = data_graph["edges"]
+    nodes = replace_zero_shot_prompt_with_prompt_template(data_graph["nodes"])
+    root = payload.get_root_node(data_graph)
+    extracted_json = payload.build_json(root, nodes, edges)
+    return load_langchain_type_from_config(config=extracted_json)
 
 
 def replace_zero_shot_prompt_with_prompt_template(nodes):
@@ -51,31 +63,28 @@ def process_data_graph(data_graph: Dict[str, Any]):
     }
 
 
-def get_result_and_thought(extracted_json: Dict[str, Any], message: str):
+def load_langchain_type_from_config(config: Dict[str, Any]):
     # Get type list
     type_list = get_type_list()
-    if extracted_json["_type"] in type_list["agents"]:
-        loaded = load_agent_executor_from_config(extracted_json)
+    if config["_type"] in type_list["agents"]:
+        return load_agent_executor_from_config(config)
+    elif config["_type"] in type_list["chains"]:
+        return load_chain_from_config(config)
+    elif config["_type"] in type_list["llms"]:
+        return load_llm_from_config(config)
+    else:
+        raise ValueError("Type should be either agent, chain or llm")
 
-        with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
-            result = loaded.run(message)
-            thought = output_buffer.getvalue()
 
-    elif extracted_json["_type"] in type_list["chains"]:
-        loaded = load_chain_from_config(extracted_json)
-
-        with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
-            result = loaded.run(message)
-            thought = output_buffer.getvalue()
-
-    elif extracted_json["_type"] in type_list["llms"]:
-        loaded = load_llm_from_config(extracted_json)
-
+def get_result_and_thought(extracted_json: Dict[str, Any], message: str):
+    # Get type list
+    try:
+        loaded = load_langchain_type_from_config(config=extracted_json)
         with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
             result = loaded(message)
             thought = output_buffer.getvalue()
-    else:
-        result = "Error: Type should be either agent, chain or llm"
+    except Exception as e:
+        result = f"Error: {str(e)}"
         thought = ""
     return result, thought
 
