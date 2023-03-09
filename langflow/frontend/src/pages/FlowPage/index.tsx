@@ -153,7 +153,11 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 		// Specify dependencies for useCallback
 		[incrementNodeId, reactFlowInstance, setErrorData, setNodes]
 	);
+
 	
+	const onDelete = (mynodes) => {
+		setEdges(edges.filter((ns) => !nodes.some((n) => ns.source === n.id || ns.target === n.id)));
+	}
 
 	return (
 		<div className="w-full h-full" ref={reactFlowWrapper}>
@@ -174,6 +178,7 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 						connectionLineComponent={ConnectionLineComponent}
 						onDragOver={onDragOver}
 						onDrop={onDrop}
+						onNodesDelete={onDelete}
 					>
 						<Background className="dark:bg-gray-900"/>
 						<Controls className="[&>button]:text-black  [&>button]:dark:bg-gray-800 hover:[&>button]:dark:bg-gray-700 [&>button]:dark:text-gray-400 [&>button]:dark:fill-gray-400 [&>button]:dark:border-gray-600">
