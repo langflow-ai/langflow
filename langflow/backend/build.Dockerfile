@@ -51,4 +51,4 @@ RUN poetry add "git+https://github.com/ibiscp/langchain.git#ibis"
 COPY *.py langflow/backend/
 RUN rm langflow/backend/dev.py
 
-RUN poetry build
+RUN poetry build -f wheel

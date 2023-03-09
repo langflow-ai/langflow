@@ -259,33 +259,32 @@ def format_dict(d):
         if "Mapping" in _type:
             _type = _type.replace("Mapping", "dict")
 
+        # Change type from str to Tool
         value["type"] = "Tool" if key == "allowed_tools" else _type
 
-        # Show if required
+        # Show or not field
         value["show"] = bool(
             (value["required"] and key not in ["input_variables"])
             or key
             in [
                 "allowed_tools",
-                # "Memory",
                 "memory",
                 "prefix",
                 "examples",
                 "temperature",
             ]
-            or "api_key" in key
+            or any(text in key for text in ["password", "token", "api", "key"])
         )
+
+        # Add password field
+        value["password"] = any(text in key for text in ["password", "token", "api", "key"])
 
         # Add multline
         value["multiline"] = key in ["suffix", "prefix", "template", "examples"]
+
         # Replace default value with actual value
-        # if _type in ["str", "bool"]:
-        #     value["value"] = value.get("default", "")
-        #     if "default" in value:
-        #         value.pop("default")
         if "default" in value:
             value["value"] = value["default"]
             value.pop("default")
 
-    # Filter out keys that should not be shown
     return d
