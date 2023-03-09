@@ -21,6 +21,7 @@ def replace_zero_shot_prompt_with_prompt_template(nodes):
             ]
             node["data"] = build_prompt_template(prompt=node["data"], tools=tools)
             break
+    return nodes
 
 
 def process_data_graph(data_graph: Dict[str, Any]):
