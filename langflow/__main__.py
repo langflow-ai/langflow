@@ -7,6 +7,7 @@ from pathlib import Path
 
 from langflow.server import LangflowApplication
 
+
 def serve(
     workers: int = None,
     timeout: int = None,
@@ -28,9 +29,12 @@ def serve(
     if not timeout:
         timeout = 60
 
-
-    options = {"bind": "0.0.0.0:5003", "workers": workers, "worker_class": "uvicorn.workers.UvicornWorker", "timeout": timeout}
-
+    options = {
+        "bind": "0.0.0.0:5003",
+        "workers": workers,
+        "worker_class": "uvicorn.workers.UvicornWorker",
+        "timeout": timeout,
+    }
 
     LangflowApplication(app, options).run()
 
