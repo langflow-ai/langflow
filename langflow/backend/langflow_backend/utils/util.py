@@ -10,10 +10,10 @@ from langchain.agents.load_tools import (
     _EXTRA_LLM_TOOLS,
     _EXTRA_OPTIONAL_TOOLS,
 )
-from typing import Optional
+from typing import Optional, Dict
 
 
-def build_template_from_function(name: str, type_to_loader_dict: dict):
+def build_template_from_function(name: str, type_to_loader_dict: Dict):
     classes = [
         item.__annotations__["return"].__name__ for item in type_to_loader_dict.values()
     ]
@@ -59,7 +59,7 @@ def build_template_from_function(name: str, type_to_loader_dict: dict):
             }
 
 
-def build_template_from_class(name: str, type_to_cls_dict: dict):
+def build_template_from_class(name: str, type_to_cls_dict: Dict):
     classes = [item.__name__ for item in type_to_cls_dict.values()]
 
     # Raise error if name is not in chains
@@ -130,8 +130,8 @@ def get_tools_dict(name: Optional[str] = None):
     """Get the tools dictionary."""
     tools = {
         **_BASE_TOOLS,
-        **_LLM_TOOLS,
-        **{k: v[0] for k, v in _EXTRA_LLM_TOOLS.items()},
+        **_LLM_TOOLS,  # type: ignore
+        **{k: v[0] for k, v in _EXTRA_LLM_TOOLS.items()},  # type: ignore
         **{k: v[0] for k, v in _EXTRA_OPTIONAL_TOOLS.items()},
     }
     return tools[name] if name else tools
@@ -283,7 +283,7 @@ def format_dict(d, name: Optional[str] = None):
                 "temperature",
                 "model_name",
             ]
-            or any(text in key for text in ["password", "token", "api", "key"])
+            or "api_key" in key
         )
 
         # Add password field

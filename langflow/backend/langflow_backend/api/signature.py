@@ -1,17 +1,6 @@
-from typing import Any, Dict
 from fastapi import APIRouter, HTTPException
-from langchain import agents, chains, llms, prompts
-from langchain.agents.load_tools import (
-    _BASE_TOOLS,
-    _EXTRA_LLM_TOOLS,
-    _EXTRA_OPTIONAL_TOOLS,
-    _LLM_TOOLS,
-    get_all_tool_names,
-)
-from langchain.chains.conversation import memory as memories
 
-from langflow_backend.utils import util
-from langflow_backend.custom import customs
+from langflow_backend.interface.signature import get_signature
 
 # build router
 router = APIRouter(
@@ -24,9 +13,7 @@ router = APIRouter(
 def get_chain(name: str):
     """Get the signature of a chain."""
     try:
-        return util.build_template_from_function(
-            name, chains.loading.type_to_loader_dict
-        )
+        return get_signature(name, "chains")
     except ValueError as exc:
         raise HTTPException(status_code=404, detail="Chain not found") from exc
 
@@ -35,7 +22,7 @@ def get_chain(name: str):
 def get_agent(name: str):
     """Get the signature of an agent."""
     try:
-        return util.build_template_from_class(name, agents.loading.AGENT_TO_CLASS)
+        return get_signature(name, "agents")
     except ValueError as exc:
         raise HTTPException(status_code=404, detail="Agent not found") from exc
 
@@ -44,11 +31,7 @@ def get_agent(name: str):
 def get_prompt(name: str):
     """Get the signature of a prompt."""
     try:
-        if name in customs.get_custom_prompts().keys():
-            return customs.get_custom_prompts()[name]
-        return util.build_template_from_function(
-            name, prompts.loading.type_to_loader_dict
-        )
+        return get_signature(name, "prompts")
     except ValueError as exc:
         raise HTTPException(status_code=404, detail="Prompt not found") from exc
 
@@ -57,7 +40,7 @@ def get_prompt(name: str):
 def get_llm(name: str):
     """Get the signature of an llm."""
     try:
-        return util.build_template_from_class(name, llms.type_to_cls_dict)
+        return get_signature(name, "llms")
     except ValueError as exc:
         raise HTTPException(status_code=404, detail="LLM not found") from exc
 
@@ -66,7 +49,7 @@ def get_llm(name: str):
 def get_memory(name: str):
     """Get the signature of a memory."""
     try:
-        return util.build_template_from_class(name, memories.type_to_cls_dict)
+        return get_signature(name, "memories")
     except ValueError as exc:
         raise HTTPException(status_code=404, detail="Memory not found") from exc
 
@@ -74,51 +57,7 @@ def get_memory(name: str):
 @router.get("/tool")
 def get_tool(name: str):
     """Get the signature of a tool."""
-
-    all_tools = {}
-    for tool in get_all_tool_names():
-        if tool_params := util.get_tool_params(util.get_tools_dict(tool)):
-            all_tools[tool_params["name"]] = tool
-
-    # Raise error if name is not in tools
-    if name not in all_tools.keys():
-        raise HTTPException(status_code=404, detail=f"Tool {name} not found.")
-
-    type_dict = {
-        "str": {
-            "type": "str",
-            "required": False,
-            "list": False,
-            "show": True,
-            "placeholder": "",
-            "value": "",
-        },
-        "llm": {"type": "BaseLLM", "required": True, "list": False, "show": True},
-    }
-
-    tool_type = all_tools[name]
-
-    if tool_type in _BASE_TOOLS:
-        params = []
-    elif tool_type in _LLM_TOOLS:
-        params = ["llm"]
-    elif tool_type in _EXTRA_LLM_TOOLS:
-        _, extra_keys = _EXTRA_LLM_TOOLS[tool_type]
-        params = ["llm"] + extra_keys
-    elif tool_type in _EXTRA_OPTIONAL_TOOLS:
-        _, extra_keys = _EXTRA_OPTIONAL_TOOLS[tool_type]
-        params = extra_keys
-    else:
-        params = []
-
-    template = {
-        param: (type_dict[param] if param == "llm" else type_dict["str"])
-        for param in params
-    }  # type: Dict[str, Any]
-    template["_type"] = tool_type
-
-    return {
-        "template": template,
-        **util.get_tool_params(util.get_tools_dict(tool_type)),
-        "base_classes": ["Tool"],
-    }
+    try:
+        return get_signature(name, "tools")
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Tool not found") from exc
