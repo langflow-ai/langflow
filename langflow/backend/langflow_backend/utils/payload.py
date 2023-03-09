@@ -2,12 +2,12 @@ import contextlib
 import re
 
 
-def extract_input_variables(data):
+def extract_input_variables(nodes):
     """
     Extracts input variables from the template
     and adds them to the input_variables field.
     """
-    for node in data["nodes"]:
+    for node in nodes:
         with contextlib.suppress(Exception):
             if "input_variables" in node["data"]["node"]["template"]:
                 if node["data"]["node"]["template"]["_type"] == "prompt":
@@ -24,17 +24,15 @@ def extract_input_variables(data):
                 else:
                     variables = []
                 node["data"]["node"]["template"]["input_variables"]["value"] = variables
-    return data
+    return nodes
 
 
-def get_root_node(data):
+def get_root_node(nodes, edges):
     """
     Returns the root node of the template.
     """
-    incoming_edges = {edge["source"] for edge in data["edges"]}
-    return next(
-        (node for node in data["nodes"] if node["id"] not in incoming_edges), None
-    )
+    incoming_edges = {edge["source"] for edge in edges}
+    return next((node for node in nodes if node["id"] not in incoming_edges), None)
 
 
 def build_json(root, nodes, edges):
