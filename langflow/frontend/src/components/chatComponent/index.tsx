@@ -147,7 +147,7 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 									clearChat();
 								}}
 							>
-								clear
+								Clear
 							</button>
 						</div>
 						<div className="w-full h-[400px] flex gap-3 mb-auto overflow-y-auto scrollbar-hide flex-col bg-gray-50 dark:bg-gray-900 p-3 py-5">
