@@ -17,6 +17,8 @@ langflow = "langflow.__main__:main"
 ruff = "^0.0.254"
 black = "^23.1.0"
 mypy = "^1.1.1"
+pytest = "^7.2.2"
+pytest-cov = "^4.0.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

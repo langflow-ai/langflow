@@ -1,0 +1,541 @@
+{
+    "name": "New Flow 9",
+    "id": "1",
+    "data": {
+        "nodes": [{
+                "width": 384,
+                "height": 391,
+                "id": "dndnode_61",
+                "type": "genericNode",
+                "position": {
+                    "x": 764,
+                    "y": 382
+                },
+                "data": {
+                    "type": "LLMChain",
+                    "node": {
+                        "template": {
+                            "_type": "llm_chain",
+                            "memory": {
+                                "type": "Memory",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "password": false,
+                                "multiline": false,
+                                "value": null
+                            },
+                            "verbose": {
+                                "type": "bool",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": true
+                            },
+                            "prompt": {
+                                "type": "BasePromptTemplate",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "password": false,
+                                "multiline": false
+                            },
+                            "llm": {
+                                "type": "BaseLLM",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "password": false,
+                                "multiline": false
+                            },
+                            "output_key": {
+                                "type": "str",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": true,
+                                "multiline": false,
+                                "value": "text"
+                            }
+                        },
+                        "description": "Chain to run queries against LLMs.",
+                        "base_classes": [
+                            "Chain"
+                        ]
+                    },
+                    "id": "dndnode_61",
+                    "value": null
+                },
+                "selected": false,
+                "positionAbsolute": {
+                    "x": 764,
+                    "y": 382
+                },
+                "dragging": false
+            },
+            {
+                "width": 384,
+                "height": 351,
+                "id": "dndnode_62",
+                "type": "genericNode",
+                "position": {
+                    "x": 1488,
+                    "y": 550
+                },
+                "data": {
+                    "type": "ZeroShotAgent",
+                    "node": {
+                        "template": {
+                            "_type": "zero-shot-react-description",
+                            "llm_chain": {
+                                "type": "LLMChain",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "password": false,
+                                "multiline": false
+                            },
+                            "allowed_tools": {
+                                "type": "Tool",
+                                "required": false,
+                                "placeholder": "",
+                                "list": true,
+                                "show": true,
+                                "password": false,
+                                "multiline": false,
+                                "value": null
+                            },
+                            "return_values": {
+                                "type": "str",
+                                "required": false,
+                                "placeholder": "",
+                                "list": true,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": [
+                                    "output"
+                                ]
+                            }
+                        },
+                        "description": "Agent for the MRKL chain.",
+                        "base_classes": [
+                            "Agent"
+                        ]
+                    },
+                    "id": "dndnode_62",
+                    "value": null
+                },
+                "positionAbsolute": {
+                    "x": 1488,
+                    "y": 550
+                }
+            },
+            {
+                "width": 384,
+                "height": 529,
+                "id": "dndnode_63",
+                "type": "genericNode",
+                "position": {
+                    "x": 206,
+                    "y": 210
+                },
+                "data": {
+                    "type": "ZeroShotPrompt",
+                    "node": {
+                        "template": {
+                            "_type": "zero_shot",
+                            "prefix": {
+                                "type": "str",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "Answer the following questions as best you can. You have access to the following tools:"
+                            },
+                            "suffix": {
+                                "type": "str",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "Begin!\n\nQuestion: {input}\nThought:{agent_scratchpad}"
+                            },
+                            "format_instructions": {
+                                "type": "str",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "Use the following format:\n\nQuestion: the input question you must answer\nThought: you should always think about what to do\nAction: the action to take, should be one of [{tool_names}]\nAction Input: the input to the action\nObservation: the result of the action\n... (this Thought/Action/Action Input/Observation can repeat N times)\nThought: I now know the final answer\nFinal Answer: the final answer to the original input question"
+                            }
+                        },
+                        "description": "Prompt template for Zero Shot Agent.",
+                        "base_classes": [
+                            "BasePromptTemplate"
+                        ]
+                    },
+                    "id": "dndnode_63",
+                    "value": null
+                },
+                "selected": false,
+                "positionAbsolute": {
+                    "x": 206,
+                    "y": 210
+                },
+                "dragging": false
+            },
+            {
+                "width": 384,
+                "height": 501,
+                "id": "dndnode_64",
+                "type": "genericNode",
+                "position": {
+                    "x": 210,
+                    "y": 818
+                },
+                "data": {
+                    "type": "OpenAI",
+                    "node": {
+                        "template": {
+                            "_type": "openai",
+                            "cache": {
+                                "type": "bool",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": null
+                            },
+                            "verbose": {
+                                "type": "bool",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": true
+                            },
+                            "client": {
+                                "type": "Any",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": null
+                            },
+                            "model_name": {
+                                "type": "str",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "password": false,
+                                "multiline": false,
+                                "value": "text-davinci-003",
+                                "options": [
+                                    "gpt-3.5-turbo",
+                                    "text-davinci-003",
+                                    "text-davinci-002"
+                                ]
+                            },
+                            "temperature": {
+                                "type": "float",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "password": false,
+                                "multiline": false,
+                                "value": 0.7
+                            },
+                            "max_tokens": {
+                                "type": "int",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": true,
+                                "multiline": false,
+                                "value": 256
+                            },
+                            "top_p": {
+                                "type": "float",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": 1
+                            },
+                            "frequency_penalty": {
+                                "type": "float",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": 0
+                            },
+                            "presence_penalty": {
+                                "type": "float",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": 0
+                            },
+                            "n": {
+                                "type": "int",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": 1
+                            },
+                            "best_of": {
+                                "type": "int",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": 1
+                            },
+                            "model_kwargs": {
+                                "type": "dict[str, Any]",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": null
+                            },
+                            "openai_api_key": {
+                                "type": "str",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "password": true,
+                                "multiline": false,
+                                "value": "---"
+                            },
+                            "batch_size": {
+                                "type": "int",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": 20
+                            },
+                            "request_timeout": {
+                                "type": "Union[float, Tuple[float, float], NoneType]",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": null
+                            },
+                            "logit_bias": {
+                                "type": "dict[str, float]",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": null
+                            },
+                            "max_retries": {
+                                "type": "int",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": 6
+                            },
+                            "streaming": {
+                                "type": "bool",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": false
+                            }
+                        },
+                        "description": "Generic OpenAI class that uses model name.",
+                        "base_classes": [
+                            "BaseOpenAI",
+                            "BaseLLM"
+                        ]
+                    },
+                    "id": "dndnode_64",
+                    "value": null
+                },
+                "selected": false,
+                "positionAbsolute": {
+                    "x": 210,
+                    "y": 818
+                },
+                "dragging": false
+            },
+            {
+                "width": 384,
+                "height": 397,
+                "id": "dndnode_65",
+                "type": "genericNode",
+                "position": {
+                    "x": 776,
+                    "y": 922
+                },
+                "data": {
+                    "type": "Serper Search",
+                    "node": {
+                        "template": {
+                            "serper_api_key": {
+                                "type": "str",
+                                "required": false,
+                                "list": false,
+                                "show": true,
+                                "placeholder": "",
+                                "value": "---"
+                            },
+                            "_type": "google-serper"
+                        },
+                        "name": "Serper Search",
+                        "description": "A low-cost Google Search API. Useful for when you need to answer questions about current events. Input should be a search query.",
+                        "base_classes": [
+                            "Tool"
+                        ]
+                    },
+                    "id": "dndnode_65",
+                    "value": null
+                },
+                "selected": false,
+                "positionAbsolute": {
+                    "x": 776,
+                    "y": 922
+                },
+                "dragging": false
+            }
+        ],
+        "edges": [{
+                "source": "dndnode_63",
+                "sourceHandle": "ZeroShotPrompt|dndnode_63|BasePromptTemplate",
+                "target": "dndnode_61",
+                "targetHandle": "BasePromptTemplate|prompt|dndnode_61",
+                "className": "animate-pulse",
+                "id": "reactflow__edge-dndnode_63ZeroShotPrompt|dndnode_63|BasePromptTemplate-dndnode_61BasePromptTemplate|prompt|dndnode_61"
+            },
+            {
+                "source": "dndnode_64",
+                "sourceHandle": "OpenAI|dndnode_64|BaseOpenAI,|BaseLLM",
+                "target": "dndnode_61",
+                "targetHandle": "BaseLLM|llm|dndnode_61",
+                "className": "animate-pulse",
+                "id": "reactflow__edge-dndnode_64OpenAI|dndnode_64|BaseOpenAI,|BaseLLM-dndnode_61BaseLLM|llm|dndnode_61"
+            },
+            {
+                "source": "dndnode_65",
+                "sourceHandle": "Serper Search|dndnode_65|Tool",
+                "target": "dndnode_62",
+                "targetHandle": "Tool|allowed_tools|dndnode_62",
+                "className": "animate-pulse",
+                "id": "reactflow__edge-dndnode_65Serper Search|dndnode_65|Tool-dndnode_62Tool|allowed_tools|dndnode_62"
+            },
+            {
+                "source": "dndnode_61",
+                "sourceHandle": "LLMChain|dndnode_61|Chain",
+                "target": "dndnode_62",
+                "targetHandle": "LLMChain|llm_chain|dndnode_62",
+                "className": "animate-pulse",
+                "id": "reactflow__edge-dndnode_61LLMChain|dndnode_61|Chain-dndnode_62LLMChain|llm_chain|dndnode_62"
+            }
+        ],
+        "viewport": {
+            "x": -103,
+            "y": -135,
+            "zoom": 1
+        }
+    },
+    "chat": [{
+            "message": "What is the new llm Prismer?",
+            "isSend": true
+        },
+        {
+            "message": "What is the prismer llm?",
+            "isSend": true
+        },
+        {
+            "message": "What is the prismer llm?",
+            "isSend": true
+        },
+        {
+            "message": "What is the prismer llm?",
+            "isSend": true
+        },
+        {
+            "message": "What is the prismer llm?",
+            "isSend": true
+        },
+        {
+            "message": "What is the prismer llm?",
+            "isSend": true
+        },
+        {
+            "message": "What is the prismer llm?",
+            "isSend": true
+        },
+        {
+            "message": "What is the prismer llm?",
+            "isSend": true
+        },
+        {
+            "message": "Prismer LLM is a vision-language model with an ensemble of experts.",
+            "isSend": false,
+            "thought": "Thought: I should research what this is\nAction: Serper Search\nAction Input: \"prismer llm\"\nObservation: Announcing Prismer, my team's latest vision-language AI, empowered by domain-expert models in depth, surface normal, segmentation, etc. My team's work, Prismer, is a representative example. We use a textual LM as the backbone, and plug in many visual domain experts through a neural adapter ... “Prismer is able to achieve superior data efficiency compared to ... New OpenAI post about future of ChatGPT's (and its other LLM) alignment. Prismer: A Vision-Language Model with An Ensemble of Experts ... UDAPDR: Unsupervised Domain Adaptation via LLM Prompting and Distillation of Rerankers. Emory Law's LLM program offers graduates of US and foreign law schools the opportunity to pursue the master of laws degree from one of the top nationally ranked ... Missing: prismer | Must include:prismer. Prismer: A Vision-Language Model with An Ensemble of Experts ... github: github.com/NVlabs/prismer ... into LLM embedding space viously to their being sworn, the prisoner, Michael. Solomon, standing at the bar, challenged two ... a« wa« brought before- them.\" The prisoner ?llM'eow*. RWKV is a RNN with transformer-level LLM performance. ... The implementation of \"Prismer: A Vision-Language Model with An Ensemble of Experts\". Announcing Prismer, our NVIDIA team's latest vision-language #ai empowered by domain-expert models in depth, surface normal, segmentation, etc. No paywall.\nThought:\n\n> Finished chain."
+        },
+        {
+            "message": "What is the prismer llm?",
+            "isSend": true
+        },
+        {
+            "message": "Prismer is an AI vision-language model with an ensemble of experts developed by a NVIDIA team. It is capable of achieving superior data efficiency compared to other models and can be directly trained like a GPT.",
+            "isSend": false,
+            "thought": "Thought: I need to search for the term\nAction: Serper Search\nAction Input: \"prismer llm\"\nObservation: Announcing Prismer, my team's latest vision-language AI, empowered by domain-expert models in depth, surface normal, segmentation, etc. My team's work, Prismer, is a representative example. We use a textual LM as the backbone, and plug in many visual domain experts through a neural adapter ... “Prismer is able to achieve superior data efficiency compared to ... New OpenAI post about future of ChatGPT's (and its other LLM) alignment. Prismer: A Vision-Language Model with An Ensemble of Experts ... UDAPDR: Unsupervised Domain Adaptation via LLM Prompting and Distillation of Rerankers. A very insightful post about the potential issues with LLM chatbots for general ... Announcing Prismer, our NVIDIA team's latest vision-language #ai ... As technology continues to transform our economy and culture, businesses need a new breed of lawyers who understand the legal and commercial aspects of new ... Missing: prismer | Must include:prismer. RWKV is a RNN with transformer-level LLM performance. ... The implementation of \"Prismer: A Vision-Language Model with An Ensemble of Experts\". ... Bendix vorad collision warning system, Vegglampe med prismer, Ok magazine ... Alabama llm, Colt 25 caliber magazine, Poppie clinch, Mcds upper school, ... RWKV is an RNN with transformer-level LLM performance. It can be directly trained like a GPT (parallelizable). So it's combining the best of RNN ...\nThought:\n\n> Finished chain."
+        }
+    ]
+}
