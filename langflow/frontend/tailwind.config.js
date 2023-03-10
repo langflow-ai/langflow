@@ -32,6 +32,9 @@ module.exports = {
             '-webkit-appearance': 'none',
             'margin': 0
           },
+        },
+        '.password':{
+          "-webkit-text-security":"disc"
         }
       }
       )
