@@ -86,7 +86,7 @@ def get_tool_signature(name: str):
     type_dict = {
         "str": {
             "type": "str",
-            "required": False,
+            "required": True,
             "list": False,
             "show": True,
             "placeholder": "",
@@ -111,9 +111,15 @@ def get_tool_signature(name: str):
         params = []
 
     template = {
-        param: (type_dict[param] if param == "llm" else type_dict["str"])
+        param: (type_dict[param].copy() if param == "llm" else type_dict["str"].copy())
         for param in params
-    }  # type: Dict[str, Any]
+    }
+
+    # Remove required from aiosession
+    if "aiosession" in template.keys():
+        template["aiosession"]["required"] = False
+        template["aiosession"]["show"] = False
+
     template["_type"] = tool_type
 
     return {
