@@ -2,7 +2,7 @@
 
 # ⛓️ LangFlow
 
-~ A User Interface For [LangChain](https://github.com/hwchase17/langchain) ~
+~ An Intuitive User Interface For [LangChain](https://github.com/hwchase17/langchain) ~
 
 
 <p>
