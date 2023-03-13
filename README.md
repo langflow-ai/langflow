@@ -2,7 +2,7 @@
 
 # ⛓️ LangFlow
 
-~ An Intuitive User Interface For [LangChain](https://github.com/hwchase17/langchain) ~
+~ A User Interface For [LangChain](https://github.com/hwchase17/langchain) ~
 
 
 <p>
@@ -30,7 +30,7 @@ You can install LangFlow from pip:
 
 Next, run:
 
-`langflow` or `python -m langflow`
+`python -m langflow` or just `langflow`
 
 
 ## 🎨 Creating Flows
