@@ -2,7 +2,8 @@
 
 # ⛓️ LangFlow
 
-~ A no-code flow builder for langchain ~
+~ A Flow Interface For [LangChain](https://github.com/hwchase17/langchain) ~
+
 
 <p>
 <img alt="GitHub Contributors" src="https://img.shields.io/github/contributors/logspace-ai/langflow" />
@@ -19,7 +20,7 @@
 
 ![LangFlow Logo](https://github.com/logspace-ai/langflow/blob/main/img/llm_simple_flow.png)
 
-LangFlow is a no-code flow builder for LangChain, designed to provide a drag-and-drop UI, combining the capabilities of LangChain with reactFlow and a chat interface.
+LangFlow is a UI for [LangChain](https://github.com/hwchase17/langchain), designed with [react-flow](https://github.com/wbkd/react-flow) to provide an effortless way to experiment and prototype flows with the drag-and-drop and chat interfaces.
 
 ## 📦 Installation
 
@@ -27,28 +28,25 @@ You can install LangFlow from pip:
 
 `pip install langflow`
 
-Next, set the `OPENAI_API_KEY` environment variable using one of the following methods:
+Next, run:
 
-- Use the following command in your terminal: `export OPENAI_API_KEY=your-api-key`.
-- In a Python script or Jupyter notebook, use the following code: `import os; os.environ["OPENAI_API_KEY"] = "your-api-key"`.
+```
+langflow
+# or
+python -m langflow
+```
 
 ## 🎨 Creating Flows
 
-Creating flows with LangFlow is easy, thanks to its intuitive drag-and-drop interface. Simply drag components from the sidebar onto the canvas, and connect them together to create your custom NLP pipeline. LangFlow provides a range of pre-built components to choose from, including LLMs, prompt serializers, agents, and chains.
+Creating flows with LangFlow is easy. Simply drag sidebar components onto the canvas and connect them together to create your pipeline. LangFlow provides a range of [LangChain components](https://langchain.readthedocs.io/en/latest/reference.html) to choose from, including LLMs, prompt serializers, agents, and chains. 
 
-## 💻 Examples
+Explore by editing prompt parameters, create chains and agents, track an agent's thought process, and export your flow.
 
-LangFlow comes with a number of example flows to help you get started. These examples cover a range of use cases, from chatbots and question-answering systems to data augmentation and model comparison. You can use these examples as a starting point for your own custom flows, or modify them to suit your needs.
-
-## 🧰 Components
-
-LangFlow provides support for LangChain main components, including prompts, LLMs, document loaders, utils, chains, indexes, agents, and memory. For each module, we provide examples to get started, how-to guides, reference docs, and conceptual guides.
-
-For more information on each component, please refer to the [Modules section of the LangChain documentation](https://langchain-docs.example.com/modules).
 
 ## 🔧 Contributing
 
-We welcome contributions to LangFlow! If you'd like to contribute, please follow our contributing guidelines. You can also get in touch with us via GitHub issues or our community forum.
+We welcome contributions from developers of all levels to our open-source project on GitHub. If you'd like to contribute, please check our contributing guidelines and help make LangFlow more accessible. 
+
 
 ## 📄 License
 
