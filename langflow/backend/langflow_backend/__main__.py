@@ -5,7 +5,7 @@ import typer
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
-from langflow.server import LangflowApplication
+from langflow_backend.server import LangflowApplication
 
 
 def serve(
@@ -15,7 +15,7 @@ def serve(
     app = create_app()
     # get the directory of the current file
     path = Path(__file__).parent
-    static_files_dir = path / "frontend/build"
+    static_files_dir = path / "frontend"
     app.mount(
         "/",
         StaticFiles(directory=static_files_dir, html=True),
