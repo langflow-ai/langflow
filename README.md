@@ -2,7 +2,7 @@
 
 # ⛓️ LangFlow
 
-~ A Flow Interface For [LangChain](https://github.com/hwchase17/langchain) ~
+~ A User Interface For [LangChain](https://github.com/hwchase17/langchain) ~
 
 
 <p>
@@ -20,7 +20,7 @@
 
 ![LangFlow Logo](https://github.com/logspace-ai/langflow/blob/main/img/llm_simple_flow.png)
 
-LangFlow is a UI for [LangChain](https://github.com/hwchase17/langchain), designed with [react-flow](https://github.com/wbkd/react-flow) to provide an effortless way to experiment and prototype flows with the drag-and-drop and chat interfaces.
+LangFlow is a GUI for [LangChain](https://github.com/hwchase17/langchain), designed with [react-flow](https://github.com/wbkd/react-flow) to provide an effortless way to experiment and prototype flows with drag-and-drop components and a chat box.
 
 ## 📦 Installation
 
@@ -37,7 +37,7 @@ Next, run:
 
 Creating flows with LangFlow is easy. Simply drag sidebar components onto the canvas and connect them together to create your pipeline. LangFlow provides a range of [LangChain components](https://langchain.readthedocs.io/en/latest/reference.html) to choose from, including LLMs, prompt serializers, agents, and chains. 
 
-Explore by editing prompt parameters, create chains and agents, track an agent's thought process, and export your flow.
+Explore by editing prompt parameters, link chains and agents, track an agent's thought process, and export your flow.
 
 
 ## 🔧 Contributing
