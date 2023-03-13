@@ -30,11 +30,7 @@ You can install LangFlow from pip:
 
 Next, run:
 
-`langflow`
-
-or
-
-`python -m langflow`
+`langflow` or `python -m langflow`
 
 
 ## 🎨 Creating Flows
