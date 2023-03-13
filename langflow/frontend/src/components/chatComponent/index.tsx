@@ -16,9 +16,8 @@ import ChatMessage from "./chatMessage";
 const _ = require("lodash");
 
 export default function Chat({ flow, reactFlowInstance }: ChatType) {
-	const { updateFlow } = useContext(TabsContext);
+	const { updateFlow,lockChat,setLockChat,flows,tabIndex } = useContext(TabsContext);
 	const [saveChat, setSaveChat] = useState(false);
-	const [lockChat, setLockChat] = useState(false);
 	const [open, setOpen] = useState(true);
 	const [chatValue, setChatValue] = useState("");
 	const [chatHistory, setChatHistory] = useState(flow.chat);
@@ -26,10 +25,15 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 	const addChatHistory = (
 		message: string,
 		isSend: boolean,
-		thought?: string
+		thought?: string,
 	) => {
+		let tabsChange = false;
 		setChatHistory((old) => {
 			let newChat = _.cloneDeep(old);
+			if(flow.chat !==old){
+				tabsChange = true
+				return old
+			}
 			if (thought) {
 				newChat.push({ message, isSend, thought });
 			} else {
@@ -37,6 +41,15 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 			}
 			return newChat;
 		});
+		if(tabsChange){
+			console.log(flow.chat)
+			if(thought){
+				updateFlow({..._.cloneDeep(flow),chat:[...flow.chat,{isSend,message,thought}]})
+			}
+			else{
+				updateFlow({..._.cloneDeep(flow),chat:[...flow.chat,{isSend,message}]})
+			}
+		}
 		setSaveChat((chat) => !chat);
 	};
 	useEffect(() => {
@@ -86,7 +99,7 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 				addChatHistory(message, true);
 				console.log({ ...reactFlowInstance.toObject(), message, chatHistory });
 
-				sendAll({ ...reactFlowInstance.toObject(), message, chatHistory })
+				sendAll({ ...reactFlowInstance.toObject(), message, chatHistory})
 					.then((r) => {
 						console.log(r.data);
 						addChatHistory(r.data.result, false, r.data.thought);
@@ -99,7 +112,7 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 			} else {
 				setErrorData({
 					title: "Error sending message",
-					list: ["There are required fields not filled yet."],
+					list: [ "Oops! Looks like you missed some required information. Please fill in all the required fields before continuing."],
 				});
 			}
 		} else {

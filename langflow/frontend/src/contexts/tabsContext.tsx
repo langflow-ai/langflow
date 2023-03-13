@@ -14,6 +14,8 @@ const TabsContextInitialValue: TabsContextType = {
 	incrementNodeId: () => 0,
 	downloadFlow: () => {},
 	uploadFlow: () => {},
+	lockChat: false,
+	setLockChat:(prevState:boolean)=>{}
 };
 
 export const TabsContext = createContext<TabsContextType>(
@@ -25,6 +27,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	const [tabIndex, setTabIndex] = useState(0);
 	const [flows, setFlows] = useState<Array<FlowType>>([]);
 	const [id, setId] = useState(0);
+	const [lockChat, setLockChat] = useState(false);
 
 	const newNodeId = useRef(0);
 	function incrementNodeId() {
@@ -166,6 +169,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	return (
 		<TabsContext.Provider
 			value={{
+				lockChat,
+				setLockChat,
 				tabIndex,
 				setTabIndex,
 				flows,
