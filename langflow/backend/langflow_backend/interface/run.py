@@ -14,7 +14,7 @@ def process_data_graph(data_graph: Dict[str, Any]):
     extracted_json = loading.extract_json(data_graph)
 
     message = data_graph["message"]
-    flow_id = data_graph["id"]
+    # flow_id = data_graph["id"]
     # Process json
     result, thought = get_result_and_thought(extracted_json, message)
 
@@ -27,7 +27,7 @@ def process_data_graph(data_graph: Dict[str, Any]):
         "thought": re.sub(
             r"\x1b\[([0-9,A-Z]{1,2}(;[0-9,A-Z]{1,2})?)?[m|K]", "", thought
         ).strip(),
-        "id": flow_id,
+        # "id": flow_id,
     }
 
 
