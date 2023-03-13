@@ -31,7 +31,9 @@ You can install LangFlow from pip:
 Next, run:
 
 `langflow`
+
 or
+
 `python -m langflow`
 
 
