@@ -30,7 +30,8 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 		let tabsChange = false;
 		setChatHistory((old) => {
 			let newChat = _.cloneDeep(old);
-			if(flow.chat !==old){
+			if(JSON.stringify(flow.chat) !==JSON.stringify(old)){
+				console.log(old,flow.chat)
 				tabsChange = true
 				return old
 			}
