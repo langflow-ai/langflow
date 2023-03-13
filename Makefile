@@ -30,8 +30,12 @@ build:
 	make install_frontend
 	make build_frontend
 	cp -r langflow/frontend/build langflow/backend/langflow_backend/frontend
-	cd langflow/backend && poetry build --format sdist
-	rm -rf dist && mv langflow/backend/dist/ dist
+	poetry build --format sdist
+	rm -rf langflow/backend/langflow_backend/frontend
+
+publish:
+	make build
+	poetry publish
 
 help:
 	@echo '----'

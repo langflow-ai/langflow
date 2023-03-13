@@ -30,7 +30,7 @@ def serve(
         timeout = 60
 
     options = {
-        "bind": "0.0.0.0:5003",
+        "bind": "127.0.0.1:5003",
         "workers": workers,
         "worker_class": "uvicorn.workers.UvicornWorker",
         "timeout": timeout,
