@@ -1,54 +1,78 @@
-import { useContext } from "react";
+import { useContext, useEffect, useRef } from "react";
 import { alertContext } from "../../contexts/alertContext";
-import {
-  XMarkIcon,
-} from "@heroicons/react/24/solid";
+import { XMarkIcon } from "@heroicons/react/24/solid";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import SingleAlert from "./components/singleAlertComponent";
 import { AlertDropdownType } from "../../types/alerts";
 import { PopUpContext } from "../../contexts/popUpContext";
 
-
-
 export default function AlertDropdown({}: AlertDropdownType) {
-  const {
-    notificationList,
-    clearNotificationList,
-    removeFromNotificationList,
-  } = useContext(alertContext);
-  const {closePopUp} =  useContext(PopUpContext)
-  
+	const { closePopUp } = useContext(PopUpContext);
+	const componentRef = useRef<HTMLDivElement>(null);
 
-  return (
-      <div className="z-10 py-3 pb-4 rounded-md bg-white ring-1 ring-black ring-opacity-5 shadow-lg focus:outline-none overflow-hidden w-[16rem] h-[28rem] flex flex-col">
-        <div className="flex pl-3 flex-row justify-between text-md font-medium text-gray-800">
-          Notifications
-          <div className="flex gap-2 pr-3 ">
-            <button
-              className="hover:text-red-500"
-              onClick={() => {closePopUp(); setTimeout(clearNotificationList, 100)}}
-            >
-              <TrashIcon className="w-[1.1rem] h-[1.1rem]" />
-            </button>
-            <button
-              className="hover:text-red-500"
-              onClick={closePopUp}
-            >
-              <XMarkIcon className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-        <div className="mt-2 flex flex-col overflow-y-scroll w-full h-full scrollbar-hide">
-          {notificationList.length !== 0 ? 
-          notificationList.map((alertItem, index) => (
-            <SingleAlert key={alertItem.id} dropItem={alertItem} removeAlert={removeFromNotificationList} />
-          ))
-        :
-        <div className="h-full w-full pb-16 text-gray-500 flex justify-center items-center">
-          No new notifications
-          </div>
-        }
-        </div>
-      </div>
-  );
+	useEffect(() => {
+		function handleClickOutside(event: MouseEvent) {
+			if (
+				componentRef.current &&
+				!componentRef.current.contains(event.target as Node)
+			) {
+        console.log(event)
+				closePopUp();
+			}
+		}
+
+		// Bind the event listener
+		document.addEventListener("mousedown", handleClickOutside);
+
+		// Cleanup the event listener when the component is unmounted
+		return () => {
+			document.removeEventListener("mousedown", handleClickOutside);
+		};
+	}, [componentRef]);
+
+	const {
+		notificationList,
+		clearNotificationList,
+		removeFromNotificationList,
+	} = useContext(alertContext);
+
+	return (
+		<div
+			ref={componentRef}
+			className="z-10 py-3 pb-4 rounded-md bg-white ring-1 ring-black ring-opacity-5 shadow-lg focus:outline-none overflow-hidden w-[16rem] h-[28rem] flex flex-col"
+		>
+			<div className="flex pl-3 flex-row justify-between text-md font-medium text-gray-800">
+				Notifications
+				<div className="flex gap-2 pr-3 ">
+					<button
+						className="hover:text-red-500"
+						onClick={() => {
+							closePopUp();
+							setTimeout(clearNotificationList, 100);
+						}}
+					>
+						<TrashIcon className="w-[1.1rem] h-[1.1rem]" />
+					</button>
+					<button className="hover:text-red-500" onClick={closePopUp}>
+						<XMarkIcon className="h-5 w-5" />
+					</button>
+				</div>
+			</div>
+			<div className="mt-2 flex flex-col overflow-y-scroll w-full h-full scrollbar-hide">
+				{notificationList.length !== 0 ? (
+					notificationList.map((alertItem, index) => (
+						<SingleAlert
+							key={alertItem.id}
+							dropItem={alertItem}
+							removeAlert={removeFromNotificationList}
+						/>
+					))
+				) : (
+					<div className="h-full w-full pb-16 text-gray-500 flex justify-center items-center">
+						No new notifications
+					</div>
+				)}
+			</div>
+		</div>
+	);
 }

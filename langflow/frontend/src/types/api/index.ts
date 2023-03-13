@@ -11,5 +11,5 @@ export type sendAllProps={
     edges: Edge[];
     viewport: Viewport;
     message:string;
-    chatHistory:{message:string,isSend:boolean}[]
+    chatHistory:{message:string,isSend:boolean}[],
 };
