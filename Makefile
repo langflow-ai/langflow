@@ -18,7 +18,7 @@ format:
 lint:
 	poetry run mypy .
 	poetry run black . --check
-	poetry run ruff .
+	poetry run ruff . --fix
 
 install_frontend:
 	cd langflow/frontend && npm install
