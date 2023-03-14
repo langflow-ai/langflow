@@ -24,7 +24,7 @@ install_frontend:
 	cd langflow/frontend && npm install
 
 build_frontend:
-	cd langflow/frontend && npm run build
+	cd langflow/frontend && CI='' npm run build
 
 build:
 	make install_frontend
