@@ -41,7 +41,7 @@ jobs:
           draft: false
           generateReleaseNotes: true
           tag: v${{ steps.check-version.outputs.version }}
-          commit: master
+          commit: main
       - name: Publish to PyPI
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
