@@ -26,7 +26,7 @@ You can install LangFlow from pip:
 
 Next, run:
 
-`langflow` or `python -m langflow`
+`python -m langflow` or just `langflow`
 
 ## 🎨 Creating Flows
 
@@ -34,7 +34,8 @@ Creating flows with LangFlow is easy. Simply drag sidebar components onto the ca
 
 Explore by editing prompt parameters, link chains and agents, track an agent's thought process, and export your flow.
 
-## 🔧 Contributing
+
+## 👋 Contributing
 
 We welcome contributions from developers of all levels to our open-source project on GitHub. If you'd like to contribute, please check our contributing guidelines and help make LangFlow more accessible.
 
