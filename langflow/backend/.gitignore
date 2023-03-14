@@ -4,6 +4,9 @@ __pycache__/
 *$py.class
 notebooks
 
+# frontend
+langflow_backend/frontend
+
 # C extensions
 *.so
 

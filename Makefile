@@ -18,7 +18,7 @@ format:
 lint:
 	poetry run mypy .
 	poetry run black . --check
-	poetry run ruff .
+	poetry run ruff . --fix
 
 install_frontend:
 	cd langflow/frontend && npm install
@@ -29,7 +29,13 @@ build_frontend:
 build:
 	make install_frontend
 	make build_frontend
+	cp -r langflow/frontend/build langflow/backend/langflow_backend/frontend
 	poetry build --format sdist
+	rm -rf langflow/backend/langflow_backend/frontend
+
+publish:
+	make build
+	poetry publish
 
 help:
 	@echo '----'

@@ -1,4 +1,4 @@
-from gunicorn.app.base import BaseApplication
+from gunicorn.app.base import BaseApplication  # type: ignore
 
 
 class LangflowApplication(BaseApplication):
