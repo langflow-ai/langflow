@@ -1,31 +1,39 @@
 [tool.poetry]
 name = "langflow"
-version = "0.0.1"
+version = "0.0.27"
 description = "A Python package with a built-in web application"
-authors = ["Ibis Prevedello <ibiscp@gmail.com>", "Gabriel Almeida <gabrielf.almeida90@gmail.com>","Otávio Anovazzi <otavio2204@gmail.com>"]
+authors = ["Ibis Prevedello <ibiscp@gmail.com>",
+           "Gabriel Almeida <gabrielf.almeida90@gmail.com>",
+           "Otávio Anovazzi <otavio2204@gmail.com>",
+           "Lucas Eduoli <lucaseduoli@gmail.com"]
 packages = [
-    { include = "langflow"},
+    { include = "langflow_backend", from = "langflow/backend" },
 ]
-include = ["langflow/frontend/build/*", "langflow/frontend/build/**/*"]
-exclude = ["langflow/frontend/node_modules/*", "langflow/frontend/src/*"]
+include = ["langflow/backend/langflow_backend/*", "langflow/backend/langflow_backend/**/*"]
+license = "MIT"
+readme = "README.md"
 
 [tool.poetry.scripts]
-langflow = "langflow.__main__:main"
-
-
-[tool.poetry.group.dev.dependencies]
-ruff = "^0.0.254"
-black = "^23.1.0"
-mypy = "^1.1.1"
-pytest = "^7.2.2"
-pytest-cov = "^4.0.0"
-
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+langflow = "langflow_backend.__main__:main"
 
 [tool.poetry.dependencies]
 python = "^3.9"
+openai = "^0.26.5"
+fastapi = "^0.91.0"
+uvicorn = "^0.20.0"
+beautifulsoup4 = "^4.11.2"
+google-search-results = "^2.4.1"
+google-api-python-client = "^2.79.0"
+langchain_ibis = "0.0.100"
 typer = "^0.7.0"
 gunicorn = "^20.1.0"
-langflow_backend = {path = "langflow/backend"}
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.1.0"
+ipykernel = "^6.21.2"
+mypy = "^1.1.1"
+ruff = "^0.0.254"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
