@@ -120,7 +120,7 @@ def get_tool_signature(name: str):
         template["aiosession"]["required"] = False
         template["aiosession"]["show"] = False
 
-    template["_type"] = tool_type
+    template["_type"] = tool_type  # type: ignore
 
     return {
         "template": template,

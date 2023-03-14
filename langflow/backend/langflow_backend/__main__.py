@@ -1,5 +1,4 @@
 import multiprocessing
-import os
 import platform
 
 from langflow_backend.main import create_app
@@ -10,16 +9,14 @@ from pathlib import Path
 
 
 def get_number_of_workers(workers=None):
-    if workers is None:
-        workers = 1
-    elif workers == -1:
+    if workers == -1:
         workers = (multiprocessing.cpu_count() * 2) + 1
     return workers
 
 
 def serve(
-    workers: int = None,
-    timeout: int = None,
+    workers: int = 1,
+    timeout: int = 60,
 ):
     app = create_app()
     # get the directory of the current file
@@ -30,9 +27,6 @@ def serve(
         StaticFiles(directory=static_files_dir, html=True),
         name="static",
     )
-
-    if not timeout:
-        timeout = 60
 
     host = "127.0.0.1"
     port = 5003
