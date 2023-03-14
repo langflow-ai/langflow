@@ -28,7 +28,7 @@ jobs:
           python-version: "3.10"
           cache: "poetry"
       - name: Build project for distribution
-        run: poetry build
+        run: make build
       - name: Check Version
         id: check-version
         run: |
