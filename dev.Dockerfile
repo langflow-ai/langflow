@@ -1,21 +1,18 @@
-FROM tiangolo/uvicorn-gunicorn-fastapi:python3.10
+FROM python:3.10-slim
 
 WORKDIR /app
 
 # Install Poetry
-# RUN apt-get update && apt-get install -y curl
-# RUN curl -sSL https://install.python-poetry.org | python3 - 
+RUN apt-get update && apt-get install -y curl
+RUN curl -sSL https://install.python-poetry.org | python3 -
 # # Add Poetry to PATH
-# ENV PATH="${PATH}:/root/.local/bin"
+ENV PATH="${PATH}:/root/.local/bin"
 # # Copy the pyproject.toml and poetry.lock files
-# COPY poetry.lock pyproject.toml ./
+COPY poetry.lock pyproject.toml ./
 # Copy the rest of the application codes
 COPY ./ ./
 
 # Install dependencies
-RUN pip install -e .
+RUN poetry config virtualenvs.create false && poetry install --no-interaction --no-ansi
 
-
-WORKDIR /app/langflow/backend
-
-CMD ["uvicorn", "langflow_backend.main:app", "--host", "127.0.0.1", "--port", "5003", "--reload"]
+CMD ["uvicorn", "langflow_backend.main:app", "--host", "0.0.0.0", "--port", "5003", "--reload"]
