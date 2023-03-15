@@ -9,8 +9,6 @@ services:
       - "5003:5003"
     volumes:
       - ./:/app
-    environment:
-      - PYTHONPATH=/langflow  # add this line to set PYTHONPATH
 
   frontend:
     build: ./langflow/frontend
@@ -18,3 +16,6 @@ services:
       - "3000:3000"
     volumes:
       - ./langflow/frontend:/app
+    # Set process.env.BACKEND to the backend service
+    environment:
+      - BACKEND=http://backend:5003
