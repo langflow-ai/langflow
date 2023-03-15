@@ -15,6 +15,7 @@ def get_number_of_workers(workers=None):
 
 
 def serve(
+    host: str = "127.0.0.1",
     workers: int = 1,
     timeout: int = 60,
 ):
@@ -27,8 +28,6 @@ def serve(
         StaticFiles(directory=static_files_dir, html=True),
         name="static",
     )
-
-    host = "127.0.0.1"
     port = 5003
     options = {
         "bind": f"{host}:{port}",
