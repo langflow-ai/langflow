@@ -246,10 +246,6 @@ def format_dict(d, name: Optional[str] = None):
         if key == "_type":
             continue
 
-        # Set verbose to True
-        if key == "verbose":
-            value["default"] = True
-
         _type = value["type"]
 
         # Remove 'Optional' wrapper
@@ -302,4 +298,24 @@ def format_dict(d, name: Optional[str] = None):
         if name == "OpenAI" and key == "model_name":
             value["options"] = ["text-davinci-003", "text-davinci-002"]
 
+    return d
+
+
+def update_verbose(d: dict, new_value: bool) -> dict:
+    """
+    Recursively updates the value of the 'verbose' key in a dictionary.
+
+    Args:
+        d: the dictionary to update
+        new_value: the new value to set
+
+    Returns:
+        The updated dictionary.
+    """
+
+    for k, v in d.items():
+        if isinstance(v, dict):
+            update_verbose(v, new_value)
+        elif k == "verbose":
+            d[k] = new_value
     return d
