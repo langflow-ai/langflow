@@ -92,7 +92,7 @@ def load_agent_executor_from_config(
     )
 
 
-def load_tools_from_config(tool_list: list[dict]) -> list[Tool]:
+def load_tools_from_config(tool_list: list[dict]) -> list:
     """Load tools based on a config list.
 
     Args:
