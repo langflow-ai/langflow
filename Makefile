@@ -23,6 +23,12 @@ lint:
 install_frontend:
 	cd langflow/frontend && npm install
 
+run_frontend:
+	cd langflow/frontend && npm start
+
+run_backend:
+	poetry run uvicorn langflow_backend.main:app --port 5003 --reload
+
 build_frontend:
 	cd langflow/frontend && CI='' npm run build
 

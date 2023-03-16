@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  langflow:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    ports:
+      - "5003:5003"
+    command: langflow --host 0.0.0.0
+    platform: linux/amd64
