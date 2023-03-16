@@ -27,13 +27,44 @@ so that more people can benefit from it.
   remember to include the code you ran and if possible, extract only the relevant
   parts and don't just dump your entire script. This will make it easier for us to
   reproduce the error.
-  
+
 - **Sharing long blocks of code or logs:** If you need to include long code,
   logs or tracebacks, you can wrap them in `<details>` and `</details>`. This
   [collapses the content](https://developer.mozilla.org/en/docs/Web/HTML/Element/details)
   so it only becomes visible on click, making the issue easier to read and follow.
-  
+
 ### Issue labels
 
 [See this page](https://github.com/logspace-ai/langflow/labels) for an overview of
 the system we use to tag our issues and pull requests.
+
+
+### Local development
+You can develop LangFlow using docker compose, or locally.
+
+#### **Docker compose**
+This will run the backend and frontend in separate containers. The frontend will be available at `localhost:3000` and the backend at `localhost:5003`.
+```bash
+docker compose up --build
+```
+
+#### **Locally**
+Run locally by cloning the repository and installing the dependencies. We recommend using a virtual environment to isolate the dependencies from your system.
+
+Before you start, make sure you have the following installed:
+  - Poetry
+  - Node.js
+
+For the backend, you will need to install the dependencies and start the development server.
+```bash
+poetry install
+# Port 5003 is required for the backend to work with the frontend
+make run_backend
+```
+For the frontend, you will need to install the dependencies and start the development server.
+```bash
+cd langflow/frontend
+npm install
+npm start
+```
+

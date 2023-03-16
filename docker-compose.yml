@@ -9,12 +9,17 @@ services:
       - "5003:5003"
     volumes:
       - ./:/app
-    environment:
-      - PYTHONPATH=/langflow  # add this line to set PYTHONPATH
+    platform: linux/amd64
+    command: bash -c "uvicorn langflow_backend.main:app --host 0.0.0.0 --port 5003 --reload"
 
   frontend:
-    build: ./langflow/frontend
+    build:
+      context: ./langflow/frontend
+      dockerfile: ./dev.Dockerfile
     ports:
       - "3000:3000"
     volumes:
       - ./langflow/frontend:/app
+    # Set process.env.BACKEND to the backend service
+    environment:
+      - BACKEND="http://backend:5003"
