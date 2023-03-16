@@ -10,7 +10,7 @@
 <img alt="" src="https://img.shields.io/github/repo-size/logspace-ai/langflow" />
 <img alt="GitHub Issues" src="https://img.shields.io/github/issues/logspace-ai/langflow" />
 <img alt="GitHub Pull Requests" src="https://img.shields.io/github/issues-pr/logspace-ai/langflow" />
-<img alt="Github License" src="https://img.shields.io/github/license/logspace-ai/langflow" />  
+<img alt="Github License" src="https://img.shields.io/github/license/logspace-ai/langflow" />
 </p>
 
 <a href="https://github.com/logspace-ai/langflow">
@@ -26,7 +26,7 @@ You can install LangFlow from pip:
 
 Next, run:
 
-`python -m langflow` or just `langflow`
+`langflow`
 
 ## 🎨 Creating Flows
 
