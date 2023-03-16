@@ -246,10 +246,6 @@ def format_dict(d, name: Optional[str] = None):
         if key == "_type":
             continue
 
-        # Set verbose to True
-        if key == "verbose":
-            value["default"] = True
-
         _type = value["type"]
 
         # Remove 'Optional' wrapper
