@@ -1,7 +1,7 @@
 import { APIObjectType, sendAllProps } from '../../types/api/index';
 import axios, { AxiosResponse } from "axios";
 
-const backendUrl = process.env.BACKEND || "http://localhost:7860";
+const backendUrl = window.sessionStorage.getItem('port') || "http://localhost:7860";
 
 export async function getAll():Promise<AxiosResponse<APIObjectType>> {
     return await axios.get(`${backendUrl}/all`);
