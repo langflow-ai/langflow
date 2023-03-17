@@ -1,7 +1,6 @@
 FROM python:3.11-slim
 
-WORKDIR /app
-COPY ./ /app
+RUN apt-get update && apt-get install gcc -y
 RUN pip install langflow>=0.0.33
 
 EXPOSE 5003

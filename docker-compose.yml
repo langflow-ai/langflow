@@ -9,7 +9,6 @@ services:
       - "5003:5003"
     volumes:
       - ./:/app
-    platform: linux/amd64
     command: bash -c "uvicorn langflow_backend.main:app --host 0.0.0.0 --port 5003 --reload"
 
   frontend:
