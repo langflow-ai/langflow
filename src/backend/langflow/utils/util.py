@@ -276,7 +276,7 @@ def format_dict(d, name: Optional[str] = None):
                 "prefix",
                 "examples",
                 "temperature",
-                # "model_name",
+                "model_name",
             ]
             or "api_key" in key
         )
