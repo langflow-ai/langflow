@@ -21,23 +21,23 @@ lint:
 	poetry run ruff . --fix
 
 install_frontend:
-	cd langflow/frontend && npm install
+	cd src/frontend && npm install
 
 run_frontend:
-	cd langflow/frontend && npm start
+	cd src/frontend && npm start
 
 run_backend:
-	poetry run uvicorn langflow_backend.main:app --port 5003 --reload
+	poetry run uvicorn langflow.main:app --port 5003 --reload
 
 build_frontend:
-	cd langflow/frontend && CI='' npm run build
+	cd src/frontend && CI='' npm run build
+	cp -r src/frontend/build src/backend/langflow/frontend
 
 build:
 	make install_frontend
 	make build_frontend
-	cp -r langflow/frontend/build langflow/backend/langflow_backend/frontend
 	poetry build --format sdist
-	rm -rf langflow/backend/langflow_backend/frontend
+	rm -rf src/backend/langflow/frontend
 
 publish:
 	make build

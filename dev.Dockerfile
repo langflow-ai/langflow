@@ -15,4 +15,4 @@ COPY ./ ./
 # Install dependencies
 RUN poetry config virtualenvs.create false && poetry install --no-interaction --no-ansi
 
-CMD ["uvicorn", "langflow_backend.main:app", "--host", "0.0.0.0", "--port", "5003", "--reload"]
+CMD ["uvicorn", "langflow.main:app", "--host", "0.0.0.0", "--port", "5003", "--reload"]

@@ -5,7 +5,7 @@ __pycache__/
 notebooks
 
 # frontend
-langflow_backend/frontend
+src/frontend
 
 # C extensions
 *.so

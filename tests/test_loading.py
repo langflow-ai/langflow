@@ -1,5 +1,5 @@
 from pathlib import Path
-from langflow_backend import load_flow_from_json
+from langflow import load_flow_from_json
 
 
 def test_load_flow_from_json():

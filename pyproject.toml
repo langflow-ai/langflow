@@ -4,14 +4,14 @@ version = "0.0.33"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 packages = [
-    { include = "langflow_backend", from = "langflow/backend" },
+    { include = "langflow", from = "src/backend" },
 ]
-include = ["langflow/backend/langflow_backend/*", "langflow/backend/langflow_backend/**/*"]
+include = ["src/backend/langflow/*", "src/backend/langflow/**/*"]
 license = "MIT"
 readme = "README.md"
 
 [tool.poetry.scripts]
-langflow = "langflow_backend.__main__:main"
+langflow = "langflow.__main__:main"
 
 [tool.poetry.dependencies]
 python = "^3.9"
