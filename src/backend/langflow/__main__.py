@@ -1,7 +1,7 @@
 import multiprocessing
 import platform
 
-from langflow_backend.main import create_app
+from langflow.main import create_app
 
 import typer
 from fastapi.staticfiles import StaticFiles
@@ -44,7 +44,7 @@ def serve(
 
         uvicorn.run(app, host=host, port=port, log_level="info")
     else:
-        from langflow_backend.server import LangflowApplication
+        from langflow.server import LangflowApplication
 
         LangflowApplication(app, options).run()
 

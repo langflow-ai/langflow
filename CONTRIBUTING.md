@@ -63,7 +63,7 @@ make run_backend
 ```
 For the frontend, you will need to install the dependencies and start the development server.
 ```bash
-cd langflow/frontend
+cd src/frontend
 npm install
 npm start
 ```

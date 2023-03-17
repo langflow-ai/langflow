@@ -50,7 +50,7 @@ COPY pyproject.toml ./
 COPY ./langflow ./langflow
 
 # Copy files from frontend
-COPY --from=frontend_build /app/build /app/langflow/frontend/build/
+COPY --from=frontend_build /app/build /app/src/frontend/build/
 
 RUN pip install .
 

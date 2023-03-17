@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 
-from langflow_backend.interface.signature import get_signature
+from langflow.interface.signature import get_signature
 
 # build router
 router = APIRouter(
