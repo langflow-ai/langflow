@@ -36,8 +36,10 @@ def serve(
         "timeout": timeout,
     }
 
-    if platform.system() == "Darwin":
-        # Run using uvicorn on MacOS
+    if platform.system() in ["Darwin", "Windows"]:
+        # Run using uvicorn on MacOS and Windows
+        # Windows doesn't support gunicorn
+        # MacOS requires a env variable to be set to use gunicorn
         import uvicorn
 
         uvicorn.run(app, host=host, port=port, log_level="info")
