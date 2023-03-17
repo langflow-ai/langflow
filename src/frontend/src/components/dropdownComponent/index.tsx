@@ -1,21 +1,22 @@
 import { Listbox, Transition } from "@headlessui/react";
 import { ChevronUpDownIcon, CheckIcon } from "@heroicons/react/24/outline";
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { DropDownComponentType } from "../../types/components";
 import { classNames } from "../../utils";
 
-export default function Dropdown({title, value, options, onSelect}:DropDownComponentType) {
+export default function Dropdown({value, options, onSelect}:DropDownComponentType) {
+  let [internalValue,setInternalValue] = useState(value??"choose an option")
   return (
     <>
-      <Listbox value={value} onChange={onSelect}>
+      <Listbox value={internalValue} onChange={(value)=>{
+        setInternalValue(value)
+        onSelect(value)
+      }}>
         {({ open }) => (
           <>
-            <Listbox.Label className="block text-sm font-medium text-gray-700">
-              {title}
-            </Listbox.Label>
             <div className="relative mt-1">
               <Listbox.Button className="relative w-full cursor-default rounded-md border border-gray-300 bg-white py-2 pl-3 pr-10 text-left shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm">
-                <span className="block truncate">{value}</span>
+                <span className="block w-max truncate">{internalValue}</span>
                 <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
                   <ChevronUpDownIcon
                     className="h-5 w-5 text-gray-400"

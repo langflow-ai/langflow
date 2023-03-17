@@ -12,7 +12,6 @@ export type ToggleComponentType = {
 	disabled: boolean;
 };
 export type DropDownComponentType = {
-	title: string;
 	value: string;
 	options: string[];
 	onSelect: (value: string) => void;
