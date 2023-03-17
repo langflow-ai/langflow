@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
-from langflow_backend.interface.types import build_langchain_types_dict
-from langflow_backend.interface.run import process_data_graph
+from langflow.interface.types import build_langchain_types_dict
+from langflow.interface.run import process_data_graph
 from typing import Any, Dict
 
 

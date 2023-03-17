@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from langflow_backend.interface.listing import list_type
+from langflow.interface.listing import list_type
 
 # build router
 router = APIRouter(

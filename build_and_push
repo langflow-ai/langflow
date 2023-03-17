@@ -1,6 +1,6 @@
 #! /bin/bash
 
-cd langflow/frontend
+cd src/frontend
 docker build -t logspace/frontend_build -f build.Dockerfile .
 cd ../backend
 docker build -t logspace/backend_build -f build.Dockerfile .

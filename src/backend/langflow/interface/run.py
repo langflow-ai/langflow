@@ -2,7 +2,7 @@ import contextlib
 import io
 import re
 from typing import Any, Dict
-from langflow_backend.interface import loading
+from langflow.interface import loading
 
 
 def process_data_graph(data_graph: Dict[str, Any]):

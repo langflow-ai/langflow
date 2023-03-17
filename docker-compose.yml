@@ -9,16 +9,16 @@ services:
       - "5003:5003"
     volumes:
       - ./:/app
-    command: bash -c "uvicorn langflow_backend.main:app --host 0.0.0.0 --port 5003 --reload"
+    command: bash -c "uvicorn langflow.main:app --host 0.0.0.0 --port 5003 --reload"
 
   frontend:
     build:
-      context: ./langflow/frontend
+      context: ./src/frontend
       dockerfile: ./dev.Dockerfile
     ports:
       - "3000:3000"
     volumes:
-      - ./langflow/frontend:/app
+      - ./src/frontend:/app
     # Set process.env.BACKEND to the backend service
     environment:
       - BACKEND="http://backend:5003"

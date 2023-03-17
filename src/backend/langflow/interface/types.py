@@ -1,5 +1,5 @@
-from langflow_backend.interface.listing import list_type
-from langflow_backend.interface.signature import get_signature
+from langflow.interface.listing import list_type
+from langflow.interface.signature import get_signature
 
 
 def get_type_list():
