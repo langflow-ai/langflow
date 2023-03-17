@@ -14,11 +14,7 @@ def get_number_of_workers(workers=None):
     return workers
 
 
-def serve(
-    host: str = "127.0.0.1",
-    workers: int = 1,
-    timeout: int = 60,
-):
+def serve(host: str = "127.0.0.1", workers: int = 1, timeout: int = 60):
     app = create_app()
     # get the directory of the current file
     path = Path(__file__).parent
@@ -28,7 +24,7 @@ def serve(
         StaticFiles(directory=static_files_dir, html=True),
         name="static",
     )
-    port = 5003
+    port = 7860
     options = {
         "bind": f"{host}:{port}",
         "workers": get_number_of_workers(workers),
