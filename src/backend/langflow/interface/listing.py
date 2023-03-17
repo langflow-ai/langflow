@@ -1,6 +1,6 @@
 from langchain import chains, agents, prompts, llms
-from langflow_backend.custom import customs
-from langflow_backend.utils import util, allowed_components
+from langflow.custom import customs
+from langflow.utils import util, allowed_components
 from langchain.agents.load_tools import get_all_tool_names
 from langchain.chains.conversation import memory as memories
 
