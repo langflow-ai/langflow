@@ -39,6 +39,10 @@ Explore by editing prompt parameters, link chains and agents, track an agent's t
 
 We welcome contributions from developers of all levels to our open-source project on GitHub. If you'd like to contribute, please check our contributing guidelines and help make LangFlow more accessible.
 
+
+[![Star History Chart](https://api.star-history.com/svg?repos=logspace-ai/langflow&type=Timeline)](https://star-history.com/#logspace-ai/langflow&Date)
+
+
 ## 📄 License
 
 LangFlow is released under the MIT License. See the LICENSE file for details.
