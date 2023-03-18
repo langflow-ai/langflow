@@ -9,5 +9,5 @@ export async function getAll():Promise<AxiosResponse<APIObjectType>> {
 
 export async function sendAll(data:sendAllProps) {
     console.log(data);
-    return await axios.post(`${backendUrl}/predict`, data);
+    return await axios.post(`/predict`, data);
 }
