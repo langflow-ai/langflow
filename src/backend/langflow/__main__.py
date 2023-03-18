@@ -23,7 +23,13 @@ def replace_port(static_files_dir, host, port):
     # we need to set the base url to the port that the server is running on
     # so that the frontend can make requests to the backend
     # This is a hacky way to do it, but it works
-    new_string = f'setItem("port","http://{host}:{port}")'
+
+    # Check if the host is http or https
+    if "http" in host:
+        new_string = f'setItem("port","{host}:{port}")'
+    else:
+        new_string = f'setItem("port","http://{host}:{port}")'
+
     with open(static_files_dir / "index.html", "r") as f:
         index_html = f.read()
         # using regex to replace the port
