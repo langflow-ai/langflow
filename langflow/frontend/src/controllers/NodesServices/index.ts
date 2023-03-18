@@ -1,7 +1,7 @@
 import { APIObjectType, sendAllProps } from '../../types/api/index';
 import axios, { AxiosResponse } from "axios";
 
-const backendUrl = process.env.BACKEND || "http://localhost:5003";
+const backendUrl = process.env.BACKEND || `http://${window.location.hostname}:5003`;
 
 export async function getAll():Promise<AxiosResponse<APIObjectType>> {
     return await axios.get(`${backendUrl}/all`);
