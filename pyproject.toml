@@ -1,17 +1,17 @@
 [tool.poetry]
 name = "langflow"
-version = "0.0.33"
+version = "0.0.40"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 packages = [
-    { include = "langflow_backend", from = "langflow/backend" },
+    { include = "langflow", from = "src/backend" },
 ]
-include = ["langflow/backend/langflow_backend/*", "langflow/backend/langflow_backend/**/*"]
+include = ["src/backend/langflow/*", "src/backend/langflow/**/*"]
 license = "MIT"
 readme = "README.md"
 
 [tool.poetry.scripts]
-langflow = "langflow_backend.__main__:main"
+langflow = "langflow.__main__:main"
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -21,9 +21,9 @@ uvicorn = "^0.20.0"
 beautifulsoup4 = "^4.11.2"
 google-search-results = "^2.4.1"
 google-api-python-client = "^2.79.0"
-langchain_ibis = "0.0.100"
 typer = "^0.7.0"
 gunicorn = "^20.1.0"
+langchain = "^0.0.113"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
