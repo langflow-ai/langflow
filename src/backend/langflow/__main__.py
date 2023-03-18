@@ -7,6 +7,9 @@ from langflow.main import create_app
 import typer
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def get_number_of_workers(workers=None):
@@ -25,10 +28,11 @@ def replace_port(static_files_dir, host, port):
     # This is a hacky way to do it, but it works
 
     # Check if the host is http or https
-    if "http" in host:
-        new_string = f'setItem("port","{host}:{port}")'
-    else:
-        new_string = f'setItem("port","http://{host}:{port}")'
+    logger.info(f"host: {host}")
+    logger.info(f"port: {port}")
+    url = f"{host}:{port}" if "http" in host else f"http://{host}:{port}"
+    logger.info(f"url: {url}")
+    new_string = f'setItem("port","{url}")'
 
     with open(static_files_dir / "index.html", "r") as f:
         index_html = f.read()
