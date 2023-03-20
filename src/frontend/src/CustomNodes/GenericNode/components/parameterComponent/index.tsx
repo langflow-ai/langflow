@@ -39,7 +39,6 @@ export default function ParameterComponent({
 	const [enabled, setEnabled] = useState(
 		data.node.template[name]?.value ?? false
 	);
-	console.log(data.node.template[name]);
 	const { reactFlowInstance } = useContext(typesContext);
 	let disabled =
 		reactFlowInstance?.getEdges().some((e) => e.targetHandle === id) ?? false;
