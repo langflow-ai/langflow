@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "0.0.40"
+version = "0.0.41"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 packages = [
