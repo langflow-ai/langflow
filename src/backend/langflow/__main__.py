@@ -74,7 +74,7 @@ def serve(
     }
 
     # Replace the port in index.html
-    replace_port(static_files_dir, host, port)
+    # replace_port(static_files_dir, host, port)
 
     if platform.system() in ["Darwin", "Windows"]:
         # Run using uvicorn on MacOS and Windows
