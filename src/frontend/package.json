@@ -1,6 +1,6 @@
 {
     "name": "langflow",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "private": true,
     "dependencies": {
         "@emotion/react": "^11.10.5",
@@ -53,5 +53,6 @@
             "last 1 firefox version",
             "last 1 safari version"
         ]
-    }
+    },
+    "proxy": "http://localhost:7860"
 }
