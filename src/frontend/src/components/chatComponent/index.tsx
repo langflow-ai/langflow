@@ -31,7 +31,6 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 		setChatHistory((old) => {
 			let newChat = _.cloneDeep(old);
 			if(JSON.stringify(flow.chat) !==JSON.stringify(old)){
-				console.log(old,flow.chat)
 				tabsChange = true
 				return old
 			}
@@ -43,7 +42,6 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 			return newChat;
 		});
 		if(tabsChange){
-			console.log(flow.chat)
 			if(thought){
 				updateFlow({..._.cloneDeep(flow),chat:[...flow.chat,{isSend,message,thought}]})
 			}
@@ -98,11 +96,9 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 				let message = chatValue;
 				setChatValue("");
 				addChatHistory(message, true);
-				console.log({ ...reactFlowInstance.toObject(), message, chatHistory });
 
 				sendAll({ ...reactFlowInstance.toObject(), message, chatHistory})
 					.then((r) => {
-						console.log(r.data);
 						addChatHistory(r.data.result, false, r.data.thought);
 						setLockChat(false);
 					})
