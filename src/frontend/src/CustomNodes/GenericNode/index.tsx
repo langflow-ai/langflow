@@ -80,8 +80,8 @@ export default function GenericNode({ data, selected}:{data:NodeDataType,selecte
             data={data}
             color={nodeColors[types[data.type]]}
             title={data.type}
-            tooltipTitle={"Type: str"}
-            id={data.type + "|" + data.id + data.node.base_classes.map((b) => ("|" + b))}
+            tooltipTitle={`Type: ${data.node.base_classes.join(' | ')}`}
+            id={[data.type, data.id, ...data.node.base_classes].join('|')}
             type={'str'}
             left={false}
           />
