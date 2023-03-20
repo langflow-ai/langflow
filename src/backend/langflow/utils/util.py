@@ -11,6 +11,8 @@ from langchain.agents.load_tools import (
 )
 from typing import Optional, Dict
 
+from backend.langflow.utils.constants import CHAT_OPENAI_MODELS, OPENAI_MODELS
+
 
 def build_template_from_function(name: str, type_to_loader_dict: Dict):
     classes = [
@@ -296,9 +298,9 @@ def format_dict(d, name: Optional[str] = None):
 
         # Add options to openai
         if name == "OpenAI" and key == "model_name":
-            value["options"] = ["text-davinci-003", "text-davinci-002"]
+            value["options"] = OPENAI_MODELS
         elif name == "OpenAIChat" and key == "model_name":
-            value["options"] = ["gpt-3.5-turbo", "gpt-4"]
+            value["options"] = CHAT_OPENAI_MODELS
 
     return d
 
