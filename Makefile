@@ -39,6 +39,10 @@ build:
 	poetry build --format sdist
 	rm -rf src/backend/langflow/frontend
 
+dev:
+	make install_frontend
+	docker compose up --build
+
 publish:
 	make build
 	poetry publish
@@ -49,4 +53,8 @@ help:
 	@echo 'lint                - run linters'
 	@echo 'install_frontend    - install the frontend dependencies'
 	@echo 'build_frontend      - build the frontend static files'
+	@echo 'run_frontend        - run the frontend in development mode'
+	@echo 'run_backend         - run the backend in development mode'
 	@echo 'build               - build the frontend static files and package the project'
+	@echo 'publish             - build the frontend static files and package the project and publish it to PyPI'
+	@echo 'dev                 - run the project in development mode with docker compose'
