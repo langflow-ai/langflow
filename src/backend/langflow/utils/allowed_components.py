@@ -4,6 +4,6 @@ AGENTS = ["ZeroShotAgent"]
 
 PROMPTS = ["PromptTemplate", "FewShotPromptTemplate"]
 
-LLMS = ["OpenAI"]
+LLMS = ["OpenAI", "OpenAIChat"]
 
 TOOLS = ["Search", "PAL-MATH", "Calculator", "Serper Search"]

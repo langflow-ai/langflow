@@ -7,7 +7,6 @@ import { SingleAlertComponentType } from "../../../../types/alerts";
 export default function SingleAlert({ dropItem, removeAlert}:SingleAlertComponentType) {
     const [show, setShow] = useState(true);
     const type = dropItem.type;
-    console.log(dropItem.id)
 
     return (
         <Transition
