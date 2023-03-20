@@ -15,7 +15,6 @@ langflow = "langflow.__main__:main"
 
 [tool.poetry.dependencies]
 python = "^3.9"
-openai = "^0.26.5"
 fastapi = "^0.92.0"
 uvicorn = "^0.20.0"
 beautifulsoup4 = "^4.11.2"
@@ -24,6 +23,7 @@ google-api-python-client = "^2.79.0"
 typer = "^0.7.0"
 gunicorn = "^20.1.0"
 langchain = "^0.0.113"
+openai = "^0.27.2"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"

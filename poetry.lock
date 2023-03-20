@@ -1378,13 +1378,14 @@ files = [
 
 [[package]]
 name = "openai"
-version = "0.26.5"
+version = "0.27.2"
 description = "Python client library for the OpenAI API"
 category = "main"
 optional = false
 python-versions = ">=3.7.1"
 files = [
-    {file = "openai-0.26.5.tar.gz", hash = "sha256:2882a59c67ae33c2716a04389a6e6680d061f073424953732f917fde219addfd"},
+    {file = "openai-0.27.2-py3-none-any.whl", hash = "sha256:6df674cf257e9e0504f1fd191c333d3f6a2442b13218d0eccf06230eb24d320e"},
+    {file = "openai-0.27.2.tar.gz", hash = "sha256:5869fdfa34b0ec66c39afa22f4a0fb83a135dff81f6505f52834c6ab3113f762"},
 ]
 
 [package.dependencies]
@@ -1395,7 +1396,7 @@ tqdm = "*"
 [package.extras]
 datalib = ["numpy", "openpyxl (>=3.0.7)", "pandas (>=1.2.3)", "pandas-stubs (>=1.1.0.11)"]
 dev = ["black (>=21.6b0,<22.0)", "pytest (>=6.0.0,<7.0.0)", "pytest-asyncio", "pytest-mock"]
-embeddings = ["matplotlib", "numpy", "openpyxl (>=3.0.7)", "pandas (>=1.2.3)", "pandas-stubs (>=1.1.0.11)", "plotly", "scikit-learn (>=1.0.2)", "sklearn", "tenacity (>=8.0.1)"]
+embeddings = ["matplotlib", "numpy", "openpyxl (>=3.0.7)", "pandas (>=1.2.3)", "pandas-stubs (>=1.1.0.11)", "plotly", "scikit-learn (>=1.0.2)", "scipy", "tenacity (>=8.0.1)"]
 wandb = ["numpy", "openpyxl (>=3.0.7)", "pandas (>=1.2.3)", "pandas-stubs (>=1.1.0.11)", "wandb"]
 
 [[package]]
@@ -2406,4 +2407,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "9287450d71ec7c3bd7b1ef2766e22b86fb92bf0e2f51260adf039b1175c74f7c"
+content-hash = "ebc0a8ca9ea284d8e986306a10f13ff91e7e8aae18341c83329f5b1e1bcc66bd"
