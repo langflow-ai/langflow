@@ -3,12 +3,19 @@ name = "langflow"
 version = "0.0.45"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
-packages = [
-    { include = "langflow", from = "src/backend" },
+maintainers = [
+    "Gabriel Almeida <gabriel@logspace.ai>",
+    "Ibis Prevedello <ibiscp@gmail.com>",
+    "Lucas Eduoli <lucaseduoli@gmail.com>",
+    "Otávio Anovazzi <otavio2204@gmail.com>",
 ]
-include = ["src/backend/langflow/*", "src/backend/langflow/**/*"]
+repository = "https://github.com/logspace-ai/langflow"
 license = "MIT"
 readme = "README.md"
+keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
+packages = [{ include = "langflow", from = "src/backend" }]
+include = ["src/backend/langflow/*", "src/backend/langflow/**/*"]
+
 
 [tool.poetry.scripts]
 langflow = "langflow.__main__:main"
