@@ -50,10 +50,10 @@ export default function TabsManagerComponent() {
 					flow={null}
 				/>
 				<div className="ml-auto mr-2 flex gap-3">
-					<button onClick={() => uploadFlow()} className="flex items-center gap-1 text-gray-400 hover:text-gray-500">
+					<button onClick={() => uploadFlow()} className="flex items-center gap-1 pr-2 border-gray-400 border-r text-sm text-gray-400 hover:text-gray-500">
 						Import <ArrowUpTrayIcon className="w-5 h-5" />
 					</button>
-					<button onClick={() => downloadFlow()} className="flex items-center gap-1 text-gray-400 hover:text-gray-500">
+					<button onClick={() => downloadFlow()} className="flex items-center gap-1 mr-2 text-sm text-gray-400 hover:text-gray-500">
 						Export <ArrowDownTrayIcon className="h-5 w-5" />
 					</button>
 					<button
