@@ -1,6 +1,5 @@
 import multiprocessing
 import platform
-import re
 
 from langflow.main import create_app
 
