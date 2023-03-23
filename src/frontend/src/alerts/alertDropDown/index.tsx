@@ -16,7 +16,6 @@ export default function AlertDropdown({}: AlertDropdownType) {
 				componentRef.current &&
 				!componentRef.current.contains(event.target as Node)
 			) {
-        console.log(event)
 				closePopUp();
 			}
 		}

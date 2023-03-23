@@ -1,47 +1,20 @@
 import multiprocessing
 import platform
-import re
 
 from langflow.main import create_app
 
 import typer
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def get_number_of_workers(workers=None):
     if workers == -1:
         workers = (multiprocessing.cpu_count() * 2) + 1
     return workers
-
-
-def replace_port(static_files_dir, host, port):
-    # Load index.html from frontend directory
-    # In it there is a script tag that sets the base url
-    # like so setItem("port", "http://localhost:7860")
-    # localhost could be anything so we need to verify for string
-    # we need to set the base url to the port that the server is running on
-    # so that the frontend can make requests to the backend
-    # This is a hacky way to do it, but it works
-    new_string = f'setItem("port","http://{host}:{port}")'
-    with open(static_files_dir / "index.html", "r") as f:
-        index_html = f.read()
-        # using regex to replace the port
-        index_html = re.sub(
-            r"setItem\(\"port\",.*\)",
-            new_string,
-            index_html,
-        )
-    with open(static_files_dir / "index.html", "w") as f:
-        f.write(index_html)
-    # Verify that the port was replaced
-    with open(static_files_dir / "index.html", "r") as f:
-        index_html = f.read()
-        if new_string not in index_html:
-            raise ValueError(
-                "The port was not replaced in index.html. "
-                "Please check the regex in main.py"
-            )
 
 
 def serve(
@@ -62,9 +35,6 @@ def serve(
         "worker_class": "uvicorn.workers.UvicornWorker",
         "timeout": timeout,
     }
-
-    # Replace the port in index.html
-    replace_port(static_files_dir, host, port)
 
     if platform.system() in ["Darwin", "Windows"]:
         # Run using uvicorn on MacOS and Windows
