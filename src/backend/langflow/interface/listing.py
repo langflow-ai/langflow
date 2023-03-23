@@ -1,4 +1,5 @@
-from langchain import chains, agents, prompts, llms
+from langchain import chains, agents, prompts
+from langflow.interface.custom_lists import llm_type_to_cls_dict
 from langflow.custom import customs
 from langflow.utils import util, allowed_components
 from langchain.agents.load_tools import get_all_tool_names
@@ -55,7 +56,7 @@ def list_llms():
     """List all llm types"""
     return [
         llm.__name__
-        for llm in llms.type_to_cls_dict.values()
+        for llm in llm_type_to_cls_dict.values()
         if llm.__name__ in allowed_components.LLMS
     ]
 

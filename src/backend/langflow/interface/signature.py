@@ -1,5 +1,6 @@
 from typing import Dict, Any  # noqa: F401
-from langchain import agents, chains, llms, prompts
+from langchain import agents, chains, prompts
+from langflow.interface.custom_lists import llm_type_to_cls_dict
 from langchain.agents.load_tools import (
     _BASE_TOOLS,
     _EXTRA_LLM_TOOLS,
@@ -56,7 +57,7 @@ def get_prompt_signature(name: str):
 def get_llm_signature(name: str):
     """Get the signature of an llm."""
     try:
-        return util.build_template_from_class(name, llms.type_to_cls_dict)
+        return util.build_template_from_class(name, llm_type_to_cls_dict)
     except ValueError as exc:
         raise ValueError("LLM not found") from exc
 

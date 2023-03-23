@@ -182,17 +182,6 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 					>
 						<Background className="dark:bg-gray-900"/>
 						<Controls className="[&>button]:text-black  [&>button]:dark:bg-gray-800 hover:[&>button]:dark:bg-gray-700 [&>button]:dark:text-gray-400 [&>button]:dark:fill-gray-400 [&>button]:dark:border-gray-600">
-							<ControlButton
-								onClick={() => uploadFlow()}
-							>
-								<ArrowUpTrayIcon />
-							</ControlButton>
-
-							<ControlButton
-								onClick={() => downloadFlow()}
-							>
-								<ArrowDownTrayIcon />
-							</ControlButton>
 						</Controls>
 					</ReactFlow>
 					<Chat flow={flow} reactFlowInstance={reactFlowInstance} />
