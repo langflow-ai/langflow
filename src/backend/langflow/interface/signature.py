@@ -1,6 +1,6 @@
-from typing import Dict, Any  # noqa: F401
+from typing import Any, Dict  # noqa: F401
+
 from langchain import agents, chains, prompts
-from langflow.interface.custom_lists import llm_type_to_cls_dict
 from langchain.agents.load_tools import (
     _BASE_TOOLS,
     _EXTRA_LLM_TOOLS,
@@ -9,8 +9,12 @@ from langchain.agents.load_tools import (
     get_all_tool_names,
 )
 
-from langflow.utils import util
 from langflow.custom import customs
+from langflow.interface.custom_lists import (
+    llm_type_to_cls_dict,
+    memory_type_to_cls_dict,
+)
+from langflow.utils import util
 
 
 def get_signature(name: str, object_type: str):
@@ -20,6 +24,7 @@ def get_signature(name: str, object_type: str):
         "agents": get_agent_signature,
         "prompts": get_prompt_signature,
         "llms": get_llm_signature,
+        "memories": get_memory_signature,
         "tools": get_tool_signature,
     }.get(object_type, lambda name: f"Invalid type: {name}")(name)
 
@@ -60,6 +65,14 @@ def get_llm_signature(name: str):
         return util.build_template_from_class(name, llm_type_to_cls_dict)
     except ValueError as exc:
         raise ValueError("LLM not found") from exc
+
+
+def get_memory_signature(name: str):
+    """Get the signature of a memory."""
+    try:
+        return util.build_template_from_class(name, memory_type_to_cls_dict)
+    except ValueError as exc:
+        raise ValueError("Memory not found") from exc
 
 
 def get_tool_signature(name: str):
