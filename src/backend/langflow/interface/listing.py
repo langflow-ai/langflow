@@ -1,9 +1,13 @@
-from langchain import chains, agents, prompts
-from langflow.interface.custom_lists import llm_type_to_cls_dict
-from langflow.custom import customs
-from langflow.utils import util, allowed_components
+from langchain import agents, chains, prompts
 from langchain.agents.load_tools import get_all_tool_names
-from langchain.chains.conversation import memory as memories
+
+from langflow.custom import customs
+from langflow.interface.custom_lists import (
+    llm_type_to_cls_dict,
+    memory_type_to_cls_dict,
+)
+from langflow.settings import settings
+from langflow.utils import util
 
 
 def list_type(object_type: str):
@@ -13,18 +17,19 @@ def list_type(object_type: str):
         "agents": list_agents,
         "prompts": list_prompts,
         "llms": list_llms,
-        "tools": list_tools,
         "memories": list_memories,
+        "tools": list_tools,
     }.get(object_type, lambda: "Invalid type")()
 
 
 def list_agents():
     """List all agent types"""
-    # return list(agents.loading.AGENT_TO_CLASS.keys())
+    AGENT_BUG = ["ChatAgent"]
     return [
         agent.__name__
         for agent in agents.loading.AGENT_TO_CLASS.values()
-        if agent.__name__ in allowed_components.AGENTS
+        if (agent.__name__ in settings.agents or settings.dev)
+        and agent.__name__ not in AGENT_BUG
     ]
 
 
@@ -34,19 +39,24 @@ def list_prompts():
     library_prompts = [
         prompt.__annotations__["return"].__name__
         for prompt in prompts.loading.type_to_loader_dict.values()
-        if prompt.__annotations__["return"].__name__ in allowed_components.PROMPTS
+        if prompt.__annotations__["return"].__name__ in settings.prompts or settings.dev
     ]
     return library_prompts + list(custom_prompts.keys())
 
 
 def list_tools():
     """List all load tools"""
+    TOOL_BUG = []
 
     tools = []
 
     for tool in get_all_tool_names():
         tool_params = util.get_tool_params(util.get_tools_dict(tool))
-        if tool_params and tool_params["name"] in allowed_components.TOOLS:
+        if (
+            tool_params
+            and (tool_params["name"] in settings.tools or settings.dev)
+            and tool_params["name"] not in TOOL_BUG
+        ):
             tools.append(tool_params["name"])
 
     return tools
@@ -57,7 +67,7 @@ def list_llms():
     return [
         llm.__name__
         for llm in llm_type_to_cls_dict.values()
-        if llm.__name__ in allowed_components.LLMS
+        if llm.__name__ in settings.llms or settings.dev
     ]
 
 
@@ -66,10 +76,21 @@ def list_chain_types():
     return [
         chain.__annotations__["return"].__name__
         for chain in chains.loading.type_to_loader_dict.values()
-        if chain.__annotations__["return"].__name__ in allowed_components.CHAINS
+        if chain.__annotations__["return"].__name__ in settings.chains or settings.dev
     ]
 
 
 def list_memories():
     """List all memory types"""
-    return [memory.__name__ for memory in memories.type_to_cls_dict.values()]
+    MEMORY_BUG = [
+        "ChatMessageHistory",
+        "ConversationSummaryBufferMemory",
+        "ConversationKGMemory",
+        "ConversationSummaryMemory",
+    ]
+    return [
+        memory.__name__
+        for memory in memory_type_to_cls_dict.values()
+        if (memory.__name__ in settings.memories or settings.dev)
+        and memory.__name__ not in MEMORY_BUG
+    ]
