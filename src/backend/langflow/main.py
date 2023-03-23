@@ -1,8 +1,9 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 from langflow.api.endpoints import router as endpoints_router
 from langflow.api.list_endpoints import router as list_router
 from langflow.api.signature import router as signatures_router
-from fastapi.middleware.cors import CORSMiddleware
 
 
 def create_app():
