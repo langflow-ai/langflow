@@ -4,6 +4,7 @@ import {
 	ArrowDownTrayIcon,
 	DocumentDuplicateIcon,
     ComputerDesktopIcon,
+	ArrowUpTrayIcon,
 } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
@@ -70,7 +71,7 @@ export default function ImportModal() {
 								<div className="h-full w-full flex flex-col justify-center items-center">
 									<div className="flex w-full pb-4 z-10 justify-center shadow-sm">
 										<div className="mx-auto mt-4 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-gray-900 sm:mx-0 sm:h-10 sm:w-10">
-											<ArrowDownTrayIcon
+											<ArrowUpTrayIcon
 												className="h-6 w-6 text-blue-600"
 												aria-hidden="true"
 											/>

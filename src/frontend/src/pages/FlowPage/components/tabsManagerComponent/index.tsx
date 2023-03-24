@@ -15,6 +15,7 @@ import { PopUpContext } from "../../../../contexts/popUpContext";
 import AlertDropdown from "../../../../alerts/alertDropDown";
 import { alertContext } from "../../../../contexts/alertContext";
 import ImportModal from "../../../../modals/importModal";
+import ExportModal from "../../../../modals/exportModal";
 
 export default function TabsManagerComponent() {
 	const { flows, addFlow, tabIndex, setTabIndex, uploadFlow, downloadFlow } =
@@ -64,7 +65,7 @@ export default function TabsManagerComponent() {
 						Import <ArrowUpTrayIcon className="w-5 h-5" />
 					</button>
 					<button
-						onClick={() => downloadFlow()}
+						onClick={() =>openPopUp(<ExportModal/>)}
 						className="flex items-center gap-1 mr-2 text-sm text-gray-400 hover:text-gray-500"
 					>
 						Export <ArrowDownTrayIcon className="h-5 w-5" />
