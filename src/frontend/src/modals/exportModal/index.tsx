@@ -112,7 +112,7 @@ export default function ExportModal() {
 												htmlFor="description"
 												className="block mb-2 font-medium text-gray-700 dark:text-white"
 											>
-												Description
+												Description <span className="text-gray-400 text-sm"> (optional)</span>
 											</label>
 											<textarea
 												name="description"
