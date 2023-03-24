@@ -72,11 +72,10 @@ def build_json(root: Node, graph: Graph) -> Dict:
             # Otherwise, recursively build the child nodes
             children = []
             for local_node in local_nodes:
-                module_types = [local_node.data["type"]]
-                if "node" in local_node.data:
-                    module_types += local_node.data["node"]["base_classes"]
-                if module_type in module_types:
-                    children.append(local_node)
+                node_children = graph.get_children_by_module_type(
+                    local_node, module_type
+                )
+                children.extend(node_children)
 
             if value["required"] and not children:
                 raise ValueError(f"No child with type {module_type} found")
