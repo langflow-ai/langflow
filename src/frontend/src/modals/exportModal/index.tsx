@@ -95,9 +95,11 @@ export default function ExportModal() {
 											</label>
 											<input
 												onChange={(event) => {
-													let newFlow = flows[tabIndex];
-													newFlow.name = event.target.value;
-													updateFlow(newFlow);
+                                                    if(event.target.value!=""){
+                                                        let newFlow = flows[tabIndex];
+                                                        newFlow.name = event.target.value;
+                                                        updateFlow(newFlow);
+                                                    }
 												}}
 												type="text"
 												name="name"
