@@ -128,9 +128,11 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	function addFlow(flow?: FlowType) {
 		// Get data from the flow or set it to null if there's no flow provided.
 		const data = flow?.data ? flow.data : null;
+		const description = flow?.description?flow.description:""
 
 		// Create a new flow with a default name if no flow is provided.
 		let newFlow: FlowType = {
+			description,
 			name: "New Flow",
 			id: id.toString(),
 			data,
@@ -158,6 +160,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 			const newFlows = [...prevState];
 			const index = newFlows.findIndex((flow) => flow.id === newFlow.id);
 			if (index !== -1) {
+				newFlows[index].description = newFlow.description??""
 				newFlows[index].data = newFlow.data;
 				newFlows[index].name = newFlow.name;
 				newFlows[index].chat = newFlow.chat;
