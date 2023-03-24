@@ -10,6 +10,7 @@ export type TabsContextType = {
 	incrementNodeId: () => number;
 	downloadFlow: (flow:FlowType) => void;
 	uploadFlow: () => void;
-	lockChat:boolean,
-	setLockChat:(prevState:boolean)=>void
+	lockChat:boolean;
+	setLockChat:(prevState:boolean)=>void;
+	hardReset:()=>void;
 };

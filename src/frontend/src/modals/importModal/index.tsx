@@ -88,13 +88,14 @@ export default function ImportModal() {
 									<div className="h-full w-full bg-gray-200 dark:bg-gray-900 p-4 gap-4 flex flex-row justify-center items-center">
 										<div className="flex h-full w-full justify-evenly items-center">
 											<ButtonBox
-												bgColor="bg-blue-500"
+												deactivate
+												bgColor="bg-slate-400"
 												description="Prebuilt Examples"
 												icon={
 													<DocumentDuplicateIcon className="h-10 w-10 flex-shrink-0" />
 												}
 												onClick={() => console.log("sdsds")}
-												textColor="text-blue-500"
+												textColor="text-slate-400"
 												title="Examples"
 											></ButtonBox>
 											<ButtonBox
