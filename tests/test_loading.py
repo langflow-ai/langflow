@@ -1,5 +1,6 @@
 import json
 from langchain import LLMChain, OpenAI
+from langflow.utils.graph import Graph
 import pytest
 from pathlib import Path
 from langflow import load_flow_from_json
@@ -31,10 +32,11 @@ def test_get_root_node():
     data_graph = flow_graph["data"]
     nodes = data_graph["nodes"]
     edges = data_graph["edges"]
-    root = get_root_node(nodes, edges)
+    graph = Graph(nodes, edges)
+    root = get_root_node(graph)
     assert root is not None
-    assert "id" in root
-    assert "data" in root
+    assert hasattr(root, "id")
+    assert hasattr(root, "data")
 
 
 def test_build_json():
@@ -43,8 +45,9 @@ def test_build_json():
     data_graph = flow_graph["data"]
     nodes = data_graph["nodes"]
     edges = data_graph["edges"]
-    root = get_root_node(nodes, edges)
-    built_json = build_json(root, nodes, edges)
+    graph = Graph(nodes, edges)
+    root = get_root_node(graph)
+    built_json = build_json(root, graph)
     assert built_json is not None
     assert isinstance(built_json, dict)
 
@@ -63,9 +66,10 @@ def test_build_json_missing_child():
                 if isinstance(value, dict) and "required" in value:
                     value["required"] = True
 
-    root = get_root_node(nodes, edges)
+    graph = Graph(nodes, edges)
+    root = get_root_node(graph)
     with pytest.raises(ValueError):
-        build_json(root, nodes, edges)
+        build_json(root, graph)
 
 
 def test_build_json_no_nodes():
@@ -83,8 +87,9 @@ def test_build_json_invalid_edge():
     for edge in edges:
         edge["source"] = "invalid_id"
 
-    root = get_root_node(nodes, edges)
-    with pytest.raises(ValueError):
+    with pytest.raises(AttributeError):
+        graph = Graph(nodes, edges)
+        root = get_root_node(graph)
         build_json(root, nodes, edges)
 
 

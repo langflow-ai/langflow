@@ -27,25 +27,22 @@ def extract_input_variables(nodes):
     return nodes
 
 
-def get_root_node(nodes, edges):
+def get_root_node(graph):
     """
     Returns the root node of the template.
     """
-    incoming_edges = {edge["source"] for edge in edges}
-    return next((node for node in nodes if node["id"] not in incoming_edges), None)
+    incoming_edges = {edge.source for edge in graph.edges}
+    return next((node for node in graph.nodes if node not in incoming_edges), None)
 
 
-def build_json(root, nodes, edges):
-    """
-    Builds a json from the nodes and edges
-    """
-    edge_ids = [edge["source"] for edge in edges if edge["target"] == root["id"]]
-    local_nodes = [node for node in nodes if node["id"] in edge_ids]
+def build_json(root, graph):
+    edge_ids = [edge.source for edge in graph.edges if edge.target == root]
+    local_nodes = [node for node in graph.nodes if node in edge_ids]
 
-    if "node" not in root["data"]:
-        return build_json(local_nodes[0], nodes, edges)
+    if "node" not in root.data:
+        return build_json(local_nodes[0], graph)
 
-    final_dict = root["data"]["node"]["template"].copy()
+    final_dict = root.data["node"]["template"].copy()
 
     for key, value in final_dict.items():
         if key == "_type":
@@ -59,16 +56,16 @@ def build_json(root, nodes, edges):
             value = {}
         else:
             children = []
-            for c in local_nodes:
-                module_types = [c["data"]["type"]]
-                if "node" in c["data"]:
-                    module_types += c["data"]["node"]["base_classes"]
+            for local_node in local_nodes:
+                module_types = [local_node.data["type"]]
+                if "node" in local_node.data:
+                    module_types += local_node.data["node"]["base_classes"]
                 if module_type in module_types:
-                    children.append(c)
+                    children.append(local_node)
 
             if value["required"] and not children:
                 raise ValueError(f"No child with type {module_type} found")
-            values = [build_json(child, nodes, edges) for child in children]
+            values = [build_json(child, graph) for child in children]
             value = list(values) if value["list"] else next(iter(values), None)
         final_dict[key] = value
     return final_dict
