@@ -2,7 +2,7 @@ from typing import Dict, List, Union
 
 
 class Node:
-    def __init__(self, data: Dict[str, Union[str, Dict[str, Union[str, List[str]]]]]):
+    def __init__(self, data: Dict):
         self.id: str = data["id"]
         self._data = data
         self.edges: List[Edge] = []
@@ -62,26 +62,36 @@ class Graph:
                 connected_nodes.append(edge.source)
         return connected_nodes
 
-    def get_node_neighbors(self, node_id: str) -> Dict[str, int]:
-        neighbors: Dict[str, int] = {}
+    def get_node_neighbors(self, node: Node) -> Dict[str, int]:
+        neighbors: Dict[Node, int] = {}
         for edge in self.edges:
-            if edge.source.id == node_id:
-                neighbor_id = edge.target.id
-                if neighbor_id not in neighbors:
-                    neighbors[neighbor_id] = 0
-                neighbors[neighbor_id] += 1
-            elif edge.target.id == node_id:
-                neighbor_id = edge.source.id
-                if neighbor_id not in neighbors:
-                    neighbors[neighbor_id] = 0
-                neighbors[neighbor_id] += 1
+            if edge.source == node:
+                neighbor = edge.target
+                if neighbor not in neighbors:
+                    neighbors[neighbor] = 0
+                neighbors[neighbor] += 1
+            elif edge.target == node:
+                neighbor = edge.source
+                if neighbor not in neighbors:
+                    neighbors[neighbor] = 0
+                neighbors[neighbor] += 1
         return neighbors
 
     def _build_edges(self) -> List[Edge]:
-        return [
-            Edge(self.get_node(edge["source"]), self.get_node(edge["target"]))
-            for edge in self._edges
-        ]
+        # Edge takes two nodes as arguments, so we need to build the nodes first
+        # and then build the edges
+        # if we can't find a node, we raise an error
+
+        edges: List[Edge] = []
+        for edge in self._edges:
+            source = self.get_node(edge["source"])
+            target = self.get_node(edge["target"])
+            if source is None:
+                raise ValueError(f"Source node {edge['source']} not found")
+            if target is None:
+                raise ValueError(f"Target node {edge['target']} not found")
+            edges.append(Edge(source, target))
+        return edges
 
     def _build_nodes(self) -> List[Node]:
         return [Node(node) for node in self._nodes]

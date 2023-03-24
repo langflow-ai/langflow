@@ -8,17 +8,15 @@ from langflow.interface.loading import extract_json
 from langflow.utils.payload import get_root_node, build_json
 from langflow.interface.loading import load_langchain_type_from_config
 
-EXAMPLE_JSON_PATH = Path(__file__).parent.absolute() / "data" / "example_flow.json"
-
 
 def test_load_flow_from_json():
     """Test loading a flow from a json file"""
-    loaded = load_flow_from_json(EXAMPLE_JSON_PATH)
+    loaded = load_flow_from_json(pytest.EXAMPLE_JSON_PATH)
     assert loaded is not None
 
 
 def test_extract_json():
-    with open(EXAMPLE_JSON_PATH, "r") as f:
+    with open(pytest.EXAMPLE_JSON_PATH, "r") as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]
     extracted = extract_json(data_graph)
@@ -27,7 +25,7 @@ def test_extract_json():
 
 
 def test_get_root_node():
-    with open(EXAMPLE_JSON_PATH, "r") as f:
+    with open(pytest.EXAMPLE_JSON_PATH, "r") as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]
     nodes = data_graph["nodes"]
@@ -40,7 +38,7 @@ def test_get_root_node():
 
 
 def test_build_json():
-    with open(EXAMPLE_JSON_PATH, "r") as f:
+    with open(pytest.EXAMPLE_JSON_PATH, "r") as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]
     nodes = data_graph["nodes"]
@@ -53,7 +51,7 @@ def test_build_json():
 
 
 def test_build_json_missing_child():
-    with open(EXAMPLE_JSON_PATH, "r") as f:
+    with open(pytest.EXAMPLE_JSON_PATH, "r") as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]
     nodes = data_graph["nodes"]
@@ -78,7 +76,7 @@ def test_build_json_no_nodes():
 
 
 def test_build_json_invalid_edge():
-    with open(EXAMPLE_JSON_PATH, "r") as f:
+    with open(pytest.EXAMPLE_JSON_PATH, "r") as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]
     nodes = data_graph["nodes"]
@@ -87,14 +85,14 @@ def test_build_json_invalid_edge():
     for edge in edges:
         edge["source"] = "invalid_id"
 
-    with pytest.raises(AttributeError):
+    with pytest.raises(ValueError):
         graph = Graph(nodes, edges)
         root = get_root_node(graph)
         build_json(root, nodes, edges)
 
 
 def test_load_langchain_type_from_config():
-    with open(EXAMPLE_JSON_PATH, "r") as f:
+    with open(pytest.EXAMPLE_JSON_PATH, "r") as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]
     extracted = extract_json(data_graph)
