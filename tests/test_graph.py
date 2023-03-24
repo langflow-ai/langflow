@@ -1,7 +1,7 @@
 import json
-from langflow.utils.graph import Graph
+from langflow.utils.graph import Edge, Graph, Node
 import pytest
-from langflow.utils.payload import get_root_node
+from langflow.utils.payload import build_json, get_root_node
 
 # Test cases for the graph module
 
@@ -70,3 +70,68 @@ def test_get_node_neighbors():
         for neighbor, val in chain_neighbors.items()
         if val
     )
+
+
+def test_get_node():
+    """Test getting a single node"""
+    graph = get_graph()
+    node_id = graph.nodes[0].id
+    node = graph.get_node(node_id)
+    assert isinstance(node, Node)
+    assert node.id == node_id
+
+
+def test_build_nodes():
+    """Test building nodes"""
+    graph = get_graph()
+    assert len(graph.nodes) == len(graph._nodes)
+    for node in graph.nodes:
+        assert isinstance(node, Node)
+
+
+def test_build_edges():
+    """Test building edges"""
+    graph = get_graph()
+    assert len(graph.edges) == len(graph._edges)
+    for edge in graph.edges:
+        assert isinstance(edge, Edge)
+        assert isinstance(edge.source, Node)
+        assert isinstance(edge.target, Node)
+
+
+def test_get_root_node():
+    """Test getting root node"""
+    graph = get_graph(basic=True)
+    assert isinstance(graph, Graph)
+    root = get_root_node(graph)
+    assert root is not None
+    assert isinstance(root, Node)
+    assert root.data["type"] == "ZeroShotAgent"
+    # For complex example, the root node is a ZeroShotAgent too
+    graph = get_graph(basic=False)
+    assert isinstance(graph, Graph)
+    root = get_root_node(graph)
+    assert root is not None
+    assert isinstance(root, Node)
+    assert root.data["type"] == "ZeroShotAgent"
+
+
+def test_build_json():
+    """Test building JSON from graph"""
+    graph = get_graph()
+    assert isinstance(graph, Graph)
+    root = get_root_node(graph)
+    json_data = build_json(root, graph)
+    assert isinstance(json_data, dict)
+    assert json_data["_type"] == "zero-shot-react-description"
+    assert isinstance(json_data["llm_chain"], dict)
+    assert json_data["llm_chain"]["_type"] == "llm_chain"
+    assert json_data["llm_chain"]["memory"] is None
+    assert json_data["llm_chain"]["verbose"] is True
+    assert isinstance(json_data["llm_chain"]["prompt"], dict)
+    assert isinstance(json_data["llm_chain"]["llm"], dict)
+    assert json_data["llm_chain"]["output_key"] == "text"
+    assert isinstance(json_data["allowed_tools"], list)
+    assert all(isinstance(tool, dict) for tool in json_data["allowed_tools"])
+    assert isinstance(json_data["return_values"], list)
+    assert all(isinstance(val, str) for val in json_data["return_values"])
