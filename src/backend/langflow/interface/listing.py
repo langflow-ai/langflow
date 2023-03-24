@@ -24,12 +24,10 @@ def list_type(object_type: str):
 
 def list_agents():
     """List all agent types"""
-    AGENT_BUG = ["ChatAgent"]
     return [
         agent.__name__
         for agent in agents.loading.AGENT_TO_CLASS.values()
-        if (agent.__name__ in settings.agents or settings.dev)
-        and agent.__name__ not in AGENT_BUG
+        if agent.__name__ in settings.agents or settings.dev
     ]
 
 
@@ -46,17 +44,12 @@ def list_prompts():
 
 def list_tools():
     """List all load tools"""
-    TOOL_BUG = []
 
     tools = []
 
     for tool in get_all_tool_names():
         tool_params = util.get_tool_params(util.get_tools_dict(tool))
-        if (
-            tool_params
-            and (tool_params["name"] in settings.tools or settings.dev)
-            and tool_params["name"] not in TOOL_BUG
-        ):
+        if tool_params and tool_params["name"] in settings.tools or settings.dev:
             tools.append(tool_params["name"])
 
     return tools
@@ -82,15 +75,8 @@ def list_chain_types():
 
 def list_memories():
     """List all memory types"""
-    MEMORY_BUG = [
-        "ChatMessageHistory",
-        "ConversationSummaryBufferMemory",
-        "ConversationKGMemory",
-        "ConversationSummaryMemory",
-    ]
     return [
         memory.__name__
         for memory in memory_type_to_cls_dict.values()
-        if (memory.__name__ in settings.memories or settings.dev)
-        and memory.__name__ not in MEMORY_BUG
+        if memory.__name__ in settings.memories or settings.dev
     ]
