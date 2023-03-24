@@ -15,7 +15,8 @@ const TabsContextInitialValue: TabsContextType = {
 	downloadFlow: (flow:FlowType) => {},
 	uploadFlow: () => {},
 	lockChat: false,
-	setLockChat:(prevState:boolean)=>{}
+	setLockChat:(prevState:boolean)=>{},
+	hardReset:()=>{}
 };
 
 export const TabsContext = createContext<TabsContextType>(
@@ -54,6 +55,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 			newNodeId.current = cookieObject.nodeId;
 		}
 	}, []);
+	function hardReset(){
+		newNodeId.current=0;
+		setTabIndex(0);setFlows([]);setId(0);
+	}
 
 	/**
 	 * Downloads the current flow as a JSON file
@@ -172,6 +177,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	return (
 		<TabsContext.Provider
 			value={{
+				hardReset,
 				lockChat,
 				setLockChat,
 				tabIndex,
