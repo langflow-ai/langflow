@@ -53,13 +53,10 @@ class Graph:
     def get_node(self, node_id: str) -> Union[None, Node]:
         return next((node for node in self.nodes if node.id == node_id), None)
 
-    def get_connected_nodes(self, node_id: str) -> List[Node]:
-        connected_nodes: List[Node] = []
-        for edge in self.edges:
-            if edge.source.id == node_id:
-                connected_nodes.append(edge.target)
-            elif edge.target.id == node_id:
-                connected_nodes.append(edge.source)
+    def get_nodes_with_target(self, node: Node) -> List[Node]:
+        connected_nodes: List[Node] = [
+            edge.source for edge in self.edges if edge.target == node
+        ]
         return connected_nodes
 
     def get_node_neighbors(self, node: Node) -> Dict[str, int]:
