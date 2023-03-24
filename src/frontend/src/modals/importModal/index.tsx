@@ -7,12 +7,14 @@ import {
 } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
+import { TabsContext } from "../../contexts/tabsContext";
 import ButtonBox from "./buttonBox";
 
 export default function ImportModal() {
 	const [open, setOpen] = useState(true);
 	const { closePopUp } = useContext(PopUpContext);
 	const ref = useRef();
+    const {uploadFlow} = useContext(TabsContext)
 	function setModalOpen(x: boolean) {
 		setOpen(x);
 		if (x === false) {
@@ -100,7 +102,7 @@ export default function ImportModal() {
 												icon={
 													<ComputerDesktopIcon className="h-10 w-10 flex-shrink-0" />
 												}
-												onClick={() => console.log("sdsds")}
+												onClick={() => {uploadFlow()}}
 												textColor="text-blue-500"
 												title="Local file"
 											></ButtonBox>
