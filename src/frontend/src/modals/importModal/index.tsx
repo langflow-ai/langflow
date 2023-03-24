@@ -102,7 +102,7 @@ export default function ImportModal() {
 												icon={
 													<ComputerDesktopIcon className="h-10 w-10 flex-shrink-0" />
 												}
-												onClick={() => {uploadFlow()}}
+												onClick={() => uploadFlow()}
 												textColor="text-blue-500"
 												title="Local file"
 											></ButtonBox>
