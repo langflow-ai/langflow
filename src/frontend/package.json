@@ -17,6 +17,7 @@
         "@types/react": "^18.0.27",
         "@types/react-dom": "^18.0.10",
         "axios": "^1.3.2",
+        "lodash": "^4.17.21",
         "react": "^18.2.0",
         "react-cookie": "^4.1.1",
         "react-dom": "^18.2.0",

@@ -9,6 +9,8 @@ import {
   Bars3CenterLeftIcon,
 } from "@heroicons/react/24/outline";
 import { Connection, Edge, Node, ReactFlowInstance } from "reactflow";
+import { FlowType } from "./types/flow";
+var _ = require('lodash')
 
 export function classNames(...classes:Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -342,3 +344,16 @@ export function isValidConnection(
   return false;
 }
 
+export function removeApiKeys(flow:FlowType):FlowType{
+  let cleanFLow = _.cloneDeep(flow)
+  cleanFLow.data.nodes.forEach(node=>{
+    for(const key in node.data.node.template)
+    {
+      if(key.includes('api')){
+        console.log(node.data.node.template[key])
+        node.data.node.template[key].value = ''
+      }
+    }
+  })
+  return cleanFLow
+}
