@@ -17,6 +17,7 @@ from langchain.agents.load_tools import (
     _EXTRA_LLM_TOOLS,
     _EXTRA_OPTIONAL_TOOLS,
 )
+from langflow.utils.graph import Graph
 
 
 def load_flow_from_json(path: str):
@@ -36,8 +37,9 @@ def extract_json(data_graph):
     nodes = payload.extract_input_variables(nodes)
     # Nodes, edges and root node
     edges = data_graph["edges"]
-    root = payload.get_root_node(nodes, edges)
-    return payload.build_json(root, nodes, edges)
+    graph = Graph(nodes, edges)
+    root = payload.get_root_node(graph)
+    return payload.build_json(root, graph)
 
 
 def replace_zero_shot_prompt_with_prompt_template(nodes):
