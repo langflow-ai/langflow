@@ -17,14 +17,14 @@ def get_graph(basic=True):
     return Graph(nodes, edges)
 
 
-def test_get_connected_nodes():
+def test_get_nodes_with_target():
     """Test getting connected nodes"""
     graph = get_graph()
     assert isinstance(graph, Graph)
     # Get root node
     root = get_root_node(graph)
     assert root is not None
-    connected_nodes = graph.get_connected_nodes(root)
+    connected_nodes = graph.get_nodes_with_target(root)
     assert connected_nodes is not None
 
 
