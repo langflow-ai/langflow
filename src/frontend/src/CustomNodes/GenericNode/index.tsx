@@ -15,7 +15,9 @@ import { NodeDataType} from "../../types/flow";
 export default function GenericNode({ data, selected}:{data:NodeDataType,selected:boolean}) {
   const {types, deleteNode} = useContext(typesContext);
   const Icon = nodeIcons[types[data.type]];
-
+  if(!Icon){
+    return
+  }
 
   return (
     <div className={ classNames(selected?"border border-blue-500":"border dark:border-gray-700","prompt-node relative bg-white dark:bg-gray-900 w-96 rounded-lg flex flex-col justify-center")}>
