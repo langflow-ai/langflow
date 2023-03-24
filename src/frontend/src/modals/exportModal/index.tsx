@@ -6,6 +6,7 @@ import {
 	ComputerDesktopIcon,
 } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useRef, useState } from "react";
+import { alertContext } from "../../contexts/alertContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { removeApiKeys } from "../../utils";
@@ -14,6 +15,7 @@ export default function ExportModal() {
 	const [open, setOpen] = useState(true);
 	const { closePopUp } = useContext(PopUpContext);
 	const ref = useRef();
+    const {setErrorData}= useContext(alertContext)
 	const { flows, tabIndex, updateFlow, downloadFlow } = useContext(TabsContext);
 	function setModalOpen(x: boolean) {
 		setOpen(x);
@@ -99,6 +101,9 @@ export default function ExportModal() {
                                                         let newFlow = flows[tabIndex];
                                                         newFlow.name = event.target.value;
                                                         updateFlow(newFlow);
+                                                    }
+                                                    else{
+                                                        setErrorData({title:"Flow name can't be empty"})
                                                     }
 												}}
 												type="text"
