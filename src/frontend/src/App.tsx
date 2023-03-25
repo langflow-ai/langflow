@@ -126,7 +126,7 @@ useEffect(() => {
 					</div>
 				))}
 			</div>
-			<a target={"_blank"} href="https://logspace.ai/" className="absolute bottom-1 left-1 text-gray-500 text-xs cursor-pointer font-sans tracking-wide">Created by Logspace</a>
+			<a target={"_blank"} href="https://logspace.ai/" className="absolute bottom-1 left-1 text-gray-500 text-xs cursor-pointer font-sans tracking-wide">Created with passion by Logspace</a>
 		</div>
 	);
 }
