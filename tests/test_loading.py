@@ -64,9 +64,9 @@ def test_build_json_missing_child():
                 if isinstance(value, dict) and "required" in value:
                     value["required"] = True
 
-    graph = Graph(nodes, edges)
-    root = get_root_node(graph)
     with pytest.raises(ValueError):
+        graph = Graph(nodes, edges)
+        root = get_root_node(graph)
         build_json(root, graph)
 
 
