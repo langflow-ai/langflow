@@ -6,16 +6,20 @@ from langchain.agents.load_tools import get_all_tool_names
 from langchain.chains.conversation import memory as memories
 
 
-def list_type(object_type: str):
-    """List all components"""
+def get_type_dict():
     return {
         "chains": list_chain_types,
         "agents": list_agents,
         "prompts": list_prompts,
         "llms": list_llms,
         "tools": list_tools,
-        "memories": list_memories,
-    }.get(object_type, lambda: "Invalid type")()
+        # "memories": list_memories,
+    }
+
+
+def list_type(object_type: str):
+    """List all components"""
+    return get_type_dict().get(object_type, lambda: "Invalid type")()
 
 
 def list_agents():
@@ -48,7 +52,7 @@ def list_tools():
         tool_params = util.get_tool_params(util.get_tools_dict(tool))
         if tool_params and tool_params["name"] in allowed_components.TOOLS:
             tools.append(tool_params["name"])
-
+    tools.append("BaseTool")
     return tools
 
 

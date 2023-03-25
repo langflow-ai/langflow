@@ -18,6 +18,7 @@ from langchain.agents.load_tools import (
     _EXTRA_OPTIONAL_TOOLS,
 )
 from langflow.utils.graph import Graph
+from langchain.agents import agent as agent_module
 
 
 def load_flow_from_json(path: str):
@@ -90,6 +91,19 @@ def load_agent_executor_from_config(
         agent=agent_obj,
         tools=tools,
         callback_manager=callback_manager,
+        **kwargs,
+    )
+
+
+def load_agent_executor(
+    agent_class: agent_module.Agent, allowed_tools, llm_chain, **kwargs
+):
+    """Load agent executor from agent class, tools and chain"""
+    tool_names = [tool.name for tool in allowed_tools]
+    agent = agent_class(allowed_tools=tool_names, llm_chain=llm_chain)
+    return AgentExecutor.from_agent_and_tools(
+        agent=agent,
+        tools=allowed_tools,
         **kwargs,
     )
 

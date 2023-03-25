@@ -47,7 +47,7 @@ def build_json(root: Node, graph: Graph) -> Dict:
     else:
         # Otherwise, find all children whose type matches the type
         # specified in the template
-        module_type = root.data["node"]["template"]["_type"]
+        module_type = root.module_type
         local_nodes = graph.get_nodes_with_target(root)
 
     if len(local_nodes) == 1:
