@@ -1,10 +1,8 @@
+import types
 from typing import Dict, List, Union
-from langflow.interface import listing, loading
+from langflow.interface import loading
 from langflow.utils import payload, util
-
-LANGCHAIN_TYPES_DICT = {
-    k: list_function() for k, list_function in listing.get_type_dict().items()
-}
+from langflow.interface.listing import ALL_TYPES_DICT
 
 
 class Node:
@@ -38,11 +36,11 @@ class Node:
         ]
 
         template_dict = self.data["node"]["template"]
-        self.module_type = (
+        self.node_type = (
             self.data["type"] if "Tool" not in self.output else template_dict["_type"]
         )
 
-    def _build_params(self) -> Dict:
+    def _build_params(self):
         # Some params are required, some are optional
         # but most importantly, some params are python base classes
         # like str and others are LangChain objects like LLMChain, BasePromptTemplate
@@ -68,7 +66,7 @@ class Node:
                 continue
             if value["type"] not in ["str", "bool"]:
                 # Get the edge that connects to this node
-                edge = next(
+                edge: Edge = next(
                     (
                         edge
                         for edge in self.edges
@@ -83,21 +81,16 @@ class Node:
                 # or create a new list if it doesn't
                 if edge is None and value["required"]:
                     raise ValueError(
-                        f"Required input {key} for module {self.module_type} is not connected"
+                        f"Required input {key} for module {self.node_type} is not connected"
                     )
                 if value["list"]:
                     if key in params:
                         params[key].append(edge.source)
                     else:
                         params[key] = [edge.source]
-                else:
-                    if not value["required"] and edge is None:
-                        continue
-
+                elif value["required"] or edge is not None:
                     params[key] = edge.source
-            else:
-                if not value["required"] and not value.get("value"):
-                    continue
+            elif value["required"] or value.get("value"):
                 params[key] = value["value"]
 
         # Add _type to params
@@ -112,7 +105,7 @@ class Node:
         # and use the output of that build as the value for the param
         # if the value is not a node, then we use the value as the param
         # and continue
-        # Another aspect is that the module_type is the class that we need to import
+        # Another aspect is that the node_type is the class that we need to import
         # and instantiate with these built params
 
         # Build each node in the params dict
@@ -120,7 +113,10 @@ class Node:
             # Check if Node or list of Nodes
             if isinstance(value, Node):
                 result = value.build()
-                self.params[key] = result.run if key == "func" else result
+                # If the key is "func", then we need to use the run method
+                if key == "func" and not isinstance(result, types.FunctionType):
+                    result = result.run
+                self.params[key] = result
             elif isinstance(value, list) and all(
                 isinstance(node, Node) for node in value
             ):
@@ -130,12 +126,13 @@ class Node:
         # and instantiate it with the params
         # and return the instance
         instance = None
-        for base_type, value in LANGCHAIN_TYPES_DICT.items():
+        for base_type, value in ALL_TYPES_DICT.items():
             if base_type == "tools":
                 value = util.get_tools_dict()
-            if self.module_type in value:
+
+            if self.node_type in value:
                 instance = loading.instantiate_class(
-                    module_type=self.module_type,
+                    node_type=self.node_type,
                     base_type=base_type,
                     params=self.params,
                 )
@@ -260,11 +257,11 @@ class Graph:
     def _build_nodes(self) -> List[Node]:
         return [Node(node) for node in self._nodes]
 
-    def get_children_by_module_type(self, node: Node, module_type: str) -> List[Node]:
+    def get_children_by_node_type(self, node: Node, node_type: str) -> List[Node]:
         children = []
-        module_types = [node.data["type"]]
+        node_types = [node.data["type"]]
         if "node" in node.data:
-            module_types += node.data["node"]["base_classes"]
-        if module_type in module_types:
+            node_types += node.data["node"]["base_classes"]
+        if node_type in node_types:
             children.append(node)
         return children

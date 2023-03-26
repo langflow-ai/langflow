@@ -3,6 +3,7 @@ import importlib
 import inspect
 import re
 from typing import Dict, Optional
+import types
 
 from langchain.agents.load_tools import (
     _BASE_TOOLS,
@@ -122,6 +123,21 @@ def build_template_from_class(
             }
 
 
+def eval_function(function_string: str):
+    # Create an empty dictionary to serve as a separate namespace
+    namespace: Dict = {}
+
+    # Execute the code string in the new namespace
+    exec(function_string, namespace)
+    function_object = next(
+        (obj for name, obj in namespace.items() if isinstance(obj, types.FunctionType)),
+        None,
+    )
+    if function_object is None:
+        raise ValueError("Function string does not contain a function")
+    return function_object
+
+
 def get_base_classes(cls):
     """Get the base classes of a class.
     These are used to determine the output of the nodes.
@@ -165,9 +181,6 @@ class GenericTool(Tool):
         super().__init__(name=name, description=description, func=func)
 
 
-# from langchain.llms.base import BaseLLM
-
-
 def get_base_tool(name, description, func: callable) -> BaseTool:
     return GenericTool(func=func, name="Generic Tool", description="Bacon")
 
@@ -205,6 +218,7 @@ def get_tool_params(func, **kwargs):
                                 tool_params["description"] = ast.literal_eval(
                                     keyword.value
                                 )
+
                         return tool_params
                     return {
                         "name": ast.literal_eval(tool.args[0]),
