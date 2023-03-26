@@ -17,8 +17,26 @@ from langchain.agents.load_tools import (
     _EXTRA_LLM_TOOLS,
     _EXTRA_OPTIONAL_TOOLS,
 )
-from langflow.utils.graph import Graph
 from langchain.agents import agent as agent_module
+from langflow.utils.graph import Graph
+
+from langflow.interface.importing import import_by_type
+
+from langchain.agents import ZeroShotAgent
+
+
+def instantiate_class(module_type: str, base_type: str, params: Dict) -> Any:
+    """Instantiate class from module type and key, and params"""
+    class_object = import_by_type(_type=base_type, name=module_type)
+    if base_type == "agents":
+        # We need to initialize it differently
+        allowed_tools = params["allowed_tools"]
+        llm_chain = params["llm_chain"]
+        return load_agent_executor(class_object, allowed_tools, llm_chain)
+    elif base_type == "tools" or module_type != "ZeroShotPrompt":
+        return class_object(**params)
+    else:
+        return ZeroShotAgent.create_prompt(**params, tools=[])
 
 
 def load_flow_from_json(path: str):
