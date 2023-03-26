@@ -28,8 +28,9 @@ def get_chain_signature(name: str):
     """Get the chain type by signature."""
     try:
         return util.build_template_from_function(
-            name, chains.loading.type_to_loader_dict
+            name, chains.loading.type_to_loader_dict, add_function=True
         )
+
     except ValueError as exc:
         raise ValueError("Chain not found") from exc
 
@@ -37,7 +38,9 @@ def get_chain_signature(name: str):
 def get_agent_signature(name: str):
     """Get the signature of an agent."""
     try:
-        return util.build_template_from_class(name, agents.loading.AGENT_TO_CLASS)
+        return util.build_template_from_class(
+            name, agents.loading.AGENT_TO_CLASS, add_function=True
+        )
     except ValueError as exc:
         raise ValueError("Agent not found") from exc
 
@@ -65,11 +68,13 @@ def get_llm_signature(name: str):
 def get_tool_signature(name: str):
     """Get the signature of a tool."""
 
+    NODE_INPUTS = ["llm", "func"]
     all_tools = {}
     for tool in get_all_tool_names():
         if tool_params := util.get_tool_params(util.get_tools_dict(tool)):
             all_tools[tool_params["name"]] = tool
 
+    all_tools["BaseTool"] = "BaseTool"
     # Raise error if name is not in tools
     if name not in all_tools.keys():
         raise ValueError("Tool not found")
@@ -84,6 +89,14 @@ def get_tool_signature(name: str):
             "value": "",
         },
         "llm": {"type": "BaseLLM", "required": True, "list": False, "show": True},
+        "func": {
+            "type": "function",
+            "required": True,
+            "list": False,
+            "show": True,
+            "value": "",
+            "multiline": True,
+        },
     }
 
     tool_type = all_tools[name]
@@ -98,11 +111,15 @@ def get_tool_signature(name: str):
     elif tool_type in _EXTRA_OPTIONAL_TOOLS:
         _, extra_keys = _EXTRA_OPTIONAL_TOOLS[tool_type]
         params = extra_keys
+    elif tool_type == "BaseTool":
+        params = ["name", "description", "func"]
     else:
         params = []
 
     template = {
-        param: (type_dict[param].copy() if param == "llm" else type_dict["str"].copy())
+        param: (
+            type_dict[param].copy() if param in NODE_INPUTS else type_dict["str"].copy()
+        )
         for param in params
     }
 
