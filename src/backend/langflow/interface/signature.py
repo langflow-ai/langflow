@@ -24,7 +24,7 @@ def get_signature(name: str, object_type: str):
         "agents": get_agent_signature,
         "prompts": get_prompt_signature,
         "llms": get_llm_signature,
-        "memories": get_memory_signature,
+        # "memories": get_memory_signature,
         "tools": get_tool_signature,
     }.get(object_type, lambda name: f"Invalid type: {name}")(name)
 
