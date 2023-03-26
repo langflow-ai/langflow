@@ -55,7 +55,7 @@ def list_tools():
         tool_params = util.get_tool_params(util.get_tools_dict(tool))
         if tool_params and tool_params["name"] in settings.tools or settings.dev:
             tools.append(tool_params["name"])
-    tools.append("BaseTool")
+
     return tools
 
 
@@ -84,3 +84,15 @@ def list_memories():
         for memory in memory_type_to_cls_dict.values()
         if memory.__name__ in settings.memories or settings.dev
     ]
+
+
+LANGCHAIN_TYPES_DICT = {
+    k: list_function() for k, list_function in get_type_dict().items()
+}
+
+# Now we'll build a dict with Langchain types and ours
+
+ALL_TYPES_DICT = {
+    **LANGCHAIN_TYPES_DICT,
+    "Custom": ["Custom Tool", "Python Function"],
+}

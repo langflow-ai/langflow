@@ -25,16 +25,26 @@ from langflow.interface.types import get_type_list
 from langflow.utils import payload, util
 
 
-def instantiate_class(module_type: str, base_type: str, params: Dict) -> Any:
+def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
     """Instantiate class from module type and key, and params"""
-    class_object = import_by_type(_type=base_type, name=module_type)
+    class_object = import_by_type(_type=base_type, name=node_type)
     if base_type == "agents":
         # We need to initialize it differently
         allowed_tools = params["allowed_tools"]
         llm_chain = params["llm_chain"]
         return load_agent_executor(class_object, allowed_tools, llm_chain)
-    elif base_type == "tools" or module_type != "ZeroShotPrompt":
+    elif base_type == "tools" or node_type != "ZeroShotPrompt":
         return class_object(**params)
+    elif node_type == "PythonFunction":
+        # If the node_type is "PythonFunction"
+        # we need to get the function from the params
+        # which will be a str containing a python function
+        # and then we need to compile it and return the function
+        # as the instance
+        function_string = params["function"]
+        if isinstance(function_string, str):
+            return util.eval_function(function_string)
+        raise ValueError("Function should be a string")
     else:
         return ZeroShotAgent.create_prompt(**params, tools=[])
 
