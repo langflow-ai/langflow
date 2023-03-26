@@ -1,15 +1,15 @@
 import ast
+import importlib
 import inspect
 import re
-import importlib
+from typing import Dict, Optional
 
 from langchain.agents.load_tools import (
     _BASE_TOOLS,
-    _LLM_TOOLS,
     _EXTRA_LLM_TOOLS,
     _EXTRA_OPTIONAL_TOOLS,
+    _LLM_TOOLS,
 )
-from typing import Optional, Dict
 
 
 from langchain.agents.tools import Tool
@@ -84,6 +84,7 @@ def build_template_from_class(
         if v.__name__ == name:
             _class = v
 
+            # Get the docstring
             docs = get_class_doc(_class)
 
             variables = {"_type": _type}
@@ -238,11 +239,7 @@ def get_class_doc(class_name):
         A dictionary containing the extracted information, with keys
         for 'Description', 'Parameters', 'Attributes', and 'Returns'.
     """
-    # Get the class docstring
-    docstring = class_name.__doc__
-
-    # Parse the docstring to extract information
-    lines = docstring.split("\n")
+    # Template
     data = {
         "Description": "",
         "Parameters": {},
@@ -250,6 +247,15 @@ def get_class_doc(class_name):
         "Example": [],
         "Returns": {},
     }
+
+    # Get the class docstring
+    docstring = class_name.__doc__
+
+    if not docstring:
+        return data
+
+    # Parse the docstring to extract information
+    lines = docstring.split("\n")
 
     current_section = "Description"
 
