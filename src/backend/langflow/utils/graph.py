@@ -1,6 +1,5 @@
 from typing import Dict, List, Union
-from langflow.interface import listing
-from langflow.interface.importing import import_by_type
+from langflow.interface import listing, loading
 from langflow.utils import payload, util
 
 LANGCHAIN_TYPES_DICT = {
@@ -105,8 +104,6 @@ class Node:
         self.params = params
 
     def build(self):
-        from langflow.interface.loading import load_agent_executor
-
         # The params dict is used to build the module
         # it contains values and keys that point to nodes which
         # have their own params dict
@@ -122,8 +119,8 @@ class Node:
         for key, value in self.params.items():
             # Check if Node or list of Nodes
             if isinstance(value, Node):
-                self.params[key] = value.build()
-
+                result = value.build()
+                self.params[key] = result.run if key == "func" else result
             elif isinstance(value, list) and all(
                 isinstance(node, Node) for node in value
             ):
@@ -133,26 +130,15 @@ class Node:
         # and instantiate it with the params
         # and return the instance
         instance = None
-        for key, value in LANGCHAIN_TYPES_DICT.items():
-            if key == "tools":
+        for base_type, value in LANGCHAIN_TYPES_DICT.items():
+            if base_type == "tools":
                 value = util.get_tools_dict()
             if self.module_type in value:
-                class_object = import_by_type(_type=key, name=self.module_type)
-                if key == "agents":
-                    # We need to initialize it differently
-                    allowed_tools = self.params["allowed_tools"]
-                    llm_chain = self.params["llm_chain"]
-                    instance = load_agent_executor(
-                        class_object, allowed_tools, llm_chain
-                    )
-                elif key == "tools":
-                    instance = class_object(**self.params)
-                elif self.module_type == "ZeroShotPrompt":
-                    from langchain.agents import ZeroShotAgent
-
-                    instance = ZeroShotAgent.create_prompt(**self.params, tools=[])
-                else:
-                    instance = class_object(**self.params)
+                instance = loading.instantiate_class(
+                    module_type=self.module_type,
+                    base_type=base_type,
+                    params=self.params,
+                )
                 break
         return instance
 

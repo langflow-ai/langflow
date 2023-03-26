@@ -281,3 +281,11 @@ def test_build():
     agent = graph.build()
     # The agent should be a AgentExecutor
     assert isinstance(agent, AgentExecutor)
+
+    # Now we test the complex example
+    graph = get_graph(basic=False)
+    assert isinstance(graph, Graph)
+    # Now we test the build method
+    agent = graph.build()
+    # The agent should be a AgentExecutor
+    assert isinstance(agent, AgentExecutor)

@@ -149,7 +149,7 @@
                                 "show": true,
                                 "password": true,
                                 "multiline": false,
-                                "value": null
+                                "value": "sk-"
                             },
                             "batch_size": {
                                 "type": "int",
