@@ -6,7 +6,7 @@ def get_type_list():
     """Get a list of all langchain types"""
     all_types = build_langchain_types_dict()
 
-    all_types.pop("tools")
+    # all_types.pop("tools")
 
     for key, value in all_types.items():
         all_types[key] = [item["template"]["_type"] for item in value.values()]

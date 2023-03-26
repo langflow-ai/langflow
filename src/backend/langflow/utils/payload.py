@@ -2,8 +2,6 @@ import contextlib
 import re
 from typing import Dict
 
-from langflow.utils.graph import Graph, Node
-
 
 def extract_input_variables(nodes):
     """
@@ -38,7 +36,7 @@ def get_root_node(graph):
     return next((node for node in graph.nodes if node not in incoming_edges), None)
 
 
-def build_json(root: Node, graph: Graph) -> Dict:
+def build_json(root, graph) -> Dict:
     if "node" not in root.data:
         # If the root node has no "node" key, then it has only one child,
         # which is the target of the single outgoing edge
