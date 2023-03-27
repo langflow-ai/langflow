@@ -1,5 +1,6 @@
+from copy import deepcopy
 import types
-from typing import Dict, List, Union
+from typing import Any, Dict, List, Union
 from langflow.interface import loading
 from langflow.utils import payload, util
 from langflow.interface.listing import ALL_TYPES_DICT
@@ -11,6 +12,8 @@ class Node:
         self._data = data
         self.edges: List[Edge] = []
         self._parse_data()
+        self._built_object = None
+        self._built = False
 
     def _parse_data(self) -> None:
         self.data = self._data["data"]
@@ -94,7 +97,7 @@ class Node:
         # Add _type to params
         self.params = params
 
-    def build(self):
+    def _build(self):
         # The params dict is used to build the module
         # it contains values and keys that point to nodes which
         # have their own params dict
@@ -113,7 +116,12 @@ class Node:
                 result = value.build()
                 # If the key is "func", then we need to use the run method
                 if key == "func" and not isinstance(result, types.FunctionType):
-                    result = result.run
+                    # func can be PythonFunction(code='\ndef upper_case(text: str) -> str:\n    return text.upper()\n')
+                    # so we need to check if there is an attribute called run
+                    if hasattr(result, "run"):
+                        result = result.run  # type: ignore
+                    elif hasattr(result, "get_function"):
+                        result = result.get_function()  # type: ignore
                 self.params[key] = result
             elif isinstance(value, list) and all(
                 isinstance(node, Node) for node in value
@@ -123,19 +131,27 @@ class Node:
         # Get the class from LANGCHAIN_TYPES_DICT
         # and instantiate it with the params
         # and return the instance
-        instance = None
         for base_type, value in ALL_TYPES_DICT.items():
             if base_type == "tools":
                 value = util.get_tools_dict()
 
             if self.node_type in value:
-                instance = loading.instantiate_class(
+                self._built_object = loading.instantiate_class(
                     node_type=self.node_type,
                     base_type=base_type,
                     params=self.params,
                 )
                 break
-        return instance
+
+        if self._built_object is None:
+            raise ValueError(f"Node type {self.node_type} not found")
+
+        self._built = True
+
+    def build(self, force: bool = False) -> Any:
+        if not self._built or force:
+            self._build()
+        return deepcopy(self._built_object)
 
     def add_edge(self, edge: "Edge") -> None:
         self.edges.append(edge)
