@@ -97,7 +97,7 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 				setChatValue("");
 				addChatHistory(message, true);
 
-				sendAll({ ...reactFlowInstance.toObject(), message, chatHistory})
+				sendAll({ ...reactFlowInstance.toObject(), message, chatHistory,name:flow.name,description:flow.description})
 					.then((r) => {
 						addChatHistory(r.data.result, false, r.data.thought);
 						setLockChat(false);
