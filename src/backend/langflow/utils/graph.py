@@ -14,9 +14,6 @@ class Node:
 
     def _parse_data(self) -> None:
         self.data = self._data["data"]
-        # Data dict:
-        # {'type': 'LLMChain', 'node': {'template': {'_type': 'llm_chain', 'memory': {'type': 'BaseMemory', 'required': False, 'placeholder': '', 'list': False, 'show': True, 'password': False, 'multiline': False, 'value': None}, 'verbose': {'type': 'bool', 'required': False, 'placeholder': '', 'list': False, 'show': False, 'password': False, 'multiline': False, 'value': False}, 'prompt': {'type': 'BasePromptTemplate', 'required': True, 'placeholder': '', 'list': False, 'show': True, 'password': False, 'multiline': False}, 'llm': {'type': 'BaseLanguageModel', 'required': True, 'placeholder': '', 'list': False, 'show': True, 'password': False, 'multiline': False}, 'output_key': {'type': 'str', 'required': False, 'placeholder': '', 'list': False, 'show': False, 'password': True, 'multiline': False, 'value': 'text'}}, 'description': 'Chain to run queries against LLMs.', 'base_classes': ['Chain']}, 'id': 'dndnode_1', 'value': None}
-        # base_classes are the classes that the node can be cast to
         self.output = self.data["node"]["base_classes"]
         template_dicts = {
             key: value
@@ -80,8 +77,9 @@ class Node:
                 # so we need to append to a list if it exists
                 # or create a new list if it doesn't
                 if edge is None and value["required"]:
+                    # break line
                     raise ValueError(
-                        f"Required input {key} for module {self.node_type} is not connected"
+                        f"Required input {key} for module {self.node_type} not found"
                     )
                 if value["list"]:
                     if key in params:
@@ -159,11 +157,12 @@ class Edge:
         self.validate_edge()
 
     def validate_edge(self) -> None:
-        # Validate that the outputs of the source node are valid inputs for the target node
+        # Validate that the outputs of the source node are valid inputs
+        # for the target node
         self.source_types = self.source.output
         self.target_reqs = self.target.required_inputs + self.target.optional_inputs
-        # Both lists contain strings and sometimes a string contains the value we are looking for
-        # e.g. comgin_out=["Chain"] and target_reqs=["LLMChain"]
+        # Both lists contain strings and sometimes a string contains the value we are
+        # looking for e.g. comgin_out=["Chain"] and target_reqs=["LLMChain"]
         # so we need to check if any of the strings in source_types is in target_reqs
         self.valid = any(
             output in target_req
