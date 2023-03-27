@@ -17,10 +17,6 @@ import GenericNode from "../../CustomNodes/GenericNode";
 import { alertContext } from "../../contexts/alertContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
-import {
-	ArrowDownTrayIcon,
-	ArrowUpTrayIcon,
-} from "@heroicons/react/24/outline";
 import ConnectionLineComponent from "./components/ConnectionLineComponent";
 import { FlowType, NodeType } from "../../types/flow";
 import { APIClassType } from "../../types/api";
