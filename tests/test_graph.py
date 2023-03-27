@@ -262,7 +262,7 @@ def test_build():
     # # and use the output of that build as the value for the param
     # # if the value is not a node, then we use the value as the param
     # # and continue
-    # # Another aspect is that the module_type is the class that we need to import
+    # # Another aspect is that the node_type is the class that we need to import
     # # and instantiate with these built params
 
     # # Build each node in the params dict
@@ -273,7 +273,7 @@ def test_build():
     # # Get the class from LANGCHAIN_TYPES_DICT
     # # and instantiate it with the params
     # # and return the instance
-    # return LANGCHAIN_TYPES_DICT[self.module_type](**self.params)
+    # return LANGCHAIN_TYPES_DICT[self.node_type](**self.params)
     graph = get_graph()
     assert isinstance(graph, Graph)
     # Now we test the build method
