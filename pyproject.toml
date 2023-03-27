@@ -39,6 +39,10 @@ ipykernel = "^6.21.2"
 mypy = "^1.1.1"
 ruff = "^0.0.254"
 httpx = "^0.23.3"
+rich = "^13.3.3"
+
+[tool.ruff]
+line-length = 120
 
 [build-system]
 requires = ["poetry-core"]
