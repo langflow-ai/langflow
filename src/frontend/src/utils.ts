@@ -8,6 +8,7 @@ import {
   ComputerDesktopIcon,
   Bars3CenterLeftIcon,
   PaperClipIcon,
+  QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
 import { Connection, Edge, Node, ReactFlowInstance } from "reactflow";
 import { FlowType } from "./types/flow";
@@ -73,7 +74,8 @@ export const nodeColors: {[char: string]: string} = {
   advanced: "#000000",
   chat: "#454173",
   thought:"#272541",
-  docloaders:"#10B981"
+  docloaders:"#FF9135",
+  unknown:"#9CA3AF"
 };
 
 export const nodeNames:{[char: string]: string} = {
@@ -85,7 +87,8 @@ export const nodeNames:{[char: string]: string} = {
   memories: "Memories",
   advanced: "Advanced",
   chat: "Chat",
-  docloaders:"Document Loader"
+  docloaders:"Document Loader",
+  unknown:"Unknown"
 };
 
 export const nodeIcons:{[char: string]: React.ForwardRefExoticComponent<React.SVGProps<SVGSVGElement>>} = {
@@ -97,7 +100,8 @@ export const nodeIcons:{[char: string]: React.ForwardRefExoticComponent<React.SV
   tools: WrenchScrewdriverIcon,
   advanced: ComputerDesktopIcon,
   chat: Bars3CenterLeftIcon,
-  docloaders:PaperClipIcon
+  docloaders:Bars3CenterLeftIcon,
+  unknown:QuestionMarkCircleIcon
 };
 
 export const bgColors = {
