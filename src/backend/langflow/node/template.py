@@ -15,7 +15,9 @@ class Field(BaseModel):
     name: str = None
 
     def to_dict(self):
-        return self.dict()
+        result = self.dict()
+        result["type"] = result.pop("field_type")
+        return result
 
 
 class Template(BaseModel):
@@ -32,11 +34,11 @@ class FrontendNode(BaseModel):
     template: Template
     description: str
     base_classes: list
-    _name: str = None
+    name: str = None
 
     def to_dict(self):
         return {
-            self._name: {
+            self.name: {
                 "template": self.template.to_dict(),
                 "description": self.description,
                 "base_classes": self.base_classes,

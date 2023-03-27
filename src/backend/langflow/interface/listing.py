@@ -17,13 +17,13 @@ def get_type_dict():
         "prompts": list_prompts,
         "llms": list_llms,
         "tools": list_tools,
-        # "memories": list_memories,
+        "memories": list_memories,
     }
 
 
 def list_type(object_type: str):
     """List all components"""
-    return get_type_dict().get(object_type, lambda: "Invalid type")()
+    return get_type_dict().get(object_type, lambda: None)()
 
 
 def list_agents():
@@ -37,7 +37,7 @@ def list_agents():
 
 def list_prompts():
     """List all prompt types"""
-    custom_prompts = customs.get_custom_prompts()
+    custom_prompts = customs.get_custom_nodes("prompts")
     library_prompts = [
         prompt.__annotations__["return"].__name__
         for prompt in prompts.loading.type_to_loader_dict.values()
@@ -52,11 +52,13 @@ def list_tools():
     tools = []
 
     for tool in get_all_tool_names():
-        tool_params = util.get_tool_params(util.get_tools_dict(tool))
+        tool_params = util.get_tool_params(util.get_tool_by_name(tool))
         if tool_params and tool_params["name"] in settings.tools or settings.dev:
             tools.append(tool_params["name"])
 
-    return tools
+    # Add Tool
+    custom_tools = customs.get_custom_nodes("tools")
+    return tools + list(custom_tools.keys())
 
 
 def list_llms():
