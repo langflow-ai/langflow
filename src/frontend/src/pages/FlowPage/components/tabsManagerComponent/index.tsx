@@ -14,9 +14,12 @@ import {
 import { PopUpContext } from "../../../../contexts/popUpContext";
 import AlertDropdown from "../../../../alerts/alertDropDown";
 import { alertContext } from "../../../../contexts/alertContext";
+import ImportModal from "../../../../modals/importModal";
+import ExportModal from "../../../../modals/exportModal";
 
 export default function TabsManagerComponent() {
-	const { flows, addFlow, tabIndex, setTabIndex, uploadFlow, downloadFlow } = useContext(TabsContext);
+	const { flows, addFlow, tabIndex, setTabIndex, uploadFlow, downloadFlow } =
+		useContext(TabsContext);
 	const { openPopUp } = useContext(PopUpContext);
 	const AlertWidth = 256;
 	const { dark, setDark } = useContext(darkContext);
@@ -50,10 +53,21 @@ export default function TabsManagerComponent() {
 					flow={null}
 				/>
 				<div className="ml-auto mr-2 flex gap-3">
-					<button onClick={() => uploadFlow()} className="flex items-center gap-1 pr-2 border-gray-400 border-r text-sm text-gray-400 hover:text-gray-500">
+					<button
+						onClick={() =>
+							openPopUp(
+								<ImportModal
+								/>
+							)
+						}
+						className="flex items-center gap-1 pr-2 border-gray-400 border-r text-sm text-gray-400 hover:text-gray-500"
+					>
 						Import <ArrowUpTrayIcon className="w-5 h-5" />
 					</button>
-					<button onClick={() => downloadFlow()} className="flex items-center gap-1 mr-2 text-sm text-gray-400 hover:text-gray-500">
+					<button
+						onClick={() =>openPopUp(<ExportModal/>)}
+						className="flex items-center gap-1 mr-2 text-sm text-gray-400 hover:text-gray-500"
+					>
 						Export <ArrowDownTrayIcon className="h-5 w-5" />
 					</button>
 					<button
