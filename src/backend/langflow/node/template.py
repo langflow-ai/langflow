@@ -16,7 +16,12 @@ class Field(BaseModel):
 
     def to_dict(self):
         result = self.dict()
+        # Remove key if it is None
+        for key in list(result.keys()):
+            if result[key] is None:
+                del result[key]
         result["type"] = result.pop("field_type")
+        result["list"] = result.pop("is_list")
         return result
 
 
@@ -26,7 +31,7 @@ class Template(BaseModel):
 
     def to_dict(self):
         result = {field.name: field.to_dict() for field in self.fields}
-        result["_type"] = self.type_name
+        result["_type"] = self.type_name  # type: ignore
         return result
 
 

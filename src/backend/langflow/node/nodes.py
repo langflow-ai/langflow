@@ -61,7 +61,7 @@ class PythonFunctionNode(FrontendNode):
                 multiline=True,
                 value=DEFAULT_PYTHON_FUNCTION,
                 name="code",
-            ),
+            )
         ],
     )
     description: str = "Python function to be executed."
