@@ -4,8 +4,6 @@ import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 import { BrowserRouter } from "react-router-dom";
 import ContextWrapper from "./contexts";
-import CrashErrorComponent from "./components/CrashErrorComponent";
-import { ErrorBoundary } from "react-error-boundary";
 
 const root = ReactDOM.createRoot(
 	document.getElementById("root") as HTMLElement
