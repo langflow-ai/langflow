@@ -4,8 +4,8 @@ from langflow.utils.constants import DEFAULT_PYTHON_FUNCTION
 
 
 class ZeroShotPromptNode(FrontendNode):
-    name = "ZeroShotPrompt"
-    template = Template(
+    name: str = "ZeroShotPrompt"
+    template: Template = Template(
         type_name="zero_shot",
         fields=[
             Field(
@@ -40,16 +40,16 @@ class ZeroShotPromptNode(FrontendNode):
             ),
         ],
     )
-    description = "Prompt template for Zero Shot Agent."
-    base_classes = ["BasePromptTemplate"]
+    description: str = "Prompt template for Zero Shot Agent."
+    base_classes: list[str] = ["BasePromptTemplate"]
 
     def to_dict(self):
         return super().to_dict()
 
 
 class PythonFunctionNode(FrontendNode):
-    name = "PythonFunction"
-    template = Template(
+    name: str = "PythonFunction"
+    template: Template = Template(
         type_name="python_function",
         fields=[
             Field(
@@ -64,16 +64,16 @@ class PythonFunctionNode(FrontendNode):
             ),
         ],
     )
-    description = "Python function to be executed."
-    base_classes = ["function"]
+    description: str = "Python function to be executed."
+    base_classes: list[str] = ["function"]
 
     def to_dict(self):
         return super().to_dict()
 
 
 class ToolNode(FrontendNode):
-    name = "Tool"
-    template = Template(
+    name: str = "Tool"
+    template: Template = Template(
         type_name="tool",
         fields=[
             Field(
@@ -108,8 +108,8 @@ class ToolNode(FrontendNode):
             ),
         ],
     )
-    description = "Tool to be used in the flow."
-    base_classes = ["BaseTool"]
+    description: str = "Tool to be used in the flow."
+    base_classes: list[str] = ["BaseTool"]
 
     def to_dict(self):
         return super().to_dict()

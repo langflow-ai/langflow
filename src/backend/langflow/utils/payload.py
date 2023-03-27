@@ -76,7 +76,9 @@ def build_json(root, graph) -> Dict:
             if value["required"] and not children:
                 raise ValueError(f"No child with type {node_type} found")
             values = [build_json(child, graph) for child in children]
-            value = list(values) if value["list"] else next(iter(values), None)
+            value = (
+                list(values) if value["list"] else next(iter(values), None)  # type: ignore
+            )
         final_dict[key] = value
 
     return final_dict
