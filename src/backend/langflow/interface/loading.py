@@ -41,7 +41,7 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
         # which will be a str containing a python function
         # and then we need to compile it and return the function
         # as the instance
-        function_string = params["function"]
+        function_string = params["code"]
         if isinstance(function_string, str):
             return util.eval_function(function_string)
         raise ValueError("Function should be a string")

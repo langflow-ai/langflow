@@ -15,6 +15,7 @@ from langflow.interface.custom_lists import (
     memory_type_to_cls_dict,
 )
 from langflow.utils import util
+from langflow.utils.constants import CUSTOM_TOOLS
 
 
 def get_signature(name: str, object_type: str):
@@ -53,8 +54,8 @@ def get_agent_signature(name: str):
 def get_prompt_signature(name: str):
     """Get the signature of a prompt."""
     try:
-        if name in customs.get_custom_prompts().keys():
-            return customs.get_custom_prompts()[name]
+        if name in customs.get_custom_nodes("prompts").keys():
+            return customs.get_custom_nodes("prompts")[name]
         return util.build_template_from_function(
             name, prompts.loading.type_to_loader_dict
         )
@@ -82,12 +83,14 @@ def get_tool_signature(name: str):
     """Get the signature of a tool."""
 
     NODE_INPUTS = ["llm", "func"]
+    base_classes = ["Tool"]
     all_tools = {}
-    for tool in get_all_tool_names():
-        if tool_params := util.get_tool_params(util.get_tools_dict(tool)):
-            all_tools[tool_params["name"]] = tool
+    all_tool_names = get_all_tool_names() + list(CUSTOM_TOOLS.keys())
+    for tool in all_tool_names:
+        if tool_params := util.get_tool_params(util.get_tool_by_name(tool)):
+            tool_name = tool_params.get("name") or str(tool)
+            all_tools[tool_name] = {"type": tool, "params": tool_params}
 
-    all_tools["BaseTool"] = "BaseTool"
     # Raise error if name is not in tools
     if name not in all_tools.keys():
         raise ValueError("Tool not found")
@@ -110,9 +113,17 @@ def get_tool_signature(name: str):
             "value": "",
             "multiline": True,
         },
+        "code": {
+            "type": "str",
+            "required": True,
+            "list": False,
+            "show": True,
+            "value": "",
+            "multiline": True,
+        },
     }
 
-    tool_type = all_tools[name]
+    tool_type = all_tools[name]["type"]
 
     if tool_type in _BASE_TOOLS:
         params = []
@@ -124,8 +135,13 @@ def get_tool_signature(name: str):
     elif tool_type in _EXTRA_OPTIONAL_TOOLS:
         _, extra_keys = _EXTRA_OPTIONAL_TOOLS[tool_type]
         params = extra_keys
-    elif tool_type == "BaseTool":
+    elif tool_type == "Tool":
         params = ["name", "description", "func"]
+    elif tool_type in CUSTOM_TOOLS:
+        # Get custom tool params
+        params = all_tools[name]["params"]
+        base_classes = ["function"]
+
     else:
         params = []
 
@@ -142,9 +158,8 @@ def get_tool_signature(name: str):
         template["aiosession"]["show"] = False
 
     template["_type"] = tool_type  # type: ignore
-
     return {
-        "template": template,
-        **util.get_tool_params(util.get_tools_dict(tool_type)),
-        "base_classes": ["Tool"],
+        "template": util.format_dict(template),
+        **util.get_tool_params(util.get_tool_by_name(tool_type)),
+        "base_classes": base_classes,
     }
