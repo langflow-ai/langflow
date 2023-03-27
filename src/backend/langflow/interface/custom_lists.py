@@ -41,3 +41,28 @@ memory_type_to_cls_dict: dict[str, Any] = {
 
 # chain_type_to_cls_dict = type_to_loader_dict
 # chain_type_to_cls_dict["conversation_chain"] = ConversationChain
+
+from typing import Optional
+from langchain.agents.load_tools import (
+    _BASE_TOOLS,
+    _EXTRA_LLM_TOOLS,
+    _EXTRA_OPTIONAL_TOOLS,
+    _LLM_TOOLS,
+)
+from langflow.doc_loaders import csv_loader
+
+
+def get_tools_dict(name: Optional[str] = None):
+    """Get the tools dictionary."""
+    tools = {
+        **_BASE_TOOLS,
+        **_LLM_TOOLS,
+        **{k: v[0] for k, v in _EXTRA_LLM_TOOLS.items()},
+        **{k: v[0] for k, v in _EXTRA_OPTIONAL_TOOLS.items()},
+    }
+    return tools[name] if name else tools
+
+
+docloaders = {
+    "csv_loader": csv_loader.get_csv_loader,
+}

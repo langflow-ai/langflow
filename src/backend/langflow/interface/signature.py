@@ -1,18 +1,20 @@
 from typing import Any, Dict  # noqa: F401
 
 from langchain import agents, chains, prompts
+
 from langchain.agents.load_tools import (
     _BASE_TOOLS,
     _EXTRA_LLM_TOOLS,
     _EXTRA_OPTIONAL_TOOLS,
     _LLM_TOOLS,
-    get_all_tool_names,
 )
 
 from langflow.custom import customs
 from langflow.interface.custom_lists import (
     llm_type_to_cls_dict,
     memory_type_to_cls_dict,
+    get_tools_dict,
+    docloaders,
 )
 from langflow.utils import util
 
@@ -25,6 +27,7 @@ def get_signature(name: str, object_type: str):
         "prompts": get_prompt_signature,
         "llms": get_llm_signature,
         "memories": get_memory_signature,
+        "docloaders": get_docloader_signature,
         "tools": get_tool_signature,
     }.get(object_type, lambda name: f"Invalid type: {name}")(name)
 
@@ -79,8 +82,11 @@ def get_tool_signature(name: str):
     """Get the signature of a tool."""
 
     all_tools = {}
-    for tool in get_all_tool_names():
-        if tool_params := util.get_tool_params(util.get_tools_dict(tool)):
+
+    tools_dict = get_tools_dict()
+
+    for tool in tools_dict.keys():
+        if tool_params := util.get_tool_params(tools_dict[tool]):
             all_tools[tool_params["name"]] = tool
 
     # Raise error if name is not in tools
@@ -112,7 +118,7 @@ def get_tool_signature(name: str):
         _, extra_keys = _EXTRA_OPTIONAL_TOOLS[tool_type]
         params = extra_keys
     else:
-        params = []
+        params = ["llm", "csv_file"]
 
     template = {
         param: (type_dict[param].copy() if param == "llm" else type_dict["str"].copy())
@@ -120,7 +126,7 @@ def get_tool_signature(name: str):
     }
 
     # Remove required from aiosession
-    if "aiosession" in template.keys():
+    if "aiosession" in template:
         template["aiosession"]["required"] = False
         template["aiosession"]["show"] = False
 
@@ -128,6 +134,54 @@ def get_tool_signature(name: str):
 
     return {
         "template": template,
-        **util.get_tool_params(util.get_tools_dict(tool_type)),
+        **util.get_tool_params(tools_dict[tool_type]),
+        "base_classes": ["Tool"],
+    }
+
+
+def get_docloader_signature(name: str):
+    """Get the signature of a tool."""
+
+    all_tools = {}
+
+    for tool in docloaders.keys():
+        if tool_params := util.get_tool_params(docloaders[tool]):
+            all_tools[tool_params["name"]] = tool
+
+    # Raise error if name is not in tools
+    if name not in all_tools.keys():
+        raise ValueError("Tool not found")
+
+    type_dict = {
+        "str": {
+            "type": "str",
+            "required": True,
+            "list": False,
+            "show": True,
+            "placeholder": "",
+            "value": "",
+        },
+        "llm": {"type": "BaseLLM", "required": True, "list": False, "show": True},
+    }
+
+    tool_type = all_tools[name]
+
+    params = ["llm", "csv_file"]
+
+    template = {
+        param: (type_dict[param].copy() if param == "llm" else type_dict["str"].copy())
+        for param in params
+    }
+
+    # Remove required from aiosession
+    if "aiosession" in template:
+        template["aiosession"]["required"] = False
+        template["aiosession"]["show"] = False
+
+    template["_type"] = tool_type  # type: ignore
+
+    return {
+        "template": template,
+        **util.get_tool_params(docloaders[tool_type]),
         "base_classes": ["Tool"],
     }

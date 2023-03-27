@@ -1,13 +1,18 @@
 from langchain import agents, chains, prompts
-from langchain.agents.load_tools import get_all_tool_names
+
+# from langchain.agents.load_tools import get_all_tool_names
 
 from langflow.custom import customs
 from langflow.interface.custom_lists import (
     llm_type_to_cls_dict,
     memory_type_to_cls_dict,
+    get_tools_dict,
+    docloaders
 )
 from langflow.settings import settings
 from langflow.utils import util
+
+# from langchain.docstore import docstores
 
 
 def list_type(object_type: str):
@@ -18,6 +23,8 @@ def list_type(object_type: str):
         "prompts": list_prompts,
         "llms": list_llms,
         "memories": list_memories,
+        # "docstores": list_docstores,
+        "docloaders": list_docloaders,
         "tools": list_tools,
     }.get(object_type, lambda: "Invalid type")()
 
@@ -47,9 +54,23 @@ def list_tools():
 
     tools = []
 
-    for tool in get_all_tool_names():
-        tool_params = util.get_tool_params(util.get_tools_dict(tool))
-        if tool_params and tool_params["name"] in settings.tools or settings.dev:
+    tools_dict = get_tools_dict()
+
+    for tool in tools_dict.keys():
+        tool_params = util.get_tool_params(tools_dict[tool])
+        if tool_params and (tool_params["name"] in settings.tools or settings.dev):
+            tools.append(tool_params["name"])
+
+    return tools
+
+def list_docloaders():
+    """List all docloaders tools"""
+
+    tools = []
+
+    for tool in docloaders.keys():
+        tool_params = util.get_tool_params(docloaders[tool])
+        if tool_params and (tool_params["name"] in settings.tools or settings.dev):
             tools.append(tool_params["name"])
 
     return tools

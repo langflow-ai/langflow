@@ -32,5 +32,13 @@ def build_langchain_types_dict():
             memory: get_signature(memory, "memories")
             for memory in list_type("memories")
         },
+        # "docstores" : {
+        #     docstore: get_signature(docstore, "docstores")
+        #     for docstore in list_type("docstores")
+        # },
+        "docloaders": {
+            docloader: get_signature(docloader, "docloaders")
+            for docloader in list_type("docloaders")
+        },
         "tools": {tool: get_signature(tool, "tools") for tool in list_type("tools")},
     }

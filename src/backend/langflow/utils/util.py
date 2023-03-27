@@ -4,13 +4,6 @@ import inspect
 import re
 from typing import Dict, Optional
 
-from langchain.agents.load_tools import (
-    _BASE_TOOLS,
-    _EXTRA_LLM_TOOLS,
-    _EXTRA_OPTIONAL_TOOLS,
-    _LLM_TOOLS,
-)
-
 from langflow.utils import constants
 
 
@@ -126,17 +119,6 @@ def get_default_factory(module: str, function: str):
         imported_module = importlib.import_module(module)
         return getattr(imported_module, match[1])()
     return None
-
-
-def get_tools_dict(name: Optional[str] = None):
-    """Get the tools dictionary."""
-    tools = {
-        **_BASE_TOOLS,
-        **_LLM_TOOLS,  # type: ignore
-        **{k: v[0] for k, v in _EXTRA_LLM_TOOLS.items()},  # type: ignore
-        **{k: v[0] for k, v in _EXTRA_OPTIONAL_TOOLS.items()},
-    }
-    return tools[name] if name else tools
 
 
 def get_tool_params(func, **kwargs):

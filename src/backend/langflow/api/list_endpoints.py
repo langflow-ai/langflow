@@ -17,6 +17,8 @@ def read_items():
         "agents",
         "prompts",
         "llms",
+        "memories",
+        "docloaders",
         "tools",
     ]
 
@@ -30,7 +32,6 @@ def list_chains():
 @router.get("/agents")
 def list_agents():
     """List all agent types"""
-    # return list(agents.loading.AGENT_TO_CLASS.keys())
     return list_type("agents")
 
 
@@ -56,3 +57,9 @@ def list_memories():
 def list_tools():
     """List all load tools"""
     return list_type("tools")
+
+
+@router.get("/docloaders")
+def list_docloaders():
+    """List all docloader types"""
+    return list_type("docloaders")

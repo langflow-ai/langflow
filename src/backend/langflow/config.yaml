@@ -24,4 +24,4 @@ tools:
 memories:
   # - ConversationBufferMemory
 
-dev: false
+dev: true
