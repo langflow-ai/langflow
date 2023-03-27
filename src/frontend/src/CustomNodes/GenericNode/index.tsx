@@ -19,18 +19,19 @@ export default function GenericNode({
 	selected: boolean;
 }) {
 	const { setErrorData } = useContext(alertContext);
-  const showError = useRef(true)
+	const showError = useRef(true);
 	const { types, deleteNode } = useContext(typesContext);
 	const Icon = nodeIcons[types[data.type]];
 	if (!Icon) {
 		console.log(data);
-    if(showError.current){
-      setErrorData({
-        title: data.type?`The ${data.type} node could not be rendered, please review your json file`:
-          "There was a node that can't be rendered, please review your json file",
-      });
-      showError.current=false
-    }
+		if (showError.current) {
+			setErrorData({
+				title: data.type
+					? `The ${data.type} node could not be rendered, please review your json file`
+					: "There was a node that can't be rendered, please review your json file",
+			});
+			showError.current = false;
+		}
 		return;
 	}
 
@@ -45,7 +46,9 @@ export default function GenericNode({
 				<div className="w-full flex items-center truncate gap-4 text-lg">
 					<Icon
 						className="w-10 h-10 p-1 rounded"
-						style={{ color: nodeColors[types[data.type]] }}
+						style={{
+							color: nodeColors[types[data.type]] ?? nodeColors.unknown,
+						}}
 					/>
 					<div className="truncate">{data.type}</div>
 				</div>
@@ -80,8 +83,7 @@ export default function GenericNode({
 										data={data}
 										color={
 											nodeColors[types[data.node.template[t].type]] ??
-											nodeColors[types[data.node.template[t].type]] ??
-											"black"
+											nodeColors.unknown
 										}
 										title={snakeToNormalCase(t)}
 										name={t}
@@ -105,7 +107,7 @@ export default function GenericNode({
 					</div>
 					<ParameterComponent
 						data={data}
-						color={nodeColors[types[data.type]]}
+						color={nodeColors[types[data.type]] ?? nodeColors.unknown}
 						title={data.type}
 						tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
 						id={[data.type, data.id, ...data.node.base_classes].join("|")}
