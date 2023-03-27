@@ -12,7 +12,7 @@ class Field(BaseModel):
     value: Any = None
     # _name will be used to store the name of the field
     # in the template
-    name: str = None
+    name: str = ""
 
     def to_dict(self):
         result = self.dict()
@@ -34,7 +34,7 @@ class FrontendNode(BaseModel):
     template: Template
     description: str
     base_classes: list
-    name: str = None
+    name: str = ""
 
     def to_dict(self):
         return {

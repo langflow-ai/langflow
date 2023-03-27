@@ -124,7 +124,7 @@ def load_agent_executor_from_config(
 
 
 def load_agent_executor(
-    agent_class: agent_module.Agent, allowed_tools, llm_chain, **kwargs
+    agent_class: type[agent_module.Agent], allowed_tools, llm_chain, **kwargs
 ):
     """Load agent executor from agent class, tools and chain"""
     tool_names = [tool.name for tool in allowed_tools]

@@ -63,7 +63,7 @@ class Node:
                 continue
             if value["type"] not in ["str", "bool"]:
                 # Get the edge that connects to this node
-                edge: Edge = next(
+                edge = next(
                     (
                         edge
                         for edge in self.edges
@@ -222,7 +222,7 @@ class Graph:
         root_node = payload.get_root_node(self)
         return root_node.build()
 
-    def get_node_neighbors(self, node: Node) -> Dict[str, int]:
+    def get_node_neighbors(self, node: Node) -> Dict[Node, int]:
         neighbors: Dict[Node, int] = {}
         for edge in self.edges:
             if edge.source == node:
