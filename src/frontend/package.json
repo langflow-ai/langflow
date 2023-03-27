@@ -16,6 +16,7 @@
         "@types/node": "^16.18.12",
         "@types/react": "^18.0.27",
         "@types/react-dom": "^18.0.10",
+        "@uiw/react-textarea-code-editor": "^2.1.1",
         "axios": "^1.3.2",
         "lodash": "^4.17.21",
         "react": "^18.2.0",
