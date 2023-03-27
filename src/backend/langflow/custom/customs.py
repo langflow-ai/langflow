@@ -9,4 +9,4 @@ CUSTOM_NODES = {
 
 def get_custom_nodes(node_type: str):
     """Get custom nodes."""
-    return CUSTOM_NODES.get(node_type, [])
+    return CUSTOM_NODES.get(node_type, {})
