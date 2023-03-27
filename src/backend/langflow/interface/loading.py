@@ -46,7 +46,9 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
             return util.eval_function(function_string)
         raise ValueError("Function should be a string")
     else:
-        return ZeroShotAgent.create_prompt(**params, tools=[])
+        if "tools" not in params:
+            params["tools"] = []
+        return ZeroShotAgent.create_prompt(**params)
 
 
 def load_flow_from_json(path: str):
