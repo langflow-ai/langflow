@@ -6,7 +6,7 @@ import {
 	XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { MouseEventHandler, useContext, useEffect, useRef, useState } from "react";
-import { sendAll } from "../../controllers/NodesServices";
+import { sendAll } from "../../controllers/API";
 import { alertContext } from "../../contexts/alertContext";
 import { classNames, nodeColors } from "../../utils";
 import { TabsContext } from "../../contexts/tabsContext";

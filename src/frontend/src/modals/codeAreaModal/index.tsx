@@ -9,6 +9,7 @@ import "ace-builds/src-noconflict/theme-twilight";
 import "ace-builds/src-noconflict/ext-language_tools"
 import "ace-builds/webpack-resolver"
 import {darkContext} from "../../contexts/darkContext"
+import { checkCode } from "../../controllers/API";
 export default function CodeAreaModal({
 	value,
 	setValue,
@@ -104,7 +105,7 @@ export default function CodeAreaModal({
                                                     enableLiveAutocompletion
                                                     theme={dark?"twilight":"github"}
                                                     name="CodeEditor"
-                                                    onChange={(value)=>{setCode(value);setValue(value)}}
+                                                    onChange={(value)=>{setCode(value)}}
                                                     className="h-full w-full rounded-lg"
 												/>
 											</div>
@@ -115,10 +116,20 @@ export default function CodeAreaModal({
 											type="button"
 											className="inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm"
 											onClick={() => {
+												setValue(code)
 												setModalOpen(false);
 											}}
 										>
-											Finish editing
+											Save code
+										</button>
+										<button
+											type="button"
+											className="inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm"
+											onClick={() => {
+												checkCode(code)
+											}}
+										>
+											Check Code
 										</button>
 									</div>
 								</div>
