@@ -1,6 +1,12 @@
+# Description: Graph class for building a graph of nodes and edges
+# Insights:
+#   - Defer prompts building to the last moment or when they have all the tools
+#   - Build each inner agent first, then build the outer agent
+from langchain.agents.load_tools import get_all_tool_names
+
 from copy import deepcopy
 import types
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 from langflow.interface import loading
 from langflow.utils import payload, util
 from langflow.interface.listing import ALL_TYPES_DICT
@@ -166,6 +172,35 @@ class Node:
         return id(self)
 
 
+class AgentNode(Node):
+    def __init__(self, data: Dict):
+        super().__init__(data)
+        self.tools: List[ToolNode] = []
+        self.chains: List[ChainNode] = []
+
+    def _set_tools_and_chains(self) -> None:
+        for edge in self.edges:
+            source_node = edge.source
+            if isinstance(source_node, ToolNode):
+                self.tools.append(source_node)
+            elif isinstance(source_node, ChainNode):
+                self.chains.append(source_node)
+
+    def build(self, force: bool = False) -> Any:
+        if not self._built or force:
+            self._set_tools_and_chains()
+            # First, build the tools
+            for tool_node in self.tools:
+                tool_node.build()
+
+            # Next, build the chains and the rest
+            for chain_node in self.chains:
+                chain_node.build(tools=self.tools)
+
+            self._build()
+        return deepcopy(self._built_object)
+
+
 class Edge:
     def __init__(self, source: "Node", target: "Node"):
         self.source: "Node" = source
@@ -202,6 +237,51 @@ class Edge:
             f"Edge(source={self.source.id}, target={self.target.id}, valid={self.valid}"
             f", matched_type={self.matched_type})"
         )
+
+
+class PromptNode(Node):
+    def __init__(self, data: Dict):
+        super().__init__(data)
+
+    def build(self, tools: Optional[List[Node]] = None, force: bool = False) -> Any:
+        if not self._built or force:
+            # Check if it is a ZeroShotPrompt and needs a tool
+            if self.node_type == "ZeroShotPrompt":
+                tools = (
+                    [tool_node.build() for tool_node in tools]
+                    if tools is not None
+                    else []
+                )
+                self.params["tools"] = tools
+
+            self._build()
+        return deepcopy(self._built_object)
+
+
+class ToolNode(Node):
+    def __init__(self, data: Dict):
+        super().__init__(data)
+
+    def build(self, force: bool = False) -> Any:
+        if not self._built or force:
+            self._build()
+        return deepcopy(self._built_object)
+
+
+class ChainNode(Node):
+    def __init__(self, data: Dict):
+        super().__init__(data)
+
+    def build(self, tools: Optional[List[Node]] = None, force: bool = False) -> Any:
+        if not self._built or force:
+            # Check if the chain requires a PromptNode
+            for key, value in self.params.items():
+                if isinstance(value, PromptNode):
+                    # Build the PromptNode, passing the tools if available
+                    self.params[key] = value.build(tools=tools or [], force=force)
+
+            self._build()
+        return deepcopy(self._built_object)
 
 
 class Graph:
@@ -270,7 +350,24 @@ class Graph:
         return edges
 
     def _build_nodes(self) -> List[Node]:
-        return [Node(node) for node in self._nodes]
+        nodes = []
+        all_tool_names = set(get_all_tool_names())
+        for node in self._nodes:
+            node_data = node["data"]
+            node_type = node_data["type"]
+            node_lc_type = node_data["node"]["template"]["_type"]
+
+            if node_type in ["ZeroShotPrompt", "PromptTemplate"]:
+                nodes.append(PromptNode(node))
+            elif "agent" in node_type.lower():
+                nodes.append(AgentNode(node))
+            elif "chain" in node_type.lower():
+                nodes.append(ChainNode(node))
+            elif "tool" in node_type.lower() or node_lc_type in all_tool_names:
+                nodes.append(ToolNode(node))
+            else:
+                nodes.append(Node(node))
+        return nodes
 
     def get_children_by_node_type(self, node: Node, node_type: str) -> List[Node]:
         children = []
@@ -280,3 +377,32 @@ class Graph:
         if node_type in node_types:
             children.append(node)
         return children
+
+    def _build_agent(self, agent_node: Node) -> None:
+        # Identify the ZeroShotPrompt node and any inner ZeroShotAgent nodes
+        zero_shot_prompt_node = None
+        inner_agent_nodes = []
+        for edge in agent_node.edges:
+            if edge.source == agent_node:
+                source_node = edge.target
+                if (
+                    isinstance(source_node, DeferredNode)
+                    and source_node.node_type == "ZeroShotPrompt"
+                ):
+                    zero_shot_prompt_node = source_node
+                elif source_node.node_type == "ZeroShotAgent":
+                    inner_agent_nodes.append(source_node)
+
+        # First, build any inner ZeroShotAgent nodes
+        for inner_agent_node in inner_agent_nodes:
+            self._build_agent(inner_agent_node)
+
+        # Build the ZeroShotAgent node itself
+        agent_built = agent_node.build()
+
+        if zero_shot_prompt_node:
+            # Set the tools parameter in the ZeroShotPrompt node
+            zero_shot_prompt_node.params["tools"] = agent_built.tools
+
+            # Build the ZeroShotPrompt node
+            zero_shot_prompt_node.build()
