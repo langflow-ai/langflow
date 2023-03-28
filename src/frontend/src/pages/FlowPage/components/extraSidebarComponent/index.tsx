@@ -6,7 +6,7 @@ import {
   nodeNames,
 } from "../../../../utils";
 import { useContext, useEffect, useState } from "react";
-import { getAll } from "../../../../controllers/NodesServices";
+import { getAll } from "../../../../controllers/API";
 import { typesContext } from "../../../../contexts/typesContext";
 import { APIClassType, APIKindType, APIObjectType } from "../../../../types/api";
 
