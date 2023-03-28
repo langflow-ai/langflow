@@ -8,3 +8,8 @@ export async function getAll():Promise<AxiosResponse<APIObjectType>> {
 export async function sendAll(data:sendAllProps) {
     return await axios.post(`/predict`, data);
 }
+
+export async function checkCode(code:string){
+
+    return await axios.post('/validate',{code})
+}

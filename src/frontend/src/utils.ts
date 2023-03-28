@@ -7,8 +7,12 @@ import {
   WrenchScrewdriverIcon,
   ComputerDesktopIcon,
   Bars3CenterLeftIcon,
+  PaperClipIcon,
+  QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
 import { Connection, Edge, Node, ReactFlowInstance } from "reactflow";
+import { FlowType } from "./types/flow";
+var _ = require('lodash')
 
 export function classNames(...classes:Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -69,7 +73,9 @@ export const nodeColors: {[char: string]: string} = {
   memories: "#FF9135",
   advanced: "#000000",
   chat: "#454173",
-  thought:"#272541"
+  thought:"#272541",
+  docloaders:"#FF9135",
+  unknown:"#9CA3AF"
 };
 
 export const nodeNames:{[char: string]: string} = {
@@ -81,7 +87,8 @@ export const nodeNames:{[char: string]: string} = {
   memories: "Memories",
   advanced: "Advanced",
   chat: "Chat",
-
+  docloaders:"Document Loader",
+  unknown:"Unknown"
 };
 
 export const nodeIcons:{[char: string]: React.ForwardRefExoticComponent<React.SVGProps<SVGSVGElement>>} = {
@@ -93,6 +100,8 @@ export const nodeIcons:{[char: string]: React.ForwardRefExoticComponent<React.SV
   tools: WrenchScrewdriverIcon,
   advanced: ComputerDesktopIcon,
   chat: Bars3CenterLeftIcon,
+  docloaders:Bars3CenterLeftIcon,
+  unknown:QuestionMarkCircleIcon
 };
 
 export const bgColors = {
@@ -340,4 +349,18 @@ export function isValidConnection(
     }
   }
   return false;
+}
+
+export function removeApiKeys(flow:FlowType):FlowType{
+  let cleanFLow = _.cloneDeep(flow)
+  cleanFLow.data.nodes.forEach(node=>{
+    for(const key in node.data.node.template)
+    {
+      if(key.includes('api')){
+        console.log(node.data.node.template[key])
+        node.data.node.template[key].value = ''
+      }
+    }
+  })
+  return cleanFLow
 }
