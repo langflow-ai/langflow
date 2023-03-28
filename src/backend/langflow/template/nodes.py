@@ -53,12 +53,11 @@ class PythonFunctionNode(FrontendNode):
         type_name="python_function",
         fields=[
             Field(
-                field_type="str",
+                field_type="code",
                 required=True,
                 placeholder="",
                 is_list=False,
                 show=True,
-                multiline=True,
                 value=DEFAULT_PYTHON_FUNCTION,
                 name="code",
             )
