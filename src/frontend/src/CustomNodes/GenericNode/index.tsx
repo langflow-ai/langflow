@@ -34,7 +34,7 @@ export default function GenericNode({
 		}
 		return;
 	}
-
+	console.log(data)
 	return (
 		<div
 			className={classNames(

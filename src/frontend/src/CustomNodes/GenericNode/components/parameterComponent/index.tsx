@@ -10,6 +10,7 @@ import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
 import FloatComponent from "../../../../components/floatComponent";
 import Dropdown from "../../../../components/dropdownComponent";
+import CodeAreaComponent from "../../../../components/codeAreaComponent";
 
 export default function ParameterComponent({
 	left,
@@ -136,9 +137,17 @@ export default function ParameterComponent({
 				  data.node.template[name].options ? (
 					<Dropdown
 						options={data.node.template[name].options}
-						onSelect={(newValue) => data.node.template[name].value=newValue}
-						value={data.node.template[name].value??"chose an option"}
+						onSelect={(newValue) => (data.node.template[name].value = newValue)}
+						value={data.node.template[name].value ?? "chose an option"}
 					></Dropdown>
+				) : left === true && type === "code" ? (
+					<CodeAreaComponent
+						disabled={disabled}
+						value={data.node.template[name].value ?? ""}
+						onChange={(t: string) => {
+							data.node.template[name].value = t;
+						}}
+					/>
 				) : (
 					<></>
 				)}
