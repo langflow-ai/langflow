@@ -120,13 +120,42 @@ export default function CodeAreaModal({
 											type="button"
 											className="inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm"
 											onClick={() => {
-												setValue(code)
 												checkCode(code)
-													.then((_) =>{
-														setSuccessData({ title: "Code is ready to run" })
-														setModalOpen(false)
-													}
-													)
+													.then((apiReturn) => {
+														console.log(apiReturn);
+														if (apiReturn.data) {
+															console.log(apiReturn.data);
+															let importsErrors = apiReturn.data.imports.errors;
+															let funcErrors = apiReturn.data.function.errors;
+															if (
+																funcErrors.length === 0 &&
+																importsErrors.length === 0
+															) {
+																setSuccessData({
+																	title: "Code is ready to run",
+																});
+																setModalOpen(false);
+																setValue(code)
+															} else {
+																if (funcErrors.length !== 0) {
+																	setErrorData({
+																		title: "There is an error in your function",
+																		list: funcErrors,
+																	});
+																}
+																if(importsErrors.length!==0){
+																	setErrorData({
+																		title: "There is an error in your imports",
+																		list: importsErrors,
+																	});
+																}
+															}
+														} else {
+															setErrorData({
+																title: "Something went wrong, please try again",
+															});
+														}
+													})
 													.catch((_) =>
 														setErrorData({
 															title:
