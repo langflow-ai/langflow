@@ -23,7 +23,6 @@ export default function GenericNode({
 	const { types, deleteNode } = useContext(typesContext);
 	const Icon = nodeIcons[types[data.type]];
 	if (!Icon) {
-		console.log(data);
 		if (showError.current) {
 			setErrorData({
 				title: data.type
@@ -34,7 +33,6 @@ export default function GenericNode({
 		}
 		return;
 	}
-	console.log(data)
 	return (
 		<div
 			className={classNames(
