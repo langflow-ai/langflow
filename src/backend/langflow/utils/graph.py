@@ -2,7 +2,6 @@
 # Insights:
 #   - Defer prompts building to the last moment or when they have all the tools
 #   - Build each inner agent first, then build the outer agent
-from langchain.agents.load_tools import get_all_tool_names
 
 from copy import deepcopy
 import types
@@ -10,6 +9,7 @@ from typing import Any, Dict, List, Optional, Union
 from langflow.interface import loading
 from langflow.utils import payload, util
 from langflow.interface.listing import ALL_TYPES_DICT
+from langflow.utils.constants import ALL_TOOLS_NAMES
 
 
 class Node:
@@ -351,7 +351,6 @@ class Graph:
 
     def _build_nodes(self) -> List[Node]:
         nodes = []
-        all_tool_names = set(get_all_tool_names())
         for node in self._nodes:
             node_data = node["data"]
             node_type = node_data["type"]
@@ -363,7 +362,7 @@ class Graph:
                 nodes.append(AgentNode(node))
             elif "chain" in node_type.lower():
                 nodes.append(ChainNode(node))
-            elif "tool" in node_type.lower() or node_lc_type in all_tool_names:
+            elif "tool" in node_type.lower() or node_lc_type in ALL_TOOLS_NAMES:
                 nodes.append(ToolNode(node))
             else:
                 nodes.append(Node(node))
@@ -377,32 +376,3 @@ class Graph:
         if node_type in node_types:
             children.append(node)
         return children
-
-    def _build_agent(self, agent_node: Node) -> None:
-        # Identify the ZeroShotPrompt node and any inner ZeroShotAgent nodes
-        zero_shot_prompt_node = None
-        inner_agent_nodes = []
-        for edge in agent_node.edges:
-            if edge.source == agent_node:
-                source_node = edge.target
-                if (
-                    isinstance(source_node, DeferredNode)
-                    and source_node.node_type == "ZeroShotPrompt"
-                ):
-                    zero_shot_prompt_node = source_node
-                elif source_node.node_type == "ZeroShotAgent":
-                    inner_agent_nodes.append(source_node)
-
-        # First, build any inner ZeroShotAgent nodes
-        for inner_agent_node in inner_agent_nodes:
-            self._build_agent(inner_agent_node)
-
-        # Build the ZeroShotAgent node itself
-        agent_built = agent_node.build()
-
-        if zero_shot_prompt_node:
-            # Set the tools parameter in the ZeroShotPrompt node
-            zero_shot_prompt_node.params["tools"] = agent_built.tools
-
-            # Build the ZeroShotPrompt node
-            zero_shot_prompt_node.build()
