@@ -1,5 +1,6 @@
 from langchain.agents import Tool
 from langflow.interface.custom_types import PythonFunction
+from langchain.agents.load_tools import get_all_tool_names
 
 OPENAI_MODELS = [
     "text-davinci-003",
@@ -16,3 +17,5 @@ DEFAULT_PYTHON_FUNCTION = """
 def python_function(text: str) -> str:
     return text
 """
+
+ALL_TOOLS_NAMES = set(get_all_tool_names() + list(CUSTOM_TOOLS.keys()))

@@ -1,5 +1,4 @@
 from langchain import agents, chains, prompts
-from langchain.agents.load_tools import get_all_tool_names
 
 from langflow.custom import customs
 from langflow.interface.custom_lists import (
@@ -8,6 +7,7 @@ from langflow.interface.custom_lists import (
 )
 from langflow.settings import settings
 from langflow.utils import util
+from langflow.utils.constants import ALL_TOOLS_NAMES
 
 
 def get_type_dict():
@@ -51,7 +51,7 @@ def list_tools():
 
     tools = []
 
-    for tool in get_all_tool_names():
+    for tool in list(ALL_TOOLS_NAMES):
         tool_params = util.get_tool_params(util.get_tool_by_name(tool))
         if tool_params and tool_params["name"] in settings.tools or settings.dev:
             tools.append(tool_params["name"])
