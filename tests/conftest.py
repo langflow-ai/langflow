@@ -11,6 +11,11 @@ def pytest_configure():
         Path(__file__).parent.absolute() / "data" / "complex_example.json"
     )
 
+    pytest.CODE_WITH_SYNTAX_ERROR = """
+def get_text():
+    retun "Hello World"
+    """
+
 
 # Create client fixture for FastAPI
 @pytest.fixture(scope="module")

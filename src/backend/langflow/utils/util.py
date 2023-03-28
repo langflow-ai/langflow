@@ -123,21 +123,6 @@ def build_template_from_class(
             }
 
 
-def eval_function(function_string: str):
-    # Create an empty dictionary to serve as a separate namespace
-    namespace: Dict = {}
-
-    # Execute the code string in the new namespace
-    exec(function_string, namespace)
-    function_object = next(
-        (obj for name, obj in namespace.items() if isinstance(obj, types.FunctionType)),
-        None,
-    )
-    if function_object is None:
-        raise ValueError("Function string does not contain a function")
-    return function_object
-
-
 def get_base_classes(cls):
     """Get the base classes of a class.
     These are used to determine the output of the nodes.

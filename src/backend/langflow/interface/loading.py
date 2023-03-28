@@ -22,7 +22,7 @@ from langchain.llms.base import BaseLLM
 from langchain.llms.loading import load_llm_from_config
 
 from langflow.interface.types import get_type_list
-from langflow.utils import payload, util
+from langflow.utils import payload, util, validate
 
 
 def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
@@ -43,7 +43,7 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
         # as the instance
         function_string = params["code"]
         if isinstance(function_string, str):
-            return util.eval_function(function_string)
+            return validate.eval_function(function_string)
         raise ValueError("Function should be a string")
     else:
         if "tools" not in params:
