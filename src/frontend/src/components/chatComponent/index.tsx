@@ -6,7 +6,7 @@ import {
 	XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { MouseEventHandler, useContext, useEffect, useRef, useState } from "react";
-import { sendAll } from "../../controllers/NodesServices";
+import { sendAll } from "../../controllers/API";
 import { alertContext } from "../../contexts/alertContext";
 import { classNames, nodeColors } from "../../utils";
 import { TabsContext } from "../../contexts/tabsContext";
@@ -97,7 +97,7 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 				setChatValue("");
 				addChatHistory(message, true);
 
-				sendAll({ ...reactFlowInstance.toObject(), message, chatHistory})
+				sendAll({ ...reactFlowInstance.toObject(), message, chatHistory,name:flow.name,description:flow.description})
 					.then((r) => {
 						addChatHistory(r.data.result, false, r.data.thought);
 						setLockChat(false);

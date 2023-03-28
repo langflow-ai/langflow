@@ -5,7 +5,7 @@ import CodeAreaModal from "../../modals/codeAreaModal";
 import TextAreaModal from "../../modals/textAreaModal";
 import { TextAreaComponentType } from "../../types/components";
 
-export default function TextAreaComponent({ value, onChange, disabled }:TextAreaComponentType) {
+export default function CodeAreaComponent({ value, onChange, disabled }:TextAreaComponentType) {
   const [myValue, setMyValue] = useState(value);
   const { openPopUp } = useContext(PopUpContext);
   useEffect(() => {
@@ -25,7 +25,7 @@ export default function TextAreaComponent({ value, onChange, disabled }:TextArea
         >
             {myValue !== "" ? myValue : 'Text empty'}
         </span>
-        <button onClick={()=>{openPopUp(<TextAreaModal value={myValue} setValue={(t:string) => {setMyValue(t); onChange(t);}}/>)}}>
+        <button onClick={()=>{openPopUp(<CodeAreaModal value={myValue} setValue={(t:string) => {setMyValue(t); onChange(t);}}/>)}}>
             <ArrowTopRightOnSquareIcon className="w-6 h-6 hover:text-blue-600" />
         </button>
       </div>
