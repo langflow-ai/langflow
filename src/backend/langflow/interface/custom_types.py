@@ -24,7 +24,9 @@ class Function(BaseModel):
 
     def get_function(self):
         """Get the function"""
-        return validate.eval_function(self.code)
+        function_name = validate.extract_function_name(self.code)
+
+        return validate.create_function(self.code, function_name)
 
 
 class PythonFunction(Function):
