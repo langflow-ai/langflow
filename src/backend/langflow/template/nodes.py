@@ -1,4 +1,4 @@
-from langflow.node.template import Field, FrontendNode, Template
+from langflow.template.template import Field, FrontendNode, Template
 from langchain.agents.mrkl import prompt
 from langflow.utils.constants import DEFAULT_PYTHON_FUNCTION
 
@@ -53,12 +53,11 @@ class PythonFunctionNode(FrontendNode):
         type_name="python_function",
         fields=[
             Field(
-                field_type="str",
+                field_type="code",
                 required=True,
                 placeholder="",
                 is_list=False,
                 show=True,
-                multiline=True,
                 value=DEFAULT_PYTHON_FUNCTION,
                 name="code",
             )

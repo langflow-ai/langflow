@@ -1,4 +1,4 @@
-from langflow.node import nodes
+from langflow.template import nodes
 
 
 CUSTOM_NODES = {

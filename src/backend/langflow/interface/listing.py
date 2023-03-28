@@ -1,5 +1,4 @@
 from langchain import agents, chains, prompts
-from langchain.agents.load_tools import get_all_tool_names
 
 from langflow.custom import customs
 from langflow.interface.custom_lists import (
@@ -8,6 +7,14 @@ from langflow.interface.custom_lists import (
 )
 from langflow.settings import settings
 from langflow.utils import util
+from langchain.agents.load_tools import get_all_tool_names
+from langchain.agents import Tool
+from langflow.interface.custom_types import PythonFunction
+
+
+CUSTOM_TOOLS = {"Tool": Tool, "PythonFunction": PythonFunction}
+TOOLS_DICT = util.get_tools_dict()
+ALL_TOOLS_NAMES = set(get_all_tool_names() + list(CUSTOM_TOOLS.keys()))
 
 
 def get_type_dict():
@@ -51,9 +58,9 @@ def list_tools():
 
     tools = []
 
-    for tool in get_all_tool_names():
+    for tool in ALL_TOOLS_NAMES:
         tool_params = util.get_tool_params(util.get_tool_by_name(tool))
-        if tool_params and tool_params["name"] in settings.tools or settings.dev:
+        if tool_params and tool_params.get("name") in settings.tools or settings.dev:
             tools.append(tool_params["name"])
 
     # Add Tool
