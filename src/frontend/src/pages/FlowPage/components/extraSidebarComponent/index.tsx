@@ -55,7 +55,7 @@ export default function ExtraSidebar() {
       {Object.keys(data).map((d:keyof APIObjectType, i) => (
         <DisclosureComponent
           key={i}
-          button={{ title: nodeNames[d], Icon: nodeIcons[d] }}
+          button={{ title: nodeNames[d]??nodeNames.unknown, Icon: nodeIcons[d]??nodeIcons.unknown }}
         >
           <div className="p-2 flex flex-col gap-2">
             {Object.keys(data[d]).map((t: string, k) => (
@@ -63,7 +63,7 @@ export default function ExtraSidebar() {
                 <div
                   draggable
                   className={" cursor-grab border-l-8 rounded-l-md"}
-                  style={{ borderLeftColor: nodeColors[d] }}
+                  style={{ borderLeftColor: nodeColors[d]??nodeColors.unknown }}
                   onDragStart={(event) =>
                     onDragStart(event, {
                       type: t,

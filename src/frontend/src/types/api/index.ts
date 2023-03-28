@@ -9,7 +9,10 @@ export type TemplateVariableType = {type:string,required:boolean,placeholder?:st
 export type sendAllProps={
     nodes: Node[];
     edges: Edge[];
+    name:string,
+    description:string;
     viewport: Viewport;
     message:string;
+
     chatHistory:{message:string,isSend:boolean}[],
 };
