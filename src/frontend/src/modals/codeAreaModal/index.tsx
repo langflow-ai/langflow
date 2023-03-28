@@ -6,10 +6,11 @@ import AceEditor from "react-ace";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
-import "ace-builds/src-noconflict/ext-language_tools"
-import "ace-builds/webpack-resolver"
-import {darkContext} from "../../contexts/darkContext"
+import "ace-builds/src-noconflict/ext-language_tools";
+import "ace-builds/webpack-resolver";
+import { darkContext } from "../../contexts/darkContext";
 import { checkCode } from "../../controllers/API";
+import { alertContext } from "../../contexts/alertContext";
 export default function CodeAreaModal({
 	value,
 	setValue,
@@ -19,7 +20,8 @@ export default function CodeAreaModal({
 }) {
 	const [open, setOpen] = useState(true);
 	const [code, setCode] = useState(value);
-    const {dark} = useContext(darkContext)
+	const { dark } = useContext(darkContext);
+	const { setErrorData, setSuccessData } = useContext(alertContext);
 	const { closePopUp } = useContext(PopUpContext);
 	const ref = useRef();
 	function setModalOpen(x: boolean) {
@@ -99,14 +101,16 @@ export default function CodeAreaModal({
 													value={code}
 													mode="python"
 													highlightActiveLine={true}
-                                                    showPrintMargin={false}
-                                                    fontSize={14}
-                                                    showGutter
-                                                    enableLiveAutocompletion
-                                                    theme={dark?"twilight":"github"}
-                                                    name="CodeEditor"
-                                                    onChange={(value)=>{setCode(value)}}
-                                                    className="h-full w-full rounded-lg"
+													showPrintMargin={false}
+													fontSize={14}
+													showGutter
+													enableLiveAutocompletion
+													theme={dark ? "twilight" : "github"}
+													name="CodeEditor"
+													onChange={(value) => {
+														setCode(value);
+													}}
+													className="h-full w-full rounded-lg"
 												/>
 											</div>
 										</div>
@@ -117,19 +121,21 @@ export default function CodeAreaModal({
 											className="inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm"
 											onClick={() => {
 												setValue(code)
-												setModalOpen(false);
-											}}
-										>
-											Save code
-										</button>
-										<button
-											type="button"
-											className="inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm"
-											onClick={() => {
 												checkCode(code)
+													.then((_) =>{
+														setSuccessData({ title: "Code is ready to run" })
+														setModalOpen(false)
+													}
+													)
+													.catch((_) =>
+														setErrorData({
+															title:
+																"There is something wrong with this code, please review it",
+														})
+													);
 											}}
 										>
-											Check Code
+											Check & Save
 										</button>
 									</div>
 								</div>

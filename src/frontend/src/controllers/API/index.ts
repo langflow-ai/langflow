@@ -10,5 +10,6 @@ export async function sendAll(data:sendAllProps) {
 }
 
 export async function checkCode(code:string){
-    return []
+
+    return await axios.post('/validate',{code})
 }
