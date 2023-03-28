@@ -1,10 +1,12 @@
 from typing import Any, Dict
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
+from langflow.api.base import Code, ValidationResponse
 from langflow.interface.custom_types import PythonFunction
 
 from langflow.interface.run import process_graph
 from langflow.interface.types import build_langchain_types_dict
+from langflow.utils.validate import validate_code
 
 
 # build router
@@ -24,10 +26,13 @@ def get_load(data: Dict[str, Any]):
         return HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/validate", status_code=200)
-def validate_code(data: PythonFunction):
+@router.post("/validate", status_code=200, response_model=ValidationResponse)
+def post_validate_code(code: Code):
     try:
-        # if the data var gets here then it is valid python code
-        return {"valid": True}
+        errors = validate_code(code.code)
+        return ValidationResponse(
+            imports=errors.get("imports", {}),
+            function=errors.get("function", {}),
+        )
     except Exception as e:
         return HTTPException(status_code=500, detail=str(e))
