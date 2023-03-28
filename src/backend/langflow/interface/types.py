@@ -16,6 +16,7 @@ def get_type_list():
 
 def build_langchain_types_dict():
     """Build a dictionary of all langchain types"""
+
     return {
         "chains": {
             chain: get_signature(chain, "chains") for chain in list_type("chains")
@@ -27,5 +28,9 @@ def build_langchain_types_dict():
             prompt: get_signature(prompt, "prompts") for prompt in list_type("prompts")
         },
         "llms": {llm: get_signature(llm, "llms") for llm in list_type("llms")},
+        "memories": {
+            memory: get_signature(memory, "memories")
+            for memory in list_type("memories")
+        },
         "tools": {tool: get_signature(tool, "tools") for tool in list_type("tools")},
     }

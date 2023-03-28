@@ -1,15 +1,17 @@
 import ast
+import importlib
 import inspect
 import re
-import importlib
+from typing import Dict, Optional
 
 from langchain.agents.load_tools import (
     _BASE_TOOLS,
-    _LLM_TOOLS,
     _EXTRA_LLM_TOOLS,
     _EXTRA_OPTIONAL_TOOLS,
+    _LLM_TOOLS,
 )
-from typing import Optional, Dict
+
+from langflow.utils import constants
 
 
 def build_template_from_function(name: str, type_to_loader_dict: Dict):
@@ -69,6 +71,7 @@ def build_template_from_class(name: str, type_to_cls_dict: Dict):
         if v.__name__ == name:
             _class = v
 
+            # Get the docstring
             docs = get_class_doc(_class)
 
             variables = {"_type": _type}
@@ -190,11 +193,7 @@ def get_class_doc(class_name):
         A dictionary containing the extracted information, with keys
         for 'Description', 'Parameters', 'Attributes', and 'Returns'.
     """
-    # Get the class docstring
-    docstring = class_name.__doc__
-
-    # Parse the docstring to extract information
-    lines = docstring.split("\n")
+    # Template
     data = {
         "Description": "",
         "Parameters": {},
@@ -202,6 +201,15 @@ def get_class_doc(class_name):
         "Example": [],
         "Returns": {},
     }
+
+    # Get the class docstring
+    docstring = class_name.__doc__
+
+    if not docstring:
+        return data
+
+    # Parse the docstring to extract information
+    lines = docstring.split("\n")
 
     current_section = "Description"
 
@@ -296,9 +304,9 @@ def format_dict(d, name: Optional[str] = None):
 
         # Add options to openai
         if name == "OpenAI" and key == "model_name":
-            value["options"] = ["text-davinci-003", "text-davinci-002"]
+            value["options"] = constants.OPENAI_MODELS
         elif name == "OpenAIChat" and key == "model_name":
-            value["options"] = ["gpt-3.5-turbo", "gpt-4"]
+            value["options"] = constants.CHAT_OPENAI_MODELS
 
     return d
 
