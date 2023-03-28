@@ -9,9 +9,9 @@ from langchain.agents.load_tools import (
     _LLM_TOOLS,
 )
 from langchain.agents import agent as agent_module
-from langflow.utils.graph import Graph
 
-from langflow.interface.importing import import_by_type
+
+from langflow.interface.importing.utils import import_by_type
 
 from langchain.agents import ZeroShotAgent
 from langchain.agents.loading import load_agent_from_config
@@ -61,6 +61,8 @@ def load_flow_from_json(path: str):
 
 
 def extract_json(data_graph):
+    from langflow.graph.graph import Graph
+
     nodes = data_graph["nodes"]
     # Substitute ZeroShotPrompt with PromptTemplate
     nodes = replace_zero_shot_prompt_with_prompt_template(nodes)

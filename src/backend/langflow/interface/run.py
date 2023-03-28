@@ -5,7 +5,7 @@ from typing import Any, Dict
 
 from langflow.interface import loading
 from langflow.utils import payload
-from langflow.utils.graph import Graph
+from langflow.graph.graph import Graph
 
 
 def process_data_graph(data_graph: Dict[str, Any]):
