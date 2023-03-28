@@ -10,8 +10,8 @@ export default function TextAreaComponent({ value, onChange, disabled }:TextArea
   const { openPopUp } = useContext(PopUpContext);
   useEffect(() => {
     if (disabled) {
-      setMyValue([""]);
-      onChange([""]);
+      setMyValue("");
+      onChange("");
     }
   }, [disabled, onChange]);
   return (

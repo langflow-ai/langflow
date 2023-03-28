@@ -2,17 +2,23 @@ import { Dialog, Transition } from "@headlessui/react";
 import { XMarkIcon, CommandLineIcon } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
-import CodeEditor from "@uiw/react-textarea-code-editor";
-
+import AceEditor from "react-ace";
+import "ace-builds/src-noconflict/mode-python";
+import "ace-builds/src-noconflict/theme-github";
+import "ace-builds/src-noconflict/theme-twilight";
+import "ace-builds/src-noconflict/ext-language_tools"
+import "ace-builds/webpack-resolver"
+import {darkContext} from "../../contexts/darkContext"
 export default function CodeAreaModal({
 	value,
 	setValue,
 }: {
 	setValue: (value: string) => void;
-	value: string | string[];
+	value: string;
 }) {
 	const [open, setOpen] = useState(true);
 	const [code, setCode] = useState(value);
+    const {dark} = useContext(darkContext)
 	const { closePopUp } = useContext(PopUpContext);
 	const ref = useRef();
 	function setModalOpen(x: boolean) {
@@ -84,22 +90,32 @@ export default function CodeAreaModal({
 											</Dialog.Title>
 										</div>
 									</div>
-									<div className="h-full w-full bg-gray-200 dark:bg-gray-900 p-4 gap-4 flex flex-row justify-center items-center">
+									<div className="h-full w-full bg-gray-200 overflow-auto dark:bg-gray-900 p-4 gap-4 flex flex-row justify-center items-center">
 										<div className="flex h-full w-full">
-											<div className="overflow-hidden px-4 py-5 sm:p-6 w-full rounded-lg bg-white dark:bg-gray-800 shadow">
+											<div className="overflow-hidden px-4 py-5 sm:p-6 w-full h-full rounded-lg bg-white dark:bg-gray-800 shadow">
 												{/* need to insert code editor */}
-												<CodeEditor
+												<AceEditor
+													value={code}
+													mode="python"
+													highlightActiveLine={true}
+                                                    showPrintMargin={false}
+                                                    fontSize={14}
+                                                    showGutter
+                                                    enableLiveAutocompletion
+                                                    theme={dark?"twilight":"github"}
+                                                    name="CodeEditor"
+                                                    onChange={(value)=>{setCode(value);setValue(value)}}
+                                                    className="h-full w-full rounded-lg"
+												/>
+												{/* <textarea
+													ref={ref}
+													className="form-input h-full w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
 													value={code}
 													onChange={(e) => {
 														setCode(e.target.value);
 														setValue(e.target.value);
 													}}
-                                                    language={"python"}
-													placeholder="please insert your code here"
-                                                    className="w-full h-full overflow-auto scrollbar-hide"
-												/>
-
-												{/* <textarea ref={ref} className="form-input h-full w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white" value={code} onChange={(e) => {setCode(e.target.value); setValue(e.target.value)}}/> */}
+												/> */}
 											</div>
 										</div>
 									</div>
