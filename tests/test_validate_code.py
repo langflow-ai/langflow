@@ -1,4 +1,12 @@
-from langflow.utils.validate import validate_code
+from langflow.utils.validate import (
+    create_function,
+    extract_function_name,
+    validate_code,
+    execute_function,
+)
+import pytest
+from requests.exceptions import MissingSchema
+from unittest import mock
 
 
 def test_validate_code():
@@ -37,3 +45,62 @@ def square(x)
         "imports": {"errors": []},
         "function": {"errors": ["expected ':' (<unknown>, line 4)"]},
     }
+
+
+def test_execute_function_success():
+    code = """
+import math
+
+def my_function(x):
+    return math.sin(x) + 1
+    """
+    result = execute_function(code, "my_function", 0.5)
+    assert result == 1.479425538604203
+
+
+def test_execute_function_missing_module():
+    code = """
+import some_missing_module
+
+def my_function(x):
+    return some_missing_module.some_function(x)
+    """
+    with pytest.raises(ModuleNotFoundError):
+        execute_function(code, "my_function", 0.5)
+
+
+def test_execute_function_missing_function():
+    code = """
+import math
+
+def my_function(x):
+    return math.some_missing_function(x)
+    """
+    with pytest.raises(AttributeError):
+        execute_function(code, "my_function", 0.5)
+
+
+def test_execute_function_missing_schema():
+    code = """
+import requests
+
+def my_function(x):
+    return requests.get(x).text
+    """
+    with mock.patch("requests.get", side_effect=MissingSchema):
+        with pytest.raises(MissingSchema):
+            execute_function(code, "my_function", "invalid_url")
+
+
+def test_create_function():
+    code = """
+import math
+
+def my_function(x):
+    return math.sin(x) + 1
+"""
+
+    function_name = extract_function_name(code)
+    function = create_function(code, function_name)
+    result = function(0.5)
+    assert result == 1.479425538604203
