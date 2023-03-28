@@ -107,15 +107,6 @@ export default function CodeAreaModal({
                                                     onChange={(value)=>{setCode(value);setValue(value)}}
                                                     className="h-full w-full rounded-lg"
 												/>
-												{/* <textarea
-													ref={ref}
-													className="form-input h-full w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-													value={code}
-													onChange={(e) => {
-														setCode(e.target.value);
-														setValue(e.target.value);
-													}}
-												/> */}
 											</div>
 										</div>
 									</div>
