@@ -6,7 +6,6 @@ from langchain.agents.load_tools import (
     _EXTRA_LLM_TOOLS,
     _EXTRA_OPTIONAL_TOOLS,
     _LLM_TOOLS,
-    get_all_tool_names,
 )
 
 from langflow.custom import customs
@@ -14,9 +13,9 @@ from langflow.interface.custom_lists import (
     llm_type_to_cls_dict,
     memory_type_to_cls_dict,
 )
-from langflow.node.template import Field, Template
+from langflow.interface.listing import CUSTOM_TOOLS, ALL_TOOLS_NAMES
+from langflow.template.template import Field, Template
 from langflow.utils import util
-from langflow.utils.constants import CUSTOM_TOOLS
 
 
 def get_signature(name: str, object_type: str):
@@ -86,8 +85,7 @@ def get_tool_signature(name: str):
     NODE_INPUTS = ["llm", "func"]
     base_classes = ["Tool"]
     all_tools = {}
-    all_tool_names: list[str] = get_all_tool_names() + list(CUSTOM_TOOLS.keys())
-    for tool in all_tool_names:
+    for tool in ALL_TOOLS_NAMES:
         if tool_params := util.get_tool_params(util.get_tool_by_name(tool)):
             tool_name = tool_params.get("name") or str(tool)
             all_tools[tool_name] = {"type": tool, "params": tool_params}

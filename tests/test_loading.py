@@ -1,6 +1,6 @@
 import json
 from langchain import LLMChain, OpenAI
-from langflow.utils.graph import Graph
+from langflow.graph.graph import Graph
 import pytest
 
 from langflow import load_flow_from_json

@@ -15,6 +15,7 @@ from langchain.agents.load_tools import (
 
 from langchain.agents.tools import Tool
 
+
 from langflow.utils import constants
 
 
@@ -165,12 +166,14 @@ def get_default_factory(module: str, function: str):
 
 def get_tools_dict():
     """Get the tools dictionary."""
+    from langflow.interface.listing import CUSTOM_TOOLS
+
     tools = {
         **_BASE_TOOLS,
         **_LLM_TOOLS,
         **{k: v[0] for k, v in _EXTRA_LLM_TOOLS.items()},
         **{k: v[0] for k, v in _EXTRA_OPTIONAL_TOOLS.items()},
-        **constants.CUSTOM_TOOLS,
+        **CUSTOM_TOOLS,
     }
     return tools
 

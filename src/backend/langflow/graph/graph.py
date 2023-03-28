@@ -1,9 +1,14 @@
+# Description: Graph class for building a graph of nodes and edges
+# Insights:
+#   - Defer prompts building to the last moment or when they have all the tools
+#   - Build each inner agent first, then build the outer agent
+
 from copy import deepcopy
 import types
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
+from langflow.utils import payload
+from langflow.interface.listing import ALL_TYPES_DICT, ALL_TOOLS_NAMES, TOOLS_DICT
 from langflow.interface import loading
-from langflow.utils import payload, util
-from langflow.interface.listing import ALL_TYPES_DICT
 
 
 class Node:
@@ -133,7 +138,7 @@ class Node:
         # and return the instance
         for base_type, value in ALL_TYPES_DICT.items():
             if base_type == "tools":
-                value = util.get_tools_dict()
+                value = TOOLS_DICT
 
             if self.node_type in value:
                 self._built_object = loading.instantiate_class(
@@ -164,6 +169,35 @@ class Node:
 
     def __hash__(self) -> int:
         return id(self)
+
+
+class AgentNode(Node):
+    def __init__(self, data: Dict):
+        super().__init__(data)
+        self.tools: List[ToolNode] = []
+        self.chains: List[ChainNode] = []
+
+    def _set_tools_and_chains(self) -> None:
+        for edge in self.edges:
+            source_node = edge.source
+            if isinstance(source_node, ToolNode):
+                self.tools.append(source_node)
+            elif isinstance(source_node, ChainNode):
+                self.chains.append(source_node)
+
+    def build(self, force: bool = False) -> Any:
+        if not self._built or force:
+            self._set_tools_and_chains()
+            # First, build the tools
+            for tool_node in self.tools:
+                tool_node.build()
+
+            # Next, build the chains and the rest
+            for chain_node in self.chains:
+                chain_node.build(tools=self.tools)
+
+            self._build()
+        return deepcopy(self._built_object)
 
 
 class Edge:
@@ -202,6 +236,51 @@ class Edge:
             f"Edge(source={self.source.id}, target={self.target.id}, valid={self.valid}"
             f", matched_type={self.matched_type})"
         )
+
+
+class PromptNode(Node):
+    def __init__(self, data: Dict):
+        super().__init__(data)
+
+    def build(self, tools: Optional[List[Node]] = None, force: bool = False) -> Any:
+        if not self._built or force:
+            # Check if it is a ZeroShotPrompt and needs a tool
+            if self.node_type == "ZeroShotPrompt":
+                tools = (
+                    [tool_node.build() for tool_node in tools]
+                    if tools is not None
+                    else []
+                )
+                self.params["tools"] = tools
+
+            self._build()
+        return deepcopy(self._built_object)
+
+
+class ToolNode(Node):
+    def __init__(self, data: Dict):
+        super().__init__(data)
+
+    def build(self, force: bool = False) -> Any:
+        if not self._built or force:
+            self._build()
+        return deepcopy(self._built_object)
+
+
+class ChainNode(Node):
+    def __init__(self, data: Dict):
+        super().__init__(data)
+
+    def build(self, tools: Optional[List[Node]] = None, force: bool = False) -> Any:
+        if not self._built or force:
+            # Check if the chain requires a PromptNode
+            for key, value in self.params.items():
+                if isinstance(value, PromptNode):
+                    # Build the PromptNode, passing the tools if available
+                    self.params[key] = value.build(tools=tools or [], force=force)
+
+            self._build()
+        return deepcopy(self._built_object)
 
 
 class Graph:
@@ -270,7 +349,23 @@ class Graph:
         return edges
 
     def _build_nodes(self) -> List[Node]:
-        return [Node(node) for node in self._nodes]
+        nodes = []
+        for node in self._nodes:
+            node_data = node["data"]
+            node_type = node_data["type"]
+            node_lc_type = node_data["node"]["template"]["_type"]
+
+            if node_type in ["ZeroShotPrompt", "PromptTemplate"]:
+                nodes.append(PromptNode(node))
+            elif "agent" in node_type.lower():
+                nodes.append(AgentNode(node))
+            elif "chain" in node_type.lower():
+                nodes.append(ChainNode(node))
+            elif "tool" in node_type.lower() or node_lc_type in ALL_TOOLS_NAMES:
+                nodes.append(ToolNode(node))
+            else:
+                nodes.append(Node(node))
+        return nodes
 
     def get_children_by_node_type(self, node: Node, node_type: str) -> List[Node]:
         children = []
