@@ -6,10 +6,9 @@
 from copy import deepcopy
 import types
 from typing import Any, Dict, List, Optional, Union
+from langflow.utils import payload
+from langflow.interface.listing import ALL_TYPES_DICT, ALL_TOOLS_NAMES, TOOLS_DICT
 from langflow.interface import loading
-from langflow.utils import payload, util
-from langflow.interface.listing import ALL_TYPES_DICT
-from langflow.utils.constants import ALL_TOOLS_NAMES
 
 
 class Node:
@@ -139,7 +138,7 @@ class Node:
         # and return the instance
         for base_type, value in ALL_TYPES_DICT.items():
             if base_type == "tools":
-                value = util.get_tools_dict()
+                value = TOOLS_DICT
 
             if self.node_type in value:
                 self._built_object = loading.instantiate_class(
