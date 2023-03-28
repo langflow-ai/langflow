@@ -151,7 +151,7 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 								/>
 								Chat
 							</div>
-							<button className="hover:text-blue-500"
+							<button className="hover:text-blue-500 dark:text-white"
 								onClick={(e) => {
 									e.stopPropagation()
 									clearChat();
