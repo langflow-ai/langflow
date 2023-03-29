@@ -2,7 +2,7 @@ import ast
 import importlib
 import inspect
 import re
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 from langchain.agents.load_tools import (
     _BASE_TOOLS,
@@ -170,7 +170,7 @@ def get_tool_by_name(name: str):
     return tools[name]
 
 
-def get_tool_params(tool, **kwargs) -> Dict | None:
+def get_tool_params(tool, **kwargs) -> Union[Dict, None]:
     # Parse the function code into an abstract syntax tree
     # Define if it is a function or a class
     if inspect.isfunction(tool):
@@ -183,7 +183,7 @@ def get_tool_params(tool, **kwargs) -> Dict | None:
         raise ValueError("Tool must be a function or class.")
 
 
-def get_func_tool_params(func, **kwargs) -> Dict | None:
+def get_func_tool_params(func, **kwargs) -> Union[Dict, None]:
     tree = ast.parse(inspect.getsource(func))
 
     # Iterate over the statements in the abstract syntax tree
@@ -226,7 +226,7 @@ def get_func_tool_params(func, **kwargs) -> Dict | None:
     return None
 
 
-def get_class_tool_params(cls, **kwargs) -> Dict | None:
+def get_class_tool_params(cls, **kwargs) -> Union[Dict, None]:
     tree = ast.parse(inspect.getsource(cls))
 
     tool_params = {}
