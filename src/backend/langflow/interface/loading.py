@@ -52,17 +52,13 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
 
 
 def load_flow_from_json(path: str):
+    # This is done to avoid circular imports
+    from langflow.graph.graph import Graph
+
     """Load flow from json file"""
     with open(path, "r") as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]
-    extracted_json = extract_json(data_graph)
-    return load_langchain_type_from_config(config=extracted_json)
-
-
-def extract_json(data_graph):
-    from langflow.graph.graph import Graph
-
     nodes = data_graph["nodes"]
     # Substitute ZeroShotPrompt with PromptTemplate
     nodes = replace_zero_shot_prompt_with_prompt_template(nodes)
@@ -71,8 +67,7 @@ def extract_json(data_graph):
     # Nodes, edges and root node
     edges = data_graph["edges"]
     graph = Graph(nodes, edges)
-    root = payload.get_root_node(graph)
-    return payload.build_json(root, graph)
+    return graph.build()
 
 
 def replace_zero_shot_prompt_with_prompt_template(nodes):
