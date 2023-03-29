@@ -3,7 +3,6 @@ import importlib
 import inspect
 import re
 from typing import Dict, Optional, Union
-
 from langchain.agents.load_tools import (
     _BASE_TOOLS,
     _EXTRA_LLM_TOOLS,
@@ -16,6 +15,49 @@ from langchain.agents.tools import Tool
 
 
 from langflow.utils import constants
+
+
+def build_template_from_parameters(
+    name: str, type_to_loader_dict: Dict, add_function: bool = False
+):
+    # Retrieve the function that matches the provided name
+    func = None
+    for _, v in type_to_loader_dict.items():
+        if v.__name__ == name:
+            func = v
+            break
+
+    if func is None:
+        raise ValueError(f"{name} not found")
+
+    # Process parameters
+    parameters = func.__annotations__
+    variables = {}
+    for param_name, param_type in parameters.items():
+        if param_name in ["return", "kwargs"]:
+            continue
+
+        variables[param_name] = {
+            "type": param_type.__name__,
+            "default": parameters[param_name].__repr_args__()[0][1],
+            # Op
+            "placeholder": "",
+        }
+
+    # Get the base classes of the return type
+    return_type = parameters.get("return")
+    base_classes = get_base_classes(return_type) if return_type else []
+    if add_function:
+        base_classes.append("function")
+
+    # Get the function's docstring
+    docs = inspect.getdoc(func) or ""
+
+    return {
+        "template": format_dict(variables, name),
+        "description": docs["Description"],
+        "base_classes": base_classes,
+    }
 
 
 def build_template_from_function(
@@ -37,7 +79,7 @@ def build_template_from_function(
 
             variables = {"_type": _type}
             for class_field_items, value in _class.__fields__.items():
-                if class_field_items in ["callback_manager", "requests_wrapper"]:
+                if class_field_items in ["callback_manager"]:
                     continue
                 variables[class_field_items] = {}
                 for name_, value_ in value.__repr_args__():
@@ -150,7 +192,7 @@ def get_default_factory(module: str, function: str):
 
 def get_tools_dict():
     """Get the tools dictionary."""
-    from langflow.interface.listing import CUSTOM_TOOLS
+    from langflow.interface.listing import CUSTOM_TOOLS, OTHER_TOOLS
 
     tools = {
         **_BASE_TOOLS,
@@ -158,6 +200,7 @@ def get_tools_dict():
         **{k: v[0] for k, v in _EXTRA_LLM_TOOLS.items()},
         **{k: v[0] for k, v in _EXTRA_OPTIONAL_TOOLS.items()},
         **CUSTOM_TOOLS,
+        **OTHER_TOOLS,
     }
     return tools
 
@@ -170,15 +213,15 @@ def get_tool_by_name(name: str):
     return tools[name]
 
 
-def get_tool_params(tool, **kwargs) -> Union[Dict, None]:
+def get_tool_params(tool, **kwargs) -> Dict:
     # Parse the function code into an abstract syntax tree
     # Define if it is a function or a class
     if inspect.isfunction(tool):
-        return get_func_tool_params(tool, **kwargs)
+        return get_func_tool_params(tool, **kwargs) or {}
     elif inspect.isclass(tool):
         # Get the parameters necessary to
         # instantiate the class
-        return get_class_tool_params(tool, **kwargs)
+        return get_class_tool_params(tool, **kwargs) or {}
     else:
         raise ValueError("Tool must be a function or class.")
 
@@ -373,7 +416,20 @@ def format_dict(d, name: Optional[str] = None):
         )
 
         # Add multline
-        value["multiline"] = key in ["suffix", "prefix", "template", "examples", "code"]
+        value["multiline"] = key in [
+            "suffix",
+            "prefix",
+            "template",
+            "examples",
+            "code",
+            "headers",
+        ]
+
+        # Replace dict type with str
+        if "dict" in value["type"].lower():
+            value["type"] = "str"
+
+        value["file"] = key in ["dict_"]
 
         # Replace default value with actual value
         if "default" in value:

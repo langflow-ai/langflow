@@ -1,5 +1,6 @@
 from langchain import agents, chains, prompts
-
+from langchain.agents import agent_toolkits
+from langchain import requests
 from langflow.custom import customs
 from langflow.interface.custom_lists import (
     llm_type_to_cls_dict,
@@ -10,11 +11,14 @@ from langflow.utils import util
 from langchain.agents.load_tools import get_all_tool_names
 from langchain.agents import Tool
 from langflow.interface.custom_types import PythonFunction
+from langchain.tools.json.tool import JsonSpec
 
-
+OTHER_TOOLS = {"JsonSpec": JsonSpec}
 CUSTOM_TOOLS = {"Tool": Tool, "PythonFunction": PythonFunction}
 TOOLS_DICT = util.get_tools_dict()
-ALL_TOOLS_NAMES = set(get_all_tool_names() + list(CUSTOM_TOOLS.keys()))
+ALL_TOOLS_NAMES = set(
+    get_all_tool_names() + list(CUSTOM_TOOLS.keys()) + list(OTHER_TOOLS.keys())
+)
 
 
 def get_type_dict():
@@ -25,12 +29,19 @@ def get_type_dict():
         "llms": list_llms,
         "tools": list_tools,
         "memories": list_memories,
+        "toolkits": list_toolkis,
+        "wrappers": list_wrappers,
     }
 
 
 def list_type(object_type: str):
     """List all components"""
     return get_type_dict().get(object_type, lambda: None)()
+
+
+def list_wrappers():
+    """List all wrapper types"""
+    return [requests.RequestsWrapper.__name__]
 
 
 def list_agents():
@@ -40,6 +51,11 @@ def list_agents():
         for agent in agents.loading.AGENT_TO_CLASS.values()
         if agent.__name__ in settings.agents or settings.dev
     ]
+
+
+def list_toolkis():
+    """List all toolkit types"""
+    return agent_toolkits.__all__
 
 
 def list_prompts():
@@ -60,6 +76,10 @@ def list_tools():
 
     for tool in ALL_TOOLS_NAMES:
         tool_params = util.get_tool_params(util.get_tool_by_name(tool))
+
+        if "name" not in tool_params:
+            tool_params["name"] = tool
+
         if tool_params and (
             tool_params.get("name") in settings.tools
             or (tool_params.get("name") and settings.dev)

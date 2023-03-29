@@ -1,8 +1,11 @@
 ## LLM
 from typing import Any
 
-from langchain import llms
+from langchain import llms, requests
 from langchain.llms.openai import OpenAIChat
+from langchain.agents import agent_toolkits
+from langflow.interface.importing.utils import import_class
+
 
 llm_type_to_cls_dict = llms.type_to_cls_dict
 llm_type_to_cls_dict["openai-chat"] = OpenAIChat
@@ -41,3 +44,21 @@ memory_type_to_cls_dict: dict[str, Any] = {
 
 # chain_type_to_cls_dict = type_to_loader_dict
 # chain_type_to_cls_dict["conversation_chain"] = ConversationChain
+
+toolkit_type_to_loader_dict: dict[str, Any] = {
+    toolkit_name: import_class(f"langchain.agents.agent_toolkits.{toolkit_name}")
+    # if toolkit_name is lower case it is a loader
+    for toolkit_name in agent_toolkits.__all__
+    if toolkit_name.islower()
+}
+
+toolkit_type_to_cls_dict: dict[str, Any] = {
+    toolkit_name: import_class(f"langchain.agents.agent_toolkits.{toolkit_name}")
+    # if toolkit_name is not lower case it is a class
+    for toolkit_name in agent_toolkits.__all__
+    if not toolkit_name.islower()
+}
+
+wrapper_type_to_cls_dict: dict[str, Any] = {
+    wrapper.__name__: wrapper for wrapper in [requests.RequestsWrapper]
+}
