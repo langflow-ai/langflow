@@ -101,9 +101,8 @@ def execute_function(code, function_name, *args, **kwargs):
     )
     try:
         exec(code_obj, exec_globals, locals())
-    except Exception as e:
-        # handle execution error here
-        pass
+    except Exception as exc:
+        raise ValueError("Function string does not contain a function") from exc
 
     # Add the function to the exec_globals dictionary
     exec_globals[function_name] = locals()[function_name]
@@ -145,7 +144,7 @@ def create_function(code, function_name):
     )
     try:
         exec(code_obj, exec_globals, locals())
-    except Exception as e:
+    except Exception:
         pass
 
     exec_globals[function_name] = locals()[function_name]

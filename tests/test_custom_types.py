@@ -1,9 +1,6 @@
 # Test this:
-from typing import Optional, Callable
 from langflow.interface.custom_types import PythonFunction
-from langflow.utils import util, constants
-from pydantic import BaseModel, ValidationError, validator
-from langchain.agents import tool
+from langflow.utils import constants
 import pytest
 
 

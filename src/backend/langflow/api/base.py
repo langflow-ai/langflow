@@ -1,5 +1,4 @@
 from pydantic import BaseModel, validator
-import json
 
 
 class Code(BaseModel):
