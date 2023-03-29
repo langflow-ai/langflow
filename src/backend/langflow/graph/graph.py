@@ -69,7 +69,9 @@ class Node:
         for key, value in template_dict.items():
             if key == "_type":
                 continue
-            if value["type"] not in ["str", "bool"]:
+            # If the type is not transformable to a python base class
+            # then we need to get the edge that connects to this node
+            if value["type"] not in ["str", "bool", "code"]:
                 # Get the edge that connects to this node
                 edge = next(
                     (
