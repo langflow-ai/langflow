@@ -1,5 +1,5 @@
 import json
-from langflow.graph.graph import Edge, Graph, Node
+from langflow.graph import Edge, Node, Graph
 import pytest
 from langflow.utils.payload import build_json, get_root_node
 from langchain.agents import AgentExecutor
