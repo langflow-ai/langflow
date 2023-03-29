@@ -36,7 +36,7 @@ export type InputListComponentType = {
 export type TextAreaComponentType = {
 	disabled: boolean;
 	onChange: (value: string[] | string) => void;
-	value: string[] | string;
+	value: string;
 };
 
 export type DisclosureComponentType = {

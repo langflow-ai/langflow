@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "0.0.46"
+version = "0.0.50"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
@@ -38,6 +38,14 @@ black = "^23.1.0"
 ipykernel = "^6.21.2"
 mypy = "^1.1.1"
 ruff = "^0.0.254"
+httpx = "^0.23.3"
+rich = "^13.3.3"
+pytest = "^7.2.2"
+types-requests = "^2.28.11"
+requests = "^2.28.0"
+
+[tool.ruff]
+line-length = 120
 
 [build-system]
 requires = ["poetry-core"]

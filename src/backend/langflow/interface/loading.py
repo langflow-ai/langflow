@@ -8,6 +8,12 @@ from langchain.agents.load_tools import (
     _EXTRA_OPTIONAL_TOOLS,
     _LLM_TOOLS,
 )
+from langchain.agents import agent as agent_module
+
+
+from langflow.interface.importing.utils import import_by_type
+
+from langchain.agents import ZeroShotAgent
 from langchain.agents.loading import load_agent_from_config
 from langchain.agents.tools import Tool
 from langchain.callbacks.base import BaseCallbackManager
@@ -16,19 +22,43 @@ from langchain.llms.base import BaseLLM
 from langchain.llms.loading import load_llm_from_config
 
 from langflow.interface.types import get_type_list
-from langflow.utils import payload, util
+from langflow.utils import payload, util, validate
+
+
+def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
+    """Instantiate class from module type and key, and params"""
+    class_object = import_by_type(_type=base_type, name=node_type)
+    if base_type == "agents":
+        # We need to initialize it differently
+        allowed_tools = params["allowed_tools"]
+        llm_chain = params["llm_chain"]
+        return load_agent_executor(class_object, allowed_tools, llm_chain)
+    elif base_type == "tools" or node_type != "ZeroShotPrompt":
+        return class_object(**params)
+    elif node_type == "PythonFunction":
+        # If the node_type is "PythonFunction"
+        # we need to get the function from the params
+        # which will be a str containing a python function
+        # and then we need to compile it and return the function
+        # as the instance
+        function_string = params["code"]
+        if isinstance(function_string, str):
+            return validate.eval_function(function_string)
+        raise ValueError("Function should be a string")
+    else:
+        if "tools" not in params:
+            params["tools"] = []
+        return ZeroShotAgent.create_prompt(**params)
 
 
 def load_flow_from_json(path: str):
+    # This is done to avoid circular imports
+    from langflow.graph.graph import Graph
+
     """Load flow from json file"""
     with open(path, "r") as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]
-    extracted_json = extract_json(data_graph)
-    return load_langchain_type_from_config(config=extracted_json)
-
-
-def extract_json(data_graph):
     nodes = data_graph["nodes"]
     # Substitute ZeroShotPrompt with PromptTemplate
     nodes = replace_zero_shot_prompt_with_prompt_template(nodes)
@@ -36,8 +66,8 @@ def extract_json(data_graph):
     nodes = payload.extract_input_variables(nodes)
     # Nodes, edges and root node
     edges = data_graph["edges"]
-    root = payload.get_root_node(nodes, edges)
-    return payload.build_json(root, nodes, edges)
+    graph = Graph(nodes, edges)
+    return graph.build()
 
 
 def replace_zero_shot_prompt_with_prompt_template(nodes):
@@ -88,6 +118,19 @@ def load_agent_executor_from_config(
         agent=agent_obj,
         tools=tools,
         callback_manager=callback_manager,
+        **kwargs,
+    )
+
+
+def load_agent_executor(
+    agent_class: type[agent_module.Agent], allowed_tools, llm_chain, **kwargs
+):
+    """Load agent executor from agent class, tools and chain"""
+    tool_names = [tool.name for tool in allowed_tools]
+    agent = agent_class(allowed_tools=tool_names, llm_chain=llm_chain)
+    return AgentExecutor.from_agent_and_tools(
+        agent=agent,
+        tools=allowed_tools,
         **kwargs,
     )
 

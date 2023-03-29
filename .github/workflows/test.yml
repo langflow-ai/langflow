@@ -1,9 +1,10 @@
-name: lint
+name: test
 
 on:
   push:
     branches: [main]
   pull_request:
+    branches: [dev]
 
 env:
   POETRY_VERSION: "1.4.0"
@@ -14,23 +15,19 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - "3.8"
-          - "3.9"
           - "3.10"
           - "3.11"
     steps:
       - uses: actions/checkout@v3
       - name: Install poetry
-        run: |
-          pipx install poetry==$POETRY_VERSION
+        run: pipx install poetry==$POETRY_VERSION
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-          cache: poetry
+          cache: "poetry"
       - name: Install dependencies
+        run: poetry install
+      - name: Run unit tests
         run: |
-          poetry install
-      - name: Analysing the code with our lint
-        run: |
-          make lint
+          make test

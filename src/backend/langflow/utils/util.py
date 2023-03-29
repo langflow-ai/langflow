@@ -2,7 +2,7 @@ import ast
 import importlib
 import inspect
 import re
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 from langchain.agents.load_tools import (
     _BASE_TOOLS,
@@ -11,10 +11,16 @@ from langchain.agents.load_tools import (
     _LLM_TOOLS,
 )
 
+
+from langchain.agents.tools import Tool
+
+
 from langflow.utils import constants
 
 
-def build_template_from_function(name: str, type_to_loader_dict: Dict):
+def build_template_from_function(
+    name: str, type_to_loader_dict: Dict, add_function: bool = False
+):
     classes = [
         item.__annotations__["return"].__name__ for item in type_to_loader_dict.values()
     ]
@@ -52,6 +58,11 @@ def build_template_from_function(name: str, type_to_loader_dict: Dict):
                     if class_field_items in docs["Attributes"]
                     else ""
                 )
+            # Adding function to base classes to allow
+            # the output to be a function
+            base_classes = get_base_classes(_class)
+            if add_function:
+                base_classes.append("function")
 
             return {
                 "template": format_dict(variables, name),
@@ -60,7 +71,9 @@ def build_template_from_function(name: str, type_to_loader_dict: Dict):
             }
 
 
-def build_template_from_class(name: str, type_to_cls_dict: Dict):
+def build_template_from_class(
+    name: str, type_to_cls_dict: Dict, add_function: bool = False
+):
     classes = [item.__name__ for item in type_to_cls_dict.values()]
 
     # Raise error if name is not in chains
@@ -97,15 +110,22 @@ def build_template_from_class(name: str, type_to_cls_dict: Dict):
                     if class_field_items in docs["Attributes"]
                     else ""
                 )
-
+            base_classes = get_base_classes(_class)
+            # Adding function to base classes to allow
+            # the output to be a function
+            if add_function:
+                base_classes.append("function")
             return {
                 "template": format_dict(variables, name),
                 "description": docs["Description"],
-                "base_classes": get_base_classes(_class),
+                "base_classes": base_classes,
             }
 
 
 def get_base_classes(cls):
+    """Get the base classes of a class.
+    These are used to determine the output of the nodes.
+    """
     bases = cls.__bases__
     if not bases:
         return []
@@ -128,19 +148,42 @@ def get_default_factory(module: str, function: str):
     return None
 
 
-def get_tools_dict(name: Optional[str] = None):
+def get_tools_dict():
     """Get the tools dictionary."""
+    from langflow.interface.listing import CUSTOM_TOOLS
+
     tools = {
         **_BASE_TOOLS,
-        **_LLM_TOOLS,  # type: ignore
-        **{k: v[0] for k, v in _EXTRA_LLM_TOOLS.items()},  # type: ignore
+        **_LLM_TOOLS,
+        **{k: v[0] for k, v in _EXTRA_LLM_TOOLS.items()},
         **{k: v[0] for k, v in _EXTRA_OPTIONAL_TOOLS.items()},
+        **CUSTOM_TOOLS,
     }
-    return tools[name] if name else tools
+    return tools
 
 
-def get_tool_params(func, **kwargs):
+def get_tool_by_name(name: str):
+    """Get a tool from the tools dictionary."""
+    tools = get_tools_dict()
+    if name not in tools:
+        raise ValueError(f"{name} not found.")
+    return tools[name]
+
+
+def get_tool_params(tool, **kwargs) -> Union[Dict, None]:
     # Parse the function code into an abstract syntax tree
+    # Define if it is a function or a class
+    if inspect.isfunction(tool):
+        return get_func_tool_params(tool, **kwargs)
+    elif inspect.isclass(tool):
+        # Get the parameters necessary to
+        # instantiate the class
+        return get_class_tool_params(tool, **kwargs)
+    else:
+        raise ValueError("Tool must be a function or class.")
+
+
+def get_func_tool_params(func, **kwargs) -> Union[Dict, None]:
     tree = ast.parse(inspect.getsource(func))
 
     # Iterate over the statements in the abstract syntax tree
@@ -149,7 +192,7 @@ def get_tool_params(func, **kwargs):
         if isinstance(node, ast.Return):
             tool = node.value
             if isinstance(tool, ast.Call):
-                if tool.func.id == "Tool":
+                if isinstance(tool.func, ast.Name) and tool.func.id == "Tool":
                     if tool.keywords:
                         tool_params = {}
                         for keyword in tool.keywords:
@@ -159,11 +202,13 @@ def get_tool_params(func, **kwargs):
                                 tool_params["description"] = ast.literal_eval(
                                     keyword.value
                                 )
+
                         return tool_params
                     return {
                         "name": ast.literal_eval(tool.args[0]),
                         "description": ast.literal_eval(tool.args[2]),
                     }
+                #
                 else:
                     # get the class object from the return statement
                     try:
@@ -177,9 +222,42 @@ def get_tool_params(func, **kwargs):
                         "name": getattr(class_obj, "name"),
                         "description": getattr(class_obj, "description"),
                     }
-
-    # Return None if no return statement was found
+        # Return None if no return statement was found
     return None
+
+
+def get_class_tool_params(cls, **kwargs) -> Union[Dict, None]:
+    tree = ast.parse(inspect.getsource(cls))
+
+    tool_params = {}
+
+    # Iterate over the statements in the abstract syntax tree
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef):
+            # Find the class definition and look for methods
+            for stmt in node.body:
+                if isinstance(stmt, ast.FunctionDef) and stmt.name == "__init__":
+                    # There is no assignment statements in the __init__ method
+                    # So we need to get the params from the function definition
+                    for arg in stmt.args.args:
+                        if arg.arg == "name":
+                            # It should be the name of the class
+                            tool_params[arg.arg] = cls.__name__
+                        elif arg.arg == "self":
+                            continue
+                        # If there is not default value, set it to an empty string
+                        else:
+                            try:
+                                annotation = ast.literal_eval(arg.annotation)  # type: ignore
+                                tool_params[arg.arg] = annotation
+                            except ValueError:
+                                tool_params[arg.arg] = ""
+                # Get the attribute name and the annotation
+                elif cls != Tool and isinstance(stmt, ast.AnnAssign):
+                    # Get the attribute name and the annotation
+                    tool_params[stmt.target.id] = ""  # type: ignore
+
+    return tool_params
 
 
 def get_class_doc(class_name):
@@ -272,7 +350,7 @@ def format_dict(d, name: Optional[str] = None):
             _type = _type.replace("Mapping", "dict")
 
         # Change type from str to Tool
-        value["type"] = "Tool" if key == "allowed_tools" else _type
+        value["type"] = "Tool" if key in ["allowed_tools"] else _type
 
         # Show or not field
         value["show"] = bool(
@@ -291,11 +369,11 @@ def format_dict(d, name: Optional[str] = None):
 
         # Add password field
         value["password"] = any(
-            text in key for text in ["password", "token", "api", "key"]
+            text in key.lower() for text in ["password", "token", "api", "key"]
         )
 
         # Add multline
-        value["multiline"] = key in ["suffix", "prefix", "template", "examples"]
+        value["multiline"] = key in ["suffix", "prefix", "template", "examples", "code"]
 
         # Replace default value with actual value
         if "default" in value:
