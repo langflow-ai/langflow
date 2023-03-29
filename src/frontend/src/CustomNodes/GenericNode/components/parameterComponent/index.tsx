@@ -54,7 +54,7 @@ export default function ParameterComponent({
 					{title}
 					<span className="text-red-600">{required ? " *" : ""}</span>
 				</div>
-				{left && (type === "str" || type === "bool" || type === "float") ? (
+				{left && (type === "str" || type === "bool" || type === "float"||type=="code") ? (
 					<></>
 				) : (
 					<Tooltip title={tooltipTitle + (required ? " (required)" : "")}>
