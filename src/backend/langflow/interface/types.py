@@ -33,4 +33,18 @@ def build_langchain_types_dict():
             for memory in list_type("memories")
         },
         "tools": {tool: get_signature(tool, "tools") for tool in list_type("tools")},
+        "toolkits": get_toolkits(),
+        "wrappers": {
+            wrapper: get_signature(wrapper, "wrappers")
+            for wrapper in list_type("wrappers")
+        },
     }
+
+
+def get_toolkits():
+    """Get a list of all toolkits"""
+    result = {}
+    for toolkit in list_type("toolkits"):
+        if sig := get_signature(toolkit, "toolkits"):
+            result[toolkit] = sig
+    return result

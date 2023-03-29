@@ -12,7 +12,11 @@ from langflow.custom import customs
 from langflow.interface.custom_lists import (
     llm_type_to_cls_dict,
     memory_type_to_cls_dict,
+    toolkit_type_to_cls_dict,
+    toolkit_type_to_loader_dict,
+    wrapper_type_to_cls_dict,
 )
+
 from langflow.interface.listing import CUSTOM_TOOLS, ALL_TOOLS_NAMES
 from langflow.template.template import Field, Template
 from langflow.utils import util
@@ -21,13 +25,42 @@ from langflow.utils import util
 def get_signature(name: str, object_type: str):
     """Get the signature of an object."""
     return {
+        "toolkits": get_toolkit_signature,
         "chains": get_chain_signature,
         "agents": get_agent_signature,
         "prompts": get_prompt_signature,
         "llms": get_llm_signature,
         # "memories": get_memory_signature,
         "tools": get_tool_signature,
+        "wrappers": get_wrapper_signature,
     }.get(object_type, lambda name: f"Invalid type: {name}")(name)
+
+
+def get_toolkit_signature(name: str):
+    """Get the signature of a toolkit."""
+    try:
+        if name.islower():
+            pass
+            # return util.build_template_from_function(
+            #     name, toolkit_type_to_loader_dict, add_function=True
+            # )
+        else:
+            return util.build_template_from_class(
+                name, toolkit_type_to_cls_dict, add_function=True
+            )
+    except ValueError as exc:
+        raise ValueError("Toolkit not found") from exc
+
+
+def get_wrapper_signature(name: str):
+    """Get the signature of a wrapper."""
+    try:
+        return util.build_template_from_class(
+            name,
+            wrapper_type_to_cls_dict,
+        )
+    except ValueError as exc:
+        raise ValueError("Wrapper not found") from exc
 
 
 def get_chain_signature(name: str):
