@@ -22,8 +22,11 @@ tools:
   - Serper Search
   - Tool
   - PythonFunction
+  - JsonSpec
 
 memories:
   # - ConversationBufferMemory
+
+
 
 dev: false
