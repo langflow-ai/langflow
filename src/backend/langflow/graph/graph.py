@@ -257,7 +257,7 @@ class PromptNode(Node):
     def build(
         self,
         force: bool = False,
-        tools: Optional[List[Node]] | Optional[List[ToolNode]] = None,
+        tools: Optional[Union[List[Node], List[ToolNode]]] = None,
     ) -> Any:
         if not self._built or force:
             # Check if it is a ZeroShotPrompt and needs a tool
@@ -280,7 +280,7 @@ class ChainNode(Node):
     def build(
         self,
         force: bool = False,
-        tools: Optional[List[Node]] | Optional[List[ToolNode]] = None,
+        tools: Optional[Union[List[Node], List[ToolNode]]] = None,
     ) -> Any:
         if not self._built or force:
             # Check if the chain requires a PromptNode
