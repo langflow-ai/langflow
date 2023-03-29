@@ -38,7 +38,7 @@ export default function ButtonBox({
 					<h3 className="mt-6 text-lg font-semibold text-white">{title}</h3>
 					<div className="mt-1 flex flex-grow flex-col justify-between">
 						<dt className="sr-only">{title}</dt>
-						<dd className="text-sm text-gray-100">{deactivate? "cooming soon":description}</dd>
+						<dd className="text-sm text-gray-100">{deactivate? "Coming soon":description}</dd>
 					</div>
 				</div>
 			</div>
