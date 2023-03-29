@@ -1,5 +1,4 @@
 from langchain import agents, chains, prompts
-from langchain.agents.load_tools import get_all_tool_names
 
 from langflow.custom import customs
 from langflow.interface.custom_lists import (
@@ -8,18 +7,30 @@ from langflow.interface.custom_lists import (
 )
 from langflow.settings import settings
 from langflow.utils import util
+from langchain.agents.load_tools import get_all_tool_names
+from langchain.agents import Tool
+from langflow.interface.custom_types import PythonFunction
 
 
-def list_type(object_type: str):
-    """List all components"""
+CUSTOM_TOOLS = {"Tool": Tool, "PythonFunction": PythonFunction}
+TOOLS_DICT = util.get_tools_dict()
+ALL_TOOLS_NAMES = set(get_all_tool_names() + list(CUSTOM_TOOLS.keys()))
+
+
+def get_type_dict():
     return {
         "chains": list_chain_types,
         "agents": list_agents,
         "prompts": list_prompts,
         "llms": list_llms,
-        "memories": list_memories,
         "tools": list_tools,
-    }.get(object_type, lambda: "Invalid type")()
+        "memories": list_memories,
+    }
+
+
+def list_type(object_type: str):
+    """List all components"""
+    return get_type_dict().get(object_type, lambda: None)()
 
 
 def list_agents():
@@ -33,7 +44,7 @@ def list_agents():
 
 def list_prompts():
     """List all prompt types"""
-    custom_prompts = customs.get_custom_prompts()
+    custom_prompts = customs.get_custom_nodes("prompts")
     library_prompts = [
         prompt.__annotations__["return"].__name__
         for prompt in prompts.loading.type_to_loader_dict.values()
@@ -47,12 +58,14 @@ def list_tools():
 
     tools = []
 
-    for tool in get_all_tool_names():
-        tool_params = util.get_tool_params(util.get_tools_dict(tool))
-        if tool_params and tool_params["name"] in settings.tools or settings.dev:
+    for tool in ALL_TOOLS_NAMES:
+        tool_params = util.get_tool_params(util.get_tool_by_name(tool))
+        if tool_params and tool_params.get("name") in settings.tools or settings.dev:
             tools.append(tool_params["name"])
 
-    return tools
+    # Add Tool
+    custom_tools = customs.get_custom_nodes("tools")
+    return tools + list(custom_tools.keys())
 
 
 def list_llms():
@@ -80,3 +93,15 @@ def list_memories():
         for memory in memory_type_to_cls_dict.values()
         if memory.__name__ in settings.memories or settings.dev
     ]
+
+
+LANGCHAIN_TYPES_DICT = {
+    k: list_function() for k, list_function in get_type_dict().items()
+}
+
+# Now we'll build a dict with Langchain types and ours
+
+ALL_TYPES_DICT = {
+    **LANGCHAIN_TYPES_DICT,
+    "Custom": ["Custom Tool", "Python Function"],
+}

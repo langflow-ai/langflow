@@ -1,0 +1,723 @@
+{
+    "name": "New Flow",
+    "id": "0",
+    "data": {
+        "nodes": [
+            {
+                "width": 384,
+                "height": 351,
+                "id": "dndnode_3",
+                "type": "genericNode",
+                "position": {
+                    "x": 612.9299322834961,
+                    "y": 194.75070242078417
+                },
+                "data": {
+                    "type": "ZeroShotAgent",
+                    "node": {
+                        "template": {
+                            "_type": "zero-shot-react-description",
+                            "llm_chain": {
+                                "type": "LLMChain",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "password": false,
+                                "multiline": false
+                            },
+                            "allowed_tools": {
+                                "type": "Tool",
+                                "required": false,
+                                "placeholder": "",
+                                "list": true,
+                                "show": true,
+                                "password": false,
+                                "multiline": false,
+                                "value": null
+                            },
+                            "return_values": {
+                                "type": "str",
+                                "required": false,
+                                "placeholder": "",
+                                "list": true,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": [
+                                    "output"
+                                ]
+                            }
+                        },
+                        "description": "Agent for the MRKL chain.",
+                        "base_classes": [
+                            "Agent",
+                            "function"
+                        ]
+                    },
+                    "id": "dndnode_3",
+                    "value": null
+                },
+                "selected": false,
+                "positionAbsolute": {
+                    "x": 612.9299322834961,
+                    "y": 194.75070242078417
+                },
+                "dragging": false
+            },
+            {
+                "width": 384,
+                "height": 463,
+                "id": "dndnode_27",
+                "type": "genericNode",
+                "position": {
+                    "x": 86.29922452047686,
+                    "y": 39.132143332238115
+                },
+                "data": {
+                    "type": "Tool",
+                    "node": {
+                        "template": {
+                            "name": {
+                                "type": "str",
+                                "required": true,
+                                "list": false,
+                                "show": true,
+                                "placeholder": "",
+                                "value": "Uppercase",
+                                "password": false,
+                                "multiline": false
+                            },
+                            "description": {
+                                "type": "str",
+                                "required": true,
+                                "list": false,
+                                "show": true,
+                                "placeholder": "",
+                                "value": "Returns an uppercase version of the text passed.",
+                                "password": false,
+                                "multiline": false
+                            },
+                            "func": {
+                                "type": "function",
+                                "required": true,
+                                "list": false,
+                                "show": true,
+                                "value": "",
+                                "multiline": false,
+                                "password": false
+                            },
+                            "_type": "Tool"
+                        },
+                        "name": "Tool",
+                        "func": "",
+                        "description": "",
+                        "base_classes": [
+                            "Tool"
+                        ]
+                    },
+                    "id": "dndnode_27",
+                    "value": null
+                },
+                "selected": false,
+                "positionAbsolute": {
+                    "x": 86.29922452047686,
+                    "y": 39.132143332238115
+                },
+                "dragging": false
+            },
+            {
+                "width": 384,
+                "height": 463,
+                "id": "dndnode_28",
+                "type": "genericNode",
+                "position": {
+                    "x": 1134.4549802672202,
+                    "y": 287.9885910233929
+                },
+                "data": {
+                    "type": "Tool",
+                    "node": {
+                        "template": {
+                            "name": {
+                                "type": "str",
+                                "required": true,
+                                "list": false,
+                                "show": true,
+                                "placeholder": "",
+                                "value": "",
+                                "password": false,
+                                "multiline": false
+                            },
+                            "description": {
+                                "type": "str",
+                                "required": true,
+                                "list": false,
+                                "show": true,
+                                "placeholder": "",
+                                "value": "",
+                                "password": false,
+                                "multiline": false
+                            },
+                            "func": {
+                                "type": "function",
+                                "required": true,
+                                "list": false,
+                                "show": true,
+                                "value": "",
+                                "multiline": false,
+                                "password": false
+                            },
+                            "_type": "Tool"
+                        },
+                        "name": "Tool",
+                        "func": "",
+                        "description": "",
+                        "base_classes": [
+                            "Tool"
+                        ]
+                    },
+                    "id": "dndnode_28",
+                    "value": null
+                },
+                "positionAbsolute": {
+                    "x": 1134.4549802672202,
+                    "y": 287.9885910233929
+                },
+                "selected": false,
+                "dragging": false
+            },
+            {
+                "width": 384,
+                "height": 357,
+                "id": "dndnode_40",
+                "type": "genericNode",
+                "position": {
+                    "x": -366.4341715850213,
+                    "y": 136.29836646158452
+                },
+                "data": {
+                    "type": "PythonFunction",
+                    "node": {
+                        "template": {
+                            "code": {
+                                "required": true,
+                                "placeholder": "",
+                                "show": true,
+                                "multiline": true,
+                                "value": "\ndef upper_case(text: str) -> str:\n    return text.upper()\n",
+                                "name": "code",
+                                "type": "str",
+                                "list": false
+                            },
+                            "_type": "python_function"
+                        },
+                        "description": "Python function to be executed.",
+                        "base_classes": [
+                            "function"
+                        ]
+                    },
+                    "id": "dndnode_40",
+                    "value": null
+                },
+                "selected": false,
+                "positionAbsolute": {
+                    "x": -366.4341715850213,
+                    "y": 136.29836646158452
+                },
+                "dragging": false
+            },
+            {
+                "width": 384,
+                "height": 351,
+                "id": "dndnode_41",
+                "type": "genericNode",
+                "position": {
+                    "x": 1642.7653281427417,
+                    "y": 69.01105573790835
+                },
+                "data": {
+                    "type": "ZeroShotAgent",
+                    "node": {
+                        "template": {
+                            "_type": "zero-shot-react-description",
+                            "llm_chain": {
+                                "type": "LLMChain",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "password": false,
+                                "multiline": false
+                            },
+                            "allowed_tools": {
+                                "type": "Tool",
+                                "required": false,
+                                "placeholder": "",
+                                "list": true,
+                                "show": true,
+                                "password": false,
+                                "multiline": false,
+                                "value": null
+                            },
+                            "return_values": {
+                                "type": "str",
+                                "required": false,
+                                "placeholder": "",
+                                "list": true,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": [
+                                    "output"
+                                ]
+                            }
+                        },
+                        "description": "Agent for the MRKL chain.",
+                        "base_classes": [
+                            "Agent",
+                            "function"
+                        ]
+                    },
+                    "id": "dndnode_41",
+                    "value": null
+                },
+                "selected": false,
+                "positionAbsolute": {
+                    "x": 1642.7653281427417,
+                    "y": 69.01105573790835
+                },
+                "dragging": false
+            },
+            {
+                "width": 384,
+                "height": 529,
+                "id": "dndnode_42",
+                "type": "genericNode",
+                "position": {
+                    "x": -379.23467185725826,
+                    "y": -551.3889442620921
+                },
+                "data": {
+                    "type": "ZeroShotPrompt",
+                    "node": {
+                        "template": {
+                            "prefix": {
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "multiline": true,
+                                "value": "Answer the following questions as best you can. You have access to the following tools:",
+                                "name": "prefix",
+                                "type": "str",
+                                "list": false
+                            },
+                            "suffix": {
+                                "required": true,
+                                "placeholder": "",
+                                "show": true,
+                                "multiline": true,
+                                "value": "Begin!\n\nQuestion: {input}\nThought:{agent_scratchpad}",
+                                "name": "suffix",
+                                "type": "str",
+                                "list": false
+                            },
+                            "format_instructions": {
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "multiline": true,
+                                "value": "Use the following format:\n\nQuestion: the input question you must answer\nThought: you should always think about what to do\nAction: the action to take, should be one of [{tool_names}]\nAction Input: the input to the action\nObservation: the result of the action\n... (this Thought/Action/Action Input/Observation can repeat N times)\nThought: I now know the final answer\nFinal Answer: the final answer to the original input question",
+                                "name": "format_instructions",
+                                "type": "str",
+                                "list": false
+                            },
+                            "_type": "zero_shot"
+                        },
+                        "description": "Prompt template for Zero Shot Agent.",
+                        "base_classes": [
+                            "BasePromptTemplate"
+                        ]
+                    },
+                    "id": "dndnode_42",
+                    "value": null
+                },
+                "selected": false,
+                "positionAbsolute": {
+                    "x": -379.23467185725826,
+                    "y": -551.3889442620921
+                },
+                "dragging": false
+            },
+            {
+                "width": 384,
+                "height": 391,
+                "id": "dndnode_43",
+                "type": "genericNode",
+                "position": {
+                    "x": 100.76532814274174,
+                    "y": -437.78894426209195
+                },
+                "data": {
+                    "type": "LLMChain",
+                    "node": {
+                        "template": {
+                            "_type": "llm_chain",
+                            "memory": {
+                                "type": "BaseMemory",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "password": false,
+                                "multiline": false,
+                                "value": null
+                            },
+                            "verbose": {
+                                "type": "bool",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": false
+                            },
+                            "prompt": {
+                                "type": "BasePromptTemplate",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "password": false,
+                                "multiline": false
+                            },
+                            "llm": {
+                                "type": "BaseLanguageModel",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "password": false,
+                                "multiline": false
+                            },
+                            "output_key": {
+                                "type": "str",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": true,
+                                "multiline": false,
+                                "value": "text"
+                            }
+                        },
+                        "description": "Chain to run queries against LLMs.",
+                        "base_classes": [
+                            "Chain"
+                        ]
+                    },
+                    "id": "dndnode_43",
+                    "value": null
+                },
+                "selected": false,
+                "positionAbsolute": {
+                    "x": 100.76532814274174,
+                    "y": -437.78894426209195
+                },
+                "dragging": false
+            },
+            {
+                "width": 384,
+                "height": 477,
+                "id": "dndnode_44",
+                "type": "genericNode",
+                "position": {
+                    "x": -841.2346718572583,
+                    "y": 368.6110557379079
+                },
+                "data": {
+                    "type": "OpenAI",
+                    "node": {
+                        "template": {
+                            "_type": "openai",
+                            "cache": {
+                                "type": "bool",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": null
+                            },
+                            "verbose": {
+                                "type": "bool",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": null
+                            },
+                            "client": {
+                                "type": "Any",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": null
+                            },
+                            "model_name": {
+                                "type": "str",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "password": false,
+                                "multiline": false,
+                                "value": "text-davinci-003",
+                                "options": [
+                                    "text-davinci-003",
+                                    "text-davinci-002",
+                                    "text-curie-001",
+                                    "text-babbage-001",
+                                    "text-ada-001"
+                                ]
+                            },
+                            "temperature": {
+                                "type": "float",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "password": false,
+                                "multiline": false,
+                                "value": 0.7
+                            },
+                            "max_tokens": {
+                                "type": "int",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": true,
+                                "multiline": false,
+                                "value": 256
+                            },
+                            "top_p": {
+                                "type": "float",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": 1
+                            },
+                            "frequency_penalty": {
+                                "type": "float",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": 0
+                            },
+                            "presence_penalty": {
+                                "type": "float",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": 0
+                            },
+                            "n": {
+                                "type": "int",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": 1
+                            },
+                            "best_of": {
+                                "type": "int",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": 1
+                            },
+                            "model_kwargs": {
+                                "type": "dict[str, Any]",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": null
+                            },
+                            "openai_api_key": {
+                                "type": "str",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "password": true,
+                                "multiline": false,
+                                "value": "sk-"
+                            },
+                            "batch_size": {
+                                "type": "int",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": 20
+                            },
+                            "request_timeout": {
+                                "type": "Union[float, Tuple[float, float], NoneType]",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": null
+                            },
+                            "logit_bias": {
+                                "type": "dict[str, float]",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": null
+                            },
+                            "max_retries": {
+                                "type": "int",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": 6
+                            },
+                            "streaming": {
+                                "type": "bool",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": false,
+                                "password": false,
+                                "multiline": false,
+                                "value": false
+                            }
+                        },
+                        "description": "Generic OpenAI class that uses model name.",
+                        "base_classes": [
+                            "BaseOpenAI",
+                            "BaseLLM",
+                            "BaseLanguageModel"
+                        ]
+                    },
+                    "id": "dndnode_44",
+                    "value": null
+                },
+                "selected": false,
+                "positionAbsolute": {
+                    "x": -841.2346718572583,
+                    "y": 368.6110557379079
+                },
+                "dragging": false
+            }
+        ],
+        "edges": [
+            {
+                "source": "dndnode_27",
+                "sourceHandle": "Tool|dndnode_27|Tool",
+                "target": "dndnode_3",
+                "targetHandle": "Tool|allowed_tools|dndnode_3",
+                "className": "animate-pulse",
+                "id": "reactflow__edge-dndnode_27Tool|dndnode_27|Tool-dndnode_3Tool|allowed_tools|dndnode_3"
+            },
+            {
+                "source": "dndnode_3",
+                "sourceHandle": "ZeroShotAgent|dndnode_3|Agent|function",
+                "target": "dndnode_28",
+                "targetHandle": "function|func|dndnode_28",
+                "className": "animate-pulse",
+                "id": "reactflow__edge-dndnode_3ZeroShotAgent|dndnode_3|Agent|function-dndnode_28function|func|dndnode_28"
+            },
+            {
+                "source": "dndnode_40",
+                "sourceHandle": "PythonFunction|dndnode_40|function",
+                "target": "dndnode_27",
+                "targetHandle": "function|func|dndnode_27",
+                "className": "animate-pulse",
+                "id": "reactflow__edge-dndnode_40PythonFunction|dndnode_40|function-dndnode_27function|func|dndnode_27"
+            },
+            {
+                "source": "dndnode_28",
+                "sourceHandle": "Tool|dndnode_28|Tool",
+                "target": "dndnode_41",
+                "targetHandle": "Tool|allowed_tools|dndnode_41",
+                "className": "animate-pulse",
+                "id": "reactflow__edge-dndnode_28Tool|dndnode_28|Tool-dndnode_41Tool|allowed_tools|dndnode_41"
+            },
+            {
+                "source": "dndnode_42",
+                "sourceHandle": "ZeroShotPrompt|dndnode_42|BasePromptTemplate",
+                "target": "dndnode_43",
+                "targetHandle": "BasePromptTemplate|prompt|dndnode_43",
+                "className": "animate-pulse",
+                "id": "reactflow__edge-dndnode_42ZeroShotPrompt|dndnode_42|BasePromptTemplate-dndnode_43BasePromptTemplate|prompt|dndnode_43"
+            },
+            {
+                "source": "dndnode_44",
+                "sourceHandle": "OpenAI|dndnode_44|BaseOpenAI|BaseLLM|BaseLanguageModel",
+                "target": "dndnode_43",
+                "targetHandle": "BaseLanguageModel|llm|dndnode_43",
+                "className": "animate-pulse",
+                "id": "reactflow__edge-dndnode_44OpenAI|dndnode_44|BaseOpenAI|BaseLLM|BaseLanguageModel-dndnode_43BaseLanguageModel|llm|dndnode_43"
+            },
+            {
+                "source": "dndnode_43",
+                "sourceHandle": "LLMChain|dndnode_43|Chain",
+                "target": "dndnode_3",
+                "targetHandle": "LLMChain|llm_chain|dndnode_3",
+                "className": "animate-pulse",
+                "id": "reactflow__edge-dndnode_43LLMChain|dndnode_43|Chain-dndnode_3LLMChain|llm_chain|dndnode_3"
+            },
+            {
+                "source": "dndnode_43",
+                "sourceHandle": "LLMChain|dndnode_43|Chain",
+                "target": "dndnode_41",
+                "targetHandle": "LLMChain|llm_chain|dndnode_41",
+                "className": "animate-pulse",
+                "id": "reactflow__edge-dndnode_43LLMChain|dndnode_43|Chain-dndnode_41LLMChain|llm_chain|dndnode_41"
+            }
+        ],
+        "viewport": {
+            "x": 250.11733592862913,
+            "y": 349.94447213104604,
+            "zoom": 0.5
+        }
+    },
+    "chat": []
+}

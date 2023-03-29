@@ -16,3 +16,4 @@ export type sendAllProps={
 
     chatHistory:{message:string,isSend:boolean}[],
 };
+export type errorsTypeAPI={function:{errors:Array<string>},imports:{errors:Array<string>}}

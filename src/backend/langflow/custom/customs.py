@@ -1,42 +1,12 @@
-from langchain.agents.mrkl import prompt
+from langflow.template import nodes
 
 
-def get_custom_prompts():
-    """Get custom prompts."""
+CUSTOM_NODES = {
+    "prompts": {**nodes.ZeroShotPromptNode().to_dict()},
+    "tools": {**nodes.PythonFunctionNode().to_dict(), **nodes.ToolNode().to_dict()},
+}
 
-    return {
-        "ZeroShotPrompt": {
-            "template": {
-                "_type": "zero_shot",
-                "prefix": {
-                    "type": "str",
-                    "required": False,
-                    "placeholder": "",
-                    "list": False,
-                    "show": True,
-                    "multiline": True,
-                    "value": prompt.PREFIX,
-                },
-                "suffix": {
-                    "type": "str",
-                    "required": True,
-                    "placeholder": "",
-                    "list": False,
-                    "show": True,
-                    "multiline": True,
-                    "value": prompt.SUFFIX,
-                },
-                "format_instructions": {
-                    "type": "str",
-                    "required": False,
-                    "placeholder": "",
-                    "list": False,
-                    "show": True,
-                    "multiline": True,
-                    "value": prompt.FORMAT_INSTRUCTIONS,
-                },
-            },
-            "description": "Prompt template for Zero Shot Agent.",
-            "base_classes": ["BasePromptTemplate"],
-        }
-    }
+
+def get_custom_nodes(node_type: str):
+    """Get custom nodes."""
+    return CUSTOM_NODES.get(node_type, {})

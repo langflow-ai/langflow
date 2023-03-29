@@ -20,6 +20,8 @@ tools:
   - PAL-MATH
   - Calculator
   - Serper Search
+  - Tool
+  - PythonFunction
 
 memories:
   # - ConversationBufferMemory
