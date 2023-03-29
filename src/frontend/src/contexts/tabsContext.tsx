@@ -16,7 +16,7 @@ const TabsContextInitialValue: TabsContextType = {
 	uploadFlow: () => {},
 	lockChat: false,
 	setLockChat:(prevState:boolean)=>{},
-	hardReset:()=>{}
+	hardReset:()=>{},
 };
 
 export const TabsContext = createContext<TabsContextType>(
@@ -142,6 +142,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 			id: id.toString(),
 			data,
 			chat: flow ? flow.chat : [],
+			files:{}
 		};
 
 		// Increment the ID counter.
