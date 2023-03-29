@@ -8,27 +8,6 @@ from langflow.utils import payload
 from langflow.graph.graph import Graph
 
 
-def process_data_graph(data_graph: Dict[str, Any]):
-    """
-    Process data graph by extracting input variables and replacing ZeroShotPrompt
-    with PromptTemplate,then run the graph and return the result and thought.
-    """
-
-    extracted_json = loading.extract_json(data_graph)
-
-    message = data_graph["message"]
-
-    # Process json
-    result, thought = get_result_and_thought(extracted_json, message)
-
-    return {
-        "result": result,
-        "thought": re.sub(
-            r"\x1b\[([0-9,A-Z]{1,2}(;[0-9,A-Z]{1,2})?)?[m|K]", "", thought
-        ).strip(),
-    }
-
-
 def process_graph(data_graph: Dict[str, Any]):
     """
     Process graph by extracting input variables and replacing ZeroShotPrompt
