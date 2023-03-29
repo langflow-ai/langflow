@@ -40,6 +40,7 @@ mypy = "^1.1.1"
 ruff = "^0.0.254"
 httpx = "^0.23.3"
 rich = "^13.3.3"
+pytest = "^7.2.2"
 
 [tool.ruff]
 line-length = 120
