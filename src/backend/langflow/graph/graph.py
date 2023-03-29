@@ -240,11 +240,25 @@ class Edge:
         )
 
 
+class ToolNode(Node):
+    def __init__(self, data: Dict):
+        super().__init__(data)
+
+    def build(self, force: bool = False) -> Any:
+        if not self._built or force:
+            self._build()
+        return deepcopy(self._built_object)
+
+
 class PromptNode(Node):
     def __init__(self, data: Dict):
         super().__init__(data)
 
-    def build(self, tools: Optional[List[Node]] = None, force: bool = False) -> Any:
+    def build(
+        self,
+        force: bool = False,
+        tools: Optional[List[Node]] | Optional[List[ToolNode]] = None,
+    ) -> Any:
         if not self._built or force:
             # Check if it is a ZeroShotPrompt and needs a tool
             if self.node_type == "ZeroShotPrompt":
@@ -259,27 +273,21 @@ class PromptNode(Node):
         return deepcopy(self._built_object)
 
 
-class ToolNode(Node):
-    def __init__(self, data: Dict):
-        super().__init__(data)
-
-    def build(self, force: bool = False) -> Any:
-        if not self._built or force:
-            self._build()
-        return deepcopy(self._built_object)
-
-
 class ChainNode(Node):
     def __init__(self, data: Dict):
         super().__init__(data)
 
-    def build(self, tools: Optional[List[Node]] = None, force: bool = False) -> Any:
+    def build(
+        self,
+        force: bool = False,
+        tools: Optional[List[Node]] | Optional[List[ToolNode]] = None,
+    ) -> Any:
         if not self._built or force:
             # Check if the chain requires a PromptNode
             for key, value in self.params.items():
                 if isinstance(value, PromptNode):
                     # Build the PromptNode, passing the tools if available
-                    self.params[key] = value.build(tools=tools or [], force=force)
+                    self.params[key] = value.build(tools=tools, force=force)
 
             self._build()
         return deepcopy(self._built_object)
@@ -351,13 +359,13 @@ class Graph:
         return edges
 
     def _build_nodes(self) -> List[Node]:
-        nodes = []
+        nodes: List[Node] = []
         for node in self._nodes:
             node_data = node["data"]
-            node_type = node_data["type"]
-            node_lc_type = node_data["node"]["template"]["_type"]
+            node_type: str = node_data["type"]  # type: ignore
+            node_lc_type: str = node_data["node"]["template"]["_type"]  # type: ignore
 
-            if node_type in ["ZeroShotPrompt", "PromptTemplate"]:
+            if node_type in {"ZeroShotPrompt", "PromptTemplate"}:
                 nodes.append(PromptNode(node))
             elif "agent" in node_type.lower():
                 nodes.append(AgentNode(node))

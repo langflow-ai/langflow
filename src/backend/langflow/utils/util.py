@@ -3,7 +3,6 @@ import importlib
 import inspect
 import re
 from typing import Dict, Optional
-import types
 
 from langchain.agents.load_tools import (
     _BASE_TOOLS,
