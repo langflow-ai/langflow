@@ -154,10 +154,10 @@ export default function ParameterComponent({
 							data.node.template[name].value = t;
 						}}
 					/>
-				) : left === true && type === "file" ? (
+				) : (left === true && type === "file")||data.type==="JsonSpec" ? (
 					<InputFileComponent
 						disabled={disabled}
-						value={data.node.template[name].value ?? ""}
+						value={data.node.template[name]?.value ?? ""}
 						onChange={(t: string) => {
 							data.node.template[name].value = t;
 						}}
