@@ -24,9 +24,4 @@ tools:
   - PythonFunction
   - JsonSpec
 
-memories:
-  # - ConversationBufferMemory
-
-
-
 dev: false
