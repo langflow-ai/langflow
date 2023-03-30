@@ -59,6 +59,7 @@ toolkit_type_to_cls_dict: dict[str, Any] = {
     if not toolkit_name.islower()
 }
 
+
 wrapper_type_to_cls_dict: dict[str, Any] = {
     wrapper.__name__: wrapper for wrapper in [requests.RequestsWrapper]
 }

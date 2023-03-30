@@ -40,7 +40,7 @@ def get_toolkit_signature(name: str):
     """Get the signature of a toolkit."""
     try:
         if name.islower():
-            pass
+            ...
             # return util.build_template_from_function(
             #     name, toolkit_type_to_loader_dict, add_function=True
             # )
@@ -77,6 +77,8 @@ def get_chain_signature(name: str):
 def get_agent_signature(name: str):
     """Get the signature of an agent."""
     try:
+        if name in customs.get_custom_nodes("agents").keys():
+            return customs.get_custom_nodes("agents")[name]
         return util.build_template_from_class(
             name, agents.loading.AGENT_TO_CLASS, add_function=True
         )

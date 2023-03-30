@@ -10,7 +10,7 @@ from langflow.settings import settings
 from langflow.utils import util
 from langchain.agents.load_tools import get_all_tool_names
 from langchain.agents import Tool
-from langflow.interface.custom_types import PythonFunction
+from langflow.interface.custom_types import JsonAgent, PythonFunction
 from langchain.tools.json.tool import JsonSpec
 
 OTHER_TOOLS = {"JsonSpec": JsonSpec}
@@ -50,7 +50,7 @@ def list_agents():
         agent.__name__
         for agent in agents.loading.AGENT_TO_CLASS.values()
         if agent.__name__ in settings.agents or settings.dev
-    ]
+    ] + [JsonAgent.__name__]
 
 
 def list_toolkis():

@@ -406,6 +406,7 @@ def format_dict(d, name: Optional[str] = None):
                 "examples",
                 "temperature",
                 "model_name",
+                "headers",
             ]
             or "api_key" in key
         )
@@ -427,7 +428,7 @@ def format_dict(d, name: Optional[str] = None):
 
         # Replace dict type with str
         if "dict" in value["type"].lower():
-            value["type"] = "str"
+            value["type"] = "code"
 
         value["file"] = key in ["dict_"]
 
@@ -436,6 +437,11 @@ def format_dict(d, name: Optional[str] = None):
             value["value"] = value["default"]
             value.pop("default")
 
+        if key == "headers":
+            value[
+                "value"
+            ] = """{'Authorization':
+            'Bearer <token>'}"""
         # Add options to openai
         if name == "OpenAI" and key == "model_name":
             value["options"] = constants.OPENAI_MODELS
