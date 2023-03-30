@@ -1,18 +1,18 @@
 import os
-from typing import List, Optional
+from typing import List
 
 import yaml
 from pydantic import BaseSettings, Field, root_validator
 
 
 class Settings(BaseSettings):
-    chains: Optional[List[str]] = Field(...)
-    agents: Optional[List[str]] = Field(...)
-    prompts: Optional[List[str]] = Field(...)
-    llms: Optional[List[str]] = Field(...)
-    tools: Optional[List[str]] = Field(...)
-    memories: Optional[List[str]] = Field(...)
-    dev: bool = Field(...)
+    chains: List[str] = Field(default=[])
+    agents: List[str] = Field(default=[])
+    prompts: List[str] = Field(default=[])
+    llms: List[str] = Field(default=[])
+    tools: List[str] = Field(default=[])
+    memories: List[str] = Field(default=[])
+    dev: bool = Field(default=False)
 
     class Config:
         validate_assignment = True
