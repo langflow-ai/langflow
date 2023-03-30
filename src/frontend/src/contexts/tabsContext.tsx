@@ -142,7 +142,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 			id: id.toString(),
 			data,
 			chat: flow ? flow.chat : [],
-			files:{}
 		};
 
 		// Increment the ID counter.
