@@ -25,3 +25,6 @@ class MemoryCreator(LangChainTypeCreator):
             for memory in self.type_to_loader_dict.values()
             if memory.__name__ in settings.memories or settings.dev
         ]
+
+
+memory_creator = MemoryCreator()

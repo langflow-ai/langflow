@@ -25,3 +25,6 @@ class LLMCreator(LangChainTypeCreator):
             for llm in self.type_to_loader_dict.values()
             if llm.__name__ in settings.llms or settings.dev
         ]
+
+
+llm_creator = LLMCreator()

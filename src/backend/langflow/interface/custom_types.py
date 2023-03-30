@@ -1,5 +1,5 @@
 from typing import Callable, Optional
-from langchain import LLMChain, PromptTemplate
+from langchain import LLMChain
 from langchain.agents import AgentExecutor, ZeroShotAgent
 from langflow.utils import validate
 from pydantic import BaseModel, validator
@@ -64,6 +64,12 @@ class JsonAgent(BaseModel):
             prompt=prompt,
         )
         agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names)
-        return AgentExecutor.from_agent_and_tools(
+        self.agent_executor = AgentExecutor.from_agent_and_tools(
             agent=agent, tools=tools, verbose=True
         )
+
+    def __call__(self, *args, **kwargs):
+        return self.agent_executor(*args, **kwargs)
+
+    def run(self, *args, **kwargs):
+        return self.agent_executor.run(*args, **kwargs)
