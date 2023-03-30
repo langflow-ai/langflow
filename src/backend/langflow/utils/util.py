@@ -88,28 +88,30 @@ def build_template_from_class(
             docs = get_class_doc(_class)
 
             variables = {"_type": _type}
-            for class_field_items, value in _class.__fields__.items():
-                if class_field_items in ["callback_manager"]:
-                    continue
-                variables[class_field_items] = {}
-                for name_, value_ in value.__repr_args__():
-                    if name_ == "default_factory":
-                        try:
-                            variables[class_field_items][
-                                "default"
-                            ] = get_default_factory(
-                                module=_class.__base__.__module__, function=value_
-                            )
-                        except Exception:
-                            variables[class_field_items]["default"] = None
-                    elif name_ not in ["name"]:
-                        variables[class_field_items][name_] = value_
 
-                variables[class_field_items]["placeholder"] = (
-                    docs["Attributes"][class_field_items]
-                    if class_field_items in docs["Attributes"]
-                    else ""
-                )
+            if "__fields__" in _class.__dict__:
+                for class_field_items, value in _class.__fields__.items():
+                    if class_field_items in ["callback_manager"]:
+                        continue
+                    variables[class_field_items] = {}
+                    for name_, value_ in value.__repr_args__():
+                        if name_ == "default_factory":
+                            try:
+                                variables[class_field_items][
+                                    "default"
+                                ] = get_default_factory(
+                                    module=_class.__base__.__module__, function=value_
+                                )
+                            except Exception:
+                                variables[class_field_items]["default"] = None
+                        elif name_ not in ["name"]:
+                            variables[class_field_items][name_] = value_
+
+                    variables[class_field_items]["placeholder"] = (
+                        docs["Attributes"][class_field_items]
+                        if class_field_items in docs["Attributes"]
+                        else ""
+                    )
             base_classes = get_base_classes(_class)
             # Adding function to base classes to allow
             # the output to be a function

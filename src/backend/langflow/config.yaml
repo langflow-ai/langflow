@@ -26,4 +26,13 @@ tools:
 memories:
   # - ConversationBufferMemory
 
+embeddings:
+  #
+
+vectorstores:
+  #
+
+documentloaders:
+  #
+
 dev: false
