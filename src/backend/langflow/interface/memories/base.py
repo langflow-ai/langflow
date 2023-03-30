@@ -10,7 +10,9 @@ class MemoryCreator(LangChainTypeCreator):
 
     @property
     def type_to_loader_dict(self) -> Dict:
-        return memory_type_to_cls_dict
+        if self.type_dict is None:
+            self.type_dict = memory_type_to_cls_dict
+        return self.type_dict
 
     def get_signature(self, name: str) -> Dict | None:
         """Get the signature of a memory."""

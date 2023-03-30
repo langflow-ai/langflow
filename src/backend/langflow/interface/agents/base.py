@@ -10,7 +10,9 @@ class AgentCreator(LangChainTypeCreator):
 
     @property
     def type_to_loader_dict(self) -> Dict:
-        return loading.AGENT_TO_CLASS
+        if self.type_dict is None:
+            self.type_dict = loading.AGENT_TO_CLASS
+        return self.type_dict
 
     def get_signature(self, name: str) -> Dict | None:
         try:

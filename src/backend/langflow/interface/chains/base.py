@@ -12,7 +12,9 @@ class ChainCreator(LangChainTypeCreator):
 
     @property
     def type_to_loader_dict(self) -> Dict:
-        return chains_loading.type_to_loader_dict
+        if self.type_dict is None:
+            self.type_dict = chains_loading.type_to_loader_dict
+        return self.type_dict
 
     def get_signature(self, name: str) -> Dict | None:
         try:

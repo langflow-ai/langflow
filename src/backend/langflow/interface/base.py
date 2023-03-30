@@ -9,11 +9,14 @@ from langflow.template.template import Template, Field, FrontendNode
 
 class LangChainTypeCreator(BaseModel, ABC):
     type_name: str
+    type_dict: Optional[Dict] = None
 
     @property
     @abstractmethod
     def type_to_loader_dict(self) -> Dict:
-        pass
+        if self.type_dict is None:
+            raise NotImplementedError
+        return self.type_dict
 
     @abstractmethod
     def get_signature(self, name: str) -> Optional[Dict[Any, Any]]:
@@ -27,7 +30,10 @@ class LangChainTypeCreator(BaseModel, ABC):
         result: Dict = {self.type_name: {}}
 
         for name in self.to_list():
-            result[self.type_name][name] = self.frontend_node(name).to_dict()
+            # frontend_node.to_dict() returns a dict with the following structure:
+            # {name: {template: {fields}, description: str}}
+            # so we should update the result dict
+            result[self.type_name].update(self.frontend_node(name).to_dict())
 
         return result
 
@@ -45,6 +51,9 @@ class LangChainTypeCreator(BaseModel, ABC):
                 show=value.get("show", True),
                 multiline=value.get("multiline", False),
                 value=value.get("value", None),
+                suffixes=value.get("suffixes", []),
+                file_types=value.get("fileTypes", []),
+                content=value.get("content", None),
             )
             for key, value in signature["template"].items()
             if key != "_type"
@@ -52,7 +61,7 @@ class LangChainTypeCreator(BaseModel, ABC):
         template = Template(type_name=name, fields=fields)
         return FrontendNode(
             template=template,
-            description=signature["description"],
+            description=signature.get("description", ""),
             base_classes=signature["base_classes"],
             name=name,
         )

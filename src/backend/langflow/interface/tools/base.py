@@ -1,6 +1,9 @@
 from langflow.custom import customs
-from langflow.interface.tools.constants import ALL_TOOLS_NAMES, CUSTOM_TOOLS
-import langflow.interface.tools.util
+from langflow.interface.tools.constants import (
+    ALL_TOOLS_NAMES,
+    CUSTOM_TOOLS,
+    OTHER_TOOLS,
+)
 from langflow.template.template import Field, Template
 from langflow.utils import util
 from langflow.settings import settings
@@ -12,7 +15,11 @@ from langchain.agents.load_tools import (
     _EXTRA_OPTIONAL_TOOLS,
     _LLM_TOOLS,
 )
-from langflow.interface.tools.util import get_tools_dict
+from langflow.interface.tools.util import (
+    get_tool_by_name,
+    get_tools_dict,
+    get_tool_params,
+)
 
 
 class ToolCreator(LangChainTypeCreator):
@@ -32,9 +39,7 @@ class ToolCreator(LangChainTypeCreator):
         base_classes = ["Tool"]
         all_tools = {}
         for tool in self.type_to_loader_dict.keys():
-            if tool_params := langflow.interface.tools.util.get_tool_params(
-                langflow.interface.tools.util.get_tool_by_name(tool)
-            ):
+            if tool_params := get_tool_params(get_tool_by_name(tool)):
                 tool_name = tool_params.get("name") or str(tool)
                 all_tools[tool_name] = {"type": tool, "params": tool_params}
 
@@ -67,6 +72,13 @@ class ToolCreator(LangChainTypeCreator):
                 value="",
                 multiline=True,
             ),
+            "dict_": Field(
+                field_type="file",
+                required=True,
+                is_list=False,
+                show=True,
+                value="",
+            ),
         }
 
         tool_type: str = all_tools[name]["type"]  # type: ignore
@@ -89,6 +101,8 @@ class ToolCreator(LangChainTypeCreator):
             base_classes = ["function"]
             if node := customs.get_custom_nodes("tools").get(tool_type):
                 return node
+        elif tool_type in OTHER_TOOLS:
+            params = all_tools[name]["params"]  # type: ignore
 
         else:
             params = []
@@ -108,9 +122,7 @@ class ToolCreator(LangChainTypeCreator):
 
         template = Template(fields=fields, type_name=tool_type)
 
-        tool_params = langflow.interface.tools.util.get_tool_params(
-            langflow.interface.tools.util.get_tool_by_name(tool_type)
-        )
+        tool_params = get_tool_params(get_tool_by_name(tool_type))
         if tool_params is None:
             tool_params = {}
         return {
@@ -125,9 +137,11 @@ class ToolCreator(LangChainTypeCreator):
         tools = []
 
         for tool in ALL_TOOLS_NAMES:
-            tool_params = langflow.interface.tools.util.get_tool_params(
-                langflow.interface.tools.util.get_tool_by_name(tool)
-            )
+            tool_params = get_tool_params(get_tool_by_name(tool))
+
+            if tool_params and not tool_params.get("name"):
+                tool_params["name"] = tool
+
             if tool_params and (
                 tool_params.get("name") in settings.tools
                 or (tool_params.get("name") and settings.dev)

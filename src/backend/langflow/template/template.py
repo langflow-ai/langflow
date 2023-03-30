@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Union
 from pydantic import BaseModel
 
 
@@ -10,6 +10,9 @@ class Field(BaseModel):
     show: bool = True
     multiline: bool = False
     value: Any = None
+    suffixes: list[str] = []
+    file_types: list[str] = []
+    content: Union[str, None] = None
     # _name will be used to store the name of the field
     # in the template
     name: str = ""
@@ -18,10 +21,16 @@ class Field(BaseModel):
         result = self.dict()
         # Remove key if it is None
         for key in list(result.keys()):
-            if result[key] is None:
+            if result[key] is None or result[key] == []:
                 del result[key]
         result["type"] = result.pop("field_type")
         result["list"] = result.pop("is_list")
+
+        if result.get("file_types"):
+            result["fileTypes"] = result.pop("file_types")
+
+        if self.field_type == "file":
+            result["content"] = self.content
         return result
 
 

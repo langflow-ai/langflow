@@ -1,5 +1,5 @@
 # Test this:
-from langflow.interface.custom_types import PythonFunction
+from langflow.interface.custom.types import PythonFunction
 from langflow.utils import constants
 import pytest
 

@@ -3,6 +3,7 @@ from langflow.interface.llms.base import llm_creator
 from langflow.interface.memories.base import memory_creator
 from langflow.interface.prompts.base import prompt_creator
 from langflow.interface.chains.base import chain_creator
+from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.tools.base import tool_creator
 
 
@@ -30,6 +31,7 @@ def build_langchain_types_dict():
         llm_creator,
         memory_creator,
         tool_creator,
+        toolkits_creator,
     ]
 
     all_types = {}
