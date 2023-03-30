@@ -1,5 +1,12 @@
+from langflow.interface.agents import AgentCreator
 from langflow.interface.listing import list_type
+from langflow.interface.llms import LLMCreator
+from langflow.interface.memories import MemoryCreator
+from langflow.interface.prompts import PromptCreator
 from langflow.interface.signature import get_signature
+from langchain import chains
+from langflow.interface.chains import ChainCreator
+from langflow.interface.tools import ToolCreator
 
 
 def get_type_list():
@@ -16,35 +23,25 @@ def get_type_list():
 
 def build_langchain_types_dict():
     """Build a dictionary of all langchain types"""
+    chain_creator = ChainCreator()
+    agent_creator = AgentCreator()
+    prompt_creator = PromptCreator()
+    tool_creator = ToolCreator()
+    llm_creator = LLMCreator()
+    memory_creator = MemoryCreator()
 
-    return {
-        "chains": {
-            chain: get_signature(chain, "chains") for chain in list_type("chains")
-        },
-        "agents": {
-            agent: get_signature(agent, "agents") for agent in list_type("agents")
-        },
-        "prompts": {
-            prompt: get_signature(prompt, "prompts") for prompt in list_type("prompts")
-        },
-        "llms": {llm: get_signature(llm, "llms") for llm in list_type("llms")},
-        "memories": {
-            memory: get_signature(memory, "memories")
-            for memory in list_type("memories")
-        },
-        "tools": {tool: get_signature(tool, "tools") for tool in list_type("tools")},
-        "toolkits": get_toolkits(),
-        "wrappers": {
-            wrapper: get_signature(wrapper, "wrappers")
-            for wrapper in list_type("wrappers")
-        },
-    }
+    all_types = {}
 
+    creators = [
+        chain_creator,
+        agent_creator,
+        prompt_creator,
+        llm_creator,
+        memory_creator,
+        tool_creator,
+    ]
 
-def get_toolkits():
-    """Get a list of all toolkits"""
-    result = {}
-    for toolkit in list_type("toolkits"):
-        if sig := get_signature(toolkit, "toolkits"):
-            result[toolkit] = sig
-    return result
+    all_types = {}
+    for creator in creators:
+        all_types.update(creator.to_dict())
+    return all_types
