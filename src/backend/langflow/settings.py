@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     llms: Optional[List[str]] = Field(...)
     tools: Optional[List[str]] = Field(...)
     memories: Optional[List[str]] = Field(...)
+    embeddings: Optional[List[str]] = Field(...)
+    vectorstores: Optional[List[str]] = Field(...)
+    documentloaders: Optional[List[str]] = Field(...)
     dev: bool = Field(...)
 
     class Config:

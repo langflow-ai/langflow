@@ -4,6 +4,9 @@ from langflow.interface.llms import LLMCreator
 from langflow.interface.memories import MemoryCreator
 from langflow.interface.prompts import PromptCreator
 from langflow.interface.signature import get_signature
+from langflow.interface.embeddings import EmbeddingCreator
+from langflow.interface.vectorstore import VectorstoreCreator
+from langflow.interface.documentloaders import DocumentLoaderCreator
 from langchain import chains
 from langflow.interface.chains import ChainCreator
 from langflow.interface.tools import ToolCreator
@@ -29,6 +32,9 @@ def build_langchain_types_dict():
     tool_creator = ToolCreator()
     llm_creator = LLMCreator()
     memory_creator = MemoryCreator()
+    embedding_creator = EmbeddingCreator()
+    vectorstore_creator = VectorstoreCreator()
+    documentloader_creator = DocumentLoaderCreator()
 
     all_types = {}
 
@@ -39,6 +45,9 @@ def build_langchain_types_dict():
         llm_creator,
         memory_creator,
         tool_creator,
+        embedding_creator,
+        vectorstore_creator,
+        documentloader_creator,
     ]
 
     all_types = {}
