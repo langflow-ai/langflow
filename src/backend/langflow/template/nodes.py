@@ -112,3 +112,35 @@ class ToolNode(FrontendNode):
 
     def to_dict(self):
         return super().to_dict()
+
+
+class JsonAgentNode(FrontendNode):
+    name: str = "JsonAgent"
+    template: Template = Template(
+        type_name="json_agent",
+        fields=[
+            Field(
+                field_type="BaseToolkit",
+                required=True,
+                placeholder="",
+                is_list=False,
+                show=True,
+                value="",
+                name="toolkit",
+            ),
+            Field(
+                field_type="BaseLanguageModel",
+                required=True,
+                placeholder="",
+                is_list=False,
+                show=True,
+                value="",
+                name="LLM",
+            ),
+        ],
+    )
+    description: str = """Construct a json agent from an LLM and tools."""
+    base_classes: list[str] = ["BaseAgent"]
+
+    def to_dict(self):
+        return super().to_dict()
