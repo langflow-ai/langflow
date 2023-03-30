@@ -6,8 +6,9 @@
 from copy import deepcopy
 import types
 from typing import Any, Dict, List
-from langflow.interface.listing import ALL_TYPES_DICT, TOOLS_DICT
+from langflow.interface.listing import ALL_TYPES_DICT
 from langflow.interface import loading
+from langflow.interface.tools.base import tool_creator
 
 
 class Node:
@@ -139,7 +140,7 @@ class Node:
         # and return the instance
         for base_type, value in ALL_TYPES_DICT.items():
             if base_type == "tools":
-                value = TOOLS_DICT
+                value = tool_creator.type_to_loader_dict
 
             if self.node_type in value:
                 self._built_object = loading.instantiate_class(
@@ -208,5 +209,3 @@ class Edge:
             f"Edge(source={self.source.id}, target={self.target.id}, valid={self.valid}"
             f", matched_type={self.matched_type})"
         )
-
-

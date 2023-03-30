@@ -1,5 +1,6 @@
 from langflow.custom import customs
-from langflow.interface.listing import ALL_TOOLS_NAMES, CUSTOM_TOOLS
+from langflow.interface.tools.constants import ALL_TOOLS_NAMES, CUSTOM_TOOLS
+import langflow.interface.tools.util
 from langflow.template.template import Field, Template
 from langflow.utils import util
 from langflow.settings import settings
@@ -11,14 +12,18 @@ from langchain.agents.load_tools import (
     _EXTRA_OPTIONAL_TOOLS,
     _LLM_TOOLS,
 )
+from langflow.interface.tools.util import get_tools_dict
 
 
 class ToolCreator(LangChainTypeCreator):
     type_name: str = "tools"
+    tools_dict: Dict | None = None
 
     @property
     def type_to_loader_dict(self) -> Dict:
-        return util.get_tools_dict()
+        if self.tools_dict is None:
+            self.tools_dict = get_tools_dict()
+        return self.tools_dict
 
     def get_signature(self, name: str) -> Dict | None:
         """Get the signature of a tool."""
@@ -27,7 +32,9 @@ class ToolCreator(LangChainTypeCreator):
         base_classes = ["Tool"]
         all_tools = {}
         for tool in self.type_to_loader_dict.keys():
-            if tool_params := util.get_tool_params(util.get_tool_by_name(tool)):
+            if tool_params := langflow.interface.tools.util.get_tool_params(
+                langflow.interface.tools.util.get_tool_by_name(tool)
+            ):
                 tool_name = tool_params.get("name") or str(tool)
                 all_tools[tool_name] = {"type": tool, "params": tool_params}
 
@@ -101,7 +108,9 @@ class ToolCreator(LangChainTypeCreator):
 
         template = Template(fields=fields, type_name=tool_type)
 
-        tool_params = util.get_tool_params(util.get_tool_by_name(tool_type))
+        tool_params = langflow.interface.tools.util.get_tool_params(
+            langflow.interface.tools.util.get_tool_by_name(tool_type)
+        )
         if tool_params is None:
             tool_params = {}
         return {
@@ -116,7 +125,9 @@ class ToolCreator(LangChainTypeCreator):
         tools = []
 
         for tool in ALL_TOOLS_NAMES:
-            tool_params = util.get_tool_params(util.get_tool_by_name(tool))
+            tool_params = langflow.interface.tools.util.get_tool_params(
+                langflow.interface.tools.util.get_tool_by_name(tool)
+            )
             if tool_params and (
                 tool_params.get("name") in settings.tools
                 or (tool_params.get("name") and settings.dev)

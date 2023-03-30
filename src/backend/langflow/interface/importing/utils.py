@@ -8,7 +8,7 @@ from langchain.agents import Agent
 from langchain.chains.base import Chain
 from langchain.llms.base import BaseLLM
 from langchain.tools import BaseTool
-from langflow.utils.util import get_tool_by_name
+from langflow.interface.tools.util import get_tool_by_name
 
 
 def import_module(module_path: str) -> Any:
