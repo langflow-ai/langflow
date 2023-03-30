@@ -2,27 +2,38 @@ import os
 from typing import List
 
 import yaml
-from pydantic import BaseSettings, Field, root_validator
+from pydantic import BaseSettings, root_validator
 
 
 class Settings(BaseSettings):
-    chains: List[str] = Field(default=[])
-    agents: List[str] = Field(default=[])
-    prompts: List[str] = Field(default=[])
-    llms: List[str] = Field(default=[])
-    tools: List[str] = Field(default=[])
-    memories: List[str] = Field(default=[])
-    dev: bool = Field(default=False)
+    chains: List[str] = []
+    agents: List[str] = []
+    prompts: List[str] = []
+    llms: List[str] = []
+    tools: List[str] = []
+    memories: List[str] = []
+    dev: bool = False
 
     class Config:
         validate_assignment = True
+        extra = "ignore"
 
-    @root_validator
+    @root_validator(allow_reuse=True)
     def validate_lists(cls, values):
         for key, value in values.items():
             if key != "dev" and not value:
                 values[key] = []
         return values
+
+    def update_from_yaml(self, file_path: str):
+        new_settings = load_settings_from_yaml(file_path)
+        self.chains = new_settings.chains or []
+        self.agents = new_settings.agents or []
+        self.prompts = new_settings.prompts or []
+        self.llms = new_settings.llms or []
+        self.tools = new_settings.tools or []
+        self.memories = new_settings.memories or []
+        self.dev = new_settings.dev or False
 
 
 def save_settings_to_yaml(settings: Settings, file_path: str):
@@ -41,9 +52,8 @@ def load_settings_from_yaml(file_path: str) -> Settings:
 
     with open(file_path, "r") as f:
         settings_dict = yaml.safe_load(f)
-        a = Settings.parse_obj(settings_dict)
 
-    return a
+    return Settings(**settings_dict)
 
 
 settings = load_settings_from_yaml("config.yaml")

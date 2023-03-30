@@ -2,6 +2,7 @@ import logging
 import multiprocessing
 import platform
 from pathlib import Path
+from langflow.settings import settings
 
 import typer
 from fastapi.staticfiles import StaticFiles
@@ -17,9 +18,20 @@ def get_number_of_workers(workers=None):
     return workers
 
 
+def update_settings(config: str):
+    """Update the settings from a config file."""
+    if config:
+        settings.update_from_yaml(config)
+
+
 def serve(
-    host: str = "127.0.0.1", workers: int = 1, timeout: int = 60, port: int = 7860
+    host: str = "127.0.0.1",
+    workers: int = 1,
+    timeout: int = 60,
+    port: int = 7860,
+    config: str = "config.yaml",
 ):
+    update_settings(config)
     app = create_app()
     # get the directory of the current file
     path = Path(__file__).parent
