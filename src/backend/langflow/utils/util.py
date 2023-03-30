@@ -272,6 +272,8 @@ def format_dict(d, name: Optional[str] = None):
         # Change type from str to Tool
         value["type"] = "Tool" if key in ["allowed_tools"] else _type
 
+        value["type"] = "int" if key in ["max_value_length"] else value["type"]
+
         # Show or not field
         value["show"] = bool(
             (value["required"] and key not in ["input_variables"])
@@ -307,7 +309,10 @@ def format_dict(d, name: Optional[str] = None):
         if "dict" in value["type"].lower():
             value["type"] = "code"
 
-        value["file"] = key in ["dict_"]
+        if key == "dict_":
+            value["type"] = "file"
+            value["suffixes"] = [".json", ".yaml", ".yml"]
+            value["fileTypes"] = ["json", "yaml", "yml"]
 
         # Replace default value with actual value
         if "default" in value:

@@ -3,6 +3,7 @@ from langflow.interface.chains.base import chain_creator
 from langflow.interface.llms.base import llm_creator
 from langflow.interface.memories.base import memory_creator
 from langflow.interface.prompts.base import prompt_creator
+from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.tools.base import tool_creator
 
 
@@ -14,6 +15,7 @@ def get_type_dict():
         "tools": tool_creator.to_list(),
         "chains": chain_creator.to_list(),
         "memory": memory_creator.to_list(),
+        "toolkits": toolkits_creator.to_list(),
     }
 
 
