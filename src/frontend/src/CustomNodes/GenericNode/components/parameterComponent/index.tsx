@@ -159,7 +159,9 @@ export default function ParameterComponent({
 						disabled={disabled}
 						value={data.node.template[name]?.value ?? ""}
 						onChange={(t: string) => {
-							data.node.template[name].value = t;
+							if(data.node.template[name]?.value){
+								data.node.template[name].value = t;
+							}
 						}}
 					></InputFileComponent>
 				) : (

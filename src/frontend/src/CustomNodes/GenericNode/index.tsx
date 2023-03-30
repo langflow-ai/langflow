@@ -22,7 +22,6 @@ export default function GenericNode({
 	const showError = useRef(true);
 	const { types, deleteNode } = useContext(typesContext);
 	const Icon = nodeIcons[types[data.type]];
-	console.log(data)
 	if (!Icon) {
 		if (showError.current) {
 			setErrorData({
