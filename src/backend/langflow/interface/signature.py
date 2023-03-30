@@ -13,7 +13,6 @@ from langflow.interface.custom_lists import (
     llm_type_to_cls_dict,
     memory_type_to_cls_dict,
     toolkit_type_to_cls_dict,
-    toolkit_type_to_loader_dict,
     wrapper_type_to_cls_dict,
 )
 

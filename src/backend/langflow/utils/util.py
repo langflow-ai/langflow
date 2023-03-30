@@ -55,7 +55,7 @@ def build_template_from_parameters(
 
     return {
         "template": format_dict(variables, name),
-        "description": docs["Description"],
+        "description": docs["Description"],  # type: ignore
         "base_classes": base_classes,
     }
 
