@@ -26,7 +26,7 @@ You can install LangFlow from pip:
 
 Next, run:
 
-`langflow`
+`python -m langflow`
 
 ### Deploy Langflow on Google Cloud Platform
 
