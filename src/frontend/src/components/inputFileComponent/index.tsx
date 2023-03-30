@@ -17,6 +17,12 @@ export default function InputFileComponent({
 		}
 	}, [disabled, onChange]);
 
+	function attachFile(fileReadEvent: ProgressEvent<FileReader>) {
+		fileReadEvent.preventDefault();
+		const file = fileReadEvent.target.result;
+		console.log(file);
+	}
+
 	const handleButtonClick = () => {
 		const input = document.createElement("input");
 		input.type = "file";
@@ -25,7 +31,10 @@ export default function InputFileComponent({
 		input.multiple = false;
 		input.onchange = (e: Event) => {
 			const file = (e.target as HTMLInputElement).files?.[0];
+			const fileData = new FileReader();
+			fileData.onload = attachFile;
 			if (file && file.name.endsWith(".json")) {
+				fileData.readAsDataURL(file);
 				setMyValue(file.name);
 				onChange(file.name);
 			} else {
