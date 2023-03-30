@@ -16,7 +16,7 @@ const TabsContextInitialValue: TabsContextType = {
 	uploadFlow: () => {},
 	lockChat: false,
 	setLockChat:(prevState:boolean)=>{},
-	hardReset:()=>{}
+	hardReset:()=>{},
 };
 
 export const TabsContext = createContext<TabsContextType>(

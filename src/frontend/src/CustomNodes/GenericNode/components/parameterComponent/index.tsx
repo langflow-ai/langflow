@@ -11,6 +11,7 @@ import { ParameterComponentType } from "../../../../types/components";
 import FloatComponent from "../../../../components/floatComponent";
 import Dropdown from "../../../../components/dropdownComponent";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
+import InputFileComponent from "../../../../components/inputFileComponent";
 
 export default function ParameterComponent({
 	left,
@@ -54,7 +55,12 @@ export default function ParameterComponent({
 					{title}
 					<span className="text-red-600">{required ? " *" : ""}</span>
 				</div>
-				{left && (type === "str" || type === "bool" || type === "float"||type=="code") ? (
+				{left &&
+				(type === "str" ||
+					type === "bool" ||
+					type === "float" ||
+					type === "code" ||
+					type === "file") ? (
 					<></>
 				) : (
 					<Tooltip title={tooltipTitle + (required ? " (required)" : "")}>
@@ -148,6 +154,16 @@ export default function ParameterComponent({
 							data.node.template[name].value = t;
 						}}
 					/>
+				) : (left === true && type === "file")||data.type==="JsonSpec" ? (
+					<InputFileComponent
+						disabled={disabled}
+						value={data.node.template[name]?.value ?? ""}
+						onChange={(t: string) => {
+							if(data.node.template[name]?.value){
+								data.node.template[name].value = t;
+							}
+						}}
+					></InputFileComponent>
 				) : (
 					<></>
 				)}
