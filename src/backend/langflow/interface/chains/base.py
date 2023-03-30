@@ -1,7 +1,5 @@
 from typing import Dict, List
 from langflow.interface.base import LangChainTypeCreator
-from langflow.interface.signature import get_chain_signature
-from langflow.template.template import Field, FrontendNode, Template
 from langflow.utils.util import build_template_from_function
 from langflow.settings import settings
 from langchain.chains import loading as chains_loading
@@ -33,3 +31,6 @@ class ChainCreator(LangChainTypeCreator):
                 or settings.dev
             )
         ]
+
+
+chain_creator = ChainCreator()

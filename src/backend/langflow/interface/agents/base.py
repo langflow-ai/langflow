@@ -26,3 +26,6 @@ class AgentCreator(LangChainTypeCreator):
             for agent in self.type_to_loader_dict.values()
             if agent.__name__ in settings.agents or settings.dev
         ]
+
+
+agent_creator = AgentCreator()

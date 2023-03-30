@@ -18,7 +18,7 @@ class ToolCreator(LangChainTypeCreator):
 
     @property
     def type_to_loader_dict(self) -> Dict:
-        return ALL_TOOLS_NAMES
+        return util.get_tools_dict()
 
     def get_signature(self, name: str) -> Dict | None:
         """Get the signature of a tool."""
@@ -26,7 +26,7 @@ class ToolCreator(LangChainTypeCreator):
         NODE_INPUTS = ["llm", "func"]
         base_classes = ["Tool"]
         all_tools = {}
-        for tool in ALL_TOOLS_NAMES:
+        for tool in self.type_to_loader_dict.keys():
             if tool_params := util.get_tool_params(util.get_tool_by_name(tool)):
                 tool_name = tool_params.get("name") or str(tool)
                 all_tools[tool_name] = {"type": tool, "params": tool_params}
@@ -126,3 +126,6 @@ class ToolCreator(LangChainTypeCreator):
         # Add Tool
         custom_tools = customs.get_custom_nodes("tools")
         return tools + list(custom_tools.keys())
+
+
+tool_creator = ToolCreator()

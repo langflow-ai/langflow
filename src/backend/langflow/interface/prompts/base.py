@@ -30,3 +30,6 @@ class PromptCreator(LangChainTypeCreator):
             or settings.dev
         ]
         return library_prompts + list(custom_prompts.keys())
+
+
+prompt_creator = PromptCreator()

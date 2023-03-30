@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel
 from abc import ABC, abstractmethod
 from langflow.template.template import Template, Field, FrontendNode
@@ -16,23 +16,25 @@ class LangChainTypeCreator(BaseModel, ABC):
         pass
 
     @abstractmethod
-    def get_signature(self, name: str) -> Dict:
+    def get_signature(self, name: str) -> Optional[Dict[Any, Any]]:
         pass
 
     @abstractmethod
     def to_list(self) -> List[str]:
         pass
 
-    def to_dict(self):
-        result = {self.type_name: {}}  # type: Dict
+    def to_dict(self) -> Dict:
+        result: Dict = {self.type_name: {}}
 
         for name in self.to_list():
-            result[self.type_name][name] = self.get_signature(name)
+            result[self.type_name][name] = self.frontend_node(name).to_dict()
 
         return result
 
     def frontend_node(self, name) -> FrontendNode:
         signature = self.get_signature(name)
+        if signature is None:
+            raise ValueError(f"{name} not found")
         fields = [
             Field(
                 name=key,
