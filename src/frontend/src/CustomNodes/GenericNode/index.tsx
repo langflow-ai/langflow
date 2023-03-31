@@ -106,7 +106,7 @@ export default function GenericNode({
 					<ParameterComponent
 						data={data}
 						color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-						title={data.node.base_classes.join(" | ")}
+						title={data.type}
 						tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
 						id={[data.type, data.id, ...data.node.base_classes].join("|")}
 						type={data.node.base_classes.join("|")}
