@@ -67,8 +67,9 @@ class PromptNode(Node):
                     else []
                 )
                 self.params["tools"] = tools
-                # Extract the input variables from the prompt
-                prompt_params = ["prefix", "suffix"]
+                prompt_params = [
+                    key for key, value in self.params.items() if value["type"] == "str"
+                ]
             else:
                 prompt_params = ["template"]
             for param in prompt_params:
