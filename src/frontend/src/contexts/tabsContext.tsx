@@ -5,6 +5,7 @@ import { normalCaseToSnakeCase } from "../utils";
 import { alertContext } from "./alertContext";
 
 const TabsContextInitialValue: TabsContextType = {
+	save:()=>{},
 	tabIndex: 0,
 	setTabIndex: (index: number) => {},
 	flows: [],
@@ -35,14 +36,19 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		newNodeId.current = newNodeId.current + 1;
 		return newNodeId.current;
 	}
+	function save(){
+		if (flows.length !== 0)
+		window.localStorage.setItem(
+			"tabsData",
+			JSON.stringify({ tabIndex, flows, id, nodeId: newNodeId.current })
+		);
+	}
 	useEffect(() => {
 		//save tabs locally
-		if (flows.length !== 0)
-			window.localStorage.setItem(
-				"tabsData",
-				JSON.stringify({ tabIndex, flows, id, nodeId: newNodeId.current })
-			);
+		save()
 	}, [flows, id, tabIndex, newNodeId]);
+
+
 
 	useEffect(() => {
 		//get tabs locally saved
@@ -177,6 +183,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	return (
 		<TabsContext.Provider
 			value={{
+				save,
 				hardReset,
 				lockChat,
 				setLockChat,
