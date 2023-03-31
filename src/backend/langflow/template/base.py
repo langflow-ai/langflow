@@ -1,5 +1,7 @@
-from typing import Any, Union
 from pydantic import BaseModel
+
+
+from typing import Any, Union
 
 
 class Field(BaseModel):

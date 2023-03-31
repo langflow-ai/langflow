@@ -1,4 +1,5 @@
-from langflow.template.template import Field, FrontendNode, Template
+from langflow.template.base import Field, Template
+from langflow.template.base import FrontendNode
 from langchain.agents.mrkl import prompt
 from langflow.utils.constants import DEFAULT_PYTHON_FUNCTION
 
