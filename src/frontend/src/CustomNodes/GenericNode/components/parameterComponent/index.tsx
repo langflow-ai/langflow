@@ -54,7 +54,7 @@ export default function ParameterComponent({
 			className="w-full flex flex-wrap justify-between items-center bg-gray-50 dark:bg-gray-800 dark:text-white mt-1 px-5 py-2"
 		>
 			<>
-				<div className="text-sm truncate">
+				<div className={"text-sm truncate w-full " + (left ? "" : "text-end")}>
 					{title}
 					<span className="text-red-600">{required ? " *" : ""}</span>
 				</div>
