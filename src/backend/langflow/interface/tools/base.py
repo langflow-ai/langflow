@@ -20,11 +20,11 @@ from langflow.interface.tools.util import (
     get_tools_dict,
 )
 from langflow.settings import settings
-from langflow.template.base import Field, Template
+from langflow.template.base import TemplateField, Template
 from langflow.utils import util
 
 TOOL_INPUTS = {
-    "str": Field(
+    "str": TemplateField(
         field_type="str",
         required=True,
         is_list=False,
@@ -32,15 +32,15 @@ TOOL_INPUTS = {
         placeholder="",
         value="",
     ),
-    "llm": Field(field_type="BaseLLM", required=True, is_list=False, show=True),
-    "func": Field(
+    "llm": TemplateField(field_type="BaseLLM", required=True, is_list=False, show=True),
+    "func": TemplateField(
         field_type="function",
         required=True,
         is_list=False,
         show=True,
         multiline=True,
     ),
-    "code": Field(
+    "code": TemplateField(
         field_type="str",
         required=True,
         is_list=False,
@@ -48,7 +48,7 @@ TOOL_INPUTS = {
         value="",
         multiline=True,
     ),
-    "dict_": Field(
+    "dict_": TemplateField(
         field_type="file",
         required=True,
         is_list=False,

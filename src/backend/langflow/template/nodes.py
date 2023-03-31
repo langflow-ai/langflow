@@ -1,6 +1,6 @@
 from langchain.agents.mrkl import prompt
 
-from langflow.template.base import Field, FrontendNode, Template
+from langflow.template.base import TemplateField, FrontendNode, Template
 from langflow.utils.constants import DEFAULT_PYTHON_FUNCTION
 
 
@@ -9,7 +9,7 @@ class ZeroShotPromptNode(FrontendNode):
     template: Template = Template(
         type_name="zero_shot",
         fields=[
-            Field(
+            TemplateField(
                 field_type="str",
                 required=False,
                 placeholder="",
@@ -19,7 +19,7 @@ class ZeroShotPromptNode(FrontendNode):
                 value=prompt.PREFIX,
                 name="prefix",
             ),
-            Field(
+            TemplateField(
                 field_type="str",
                 required=True,
                 placeholder="",
@@ -29,7 +29,7 @@ class ZeroShotPromptNode(FrontendNode):
                 value=prompt.SUFFIX,
                 name="suffix",
             ),
-            Field(
+            TemplateField(
                 field_type="str",
                 required=False,
                 placeholder="",
@@ -53,7 +53,7 @@ class PythonFunctionNode(FrontendNode):
     template: Template = Template(
         type_name="python_function",
         fields=[
-            Field(
+            TemplateField(
                 field_type="code",
                 required=True,
                 placeholder="",
@@ -76,7 +76,7 @@ class ToolNode(FrontendNode):
     template: Template = Template(
         type_name="tool",
         fields=[
-            Field(
+            TemplateField(
                 field_type="str",
                 required=True,
                 placeholder="",
@@ -86,7 +86,7 @@ class ToolNode(FrontendNode):
                 value="",
                 name="name",
             ),
-            Field(
+            TemplateField(
                 field_type="str",
                 required=True,
                 placeholder="",
@@ -96,7 +96,7 @@ class ToolNode(FrontendNode):
                 value="",
                 name="description",
             ),
-            Field(
+            TemplateField(
                 field_type="str",
                 required=True,
                 placeholder="",
@@ -120,13 +120,13 @@ class JsonAgentNode(FrontendNode):
     template: Template = Template(
         type_name="json_agent",
         fields=[
-            Field(
+            TemplateField(
                 field_type="BaseToolkit",
                 required=True,
                 show=True,
                 name="toolkit",
             ),
-            Field(
+            TemplateField(
                 field_type="BaseLanguageModel",
                 required=True,
                 show=True,

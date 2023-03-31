@@ -47,13 +47,14 @@ class ToolkitCreator(LangChainTypeCreator):
     def to_list(self) -> List[str]:
         return list(self.type_to_loader_dict.keys())
 
-    def get_create_function(self, name: str) -> Callable | None:
+    def get_create_function(self, name: str) -> Callable:
         if loader_name := self.create_functions.get(name, None):
             # import loader
             return import_module(
                 f"from langchain.agents.agent_toolkits import {loader_name[0]}"
             )
-        return None
+        else:
+            raise ValueError("Loader not found")
 
     def has_create_function(self, name: str) -> bool:
         # check if the function list is not empty

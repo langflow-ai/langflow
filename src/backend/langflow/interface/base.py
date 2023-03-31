@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
-from langflow.template.base import Field, FrontendNode, Template
+from langflow.template.base import TemplateField, FrontendNode, Template
 
 # Assuming necessary imports for Field, Template, and FrontendNode classes
 
@@ -43,7 +43,7 @@ class LangChainTypeCreator(BaseModel, ABC):
         if signature is None:
             raise ValueError(f"{name} not found")
         fields = [
-            Field(
+            TemplateField(
                 name=key,
                 field_type=value["type"],
                 required=value.get("required", False),
