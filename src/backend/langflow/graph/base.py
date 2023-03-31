@@ -3,19 +3,22 @@
 #   - Defer prompts building to the last moment or when they have all the tools
 #   - Build each inner agent first, then build the outer agent
 
-from copy import deepcopy
 import types
+from copy import deepcopy
 from typing import Any, Dict, List
-from langflow.interface.listing import ALL_TYPES_DICT
+
+from langflow.graph.utils import load_dict
 from langflow.interface import loading
+from langflow.interface.listing import ALL_TYPES_DICT
 from langflow.interface.tools.base import tool_creator
 
 
 class Node:
-    def __init__(self, data: Dict):
+    def __init__(self, data: Dict, base_type: str | None = None) -> None:
         self.id: str = data["id"]
         self._data = data
         self.edges: List[Edge] = []
+        self.base_type: str | None = base_type
         self._parse_data()
         self._built_object = None
         self._built = False
@@ -44,6 +47,11 @@ class Node:
         self.node_type = (
             self.data["type"] if "Tool" not in self.output else template_dict["_type"]
         )
+        if self.base_type is None:
+            for base_type, value in ALL_TYPES_DICT.items():
+                if self.node_type in value:
+                    self.base_type = base_type
+                    break
 
     def _build_params(self):
         # Some params are required, some are optional
@@ -71,7 +79,18 @@ class Node:
                 continue
             # If the type is not transformable to a python base class
             # then we need to get the edge that connects to this node
-            if value["type"] not in ["str", "bool", "code"]:
+            if value["type"] == "file":
+                # Load the type in value.get('suffixes') using
+                # what is inside value.get('content')
+                # value.get('value') is the file name
+                type_to_load = value.get("suffixes")
+                file_name = value.get("value")
+                content = value.get("content")
+                # Now
+                loaded_dict = load_dict(file_name, content, type_to_load)
+                params[key] = loaded_dict
+
+            elif value["type"] not in ["str", "bool", "code", "int", "float"]:
                 # Get the edge that connects to this node
                 edge = next(
                     (
@@ -138,17 +157,15 @@ class Node:
         # Get the class from LANGCHAIN_TYPES_DICT
         # and instantiate it with the params
         # and return the instance
-        for base_type, value in ALL_TYPES_DICT.items():
-            if base_type == "tools":
-                value = tool_creator.type_to_loader_dict
 
-            if self.node_type in value:
-                self._built_object = loading.instantiate_class(
-                    node_type=self.node_type,
-                    base_type=base_type,
-                    params=self.params,
-                )
-                break
+        try:
+            self._built_object = loading.instantiate_class(
+                node_type=self.node_type,
+                base_type=self.base_type,
+                params=self.params,
+            )
+        except Exception as exc:
+            raise ValueError(f"Error building node {self.node_type}") from exc
 
         if self._built_object is None:
             raise ValueError(f"Node type {self.node_type} not found")
