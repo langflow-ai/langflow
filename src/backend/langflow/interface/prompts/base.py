@@ -17,8 +17,8 @@ class PromptCreator(LangChainTypeCreator):
 
     def get_signature(self, name: str) -> Dict | None:
         try:
-            if name in get_custom_nodes("prompts").keys():
-                return get_custom_nodes("prompts")[name]
+            if name in get_custom_nodes(self.type_name).keys():
+                return get_custom_nodes(self.type_name)[name]
             return build_template_from_function(name, self.type_to_loader_dict)
         except ValueError as exc:
             raise ValueError("Prompt not found") from exc
