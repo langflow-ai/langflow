@@ -4,6 +4,7 @@ from langchain.agents import agent_toolkits
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class, import_module
+from langflow.settings import settings
 from langflow.utils.util import build_template_from_class
 
 
@@ -33,7 +34,7 @@ class ToolkitCreator(LangChainTypeCreator):
                 )
                 # if toolkit_name is not lower case it is a class
                 for toolkit_name in agent_toolkits.__all__
-                if not toolkit_name.islower()
+                if not toolkit_name.islower() and toolkit_name in settings.toolkits
             }
 
         return self.type_dict
