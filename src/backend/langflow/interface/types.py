@@ -5,6 +5,7 @@ from langflow.interface.prompts.base import prompt_creator
 from langflow.interface.chains.base import chain_creator
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.tools.base import tool_creator
+from langflow.interface.wrappers.base import wrapper_creator
 
 
 def get_type_list():
@@ -32,6 +33,7 @@ def build_langchain_types_dict():
         memory_creator,
         tool_creator,
         toolkits_creator,
+        wrapper_creator,
     ]
 
     all_types = {}

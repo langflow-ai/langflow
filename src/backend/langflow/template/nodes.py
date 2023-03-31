@@ -140,7 +140,7 @@ class JsonAgentNode(FrontendNode):
         ],
     )
     description: str = """Construct a json agent from an LLM and tools."""
-    base_classes: list[str] = ["BaseAgent"]
+    base_classes: list[str] = ["AgentExecutor"]
 
     def to_dict(self):
         return super().to_dict()

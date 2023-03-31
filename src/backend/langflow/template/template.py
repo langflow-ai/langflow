@@ -13,6 +13,7 @@ class Field(BaseModel):
     suffixes: list[str] = []
     file_types: list[str] = []
     content: Union[str, None] = None
+    password: bool = False
     # _name will be used to store the name of the field
     # in the template
     name: str = ""

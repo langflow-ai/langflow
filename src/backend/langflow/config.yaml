@@ -6,6 +6,7 @@ chains:
 
 agents:
   - ZeroShotAgent
+  - JsonAgent
 
 prompts:
   - PromptTemplate
@@ -23,5 +24,8 @@ tools:
   - Tool
   - PythonFunction
   - JsonSpec
+
+wrappers:
+  - RequestsWrapper
 
 dev: false

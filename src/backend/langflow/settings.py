@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     llms: List[str] = []
     tools: List[str] = []
     memories: List[str] = []
+    wrappers: List[str] = []
     dev: bool = False
 
     class Config:
@@ -33,6 +34,7 @@ class Settings(BaseSettings):
         self.llms = new_settings.llms or []
         self.tools = new_settings.tools or []
         self.memories = new_settings.memories or []
+        self.wrappers = new_settings.wrappers or []
         self.dev = new_settings.dev or False
 
 
