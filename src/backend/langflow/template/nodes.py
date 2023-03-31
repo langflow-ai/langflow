@@ -130,7 +130,7 @@ class JsonAgentNode(FrontendNode):
                 field_type="BaseLanguageModel",
                 required=True,
                 show=True,
-                name="LLM",
+                name="llm",
             ),
         ],
     )
