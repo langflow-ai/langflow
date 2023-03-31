@@ -1,10 +1,12 @@
-from langchain.agents import loading
-from langflow.custom.customs import get_custom_nodes
-from langflow.interface.base import LangChainTypeCreator
-from langflow.utils.util import build_template_from_class
-from langflow.settings import settings
 from typing import Dict, List
-from langflow.interface.agents.custom import JsonAgent
+
+from langchain.agents import loading
+
+from langflow.custom.customs import get_custom_nodes
+from langflow.interface.agents.custom import CUSTOM_AGENTS
+from langflow.interface.base import LangChainTypeCreator
+from langflow.settings import settings
+from langflow.utils.util import build_template_from_class
 
 
 class AgentCreator(LangChainTypeCreator):
@@ -15,7 +17,8 @@ class AgentCreator(LangChainTypeCreator):
         if self.type_dict is None:
             self.type_dict = loading.AGENT_TO_CLASS
             # Add JsonAgent to the list of agents
-            self.type_dict["JsonAgent"] = JsonAgent
+            for name, agent in CUSTOM_AGENTS.items():
+                self.type_dict[name] = agent
         return self.type_dict
 
     def get_signature(self, name: str) -> Dict | None:

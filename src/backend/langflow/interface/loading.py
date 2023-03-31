@@ -1,19 +1,16 @@
 import json
 from typing import Any, Dict, Optional
 
+from langchain.agents import ZeroShotAgent
+from langchain.agents import agent as agent_module
 from langchain.agents.agent import AgentExecutor
+from langchain.agents.agent_toolkits.base import BaseToolkit
 from langchain.agents.load_tools import (
     _BASE_TOOLS,
     _EXTRA_LLM_TOOLS,
     _EXTRA_OPTIONAL_TOOLS,
     _LLM_TOOLS,
 )
-from langchain.agents import agent as agent_module
-
-
-from langflow.interface.importing.utils import import_by_type
-
-from langchain.agents import ZeroShotAgent
 from langchain.agents.loading import load_agent_from_config
 from langchain.agents.tools import Tool
 from langchain.callbacks.base import BaseCallbackManager
@@ -21,20 +18,29 @@ from langchain.chains.loading import load_chain_from_config
 from langchain.llms.base import BaseLLM
 from langchain.llms.loading import load_llm_from_config
 
+from langflow.interface.agents.custom import CUSTOM_AGENTS
+from langflow.interface.importing.utils import import_by_type
+from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.types import get_type_list
 from langflow.utils import payload, util, validate
 
 
 def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
     """Instantiate class from module type and key, and params"""
+    if node_type in CUSTOM_AGENTS:
+        if custom_agent := CUSTOM_AGENTS.get(node_type):
+            return custom_agent.initialize(**params)
+
     class_object = import_by_type(_type=base_type, name=node_type)
+
     if base_type == "agents":
         # We need to initialize it differently
-        allowed_tools = params["allowed_tools"]
-        llm_chain = params["llm_chain"]
-        return load_agent_executor(class_object, allowed_tools, llm_chain)
-    elif base_type == "tools" or node_type != "ZeroShotPrompt":
-        return class_object(**params)
+        return load_agent_executor(class_object, params)
+    elif node_type == "ZeroShotPrompt":
+        if "tools" not in params:
+            params["tools"] = []
+        return ZeroShotAgent.create_prompt(**params)
+
     elif node_type == "PythonFunction":
         # If the node_type is "PythonFunction"
         # we need to get the function from the params
@@ -45,10 +51,14 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
         if isinstance(function_string, str):
             return validate.eval_function(function_string)
         raise ValueError("Function should be a string")
+    elif base_type == "toolkits":
+        loaded_toolkit = class_object(**params)
+        # Check if node_type has a loader
+        if toolkits_creator.has_create_function(node_type):
+            return load_toolkits_executor(node_type, loaded_toolkit, params)
+        return loaded_toolkit
     else:
-        if "tools" not in params:
-            params["tools"] = []
-        return ZeroShotAgent.create_prompt(**params)
+        return class_object(**params)
 
 
 def load_flow_from_json(path: str):
@@ -122,10 +132,10 @@ def load_agent_executor_from_config(
     )
 
 
-def load_agent_executor(
-    agent_class: type[agent_module.Agent], allowed_tools, llm_chain, **kwargs
-):
+def load_agent_executor(agent_class: type[agent_module.Agent], params, **kwargs):
     """Load agent executor from agent class, tools and chain"""
+    allowed_tools = params["allowed_tools"]
+    llm_chain = params["llm_chain"]
     tool_names = [tool.name for tool in allowed_tools]
     agent = agent_class(allowed_tools=tool_names, llm_chain=llm_chain)
     return AgentExecutor.from_agent_and_tools(
@@ -133,6 +143,14 @@ def load_agent_executor(
         tools=allowed_tools,
         **kwargs,
     )
+
+
+def load_toolkits_executor(node_type: str, toolkit: BaseToolkit, params: dict):
+    create_function = toolkits_creator.get_create_function(node_type)
+    llm = params.get("llm", None)
+    if llm:
+        return create_function(llm=llm, toolkit=toolkit)
+    return
 
 
 def load_tools_from_config(tool_list: list[dict]) -> list:
