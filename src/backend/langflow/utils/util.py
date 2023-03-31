@@ -286,6 +286,7 @@ def format_dict(d, name: Optional[str] = None):
                 "temperature",
                 "model_name",
                 "headers",
+                "max_value_length",
             ]
             or "api_key" in key
         )

@@ -63,7 +63,8 @@ export default function ParameterComponent({
 					type === "bool" ||
 					type === "float" ||
 					type === "code" ||
-					type === "file") ? (
+					type === "file" ||
+					type === "int") ? (
 					<></>
 				) : (
 					<Tooltip title={tooltipTitle + (required ? " (required)" : "")}>
