@@ -103,7 +103,7 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 						setLockChat(false);
 					})
 					.catch((error) => {
-						setErrorData({ title: error.message ?? "unknow error" });
+						setErrorData({ title: error.message ?? "Unknown Error", list: [error.response.data.detail]});
 						setLockChat(false);
 					});
 			} else {
