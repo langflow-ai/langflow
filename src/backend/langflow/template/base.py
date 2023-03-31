@@ -2,9 +2,10 @@ from pydantic import BaseModel
 
 
 from typing import Any, Union
+from abc import ABC
 
 
-class Field(BaseModel):
+class FieldCreator(BaseModel, ABC):
     field_type: str = "str"
     required: bool = False
     placeholder: str = ""
@@ -35,6 +36,10 @@ class Field(BaseModel):
         if self.field_type == "file":
             result["content"] = self.content
         return result
+
+
+class Field(FieldCreator):
+    pass
 
 
 class Template(BaseModel):
