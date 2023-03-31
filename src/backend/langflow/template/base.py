@@ -4,7 +4,7 @@ from typing import Any, Union
 from pydantic import BaseModel
 
 
-class FieldCreator(BaseModel, ABC):
+class TemplateFieldCreator(BaseModel, ABC):
     field_type: str = "str"
     required: bool = False
     placeholder: str = ""
@@ -37,13 +37,13 @@ class FieldCreator(BaseModel, ABC):
         return result
 
 
-class Field(FieldCreator):
+class TemplateField(TemplateFieldCreator):
     pass
 
 
 class Template(BaseModel):
     type_name: str
-    fields: list[Field]
+    fields: list[TemplateField]
 
     def to_dict(self):
         result = {field.name: field.to_dict() for field in self.fields}
