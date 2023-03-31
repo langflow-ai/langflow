@@ -1,8 +1,9 @@
-from typing import Any, Dict, List, Optional
-from pydantic import BaseModel
 from abc import ABC, abstractmethod
-from langflow.template.template import Template, Field, FrontendNode
+from typing import Any, Dict, List, Optional
 
+from pydantic import BaseModel
+
+from langflow.template.base import Field, FrontendNode, Template
 
 # Assuming necessary imports for Field, Template, and FrontendNode classes
 

@@ -1,8 +1,7 @@
-from pydantic import BaseModel
-
-
-from typing import Any, Union
 from abc import ABC
+from typing import Any, Union
+
+from pydantic import BaseModel
 
 
 class FieldCreator(BaseModel, ABC):

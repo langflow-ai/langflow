@@ -3,9 +3,9 @@ import io
 import re
 from typing import Any, Dict
 
+from langflow.graph.graph import Graph
 from langflow.interface import loading
 from langflow.utils import payload
-from langflow.graph.graph import Graph
 
 
 def process_graph(data_graph: Dict[str, Any]):
@@ -51,6 +51,7 @@ def get_result_and_thought_using_graph(loaded_langchain, message: str):
     except Exception as e:
         result = f"Error: {str(e)}"
         thought = ""
+        raise e
     return result, thought
 
 

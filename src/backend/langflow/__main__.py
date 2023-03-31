@@ -2,12 +2,12 @@ import logging
 import multiprocessing
 import platform
 from pathlib import Path
-from langflow.settings import settings
 
 import typer
 from fastapi.staticfiles import StaticFiles
 
 from langflow.main import create_app
+from langflow.settings import settings
 
 logger = logging.getLogger(__name__)
 

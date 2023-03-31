@@ -1,8 +1,9 @@
+from typing import Dict, List
+
+from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import memory_type_to_cls_dict
 from langflow.settings import settings
-from langflow.interface.base import LangChainTypeCreator
 from langflow.utils.util import build_template_from_class
-from typing import Dict, List
 
 
 class MemoryCreator(LangChainTypeCreator):
