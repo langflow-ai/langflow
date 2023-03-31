@@ -1,15 +1,25 @@
 from typing import Dict, List, Union
-from langflow.utils import payload
-from langflow.interface.tools.constants import ALL_TOOLS_NAMES
 
-from langflow.graph.base import Node, Edge
+from langflow.graph.base import Edge, Node
 from langflow.graph.nodes import (
     AgentNode,
     ChainNode,
+    FileToolNode,
+    LLMNode,
     PromptNode,
     ToolkitNode,
     ToolNode,
+    WrapperNode,
 )
+from langflow.interface.agents.base import agent_creator
+from langflow.interface.chains.base import chain_creator
+from langflow.interface.llms.base import llm_creator
+from langflow.interface.prompts.base import prompt_creator
+from langflow.interface.toolkits.base import toolkits_creator
+from langflow.interface.tools.base import tool_creator
+from langflow.interface.tools.constants import ALL_TOOLS_NAMES, FILE_TOOLS
+from langflow.interface.wrappers.base import wrapper_creator
+from langflow.utils import payload
 
 
 class Graph:
@@ -84,16 +94,22 @@ class Graph:
             node_type: str = node_data["type"]  # type: ignore
             node_lc_type: str = node_data["node"]["template"]["_type"]  # type: ignore
 
-            if node_type in {"ZeroShotPrompt", "PromptTemplate"}:
+            if node_type in prompt_creator.to_list():
                 nodes.append(PromptNode(node))
-            elif "agent" in node_type.lower():
+            elif node_type in agent_creator.to_list():
                 nodes.append(AgentNode(node))
-            elif "chain" in node_type.lower():
+            elif node_type in chain_creator.to_list():
                 nodes.append(ChainNode(node))
-            elif "tool" in node_type.lower() or node_lc_type in ALL_TOOLS_NAMES:
+            elif node_type in tool_creator.to_list() or node_lc_type in ALL_TOOLS_NAMES:
+                if node_type in FILE_TOOLS:
+                    nodes.append(FileToolNode(node))
                 nodes.append(ToolNode(node))
-            elif "toolkit" in node_type.lower():
+            elif node_type in toolkits_creator.to_list():
                 nodes.append(ToolkitNode(node))
+            elif node_type in wrapper_creator.to_list():
+                nodes.append(WrapperNode(node))
+            elif node_type in llm_creator.to_list():
+                nodes.append(LLMNode(node))
             else:
                 nodes.append(Node(node))
         return nodes
