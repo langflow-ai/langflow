@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 from langchain.agents import ZeroShotAgent
 from langchain.agents import agent as agent_module
@@ -146,11 +146,9 @@ def load_agent_executor(agent_class: type[agent_module.Agent], params, **kwargs)
 
 
 def load_toolkits_executor(node_type: str, toolkit: BaseToolkit, params: dict):
-    create_function = toolkits_creator.get_create_function(node_type)
-    llm = params.get("llm", None)
-    if llm:
+    create_function: Callable = toolkits_creator.get_create_function(node_type)
+    if llm := params.get("llm"):
         return create_function(llm=llm, toolkit=toolkit)
-    return
 
 
 def load_tools_from_config(tool_list: list[dict]) -> list:

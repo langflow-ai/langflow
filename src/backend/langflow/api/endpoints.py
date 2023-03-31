@@ -6,9 +6,11 @@ from langflow.api.base import Code, ValidationResponse
 from langflow.interface.run import process_graph
 from langflow.interface.types import build_langchain_types_dict
 from langflow.utils.validate import validate_code
+import logging
 
 # build router
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/all")
@@ -21,6 +23,8 @@ def get_load(data: Dict[str, Any]):
     try:
         return process_graph(data)
     except Exception as e:
+        # Log stack trace
+        logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

@@ -6,11 +6,15 @@
 import types
 from copy import deepcopy
 from typing import Any, Dict, List
+from langflow.graph.constants import DIRECT_TYPES
 
 from langflow.graph.utils import load_dict
 from langflow.interface import loading
 from langflow.interface.listing import ALL_TYPES_DICT
-from langflow.interface.tools.base import tool_creator
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Node:
@@ -86,31 +90,38 @@ class Node:
                 type_to_load = value.get("suffixes")
                 file_name = value.get("value")
                 content = value.get("content")
-                # Now
                 loaded_dict = load_dict(file_name, content, type_to_load)
                 params[key] = loaded_dict
 
-            elif value["type"] not in ["str", "bool", "code", "int", "float"]:
+            # We should check if the type is in something not
+            # the opposite
+            elif value["type"] not in DIRECT_TYPES:
                 # Get the edge that connects to this node
-                edge = next(
-                    (
-                        edge
-                        for edge in self.edges
-                        if edge.target == self and edge.matched_type in value["type"]
-                    ),
-                    None,
-                )
+                try:
+                    edge = next(
+                        (
+                            edge
+                            for edge in self.edges
+                            if edge.target == self
+                            and edge.matched_type in value["type"]
+                        ),
+                        None,
+                    )
+
+                except Exception as e:
+                    raise e
                 # Get the output of the node that the edge connects to
                 # if the value['list'] is True, then there will be more
                 # than one time setting to params[key]
                 # so we need to append to a list if it exists
                 # or create a new list if it doesn't
+
                 if edge is None and value["required"]:
                     # break line
                     raise ValueError(
                         f"Required input {key} for module {self.node_type} not found"
                     )
-                if value["list"]:
+                elif value["list"]:
                     if key in params:
                         params[key].append(edge.source)
                     else:
@@ -134,11 +145,15 @@ class Node:
         # and continue
         # Another aspect is that the node_type is the class that we need to import
         # and instantiate with these built params
-
+        logger.debug(f"Building {self.node_type}")
         # Build each node in the params dict
-        for key, value in self.params.items():
-            # Check if Node or list of Nodes
+        for key, value in self.params.copy().items():
+            # Check if Node or list of Nodes and not self
+            # to avoid recursion
             if isinstance(value, Node):
+                if value == self:
+                    del self.params[key]
+                    continue
                 result = value.build()
                 # If the key is "func", then we need to use the run method
                 if key == "func" and not isinstance(result, types.FunctionType):
@@ -220,6 +235,15 @@ class Edge:
             ),
             None,
         )
+        no_matched_type = self.matched_type is None
+        if no_matched_type:
+            logger.debug(self.source_types)
+            logger.debug(self.target_reqs)
+        if no_matched_type:
+            raise ValueError(
+                f"Edge between {self.source.node_type} and {self.target.node_type} "
+                f"has no matched type"
+            )
 
     def __repr__(self) -> str:
         return (
