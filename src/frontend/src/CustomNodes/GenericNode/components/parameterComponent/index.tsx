@@ -12,6 +12,8 @@ import FloatComponent from "../../../../components/floatComponent";
 import Dropdown from "../../../../components/dropdownComponent";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
 import InputFileComponent from "../../../../components/inputFileComponent";
+import { TabsContext } from "../../../../contexts/tabsContext";
+import IntComponent from "../../../../components/intComponent";
 
 export default function ParameterComponent({
 	left,
@@ -44,6 +46,7 @@ export default function ParameterComponent({
 	const { reactFlowInstance } = useContext(typesContext);
 	let disabled =
 		reactFlowInstance?.getEdges().some((e) => e.targetHandle === id) ?? false;
+	const { save } = useContext(TabsContext);
 
 	return (
 		<div
@@ -98,6 +101,7 @@ export default function ParameterComponent({
 								}
 								onChange={(t: string[]) => {
 									data.node.template[name].value = t;
+									save();
 								}}
 							/>
 						) : data.node.template[name].multiline ? (
@@ -106,6 +110,7 @@ export default function ParameterComponent({
 								value={data.node.template[name].value ?? ""}
 								onChange={(t: string) => {
 									data.node.template[name].value = t;
+									save();
 								}}
 							/>
 						) : (
@@ -115,6 +120,7 @@ export default function ParameterComponent({
 								value={data.node.template[name].value ?? ""}
 								onChange={(t) => {
 									data.node.template[name].value = t;
+									save();
 								}}
 							/>
 						)}
@@ -127,6 +133,7 @@ export default function ParameterComponent({
 							setEnabled={(t) => {
 								data.node.template[name].value = t;
 								setEnabled(t);
+								save();
 							}}
 						/>
 					</div>
@@ -136,6 +143,7 @@ export default function ParameterComponent({
 						value={data.node.template[name].value ?? ""}
 						onChange={(t) => {
 							data.node.template[name].value = t;
+							save();
 						}}
 					/>
 				) : left === true &&
@@ -152,18 +160,32 @@ export default function ParameterComponent({
 						value={data.node.template[name].value ?? ""}
 						onChange={(t: string) => {
 							data.node.template[name].value = t;
+							save();
 						}}
 					/>
-				) : (left === true && type === "file")||data.type==="JsonSpec" ? (
+				) : left === true && type === "file" ? (
 					<InputFileComponent
 						disabled={disabled}
-						value={data.node.template[name]?.value ?? ""}
+						value={data.node.template[name].value ?? ""}
 						onChange={(t: string) => {
-							if(data.node.template[name]?.value){
-								data.node.template[name].value = t;
-							}
+							data.node.template[name].value = t;
+						}}
+						fileTypes={data.node.template[name].fileTypes}
+						suffixes={data.node.template[name].suffixes}
+						onFileChange={(t: string) => {
+							data.node.template[name].content = t;
+							save();
 						}}
 					></InputFileComponent>
+				) : left === true && type === "int" ? (
+					<IntComponent
+						disabled={disabled}
+						value={data.node.template[name].value ?? ""}
+						onChange={(t) => {
+							data.node.template[name].value = t;
+							save();
+						}}
+					/>
 				) : (
 					<></>
 				)}
