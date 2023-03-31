@@ -1,12 +1,28 @@
-from langflow.interface.base import LangChainTypeCreator
-from langflow.utils.util import build_template_from_class
-from typing import Dict, List
+from typing import Callable, Dict, List
+
 from langchain.agents import agent_toolkits
-from langflow.interface.importing.utils import import_class
+
+from langflow.interface.base import LangChainTypeCreator
+from langflow.interface.importing.utils import import_class, import_module
+from langflow.utils.util import build_template_from_class
 
 
 class ToolkitCreator(LangChainTypeCreator):
     type_name: str = "toolkits"
+    all_types: List[str] = agent_toolkits.__all__
+    create_functions: Dict = {
+        "JsonToolkit": [],
+        "SQLDatabaseToolkit": [],
+        "OpenAPIToolkit": ["create_openapi_agent"],
+        "VectorStoreToolkit": [
+            "create_vectorstore_agent",
+            "create_vectorstore_router_agent",
+            "VectorStoreInfo",
+        ],
+        "ZapierToolkit": [],
+        "PandasToolkit": ["create_pandas_dataframe_agent"],
+        "CSVToolkit": ["create_csv_agent"],
+    }
 
     @property
     def type_to_loader_dict(self) -> Dict:
@@ -19,6 +35,7 @@ class ToolkitCreator(LangChainTypeCreator):
                 for toolkit_name in agent_toolkits.__all__
                 if not toolkit_name.islower()
             }
+
         return self.type_dict
 
     def get_signature(self, name: str) -> Dict | None:
@@ -29,6 +46,18 @@ class ToolkitCreator(LangChainTypeCreator):
 
     def to_list(self) -> List[str]:
         return list(self.type_to_loader_dict.keys())
+
+    def get_create_function(self, name: str) -> Callable | None:
+        if loader_name := self.create_functions.get(name, None):
+            # import loader
+            return import_module(
+                f"from langchain.agents.agent_toolkits import {loader_name[0]}"
+            )
+        return None
+
+    def has_create_function(self, name: str) -> bool:
+        # check if the function list is not empty
+        return bool(self.create_functions.get(name, None))
 
 
 toolkits_creator = ToolkitCreator()
