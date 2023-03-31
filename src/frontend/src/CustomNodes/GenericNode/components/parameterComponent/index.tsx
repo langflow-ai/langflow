@@ -46,17 +46,15 @@ export default function ParameterComponent({
 	const { reactFlowInstance } = useContext(typesContext);
 	let disabled =
 		reactFlowInstance?.getEdges().some((e) => e.targetHandle === id) ?? false;
-	let disabledSource =
-		reactFlowInstance?.getEdges().some((e) => e.sourceHandle !== id && e.source === data.id) ?? false;
 	const { save } = useContext(TabsContext);
 
 	return (
 		<div
 			ref={ref}
-			className={"w-full flex flex-wrap justify-between items-center  dark:text-white mt-1 px-5 py-2 " + (!left ? (disabledSource ? "bg-gray-100 dark:bg-gray-700 text-gray-500": "bg-gray-50 dark:bg-gray-800") : "bg-gray-50 dark:bg-gray-800")}
+			className="w-full flex flex-wrap justify-between items-center bg-gray-50 dark:bg-gray-800 dark:text-white mt-1 px-5 py-2"
 		>
 			<>
-				<div className="text-sm truncate">
+				<div className={"text-sm truncate w-full " + (left ? "" : "text-end")}>
 					{title}
 					<span className="text-red-600">{required ? " *" : ""}</span>
 				</div>
@@ -78,8 +76,8 @@ export default function ParameterComponent({
 								isValidConnection(connection, reactFlowInstance)
 							}
 							className={classNames(
-								left ? "-ml-0.5 " : ("-mr-0.5 " + (disabledSource ? "pointer-events-none border-gray-400 " : "")),
-								"w-3 h-3 rounded-full border-2 bg-white dark:bg-gray-800",
+								left ? "-ml-0.5 " : "-mr-0.5 ",
+								"w-3 h-3 rounded-full border-2 bg-white dark:bg-gray-800"
 							)}
 							style={{
 								borderColor: color,
