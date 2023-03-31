@@ -30,6 +30,7 @@ def serve(
     timeout: int = 60,
     port: int = 7860,
     config: str = "config.yaml",
+    log_level: str = "info",
 ):
     update_settings(config)
     app = create_app()
@@ -54,7 +55,7 @@ def serve(
         # MacOS requires a env variable to be set to use gunicorn
         import uvicorn
 
-        uvicorn.run(app, host=host, port=port, log_level="info")
+        uvicorn.run(app, host=host, port=port, log_level=log_level)
     else:
         from langflow.server import LangflowApplication
 

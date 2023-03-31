@@ -39,8 +39,18 @@ class Graph:
             edge.source.add_edge(edge)
             edge.target.add_edge(edge)
 
+        # This is a hack to make sure that the LLM node is sent to
+        # the toolkit node
+        llm_node = None
         for node in self.nodes:
             node._build_params()
+
+            if isinstance(node, LLMNode):
+                llm_node = node
+
+        for node in self.nodes:
+            if isinstance(node, ToolkitNode):
+                node.params["llm"] = llm_node
 
     def get_node(self, node_id: str) -> Union[None, Node]:
         return next((node for node in self.nodes if node.id == node_id), None)

@@ -48,10 +48,8 @@ def get_result_and_thought_using_graph(loaded_langchain, message: str):
             )
             thought = output_buffer.getvalue()
 
-    except Exception as e:
-        result = f"Error: {str(e)}"
-        thought = ""
-        raise e
+    except Exception as exc:
+        raise ValueError(f"Error: {str(exc)}") from exc
     return result, thought
 
 

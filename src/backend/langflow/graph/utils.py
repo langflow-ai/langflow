@@ -1,7 +1,7 @@
 import base64
 import json
 from typing import Dict
-
+import re
 import yaml
 
 
@@ -24,3 +24,23 @@ def load_dict(file_name, file_content, accepted_types) -> Dict:
     elif suffix in ["yaml", "yml"]:
         # Return the yaml content
         return yaml.safe_load(decoded_string)
+    else:
+        raise ValueError(f"File {file_name} is not accepted")
+
+
+def validate_prompt(prompt: str):
+    """Validate prompt."""
+    if extract_input_variables_from_prompt(prompt):
+        return prompt
+
+    return fix_prompt(prompt)
+
+
+def fix_prompt(prompt: str):
+    """Fix prompt."""
+    return prompt + " {input}"
+
+
+def extract_input_variables_from_prompt(prompt: str) -> list[str]:
+    """Extract input variables from prompt."""
+    return re.findall(r"{(.*?)}", prompt)
