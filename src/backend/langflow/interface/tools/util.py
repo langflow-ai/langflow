@@ -8,7 +8,7 @@ from langchain.agents.load_tools import (
     _LLM_TOOLS,
 )
 from langchain.agents.tools import Tool
-from langflow.interface.tools.constants import CUSTOM_TOOLS, OTHER_TOOLS
+from langflow.interface.tools.constants import CUSTOM_TOOLS, FILE_TOOLS
 
 
 def get_tools_dict():
@@ -20,7 +20,7 @@ def get_tools_dict():
         **{k: v[0] for k, v in _EXTRA_LLM_TOOLS.items()},
         **{k: v[0] for k, v in _EXTRA_OPTIONAL_TOOLS.items()},
         **CUSTOM_TOOLS,
-        **OTHER_TOOLS,
+        **FILE_TOOLS,
     }
 
 
