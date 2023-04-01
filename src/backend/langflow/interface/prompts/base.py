@@ -1,9 +1,11 @@
-from langchain.prompts import loading
-from langflow.interface.base import LangChainTypeCreator
-from langflow.utils.util import build_template_from_function
-from langflow.settings import settings
-from langflow.custom.customs import get_custom_nodes
 from typing import Dict, List
+
+from langchain.prompts import loading
+
+from langflow.custom.customs import get_custom_nodes
+from langflow.interface.base import LangChainTypeCreator
+from langflow.settings import settings
+from langflow.utils.util import build_template_from_function
 
 
 class PromptCreator(LangChainTypeCreator):
@@ -11,12 +13,14 @@ class PromptCreator(LangChainTypeCreator):
 
     @property
     def type_to_loader_dict(self) -> Dict:
-        return loading.type_to_loader_dict
+        if self.type_dict is None:
+            self.type_dict = loading.type_to_loader_dict
+        return self.type_dict
 
     def get_signature(self, name: str) -> Dict | None:
         try:
-            if name in get_custom_nodes("prompts").keys():
-                return get_custom_nodes("prompts")[name]
+            if name in get_custom_nodes(self.type_name).keys():
+                return get_custom_nodes(self.type_name)[name]
             return build_template_from_function(name, self.type_to_loader_dict)
         except ValueError as exc:
             raise ValueError("Prompt not found") from exc
@@ -30,3 +34,6 @@ class PromptCreator(LangChainTypeCreator):
             or settings.dev
         ]
         return library_prompts + list(custom_prompts.keys())
+
+
+prompt_creator = PromptCreator()

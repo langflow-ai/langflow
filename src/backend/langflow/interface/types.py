@@ -1,15 +1,14 @@
-from langflow.interface.agents import AgentCreator
-from langflow.interface.listing import list_type
-from langflow.interface.llms import LLMCreator
-from langflow.interface.memories import MemoryCreator
-from langflow.interface.prompts import PromptCreator
-from langflow.interface.signature import get_signature
-from langflow.interface.embeddings import EmbeddingCreator
-from langflow.interface.vectorstore import VectorstoreCreator
-from langflow.interface.documentloaders import DocumentLoaderCreator
-from langchain import chains
-from langflow.interface.chains import ChainCreator
-from langflow.interface.tools import ToolCreator
+from langflow.interface.agents.base import agent_creator
+from langflow.interface.chains.base import chain_creator
+from langflow.interface.documentLoaders.base import documentloader_creator
+from langflow.interface.embeddings.base import embedding_creator
+from langflow.interface.llms.base import llm_creator
+from langflow.interface.memories.base import memory_creator
+from langflow.interface.prompts.base import prompt_creator
+from langflow.interface.toolkits.base import toolkits_creator
+from langflow.interface.tools.base import tool_creator
+from langflow.interface.vectorStore.base import vectorstore_creator
+from langflow.interface.wrappers.base import wrapper_creator
 
 
 def get_type_list():
@@ -26,15 +25,6 @@ def get_type_list():
 
 def build_langchain_types_dict():
     """Build a dictionary of all langchain types"""
-    chain_creator = ChainCreator()
-    agent_creator = AgentCreator()
-    prompt_creator = PromptCreator()
-    tool_creator = ToolCreator()
-    llm_creator = LLMCreator()
-    memory_creator = MemoryCreator()
-    embedding_creator = EmbeddingCreator()
-    vectorstore_creator = VectorstoreCreator()
-    documentloader_creator = DocumentLoaderCreator()
 
     all_types = {}
 
@@ -45,6 +35,8 @@ def build_langchain_types_dict():
         llm_creator,
         memory_creator,
         tool_creator,
+        toolkits_creator,
+        wrapper_creator,
         embedding_creator,
         vectorstore_creator,
         documentloader_creator,

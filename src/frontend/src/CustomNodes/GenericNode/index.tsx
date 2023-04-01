@@ -71,7 +71,7 @@ export default function GenericNode({
 							<div key={idx}>
 								{idx === 0 ? (
 									<div className="px-5 py-2 mt-2 dark:text-white text-center">
-										Inputs:
+										Inputs
 									</div>
 								) : (
 									<></>
@@ -101,7 +101,7 @@ export default function GenericNode({
 							</div>
 						))}
 					<div className="px-5 py-2 mt-2 dark:text-white text-center">
-						Output:
+						Output
 					</div>
 					<ParameterComponent
 						data={data}
@@ -109,7 +109,7 @@ export default function GenericNode({
 						title={data.type}
 						tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
 						id={[data.type, data.id, ...data.node.base_classes].join("|")}
-						type={"str"}
+						type={data.node.base_classes.join("|")}
 						left={false}
 					/>
 				</>

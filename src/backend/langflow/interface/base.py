@@ -1,40 +1,49 @@
-from typing import Dict, List
-from pydantic import BaseModel
 from abc import ABC, abstractmethod
-from langflow.template.template import Template, Field, FrontendNode
+from typing import Any, Dict, List, Optional
 
+from pydantic import BaseModel
+
+from langflow.template.base import FrontendNode, Template, TemplateField
 
 # Assuming necessary imports for Field, Template, and FrontendNode classes
 
 
 class LangChainTypeCreator(BaseModel, ABC):
     type_name: str
+    type_dict: Optional[Dict] = None
 
     @property
     @abstractmethod
     def type_to_loader_dict(self) -> Dict:
-        pass
+        if self.type_dict is None:
+            raise NotImplementedError
+        return self.type_dict
 
     @abstractmethod
-    def get_signature(self, name: str) -> Dict:
+    def get_signature(self, name: str) -> Optional[Dict[Any, Any]]:
         pass
 
     @abstractmethod
     def to_list(self) -> List[str]:
         pass
 
-    def to_dict(self):
-        result = {self.type_name: {}}  # type: Dict
+    def to_dict(self) -> Dict:
+        result: Dict = {self.type_name: {}}
 
         for name in self.to_list():
-            result[self.type_name][name] = self.get_signature(name)
+            # frontend_node.to_dict() returns a dict with the following structure:
+            # {name: {template: {fields}, description: str}}
+            # so we should update the result dict
+            result[self.type_name].update(self.frontend_node(name).to_dict())
 
         return result
 
     def frontend_node(self, name) -> FrontendNode:
         signature = self.get_signature(name)
+        if signature is None:
+            raise ValueError(f"{name} not found")
         fields = [
-            Field(
+            TemplateField(
                 name=key,
                 field_type=value["type"],
                 required=value.get("required", False),
@@ -43,6 +52,9 @@ class LangChainTypeCreator(BaseModel, ABC):
                 show=value.get("show", True),
                 multiline=value.get("multiline", False),
                 value=value.get("value", None),
+                suffixes=value.get("suffixes", []),
+                file_types=value.get("fileTypes", []),
+                content=value.get("content", None),
             )
             for key, value in signature["template"].items()
             if key != "_type"
@@ -50,7 +62,7 @@ class LangChainTypeCreator(BaseModel, ABC):
         template = Template(type_name=name, fields=fields)
         return FrontendNode(
             template=template,
-            description=signature["description"],
+            description=signature.get("description", ""),
             base_classes=signature["base_classes"],
             name=name,
         )

@@ -1,8 +1,9 @@
+from typing import Dict, List
+
+from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import embedding_type_to_cls_dict
 from langflow.settings import settings
-from langflow.interface.base import LangChainTypeCreator
 from langflow.utils.util import build_template_from_class
-from typing import Dict, List
 
 
 class EmbeddingCreator(LangChainTypeCreator):
@@ -25,3 +26,6 @@ class EmbeddingCreator(LangChainTypeCreator):
             for embedding in self.type_to_loader_dict.values()
             if embedding.__name__ in settings.embeddings or settings.dev
         ]
+
+
+embedding_creator = EmbeddingCreator()

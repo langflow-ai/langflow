@@ -1,10 +1,5 @@
-from langflow.custom import customs
-from langflow.interface.listing import ALL_TOOLS_NAMES, CUSTOM_TOOLS
-from langflow.template.template import Field, Template
-from langflow.utils import util
-from langflow.settings import settings
-from langflow.interface.base import LangChainTypeCreator
 from typing import Dict, List
+
 from langchain.agents.load_tools import (
     _BASE_TOOLS,
     _EXTRA_LLM_TOOLS,
@@ -12,55 +7,80 @@ from langchain.agents.load_tools import (
     _LLM_TOOLS,
 )
 
+from langflow.custom import customs
+from langflow.interface.base import LangChainTypeCreator
+from langflow.interface.tools.constants import (
+    ALL_TOOLS_NAMES,
+    CUSTOM_TOOLS,
+    FILE_TOOLS,
+)
+from langflow.interface.tools.util import (
+    get_tool_by_name,
+    get_tool_params,
+    get_tools_dict,
+)
+from langflow.settings import settings
+from langflow.template.base import Template, TemplateField
+from langflow.utils import util
+
+TOOL_INPUTS = {
+    "str": TemplateField(
+        field_type="str",
+        required=True,
+        is_list=False,
+        show=True,
+        placeholder="",
+        value="",
+    ),
+    "llm": TemplateField(field_type="BaseLLM", required=True, is_list=False, show=True),
+    "func": TemplateField(
+        field_type="function",
+        required=True,
+        is_list=False,
+        show=True,
+        multiline=True,
+    ),
+    "code": TemplateField(
+        field_type="str",
+        required=True,
+        is_list=False,
+        show=True,
+        value="",
+        multiline=True,
+    ),
+    "dict_": TemplateField(
+        field_type="file",
+        required=True,
+        is_list=False,
+        show=True,
+        value="",
+    ),
+}
+
 
 class ToolCreator(LangChainTypeCreator):
     type_name: str = "tools"
+    tools_dict: Dict | None = None
 
     @property
     def type_to_loader_dict(self) -> Dict:
-        return ALL_TOOLS_NAMES
+        if self.tools_dict is None:
+            self.tools_dict = get_tools_dict()
+        return self.tools_dict
 
     def get_signature(self, name: str) -> Dict | None:
         """Get the signature of a tool."""
 
-        NODE_INPUTS = ["llm", "func"]
         base_classes = ["Tool"]
         all_tools = {}
-        for tool in ALL_TOOLS_NAMES:
-            if tool_params := util.get_tool_params(util.get_tool_by_name(tool)):
+        for tool in self.type_to_loader_dict.keys():
+            if tool_params := get_tool_params(get_tool_by_name(tool)):
                 tool_name = tool_params.get("name") or str(tool)
                 all_tools[tool_name] = {"type": tool, "params": tool_params}
 
         # Raise error if name is not in tools
         if name not in all_tools.keys():
             raise ValueError("Tool not found")
-
-        type_dict = {
-            "str": Field(
-                field_type="str",
-                required=True,
-                is_list=False,
-                show=True,
-                placeholder="",
-                value="",
-            ),
-            "llm": Field(field_type="BaseLLM", required=True, is_list=False, show=True),
-            "func": Field(
-                field_type="function",
-                required=True,
-                is_list=False,
-                show=True,
-                multiline=True,
-            ),
-            "code": Field(
-                field_type="str",
-                required=True,
-                is_list=False,
-                show=True,
-                value="",
-                multiline=True,
-            ),
-        }
 
         tool_type: str = all_tools[name]["type"]  # type: ignore
 
@@ -82,6 +102,9 @@ class ToolCreator(LangChainTypeCreator):
             base_classes = ["function"]
             if node := customs.get_custom_nodes("tools").get(tool_type):
                 return node
+        elif tool_type in FILE_TOOLS:
+            params = all_tools[name]["params"]  # type: ignore
+            base_classes += [name]
 
         else:
             params = []
@@ -89,10 +112,7 @@ class ToolCreator(LangChainTypeCreator):
         # Copy the field and add the name
         fields = []
         for param in params:
-            if param in NODE_INPUTS:
-                field = type_dict[param].copy()
-            else:
-                field = type_dict["str"].copy()
+            field = TOOL_INPUTS.get(param, TOOL_INPUTS["str"]).copy()
             field.name = param
             if param == "aiosession":
                 field.show = False
@@ -101,9 +121,7 @@ class ToolCreator(LangChainTypeCreator):
 
         template = Template(fields=fields, type_name=tool_type)
 
-        tool_params = util.get_tool_params(util.get_tool_by_name(tool_type))
-        if tool_params is None:
-            tool_params = {}
+        tool_params = all_tools[name]["params"]
         return {
             "template": util.format_dict(template.to_dict()),
             **tool_params,
@@ -116,7 +134,11 @@ class ToolCreator(LangChainTypeCreator):
         tools = []
 
         for tool in ALL_TOOLS_NAMES:
-            tool_params = util.get_tool_params(util.get_tool_by_name(tool))
+            tool_params = get_tool_params(get_tool_by_name(tool))
+
+            if tool_params and not tool_params.get("name"):
+                tool_params["name"] = tool
+
             if tool_params and (
                 tool_params.get("name") in settings.tools
                 or (tool_params.get("name") and settings.dev)
@@ -126,3 +148,6 @@ class ToolCreator(LangChainTypeCreator):
         # Add Tool
         custom_tools = customs.get_custom_nodes("tools")
         return tools + list(custom_tools.keys())
+
+
+tool_creator = ToolCreator()

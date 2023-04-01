@@ -1,15 +1,11 @@
-## LLM
 from typing import Any
 
-from langchain import llms
-from langchain.llms.openai import OpenAIChat
-
-llm_type_to_cls_dict = llms.type_to_cls_dict
-llm_type_to_cls_dict["openai-chat"] = OpenAIChat
-
+## LLM
+from langchain import llms, requests
+from langchain.agents import agent_toolkits
+from langchain.chat_models import ChatOpenAI
 
 ## Memory
-
 # from langchain.memory.buffer_window import ConversationBufferWindowMemory
 # from langchain.memory.chat_memory import ChatMessageHistory
 # from langchain.memory.combined import CombinedMemory
@@ -19,6 +15,96 @@ llm_type_to_cls_dict["openai-chat"] = OpenAIChat
 # from langchain.memory.simple import SimpleMemory
 # from langchain.memory.summary import ConversationSummaryMemory
 # from langchain.memory.summary_buffer import ConversationSummaryBufferMemory
+## Document Loaders
+from langchain.document_loaders import (
+    AirbyteJSONLoader,
+    AZLyricsLoader,
+    CollegeConfidentialLoader,
+    CoNLLULoader,
+    CSVLoader,
+    DirectoryLoader,
+    EverNoteLoader,
+    FacebookChatLoader,
+    GCSDirectoryLoader,
+    GCSFileLoader,
+    GitbookLoader,
+    GoogleApiClient,
+    GoogleApiYoutubeLoader,
+    GoogleDriveLoader,
+    GutenbergLoader,
+    HNLoader,
+    IFixitLoader,
+    IMSDbLoader,
+    NotebookLoader,
+    NotionDirectoryLoader,
+    ObsidianLoader,
+    OnlinePDFLoader,
+    PagedPDFSplitter,
+    PDFMinerLoader,
+    PyMuPDFLoader,
+    PyPDFLoader,
+    ReadTheDocsLoader,
+    RoamLoader,
+    S3DirectoryLoader,
+    S3FileLoader,
+    SRTLoader,
+    TelegramChatLoader,
+    TextLoader,
+    UnstructuredEmailLoader,
+    UnstructuredFileIOLoader,
+    UnstructuredFileLoader,
+    UnstructuredHTMLLoader,
+    UnstructuredImageLoader,
+    UnstructuredMarkdownLoader,
+    UnstructuredPDFLoader,
+    # BSHTMLLoader,
+    UnstructuredPowerPointLoader,
+    UnstructuredURLLoader,
+    UnstructuredWordDocumentLoader,
+    WebBaseLoader,
+    YoutubeLoader,
+)
+
+## Embeddings
+from langchain.embeddings import (
+    CohereEmbeddings,
+    FakeEmbeddings,
+    HuggingFaceEmbeddings,
+    HuggingFaceHubEmbeddings,
+    HuggingFaceInstructEmbeddings,
+    OpenAIEmbeddings,
+    SelfHostedEmbeddings,
+    SelfHostedHuggingFaceEmbeddings,
+    SelfHostedHuggingFaceInstructEmbeddings,
+    # SagemakerEndpointEmbeddings,
+    TensorflowHubEmbeddings,
+)
+
+## Vector Stores
+from langchain.vectorstores import (
+    FAISS,
+    AtlasDB,
+    Chroma,
+    DeepLake,
+    ElasticVectorSearch,
+    Milvus,
+    OpenSearchVectorSearch,
+    Pinecone,
+    Qdrant,
+    VectorStore,
+    Weaviate,
+)
+
+## Toolkits
+from langflow.interface.importing.utils import import_class
+
+## LLM
+
+llm_type_to_cls_dict = llms.type_to_cls_dict
+llm_type_to_cls_dict["openai-chat"] = ChatOpenAI  # type: ignore
+
+
+## Memory
 
 memory_type_to_cls_dict: dict[str, Any] = {
     # "CombinedMemory": CombinedMemory,
@@ -42,21 +128,26 @@ memory_type_to_cls_dict: dict[str, Any] = {
 # chain_type_to_cls_dict = type_to_loader_dict
 # chain_type_to_cls_dict["conversation_chain"] = ConversationChain
 
+toolkit_type_to_loader_dict: dict[str, Any] = {
+    toolkit_name: import_class(f"langchain.agents.agent_toolkits.{toolkit_name}")
+    # if toolkit_name is lower case it is a loader
+    for toolkit_name in agent_toolkits.__all__
+    if toolkit_name.islower()
+}
+
+toolkit_type_to_cls_dict: dict[str, Any] = {
+    toolkit_name: import_class(f"langchain.agents.agent_toolkits.{toolkit_name}")
+    # if toolkit_name is not lower case it is a class
+    for toolkit_name in agent_toolkits.__all__
+    if not toolkit_name.islower()
+}
+
+
+wrapper_type_to_cls_dict: dict[str, Any] = {
+    wrapper.__name__: wrapper for wrapper in [requests.RequestsWrapper]
+}
 
 ## Embeddings
-from langchain.embeddings import (
-    CohereEmbeddings,
-    FakeEmbeddings,
-    HuggingFaceEmbeddings,
-    HuggingFaceInstructEmbeddings,
-    HuggingFaceHubEmbeddings,
-    OpenAIEmbeddings,
-    # SagemakerEndpointEmbeddings,
-    TensorflowHubEmbeddings,
-    SelfHostedHuggingFaceEmbeddings,
-    SelfHostedHuggingFaceInstructEmbeddings,
-    SelfHostedEmbeddings,
-)
 
 embedding_type_to_cls_dict = {
     "OpenAIEmbeddings": OpenAIEmbeddings,
@@ -73,19 +164,6 @@ embedding_type_to_cls_dict = {
 }
 
 ## Vector Stores
-from langchain.vectorstores import (
-    ElasticVectorSearch,
-    FAISS,
-    VectorStore,
-    Pinecone,
-    Weaviate,
-    Qdrant,
-    Milvus,
-    Chroma,
-    OpenSearchVectorSearch,
-    AtlasDB,
-    DeepLake,
-)
 
 vectorstores_type_to_cls_dict = {
     "ElasticVectorSearch": ElasticVectorSearch,
@@ -102,57 +180,6 @@ vectorstores_type_to_cls_dict = {
 }
 
 ## Document Loaders
-
-from langchain.document_loaders import (
-    UnstructuredFileLoader,
-    UnstructuredFileIOLoader,
-    UnstructuredURLLoader,
-    DirectoryLoader,
-    NotionDirectoryLoader,
-    ReadTheDocsLoader,
-    GoogleDriveLoader,
-    UnstructuredHTMLLoader,
-    # BSHTMLLoader,
-    UnstructuredPowerPointLoader,
-    UnstructuredWordDocumentLoader,
-    UnstructuredPDFLoader,
-    UnstructuredImageLoader,
-    ObsidianLoader,
-    UnstructuredEmailLoader,
-    UnstructuredMarkdownLoader,
-    RoamLoader,
-    YoutubeLoader,
-    S3FileLoader,
-    TextLoader,
-    HNLoader,
-    GitbookLoader,
-    S3DirectoryLoader,
-    GCSFileLoader,
-    GCSDirectoryLoader,
-    WebBaseLoader,
-    IMSDbLoader,
-    AZLyricsLoader,
-    CollegeConfidentialLoader,
-    IFixitLoader,
-    GutenbergLoader,
-    PagedPDFSplitter,
-    PyPDFLoader,
-    EverNoteLoader,
-    AirbyteJSONLoader,
-    OnlinePDFLoader,
-    PDFMinerLoader,
-    PyMuPDFLoader,
-    TelegramChatLoader,
-    SRTLoader,
-    FacebookChatLoader,
-    NotebookLoader,
-    CoNLLULoader,
-    GoogleApiYoutubeLoader,
-    GoogleApiClient,
-    CSVLoader,
-    # BlackboardLoader
-)
-
 
 documentloaders_type_to_cls_dict = {
     "UnstructuredFileLoader": UnstructuredFileLoader,
