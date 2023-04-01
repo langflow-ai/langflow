@@ -3,9 +3,10 @@ from pydantic import BaseModel
 import pytest
 import re
 import importlib
-from typing import Dict
+from typing import Dict, List, Optional
 from langflow.utils.util import (
     build_template_from_class,
+    build_template_from_function,
     format_dict,
     get_base_classes,
     get_default_factory,
@@ -24,6 +25,54 @@ class Child(Parent):
     """Child Class"""
 
     child_field: int
+
+
+class ExampleClass1(BaseModel):
+    """Example class 1."""
+
+    def __init__(self, data: Optional[List[int]] = None):
+        self.data = data or [1, 2, 3]
+
+
+class ExampleClass2(BaseModel):
+    """Example class 2."""
+
+    def __init__(self, data: Optional[Dict[str, int]] = None):
+        self.data = data or {"a": 1, "b": 2, "c": 3}
+
+
+def example_loader_1() -> ExampleClass1:
+    """Example loader function 1."""
+    return ExampleClass1()
+
+
+def example_loader_2() -> ExampleClass2:
+    """Example loader function 2."""
+    return ExampleClass2()
+
+
+def test_build_template_from_function():
+    type_to_loader_dict = {
+        "example1": example_loader_1,
+        "example2": example_loader_2,
+    }
+
+    # Test with valid name
+    result = build_template_from_function("ExampleClass1", type_to_loader_dict)
+
+    assert "template" in result
+    assert "description" in result
+    assert "base_classes" in result
+
+    # Test with add_function=True
+    result_with_function = build_template_from_function(
+        "ExampleClass1", type_to_loader_dict, add_function=True
+    )
+    assert "function" in result_with_function["base_classes"]
+
+    # Test with invalid name
+    with pytest.raises(ValueError, match=r".* not found"):
+        build_template_from_function("NonExistent", type_to_loader_dict)
 
 
 # Test build_template_from_class
