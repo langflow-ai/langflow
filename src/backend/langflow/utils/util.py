@@ -98,7 +98,7 @@ def build_template_from_function(
             return {
                 "template": format_dict(variables, name),
                 "description": docs["Description"],
-                "base_classes": get_base_classes(_class),
+                "base_classes": base_classes,
             }
 
 
