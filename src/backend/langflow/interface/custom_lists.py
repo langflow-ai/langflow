@@ -3,12 +3,12 @@ from typing import Any
 
 from langchain import llms, requests
 from langchain.agents import agent_toolkits
-from langchain.llms.openai import OpenAIChat
+from langchain.chat_models import ChatOpenAI
 
 from langflow.interface.importing.utils import import_class
 
 llm_type_to_cls_dict = llms.type_to_cls_dict
-llm_type_to_cls_dict["openai-chat"] = OpenAIChat
+llm_type_to_cls_dict["openai-chat"] = ChatOpenAI
 
 
 ## Memory
