@@ -173,7 +173,7 @@ def get_base_classes(cls):
         result = [cls.__name__]
     if not result:
         result = [cls.__name__]
-    return list(set(result))
+    return list(set(result + [cls.__name__]))
 
 
 def get_default_factory(module: str, function: str):
@@ -333,8 +333,10 @@ def format_dict(d, name: Optional[str] = None):
         # Add options to openai
         if name == "OpenAI" and key == "model_name":
             value["options"] = constants.OPENAI_MODELS
+            value["list"] = True
         elif name == "OpenAIChat" and key == "model_name":
             value["options"] = constants.CHAT_OPENAI_MODELS
+            value["list"] = True
 
     return d
 
