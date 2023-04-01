@@ -1,14 +1,12 @@
 from langflow.template import nodes
 
 CUSTOM_NODES = {
-    "prompts": {
-        **nodes.ZeroShotPromptNode().to_dict(),
-    },
-    "tools": {**nodes.PythonFunctionNode().to_dict(), **nodes.ToolNode().to_dict()},
+    "prompts": {"ZeroShotPrompt": nodes.ZeroShotPromptNode()},
+    "tools": {"PythonFunction": nodes.PythonFunctionNode(), "Tool": nodes.ToolNode()},
     "agents": {
-        **nodes.JsonAgentNode().to_dict(),
-        **nodes.CSVAgentNode().to_dict(),
-        **nodes.InitializeAgentNode().to_dict(),
+        "JsonAgent": nodes.JsonAgentNode(),
+        "CSVAgent": nodes.CSVAgentNode(),
+        "InitializeAgent": nodes.InitializeAgentNode(),
     },
 }
 

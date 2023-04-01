@@ -153,7 +153,7 @@ class JsonAgentNode(FrontendNode):
 
 
 class InitializeAgentNode(FrontendNode):
-    name: str = "InializeAgent"
+    name: str = "InitializeAgent"
     template: Template = Template(
         type_name="initailize_agent",
         fields=[

@@ -54,8 +54,6 @@ class TemplateFieldCreator(BaseModel, ABC):
         if "List" in _type:
             _type = _type.replace("List[", "")[:-1]
             self.is_list = True
-        else:
-            self.is_list = False
 
         # Replace 'Mapping' with 'dict'
         if "Mapping" in _type:
