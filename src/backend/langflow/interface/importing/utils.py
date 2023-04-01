@@ -8,12 +8,22 @@ from langchain.agents import Agent
 from langchain.chains.base import Chain
 from langchain.llms.base import BaseLLM
 from langchain.tools import BaseTool
-from langflow.utils.util import get_tool_by_name
+
+from langflow.interface.tools.util import get_tool_by_name
 
 
 def import_module(module_path: str) -> Any:
     """Import module from module path"""
-    return importlib.import_module(module_path)
+    if "from" not in module_path:
+        # Import the module using the module path
+        return importlib.import_module(module_path)
+    # Split the module path into its components
+    _, module_path, _, object_name = module_path.split()
+
+    # Import the module using the module path
+    module = importlib.import_module(module_path)
+
+    return getattr(module, object_name)
 
 
 def import_by_type(_type: str, name: str) -> Any:
@@ -24,6 +34,8 @@ def import_by_type(_type: str, name: str) -> Any:
         "llms": import_llm,
         "tools": import_tool,
         "chains": import_chain,
+        "toolkits": import_toolkit,
+        "wrappers": import_wrapper,
     }
     return func_dict[_type](name)
 
@@ -42,8 +54,20 @@ def import_prompt(prompt: str) -> PromptTemplate:
     return import_class(f"langchain.prompts.{prompt}")
 
 
+def import_wrapper(wrapper: str) -> Any:
+    """Import wrapper from wrapper name"""
+    return import_module(f"from langchain.requests import {wrapper}")
+
+
+def import_toolkit(toolkit: str) -> Any:
+    """Import toolkit from toolkit name"""
+    return import_module(f"from langchain.agents.agent_toolkits import {toolkit}")
+
+
 def import_agent(agent: str) -> Agent:
     """Import agent from agent name"""
+    # check for custom agent
+
     return import_class(f"langchain.agents.{agent}")
 
 

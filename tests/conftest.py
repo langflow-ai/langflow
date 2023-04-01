@@ -1,4 +1,5 @@
 from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -9,6 +10,9 @@ def pytest_configure():
     )
     pytest.COMPLEX_EXAMPLE_PATH = (
         Path(__file__).parent.absolute() / "data" / "complex_example.json"
+    )
+    pytest.OPENAPI_EXAMPLE_PATH = (
+        Path(__file__).parent.absolute() / "data" / "Openapi.json"
     )
 
     pytest.CODE_WITH_SYNTAX_ERROR = """

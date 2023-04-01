@@ -5,8 +5,10 @@ import {
   LightBulbIcon,
   CommandLineIcon,
   WrenchScrewdriverIcon,
+  WrenchIcon,
   ComputerDesktopIcon,
   Bars3CenterLeftIcon,
+  GiftIcon,
   PaperClipIcon,
   QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
@@ -88,6 +90,8 @@ export const nodeNames:{[char: string]: string} = {
   advanced: "Advanced",
   chat: "Chat",
   docloaders:"Document Loader",
+  toolkits:"Toolkits",
+  wrappers:"Wrappers",
   unknown:"Unknown"
 };
 
@@ -97,10 +101,12 @@ export const nodeIcons:{[char: string]: React.ForwardRefExoticComponent<React.SV
   memories: CpuChipIcon,
   llms: LightBulbIcon,
   prompts: CommandLineIcon,
-  tools: WrenchScrewdriverIcon,
+  tools: WrenchIcon,
   advanced: ComputerDesktopIcon,
   chat: Bars3CenterLeftIcon,
   docloaders:Bars3CenterLeftIcon,
+  toolkits:WrenchScrewdriverIcon,
+  wrappers:GiftIcon,
   unknown:QuestionMarkCircleIcon
 };
 

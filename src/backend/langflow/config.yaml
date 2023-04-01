@@ -6,6 +6,8 @@ chains:
 
 agents:
   - ZeroShotAgent
+  - JsonAgent
+  - CSVAgent
 
 prompts:
   - PromptTemplate
@@ -22,9 +24,14 @@ tools:
   - Serper Search
   - Tool
   - PythonFunction
+  - JsonSpec
 
-memories:
-  # - ConversationBufferMemory
+wrappers:
+  - RequestsWrapper
+
+toolkits:
+ - OpenAPIToolkit
+ - JsonToolkit
 
 embeddings:
   #

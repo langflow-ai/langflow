@@ -1,7 +1,7 @@
 # Test this:
-from langflow.interface.custom_types import PythonFunction
-from langflow.utils import constants
 import pytest
+from langflow.interface.custom.types import PythonFunction
+from langflow.utils import constants
 
 
 def test_python_function():

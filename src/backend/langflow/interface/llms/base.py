@@ -1,8 +1,9 @@
+from typing import Dict, List
+
+from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import llm_type_to_cls_dict
 from langflow.settings import settings
-from langflow.interface.base import LangChainTypeCreator
 from langflow.utils.util import build_template_from_class
-from typing import Dict, List
 
 
 class LLMCreator(LangChainTypeCreator):
@@ -10,7 +11,9 @@ class LLMCreator(LangChainTypeCreator):
 
     @property
     def type_to_loader_dict(self) -> Dict:
-        return llm_type_to_cls_dict
+        if self.type_dict is None:
+            self.type_dict = llm_type_to_cls_dict
+        return self.type_dict
 
     def get_signature(self, name: str) -> Dict | None:
         """Get the signature of an llm."""
@@ -25,3 +28,6 @@ class LLMCreator(LangChainTypeCreator):
             for llm in self.type_to_loader_dict.values()
             if llm.__name__ in settings.llms or settings.dev
         ]
+
+
+llm_creator = LLMCreator()

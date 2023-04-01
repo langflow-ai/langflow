@@ -1,8 +1,9 @@
+from typing import Dict, List
+
+from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import documentloaders_type_to_cls_dict
 from langflow.settings import settings
-from langflow.interface.base import LangChainTypeCreator
 from langflow.utils.util import build_template_from_class
-from typing import Dict, List
 
 
 class DocumentLoaderCreator(LangChainTypeCreator):
@@ -25,3 +26,6 @@ class DocumentLoaderCreator(LangChainTypeCreator):
             for documentloader in self.type_to_loader_dict.values()
             if documentloader.__name__ in settings.documentloaders or settings.dev
         ]
+
+
+documentloader_creator = DocumentLoaderCreator()

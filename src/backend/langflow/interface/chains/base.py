@@ -1,10 +1,10 @@
 from typing import Dict, List
-from langflow.interface.base import LangChainTypeCreator
-from langflow.interface.signature import get_chain_signature
-from langflow.template.template import Field, FrontendNode, Template
-from langflow.utils.util import build_template_from_function
-from langflow.settings import settings
+
 from langchain.chains import loading as chains_loading
+
+from langflow.interface.base import LangChainTypeCreator
+from langflow.settings import settings
+from langflow.utils.util import build_template_from_function
 
 # Assuming necessary imports for Field, Template, and FrontendNode classes
 
@@ -14,7 +14,9 @@ class ChainCreator(LangChainTypeCreator):
 
     @property
     def type_to_loader_dict(self) -> Dict:
-        return chains_loading.type_to_loader_dict
+        if self.type_dict is None:
+            self.type_dict = chains_loading.type_to_loader_dict
+        return self.type_dict
 
     def get_signature(self, name: str) -> Dict | None:
         try:
@@ -33,3 +35,6 @@ class ChainCreator(LangChainTypeCreator):
                 or settings.dev
             )
         ]
+
+
+chain_creator = ChainCreator()

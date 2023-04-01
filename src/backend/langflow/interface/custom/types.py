@@ -1,6 +1,8 @@
 from typing import Callable, Optional
-from langflow.utils import validate
+
 from pydantic import BaseModel, validator
+
+from langflow.utils import validate
 
 
 class Function(BaseModel):

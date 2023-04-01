@@ -1,21 +1,52 @@
-import ast
 import importlib
 import inspect
 import re
-from typing import Dict, Optional, Union
-
-from langchain.agents.load_tools import (
-    _BASE_TOOLS,
-    _EXTRA_LLM_TOOLS,
-    _EXTRA_OPTIONAL_TOOLS,
-    _LLM_TOOLS,
-)
-
-
-from langchain.agents.tools import Tool
-
+from typing import Dict, Optional
 
 from langflow.utils import constants
+
+
+def build_template_from_parameters(
+    name: str, type_to_loader_dict: Dict, add_function: bool = False
+):
+    # Retrieve the function that matches the provided name
+    func = None
+    for _, v in type_to_loader_dict.items():
+        if v.__name__ == name:
+            func = v
+            break
+
+    if func is None:
+        raise ValueError(f"{name} not found")
+
+    # Process parameters
+    parameters = func.__annotations__
+    variables = {}
+    for param_name, param_type in parameters.items():
+        if param_name in ["return", "kwargs"]:
+            continue
+
+        variables[param_name] = {
+            "type": param_type.__name__,
+            "default": parameters[param_name].__repr_args__()[0][1],
+            # Op
+            "placeholder": "",
+        }
+
+    # Get the base classes of the return type
+    return_type = parameters.get("return")
+    base_classes = get_base_classes(return_type) if return_type else []
+    if add_function:
+        base_classes.append("function")
+
+    # Get the function's docstring
+    docs = inspect.getdoc(func) or ""
+
+    return {
+        "template": format_dict(variables, name),
+        "description": docs["Description"],  # type: ignore
+        "base_classes": base_classes,
+    }
 
 
 def build_template_from_function(
@@ -37,7 +68,7 @@ def build_template_from_function(
 
             variables = {"_type": _type}
             for class_field_items, value in _class.__fields__.items():
-                if class_field_items in ["callback_manager", "requests_wrapper"]:
+                if class_field_items in ["callback_manager"]:
                     continue
                 variables[class_field_items] = {}
                 for name_, value_ in value.__repr_args__():
@@ -67,7 +98,7 @@ def build_template_from_function(
             return {
                 "template": format_dict(variables, name),
                 "description": docs["Description"],
-                "base_classes": get_base_classes(_class),
+                "base_classes": base_classes,
             }
 
 
@@ -128,17 +159,23 @@ def get_base_classes(cls):
     """Get the base classes of a class.
     These are used to determine the output of the nodes.
     """
-    bases = cls.__bases__
-    if not bases:
-        return []
-    else:
+    if bases := cls.__bases__:
         result = []
         for base in bases:
             if any(type in base.__module__ for type in ["pydantic", "abc"]):
                 continue
             result.append(base.__name__)
-            result.extend(get_base_classes(base))
-        return result
+            base_classes = get_base_classes(base)
+            # check if the base_classes are in the result
+            # if not, add them
+            for base_class in base_classes:
+                if base_class not in result:
+                    result.append(base_class)
+    else:
+        result = [cls.__name__]
+    if not result:
+        result = [cls.__name__]
+    return list(set(result + [cls.__name__]))
 
 
 def get_default_factory(module: str, function: str):
@@ -148,118 +185,6 @@ def get_default_factory(module: str, function: str):
         imported_module = importlib.import_module(module)
         return getattr(imported_module, match[1])()
     return None
-
-
-def get_tools_dict():
-    """Get the tools dictionary."""
-    from langflow.interface.listing import CUSTOM_TOOLS
-
-    tools = {
-        **_BASE_TOOLS,
-        **_LLM_TOOLS,
-        **{k: v[0] for k, v in _EXTRA_LLM_TOOLS.items()},
-        **{k: v[0] for k, v in _EXTRA_OPTIONAL_TOOLS.items()},
-        **CUSTOM_TOOLS,
-    }
-    return tools
-
-
-def get_tool_by_name(name: str):
-    """Get a tool from the tools dictionary."""
-    tools = get_tools_dict()
-    if name not in tools:
-        raise ValueError(f"{name} not found.")
-    return tools[name]
-
-
-def get_tool_params(tool, **kwargs) -> Union[Dict, None]:
-    # Parse the function code into an abstract syntax tree
-    # Define if it is a function or a class
-    if inspect.isfunction(tool):
-        return get_func_tool_params(tool, **kwargs)
-    elif inspect.isclass(tool):
-        # Get the parameters necessary to
-        # instantiate the class
-        return get_class_tool_params(tool, **kwargs)
-    else:
-        raise ValueError("Tool must be a function or class.")
-
-
-def get_func_tool_params(func, **kwargs) -> Union[Dict, None]:
-    tree = ast.parse(inspect.getsource(func))
-
-    # Iterate over the statements in the abstract syntax tree
-    for node in ast.walk(tree):
-        # Find the first return statement
-        if isinstance(node, ast.Return):
-            tool = node.value
-            if isinstance(tool, ast.Call):
-                if isinstance(tool.func, ast.Name) and tool.func.id == "Tool":
-                    if tool.keywords:
-                        tool_params = {}
-                        for keyword in tool.keywords:
-                            if keyword.arg == "name":
-                                tool_params["name"] = ast.literal_eval(keyword.value)
-                            elif keyword.arg == "description":
-                                tool_params["description"] = ast.literal_eval(
-                                    keyword.value
-                                )
-
-                        return tool_params
-                    return {
-                        "name": ast.literal_eval(tool.args[0]),
-                        "description": ast.literal_eval(tool.args[2]),
-                    }
-                #
-                else:
-                    # get the class object from the return statement
-                    try:
-                        class_obj = eval(
-                            compile(ast.Expression(tool), "<string>", "eval")
-                        )
-                    except Exception:
-                        return None
-
-                    return {
-                        "name": getattr(class_obj, "name"),
-                        "description": getattr(class_obj, "description"),
-                    }
-        # Return None if no return statement was found
-    return None
-
-
-def get_class_tool_params(cls, **kwargs) -> Union[Dict, None]:
-    tree = ast.parse(inspect.getsource(cls))
-
-    tool_params = {}
-
-    # Iterate over the statements in the abstract syntax tree
-    for node in ast.walk(tree):
-        if isinstance(node, ast.ClassDef):
-            # Find the class definition and look for methods
-            for stmt in node.body:
-                if isinstance(stmt, ast.FunctionDef) and stmt.name == "__init__":
-                    # There is no assignment statements in the __init__ method
-                    # So we need to get the params from the function definition
-                    for arg in stmt.args.args:
-                        if arg.arg == "name":
-                            # It should be the name of the class
-                            tool_params[arg.arg] = cls.__name__
-                        elif arg.arg == "self":
-                            continue
-                        # If there is not default value, set it to an empty string
-                        else:
-                            try:
-                                annotation = ast.literal_eval(arg.annotation)  # type: ignore
-                                tool_params[arg.arg] = annotation
-                            except ValueError:
-                                tool_params[arg.arg] = ""
-                # Get the attribute name and the annotation
-                elif cls != Tool and isinstance(stmt, ast.AnnAssign):
-                    # Get the attribute name and the annotation
-                    tool_params[stmt.target.id] = ""  # type: ignore
-
-    return tool_params
 
 
 def get_class_doc(class_name):
@@ -354,6 +279,8 @@ def format_dict(d, name: Optional[str] = None):
         # Change type from str to Tool
         value["type"] = "Tool" if key in ["allowed_tools"] else _type
 
+        value["type"] = "int" if key in ["max_value_length"] else value["type"]
+
         # Show or not field
         value["show"] = bool(
             (value["required"] and key not in ["input_variables"])
@@ -365,6 +292,8 @@ def format_dict(d, name: Optional[str] = None):
                 "examples",
                 "temperature",
                 "model_name",
+                "headers",
+                "max_value_length",
             ]
             or "api_key" in key
         )
@@ -375,18 +304,41 @@ def format_dict(d, name: Optional[str] = None):
         )
 
         # Add multline
-        value["multiline"] = key in ["suffix", "prefix", "template", "examples", "code"]
+        value["multiline"] = key in [
+            "suffix",
+            "prefix",
+            "template",
+            "examples",
+            "code",
+            "headers",
+        ]
+
+        # Replace dict type with str
+        if "dict" in value["type"].lower():
+            value["type"] = "code"
+
+        if key == "dict_":
+            value["type"] = "file"
+            value["suffixes"] = [".json", ".yaml", ".yml"]
+            value["fileTypes"] = ["json", "yaml", "yml"]
 
         # Replace default value with actual value
         if "default" in value:
             value["value"] = value["default"]
             value.pop("default")
 
+        if key == "headers":
+            value[
+                "value"
+            ] = """{'Authorization':
+            'Bearer <token>'}"""
         # Add options to openai
         if name == "OpenAI" and key == "model_name":
             value["options"] = constants.OPENAI_MODELS
+            value["list"] = True
         elif name == "OpenAIChat" and key == "model_name":
             value["options"] = constants.CHAT_OPENAI_MODELS
+            value["list"] = True
 
     return d
 

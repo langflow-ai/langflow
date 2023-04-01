@@ -7,6 +7,7 @@ import typer
 from fastapi.staticfiles import StaticFiles
 
 from langflow.main import create_app
+from langflow.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +18,21 @@ def get_number_of_workers(workers=None):
     return workers
 
 
+def update_settings(config: str):
+    """Update the settings from a config file."""
+    if config:
+        settings.update_from_yaml(config)
+
+
 def serve(
-    host: str = "127.0.0.1", workers: int = 1, timeout: int = 60, port: int = 7860
+    host: str = "127.0.0.1",
+    workers: int = 1,
+    timeout: int = 60,
+    port: int = 7860,
+    config: str = "config.yaml",
+    log_level: str = "info",
 ):
+    update_settings(config)
     app = create_app()
     # get the directory of the current file
     path = Path(__file__).parent
@@ -42,7 +55,7 @@ def serve(
         # MacOS requires a env variable to be set to use gunicorn
         import uvicorn
 
-        uvicorn.run(app, host=host, port=port, log_level="info")
+        uvicorn.run(app, host=host, port=port, log_level=log_level)
     else:
         from langflow.server import LangflowApplication
 
