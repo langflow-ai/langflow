@@ -68,7 +68,9 @@ class PromptNode(Node):
                 )
                 self.params["tools"] = tools
                 prompt_params = [
-                    key for key, value in self.params.items() if value["type"] == "str"
+                    key
+                    for key, value in self.params.items()
+                    if isinstance(value, str) and key != "format_instructions"
                 ]
             else:
                 prompt_params = ["template"]
