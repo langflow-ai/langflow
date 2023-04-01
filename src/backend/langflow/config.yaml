@@ -8,6 +8,7 @@ agents:
   - ZeroShotAgent
   - JsonAgent
   - CSVAgent
+  - InitializeAgent
 
 prompts:
   - PromptTemplate
@@ -33,13 +34,13 @@ toolkits:
  - OpenAPIToolkit
  - JsonToolkit
 
-embeddings:
-  #
+embeddings: []
 
-vectorstores:
-  #
 
-documentloaders:
-  #
+vectorstores: []
+
+
+documentloaders: []
+
 
 dev: false
