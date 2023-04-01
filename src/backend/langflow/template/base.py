@@ -3,6 +3,7 @@ from typing import Any, Dict, Optional, Union
 
 from pydantic import BaseModel
 
+from langflow.template.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants
 
 
@@ -68,17 +69,7 @@ class TemplateFieldCreator(BaseModel, ABC):
         # Show or not field
         self.show = bool(
             (self.required and key not in ["input_variables"])
-            or key
-            in [
-                "allowed_tools",
-                "memory",
-                "prefix",
-                "examples",
-                "temperature",
-                "model_name",
-                "headers",
-                "max_value_length",
-            ]
+            or key in FORCE_SHOW_FIELDS
             or "api_key" in key
         )
 

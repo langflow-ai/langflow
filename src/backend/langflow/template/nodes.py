@@ -49,6 +49,16 @@ class ZeroShotPromptNode(FrontendNode):
         return super().to_dict()
 
 
+class PromptTemplateNode(FrontendNode):
+    name: str = "PromptTemplate"
+    template: Template
+    description: str
+    base_classes: list[str] = ["BasePromptTemplate"]
+
+    def to_dict(self):
+        return super().to_dict()
+
+
 class PythonFunctionNode(FrontendNode):
     name: str = "PythonFunction"
     template: Template = Template(
