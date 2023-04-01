@@ -1,8 +1,4 @@
-from typing import Dict, List
-
 import pytest
-from langflow.interface.agents.base import AgentCreator
-from langflow.interface.base import LangChainTypeCreator
 from langflow.template.base import FrontendNode, Template, TemplateField
 
 
@@ -28,16 +24,16 @@ def sample_frontend_node(sample_template: Template) -> FrontendNode:
 
 def test_template_field_defaults(sample_template_field: TemplateField):
     assert sample_template_field.field_type == "str"
-    assert sample_template_field.required == False
+    assert sample_template_field.required is False
     assert sample_template_field.placeholder == ""
-    assert sample_template_field.is_list == False
-    assert sample_template_field.show == True
-    assert sample_template_field.multiline == False
-    assert sample_template_field.value == None
+    assert sample_template_field.is_list is False
+    assert sample_template_field.show is True
+    assert sample_template_field.multiline is False
+    assert sample_template_field.value is None
     assert sample_template_field.suffixes == []
     assert sample_template_field.file_types == []
-    assert sample_template_field.content == None
-    assert sample_template_field.password == False
+    assert sample_template_field.content is None
+    assert sample_template_field.password is False
     assert sample_template_field.name == "test_field"
 
 

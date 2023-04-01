@@ -1,18 +1,11 @@
-## LLM
 from typing import Any
 
+## LLM
 from langchain import llms, requests
 from langchain.agents import agent_toolkits
 from langchain.chat_models import ChatOpenAI
 
-from langflow.interface.importing.utils import import_class
-
-llm_type_to_cls_dict = llms.type_to_cls_dict
-llm_type_to_cls_dict["openai-chat"] = ChatOpenAI
-
-
 ## Memory
-
 # from langchain.memory.buffer_window import ConversationBufferWindowMemory
 # from langchain.memory.chat_memory import ChatMessageHistory
 # from langchain.memory.combined import CombinedMemory
@@ -22,108 +15,7 @@ llm_type_to_cls_dict["openai-chat"] = ChatOpenAI
 # from langchain.memory.simple import SimpleMemory
 # from langchain.memory.summary import ConversationSummaryMemory
 # from langchain.memory.summary_buffer import ConversationSummaryBufferMemory
-
-memory_type_to_cls_dict: dict[str, Any] = {
-    # "CombinedMemory": CombinedMemory,
-    # "ConversationBufferWindowMemory": ConversationBufferWindowMemory,
-    # "ConversationBufferMemory": ConversationBufferMemory,
-    # "SimpleMemory": SimpleMemory,
-    # "ConversationSummaryBufferMemory": ConversationSummaryBufferMemory,
-    # "ConversationKGMemory": ConversationKGMemory,
-    # "ConversationEntityMemory": ConversationEntityMemory,
-    # "ConversationSummaryMemory": ConversationSummaryMemory,
-    # "ChatMessageHistory": ChatMessageHistory,
-    # "ConversationStringBufferMemory": ConversationStringBufferMemory,
-    # "ReadOnlySharedMemory": ReadOnlySharedMemory,
-}
-
-
-## Chain
-# from langchain.chains.loading import type_to_loader_dict
-# from langchain.chains.conversation.base import ConversationChain
-
-# chain_type_to_cls_dict = type_to_loader_dict
-# chain_type_to_cls_dict["conversation_chain"] = ConversationChain
-
-toolkit_type_to_loader_dict: dict[str, Any] = {
-    toolkit_name: import_class(f"langchain.agents.agent_toolkits.{toolkit_name}")
-    # if toolkit_name is lower case it is a loader
-    for toolkit_name in agent_toolkits.__all__
-    if toolkit_name.islower()
-}
-
-toolkit_type_to_cls_dict: dict[str, Any] = {
-    toolkit_name: import_class(f"langchain.agents.agent_toolkits.{toolkit_name}")
-    # if toolkit_name is not lower case it is a class
-    for toolkit_name in agent_toolkits.__all__
-    if not toolkit_name.islower()
-}
-
-
-wrapper_type_to_cls_dict: dict[str, Any] = {
-    wrapper.__name__: wrapper for wrapper in [requests.RequestsWrapper]
-}
-
-## Embeddings
-from langchain.embeddings import (
-    CohereEmbeddings,
-    FakeEmbeddings,
-    HuggingFaceEmbeddings,
-    HuggingFaceHubEmbeddings,
-    HuggingFaceInstructEmbeddings,
-    OpenAIEmbeddings,
-    SelfHostedEmbeddings,
-    SelfHostedHuggingFaceEmbeddings,
-    SelfHostedHuggingFaceInstructEmbeddings,
-    # SagemakerEndpointEmbeddings,
-    TensorflowHubEmbeddings,
-)
-
-embedding_type_to_cls_dict = {
-    "OpenAIEmbeddings": OpenAIEmbeddings,
-    "HuggingFaceEmbeddings": HuggingFaceEmbeddings,
-    "CohereEmbeddings": CohereEmbeddings,
-    "HuggingFaceHubEmbeddings": HuggingFaceHubEmbeddings,
-    "TensorflowHubEmbeddings": TensorflowHubEmbeddings,
-    # "SagemakerEndpointEmbeddings": SagemakerEndpointEmbeddings,
-    "HuggingFaceInstructEmbeddings": HuggingFaceInstructEmbeddings,
-    "SelfHostedEmbeddings": SelfHostedEmbeddings,
-    "SelfHostedHuggingFaceEmbeddings": SelfHostedHuggingFaceEmbeddings,
-    "SelfHostedHuggingFaceInstructEmbeddings": SelfHostedHuggingFaceInstructEmbeddings,
-    "FakeEmbeddings": FakeEmbeddings,
-}
-
-## Vector Stores
-from langchain.vectorstores import (
-    FAISS,
-    AtlasDB,
-    Chroma,
-    DeepLake,
-    ElasticVectorSearch,
-    Milvus,
-    OpenSearchVectorSearch,
-    Pinecone,
-    Qdrant,
-    VectorStore,
-    Weaviate,
-)
-
-vectorstores_type_to_cls_dict = {
-    "ElasticVectorSearch": ElasticVectorSearch,
-    "FAISS": FAISS,
-    "VectorStore": VectorStore,
-    "Pinecone": Pinecone,
-    "Weaviate": Weaviate,
-    "Qdrant": Qdrant,
-    "Milvus": Milvus,
-    "Chroma": Chroma,
-    "OpenSearchVectorSearch": OpenSearchVectorSearch,
-    "AtlasDB": AtlasDB,
-    "DeepLake": DeepLake,
-}
-
 ## Document Loaders
-
 from langchain.document_loaders import (
     AirbyteJSONLoader,
     AZLyricsLoader,
@@ -172,6 +64,122 @@ from langchain.document_loaders import (
     WebBaseLoader,
     YoutubeLoader,
 )
+
+## Embeddings
+from langchain.embeddings import (
+    CohereEmbeddings,
+    FakeEmbeddings,
+    HuggingFaceEmbeddings,
+    HuggingFaceHubEmbeddings,
+    HuggingFaceInstructEmbeddings,
+    OpenAIEmbeddings,
+    SelfHostedEmbeddings,
+    SelfHostedHuggingFaceEmbeddings,
+    SelfHostedHuggingFaceInstructEmbeddings,
+    # SagemakerEndpointEmbeddings,
+    TensorflowHubEmbeddings,
+)
+
+## Vector Stores
+from langchain.vectorstores import (
+    FAISS,
+    AtlasDB,
+    Chroma,
+    DeepLake,
+    ElasticVectorSearch,
+    Milvus,
+    OpenSearchVectorSearch,
+    Pinecone,
+    Qdrant,
+    VectorStore,
+    Weaviate,
+)
+
+## Toolkits
+from langflow.interface.importing.utils import import_class
+
+## LLM
+
+llm_type_to_cls_dict = llms.type_to_cls_dict
+llm_type_to_cls_dict["openai-chat"] = ChatOpenAI  # type: ignore
+
+
+## Memory
+
+memory_type_to_cls_dict: dict[str, Any] = {
+    # "CombinedMemory": CombinedMemory,
+    # "ConversationBufferWindowMemory": ConversationBufferWindowMemory,
+    # "ConversationBufferMemory": ConversationBufferMemory,
+    # "SimpleMemory": SimpleMemory,
+    # "ConversationSummaryBufferMemory": ConversationSummaryBufferMemory,
+    # "ConversationKGMemory": ConversationKGMemory,
+    # "ConversationEntityMemory": ConversationEntityMemory,
+    # "ConversationSummaryMemory": ConversationSummaryMemory,
+    # "ChatMessageHistory": ChatMessageHistory,
+    # "ConversationStringBufferMemory": ConversationStringBufferMemory,
+    # "ReadOnlySharedMemory": ReadOnlySharedMemory,
+}
+
+
+## Chain
+# from langchain.chains.loading import type_to_loader_dict
+# from langchain.chains.conversation.base import ConversationChain
+
+# chain_type_to_cls_dict = type_to_loader_dict
+# chain_type_to_cls_dict["conversation_chain"] = ConversationChain
+
+toolkit_type_to_loader_dict: dict[str, Any] = {
+    toolkit_name: import_class(f"langchain.agents.agent_toolkits.{toolkit_name}")
+    # if toolkit_name is lower case it is a loader
+    for toolkit_name in agent_toolkits.__all__
+    if toolkit_name.islower()
+}
+
+toolkit_type_to_cls_dict: dict[str, Any] = {
+    toolkit_name: import_class(f"langchain.agents.agent_toolkits.{toolkit_name}")
+    # if toolkit_name is not lower case it is a class
+    for toolkit_name in agent_toolkits.__all__
+    if not toolkit_name.islower()
+}
+
+
+wrapper_type_to_cls_dict: dict[str, Any] = {
+    wrapper.__name__: wrapper for wrapper in [requests.RequestsWrapper]
+}
+
+## Embeddings
+
+embedding_type_to_cls_dict = {
+    "OpenAIEmbeddings": OpenAIEmbeddings,
+    "HuggingFaceEmbeddings": HuggingFaceEmbeddings,
+    "CohereEmbeddings": CohereEmbeddings,
+    "HuggingFaceHubEmbeddings": HuggingFaceHubEmbeddings,
+    "TensorflowHubEmbeddings": TensorflowHubEmbeddings,
+    # "SagemakerEndpointEmbeddings": SagemakerEndpointEmbeddings,
+    "HuggingFaceInstructEmbeddings": HuggingFaceInstructEmbeddings,
+    "SelfHostedEmbeddings": SelfHostedEmbeddings,
+    "SelfHostedHuggingFaceEmbeddings": SelfHostedHuggingFaceEmbeddings,
+    "SelfHostedHuggingFaceInstructEmbeddings": SelfHostedHuggingFaceInstructEmbeddings,
+    "FakeEmbeddings": FakeEmbeddings,
+}
+
+## Vector Stores
+
+vectorstores_type_to_cls_dict = {
+    "ElasticVectorSearch": ElasticVectorSearch,
+    "FAISS": FAISS,
+    "VectorStore": VectorStore,
+    "Pinecone": Pinecone,
+    "Weaviate": Weaviate,
+    "Qdrant": Qdrant,
+    "Milvus": Milvus,
+    "Chroma": Chroma,
+    "OpenSearchVectorSearch": OpenSearchVectorSearch,
+    "AtlasDB": AtlasDB,
+    "DeepLake": DeepLake,
+}
+
+## Document Loaders
 
 documentloaders_type_to_cls_dict = {
     "UnstructuredFileLoader": UnstructuredFileLoader,
