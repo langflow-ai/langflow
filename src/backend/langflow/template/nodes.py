@@ -2,6 +2,7 @@ from langchain.agents.mrkl import prompt
 
 from langflow.template.base import FrontendNode, Template, TemplateField
 from langflow.utils.constants import DEFAULT_PYTHON_FUNCTION
+from langchain.agents import loading
 
 
 class ZeroShotPromptNode(FrontendNode):
@@ -131,6 +132,41 @@ class JsonAgentNode(FrontendNode):
                 required=True,
                 show=True,
                 name="llm",
+            ),
+        ],
+    )
+    description: str = """Construct a json agent from an LLM and tools."""
+    base_classes: list[str] = ["AgentExecutor"]
+
+    def to_dict(self):
+        return super().to_dict()
+
+
+class InitializeAgentNode(FrontendNode):
+    name: str = "InializeAgent"
+    template: Template = Template(
+        type_name="initailize_agent",
+        fields=[
+            TemplateField(
+                field_type="Tool",
+                required=True,
+                show=True,
+                name="tools",
+            ),
+            TemplateField(
+                field_type="BaseLanguageModel",
+                required=True,
+                show=True,
+                name="llm",
+            ),
+            TemplateField(
+                field_type="str",
+                required=True,
+                is_list=True,
+                show=True,
+                multiline=False,
+                options=list(loading.AGENT_TO_CLASS.keys()),
+                name="agent",
             ),
         ],
     )

@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from langchain import LLMChain
 from langchain.agents import AgentExecutor, ZeroShotAgent
@@ -8,7 +8,9 @@ from langchain.agents.agent_toolkits.pandas.prompt import PREFIX as PANDAS_PREFI
 from langchain.agents.agent_toolkits.pandas.prompt import SUFFIX as PANDAS_SUFFIX
 from langchain.agents.mrkl.prompt import FORMAT_INSTRUCTIONS
 from langchain.schema import BaseLanguageModel
+from langchain.llms.base import BaseLLM
 from langchain.tools.python.tool import PythonAstREPLTool
+from langchain.agents import initialize_agent, Tool
 
 
 class JsonAgent(AgentExecutor):
@@ -87,7 +89,26 @@ class CSVAgent(AgentExecutor):
         return super().run(*args, **kwargs)
 
 
+class InitializeAgent(AgentExecutor):
+    """Initialize agent"""
+
+    @classmethod
+    def initialize(cls, llm: BaseLLM, tools: List[Tool], agent: str):
+        return initialize_agent(
+            tools=tools,
+            llm=llm,
+            agent=agent,
+        )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def run(self, *args, **kwargs):
+        return super().run(*args, **kwargs)
+
+
 CUSTOM_AGENTS = {
     "JsonAgent": JsonAgent,
     "CSVAgent": CSVAgent,
+    "InitializeAgent": InitializeAgent,
 }
