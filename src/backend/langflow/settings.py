@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     tools: List[str] = []
     memories: List[str] = []
     wrappers: List[str] = []
+    toolkits: List[str] = []
     dev: bool = False
 
     class Config:
@@ -35,6 +36,7 @@ class Settings(BaseSettings):
         self.tools = new_settings.tools or []
         self.memories = new_settings.memories or []
         self.wrappers = new_settings.wrappers or []
+        self.toolkits = new_settings.toolkits or []
         self.dev = new_settings.dev or False
 
 

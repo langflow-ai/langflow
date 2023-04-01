@@ -29,4 +29,8 @@ tools:
 wrappers:
   - RequestsWrapper
 
+toolkits:
+ - OpenAPIToolkit
+ - JsonToolkit
+
 dev: false
