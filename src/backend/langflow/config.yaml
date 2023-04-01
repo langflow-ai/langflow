@@ -33,4 +33,13 @@ toolkits:
  - OpenAPIToolkit
  - JsonToolkit
 
+embeddings:
+  #
+
+vectorstores:
+  #
+
+documentloaders:
+  #
+
 dev: false

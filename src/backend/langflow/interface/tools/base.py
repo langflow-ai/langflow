@@ -20,7 +20,7 @@ from langflow.interface.tools.util import (
     get_tools_dict,
 )
 from langflow.settings import settings
-from langflow.template.base import TemplateField, Template
+from langflow.template.base import Template, TemplateField
 from langflow.utils import util
 
 TOOL_INPUTS = {

@@ -1,10 +1,11 @@
 import base64
-import json
-from typing import Any
-import re
-import yaml
 import csv
 import io
+import json
+import re
+from typing import Any
+
+import yaml
 
 
 def load_file(file_name, file_content, accepted_types) -> Any:
