@@ -8,7 +8,7 @@ from copy import deepcopy
 from typing import Any, Dict, List
 from langflow.graph.constants import DIRECT_TYPES
 
-from langflow.graph.utils import load_dict
+from langflow.graph.utils import load_file
 from langflow.interface import loading
 from langflow.interface.listing import ALL_TYPES_DICT
 
@@ -90,7 +90,7 @@ class Node:
                 type_to_load = value.get("suffixes")
                 file_name = value.get("value")
                 content = value.get("content")
-                loaded_dict = load_dict(file_name, content, type_to_load)
+                loaded_dict = load_file(file_name, content, type_to_load)
                 params[key] = loaded_dict
 
             # We should check if the type is in something not

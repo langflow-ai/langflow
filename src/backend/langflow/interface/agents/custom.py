@@ -7,6 +7,14 @@ from langchain.agents.agent_toolkits.json.toolkit import JsonToolkit
 from langchain.agents.mrkl.prompt import FORMAT_INSTRUCTIONS
 from langchain.schema import BaseLanguageModel
 from pydantic import BaseModel
+from langchain.llms.base import BaseLLM
+from typing import Any, Optional
+from langchain.agents.agent_toolkits.pandas.base import create_pandas_dataframe_agent
+from pathlib import Path
+
+from langchain.agents.agent_toolkits.pandas.prompt import PREFIX as PANDAS_PREFIX
+from langchain.agents.agent_toolkits.pandas.prompt import SUFFIX as PANDAS_SUFFIX
+from langchain.tools.python.tool import PythonAstREPLTool
 
 
 class JsonAgent(AgentExecutor):
@@ -41,6 +49,52 @@ class JsonAgent(AgentExecutor):
         return super().run(*args, **kwargs)
 
 
+class CSVAgent(AgentExecutor):
+    """CSV agent"""
+
+    @classmethod
+    def initialize(cls, *args, **kwargs):
+        return cls.from_toolkit_and_llm(*args, **kwargs)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @classmethod
+    def from_toolkit_and_llm(
+        cls,
+        path: dict,
+        llm: BaseLanguageModel,
+        pandas_kwargs: Optional[dict] = None,
+        **kwargs: Any
+    ):
+        import pandas as pd
+
+        _kwargs = pandas_kwargs or {}
+        df = pd.DataFrame.from_dict(path, **_kwargs)
+
+        tools = [PythonAstREPLTool(locals={"df": df})]
+        prompt = ZeroShotAgent.create_prompt(
+            tools,
+            prefix=PANDAS_PREFIX,
+            suffix=PANDAS_SUFFIX,
+            input_variables=["df", "input", "agent_scratchpad"],
+        )
+        partial_prompt = prompt.partial(df=str(df.head()))
+        llm_chain = LLMChain(
+            llm=llm,
+            prompt=partial_prompt,
+            callback_manager=None,
+        )
+        tool_names = [tool.name for tool in tools]
+        agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)
+
+        return cls.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
+
+    def run(self, *args, **kwargs):
+        return super().run(*args, **kwargs)
+
+
 CUSTOM_AGENTS = {
     "JsonAgent": JsonAgent,
+    "CSVAgent": CSVAgent,
 }
