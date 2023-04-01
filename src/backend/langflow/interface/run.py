@@ -2,10 +2,29 @@ import contextlib
 import io
 import re
 from typing import Any, Dict
+from langflow.cache.utils import compute_hash, load_cache, save_cache
 
 from langflow.graph.graph import Graph
 from langflow.interface import loading
 from langflow.utils import payload
+
+
+def load_langchain_object(data_graph):
+    computed_hash = compute_hash(data_graph)
+
+    # Load langchain_object from cache if it exists
+    langchain_object = load_cache(computed_hash)
+    if langchain_object is None:
+        nodes = data_graph["nodes"]
+        # Add input variables
+        nodes = payload.extract_input_variables(nodes)
+        # Nodes, edges and root node
+        edges = data_graph["edges"]
+        graph = Graph(nodes, edges)
+
+        langchain_object = graph.build()
+
+    return computed_hash, langchain_object
 
 
 def process_graph(data_graph: Dict[str, Any]):
@@ -13,18 +32,17 @@ def process_graph(data_graph: Dict[str, Any]):
     Process graph by extracting input variables and replacing ZeroShotPrompt
     with PromptTemplate,then run the graph and return the result and thought.
     """
-    nodes = data_graph["nodes"]
-    # Add input variables
-    # ? Is this necessary?
-    nodes = payload.extract_input_variables(nodes)
-    # Nodes, edges and root node
-    edges = data_graph["edges"]
-    graph = Graph(nodes, edges)
-
-    langchain_object = graph.build()
+    # Load langchain object
+    computed_hash, langchain_object = load_langchain_object(data_graph)
     message = data_graph["message"]
-    # Process json
+
+    # Generate result and thought
     result, thought = get_result_and_thought_using_graph(langchain_object, message)
+
+    # Save langchain_object to cache
+    # We have to save it here because if the
+    # memory is updated we need to keep the new values
+    save_cache(computed_hash, langchain_object)
 
     return {
         "result": result,

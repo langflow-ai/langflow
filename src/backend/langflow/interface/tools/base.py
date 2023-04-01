@@ -112,7 +112,7 @@ class ToolCreator(LangChainTypeCreator):
         # Copy the field and add the name
         fields = []
         for param in params:
-            field = TOOL_INPUTS.get(param, TOOL_INPUTS["str"])
+            field = TOOL_INPUTS.get(param, TOOL_INPUTS["str"]).copy()
             field.name = param
             if param == "aiosession":
                 field.show = False
