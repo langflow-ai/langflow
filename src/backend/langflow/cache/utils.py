@@ -5,7 +5,7 @@ import os
 import tempfile
 from pathlib import Path
 
-import dill
+import dill  # type: ignore
 
 PREFIX = "langflow_cache"
 

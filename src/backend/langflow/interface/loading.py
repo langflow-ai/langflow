@@ -29,7 +29,7 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
     """Instantiate class from module type and key, and params"""
     if node_type in CUSTOM_AGENTS:
         if custom_agent := CUSTOM_AGENTS.get(node_type):
-            return custom_agent.initialize(**params)
+            return custom_agent.initialize(**params)  # type: ignore
 
     class_object = import_by_type(_type=base_type, name=node_type)
 

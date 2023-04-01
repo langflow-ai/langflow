@@ -1,18 +1,14 @@
-from pathlib import Path
 from typing import Any, Optional
 
 from langchain import LLMChain
 from langchain.agents import AgentExecutor, ZeroShotAgent
 from langchain.agents.agent_toolkits.json.prompt import JSON_PREFIX, JSON_SUFFIX
 from langchain.agents.agent_toolkits.json.toolkit import JsonToolkit
-from langchain.agents.agent_toolkits.pandas.base import create_pandas_dataframe_agent
 from langchain.agents.agent_toolkits.pandas.prompt import PREFIX as PANDAS_PREFIX
 from langchain.agents.agent_toolkits.pandas.prompt import SUFFIX as PANDAS_SUFFIX
 from langchain.agents.mrkl.prompt import FORMAT_INSTRUCTIONS
-from langchain.llms.base import BaseLLM
 from langchain.schema import BaseLanguageModel
 from langchain.tools.python.tool import PythonAstREPLTool
-from pydantic import BaseModel
 
 
 class JsonAgent(AgentExecutor):
@@ -65,12 +61,12 @@ class CSVAgent(AgentExecutor):
         pandas_kwargs: Optional[dict] = None,
         **kwargs: Any
     ):
-        import pandas as pd
+        import pandas as pd  # type: ignore
 
         _kwargs = pandas_kwargs or {}
         df = pd.DataFrame.from_dict(path, **_kwargs)
 
-        tools = [PythonAstREPLTool(locals={"df": df})]
+        tools = [PythonAstREPLTool(locals={"df": df})]  # type: ignore
         prompt = ZeroShotAgent.create_prompt(
             tools,
             prefix=PANDAS_PREFIX,
@@ -81,7 +77,6 @@ class CSVAgent(AgentExecutor):
         llm_chain = LLMChain(
             llm=llm,
             prompt=partial_prompt,
-            callback_manager=None,
         )
         tool_names = [tool.name for tool in tools]
         agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)

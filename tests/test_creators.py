@@ -10,7 +10,7 @@ def sample_lang_chain_type_creator() -> LangChainTypeCreator:
     class SampleLangChainTypeCreator(LangChainTypeCreator):
         type_name: str = "test_type"
 
-        def type_to_loader_dict(self) -> Dict:
+        def type_to_loader_dict(self) -> Dict:  # type: ignore
             return {"test_type": "TestClass"}
 
         def to_list(self) -> List[str]:
