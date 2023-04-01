@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     llms: List[str] = []
     tools: List[str] = []
     memories: List[str] = []
+    embeddings: List[str] = []
+    vectorstores: List[str] = []
+    documentloaders: List[str] = []
     wrappers: List[str] = []
     toolkits: List[str] = []
     dev: bool = False
