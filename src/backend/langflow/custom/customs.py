@@ -1,7 +1,9 @@
 from langflow.template import nodes
 
 CUSTOM_NODES = {
-    "prompts": {**nodes.ZeroShotPromptNode().to_dict()},
+    "prompts": {
+        **nodes.ZeroShotPromptNode().to_dict(),
+    },
     "tools": {**nodes.PythonFunctionNode().to_dict(), **nodes.ToolNode().to_dict()},
     "agents": {
         **nodes.JsonAgentNode().to_dict(),
