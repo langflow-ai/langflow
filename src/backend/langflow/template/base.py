@@ -14,6 +14,7 @@ class TemplateFieldCreator(BaseModel, ABC):
     multiline: bool = False
     value: Any = None
     suffixes: list[str] = []
+    fileTypes: list[str] = []
     file_types: list[str] = []
     content: Union[str, None] = None
     password: bool = False
