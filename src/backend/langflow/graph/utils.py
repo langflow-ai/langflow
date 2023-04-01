@@ -1,11 +1,13 @@
 import base64
 import json
-from typing import Dict
+from typing import Any
 import re
 import yaml
+import csv
+import io
 
 
-def load_dict(file_name, file_content, accepted_types) -> Dict:
+def load_file(file_name, file_content, accepted_types) -> Any:
     """Load a file from a string."""
     # Check if the file is accepted
     if not any(file_name.endswith(suffix) for suffix in accepted_types):
@@ -24,6 +26,10 @@ def load_dict(file_name, file_content, accepted_types) -> Dict:
     elif suffix in ["yaml", "yml"]:
         # Return the yaml content
         return yaml.safe_load(decoded_string)
+    elif suffix == "csv":
+        # Load the csv content
+        csv_reader = csv.DictReader(io.StringIO(decoded_string))
+        return list(csv_reader)
     else:
         raise ValueError(f"File {file_name} is not accepted")
 

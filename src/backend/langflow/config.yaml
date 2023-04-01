@@ -7,6 +7,7 @@ chains:
 agents:
   - ZeroShotAgent
   - JsonAgent
+  - CSVAgent
 
 prompts:
   - PromptTemplate

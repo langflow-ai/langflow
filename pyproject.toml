@@ -33,6 +33,7 @@ langchain = "^0.0.127"
 openai = "^0.27.2"
 types-pyyaml = "^6.0.12.8"
 dill = "^0.3.6"
+pandas = "^1.5.3"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
