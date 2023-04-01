@@ -139,3 +139,32 @@ class JsonAgentNode(FrontendNode):
 
     def to_dict(self):
         return super().to_dict()
+
+
+class CSVAgentNode(FrontendNode):
+    name: str = "CSVAgent"
+    template: Template = Template(
+        type_name="csv_agent",
+        fields=[
+            TemplateField(
+                field_type="file",
+                required=True,
+                show=True,
+                name="path",
+                value="",
+                suffixes=[".csv"],
+                fileTypes=["csv"],
+            ),
+            TemplateField(
+                field_type="BaseLanguageModel",
+                required=True,
+                show=True,
+                name="llm",
+            ),
+        ],
+    )
+    description: str = """Construct a json agent from a CSV and tools."""
+    base_classes: list[str] = ["AgentExecutor"]
+
+    def to_dict(self):
+        return super().to_dict()
