@@ -37,8 +37,8 @@ def process_graph(data_graph: Dict[str, Any]):
     """
     # Load langchain object
     logger.debug("Loading langchain object")
+    message = data_graph.pop("message", "")
     computed_hash, langchain_object = load_langchain_object(data_graph)
-    message = data_graph["message"]
     logger.debug("Loaded langchain object")
 
     # Generate result and thought
