@@ -44,5 +44,7 @@ def build_langchain_types_dict():
 
     all_types = {}
     for creator in creators:
-        all_types.update(creator.to_dict())
+        created_types = creator.to_dict()
+        if created_types[creator.type_name].values():
+            all_types.update(created_types)
     return all_types
