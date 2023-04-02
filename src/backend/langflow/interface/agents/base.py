@@ -1,5 +1,4 @@
-import contextlib
-from typing import Dict, Iterable
+from typing import Dict, List
 
 from langchain.agents import loading
 
@@ -33,7 +32,8 @@ class AgentCreator(LangChainTypeCreator):
             raise ValueError("Agent not found") from exc
 
     # Now this is a generator
-    def to_list(self) -> Iterable:
+    def to_list(self) -> List[str]:
+        names = []
         for name, agent in self.type_to_loader_dict.items():
             agent_name = (
                 agent.function_name()
@@ -41,7 +41,8 @@ class AgentCreator(LangChainTypeCreator):
                 else agent.__name__
             )
             if agent_name in settings.agents or settings.dev:
-                yield agent_name
+                names.append(name)
+        return names
 
 
 agent_creator = AgentCreator()
