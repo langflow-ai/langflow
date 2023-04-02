@@ -31,12 +31,18 @@ class AgentCreator(LangChainTypeCreator):
         except ValueError as exc:
             raise ValueError("Agent not found") from exc
 
+    # Now this is a generator
     def to_list(self) -> List[str]:
-        return [
-            agent.__name__
-            for agent in self.type_to_loader_dict.values()
-            if agent.__name__ in settings.agents or settings.dev
-        ]
+        names = []
+        for name, agent in self.type_to_loader_dict.items():
+            agent_name = (
+                agent.function_name()
+                if hasattr(agent, "function_name")
+                else agent.__name__
+            )
+            if agent_name in settings.agents or settings.dev:
+                names.append(agent_name)
+        return names
 
 
 agent_creator = AgentCreator()

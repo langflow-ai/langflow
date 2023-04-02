@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel
 
@@ -20,7 +20,7 @@ class LangChainTypeCreator(BaseModel, ABC):
         return self.type_dict
 
     @abstractmethod
-    def get_signature(self, name: str) -> Optional[Dict[Any, Any]]:
+    def get_signature(self, name: str) -> Union[Optional[Dict[Any, Any]], FrontendNode]:
         pass
 
     @abstractmethod
@@ -42,6 +42,8 @@ class LangChainTypeCreator(BaseModel, ABC):
         signature = self.get_signature(name)
         if signature is None:
             raise ValueError(f"{name} not found")
+        if isinstance(signature, FrontendNode):
+            return signature
         fields = [
             TemplateField(
                 name=key,

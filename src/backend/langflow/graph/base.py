@@ -121,10 +121,10 @@ class Node:
                         f"Required input {key} for module {self.node_type} not found"
                     )
                 elif value["list"]:
-                    if key in params:
+                    if key not in params:
+                        params[key] = []
+                    if edge is not None:
                         params[key].append(edge.source)
-                    else:
-                        params[key] = [edge.source]
                 elif value["required"] or edge is not None:
                     params[key] = edge.source
             elif value["required"] or value.get("value"):
@@ -179,7 +179,9 @@ class Node:
                 params=self.params,
             )
         except Exception as exc:
-            raise ValueError(f"Error building node {self.node_type}") from exc
+            raise ValueError(
+                f"Error building node {self.node_type}: {str(exc)}"
+            ) from exc
 
         if self._built_object is None:
             raise ValueError(f"Node type {self.node_type} not found")

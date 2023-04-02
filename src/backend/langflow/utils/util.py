@@ -3,6 +3,7 @@ import inspect
 import re
 from typing import Dict, Optional
 
+from langflow.template.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants
 
 
@@ -284,17 +285,7 @@ def format_dict(d, name: Optional[str] = None):
         # Show or not field
         value["show"] = bool(
             (value["required"] and key not in ["input_variables"])
-            or key
-            in [
-                "allowed_tools",
-                "memory",
-                "prefix",
-                "examples",
-                "temperature",
-                "model_name",
-                "headers",
-                "max_value_length",
-            ]
+            or key in FORCE_SHOW_FIELDS
             or "api_key" in key
         )
 
@@ -336,7 +327,7 @@ def format_dict(d, name: Optional[str] = None):
         if name == "OpenAI" and key == "model_name":
             value["options"] = constants.OPENAI_MODELS
             value["list"] = True
-        elif name == "OpenAIChat" and key == "model_name":
+        elif name == "ChatOpenAI" and key == "model_name":
             value["options"] = constants.CHAT_OPENAI_MODELS
             value["list"] = True
 
