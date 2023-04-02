@@ -6,15 +6,8 @@ from langchain.agents import agent_toolkits
 from langchain.chat_models import ChatOpenAI
 
 ## Memory
-# from langchain.memory.buffer_window import ConversationBufferWindowMemory
-# from langchain.memory.chat_memory import ChatMessageHistory
-# from langchain.memory.combined import CombinedMemory
-# from langchain.memory.entity import ConversationEntityMemory
-# from langchain.memory.kg import ConversationKGMemory
-# from langchain.memory.readonly import ReadOnlySharedMemory
-# from langchain.memory.simple import SimpleMemory
-# from langchain.memory.summary import ConversationSummaryMemory
-# from langchain.memory.summary_buffer import ConversationSummaryBufferMemory
+from langchain import memory
+
 ## Document Loaders
 from langchain.document_loaders import (
     AirbyteJSONLoader,
@@ -104,23 +97,6 @@ llm_type_to_cls_dict = llms.type_to_cls_dict
 llm_type_to_cls_dict["openai-chat"] = ChatOpenAI  # type: ignore
 
 
-## Memory
-
-memory_type_to_cls_dict: dict[str, Any] = {
-    # "CombinedMemory": CombinedMemory,
-    # "ConversationBufferWindowMemory": ConversationBufferWindowMemory,
-    # "ConversationBufferMemory": ConversationBufferMemory,
-    # "SimpleMemory": SimpleMemory,
-    # "ConversationSummaryBufferMemory": ConversationSummaryBufferMemory,
-    # "ConversationKGMemory": ConversationKGMemory,
-    # "ConversationEntityMemory": ConversationEntityMemory,
-    # "ConversationSummaryMemory": ConversationSummaryMemory,
-    # "ChatMessageHistory": ChatMessageHistory,
-    # "ConversationStringBufferMemory": ConversationStringBufferMemory,
-    # "ReadOnlySharedMemory": ReadOnlySharedMemory,
-}
-
-
 ## Chain
 # from langchain.chains.loading import type_to_loader_dict
 # from langchain.chains.conversation.base import ConversationChain
@@ -140,6 +116,14 @@ toolkit_type_to_cls_dict: dict[str, Any] = {
     # if toolkit_name is not lower case it is a class
     for toolkit_name in agent_toolkits.__all__
     if not toolkit_name.islower()
+}
+
+## Memory
+
+
+memory_type_to_cls_dict: dict[str, Any] = {
+    memory_name: import_class(f"langchain.memory.{memory_name}")
+    for memory_name in memory.__all__
 }
 
 

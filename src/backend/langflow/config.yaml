@@ -8,6 +8,7 @@ agents:
   - ZeroShotAgent
   - JsonAgent
   - CSVAgent
+  - initialize_agent
 
 prompts:
   - PromptTemplate
@@ -15,7 +16,7 @@ prompts:
 
 llms:
   - OpenAI
-  - OpenAIChat
+  - ChatOpenAI
 
 tools:
   - Search
@@ -33,13 +34,16 @@ toolkits:
  - OpenAPIToolkit
  - JsonToolkit
 
-embeddings:
-  #
+memories:
+  - ConversationBufferMemory
 
-vectorstores:
-  #
+embeddings: []
 
-documentloaders:
-  #
+
+vectorstores: []
+
+
+documentloaders: []
+
 
 dev: false

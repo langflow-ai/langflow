@@ -8,7 +8,7 @@ from langchain.agents import Agent
 from langchain.chains.base import Chain
 from langchain.llms.base import BaseLLM
 from langchain.tools import BaseTool
-
+from langchain.chat_models.base import BaseChatModel
 from langflow.interface.tools.util import get_tool_by_name
 
 
@@ -31,13 +31,30 @@ def import_by_type(_type: str, name: str) -> Any:
     func_dict = {
         "agents": import_agent,
         "prompts": import_prompt,
-        "llms": import_llm,
+        "llms": {"llm": import_llm, "chat": import_chat_llm},
         "tools": import_tool,
         "chains": import_chain,
         "toolkits": import_toolkit,
         "wrappers": import_wrapper,
+        "memory": import_memory,
     }
-    return func_dict[_type](name)
+    if _type == "llms":
+        key = "chat" if "chat" in name.lower() else "llm"
+        loaded_func = func_dict[_type][key]  # type: ignore
+    else:
+        loaded_func = func_dict[_type]
+
+    return loaded_func(name)
+
+
+def import_chat_llm(llm: str) -> BaseChatModel:
+    """Import chat llm from llm name"""
+    return import_class(f"langchain.chat_models.{llm}")
+
+
+def import_memory(memory: str) -> Any:
+    """Import memory from memory name"""
+    return import_module(f"from langchain.memory import {memory}")
 
 
 def import_class(class_path: str) -> Any:

@@ -57,7 +57,14 @@ def get_result_and_thought_using_graph(loaded_langchain, message: str):
     loaded_langchain.verbose = True
     try:
         with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
-            result = loaded_langchain(message)
+            chat_input = {}
+            for key in loaded_langchain.input_keys:
+                if key != "chat_history":
+                    chat_input[key] = message
+                    break
+            if hasattr(loaded_langchain, "run"):
+                loaded_langchain = loaded_langchain.run
+            result = loaded_langchain
 
             result = (
                 result.get(loaded_langchain.output_keys[0])

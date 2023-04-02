@@ -210,7 +210,7 @@ def test_format_dict():
     }
     assert format_dict(input_dict) == expected_output
 
-    # Test 7: Check class name-specific cases (OpenAI, OpenAIChat)
+    # Test 7: Check class name-specific cases (OpenAI, ChatOpenAI)
     input_dict = {
         "model_name": {"type": "str", "required": False},
     }
@@ -237,7 +237,7 @@ def test_format_dict():
         },
     }
     assert format_dict(input_dict, "OpenAI") == expected_output_openai
-    assert format_dict(input_dict, "OpenAIChat") == expected_output_openai_chat
+    assert format_dict(input_dict, "ChatOpenAI") == expected_output_openai_chat
 
     # Test 8: Replace dict type with str
     input_dict = {

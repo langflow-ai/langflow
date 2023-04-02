@@ -340,43 +340,21 @@ def test_build_params(basic_graph):
     assert isinstance(llm_node.params["model_name"], str)
 
 
-def test_build(basic_graph, complex_graph):
+def test_build(basic_graph, complex_graph, openapi_graph):
     """Test Node's build method"""
-    # def build(self):
-    # # The params dict is used to build the module
-    # # it contains values and keys that point to nodes which
-    # # have their own params dict
-    # # When build is called, we iterate through the params dict
-    # # and if the value is a node, we call build on that node
-    # # and use the output of that build as the value for the param
-    # # if the value is not a node, then we use the value as the param
-    # # and continue
-    # # Another aspect is that the node_type is the class that we need to import
-    # # and instantiate with these built params
+    assert_agent_was_built(basic_graph)
+    assert_agent_was_built(complex_graph)
+    assert_agent_was_built(openapi_graph)
 
-    # # Build each node in the params dict
-    # for key, value in self.params.items():
-    #     if isinstance(value, Node):
-    #         self.params[key] = value.build()
 
-    # # Get the class from LANGCHAIN_TYPES_DICT
-    # # and instantiate it with the params
-    # # and return the instance
-    # return LANGCHAIN_TYPES_DICT[self.node_type](**self.params)
-
-    assert isinstance(basic_graph, Graph)
+def assert_agent_was_built(graph):
+    """Assert that the agent was built"""
+    assert isinstance(graph, Graph)
     # Now we test the build method
     # Build the Agent
-    agent = basic_graph.build()
+    result = graph.build()
     # The agent should be a AgentExecutor
-    assert isinstance(agent, AgentExecutor)
-
-    # Now we test the complex example
-    assert isinstance(complex_graph, Graph)
-    # Now we test the build method
-    agent = complex_graph.build()
-    # The agent should be a AgentExecutor
-    assert isinstance(agent, AgentExecutor)
+    assert isinstance(result, AgentExecutor)
 
 
 def test_agent_node_build(basic_graph):
@@ -384,7 +362,6 @@ def test_agent_node_build(basic_graph):
     assert agent_node is not None
     built_object = agent_node.build()
     assert built_object is not None
-    # Add any further assertions specific to the AgentNode's build() method
 
 
 def test_tool_node_build(basic_graph):
