@@ -40,7 +40,7 @@ def import_by_type(_type: str, name: str) -> Any:
     }
     if _type == "llms":
         key = "chat" if "chat" in name.lower() else "llm"
-        loaded_func = func_dict[_type][key]
+        loaded_func = func_dict[_type][key]  # type: ignore
     else:
         loaded_func = func_dict[_type]
 
