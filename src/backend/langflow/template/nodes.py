@@ -153,22 +153,10 @@ class JsonAgentNode(FrontendNode):
 
 
 class InitializeAgentNode(FrontendNode):
-    name: str = "InitializeAgent"
+    name: str = "initialize_agent"
     template: Template = Template(
         type_name="initailize_agent",
         fields=[
-            TemplateField(
-                field_type="Tool",
-                required=True,
-                show=True,
-                name="tools",
-            ),
-            TemplateField(
-                field_type="BaseLanguageModel",
-                required=True,
-                show=True,
-                name="llm",
-            ),
             TemplateField(
                 field_type="str",
                 required=True,
@@ -178,6 +166,25 @@ class InitializeAgentNode(FrontendNode):
                 options=list(loading.AGENT_TO_CLASS.keys()),
                 name="agent",
             ),
+            TemplateField(
+                field_type="BaseChatMemory",
+                required=False,
+                show=True,
+                name="memory",
+            ),
+            TemplateField(
+                field_type="Tool",
+                required=False,
+                show=True,
+                name="tools",
+                is_list=True,
+            ),
+            TemplateField(
+                field_type="BaseLanguageModel",
+                required=True,
+                show=True,
+                name="llm",
+            ),
         ],
     )
     description: str = """Construct a json agent from an LLM and tools."""
@@ -185,6 +192,11 @@ class InitializeAgentNode(FrontendNode):
 
     def to_dict(self):
         return super().to_dict()
+
+    @staticmethod
+    def format_field(field: TemplateField, name: str):
+        # do nothing and don't return anything
+        pass
 
 
 class CSVAgentNode(FrontendNode):
