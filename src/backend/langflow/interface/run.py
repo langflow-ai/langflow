@@ -7,6 +7,9 @@ from langflow.cache.utils import compute_hash, load_cache, save_cache
 from langflow.graph.graph import Graph
 from langflow.interface import loading
 from langflow.utils import payload
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def load_langchain_object(data_graph):
@@ -33,19 +36,24 @@ def process_graph(data_graph: Dict[str, Any]):
     with PromptTemplate,then run the graph and return the result and thought.
     """
     # Load langchain object
+    logger.debug("Loading langchain object")
     computed_hash, langchain_object = load_langchain_object(data_graph)
     message = data_graph["message"]
+    logger.debug("Loaded langchain object")
 
     # Generate result and thought
+    logger.debug("Generating result and thought")
     result, thought = get_result_and_thought_using_graph(langchain_object, message)
+    logger.debug("Generated result and thought")
 
     # Save langchain_object to cache
     # We have to save it here because if the
     # memory is updated we need to keep the new values
+    logger.debug("Saving langchain object to cache")
     save_cache(computed_hash, langchain_object)
-
+    logger.debug("Saved langchain object to cache")
     return {
-        "result": result,
+        "result": str(result),
         "thought": re.sub(
             r"\x1b\[([0-9,A-Z]{1,2}(;[0-9,A-Z]{1,2})?)?[m|K]", "", thought
         ).strip(),
@@ -59,12 +67,15 @@ def get_result_and_thought_using_graph(loaded_langchain, message: str):
         with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
             chat_input = {}
             for key in loaded_langchain.input_keys:
-                if key != "chat_history":
+                if key == "chat_history":
+                    if hasattr(loaded_langchain, "memory"):
+                        loaded_langchain.memory.memory_key = "chat_history"
+                else:
                     chat_input[key] = message
-                    break
+
             if hasattr(loaded_langchain, "run"):
                 loaded_langchain = loaded_langchain.run
-            result = loaded_langchain
+            result = loaded_langchain(**chat_input)
 
             result = (
                 result.get(loaded_langchain.output_keys[0])
