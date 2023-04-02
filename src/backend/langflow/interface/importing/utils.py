@@ -36,8 +36,14 @@ def import_by_type(_type: str, name: str) -> Any:
         "chains": import_chain,
         "toolkits": import_toolkit,
         "wrappers": import_wrapper,
+        "memory": import_memory,
     }
     return func_dict[_type](name)
+
+
+def import_memory(memory: str) -> Any:
+    """Import memory from memory name"""
+    return import_module(f"from langchain.memory import {memory}")
 
 
 def import_class(class_path: str) -> Any:
