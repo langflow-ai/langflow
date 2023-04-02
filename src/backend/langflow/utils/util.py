@@ -327,7 +327,7 @@ def format_dict(d, name: Optional[str] = None):
         if name == "OpenAI" and key == "model_name":
             value["options"] = constants.OPENAI_MODELS
             value["list"] = True
-        elif name == "OpenAIChat" and key == "model_name":
+        elif name == "ChatOpenAI" and key == "model_name":
             value["options"] = constants.CHAT_OPENAI_MODELS
             value["list"] = True
 

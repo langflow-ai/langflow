@@ -16,7 +16,7 @@ prompts:
 
 llms:
   - OpenAI
-  - OpenAIChat
+  - ChatOpenAI
 
 tools:
   - Search

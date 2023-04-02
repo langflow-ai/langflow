@@ -105,7 +105,7 @@ class TemplateFieldCreator(BaseModel, ABC):
         if name == "OpenAI" and key == "model_name":
             self.options = constants.OPENAI_MODELS
             self.is_list = True
-        elif name == "OpenAIChat" and key == "model_name":
+        elif name == "ChatOpenAI" and key == "model_name":
             self.options = constants.CHAT_OPENAI_MODELS
             self.is_list = True
 
@@ -216,6 +216,6 @@ class FrontendNode(BaseModel):
         if name == "OpenAI" and key == "model_name":
             field.options = constants.OPENAI_MODELS
             field.is_list = True
-        elif name == "OpenAIChat" and key == "model_name":
+        elif name == "ChatOpenAI" and key == "model_name":
             field.options = constants.CHAT_OPENAI_MODELS
             field.is_list = True

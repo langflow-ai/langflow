@@ -267,7 +267,7 @@
                     "y": 514.9920887988924
                 },
                 "data": {
-                    "type": "OpenAIChat",
+                    "type": "ChatOpenAI",
                     "node": {
                         "template": {
                             "cache": {
@@ -365,7 +365,7 @@
                                 "type": "bool",
                                 "list": false
                             },
-                            "_type": "OpenAIChat"
+                            "_type": "ChatOpenAI"
                         },
                         "description": "Wrapper around OpenAI Chat large language models.To use, you should have the ``openai`` python package installed, and theenvironment variable ``OPENAI_API_KEY`` set with your API key.Any parameters that are valid to be passed to the openai.create call can be passedin, even if not explicitly saved on this class.",
                         "base_classes": [
@@ -423,7 +423,7 @@
             },
             {
                 "source": "dndnode_36",
-                "sourceHandle": "OpenAIChat|dndnode_36|BaseLanguageModel|BaseLLM",
+                "sourceHandle": "ChatOpenAI|dndnode_36|BaseLanguageModel|BaseLLM",
                 "target": "dndnode_33",
                 "targetHandle": "BaseLanguageModel|llm|dndnode_33",
                 "className": "animate-pulse",

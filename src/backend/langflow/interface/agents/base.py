@@ -41,7 +41,7 @@ class AgentCreator(LangChainTypeCreator):
                 else agent.__name__
             )
             if agent_name in settings.agents or settings.dev:
-                names.append(name)
+                names.append(agent_name)
         return names
 
 
