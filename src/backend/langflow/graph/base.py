@@ -179,7 +179,9 @@ class Node:
                 params=self.params,
             )
         except Exception as exc:
-            raise ValueError(f"Error building node {self.node_type}") from exc
+            raise ValueError(
+                f"Error building node {self.node_type}: {str(exc)}"
+            ) from exc
 
         if self._built_object is None:
             raise ValueError(f"Node type {self.node_type} not found")

@@ -106,7 +106,10 @@ class Graph:
 
             if node_type in prompt_creator.to_list():
                 nodes.append(PromptNode(node))
-            elif node_type in agent_creator.to_list():
+            elif (
+                node_type in agent_creator.to_list()
+                or node_lc_type in agent_creator.to_list()
+            ):
                 nodes.append(AgentNode(node))
             elif node_type in chain_creator.to_list():
                 nodes.append(ChainNode(node))
@@ -118,7 +121,10 @@ class Graph:
                 nodes.append(ToolkitNode(node))
             elif node_type in wrapper_creator.to_list():
                 nodes.append(WrapperNode(node))
-            elif node_type in llm_creator.to_list():
+            elif (
+                node_type in llm_creator.to_list()
+                or node_lc_type in llm_creator.to_list()
+            ):
                 nodes.append(LLMNode(node))
             else:
                 nodes.append(Node(node))
