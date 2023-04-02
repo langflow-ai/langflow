@@ -121,10 +121,10 @@ class Node:
                         f"Required input {key} for module {self.node_type} not found"
                     )
                 elif value["list"]:
-                    if key in params:
+                    if key not in params:
+                        params[key] = []
+                    if edge is not None:
                         params[key].append(edge.source)
-                    else:
-                        params[key] = [edge.source]
                 elif value["required"] or edge is not None:
                     params[key] = edge.source
             elif value["required"] or value.get("value"):

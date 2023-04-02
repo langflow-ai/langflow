@@ -6,7 +6,7 @@ CUSTOM_NODES = {
     "agents": {
         "JsonAgent": nodes.JsonAgentNode(),
         "CSVAgent": nodes.CSVAgentNode(),
-        "InitializeAgent": nodes.InitializeAgentNode(),
+        "initialize_agent": nodes.InitializeAgentNode(),
     },
 }
 

@@ -8,7 +8,7 @@ agents:
   - ZeroShotAgent
   - JsonAgent
   - CSVAgent
-  - InitializeAgent
+  - initialize_agent
 
 prompts:
   - PromptTemplate
@@ -33,6 +33,9 @@ wrappers:
 toolkits:
  - OpenAPIToolkit
  - JsonToolkit
+
+memories:
+  - ConversationBufferMemory
 
 embeddings: []
 

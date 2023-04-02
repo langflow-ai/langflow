@@ -11,10 +11,15 @@ from langchain.schema import BaseLanguageModel
 from langchain.llms.base import BaseLLM
 from langchain.tools.python.tool import PythonAstREPLTool
 from langchain.agents import initialize_agent, Tool
+from langchain.memory.chat_memory import BaseChatMemory
 
 
 class JsonAgent(AgentExecutor):
     """Json agent"""
+
+    @staticmethod
+    def function_name():
+        return "JsonAgent"
 
     @classmethod
     def initialize(cls, *args, **kwargs):
@@ -47,6 +52,10 @@ class JsonAgent(AgentExecutor):
 
 class CSVAgent(AgentExecutor):
     """CSV agent"""
+
+    @staticmethod
+    def function_name():
+        return "CSVAgent"
 
     @classmethod
     def initialize(cls, *args, **kwargs):
@@ -90,15 +99,17 @@ class CSVAgent(AgentExecutor):
 
 
 class InitializeAgent(AgentExecutor):
-    """Initialize agent"""
+    """Implementation of initialize_agent function"""
+
+    @staticmethod
+    def function_name():
+        return "initialize_agent"
 
     @classmethod
-    def initialize(cls, llm: BaseLLM, tools: List[Tool], agent: str):
-        return initialize_agent(
-            tools=tools,
-            llm=llm,
-            agent=agent,
-        )
+    def initialize(
+        cls, llm: BaseLLM, tools: List[Tool], agent: str, memory: BaseChatMemory
+    ):
+        return initialize_agent(tools=tools, llm=llm, agent=agent, memory=memory)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -110,5 +121,5 @@ class InitializeAgent(AgentExecutor):
 CUSTOM_AGENTS = {
     "JsonAgent": JsonAgent,
     "CSVAgent": CSVAgent,
-    "InitializeAgent": InitializeAgent,
+    "initialize_agent": InitializeAgent,
 }
