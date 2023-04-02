@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import List, Optional
 
 from langchain.prompts import PromptTemplate
 from langflow.graph.utils import extract_input_variables_from_prompt
@@ -13,8 +13,8 @@ You must know all of the knowledge of {character}."""
 
 
 class BaseCustomPrompt(PromptTemplate):
-    template: Optional[str] = None
-    description: str
+    template: str = ""
+    description: Optional[str]
     human_text: str = "\n {input}"
 
     @root_validator(pre=False)
@@ -41,17 +41,19 @@ class BaseCustomPrompt(PromptTemplate):
                     for field in self.input_variables
                 ],
             ),
-            description=self.description,
+            description=self.description or "",
         )
 
 
 class SeriesCharacterPrompt(BaseCustomPrompt):
     # Add a very descriptive description for the prompt generator
-    description = "A prompt that asks the AI to act like a character from a series."
+    description: Optional[
+        str
+    ] = "A prompt that asks the AI to act like a character from a series."
     character: str
     series: str
     human_text: str = "\n {input}"
-    template: Optional[str] = CHARACTER_PROMPT
+    template: str = CHARACTER_PROMPT
 
     input_variables: List[str] = ["character", "series"]
 

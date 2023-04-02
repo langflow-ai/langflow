@@ -162,7 +162,7 @@ class FrontendNode(BaseModel):
         # Check for list type
         if "List" in _type:
             _type = _type.replace("List[", "")[:-1]
-            self.is_list = True
+            field.is_list = True
 
         # Replace 'Mapping' with 'dict'
         if "Mapping" in _type:

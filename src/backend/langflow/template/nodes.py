@@ -1,3 +1,4 @@
+from typing import Optional
 from langchain.agents.mrkl import prompt
 
 from langflow.template.base import FrontendNode, Template, TemplateField
@@ -194,7 +195,7 @@ class InitializeAgentNode(FrontendNode):
         return super().to_dict()
 
     @staticmethod
-    def format_field(field: TemplateField, name: str):
+    def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         # do nothing and don't return anything
         pass
 
