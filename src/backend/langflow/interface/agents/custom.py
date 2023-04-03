@@ -109,7 +109,13 @@ class InitializeAgent(AgentExecutor):
     def initialize(
         cls, llm: BaseLLM, tools: List[Tool], agent: str, memory: BaseChatMemory
     ):
-        return initialize_agent(tools=tools, llm=llm, agent=agent, memory=memory, return_intermediate_steps=True
+        return initialize_agent(
+            tools=tools,
+            llm=llm,
+            agent=agent,
+            memory=memory,
+            return_intermediate_steps=True,
+        )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
