@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import chain_type_to_cls_dict
@@ -17,7 +17,7 @@ class ChainCreator(LangChainTypeCreator):
             self.type_dict = chain_type_to_cls_dict
         return self.type_dict
 
-    def get_signature(self, name: str) -> Dict | None:
+    def get_signature(self, name: str) -> Optional[Dict]:
         try:
             return build_template_from_class(name, chain_type_to_cls_dict)
         except ValueError as exc:

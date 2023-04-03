@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from langchain.agents.load_tools import (
     _BASE_TOOLS,
@@ -59,7 +59,7 @@ TOOL_INPUTS = {
 
 class ToolCreator(LangChainTypeCreator):
     type_name: str = "tools"
-    tools_dict: Dict | None = None
+    tools_dict: Optional[Dict] = None
 
     @property
     def type_to_loader_dict(self) -> Dict:
@@ -67,7 +67,7 @@ class ToolCreator(LangChainTypeCreator):
             self.tools_dict = get_tools_dict()
         return self.tools_dict
 
-    def get_signature(self, name: str) -> Dict | None:
+    def get_signature(self, name: str) -> Optional[Dict]:
         """Get the signature of a tool."""
 
         base_classes = ["Tool"]
