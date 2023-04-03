@@ -3,7 +3,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from langflow.cache.utils import PREFIX, compute_hash
+from langflow.cache.utils import PREFIX, compute_hash, save_cache
 from langflow.interface.run import load_langchain_object
 
 
@@ -42,13 +42,15 @@ def langchain_objects_are_equal(obj1, obj2):
 
 def test_cache_creation(basic_data_graph):
     # Compute hash for the input data_graph
-    computed_hash = compute_hash(basic_data_graph)
-
     # Call process_graph function to build and cache the langchain_object
-    _ = load_langchain_object(basic_data_graph)
-
+    is_first_message = True
+    computed_hash, langchain_object = load_langchain_object(
+        basic_data_graph, is_first_message=is_first_message
+    )
+    save_cache(computed_hash, langchain_object, is_first_message)
     # Check if the cache file exists
     cache_file = Path(tempfile.gettempdir()) / f"{PREFIX}_{computed_hash}.dill"
+
     assert cache_file.exists()
 
 
