@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from langchain import requests
 
@@ -17,7 +17,7 @@ class WrapperCreator(LangChainTypeCreator):
             }
         return self.type_dict
 
-    def get_signature(self, name: str) -> Dict | None:
+    def get_signature(self, name: str) -> Optional[Dict]:
         try:
             return build_template_from_class(name, self.type_to_loader_dict)
         except ValueError as exc:

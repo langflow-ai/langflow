@@ -5,7 +5,7 @@
 
 import types
 from copy import deepcopy
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from langflow.graph.constants import DIRECT_TYPES
 from langflow.graph.utils import load_file
@@ -15,11 +15,11 @@ from langflow.utils.logger import logger
 
 
 class Node:
-    def __init__(self, data: Dict, base_type: str | None = None) -> None:
+    def __init__(self, data: Dict, base_type: Optional[str] = None) -> None:
         self.id: str = data["id"]
         self._data = data
         self.edges: List[Edge] = []
-        self.base_type: str | None = base_type
+        self.base_type: Optional[str] = base_type
         self._parse_data()
         self._built_object = None
         self._built = False
