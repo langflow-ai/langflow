@@ -71,9 +71,10 @@ def load_flow_from_json(path: str):
     data_graph = flow_graph["data"]
     nodes = data_graph["nodes"]
     # Substitute ZeroShotPrompt with PromptTemplate
-    nodes = replace_zero_shot_prompt_with_prompt_template(nodes)
+    # nodes = replace_zero_shot_prompt_with_prompt_template(nodes)
     # Add input variables
-    nodes = payload.extract_input_variables(nodes)
+    # nodes = payload.extract_input_variables(nodes)
+
     # Nodes, edges and root node
     edges = data_graph["edges"]
     graph = Graph(nodes, edges)

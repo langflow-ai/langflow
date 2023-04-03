@@ -32,7 +32,7 @@ def build_langchain_object(data_graph):
     logger.debug("Building langchain object")
     nodes = data_graph["nodes"]
     # Add input variables
-    nodes = payload.extract_input_variables(nodes)
+    # nodes = payload.extract_input_variables(nodes)
     # Nodes, edges and root node
     edges = data_graph["edges"]
     graph = Graph(nodes, edges)
@@ -75,27 +75,39 @@ def process_graph(data_graph: Dict[str, Any]):
 
 def get_result_and_thought_using_graph(loaded_langchain, message: str):
     """Get result and thought from extracted json"""
-    loaded_langchain.verbose = True
     try:
+        loaded_langchain.verbose = True
         with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
-            chat_input = {}
+            chat_input = None
             for key in loaded_langchain.input_keys:
-                if key == "chat_history":
-                    if hasattr(loaded_langchain, "memory"):
-                        loaded_langchain.memory.memory_key = "chat_history"
+                if key == "chat_history" and hasattr(loaded_langchain, "memory"):
+                    loaded_langchain.memory.memory_key = "chat_history"
                 else:
-                    chat_input[key] = message
+                    chat_input = {key: message}
 
-            if hasattr(loaded_langchain, "run"):
-                loaded_langchain = loaded_langchain.run
-            result = loaded_langchain(**chat_input)
+            if hasattr(loaded_langchain, "return_intermediate_steps"):
+                # https://github.com/hwchase17/langchain/issues/2068
+                loaded_langchain.return_intermediate_steps = False
+
+            try:
+                output = loaded_langchain(chat_input)
+            except ValueError as exc:
+                logger.debug("Error: %s", str(exc))
+                output = loaded_langchain.run(chat_input)
+
+            intermediate_steps = (
+                output.get("intermediate_steps", []) if isinstance(output, dict) else []
+            )
 
             result = (
-                result.get(loaded_langchain.output_keys[0])
-                if isinstance(result, dict)
-                else result
+                output.get(loaded_langchain.output_keys[0])
+                if isinstance(output, dict)
+                else output
             )
-            thought = output_buffer.getvalue()
+            if intermediate_steps:
+                thought = format_intermediate_steps(intermediate_steps)
+            else:
+                thought = output_buffer.getvalue()
 
     except Exception as exc:
         raise ValueError(f"Error: {str(exc)}") from exc
