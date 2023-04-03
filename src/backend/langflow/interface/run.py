@@ -1,6 +1,5 @@
 import contextlib
 import io
-import re
 from typing import Any, Dict
 
 from langflow.cache.utils import compute_hash, load_cache, save_cache
@@ -64,10 +63,7 @@ def process_graph(data_graph: Dict[str, Any]):
     logger.debug("Saving langchain object to cache")
     save_cache(computed_hash, langchain_object, is_first_message)
     logger.debug("Saved langchain object to cache")
-    return {
-        "result": str(result),
-        "thought": thought.strip()
-    }
+    return {"result": str(result), "thought": thought.strip()}
 
 
 def get_result_and_thought_using_graph(loaded_langchain, message: str):
