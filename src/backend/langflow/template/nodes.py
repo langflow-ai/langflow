@@ -1,9 +1,10 @@
 from typing import Optional
+
+from langchain.agents import loading
 from langchain.agents.mrkl import prompt
 
 from langflow.template.base import FrontendNode, Template, TemplateField
 from langflow.utils.constants import DEFAULT_PYTHON_FUNCTION
-from langchain.agents import loading
 
 
 class ZeroShotPromptNode(FrontendNode):

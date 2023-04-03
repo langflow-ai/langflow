@@ -2,28 +2,22 @@ import ast
 import inspect
 from typing import Dict, Union
 
-from langchain.agents.load_tools import (
-    _BASE_TOOLS,
-    _EXTRA_LLM_TOOLS,
-    _EXTRA_OPTIONAL_TOOLS,
-    _LLM_TOOLS,
-)
 from langchain.agents.tools import Tool
 
-from langflow.interface.tools.constants import CUSTOM_TOOLS, FILE_TOOLS
+from langflow.interface.tools.constants import ALL_TOOLS_NAMES
 
 
 def get_tools_dict():
     """Get the tools dictionary."""
 
-    return {
-        **_BASE_TOOLS,
-        **_LLM_TOOLS,
-        **{k: v[0] for k, v in _EXTRA_LLM_TOOLS.items()},
-        **{k: v[0] for k, v in _EXTRA_OPTIONAL_TOOLS.items()},
-        **CUSTOM_TOOLS,
-        **FILE_TOOLS,
-    }
+    all_tools = {}
+
+    for tool, fcn in ALL_TOOLS_NAMES.items():
+        if tool_params := get_tool_params(fcn):
+            tool_name = tool_params.get("name") or str(tool)
+            all_tools[tool_name] = fcn
+
+    return all_tools
 
 
 def get_tool_by_name(name: str):

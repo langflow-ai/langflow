@@ -10,7 +10,6 @@ from langchain.agents.load_tools import (
 from langflow.custom import customs
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.tools.constants import (
-    ALL_TOOLS_NAMES,
     CUSTOM_TOOLS,
     FILE_TOOLS,
 )
@@ -133,8 +132,8 @@ class ToolCreator(LangChainTypeCreator):
 
         tools = []
 
-        for tool in ALL_TOOLS_NAMES:
-            tool_params = get_tool_params(get_tool_by_name(tool))
+        for tool, fcn in get_tools_dict().items():
+            tool_params = get_tool_params(fcn)
 
             if tool_params and not tool_params.get("name"):
                 tool_params["name"] = tool
@@ -145,9 +144,7 @@ class ToolCreator(LangChainTypeCreator):
             ):
                 tools.append(tool_params["name"])
 
-        # Add Tool
-        custom_tools = customs.get_custom_nodes("tools")
-        return tools + list(custom_tools.keys())
+        return tools
 
 
 tool_creator = ToolCreator()
