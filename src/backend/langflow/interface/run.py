@@ -66,9 +66,7 @@ def process_graph(data_graph: Dict[str, Any]):
     logger.debug("Saved langchain object to cache")
     return {
         "result": str(result),
-        "thought": re.sub(
-            r"\x1b\[([0-9,A-Z]{1,2}(;[0-9,A-Z]{1,2})?)?[m|K]", "", thought
-        ).strip(),
+        "thought": thought.strip()
     }
 
 
