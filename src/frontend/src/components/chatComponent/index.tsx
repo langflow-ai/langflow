@@ -13,6 +13,7 @@ import { TabsContext } from "../../contexts/tabsContext";
 import { ChatType } from "../../types/chat";
 import ChatMessage from "./chatMessage";
 
+
 const _ = require("lodash");
 
 export default function Chat({ flow, reactFlowInstance }: ChatType) {
@@ -99,7 +100,7 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 
 				sendAll({ ...reactFlowInstance.toObject(), message, chatHistory,name:flow.name,description:flow.description})
 					.then((r) => {
-						addChatHistory(r.data.result, false, r.data.thought);
+						addChatHistory(r.data.result, false,r.data.thought);
 						setLockChat(false);
 					})
 					.catch((error) => {
