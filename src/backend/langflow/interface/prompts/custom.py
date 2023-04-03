@@ -1,11 +1,11 @@
 from typing import List, Optional
 
 from langchain.prompts import PromptTemplate
+from pydantic import root_validator
+
 from langflow.graph.utils import extract_input_variables_from_prompt
 from langflow.template.base import Template, TemplateField
 from langflow.template.nodes import PromptTemplateNode
-from pydantic import root_validator
-
 
 CHARACTER_PROMPT = """I want you to act like {character} from {series}.
 I want you to respond and answer like {character}. do not write any explanations. only answer like {character}.

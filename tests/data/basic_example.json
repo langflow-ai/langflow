@@ -432,7 +432,7 @@
                                 "placeholder": "",
                                 "value": "---"
                             },
-                            "_type": "google-serper"
+                            "_type": "Serper Search"
                         },
                         "name": "Serper Search",
                         "description": "A low-cost Google Search API. Useful for when you need to answer questions about current events. Input should be a search query.",

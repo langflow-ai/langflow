@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import memory_type_to_cls_dict
@@ -15,7 +15,7 @@ class MemoryCreator(LangChainTypeCreator):
             self.type_dict = memory_type_to_cls_dict
         return self.type_dict
 
-    def get_signature(self, name: str) -> Dict | None:
+    def get_signature(self, name: str) -> Optional[Dict]:
         """Get the signature of a memory."""
         try:
             return build_template_from_class(name, memory_type_to_cls_dict)

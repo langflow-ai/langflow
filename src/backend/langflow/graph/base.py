@@ -5,7 +5,7 @@
 
 import types
 from copy import deepcopy
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from langflow.graph.constants import DIRECT_TYPES
 from langflow.graph.utils import load_file
@@ -15,11 +15,11 @@ from langflow.utils.logger import logger
 
 
 class Node:
-    def __init__(self, data: Dict, base_type: str | None = None) -> None:
+    def __init__(self, data: Dict, base_type: Optional[str] = None) -> None:
         self.id: str = data["id"]
         self._data = data
         self.edges: List[Edge] = []
-        self.base_type: str | None = base_type
+        self.base_type: Optional[str] = base_type
         self._parse_data()
         self._built_object = None
         self._built = False
@@ -80,51 +80,44 @@ class Node:
                 continue
             # If the type is not transformable to a python base class
             # then we need to get the edge that connects to this node
-            if value["type"] == "file":
+            if value.get("type") == "file":
                 # Load the type in value.get('suffixes') using
                 # what is inside value.get('content')
                 # value.get('value') is the file name
-                type_to_load = value.get("suffixes")
                 file_name = value.get("value")
                 content = value.get("content")
+                type_to_load = value.get("suffixes")
                 loaded_dict = load_file(file_name, content, type_to_load)
                 params[key] = loaded_dict
 
             # We should check if the type is in something not
             # the opposite
-            elif value["type"] not in DIRECT_TYPES:
+            elif value.get("type") not in DIRECT_TYPES:
                 # Get the edge that connects to this node
-                try:
-                    edge = next(
-                        (
-                            edge
-                            for edge in self.edges
-                            if edge.target == self
-                            and edge.matched_type in value["type"]
-                        ),
-                        None,
-                    )
+                edges = [
+                    edge
+                    for edge in self.edges
+                    if edge.target == self and edge.matched_type in value["type"]
+                ]
 
-                except Exception as e:
-                    raise e
                 # Get the output of the node that the edge connects to
                 # if the value['list'] is True, then there will be more
                 # than one time setting to params[key]
                 # so we need to append to a list if it exists
                 # or create a new list if it doesn't
 
-                if edge is None and value["required"]:
-                    # break line
+                if value["required"] and not edges:
+                    # If a required parameter is not found, raise an error
                     raise ValueError(
                         f"Required input {key} for module {self.node_type} not found"
                     )
                 elif value["list"]:
-                    if key not in params:
-                        params[key] = []
-                    if edge is not None:
-                        params[key].append(edge.source)
-                elif value["required"] or edge is not None:
-                    params[key] = edge.source
+                    # If this is a list parameter, append all sources to a list
+                    params[key] = [edge.source for edge in edges]
+                elif edges:
+                    # If a single parameter is found, use its source
+                    params[key] = edges[0].source
+
             elif value["required"] or value.get("value"):
                 params[key] = value["value"]
 

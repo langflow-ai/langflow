@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from langflow.main import create_app
 from langflow.settings import settings
-from langflow.utils.logger import configure, logger
+from langflow.utils.logger import configure
 
 app = typer.Typer()
 
