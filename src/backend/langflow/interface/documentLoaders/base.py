@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import documentloaders_type_to_cls_dict
@@ -13,7 +13,7 @@ class DocumentLoaderCreator(LangChainTypeCreator):
     def type_to_loader_dict(self) -> Dict:
         return documentloaders_type_to_cls_dict
 
-    def get_signature(self, name: str) -> Dict | None:
+    def get_signature(self, name: str) -> Optional[Dict]:
         """Get the signature of a document loader."""
         try:
             return build_template_from_class(name, documentloaders_type_to_cls_dict)

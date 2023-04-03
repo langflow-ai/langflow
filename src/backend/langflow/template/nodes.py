@@ -1,10 +1,11 @@
 from typing import Optional
+
+from langchain.agents import loading
 from langchain.agents.mrkl import prompt
 
 from langflow.template.base import FrontendNode, Template, TemplateField
 from langflow.template.constants import DEFAULT_PROMPT, HUMAN_PROMPT, SYSTEM_PROMPT
 from langflow.utils.constants import DEFAULT_PYTHON_FUNCTION
-from langchain.agents import loading
 
 
 class BasePromptFrontendNode(FrontendNode):
@@ -176,6 +177,7 @@ class InitializeAgentNode(FrontendNode):
                 show=True,
                 multiline=False,
                 options=list(loading.AGENT_TO_CLASS.keys()),
+                value=list(loading.AGENT_TO_CLASS.keys())[0],
                 name="agent",
             ),
             TemplateField(

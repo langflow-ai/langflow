@@ -1,10 +1,9 @@
-from typing import Dict, List
-
-from langchain.chains import loading as chains_loading
+from typing import Dict, List, Optional
 
 from langflow.interface.base import LangChainTypeCreator
+from langflow.interface.custom_lists import chain_type_to_cls_dict
 from langflow.settings import settings
-from langflow.utils.util import build_template_from_function
+from langflow.utils.util import build_template_from_class
 
 # Assuming necessary imports for Field, Template, and FrontendNode classes
 
@@ -15,25 +14,20 @@ class ChainCreator(LangChainTypeCreator):
     @property
     def type_to_loader_dict(self) -> Dict:
         if self.type_dict is None:
-            self.type_dict = chains_loading.type_to_loader_dict
+            self.type_dict = chain_type_to_cls_dict
         return self.type_dict
 
-    def get_signature(self, name: str) -> Dict | None:
+    def get_signature(self, name: str) -> Optional[Dict]:
         try:
-            return build_template_from_function(
-                name, self.type_to_loader_dict, add_function=True
-            )
+            return build_template_from_class(name, chain_type_to_cls_dict)
         except ValueError as exc:
-            raise ValueError("Chain not found") from exc
+            raise ValueError("Memory not found") from exc
 
     def to_list(self) -> List[str]:
         return [
-            chain.__annotations__["return"].__name__
+            chain.__name__
             for chain in self.type_to_loader_dict.values()
-            if (
-                chain.__annotations__["return"].__name__ in settings.chains
-                or settings.dev
-            )
+            if chain.__name__ in settings.chains or settings.dev
         ]
 
 

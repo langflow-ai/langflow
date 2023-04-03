@@ -1,8 +1,8 @@
 chains:
   - LLMChain
   - LLMMathChain
-  - LLMChecker
-  # - ConversationChain
+  - LLMCheckerChain
+  - ConversationChain
 
 agents:
   - ZeroShotAgent
@@ -36,19 +36,16 @@ wrappers:
   - RequestsWrapper
 
 toolkits:
- - OpenAPIToolkit
- - JsonToolkit
+  - OpenAPIToolkit
+  - JsonToolkit
 
 memories:
   - ConversationBufferMemory
 
 embeddings: []
 
-
 vectorstores: []
 
-
 documentloaders: []
-
 
 dev: false

@@ -17,7 +17,8 @@ from langflow.interface.llms.base import llm_creator
 from langflow.interface.prompts.base import prompt_creator
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.tools.base import tool_creator
-from langflow.interface.tools.constants import ALL_TOOLS_NAMES, FILE_TOOLS
+from langflow.interface.tools.constants import FILE_TOOLS
+from langflow.interface.tools.util import get_tools_dict
 from langflow.interface.wrappers.base import wrapper_creator
 from langflow.utils import payload
 
@@ -113,7 +114,10 @@ class Graph:
                 nodes.append(AgentNode(node))
             elif node_type in chain_creator.to_list():
                 nodes.append(ChainNode(node))
-            elif node_type in tool_creator.to_list() or node_lc_type in ALL_TOOLS_NAMES:
+            elif (
+                node_type in tool_creator.to_list()
+                or node_lc_type in get_tools_dict().keys()
+            ):
                 if node_type in FILE_TOOLS:
                     nodes.append(FileToolNode(node))
                 nodes.append(ToolNode(node))

@@ -17,6 +17,7 @@
         "@types/react": "^18.0.27",
         "@types/react-dom": "^18.0.10",
         "ace-builds": "^1.16.0",
+        "ansi-to-html": "^0.7.2",
         "axios": "^1.3.2",
         "lodash": "^4.17.21",
         "react": "^18.2.0",
@@ -58,5 +59,5 @@
             "last 1 safari version"
         ]
     },
-    "proxy": "http://backend:7860"
+    "proxy": "http://localhost:7860"
 }

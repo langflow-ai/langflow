@@ -70,7 +70,12 @@ export default function GenericNode({
 						.map((t: string, idx) => (
 							<div key={idx}>
 								{idx === 0 ? (
-									<div className="px-5 py-2 mt-2 dark:text-white text-center">
+									<div
+										className={classNames(
+											"px-5 py-2 mt-2 dark:text-white text-center",
+											Object.keys(data.node.template).filter(key => !key.startsWith('_') && data.node.template[key].show).length === 0?"hidden":""
+										)}
+									>
 										Inputs
 									</div>
 								) : (
