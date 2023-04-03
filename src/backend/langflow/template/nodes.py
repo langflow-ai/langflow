@@ -166,6 +166,7 @@ class InitializeAgentNode(FrontendNode):
                 show=True,
                 multiline=False,
                 options=list(loading.AGENT_TO_CLASS.keys()),
+                value=list(loading.AGENT_TO_CLASS.keys())[0],
                 name="agent",
             ),
             TemplateField(
