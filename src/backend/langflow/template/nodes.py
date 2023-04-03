@@ -2,6 +2,7 @@ from typing import Optional
 from langchain.agents.mrkl import prompt
 
 from langflow.template.base import FrontendNode, Template, TemplateField
+from langflow.template.constants import DEFAULT_PROMPT, HUMAN_PROMPT, SYSTEM_PROMPT
 from langflow.utils.constants import DEFAULT_PYTHON_FUNCTION
 from langchain.agents import loading
 
@@ -244,6 +245,15 @@ class PromptFrontendNode(FrontendNode):
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         # if field.field_type  == "StringPromptTemplate"
         # change it to str
-        if field.field_type == "StringPromptTemplate":
+        if field.field_type == "StringPromptTemplate" and "Message" in name:
             field.field_type = "str"
             field.multiline = True
+            field.value = HUMAN_PROMPT if "Human" in field.name else SYSTEM_PROMPT
+        if field.name == "template":
+            field.value = DEFAULT_PROMPT
+
+        if (
+            "Union" in field.field_type
+            and "BaseMessagePromptTemplate" in field.field_type
+        ):
+            field.field_type = "BaseMessagePromptTemplate"
