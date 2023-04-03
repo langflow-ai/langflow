@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from langchain.prompts import loading
 from langchain import prompts
@@ -28,7 +28,7 @@ class PromptCreator(LangChainTypeCreator):
             }
         return self.type_dict
 
-    def get_signature(self, name: str) -> Dict | None:
+    def get_signature(self, name: str) -> Optional[Dict]:
         try:
             if name in get_custom_nodes(self.type_name).keys():
                 return get_custom_nodes(self.type_name)[name]

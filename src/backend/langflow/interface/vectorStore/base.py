@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import vectorstores_type_to_cls_dict
@@ -13,7 +13,7 @@ class VectorstoreCreator(LangChainTypeCreator):
     def type_to_loader_dict(self) -> Dict:
         return vectorstores_type_to_cls_dict
 
-    def get_signature(self, name: str) -> Dict | None:
+    def get_signature(self, name: str) -> Optional[Dict]:
         """Get the signature of an embedding."""
         try:
             return build_template_from_class(name, vectorstores_type_to_cls_dict)

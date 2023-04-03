@@ -1,12 +1,10 @@
 import contextlib
 import io
-import re
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict
 
 from langflow.cache.utils import compute_hash, load_cache, save_cache
 from langflow.graph.graph import Graph
 from langflow.interface import loading
-from langflow.utils import payload
 from langflow.utils.logger import logger
 
 
@@ -65,12 +63,7 @@ def process_graph(data_graph: Dict[str, Any]):
     logger.debug("Saving langchain object to cache")
     save_cache(computed_hash, langchain_object, is_first_message)
     logger.debug("Saved langchain object to cache")
-    return {
-        "result": str(result),
-        "thought": re.sub(
-            r"\x1b\[([0-9,A-Z]{1,2}(;[0-9,A-Z]{1,2})?)?[m|K]", "", thought
-        ).strip(),
-    }
+    return {"result": str(result), "thought": thought.strip()}
 
 
 def get_result_and_thought_using_graph(loaded_langchain, message: str):
