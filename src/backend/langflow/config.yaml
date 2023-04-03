@@ -13,6 +13,10 @@ agents:
 prompts:
   - PromptTemplate
   - FewShotPromptTemplate
+  - ChatPromptTemplate
+  - SystemMessagePromptTemplate
+  - AIMessagePromptTemplate
+  - HumanMessagePromptTemplate
 
 llms:
   - OpenAI
