@@ -23,7 +23,7 @@ def get_type_list():
     return all_types
 
 
-def build_langchain_types_dict():
+def build_langchain_types_dict():  # sourcery skip: dict-assign-update-to-union
     """Build a dictionary of all langchain types"""
 
     all_types = {}

@@ -7,27 +7,37 @@ from langflow.cache.utils import compute_hash, load_cache, save_cache
 from langflow.graph.graph import Graph
 from langflow.interface import loading
 from langflow.utils import payload
-import logging
-
-logger = logging.getLogger(__name__)
+from langflow.utils.logger import logger
 
 
-def load_langchain_object(data_graph):
+def load_langchain_object(data_graph, is_first_message=False):
+    """
+    Load langchain object from cache if it exists, otherwise build it.
+    """
     computed_hash = compute_hash(data_graph)
-
-    # Load langchain_object from cache if it exists
-    langchain_object = load_cache(computed_hash)
-    if langchain_object is None:
-        nodes = data_graph["nodes"]
-        # Add input variables
-        nodes = payload.extract_input_variables(nodes)
-        # Nodes, edges and root node
-        edges = data_graph["edges"]
-        graph = Graph(nodes, edges)
-
-        langchain_object = graph.build()
+    if is_first_message:
+        langchain_object = build_langchain_object(data_graph)
+    else:
+        logger.debug("Loading langchain object from cache")
+        langchain_object = load_cache(computed_hash)
 
     return computed_hash, langchain_object
+
+
+def build_langchain_object(data_graph):
+    """
+    Build langchain object from data_graph.
+    """
+
+    logger.debug("Building langchain object")
+    nodes = data_graph["nodes"]
+    # Add input variables
+    nodes = payload.extract_input_variables(nodes)
+    # Nodes, edges and root node
+    edges = data_graph["edges"]
+    graph = Graph(nodes, edges)
+
+    return graph.build()
 
 
 def process_graph(data_graph: Dict[str, Any]):
@@ -38,7 +48,10 @@ def process_graph(data_graph: Dict[str, Any]):
     # Load langchain object
     logger.debug("Loading langchain object")
     message = data_graph.pop("message", "")
-    computed_hash, langchain_object = load_langchain_object(data_graph)
+    is_first_message = len(data_graph.get("chatHistory", [])) == 0
+    computed_hash, langchain_object = load_langchain_object(
+        data_graph, is_first_message
+    )
     logger.debug("Loaded langchain object")
 
     # Generate result and thought
@@ -50,7 +63,7 @@ def process_graph(data_graph: Dict[str, Any]):
     # We have to save it here because if the
     # memory is updated we need to keep the new values
     logger.debug("Saving langchain object to cache")
-    save_cache(computed_hash, langchain_object)
+    save_cache(computed_hash, langchain_object, is_first_message)
     logger.debug("Saved langchain object to cache")
     return {
         "result": str(result),
