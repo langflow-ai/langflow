@@ -1,7 +1,7 @@
 import contextlib
 import io
 import re
-from typing import Any, Dict
+from typing import Any, Dict, List, Tuple
 
 from langflow.cache.utils import compute_hash, load_cache, save_cache
 from langflow.graph.graph import Graph
@@ -109,15 +109,40 @@ def get_result_and_thought(extracted_json: Dict[str, Any], message: str):
             config=extracted_json
         )
         with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
-            result = loaded_langchain(message)
-            result = (
-                result.get(loaded_langchain.output_keys[0])
-                if isinstance(result, dict)
-                else result
+            output = loaded_langchain(message)
+            intermediate_steps = (
+                output.get("intermediate_steps", []) if isinstance(output, dict) else []
             )
-            thought = output_buffer.getvalue()
+            result = (
+                output.get(loaded_langchain.output_keys[0])
+                if isinstance(output, dict)
+                else output
+            )
+
+            if intermediate_steps:
+                thought = format_intermediate_steps(intermediate_steps)
+            else:
+                thought = output_buffer.getvalue()
 
     except Exception as e:
         result = f"Error: {str(e)}"
         thought = ""
     return result, thought
+
+
+def format_intermediate_steps(intermediate_steps):
+    formatted_chain = "> Entering new AgentExecutor chain...\n"
+    for step in intermediate_steps:
+        action = step[0]
+        observation = step[1]
+
+        formatted_chain += (
+            f" {action.log}\nAction: {action.tool}\nAction Input: {action.tool_input}\n"
+        )
+        formatted_chain += f"Observation: {observation}\n"
+
+    final_answer = f"Final Answer: {observation}\n"
+    formatted_chain += f"Thought: I now know the final answer\n{final_answer}\n"
+    formatted_chain += "> Finished chain.\n"
+
+    return formatted_chain
