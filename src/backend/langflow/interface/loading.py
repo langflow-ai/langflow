@@ -22,7 +22,7 @@ from langflow.interface.agents.custom import CUSTOM_AGENTS
 from langflow.interface.importing.utils import import_by_type
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.types import get_type_list
-from langflow.utils import payload, util, validate
+from langflow.utils import util, validate
 
 
 def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
