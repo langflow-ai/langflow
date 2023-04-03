@@ -6,7 +6,17 @@ from langflow.utils.constants import DEFAULT_PYTHON_FUNCTION
 from langchain.agents import loading
 
 
-class ZeroShotPromptNode(FrontendNode):
+class BasePromptFrontendNode(FrontendNode):
+    name: str
+    template: Template
+    description: str
+    base_classes: list[str]
+
+    def to_dict(self):
+        return super().to_dict()
+
+
+class ZeroShotPromptNode(BasePromptFrontendNode):
     name: str = "ZeroShotPrompt"
     template: Template = Template(
         type_name="zero_shot",
@@ -227,3 +237,13 @@ class CSVAgentNode(FrontendNode):
 
     def to_dict(self):
         return super().to_dict()
+
+
+class PromptFrontendNode(FrontendNode):
+    @staticmethod
+    def format_field(field: TemplateField, name: Optional[str] = None) -> None:
+        # if field.field_type  == "StringPromptTemplate"
+        # change it to str
+        if field.field_type == "StringPromptTemplate":
+            field.field_type = "str"
+            field.multiline = True

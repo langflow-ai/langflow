@@ -219,3 +219,5 @@ class FrontendNode(BaseModel):
         elif name == "ChatOpenAI" and key == "model_name":
             field.options = constants.CHAT_OPENAI_MODELS
             field.is_list = True
+
+
