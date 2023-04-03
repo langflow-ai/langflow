@@ -76,7 +76,8 @@ def process_graph(data_graph: Dict[str, Any]):
 def get_result_and_thought_using_graph(loaded_langchain, message: str):
     """Get result and thought from extracted json"""
     try:
-        loaded_langchain.verbose = True
+        if hasattr(loaded_langchain, "verbose"):
+            loaded_langchain.verbose = True
         with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
             chat_input = None
             for key in loaded_langchain.input_keys:
