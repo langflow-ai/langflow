@@ -1,7 +1,15 @@
 from typing import Any
 
 ## LLM
-from langchain import chains, document_loaders, embeddings, llms, memory, requests, vectorstores
+from langchain import (
+    chains,
+    document_loaders,
+    embeddings,
+    llms,
+    memory,
+    requests,
+    vectorstores,
+)
 from langchain.agents import agent_toolkits
 from langchain.chat_models import ChatOpenAI
 

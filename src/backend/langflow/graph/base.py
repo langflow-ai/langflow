@@ -3,7 +3,6 @@
 #   - Defer prompts building to the last moment or when they have all the tools
 #   - Build each inner agent first, then build the outer agent
 
-import logging
 import types
 from copy import deepcopy
 from typing import Any, Dict, List
@@ -12,8 +11,7 @@ from langflow.graph.constants import DIRECT_TYPES
 from langflow.graph.utils import load_file
 from langflow.interface import loading
 from langflow.interface.listing import ALL_TYPES_DICT
-
-logger = logging.getLogger(__name__)
+from langflow.utils.logger import logger
 
 
 class Node:
