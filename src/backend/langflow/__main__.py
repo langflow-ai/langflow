@@ -1,4 +1,3 @@
-import logging
 import multiprocessing
 import platform
 from pathlib import Path
@@ -8,8 +7,9 @@ from fastapi.staticfiles import StaticFiles
 
 from langflow.main import create_app
 from langflow.settings import settings
+from langflow.utils.logger import configure, logger
 
-logger = logging.getLogger(__name__)
+app = typer.Typer()
 
 
 def get_number_of_workers(workers=None):
@@ -24,14 +24,21 @@ def update_settings(config: str):
         settings.update_from_yaml(config)
 
 
+@app.command()
 def serve(
-    host: str = "127.0.0.1",
-    workers: int = 1,
-    timeout: int = 60,
-    port: int = 7860,
-    config: str = "config.yaml",
-    log_level: str = "info",
+    host: str = typer.Option("127.0.0.1", help="Host to bind the server to."),
+    workers: int = typer.Option(1, help="Number of worker processes."),
+    timeout: int = typer.Option(60, help="Worker timeout in seconds."),
+    port: int = typer.Option(7860, help="Port to listen on."),
+    config: str = typer.Option("config.yaml", help="Path to the configuration file."),
+    log_level: str = typer.Option("info", help="Logging level."),
+    log_file: Path = typer.Option("logs/langflow.log", help="Path to the log file."),
 ):
+    """
+    Run the Langflow server.
+    """
+
+    configure(log_level=log_level, log_file=log_file)
     update_settings(config)
     app = create_app()
     # get the directory of the current file
@@ -52,7 +59,7 @@ def serve(
     if platform.system() in ["Darwin", "Windows"]:
         # Run using uvicorn on MacOS and Windows
         # Windows doesn't support gunicorn
-        # MacOS requires a env variable to be set to use gunicorn
+        # MacOS requires an env variable to be set to use gunicorn
         import uvicorn
 
         uvicorn.run(app, host=host, port=port, log_level=log_level)
@@ -63,7 +70,7 @@ def serve(
 
 
 def main():
-    typer.run(serve)
+    app()
 
 
 if __name__ == "__main__":
