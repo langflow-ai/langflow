@@ -31,6 +31,7 @@ export default function GenericNode({
 			});
 			showError.current = false;
 		}
+		deleteNode(data.id)
 		return;
 	}
 	return (
