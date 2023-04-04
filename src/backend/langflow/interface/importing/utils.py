@@ -10,6 +10,7 @@ from langchain.chat_models.base import BaseChatModel
 from langchain.llms.base import BaseLLM
 from langchain.tools import BaseTool
 
+
 from langflow.interface.tools.util import get_tool_by_name
 
 
@@ -66,9 +67,13 @@ def import_class(class_path: str) -> Any:
 
 
 def import_prompt(prompt: str) -> PromptTemplate:
+    from langflow.interface.prompts.custom import CUSTOM_PROMPTS
+
     """Import prompt from prompt name"""
     if prompt == "ZeroShotPrompt":
         return import_class("langchain.prompts.PromptTemplate")
+    elif prompt in CUSTOM_PROMPTS:
+        return CUSTOM_PROMPTS[prompt]
     return import_class(f"langchain.prompts.{prompt}")
 
 
@@ -102,4 +107,8 @@ def import_tool(tool: str) -> BaseTool:
 
 def import_chain(chain: str) -> Chain:
     """Import chain from chain name"""
+    from langflow.interface.chains.custom import CUSTOM_CHAINS
+
+    if chain in CUSTOM_CHAINS:
+        return CUSTOM_CHAINS[chain]
     return import_class(f"langchain.chains.{chain}")

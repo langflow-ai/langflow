@@ -26,6 +26,10 @@ class PromptCreator(LangChainTypeCreator):
                 for prompt_name in prompts.__all__
                 if not prompt_name.islower() and prompt_name in settings.prompts
             }
+            # Merge CUSTOM_PROMPTS into self.type_dict
+            from langflow.interface.prompts.custom import CUSTOM_PROMPTS
+
+            self.type_dict.update(CUSTOM_PROMPTS)
         return self.type_dict
 
     def get_signature(self, name: str) -> Optional[Dict]:

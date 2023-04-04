@@ -251,7 +251,7 @@ class PromptFrontendNode(FrontendNode):
             field.field_type = "str"
             field.multiline = True
             field.value = HUMAN_PROMPT if "Human" in field.name else SYSTEM_PROMPT
-        if field.name == "template":
+        if field.name == "template" and field.value == "":
             field.value = DEFAULT_PROMPT
 
         if (
