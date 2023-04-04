@@ -7,7 +7,7 @@ from langflow.utils.util import build_template_from_class
 
 
 class DocumentLoaderCreator(LangChainTypeCreator):
-    type_name: str = "documentloader"
+    type_name: str = "documentloaders"
 
     @property
     def type_to_loader_dict(self) -> Dict:
@@ -16,7 +16,21 @@ class DocumentLoaderCreator(LangChainTypeCreator):
     def get_signature(self, name: str) -> Optional[Dict]:
         """Get the signature of a document loader."""
         try:
-            return build_template_from_class(name, documentloaders_type_to_cls_dict)
+            signature = build_template_from_class(
+                name, documentloaders_type_to_cls_dict
+            )
+
+            signature["template"]["file"] = {
+                "type": "file",
+                "required": True,
+                "show": True,
+                "name": "path",
+                "value": "",
+                "suffixes": [".txt"],
+                "fileTypes": ["txt"],
+            }
+
+            return signature
         except ValueError as exc:
             raise ValueError(f"Documment Loader {name} not found") from exc
 
