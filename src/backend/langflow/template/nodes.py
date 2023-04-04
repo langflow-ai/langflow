@@ -259,3 +259,17 @@ class PromptFrontendNode(FrontendNode):
             and "BaseMessagePromptTemplate" in field.field_type
         ):
             field.field_type = "BaseMessagePromptTemplate"
+
+
+class MemoryFrontendNode(FrontendNode):
+    @staticmethod
+    def format_field(field: TemplateField, name: Optional[str] = None) -> None:
+        FrontendNode.format_field(field, name)
+
+        if not isinstance(field.value, str):
+            field.value = None
+        if field.name == "k":
+            field.required = True
+            field.show = True
+            field.field_type = "int"
+            field.value = 10
