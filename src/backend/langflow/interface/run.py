@@ -95,9 +95,9 @@ def get_result_and_thought_using_graph(loaded_langchain, message: str):
             # I'm not sure about this yet.
             function_to_call = None
             if hasattr(loaded_langchain, "memory"):
+                function_to_call = loaded_langchain.predict
             elif hasattr(loaded_langchain, "run"):
                 function_to_call = loaded_langchain.run
-                function_to_call = loaded_langchain.predict
             else:
                 function_to_call = loaded_langchain
 
