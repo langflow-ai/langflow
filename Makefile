@@ -40,14 +40,15 @@ build:
 	rm -rf src/backend/langflow/frontend
 
 dev:
-	make install_frontend
+    make install_frontend
 ifeq ($(build),1)
-	@echo 'Running docker compose up with build'
-	docker compose up --build
+    @echo 'Running docker compose up with build'
+    docker compose up $(if $(debug),-f docker-compose.debug.yml) --build
 else
-	@echo 'Running docker compose up without build'
-	docker compose up
+    @echo 'Running docker compose up without build'
+    docker compose up $(if $(debug),-f docker-compose.debug.yml)
 endif
+
 
 
 publish:
