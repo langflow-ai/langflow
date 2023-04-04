@@ -273,3 +273,4 @@ class MemoryFrontendNode(FrontendNode):
             field.show = True
             field.field_type = "int"
             field.value = 10
+            field.display_name = "Memory Size"
