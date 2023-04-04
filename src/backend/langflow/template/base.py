@@ -22,6 +22,7 @@ class TemplateFieldCreator(BaseModel, ABC):
     password: bool = False
     options: list[str] = []
     name: str = ""
+    display_name: str = ""
 
     def to_dict(self):
         result = self.dict()
@@ -219,5 +220,3 @@ class FrontendNode(BaseModel):
         elif name == "ChatOpenAI" and key == "model_name":
             field.options = constants.CHAT_OPENAI_MODELS
             field.is_list = True
-
-
