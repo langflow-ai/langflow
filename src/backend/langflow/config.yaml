@@ -37,10 +37,13 @@ toolkits:
 memories:
   - ConversationBufferMemory
 
-embeddings: []
+embeddings:
+  - OpenAIEmbeddings
 
-vectorstores: []
+vectorstores:
+  - Chroma
 
-documentloaders: []
+documentloaders:
+  - TextLoader
 
 dev: false

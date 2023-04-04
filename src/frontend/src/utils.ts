@@ -76,7 +76,9 @@ export const nodeColors: {[char: string]: string} = {
   advanced: "#000000",
   chat: "#454173",
   thought:"#272541",
-  docloaders:"#FF9135",
+  embeddings:"#FF9135",
+  documentloader:"#FF9135",
+  vectorstore: "#FF9135",
   unknown:"#9CA3AF"
 };
 
@@ -89,7 +91,9 @@ export const nodeNames:{[char: string]: string} = {
   memories: "Memories",
   advanced: "Advanced",
   chat: "Chat",
-  docloaders:"Document Loader",
+  embeddings: "Embeddings",
+  documentloader: "Document Loaders",
+  vectorstore: "Vector Stores",
   toolkits:"Toolkits",
   wrappers:"Wrappers",
   unknown:"Unknown"
@@ -104,7 +108,9 @@ export const nodeIcons:{[char: string]: React.ForwardRefExoticComponent<React.SV
   tools: WrenchIcon,
   advanced: ComputerDesktopIcon,
   chat: Bars3CenterLeftIcon,
-  docloaders:Bars3CenterLeftIcon,
+  embeddings:PaperClipIcon,
+  documentloader:PaperClipIcon,
+  vectorstore: PaperClipIcon,
   toolkits:WrenchScrewdriverIcon,
   wrappers:GiftIcon,
   unknown:QuestionMarkCircleIcon
