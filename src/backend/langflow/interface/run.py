@@ -52,6 +52,12 @@ def process_graph(data_graph: Dict[str, Any]):
     )
     logger.debug("Loaded langchain object")
 
+    if langchain_object is None:
+        # Raise user facing error
+        raise ValueError(
+            "There was an error loading the flow. Please, check all the nodes and try again."
+        )
+
     # Generate result and thought
     logger.debug("Generating result and thought")
     result, thought = get_result_and_thought_using_graph(langchain_object, message)
@@ -73,18 +79,30 @@ def get_result_and_thought_using_graph(loaded_langchain, message: str):
             loaded_langchain.verbose = True
         with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
             chat_input = None
+            memory_key = ""
+            if hasattr(loaded_langchain, "memory"):
+                mem_vars = loaded_langchain.memory.memory_variables
+                memory_key = mem_vars[0] if mem_vars else ""
+
             for key in loaded_langchain.input_keys:
-                if key == "chat_history" and hasattr(loaded_langchain, "memory"):
-                    loaded_langchain.memory.memory_key = "chat_history"
-                else:
+                if key != memory_key:
                     chat_input = {key: message}
 
             if hasattr(loaded_langchain, "return_intermediate_steps"):
                 # https://github.com/hwchase17/langchain/issues/2068
                 loaded_langchain.return_intermediate_steps = False
 
+            # I'm not sure about this yet.
+            function_to_call = None
+            if hasattr(loaded_langchain, "memory"):
+            elif hasattr(loaded_langchain, "run"):
+                function_to_call = loaded_langchain.run
+                function_to_call = loaded_langchain.predict
+            else:
+                function_to_call = loaded_langchain
+
             try:
-                output = loaded_langchain(chat_input)
+                output = function_to_call(chat_input)
             except ValueError as exc:
                 logger.debug("Error: %s", str(exc))
                 output = loaded_langchain.run(chat_input)

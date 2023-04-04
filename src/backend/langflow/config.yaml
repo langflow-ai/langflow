@@ -3,6 +3,9 @@ chains:
   - LLMMathChain
   - LLMCheckerChain
   - ConversationChain
+  - SeriesCharacterChain
+  - MidJourneyPromptChain
+  - TimeTravelGuideChain
 
 agents:
   - ZeroShotAgent
