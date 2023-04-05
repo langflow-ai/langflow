@@ -27,10 +27,3 @@ class CodeValidationResponse(BaseModel):
 
 class PromptValidationResponse(BaseModel):
     input_variables: list
-    valid: bool
-
-
-def validate_prompt(template):
-    # Extract the input variables from template
-    input_variables = extract_input_variables_from_prompt(template)
-    return input_variables, len(input_variables) > 0

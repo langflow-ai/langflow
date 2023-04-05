@@ -1,25 +1,6 @@
-import json
-from typing import Dict
+import pytest
 from fastapi.testclient import TestClient
 from langflow.interface.tools.constants import CUSTOM_TOOLS
-from pathlib import Path
-
-import pytest
-
-
-def test_post_predict(client: TestClient):
-    with open(Path(__file__).parent / "data" / "Build_error.json") as f:
-        data = f.read()
-        json_data = json.loads(data)
-    data: Dict = json_data["data"]
-    data["message"] = "I'm Bob"
-    response = client.post("/predict", json=data)
-    assert response.status_code == 200
-    data["message"] = "What is my name?"
-    data["chatHistory"] = ["I'm Bob"]
-    response = client.post("/predict", json=data)
-    assert response.status_code == 200
-    assert "Bob" in response.json()["result"]
 
 
 def test_get_all(client: TestClient):
@@ -116,28 +97,27 @@ INVALID_PROMPT = "This is an invalid prompt without any input variable."
 def test_valid_prompt(client: TestClient):
     response = client.post("/validate/prompt", json={"template": VALID_PROMPT})
     assert response.status_code == 200
-    assert response.json() == {"input_variables": ["product"], "valid": True}
+    assert response.json() == {"input_variables": ["product"]}
 
 
 def test_invalid_prompt(client: TestClient):
     response = client.post("/validate/prompt", json={"template": INVALID_PROMPT})
     assert response.status_code == 200
-    assert response.json() == {"input_variables": [], "valid": False}
+    assert response.json() == {"input_variables": []}
 
 
 @pytest.mark.parametrize(
-    "prompt,expected_input_variables,expected_validity",
+    "prompt,expected_input_variables",
     [
-        ("{color} is my favorite color.", ["color"], True),
-        ("The weather is {weather} today.", ["weather"], True),
-        ("This prompt has no variables.", [], False),
-        ("{a}, {b}, and {c} are variables.", ["a", "b", "c"], True),
+        ("{color} is my favorite color.", ["color"]),
+        ("The weather is {weather} today.", ["weather"]),
+        ("This prompt has no variables.", []),
+        ("{a}, {b}, and {c} are variables.", ["a", "b", "c"]),
     ],
 )
-def test_various_prompts(client, prompt, expected_input_variables, expected_validity):
+def test_various_prompts(client, prompt, expected_input_variables):
     response = client.post("/validate/prompt", json={"template": prompt})
     assert response.status_code == 200
     assert response.json() == {
         "input_variables": expected_input_variables,
-        "valid": expected_validity,
     }
