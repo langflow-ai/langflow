@@ -116,8 +116,15 @@ def fix_memory_inputs(langchain_object):
     get_memory_key function and updates the memory keys using the update_memory_keys function.
     """
     if hasattr(langchain_object, "memory") and langchain_object.memory is not None:
-        if langchain_object.memory.memory_key in langchain_object.input_variables:
-            return
+        try:
+            if langchain_object.memory.memory_key in langchain_object.input_variables:
+                return
+        except AttributeError:
+            if (
+                langchain_object.memory.memory_key
+                in langchain_object.prompt.input_variables
+            ):
+                return
 
         possible_new_mem_key = get_memory_key(langchain_object)
         if possible_new_mem_key is not None:
