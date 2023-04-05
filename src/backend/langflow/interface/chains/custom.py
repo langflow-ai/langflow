@@ -81,7 +81,7 @@ class MidJourneyPromptChain(BaseCustomChain):
     Current conversation:
     {history}
     Human: {input}
-    AI:"""
+    AI:"""  # noqa: E501
 
 
 class TimeTravelGuideChain(BaseCustomChain):
@@ -91,7 +91,7 @@ class TimeTravelGuideChain(BaseCustomChain):
     Current conversation:
     {history}
     Human: {input}
-    AI:"""
+    AI:"""  # noqa: E501
 
 
 CUSTOM_CHAINS: Dict[str, Type[ConversationChain]] = {

@@ -1,6 +1,5 @@
 from pydantic import BaseModel, validator
 
-from langflow.graph.utils import extract_input_variables_from_prompt
 
 
 class Code(BaseModel):

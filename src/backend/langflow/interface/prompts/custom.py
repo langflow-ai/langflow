@@ -4,8 +4,6 @@ from langchain.prompts import PromptTemplate
 from pydantic import root_validator
 
 from langflow.graph.utils import extract_input_variables_from_prompt
-from langflow.template.base import Template, TemplateField
-from langflow.template.nodes import PromptTemplateNode
 
 # Steps to create a BaseCustomPrompt:
 # 1. Create a prompt template that endes with:
