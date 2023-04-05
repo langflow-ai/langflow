@@ -18,7 +18,8 @@ class AgentCreator(LangChainTypeCreator):
             self.type_dict = loading.AGENT_TO_CLASS
             # Add JsonAgent to the list of agents
             for name, agent in CUSTOM_AGENTS.items():
-                self.type_dict[name] = agent
+                # TODO: validate AgentType
+                self.type_dict[name] = agent  # type: ignore
         return self.type_dict
 
     def get_signature(self, name: str) -> Optional[Dict]:

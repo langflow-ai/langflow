@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Type
 
 from langchain import prompts
 from langchain.prompts import loading
@@ -15,7 +15,7 @@ class PromptCreator(LangChainTypeCreator):
     type_name: str = "prompts"
 
     @property
-    def frontend_node_class(self) -> str:
+    def frontend_node_class(self) -> Type[PromptFrontendNode]:
         return PromptFrontendNode
 
     @property
