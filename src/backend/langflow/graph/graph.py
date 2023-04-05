@@ -6,6 +6,7 @@ from langflow.graph.nodes import (
     ChainNode,
     FileToolNode,
     LLMNode,
+    MemoryNode,
     PromptNode,
     ToolkitNode,
     ToolNode,
@@ -20,6 +21,7 @@ from langflow.interface.tools.base import tool_creator
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.interface.tools.util import get_tools_dict
 from langflow.interface.wrappers.base import wrapper_creator
+from langflow.interface.memories.base import memory_creator
 from langflow.utils import payload
 
 
@@ -65,6 +67,8 @@ class Graph:
     def build(self) -> List[Node]:
         # Get root node
         root_node = payload.get_root_node(self)
+        if root_node is None:
+            raise ValueError("No root node found")
         return root_node.build()
 
     def get_node_neighbors(self, node: Node) -> Dict[Node, int]:
@@ -130,6 +134,11 @@ class Graph:
                 or node_lc_type in llm_creator.to_list()
             ):
                 nodes.append(LLMNode(node))
+            elif (
+                node_type in memory_creator.to_list()
+                or node_lc_type in memory_creator.to_list()
+            ):
+                nodes.append(MemoryNode(node))
             else:
                 nodes.append(Node(node))
         return nodes

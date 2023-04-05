@@ -144,3 +144,13 @@ class WrapperNode(Node):
                 self.params["headers"] = eval(self.params["headers"])
             self._build()
         return deepcopy(self._built_object)
+
+
+class MemoryNode(Node):
+    def __init__(self, data: Dict):
+        super().__init__(data, base_type="memory")
+
+    def build(self, force: bool = False) -> Any:
+        if not self._built or force:
+            self._build()
+        return deepcopy(self._built_object)

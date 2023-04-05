@@ -72,41 +72,58 @@ def process_graph(data_graph: Dict[str, Any]):
     return {"result": str(result), "thought": thought.strip()}
 
 
-def fix_memory_inputs(langchain_object):
+def get_memory_key(langchain_object):
     """
-    Fix memory inputs by replacing the memory key with the input key.
+    Given a LangChain object, this function retrieves the current memory key from the object's memory attribute.
+    It then checks if the key exists in a dictionary of known memory keys and returns the corresponding key,
+    or None if the current key is not recognized.
     """
-    # Possible memory keys
-    # "chat_history", "history"
-    # if memory_key is "chat_history" and input_keys has "history"
-    # we need to replace "chat_history" with "history"
     mem_key_dict = {
         "chat_history": "history",
         "history": "chat_history",
     }
     memory_key = langchain_object.memory.memory_key
-    possible_new_mem_key = mem_key_dict.get(memory_key)
+    return mem_key_dict.get(memory_key)
+
+
+def update_memory_keys(langchain_object, possible_new_mem_key):
+    """
+    Given a LangChain object and a possible new memory key, this function updates the input and output keys in the
+    object's memory attribute to exclude the current memory key and the possible new key. It then sets the memory key
+    to the possible new key.
+    """
+    input_key = [
+        key
+        for key in langchain_object.input_keys
+        if key not in [langchain_object.memory.memory_key, possible_new_mem_key]
+    ][0]
+
+    output_key = [
+        key
+        for key in langchain_object.output_keys
+        if key not in [langchain_object.memory.memory_key, possible_new_mem_key]
+    ][0]
+
+    langchain_object.memory.input_key = input_key
+    langchain_object.memory.output_key = output_key
+    langchain_object.memory.memory_key = possible_new_mem_key
+
+
+def fix_memory_inputs(langchain_object):
+    """
+    Given a LangChain object, this function checks if it has a memory attribute and if that memory key exists in the
+    object's input variables. If so, it does nothing. Otherwise, it gets a possible new memory key using the
+    get_memory_key function and updates the memory keys using the update_memory_keys function.
+    """
+    if (
+        hasattr(langchain_object, "memory")
+        and langchain_object.memory is not None
+        and langchain_object.memory.memory_key in langchain_object.input_variables
+    ):
+        return
+    possible_new_mem_key = get_memory_key(langchain_object)
     if possible_new_mem_key is not None:
-        # get input_key
-        input_key = [
-            key
-            for key in langchain_object.input_keys
-            if key not in [memory_key, possible_new_mem_key]
-        ][0]
-
-        # get output_key
-        output_key = [
-            key
-            for key in langchain_object.output_keys
-            if key not in [memory_key, possible_new_mem_key]
-        ][0]
-
-        # set input_key and output_key in memory
-        langchain_object.memory.input_key = input_key
-        langchain_object.memory.output_key = output_key
-        for input_key in langchain_object.input_keys:
-            if input_key == possible_new_mem_key:
-                langchain_object.memory.memory_key = possible_new_mem_key
+        update_memory_keys(langchain_object, possible_new_mem_key)
 
 
 def get_result_and_thought_using_graph(langchain_object, message: str):
@@ -114,27 +131,24 @@ def get_result_and_thought_using_graph(langchain_object, message: str):
     try:
         if hasattr(langchain_object, "verbose"):
             langchain_object.verbose = True
+        chat_input = None
+        memory_key = ""
+        if hasattr(langchain_object, "memory") and langchain_object.memory is not None:
+            memory_key = langchain_object.memory.memory_key
+
+        for key in langchain_object.input_keys:
+            if key not in [memory_key, "chat_history"]:
+                chat_input = {key: message}
+
+        if hasattr(langchain_object, "return_intermediate_steps"):
+            # https://github.com/hwchase17/langchain/issues/2068
+            # Deactivating until we have a frontend solution
+            # to display intermediate steps
+            langchain_object.return_intermediate_steps = False
+
+        fix_memory_inputs(langchain_object)
+
         with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
-            chat_input = None
-            memory_key = ""
-            if (
-                hasattr(langchain_object, "memory")
-                and langchain_object.memory is not None
-            ):
-                memory_key = langchain_object.memory.memory_key
-
-            for key in langchain_object.input_keys:
-                if key not in [memory_key, "chat_history"]:
-                    chat_input = {key: message}
-
-            if hasattr(langchain_object, "return_intermediate_steps"):
-                # https://github.com/hwchase17/langchain/issues/2068
-                # Deactivating until we have a frontend solution
-                # to display intermediate steps
-                langchain_object.return_intermediate_steps = False
-
-            fix_memory_inputs(langchain_object)
-
             try:
                 output = langchain_object(chat_input)
             except ValueError as exc:
