@@ -25,6 +25,7 @@ prompts:
 llms:
   - OpenAI
   - AzureOpenAI
+  - ChatOpenAI
 
 tools:
   - Search
