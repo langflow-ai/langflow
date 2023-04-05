@@ -31,7 +31,7 @@ export default function GenericNode({
 			});
 			showError.current = false;
 		}
-		deleteNode(data.id)
+		deleteNode(data.id);
 		return;
 	}
 	return (
@@ -74,7 +74,12 @@ export default function GenericNode({
 									<div
 										className={classNames(
 											"px-5 py-2 mt-2 dark:text-white text-center",
-											Object.keys(data.node.template).filter(key => !key.startsWith('_') && data.node.template[key].show).length === 0?"hidden":""
+											Object.keys(data.node.template).filter(
+												(key) =>
+													!key.startsWith("_") && data.node.template[key].show
+											).length === 0
+												? "hidden"
+												: ""
 										)}
 									>
 										Inputs
@@ -89,7 +94,13 @@ export default function GenericNode({
 											nodeColors[types[data.node.template[t].type]] ??
 											nodeColors.unknown
 										}
-										title={snakeToNormalCase(t)}
+										title={
+											data.node.template[t].display_name
+												? snakeToNormalCase(data.node.template[t].display_name)
+												: data.node.template[t].name
+												? snakeToNormalCase(data.node.template[t].name)
+												: snakeToNormalCase(t)
+										}
 										name={t}
 										tooltipTitle={
 											"Type: " +
