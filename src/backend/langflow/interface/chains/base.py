@@ -19,6 +19,12 @@ class ChainCreator(LangChainTypeCreator):
             from langflow.interface.chains.custom import CUSTOM_CHAINS
 
             self.type_dict.update(CUSTOM_CHAINS)
+            # Filter according to settings.chains
+            self.type_dict = {
+                name: chain
+                for name, chain in self.type_dict.items()
+                if name in settings.chains or settings.dev
+            }
         return self.type_dict
 
     def get_signature(self, name: str) -> Optional[Dict]:
@@ -32,12 +38,8 @@ class ChainCreator(LangChainTypeCreator):
     def to_list(self) -> List[str]:
         custom_chains = list(get_custom_nodes("chains").keys())
         default_chains = list(self.type_to_loader_dict.keys())
-        # Check if the chain is in the settings
-        return [
-            chain
-            for chain in default_chains + custom_chains
-            if chain in settings.chains or settings.dev
-        ]
+
+        return default_chains + custom_chains
 
 
 chain_creator = ChainCreator()

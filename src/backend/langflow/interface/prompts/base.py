@@ -24,12 +24,17 @@ class PromptCreator(LangChainTypeCreator):
                 prompt_name: import_class(f"langchain.prompts.{prompt_name}")
                 # if prompt_name is not lower case it is a class
                 for prompt_name in prompts.__all__
-                if not prompt_name.islower() and prompt_name in settings.prompts
             }
             # Merge CUSTOM_PROMPTS into self.type_dict
             from langflow.interface.prompts.custom import CUSTOM_PROMPTS
 
             self.type_dict.update(CUSTOM_PROMPTS)
+            # Now filter according to settings.prompts
+            self.type_dict = {
+                name: prompt
+                for name, prompt in self.type_dict.items()
+                if name in settings.prompts or settings.dev
+            }
         return self.type_dict
 
     def get_signature(self, name: str) -> Optional[Dict]:
