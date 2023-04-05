@@ -7,6 +7,12 @@ from langflow.template.base import FrontendNode, Template, TemplateField
 from langflow.template.constants import DEFAULT_PROMPT, HUMAN_PROMPT, SYSTEM_PROMPT
 from langflow.utils.constants import DEFAULT_PYTHON_FUNCTION
 
+NON_CHAT_AGENTS = {
+    agent_type: agent_class
+    for agent_type, agent_class in loading.AGENT_TO_CLASS.items()
+    if "chat" not in agent_type.value
+}
+
 
 class BasePromptFrontendNode(FrontendNode):
     name: str
@@ -176,8 +182,8 @@ class InitializeAgentNode(FrontendNode):
                 is_list=True,
                 show=True,
                 multiline=False,
-                options=list(loading.AGENT_TO_CLASS.keys()),
-                value=list(loading.AGENT_TO_CLASS.keys())[0],
+                options=list(NON_CHAT_AGENTS.keys()),
+                value=list(NON_CHAT_AGENTS.keys())[0],
                 name="agent",
             ),
             TemplateField(
@@ -247,7 +253,7 @@ class PromptFrontendNode(FrontendNode):
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         # if field.field_type  == "StringPromptTemplate"
         # change it to str
-        if field.field_type == "StringPromptTemplate" and "Message" in name:
+        if field.field_type == "StringPromptTemplate" and "Message" in str(name):
             field.field_type = "str"
             field.multiline = True
             field.value = HUMAN_PROMPT if "Human" in field.name else SYSTEM_PROMPT
