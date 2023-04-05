@@ -54,6 +54,12 @@ class Graph:
         for node in self.nodes:
             if isinstance(node, ToolkitNode):
                 node.params["llm"] = llm_node
+        # remove invalid nodes
+        self.nodes = [node for node in self.nodes if self._validate_node(node)]
+
+    def _validate_node(self, node: Node) -> bool:
+        # All nodes that do not have edges are invalid
+        return len(node.edges) > 0
 
     def get_node(self, node_id: str) -> Union[None, Node]:
         return next((node for node in self.nodes if node.id == node_id), None)
