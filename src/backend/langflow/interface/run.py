@@ -115,15 +115,13 @@ def fix_memory_inputs(langchain_object):
     object's input variables. If so, it does nothing. Otherwise, it gets a possible new memory key using the
     get_memory_key function and updates the memory keys using the update_memory_keys function.
     """
-    if (
-        hasattr(langchain_object, "memory")
-        and langchain_object.memory is not None
-        and langchain_object.memory.memory_key in langchain_object.input_variables
-    ):
-        return
-    possible_new_mem_key = get_memory_key(langchain_object)
-    if possible_new_mem_key is not None:
-        update_memory_keys(langchain_object, possible_new_mem_key)
+    if hasattr(langchain_object, "memory") and langchain_object.memory is not None:
+        if langchain_object.memory.memory_key in langchain_object.input_variables:
+            return
+
+        possible_new_mem_key = get_memory_key(langchain_object)
+        if possible_new_mem_key is not None:
+            update_memory_keys(langchain_object, possible_new_mem_key)
 
 
 def get_result_and_thought_using_graph(langchain_object, message: str):
