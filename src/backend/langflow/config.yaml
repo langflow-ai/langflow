@@ -45,5 +45,6 @@ vectorstores:
 
 documentloaders:
   - TextLoader
+  - Text
 
 dev: false

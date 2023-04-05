@@ -10,6 +10,9 @@ from langflow.graph.nodes import (
     ToolkitNode,
     ToolNode,
     WrapperNode,
+    EmbeddingNode,
+    VectorStoreNode,
+    DocumentLoaderNode,
 )
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
@@ -20,6 +23,9 @@ from langflow.interface.tools.base import tool_creator
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.interface.tools.util import get_tools_dict
 from langflow.interface.wrappers.base import wrapper_creator
+from langflow.interface.embeddings.base import embedding_creator
+from langflow.interface.vectorStore.base import vectorstore_creator
+from langflow.interface.documentLoaders.base import documentloader_creator
 from langflow.utils import payload
 
 
@@ -130,6 +136,12 @@ class Graph:
                 or node_lc_type in llm_creator.to_list()
             ):
                 nodes.append(LLMNode(node))
+            elif node_type in embedding_creator.to_list():
+                nodes.append(EmbeddingNode(node))
+            elif node_type in vectorstore_creator.to_list():
+                nodes.append(VectorStoreNode(node))
+            elif node_type in documentloader_creator.to_list():
+                nodes.append(DocumentLoaderNode(node))
             else:
                 nodes.append(Node(node))
         return nodes

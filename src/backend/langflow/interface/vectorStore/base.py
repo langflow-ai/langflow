@@ -24,14 +24,12 @@ class VectorstoreCreator(LangChainTypeCreator):
                     "required": True,
                     "show": True,
                     "name": "Document Loader",
-                    "value": "",
                 },
                 "Embedding": {
                     "type": "Embeddings",
                     "required": True,
                     "show": True,
                     "name": "Embedding",
-                    "value": "",
                 },
             }
             return signature
