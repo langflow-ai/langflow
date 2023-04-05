@@ -77,6 +77,8 @@ export const nodeColors: {[char: string]: string} = {
   chat: "#454173",
   thought:"#272541",
   docloaders:"#FF9135",
+  toolkits:"#DB2C2C",
+  wrappers:"#E6277A",
   unknown:"#9CA3AF"
 };
 
