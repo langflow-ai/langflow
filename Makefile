@@ -43,10 +43,10 @@ dev:
 	make install_frontend
 ifeq ($(build),1)
 		@echo 'Running docker compose up with build'
-		docker compose up $(if $(debug),-f docker-compose.debug.yml) --build
+		docker compose $(if $(debug),-f docker-compose.debug.yml) up --build
 else
 		@echo 'Running docker compose up without build'
-		docker compose up $(if $(debug),-f docker-compose.debug.yml)
+		docker compose $(if $(debug),-f docker-compose.debug.yml) up
 endif
 
 publish:
