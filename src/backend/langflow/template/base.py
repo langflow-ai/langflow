@@ -22,7 +22,7 @@ class TemplateFieldCreator(BaseModel, ABC):
     password: bool = False
     options: list[str] = []
     name: str = ""
-    display_name: str = ""
+    display_name: Optional[str]
 
     def to_dict(self):
         result = self.dict()
