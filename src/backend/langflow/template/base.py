@@ -223,3 +223,6 @@ class FrontendNode(BaseModel):
                 field.is_list = True
         if "api_key" in key and "OpenAI" in str(name):
             field.display_name = "OpenAI API Key"
+            field.required = True
+            if field.value is None:
+                field.value = ""
