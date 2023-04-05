@@ -153,7 +153,7 @@ export default function ParameterComponent({
 					<Dropdown
 						options={data.node.template[name].options}
 						onSelect={(newValue) => (data.node.template[name].value = newValue)}
-						value={data.node.template[name].value ?? "chose an option"}
+						value={data.node.template[name].value ?? "Choose an option"}
 					></Dropdown>
 				) : left === true && type === "code" ? (
 					<CodeAreaComponent
