@@ -1,0 +1,28 @@
+version: '3.4'
+
+services:
+  backend:
+    volumes:
+      - ./:/app
+    build:
+      context: ./
+      dockerfile: ./dev.Dockerfile
+    command: ["sh", "-c", "pip install debugpy -t /tmp && python /tmp/debugpy --wait-for-client --listen 0.0.0.0:5678 -m uvicorn langflow.main:app --host 0.0.0.0 --port 7860 --reload"]
+    ports:
+      - 7860:7860
+      - 5678:5678
+    restart: on-failure
+
+  frontend:
+    build:
+      context: ./src/frontend
+      dockerfile: ./dev.Dockerfile
+      args:
+        - BACKEND_URL=http://backend:7860
+    ports:
+      - "3000:3000"
+    volumes:
+     - ./src/frontend/public:/home/node/app/public
+     - ./src/frontend/src:/home/node/app/src
+     - ./src/frontend/package.json:/home/node/app/package.json
+    restart: on-failure

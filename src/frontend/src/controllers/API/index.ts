@@ -12,5 +12,5 @@ export async function sendAll(data:sendAllProps) {
 
 export async function checkCode(code:string):Promise<AxiosResponse<errorsTypeAPI>>{
 
-    return await axios.post('/validate',{code})
+    return await axios.post('/validate/code',{code})
 }
