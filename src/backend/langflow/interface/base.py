@@ -1,6 +1,6 @@
-from abc import ABC, abstractmethod
 import abc
-from typing import Any, Dict, List, Optional, Union
+from abc import ABC, abstractmethod
+from typing import Any, Dict, List, Optional, Type, Union
 
 from pydantic import BaseModel
 
@@ -14,7 +14,7 @@ class LangChainTypeCreator(BaseModel, ABC):
     type_dict: Optional[Dict] = None
 
     @property
-    def frontend_node_class(self) -> str:
+    def frontend_node_class(self) -> Type[FrontendNode]:
         """The class type of the FrontendNode created in frontend_node."""
         return FrontendNode
 

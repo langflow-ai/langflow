@@ -1,10 +1,11 @@
-from typing import Optional
+from typing import Dict, Optional, Type
+
 from langchain.chains import ConversationChain
-from langflow.graph.utils import extract_input_variables_from_prompt
-from pydantic import root_validator, Field
 from langchain.memory.buffer import ConversationBufferMemory
 from langchain.schema import BaseMemory
+from pydantic import Field, root_validator
 
+from langflow.graph.utils import extract_input_variables_from_prompt
 
 DEFAULT_SUFFIX = """"
 Current conversation:
@@ -93,7 +94,7 @@ class TimeTravelGuideChain(BaseCustomChain):
     AI:"""
 
 
-CUSTOM_CHAINS = {
+CUSTOM_CHAINS: Dict[str, Type[ConversationChain]] = {
     "SeriesCharacterChain": SeriesCharacterChain,
     "MidJourneyPromptChain": MidJourneyPromptChain,
     "TimeTravelGuideChain": TimeTravelGuideChain,
