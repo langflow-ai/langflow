@@ -9,7 +9,6 @@ import {
   ComputerDesktopIcon,
   Bars3CenterLeftIcon,
   GiftIcon,
-  PaperClipIcon,
   QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
 import { Connection, Edge, Node, ReactFlowInstance } from "reactflow";

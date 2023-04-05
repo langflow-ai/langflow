@@ -75,7 +75,9 @@ class PromptNode(Node):
             for param in prompt_params:
                 prompt_text = self.params[param]
                 variables = extract_input_variables_from_prompt(prompt_text)
+
                 self.params["input_variables"].extend(variables)
+            self.params["input_variables"] = list(set(self.params["input_variables"]))
 
             self._build()
         return deepcopy(self._built_object)
@@ -148,27 +150,19 @@ class DocumentLoaderNode(Node):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="documentloaders")
 
-    def build(self, force: bool = False) -> Any:
-        if not self._built or force:
-            self._build()
-        return deepcopy(self._built_object)
 
 
 class EmbeddingNode(Node):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="embeddings")
 
-    def build(self, force: bool = False) -> Any:
-        if not self._built or force:
-            self._build()
-        return deepcopy(self._built_object)
-
 
 class VectorStoreNode(Node):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="vectorstores")
 
-    def build(self, force: bool = False) -> Any:
-        if not self._built or force:
-            self._build()
-        return deepcopy(self._built_object)
+
+class MemoryNode(Node):
+    def __init__(self, data: Dict):
+        super().__init__(data, base_type="memory")
+

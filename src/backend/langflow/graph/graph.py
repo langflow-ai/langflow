@@ -6,6 +6,7 @@ from langflow.graph.nodes import (
     ChainNode,
     FileToolNode,
     LLMNode,
+    MemoryNode,
     PromptNode,
     ToolkitNode,
     ToolNode,
@@ -26,6 +27,7 @@ from langflow.interface.wrappers.base import wrapper_creator
 from langflow.interface.embeddings.base import embedding_creator
 from langflow.interface.vectorStore.base import vectorstore_creator
 from langflow.interface.documentLoaders.base import documentloader_creator
+from langflow.interface.memories.base import memory_creator
 from langflow.utils import payload
 
 
@@ -58,6 +60,12 @@ class Graph:
         for node in self.nodes:
             if isinstance(node, ToolkitNode):
                 node.params["llm"] = llm_node
+        # remove invalid nodes
+        self.nodes = [node for node in self.nodes if self._validate_node(node)]
+
+    def _validate_node(self, node: Node) -> bool:
+        # All nodes that do not have edges are invalid
+        return len(node.edges) > 0
 
     def get_node(self, node_id: str) -> Union[None, Node]:
         return next((node for node in self.nodes if node.id == node_id), None)
@@ -71,6 +79,8 @@ class Graph:
     def build(self) -> List[Node]:
         # Get root node
         root_node = payload.get_root_node(self)
+        if root_node is None:
+            raise ValueError("No root node found")
         return root_node.build()
 
     def get_node_neighbors(self, node: Node) -> Dict[Node, int]:
@@ -142,6 +152,11 @@ class Graph:
                 nodes.append(VectorStoreNode(node))
             elif node_type in documentloader_creator.to_list():
                 nodes.append(DocumentLoaderNode(node))
+            elif (
+                node_type in memory_creator.to_list()
+                or node_lc_type in memory_creator.to_list()
+            ):
+                nodes.append(MemoryNode(node))
             else:
                 nodes.append(Node(node))
         return nodes

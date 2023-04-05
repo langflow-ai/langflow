@@ -74,7 +74,7 @@
                                 "multiline": false,
                                 "password": false,
                                 "name": "requests_wrapper",
-                                "type": "RequestsWrapper",
+                                "type": "TextRequestsWrapper",
                                 "list": false
                             },
                             "_type": "OpenAPIToolkit"
@@ -154,7 +154,7 @@
                     "y": 532.9920887988924
                 },
                 "data": {
-                    "type": "RequestsWrapper",
+                    "type": "TextRequestsWrapper",
                     "node": {
                         "template": {
                             "headers": {
@@ -178,11 +178,11 @@
                                 "type": "ClientSession",
                                 "list": false
                             },
-                            "_type": "RequestsWrapper"
+                            "_type": "TextRequestsWrapper"
                         },
                         "description": "Lightweight wrapper around requests library.",
                         "base_classes": [
-                            "RequestsWrapper"
+                            "TextRequestsWrapper"
                         ]
                     },
                     "id": "dndnode_34",
@@ -405,11 +405,11 @@
             },
             {
                 "source": "dndnode_34",
-                "sourceHandle": "RequestsWrapper|dndnode_34|RequestsWrapper",
+                "sourceHandle": "TextRequestsWrapper|dndnode_34|TextRequestsWrapper",
                 "target": "dndnode_32",
-                "targetHandle": "RequestsWrapper|requests_wrapper|dndnode_32",
+                "targetHandle": "TextRequestsWrapper|requests_wrapper|dndnode_32",
                 "className": "animate-pulse",
-                "id": "reactflow__edge-dndnode_34RequestsWrapper|dndnode_34|RequestsWrapper-dndnode_32RequestsWrapper|requests_wrapper|dndnode_32",
+                "id": "reactflow__edge-dndnode_34RequestsWrapper|dndnode_34|TextRequestsWrapper-dndnode_32RequestsWrapper|requests_wrapper|dndnode_32",
                 "selected": false
             },
             {

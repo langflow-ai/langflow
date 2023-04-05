@@ -26,7 +26,14 @@ def load_file(file_name, file_content, accepted_types) -> Any:
         return json.loads(decoded_string)
     elif suffix in ["yaml", "yml"]:
         # Return the yaml content
-        return yaml.safe_load(decoded_string)
+        loaded_yaml = yaml.load(decoded_string, Loader=yaml.FullLoader)
+        try:
+            from langchain.agents.agent_toolkits.openapi.spec import reduce_openapi_spec  # type: ignore
+
+            return reduce_openapi_spec(loaded_yaml)
+        except ImportError:
+            return loaded_yaml
+
     elif suffix == "csv":
         # Load the csv content
         csv_reader = csv.DictReader(io.StringIO(decoded_string))

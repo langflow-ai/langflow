@@ -1,7 +1,7 @@
 # This module is used to import any langchain class by name.
 
 import importlib
-from typing import Any
+from typing import Any, Type
 
 from langchain import PromptTemplate
 from langchain.agents import Agent
@@ -30,6 +30,8 @@ def import_module(module_path: str) -> Any:
 
 def import_by_type(_type: str, name: str) -> Any:
     """Import class by type and name"""
+    if _type is None:
+        raise ValueError(f"Type cannot be None. Check if {name} is in the config file.")
     func_dict = {
         "agents": import_agent,
         "prompts": import_prompt,
@@ -69,10 +71,14 @@ def import_class(class_path: str) -> Any:
     return getattr(module, class_name)
 
 
-def import_prompt(prompt: str) -> PromptTemplate:
+def import_prompt(prompt: str) -> Type[PromptTemplate]:
+    from langflow.interface.prompts.custom import CUSTOM_PROMPTS
+
     """Import prompt from prompt name"""
     if prompt == "ZeroShotPrompt":
         return import_class("langchain.prompts.PromptTemplate")
+    elif prompt in CUSTOM_PROMPTS:
+        return CUSTOM_PROMPTS[prompt]
     return import_class(f"langchain.prompts.{prompt}")
 
 
@@ -104,8 +110,12 @@ def import_tool(tool: str) -> BaseTool:
     return get_tool_by_name(tool)
 
 
-def import_chain(chain: str) -> Chain:
+def import_chain(chain: str) -> Type[Chain]:
     """Import chain from chain name"""
+    from langflow.interface.chains.custom import CUSTOM_CHAINS
+
+    if chain in CUSTOM_CHAINS:
+        return CUSTOM_CHAINS[chain]
     return import_class(f"langchain.chains.{chain}")
 
 
