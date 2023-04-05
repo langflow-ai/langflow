@@ -28,7 +28,7 @@ def load_file(file_name, file_content, accepted_types) -> Any:
         # Return the yaml content
         loaded_yaml = yaml.load(decoded_string, Loader=yaml.FullLoader)
         try:
-            from langchain.agents.agent_toolkits.openapi.spec import reduce_openapi_spec
+            from langchain.agents.agent_toolkits.openapi.spec import reduce_openapi_spec  # type: ignore
 
             return reduce_openapi_spec(loaded_yaml)
         except ImportError:
