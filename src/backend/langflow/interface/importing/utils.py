@@ -29,6 +29,8 @@ def import_module(module_path: str) -> Any:
 
 def import_by_type(_type: str, name: str) -> Any:
     """Import class by type and name"""
+    if _type is None:
+        raise ValueError(f"Type cannot be None. Check if {name} is in the config file.")
     func_dict = {
         "agents": import_agent,
         "prompts": import_prompt,

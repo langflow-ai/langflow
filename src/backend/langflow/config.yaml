@@ -46,6 +46,7 @@ toolkits:
 memories:
   - ConversationBufferMemory
   - ConversationSummaryMemory
+  - ConversationKGMemory
 
 embeddings: []
 
