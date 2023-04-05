@@ -4,13 +4,13 @@ from pydantic import BaseModel, validator
 class Code(BaseModel):
     code: str
 
-    @validator("code")
-    def validate_code(cls, v):
-        return v
+
+class Prompt(BaseModel):
+    template: str
 
 
 # Build ValidationResponse class for {"imports": {"errors": []}, "function": {"errors": []}}
-class ValidationResponse(BaseModel):
+class CodeValidationResponse(BaseModel):
     imports: dict
     function: dict
 
@@ -21,3 +21,7 @@ class ValidationResponse(BaseModel):
     @validator("function")
     def validate_function(cls, v):
         return v or {"errors": []}
+
+
+class PromptValidationResponse(BaseModel):
+    input_variables: list

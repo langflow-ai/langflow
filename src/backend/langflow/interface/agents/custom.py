@@ -111,7 +111,8 @@ class InitializeAgent(AgentExecutor):
         return initialize_agent(
             tools=tools,
             llm=llm,
-            agent=agent,
+            # LangChain now uses Enum for agent, but we still support string
+            agent=agent,  # type: ignore
             memory=memory,
             return_intermediate_steps=True,
         )

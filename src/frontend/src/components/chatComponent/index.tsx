@@ -75,25 +75,24 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 	}, [chatHistory]);
 	function validateNodes() {
 		if (
-			reactFlowInstance
-				.getNodes()
-				.some(
-					(n) =>
-						n.data.node &&
-						Object.keys(n.data.node.template).some(
-							(t: any) =>
-								n.data.node.template[t].required &&
-								n.data.node.template[t].value === "" &&
-								n.data.node.template[t].required &&
-								!reactFlowInstance
-									.getEdges()
-									.some(
-										(e) =>
-											e.sourceHandle.split("|")[1] === t &&
-											e.sourceHandle.split("|")[2] === n.id
-									)
-						)
-				)
+			reactFlowInstance.getNodes().some(
+				(n) =>
+					n.data.node &&
+					Object.keys(n.data.node.template).some((t: any) => {
+						return (
+							n.data.node.template[t].required &&
+							(!n.data.node.template[t].value ||
+							n.data.node.template[t].value === "") &&
+							!reactFlowInstance
+								.getEdges()
+								.some(
+									(e) =>
+										e.targetHandle.split("|")[1] === t &&
+										e.targetHandle.split("|")[2] === n.id
+								)
+						);
+					})
+			)
 		) {
 			return false;
 		}
@@ -130,10 +129,10 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 						setChatHistory((chatHistory) => {
 							let newChat = chatHistory;
 
-							lastMessage= newChat.pop().message;
+							lastMessage = newChat.pop().message;
 							return newChat;
 						});
-						setChatValue(lastMessage)
+						setChatValue(lastMessage);
 					});
 			} else {
 				setErrorData({

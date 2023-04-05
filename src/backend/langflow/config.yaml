@@ -3,6 +3,9 @@ chains:
   - LLMMathChain
   - LLMCheckerChain
   - ConversationChain
+  - SeriesCharacterChain
+  - MidJourneyPromptChain
+  - TimeTravelGuideChain
 
 agents:
   - ZeroShotAgent
@@ -13,9 +16,15 @@ agents:
 prompts:
   - PromptTemplate
   - FewShotPromptTemplate
+  - ZeroShotPrompt
+  # Wait more tests
+  # - ChatPromptTemplate
+  # - SystemMessagePromptTemplate
+  # - HumanMessagePromptTemplate
 
 llms:
   - OpenAI
+  - AzureOpenAI
   - ChatOpenAI
 
 tools:
@@ -36,6 +45,8 @@ toolkits:
 
 memories:
   - ConversationBufferMemory
+  - ConversationSummaryMemory
+  - ConversationKGMemory
 
 embeddings:
   - OpenAIEmbeddings
