@@ -57,6 +57,14 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
         if toolkits_creator.has_create_function(node_type):
             return load_toolkits_executor(node_type, loaded_toolkit, params)
         return loaded_toolkit
+    elif base_type == "embeddings":
+        params.pop("model")
+        return class_object(**params)
+    elif base_type == "vectorstores":
+        # Rename dict key
+        params["documents"] = params.pop("Document Loader")
+        params["embedding"] = params.pop("Embedding")
+        return class_object.from_documents(**params)
     else:
         return class_object(**params)
 
