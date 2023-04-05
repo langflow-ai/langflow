@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Type, Union
 
 from pydantic import BaseModel
 
@@ -11,6 +11,11 @@ from langflow.template.base import FrontendNode, Template, TemplateField
 class LangChainTypeCreator(BaseModel, ABC):
     type_name: str
     type_dict: Optional[Dict] = None
+
+    @property
+    def frontend_node_class(self) -> Type[FrontendNode]:
+        """The class type of the FrontendNode created in frontend_node."""
+        return FrontendNode
 
     @property
     @abstractmethod
@@ -62,7 +67,7 @@ class LangChainTypeCreator(BaseModel, ABC):
             if key != "_type"
         ]
         template = Template(type_name=name, fields=fields)
-        return FrontendNode(
+        return self.frontend_node_class(
             template=template,
             description=signature.get("description", ""),
             base_classes=signature["base_classes"],

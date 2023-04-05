@@ -52,6 +52,12 @@ def process_graph(data_graph: Dict[str, Any]):
     )
     logger.debug("Loaded langchain object")
 
+    if langchain_object is None:
+        # Raise user facing error
+        raise ValueError(
+            "There was an error loading the langchain_object. Please, check all the nodes and try again."
+        )
+
     # Generate result and thought
     logger.debug("Generating result and thought")
     result, thought = get_result_and_thought_using_graph(langchain_object, message)
@@ -66,34 +72,82 @@ def process_graph(data_graph: Dict[str, Any]):
     return {"result": str(result), "thought": thought.strip()}
 
 
-def get_result_and_thought_using_graph(loaded_langchain, message: str):
+def fix_memory_inputs(langchain_object):
+    """
+    Fix memory inputs by replacing the memory key with the input key.
+    """
+    # Possible memory keys
+    # "chat_history", "history"
+    # if memory_key is "chat_history" and input_keys has "history"
+    # we need to replace "chat_history" with "history"
+    mem_key_dict = {
+        "chat_history": "history",
+        "history": "chat_history",
+    }
+    memory_key = langchain_object.memory.memory_key
+    possible_new_mem_key = mem_key_dict.get(memory_key)
+    if possible_new_mem_key is not None:
+        # get input_key
+        input_key = [
+            key
+            for key in langchain_object.input_keys
+            if key not in [memory_key, possible_new_mem_key]
+        ][0]
+
+        # get output_key
+        output_key = [
+            key
+            for key in langchain_object.output_keys
+            if key not in [memory_key, possible_new_mem_key]
+        ][0]
+
+        # set input_key and output_key in memory
+        langchain_object.memory.input_key = input_key
+        langchain_object.memory.output_key = output_key
+        for input_key in langchain_object.input_keys:
+            if input_key == possible_new_mem_key:
+                langchain_object.memory.memory_key = possible_new_mem_key
+
+
+def get_result_and_thought_using_graph(langchain_object, message: str):
     """Get result and thought from extracted json"""
     try:
-        loaded_langchain.verbose = True
+        if hasattr(langchain_object, "verbose"):
+            langchain_object.verbose = True
         with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
             chat_input = None
-            for key in loaded_langchain.input_keys:
-                if key == "chat_history" and hasattr(loaded_langchain, "memory"):
-                    loaded_langchain.memory.memory_key = "chat_history"
-                else:
+            memory_key = ""
+            if (
+                hasattr(langchain_object, "memory")
+                and langchain_object.memory is not None
+            ):
+                memory_key = langchain_object.memory.memory_key
+
+            for key in langchain_object.input_keys:
+                if key not in [memory_key, "chat_history"]:
                     chat_input = {key: message}
 
-            if hasattr(loaded_langchain, "return_intermediate_steps"):
+            if hasattr(langchain_object, "return_intermediate_steps"):
                 # https://github.com/hwchase17/langchain/issues/2068
-                loaded_langchain.return_intermediate_steps = False
+                # Deactivating until we have a frontend solution
+                # to display intermediate steps
+                langchain_object.return_intermediate_steps = False
+
+            fix_memory_inputs(langchain_object)
 
             try:
-                output = loaded_langchain(chat_input)
+                output = langchain_object(chat_input)
             except ValueError as exc:
-                logger.debug("Error: %s", str(exc))
-                output = loaded_langchain.run(chat_input)
+                # make the error message more informative
+                logger.debug(f"Error: {str(exc)}")
+                output = langchain_object.run(chat_input)
 
             intermediate_steps = (
                 output.get("intermediate_steps", []) if isinstance(output, dict) else []
             )
 
             result = (
-                output.get(loaded_langchain.output_keys[0])
+                output.get(langchain_object.output_keys[0])
                 if isinstance(output, dict)
                 else output
             )
@@ -110,16 +164,16 @@ def get_result_and_thought_using_graph(loaded_langchain, message: str):
 def get_result_and_thought(extracted_json: Dict[str, Any], message: str):
     """Get result and thought from extracted json"""
     try:
-        loaded_langchain = loading.load_langchain_type_from_config(
+        langchain_object = loading.load_langchain_type_from_config(
             config=extracted_json
         )
         with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
-            output = loaded_langchain(message)
+            output = langchain_object(message)
             intermediate_steps = (
                 output.get("intermediate_steps", []) if isinstance(output, dict) else []
             )
             result = (
-                output.get(loaded_langchain.output_keys[0])
+                output.get(langchain_object.output_keys[0])
                 if isinstance(output, dict)
                 else output
             )
