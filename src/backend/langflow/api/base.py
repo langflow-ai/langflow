@@ -1,7 +1,6 @@
 from pydantic import BaseModel, validator
 
 
-
 class Code(BaseModel):
     code: str
 
