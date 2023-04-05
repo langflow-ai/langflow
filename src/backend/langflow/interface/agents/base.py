@@ -35,7 +35,7 @@ class AgentCreator(LangChainTypeCreator):
     # Now this is a generator
     def to_list(self) -> List[str]:
         names = []
-        for name, agent in self.type_to_loader_dict.items():
+        for _, agent in self.type_to_loader_dict.items():
             agent_name = (
                 agent.function_name()
                 if hasattr(agent, "function_name")
