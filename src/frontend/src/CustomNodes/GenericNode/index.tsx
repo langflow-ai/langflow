@@ -96,7 +96,7 @@ export default function GenericNode({
 										}
 										title={
 											data.node.template[t].display_name
-												? snakeToNormalCase(data.node.template[t].display_name)
+												? data.node.template[t].display_name
 												: data.node.template[t].name
 												? snakeToNormalCase(data.node.template[t].name)
 												: snakeToNormalCase(t)
