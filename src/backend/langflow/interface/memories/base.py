@@ -1,8 +1,9 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Type
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import memory_type_to_cls_dict
 from langflow.settings import settings
+from langflow.template.base import FrontendNode
 from langflow.template.nodes import MemoryFrontendNode
 from langflow.utils.util import build_template_from_class
 
@@ -11,7 +12,7 @@ class MemoryCreator(LangChainTypeCreator):
     type_name: str = "memories"
 
     @property
-    def frontend_node_class(self) -> str:
+    def frontend_node_class(self) -> Type[FrontendNode]:
         """The class type of the FrontendNode created in frontend_node."""
         return MemoryFrontendNode
 

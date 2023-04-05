@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Type
 
 from langchain.prompts import PromptTemplate
 from pydantic import root_validator
@@ -6,7 +6,6 @@ from pydantic import root_validator
 from langflow.graph.utils import extract_input_variables_from_prompt
 from langflow.template.base import Template, TemplateField
 from langflow.template.nodes import PromptTemplateNode
-
 
 # Steps to create a BaseCustomPrompt:
 # 1. Create a prompt template that endes with:
@@ -71,7 +70,9 @@ Human: {input}
     input_variables: List[str] = ["character", "series"]
 
 
-CUSTOM_PROMPTS = {"SeriesCharacterPrompt": SeriesCharacterPrompt}
+CUSTOM_PROMPTS: Dict[str, Type[BaseCustomPrompt]] = {
+    "SeriesCharacterPrompt": SeriesCharacterPrompt
+}
 
 if __name__ == "__main__":
     prompt = SeriesCharacterPrompt(character="Harry Potter", series="Harry Potter")
