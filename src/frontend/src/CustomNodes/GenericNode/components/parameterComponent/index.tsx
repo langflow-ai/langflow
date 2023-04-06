@@ -14,6 +14,7 @@ import CodeAreaComponent from "../../../../components/codeAreaComponent";
 import InputFileComponent from "../../../../components/inputFileComponent";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import IntComponent from "../../../../components/intComponent";
+import PromptAreaComponent from "../../../../components/promptComponent";
 
 export default function ParameterComponent({
 	left,
@@ -63,6 +64,7 @@ export default function ParameterComponent({
 					type === "bool" ||
 					type === "float" ||
 					type === "code" ||
+					type === "prompt" ||
 					type === "file" ||
 					type === "int") ? (
 					<></>
@@ -187,9 +189,16 @@ export default function ParameterComponent({
 							save();
 						}}
 					/>
-				) : (
-					<></>
-				)}
+				) : left === true && type === "prompt" ? (
+					<PromptAreaComponent
+						disabled={disabled}
+						value={data.node.template[name].value ?? ""}
+						onChange={(t: string) => {
+							data.node.template[name].value = t;
+							save();
+						}}
+					/>
+				):(<></>)}
 			</>
 		</div>
 	);
