@@ -1,3 +1,4 @@
+from langflow.graph.utils import extract_input_variables_from_prompt
 from pydantic import BaseModel, validator
 
 
@@ -25,3 +26,12 @@ class CodeValidationResponse(BaseModel):
 
 class PromptValidationResponse(BaseModel):
     input_variables: list
+
+
+def validate_prompt(template: str):
+    input_variables = extract_input_variables_from_prompt(template)
+    if invalid := [variable for variable in input_variables if " " in variable]:
+        raise ValueError(
+            f"Invalid input variables: {invalid}. Please remove spaces from input variables"
+        )
+    return PromptValidationResponse(input_variables=input_variables)
