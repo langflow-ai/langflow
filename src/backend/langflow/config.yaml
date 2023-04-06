@@ -24,7 +24,7 @@ prompts:
 
 llms:
   - OpenAI
-  - AzureOpenAI
+  # - AzureOpenAI
   - ChatOpenAI
   - HuggingFaceHub
 
