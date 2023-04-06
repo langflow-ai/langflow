@@ -1,13 +1,18 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Type
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import llm_type_to_cls_dict
 from langflow.settings import settings
+from langflow.template.nodes import LLMFrontendNode
 from langflow.utils.util import build_template_from_class
 
 
 class LLMCreator(LangChainTypeCreator):
     type_name: str = "llms"
+
+    @property
+    def frontend_node_class(self) -> Type[LLMFrontendNode]:
+        return LLMFrontendNode
 
     @property
     def type_to_loader_dict(self) -> Dict:
