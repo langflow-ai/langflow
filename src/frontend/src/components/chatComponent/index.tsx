@@ -18,6 +18,7 @@ import { classNames, nodeColors } from "../../utils";
 import { TabsContext } from "../../contexts/tabsContext";
 import { ChatType } from "../../types/chat";
 import ChatMessage from "./chatMessage";
+import { NodeType } from "../../types/flow";
 
 const _ = require("lodash");
 
@@ -73,36 +74,44 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 	useEffect(() => {
 		if (ref.current) ref.current.scrollIntoView({ behavior: "smooth" });
 	}, [chatHistory]);
-	function validateNodes() {
-		if (
-			reactFlowInstance.getNodes().some(
-				(n) =>
-					n.data.node &&
-					Object.keys(n.data.node.template).some((t: any) => {
-						return (
-							n.data.node.template[t].required &&
-							(!n.data.node.template[t].value ||
-							n.data.node.template[t].value === "") &&
-							!reactFlowInstance
-								.getEdges()
-								.some(
-									(e) =>
-										e.targetHandle.split("|")[1] === t &&
-										e.targetHandle.split("|")[2] === n.id
-								)
-						);
-					})
-			)
-		) {
-			return false;
+
+	function validateNode(n: NodeType): Array<string> {
+		if (!n.data?.node?.template ||
+			!Object.keys(n.data.node.template)) {
+			console.warn("There is a broken node in the flow. Please submit a bug report and include your exported flow file.");
+			return [];
 		}
-		return true;
+
+		const { type, node: { template } } = n.data;
+
+		return Object.keys(template).reduce((errors: Array<string>, t) =>
+			errors.concat(
+				template[t].required &&
+				(!template[t].value ||
+				template[t].value === "") &&
+				!reactFlowInstance
+					.getEdges()
+					.some(
+						(e) =>
+							e.targetHandle.split("|")[1] === t &&
+							e.targetHandle.split("|")[2] === n.id
+						)
+				? [`${type} is missing ${template[t].name}.`]
+				: []
+			), [] as string[]
+		);
+	};
+
+	function validateNodes() {
+		return reactFlowInstance.getNodes().flatMap((n: NodeType) => validateNode(n))
 	}
+
 	const ref = useRef(null);
 
 	function sendMessage() {
 		if (chatValue !== "") {
-			if (validateNodes()) {
+			let nodeValidationErrors = validateNodes();
+			if (nodeValidationErrors.length === 0) {
 				setLockChat(true);
 				let message = chatValue;
 				setChatValue("");
@@ -138,7 +147,8 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 				setErrorData({
 					title: "Error sending message",
 					list: [
-						"Oops! Looks like you missed some required information. Please fill in all the required fields before continuing.",
+						"Oops! Looks like you missed some required information. Please fill in all the required fields before continuing:",
+						...nodeValidationErrors
 					],
 				});
 			}
