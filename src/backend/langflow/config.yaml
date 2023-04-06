@@ -12,6 +12,7 @@ agents:
   - JsonAgent
   - CSVAgent
   - initialize_agent
+  - VectorStoreAgent
 
 prompts:
   - PromptTemplate

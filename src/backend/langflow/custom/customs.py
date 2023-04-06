@@ -8,6 +8,7 @@ CUSTOM_NODES = {
         "JsonAgent": nodes.JsonAgentNode(),
         "CSVAgent": nodes.CSVAgentNode(),
         "initialize_agent": nodes.InitializeAgentNode(),
+        "VectorStoreAgent": nodes.VectorStoreAgentNode(),
     },
 }
 

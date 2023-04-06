@@ -248,6 +248,48 @@ class CSVAgentNode(FrontendNode):
         return super().to_dict()
 
 
+class VectorStoreAgentNode(FrontendNode):
+    name: str = "VectorStoreAgent"
+    template: Template = Template(
+        type_name="vectorstore_agent",
+        fields=[
+            TemplateField(
+                field_type="str",
+                required=True,
+                show=True,
+                name="name",
+                value="",
+            ),
+            TemplateField(
+                field_type="str",
+                required=True,
+                show=True,
+                name="description",
+                value="",
+            ),
+            TemplateField(
+                field_type="VectorStore",
+                required=True,
+                show=True,
+                name="vectorstore",
+                display_name="Vector Store",
+            ),
+            TemplateField(
+                field_type="BaseLanguageModel",
+                required=True,
+                show=True,
+                name="llm",
+                display_name="LLM",
+            ),
+        ],
+    )
+    description: str = """Construct a json agent from a CSV and tools."""
+    base_classes: list[str] = ["AgentExecutor"]
+
+    def to_dict(self):
+        return super().to_dict()
+
+
 class PromptFrontendNode(FrontendNode):
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:

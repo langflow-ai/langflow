@@ -185,6 +185,10 @@ class Node:
     def build(self, force: bool = False) -> Any:
         if not self._built or force:
             self._build()
+        
+        #! Deepcopy is breaking for vectorstores
+        if self.base_type == 'vectorstores':
+            return self._built_object
         return deepcopy(self._built_object)
 
     def add_edge(self, edge: "Edge") -> None:

@@ -32,6 +32,10 @@ class AgentNode(Node):
                 chain_node.build(tools=self.tools)
 
             self._build()
+
+        #! Cannot deepcopy VectorStore
+        if self.node_type == "VectorStoreAgent":
+            return self._built_object
         return deepcopy(self._built_object)
 
 
