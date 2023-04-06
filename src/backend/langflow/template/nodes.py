@@ -299,3 +299,31 @@ class ChainFrontendNode(FrontendNode):
         if "key" in field.name:
             field.password = False
             field.show = False
+
+
+class LLMFrontendNode(FrontendNode):
+    @staticmethod
+    def format_field(field: TemplateField, name: Optional[str] = None) -> None:
+        display_names_dict = {
+            "huggingfacehub_api_token": "HuggingFace Hub API Token",
+        }
+        FrontendNode.format_field(field, name)
+        SHOW_FIELDS = ["repo_id", "task", "model_kwargs"]
+        if field.name in SHOW_FIELDS:
+            field.show = True
+
+        if "api" in field.name and ("key" in field.name or "token" in field.name):
+            field.password = True
+            field.show = True
+            field.required = True
+
+        if field.name == "task":
+            field.required = True
+            field.show = True
+            field.is_list = True
+            field.options = ["text-generation", "text2text-generation"]
+
+        if display_name := display_names_dict.get(field.name):
+            field.display_name = display_name
+        if field.name == "model_kwargs":
+            field.field_type = "code"
