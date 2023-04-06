@@ -19,7 +19,6 @@ from langflow.interface.prompts.base import prompt_creator
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.tools.base import tool_creator
 from langflow.interface.tools.constants import FILE_TOOLS
-from langflow.interface.tools.util import get_tools_dict
 from langflow.interface.wrappers.base import wrapper_creator
 from langflow.interface.memories.base import memory_creator
 from langflow.utils import payload
@@ -109,7 +108,7 @@ class Graph:
         return edges
 
     def _get_node_class(self, node_type: str, node_lc_type: str) -> Type[Node]:
-        node_type_map = {
+        node_type_map: Dict[str, Type[Node]] = {
             **{t: PromptNode for t in prompt_creator.to_list()},
             **{t: AgentNode for t in agent_creator.to_list()},
             **{t: ChainNode for t in chain_creator.to_list()},
