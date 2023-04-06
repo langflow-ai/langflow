@@ -1,4 +1,4 @@
-import { errorsTypeAPI } from './../../types/api/index';
+import { PromptTypeAPI, errorsTypeAPI } from './../../types/api/index';
 import { APIObjectType, sendAllProps } from '../../types/api/index';
 import axios, { AxiosResponse } from "axios";
 
@@ -13,4 +13,9 @@ export async function sendAll(data:sendAllProps) {
 export async function checkCode(code:string):Promise<AxiosResponse<errorsTypeAPI>>{
 
     return await axios.post('/validate/code',{code})
+}
+
+export async function checkPrompt(template:string):Promise<AxiosResponse<PromptTypeAPI>>{
+
+    return await axios.post('/validate/prompt',{template})
 }
