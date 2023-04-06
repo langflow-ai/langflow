@@ -19,7 +19,7 @@ class BaseCustomChain(ConversationChain):
 
     template: Optional[str]
 
-    ai_prefix_key: Optional[str]
+    ai_prefix_value: Optional[str]
     """Field to use as the ai_prefix. It needs to be set and has to be in the template"""
 
     @root_validator(pre=False)
@@ -27,13 +27,13 @@ class BaseCustomChain(ConversationChain):
         format_dict = {}
         input_variables = extract_input_variables_from_prompt(values["template"])
 
-        if values.get("ai_prefix_key", None) is None:
-            values["ai_prefix_key"] = values["memory"].ai_prefix
+        if values.get("ai_prefix_value", None) is None:
+            values["ai_prefix_value"] = values["memory"].ai_prefix
 
         for key in input_variables:
             new_value = values.get(key, f"{{{key}}}")
             format_dict[key] = new_value
-            if key == values.get("ai_prefix_key", None):
+            if key == values.get("ai_prefix_value", None):
                 values["memory"].ai_prefix = new_value
 
         values["template"] = values["template"].format(**format_dict)
@@ -62,7 +62,7 @@ Current conversation:
 Human: {input}
 {character}:"""
     memory: BaseMemory = Field(default_factory=ConversationBufferMemory)
-    ai_prefix_key: Optional[str] = "character"
+    ai_prefix_value: Optional[str] = "character"
     """Default memory store."""
 
 
