@@ -50,7 +50,7 @@ export default function TabComponent({ selected, flow, onClick }:{flow:FlowType,
 						) : (
 							<div className="flex items-center gap-2">
 								<span
-									className="text-left truncate"
+									className="text-left w-32 truncate"
 									onDoubleClick={() => {
 										setIsRename(true);
 										setValue(flow.name);
