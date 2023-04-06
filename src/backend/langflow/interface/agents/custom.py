@@ -11,7 +11,12 @@ from langchain.llms.base import BaseLLM
 from langchain.memory.chat_memory import BaseChatMemory
 from langchain.schema import BaseLanguageModel
 from langchain.tools.python.tool import PythonAstREPLTool
-
+from langchain.agents.agent_toolkits import (
+    VectorStoreToolkit,
+    VectorStoreInfo,
+)
+from langchain.vectorstores.base import VectorStore
+from langchain.agents.agent_toolkits.vectorstore.prompt import PREFIX as VECTORSTORE_PREFIX, ROUTER_PREFIX as VECTORSTORE_ROUTER_PREFIX
 
 class JsonAgent(AgentExecutor):
     """Json agent"""
@@ -97,6 +102,54 @@ class CSVAgent(AgentExecutor):
         return super().run(*args, **kwargs)
 
 
+class VectorStoreAgent(AgentExecutor):
+    """Vector Store agent"""
+
+    @staticmethod
+    def function_name():
+        return "VectorStoreAgent"
+
+    @classmethod
+    def initialize(cls, *args, **kwargs):
+        return cls.from_toolkit_and_llm(*args, **kwargs)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @classmethod
+    def from_toolkit_and_llm(
+        cls,
+        llm: BaseLanguageModel,
+        name: str,
+        description: str,
+        vectorstore: VectorStore,
+        **kwargs: Any
+    ):
+        """Construct a vectorstore agent from an LLM and tools."""
+
+        vectorstore_info = VectorStoreInfo(
+            name=name,
+            description=description,
+            vectorstore=vectorstore
+        )
+        toolkit = VectorStoreToolkit(vectorstore_info=vectorstore_info, llm=llm)
+
+
+        tools = toolkit.get_tools()
+        prompt = ZeroShotAgent.create_prompt(tools, prefix=VECTORSTORE_PREFIX)
+        llm_chain = LLMChain(
+            llm=llm,
+            prompt=prompt,
+            callback_manager=None,
+        )
+        tool_names = [tool.name for tool in tools]
+        agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)
+        return AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
+
+    def run(self, *args, **kwargs):
+        return super().run(*args, **kwargs)
+
+
 class InitializeAgent(AgentExecutor):
     """Implementation of initialize_agent function"""
 
@@ -128,4 +181,5 @@ CUSTOM_AGENTS = {
     "JsonAgent": JsonAgent,
     "CSVAgent": CSVAgent,
     "initialize_agent": InitializeAgent,
+    "VectorStoreAgent": VectorStoreAgent,
 }
