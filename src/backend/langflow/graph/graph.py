@@ -120,12 +120,12 @@ class Graph:
             **{t: MemoryNode for t in memory_creator.to_list()},
         }
 
+        if node_type in FILE_TOOLS:
+            return FileToolNode
         if node_type in node_type_map:
             return node_type_map[node_type]
         if node_lc_type in node_type_map:
             return node_type_map[node_lc_type]
-        if node_type in FILE_TOOLS:
-            return FileToolNode
         return Node
 
     def _build_nodes(self) -> List[Node]:
