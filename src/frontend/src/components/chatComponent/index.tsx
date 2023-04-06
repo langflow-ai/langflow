@@ -14,7 +14,7 @@ import {
 } from "react";
 import { sendAll } from "../../controllers/API";
 import { alertContext } from "../../contexts/alertContext";
-import { classNames, nodeColors } from "../../utils";
+import { classNames, nodeColors, snakeToNormalCase } from "../../utils";
 import { TabsContext } from "../../contexts/tabsContext";
 import { ChatType } from "../../types/chat";
 import ChatMessage from "./chatMessage";
@@ -29,7 +29,7 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 	const [open, setOpen] = useState(true);
 	const [chatValue, setChatValue] = useState("");
 	const [chatHistory, setChatHistory] = useState(flow.chat);
-	const { setErrorData } = useContext(alertContext);
+	const { setErrorData, setNoticeData } = useContext(alertContext);
 	const addChatHistory = (
 		message: string,
 		isSend: boolean,
@@ -76,34 +76,48 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 	}, [chatHistory]);
 
 	function validateNode(n: NodeType): Array<string> {
-		if (!n.data?.node?.template ||
-			!Object.keys(n.data.node.template)) {
-			console.warn("There is a broken node in the flow. Please submit a bug report and include your exported flow file.");
+		if (!n.data?.node?.template || !Object.keys(n.data.node.template)) {
+			setNoticeData({
+				title:
+					"We've noticed a potential issue with a node in the flow. Please review it and, if necessary, submit a bug report with your exported flow file. Thank you for your help!",
+			});
 			return [];
 		}
 
-		const { type, node: { template } } = n.data;
+		const {
+			type,
+			node: { template },
+		} = n.data;
 
-		return Object.keys(template).reduce((errors: Array<string>, t) =>
-			errors.concat(
-				template[t].required &&
-				(!template[t].value ||
-				template[t].value === "") &&
-				!reactFlowInstance
-					.getEdges()
-					.some(
-						(e) =>
-							e.targetHandle.split("|")[1] === t &&
-							e.targetHandle.split("|")[2] === n.id
-						)
-				? [`${type} is missing ${template[t].name}.`]
-				: []
-			), [] as string[]
+		return Object.keys(template).reduce(
+			(errors: Array<string>, t) =>
+				errors.concat(
+					template[t].required &&
+						(!template[t].value || template[t].value === "") &&
+						!reactFlowInstance
+							.getEdges()
+							.some(
+								(e) =>
+									e.targetHandle.split("|")[1] === t &&
+									e.targetHandle.split("|")[2] === n.id
+							)
+						? [
+								`${type} is missing ${
+									template.display_name
+										? template.display_name
+										: snakeToNormalCase(template[t].name)
+								}.`,
+						  ]
+						: []
+				),
+			[] as string[]
 		);
-	};
+	}
 
 	function validateNodes() {
-		return reactFlowInstance.getNodes().flatMap((n: NodeType) => validateNode(n))
+		return reactFlowInstance
+			.getNodes()
+			.flatMap((n: NodeType) => validateNode(n));
 	}
 
 	const ref = useRef(null);
@@ -145,11 +159,8 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 					});
 			} else {
 				setErrorData({
-					title: "Error sending message",
-					list: [
-						"Oops! Looks like you missed some required information. Please fill in all the required fields before continuing:",
-						...nodeValidationErrors
-					],
+					title: "Oops! Looks like you missed some required information:",
+					list: nodeValidationErrors,
 				});
 			}
 		} else {
