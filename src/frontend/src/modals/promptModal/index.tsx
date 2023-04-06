@@ -1,17 +1,11 @@
 import { Dialog, Transition } from "@headlessui/react";
-import { XMarkIcon, CommandLineIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
-import AceEditor from "react-ace";
-import "ace-builds/src-noconflict/mode-python";
-import "ace-builds/src-noconflict/theme-github";
-import "ace-builds/src-noconflict/theme-twilight";
-import "ace-builds/src-noconflict/ext-language_tools";
-import "ace-builds/webpack-resolver";
 import { darkContext } from "../../contexts/darkContext";
-import { checkCode } from "../../controllers/API";
+import { checkPrompt } from "../../controllers/API";
 import { alertContext } from "../../contexts/alertContext";
-export default function CodeAreaModal({
+export default function PromptAreaModal({
 	value,
 	setValue,
 }: {
@@ -19,7 +13,7 @@ export default function CodeAreaModal({
 	value: string;
 }) {
 	const [open, setOpen] = useState(true);
-	const [code, setCode] = useState(value);
+	const [myValue, setMyValue] = useState(value);
 	const { dark } = useContext(darkContext);
 	const { setErrorData, setSuccessData } = useContext(alertContext);
 	const { closePopUp } = useContext(PopUpContext);
@@ -79,7 +73,7 @@ export default function CodeAreaModal({
 								<div className="h-full w-full flex flex-col justify-center items-center">
 									<div className="flex w-full pb-4 z-10 justify-center shadow-sm">
 										<div className="mx-auto mt-4 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-gray-900 sm:mx-0 sm:h-10 sm:w-10">
-											<CommandLineIcon
+											<DocumentTextIcon
 												className="h-6 w-6 text-blue-600"
 												aria-hidden="true"
 											/>
@@ -89,27 +83,21 @@ export default function CodeAreaModal({
 												as="h3"
 												className="text-lg font-medium dark:text-white leading-10 text-gray-900"
 											>
-												Edit Code
+												Edit Prompt
 											</Dialog.Title>
 										</div>
 									</div>
 									<div className="h-full w-full bg-gray-200 overflow-auto dark:bg-gray-900 p-4 gap-4 flex flex-row justify-center items-center">
 										<div className="flex h-full w-full">
 											<div className="overflow-hidden px-4 py-5 sm:p-6 w-full h-full rounded-lg bg-white dark:bg-gray-800 shadow">
-												<AceEditor
-													value={code}
-													mode="python"
-													highlightActiveLine={true}
-													showPrintMargin={false}
-													fontSize={14}
-													showGutter
-													enableLiveAutocompletion
-													theme={dark ? "twilight" : "github"}
-													name="CodeEditor"
-													onChange={(value) => {
-														setCode(value);
+												<textarea
+													ref={ref}
+													className="form-input h-full w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+													value={myValue}
+													onChange={(e) => {
+														setMyValue(e.target.value);
+														setValue(e.target.value);
 													}}
-													className="h-full w-full rounded-lg"
 												/>
 											</div>
 										</div>
@@ -119,35 +107,23 @@ export default function CodeAreaModal({
 											type="button"
 											className="inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm"
 											onClick={() => {
-												checkCode(code)
+												checkPrompt(myValue)
 													.then((apiReturn) => {
 														console.log(apiReturn);
 														if (apiReturn.data) {
-															console.log(apiReturn.data);
-															let importsErrors = apiReturn.data.imports.errors;
-															let funcErrors = apiReturn.data.function.errors;
-															if (
-																funcErrors.length === 0 &&
-																importsErrors.length === 0
-															) {
+															let inputVariables =
+																apiReturn.data.input_variables;
+															if (inputVariables.length === 0) {
+																setErrorData({
+																	title:
+																		"The template you are attempting to use does not contain any variables for data entry.",
+																});
+															} else {
 																setSuccessData({
-																	title: "Code is ready to run",
+																	title: "Prompt is ready",
 																});
 																setModalOpen(false);
-																setValue(code)
-															} else {
-																if (funcErrors.length !== 0) {
-																	setErrorData({
-																		title: "There is an error in your function",
-																		list: funcErrors,
-																	});
-																}
-																if(importsErrors.length!==0){
-																	setErrorData({
-																		title: "There is an error in your imports",
-																		list: importsErrors,
-																	});
-																}
+																setValue(myValue);
 															}
 														} else {
 															setErrorData({
@@ -158,7 +134,7 @@ export default function CodeAreaModal({
 													.catch((_) =>
 														setErrorData({
 															title:
-																"There is something wrong with this code, please review it",
+																"There is something wrong with this prompt, please review it",
 														})
 													);
 											}}
