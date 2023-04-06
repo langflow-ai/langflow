@@ -26,12 +26,13 @@ llms:
   - OpenAI
   - AzureOpenAI
   - ChatOpenAI
+  - HuggingFaceHub
 
 tools:
-  - Search
+  # - Search
   - PAL-MATH
   - Calculator
-  - Serper Search
+  # - Serper Search
   - Tool
   - PythonFunction
   - JsonSpec
