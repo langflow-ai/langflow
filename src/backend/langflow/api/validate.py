@@ -5,6 +5,7 @@ from langflow.api.base import (
     CodeValidationResponse,
     Prompt,
     PromptValidationResponse,
+    validate_prompt,
 )
 from langflow.graph.utils import extract_input_variables_from_prompt
 from langflow.utils.logger import logger
@@ -29,8 +30,7 @@ def post_validate_code(code: Code):
 @router.post("/prompt", status_code=200, response_model=PromptValidationResponse)
 def post_validate_prompt(prompt: Prompt):
     try:
-        input_variables = extract_input_variables_from_prompt(prompt.template)
-        return PromptValidationResponse(input_variables=input_variables)
+        return validate_prompt(prompt.template)
     except Exception as e:
         logger.exception(e)
-        return HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
