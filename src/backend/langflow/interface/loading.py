@@ -1,7 +1,10 @@
 import json
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
+from langchain.agents import ZeroShotAgent
+from langchain.agents import agent as agent_module
 from langchain.agents.agent import AgentExecutor
+from langchain.agents.agent_toolkits.base import BaseToolkit
 from langchain.agents.load_tools import (
     _BASE_TOOLS,
     _EXTRA_LLM_TOOLS,
@@ -15,29 +18,67 @@ from langchain.chains.loading import load_chain_from_config
 from langchain.llms.base import BaseLLM
 from langchain.llms.loading import load_llm_from_config
 
+from langflow.interface.agents.custom import CUSTOM_AGENTS
+from langflow.interface.importing.utils import import_by_type
+from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.types import get_type_list
-from langflow.utils import payload, util
+from langflow.utils import util, validate
+
+
+def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
+    """Instantiate class from module type and key, and params"""
+    if node_type in CUSTOM_AGENTS:
+        if custom_agent := CUSTOM_AGENTS.get(node_type):
+            return custom_agent.initialize(**params)  # type: ignore
+
+    class_object = import_by_type(_type=base_type, name=node_type)
+
+    if base_type == "agents":
+        # We need to initialize it differently
+        return load_agent_executor(class_object, params)
+    elif node_type == "ZeroShotPrompt":
+        if "tools" not in params:
+            params["tools"] = []
+        return ZeroShotAgent.create_prompt(**params)
+
+    elif node_type == "PythonFunction":
+        # If the node_type is "PythonFunction"
+        # we need to get the function from the params
+        # which will be a str containing a python function
+        # and then we need to compile it and return the function
+        # as the instance
+        function_string = params["code"]
+        if isinstance(function_string, str):
+            return validate.eval_function(function_string)
+        raise ValueError("Function should be a string")
+    elif base_type == "toolkits":
+        loaded_toolkit = class_object(**params)
+        # Check if node_type has a loader
+        if toolkits_creator.has_create_function(node_type):
+            return load_toolkits_executor(node_type, loaded_toolkit, params)
+        return loaded_toolkit
+    else:
+        return class_object(**params)
 
 
 def load_flow_from_json(path: str):
+    # This is done to avoid circular imports
+    from langflow.graph import Graph
+
     """Load flow from json file"""
     with open(path, "r") as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]
-    extracted_json = extract_json(data_graph)
-    return load_langchain_type_from_config(config=extracted_json)
-
-
-def extract_json(data_graph):
     nodes = data_graph["nodes"]
     # Substitute ZeroShotPrompt with PromptTemplate
-    nodes = replace_zero_shot_prompt_with_prompt_template(nodes)
+    # nodes = replace_zero_shot_prompt_with_prompt_template(nodes)
     # Add input variables
-    nodes = payload.extract_input_variables(nodes)
+    # nodes = payload.extract_input_variables(nodes)
+
     # Nodes, edges and root node
     edges = data_graph["edges"]
-    root = payload.get_root_node(nodes, edges)
-    return payload.build_json(root, nodes, edges)
+    graph = Graph(nodes, edges)
+    return graph.build()
 
 
 def replace_zero_shot_prompt_with_prompt_template(nodes):
@@ -90,6 +131,25 @@ def load_agent_executor_from_config(
         callback_manager=callback_manager,
         **kwargs,
     )
+
+
+def load_agent_executor(agent_class: type[agent_module.Agent], params, **kwargs):
+    """Load agent executor from agent class, tools and chain"""
+    allowed_tools = params["allowed_tools"]
+    llm_chain = params["llm_chain"]
+    tool_names = [tool.name for tool in allowed_tools]
+    agent = agent_class(allowed_tools=tool_names, llm_chain=llm_chain)
+    return AgentExecutor.from_agent_and_tools(
+        agent=agent,
+        tools=allowed_tools,
+        **kwargs,
+    )
+
+
+def load_toolkits_executor(node_type: str, toolkit: BaseToolkit, params: dict):
+    create_function: Callable = toolkits_creator.get_create_function(node_type)
+    if llm := params.get("llm"):
+        return create_function(llm=llm, toolkit=toolkit)
 
 
 def load_tools_from_config(tool_list: list[dict]) -> list:

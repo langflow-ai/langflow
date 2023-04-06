@@ -2,6 +2,8 @@ import { ChatBubbleLeftEllipsisIcon, ChatBubbleOvalLeftEllipsisIcon, PlusSmallIc
 import { useState } from "react";
 import { ChatMessageType } from "../../../types/chat";
 import { nodeColors } from "../../../utils";
+var Convert = require('ansi-to-html');
+var convert = new Convert({newline:true});
 
 export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
 	const [hidden, setHidden] = useState(true);
@@ -27,7 +29,7 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
 								style={{ backgroundColor: nodeColors["thought"] }}
 								className=" text-start inline-block w-full pb-3 pt-3 px-5 cursor-pointer"
 								dangerouslySetInnerHTML={{
-									__html: chat.thought.replace(/\n/g, "<br />"),
+									__html: convert.toHtml(chat.thought)
 								}}
 							></div>
 						)}

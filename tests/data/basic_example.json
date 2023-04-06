@@ -1,15 +1,16 @@
 {
-    "name": "New Flow 9",
-    "id": "1",
+    "name": "New Flow ",
+    "id": "0",
     "data": {
-        "nodes": [{
+        "nodes": [
+            {
                 "width": 384,
                 "height": 391,
-                "id": "dndnode_61",
+                "id": "dndnode_1",
                 "type": "genericNode",
                 "position": {
-                    "x": 764,
-                    "y": 382
+                    "x": 644,
+                    "y": 348
                 },
                 "data": {
                     "type": "LLMChain",
@@ -17,7 +18,7 @@
                         "template": {
                             "_type": "llm_chain",
                             "memory": {
-                                "type": "Memory",
+                                "type": "BaseMemory",
                                 "required": false,
                                 "placeholder": "",
                                 "list": false,
@@ -34,7 +35,7 @@
                                 "show": false,
                                 "password": false,
                                 "multiline": false,
-                                "value": true
+                                "value": false
                             },
                             "prompt": {
                                 "type": "BasePromptTemplate",
@@ -46,7 +47,7 @@
                                 "multiline": false
                             },
                             "llm": {
-                                "type": "BaseLLM",
+                                "type": "BaseLanguageModel",
                                 "required": true,
                                 "placeholder": "",
                                 "list": false,
@@ -70,24 +71,22 @@
                             "Chain"
                         ]
                     },
-                    "id": "dndnode_61",
+                    "id": "dndnode_1",
                     "value": null
                 },
-                "selected": false,
                 "positionAbsolute": {
-                    "x": 764,
-                    "y": 382
-                },
-                "dragging": false
+                    "x": 644,
+                    "y": 348
+                }
             },
             {
                 "width": 384,
                 "height": 351,
-                "id": "dndnode_62",
+                "id": "dndnode_4",
                 "type": "genericNode",
                 "position": {
-                    "x": 1488,
-                    "y": 550
+                    "x": 1236,
+                    "y": 39.59999999999957
                 },
                 "data": {
                     "type": "ZeroShotAgent",
@@ -131,22 +130,22 @@
                             "Agent"
                         ]
                     },
-                    "id": "dndnode_62",
+                    "id": "dndnode_4",
                     "value": null
                 },
                 "positionAbsolute": {
-                    "x": 1488,
-                    "y": 550
+                    "x": 1236,
+                    "y": 39.59999999999957
                 }
             },
             {
                 "width": 384,
                 "height": 529,
-                "id": "dndnode_63",
+                "id": "dndnode_5",
                 "type": "genericNode",
                 "position": {
-                    "x": 206,
-                    "y": 210
+                    "x": 96,
+                    "y": -299.2000000000003
                 },
                 "data": {
                     "type": "ZeroShotPrompt",
@@ -186,24 +185,24 @@
                             "BasePromptTemplate"
                         ]
                     },
-                    "id": "dndnode_63",
+                    "id": "dndnode_5",
                     "value": null
                 },
                 "selected": false,
                 "positionAbsolute": {
-                    "x": 206,
-                    "y": 210
+                    "x": 96,
+                    "y": -299.2000000000003
                 },
                 "dragging": false
             },
             {
                 "width": 384,
-                "height": 501,
-                "id": "dndnode_64",
+                "height": 477,
+                "id": "dndnode_8",
                 "type": "genericNode",
                 "position": {
-                    "x": 210,
-                    "y": 818
+                    "x": 75,
+                    "y": 328
                 },
                 "data": {
                     "type": "OpenAI",
@@ -228,7 +227,7 @@
                                 "show": false,
                                 "password": false,
                                 "multiline": false,
-                                "value": true
+                                "value": null
                             },
                             "client": {
                                 "type": "Any",
@@ -250,7 +249,6 @@
                                 "multiline": false,
                                 "value": "text-davinci-003",
                                 "options": [
-                                    "gpt-3.5-turbo",
                                     "text-davinci-003",
                                     "text-davinci-002"
                                 ]
@@ -343,7 +341,7 @@
                                 "show": true,
                                 "password": true,
                                 "multiline": false,
-                                "value": "---"
+                                "value": "sk-"
                             },
                             "batch_size": {
                                 "type": "int",
@@ -399,27 +397,28 @@
                         "description": "Generic OpenAI class that uses model name.",
                         "base_classes": [
                             "BaseOpenAI",
-                            "BaseLLM"
+                            "BaseLLM",
+                            "BaseLanguageModel"
                         ]
                     },
-                    "id": "dndnode_64",
+                    "id": "dndnode_8",
                     "value": null
                 },
                 "selected": false,
                 "positionAbsolute": {
-                    "x": 210,
-                    "y": 818
+                    "x": 75,
+                    "y": 328
                 },
                 "dragging": false
             },
             {
                 "width": 384,
                 "height": 397,
-                "id": "dndnode_65",
+                "id": "dndnode_9",
                 "type": "genericNode",
                 "position": {
-                    "x": 776,
-                    "y": 922
+                    "x": 643,
+                    "y": 824
                 },
                 "data": {
                     "type": "Serper Search",
@@ -427,13 +426,13 @@
                         "template": {
                             "serper_api_key": {
                                 "type": "str",
-                                "required": false,
+                                "required": true,
                                 "list": false,
                                 "show": true,
                                 "placeholder": "",
                                 "value": "---"
                             },
-                            "_type": "google-serper"
+                            "_type": "Serper Search"
                         },
                         "name": "Serper Search",
                         "description": "A low-cost Google Search API. Useful for when you need to answer questions about current events. Input should be a search query.",
@@ -441,101 +440,66 @@
                             "Tool"
                         ]
                     },
-                    "id": "dndnode_65",
+                    "id": "dndnode_9",
                     "value": null
                 },
-                "selected": false,
+                "selected": true,
                 "positionAbsolute": {
-                    "x": 776,
-                    "y": 922
+                    "x": 643,
+                    "y": 824
                 },
                 "dragging": false
             }
         ],
-        "edges": [{
-                "source": "dndnode_63",
-                "sourceHandle": "ZeroShotPrompt|dndnode_63|BasePromptTemplate",
-                "target": "dndnode_61",
-                "targetHandle": "BasePromptTemplate|prompt|dndnode_61",
+        "edges": [
+            {
+                "source": "dndnode_5",
+                "sourceHandle": "ZeroShotPrompt|dndnode_5|BasePromptTemplate",
+                "target": "dndnode_1",
+                "targetHandle": "BasePromptTemplate|prompt|dndnode_1",
                 "className": "animate-pulse",
-                "id": "reactflow__edge-dndnode_63ZeroShotPrompt|dndnode_63|BasePromptTemplate-dndnode_61BasePromptTemplate|prompt|dndnode_61"
+                "id": "reactflow__edge-dndnode_5ZeroShotPrompt|dndnode_5|BasePromptTemplate-dndnode_1BasePromptTemplate|prompt|dndnode_1"
             },
             {
-                "source": "dndnode_64",
-                "sourceHandle": "OpenAI|dndnode_64|BaseOpenAI,|BaseLLM",
-                "target": "dndnode_61",
-                "targetHandle": "BaseLLM|llm|dndnode_61",
+                "source": "dndnode_1",
+                "sourceHandle": "LLMChain|dndnode_1|Chain",
+                "target": "dndnode_4",
+                "targetHandle": "LLMChain|llm_chain|dndnode_4",
                 "className": "animate-pulse",
-                "id": "reactflow__edge-dndnode_64OpenAI|dndnode_64|BaseOpenAI,|BaseLLM-dndnode_61BaseLLM|llm|dndnode_61"
+                "id": "reactflow__edge-dndnode_1LLMChain|dndnode_1|Chain-dndnode_4LLMChain|llm_chain|dndnode_4"
             },
             {
-                "source": "dndnode_65",
-                "sourceHandle": "Serper Search|dndnode_65|Tool",
-                "target": "dndnode_62",
-                "targetHandle": "Tool|allowed_tools|dndnode_62",
+                "source": "dndnode_8",
+                "sourceHandle": "OpenAI|dndnode_8|BaseOpenAI|BaseLLM|BaseLanguageModel",
+                "target": "dndnode_1",
+                "targetHandle": "BaseLanguageModel|llm|dndnode_1",
                 "className": "animate-pulse",
-                "id": "reactflow__edge-dndnode_65Serper Search|dndnode_65|Tool-dndnode_62Tool|allowed_tools|dndnode_62"
+                "id": "reactflow__edge-dndnode_8OpenAI|dndnode_8|BaseOpenAI|BaseLLM|BaseLanguageModel-dndnode_1BaseLanguageModel|llm|dndnode_1"
             },
             {
-                "source": "dndnode_61",
-                "sourceHandle": "LLMChain|dndnode_61|Chain",
-                "target": "dndnode_62",
-                "targetHandle": "LLMChain|llm_chain|dndnode_62",
+                "source": "dndnode_9",
+                "sourceHandle": "Serper Search|dndnode_9|Tool",
+                "target": "dndnode_4",
+                "targetHandle": "Tool|allowed_tools|dndnode_4",
                 "className": "animate-pulse",
-                "id": "reactflow__edge-dndnode_61LLMChain|dndnode_61|Chain-dndnode_62LLMChain|llm_chain|dndnode_62"
+                "id": "reactflow__edge-dndnode_9Serper Search|dndnode_9|Tool-dndnode_4Tool|allowed_tools|dndnode_4"
             }
         ],
         "viewport": {
-            "x": -103,
-            "y": -135,
-            "zoom": 1
+            "x": 22.5,
+            "y": 42,
+            "zoom": 0.5
         }
     },
-    "chat": [{
-            "message": "What is the new llm Prismer?",
+    "chat": [
+        {
+            "message": "Langflow. What is it?",
             "isSend": true
         },
         {
-            "message": "What is the prismer llm?",
-            "isSend": true
-        },
-        {
-            "message": "What is the prismer llm?",
-            "isSend": true
-        },
-        {
-            "message": "What is the prismer llm?",
-            "isSend": true
-        },
-        {
-            "message": "What is the prismer llm?",
-            "isSend": true
-        },
-        {
-            "message": "What is the prismer llm?",
-            "isSend": true
-        },
-        {
-            "message": "What is the prismer llm?",
-            "isSend": true
-        },
-        {
-            "message": "What is the prismer llm?",
-            "isSend": true
-        },
-        {
-            "message": "Prismer LLM is a vision-language model with an ensemble of experts.",
+            "message": "Langflow is a GUI for LangChain, designed with react-flow to provide an effortless way to experiment and prototype flows with drag-and-drop components and a chrome extension powered by GPT-3.",
             "isSend": false,
-            "thought": "Thought: I should research what this is\nAction: Serper Search\nAction Input: \"prismer llm\"\nObservation: Announcing Prismer, my team's latest vision-language AI, empowered by domain-expert models in depth, surface normal, segmentation, etc. My team's work, Prismer, is a representative example. We use a textual LM as the backbone, and plug in many visual domain experts through a neural adapter ... “Prismer is able to achieve superior data efficiency compared to ... New OpenAI post about future of ChatGPT's (and its other LLM) alignment. Prismer: A Vision-Language Model with An Ensemble of Experts ... UDAPDR: Unsupervised Domain Adaptation via LLM Prompting and Distillation of Rerankers. Emory Law's LLM program offers graduates of US and foreign law schools the opportunity to pursue the master of laws degree from one of the top nationally ranked ... Missing: prismer | Must include:prismer. Prismer: A Vision-Language Model with An Ensemble of Experts ... github: github.com/NVlabs/prismer ... into LLM embedding space viously to their being sworn, the prisoner, Michael. Solomon, standing at the bar, challenged two ... a« wa« brought before- them.\" The prisoner ?llM'eow*. RWKV is a RNN with transformer-level LLM performance. ... The implementation of \"Prismer: A Vision-Language Model with An Ensemble of Experts\". Announcing Prismer, our NVIDIA team's latest vision-language #ai empowered by domain-expert models in depth, surface normal, segmentation, etc. No paywall.\nThought:\n\n> Finished chain."
-        },
-        {
-            "message": "What is the prismer llm?",
-            "isSend": true
-        },
-        {
-            "message": "Prismer is an AI vision-language model with an ensemble of experts developed by a NVIDIA team. It is capable of achieving superior data efficiency compared to other models and can be directly trained like a GPT.",
-            "isSend": false,
-            "thought": "Thought: I need to search for the term\nAction: Serper Search\nAction Input: \"prismer llm\"\nObservation: Announcing Prismer, my team's latest vision-language AI, empowered by domain-expert models in depth, surface normal, segmentation, etc. My team's work, Prismer, is a representative example. We use a textual LM as the backbone, and plug in many visual domain experts through a neural adapter ... “Prismer is able to achieve superior data efficiency compared to ... New OpenAI post about future of ChatGPT's (and its other LLM) alignment. Prismer: A Vision-Language Model with An Ensemble of Experts ... UDAPDR: Unsupervised Domain Adaptation via LLM Prompting and Distillation of Rerankers. A very insightful post about the potential issues with LLM chatbots for general ... Announcing Prismer, our NVIDIA team's latest vision-language #ai ... As technology continues to transform our economy and culture, businesses need a new breed of lawyers who understand the legal and commercial aspects of new ... Missing: prismer | Must include:prismer. RWKV is a RNN with transformer-level LLM performance. ... The implementation of \"Prismer: A Vision-Language Model with An Ensemble of Experts\". ... Bendix vorad collision warning system, Vegglampe med prismer, Ok magazine ... Alabama llm, Colt 25 caliber magazine, Poppie clinch, Mcds upper school, ... RWKV is an RNN with transformer-level LLM performance. It can be directly trained like a GPT (parallelizable). So it's combining the best of RNN ...\nThought:\n\n> Finished chain."
+            "thought": "> Entering new AgentExecutor chain...\n I need to research what Langflow is.\nAction: Serper Search\nAction Input: \"What is Langflow?\"\nObservation: Researchers introduce LangFlow, a graphical user interface (GUI) for LangChain that simplifies testing and creation of smart applications. The drag-and-drop feature provides a quick and effortless way to experiment and prototype, and the built-in chat interface enables real-time ... LangFlow is a GUI for LangChain, designed with react-flow to provide an effortless way to experiment and prototype flows with drag-and-drop ... LangFlow is a GUI for LangChain, designed with react-flow to provide an effortless way to experiment and prototype flows with drag-and-drop components and a ... an open-source chrome extension powered by GPT-3 to get the explanation of a piece of code on any site (Stackoverflow, Github, etc). ChatGPT correctly identified Mona Lisa but failed to guess the cartoon character Michael was thinking of, suggesting Bugs Bunny holding a ... Introducing LangFlow! An open-source UI for. @LangChainAI. that enables seamless combination of multiple deep learning models to perform ... See student reviews, school photos, Chinese Mandarin courses, and housing options available at Langflow Education Centre (Macau, Macau) - Reviews - Language ... Longfellow Elementary students play on the playground during recess. Longfellow Elementary students pause for a photo during class.\nThought: Langflow is a GUI for LangChain, designed with react-flow to provide an effortless way to experiment and prototype flows with drag-and-drop components and a chrome extension powered by GPT-3.\nFinal Answer: Langflow is a GUI for LangChain, designed with react-flow to provide an effortless way to experiment and prototype flows with drag-and-drop components and a chrome extension powered by GPT-3.\n\n> Finished chain."
         }
     ]
 }

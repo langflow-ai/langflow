@@ -1,43 +1,71 @@
-## LLM
 from typing import Any
 
-from langchain import llms
-from langchain.llms.openai import OpenAIChat
+## LLM
+from langchain import (
+    chains,
+    document_loaders,
+    embeddings,
+    llms,
+    memory,
+    requests,
+    vectorstores,
+)
+from langchain.agents import agent_toolkits
+from langchain.chat_models import ChatOpenAI
 
+from langflow.interface.importing.utils import import_class
+
+## LLM
 llm_type_to_cls_dict = llms.type_to_cls_dict
-llm_type_to_cls_dict["openai-chat"] = OpenAIChat
-
-
-## Memory
-
-# from langchain.memory.buffer_window import ConversationBufferWindowMemory
-# from langchain.memory.chat_memory import ChatMessageHistory
-# from langchain.memory.combined import CombinedMemory
-# from langchain.memory.entity import ConversationEntityMemory
-# from langchain.memory.kg import ConversationKGMemory
-# from langchain.memory.readonly import ReadOnlySharedMemory
-# from langchain.memory.simple import SimpleMemory
-# from langchain.memory.summary import ConversationSummaryMemory
-# from langchain.memory.summary_buffer import ConversationSummaryBufferMemory
-
-memory_type_to_cls_dict: dict[str, Any] = {
-    # "CombinedMemory": CombinedMemory,
-    # "ConversationBufferWindowMemory": ConversationBufferWindowMemory,
-    # "ConversationBufferMemory": ConversationBufferMemory,
-    # "SimpleMemory": SimpleMemory,
-    # "ConversationSummaryBufferMemory": ConversationSummaryBufferMemory,
-    # "ConversationKGMemory": ConversationKGMemory,
-    # "ConversationEntityMemory": ConversationEntityMemory,
-    # "ConversationSummaryMemory": ConversationSummaryMemory,
-    # "ChatMessageHistory": ChatMessageHistory,
-    # "ConversationStringBufferMemory": ConversationStringBufferMemory,
-    # "ReadOnlySharedMemory": ReadOnlySharedMemory,
-}
-
+llm_type_to_cls_dict["openai-chat"] = ChatOpenAI  # type: ignore
 
 ## Chain
-# from langchain.chains.loading import type_to_loader_dict
-# from langchain.chains.conversation.base import ConversationChain
+chain_type_to_cls_dict: dict[str, Any] = {
+    chain_name: import_class(f"langchain.chains.{chain_name}")
+    for chain_name in chains.__all__
+}
 
-# chain_type_to_cls_dict = type_to_loader_dict
-# chain_type_to_cls_dict["conversation_chain"] = ConversationChain
+toolkit_type_to_loader_dict: dict[str, Any] = {
+    toolkit_name: import_class(f"langchain.agents.agent_toolkits.{toolkit_name}")
+    # if toolkit_name is lower case it is a loader
+    for toolkit_name in agent_toolkits.__all__
+    if toolkit_name.islower()
+}
+
+toolkit_type_to_cls_dict: dict[str, Any] = {
+    toolkit_name: import_class(f"langchain.agents.agent_toolkits.{toolkit_name}")
+    # if toolkit_name is not lower case it is a class
+    for toolkit_name in agent_toolkits.__all__
+    if not toolkit_name.islower()
+}
+
+## Memories
+memory_type_to_cls_dict: dict[str, Any] = {
+    memory_name: import_class(f"langchain.memory.{memory_name}")
+    for memory_name in memory.__all__
+}
+
+## Wrappers
+wrapper_type_to_cls_dict: dict[str, Any] = {
+    wrapper.__name__: wrapper for wrapper in [requests.RequestsWrapper]
+}
+
+## Embeddings
+embedding_type_to_cls_dict: dict[str, Any] = {
+    embedding_name: import_class(f"langchain.embeddings.{embedding_name}")
+    for embedding_name in embeddings.__all__
+}
+
+## Vector Stores
+vectorstores_type_to_cls_dict: dict[str, Any] = {
+    vectorstore_name: import_class(f"langchain.vectorstores.{vectorstore_name}")
+    for vectorstore_name in vectorstores.__all__
+}
+
+## Document Loaders
+documentloaders_type_to_cls_dict: dict[str, Any] = {
+    documentloader_name: import_class(
+        f"langchain.document_loaders.{documentloader_name}"
+    )
+    for documentloader_name in document_loaders.__all__
+}
