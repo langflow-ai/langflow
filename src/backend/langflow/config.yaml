@@ -26,6 +26,7 @@ llms:
   - OpenAI
   - AzureOpenAI
   - ChatOpenAI
+  - HuggingFaceHub
 
 tools:
   - Search
