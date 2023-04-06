@@ -167,7 +167,7 @@ def test_zero_shot_prompt(client: TestClient):
         "placeholder": "",
         "show": True,
         "multiline": True,
-        "value": "Answer the following questions as best you can. You have access to the following tools:", # noqa: E501
+        "value": "Answer the following questions as best you can. You have access to the following tools:",  # noqa: E501
         "password": False,
         "name": "prefix",
         "type": "str",
@@ -189,7 +189,7 @@ def test_zero_shot_prompt(client: TestClient):
         "placeholder": "",
         "show": False,
         "multiline": False,
-        "value": "Use the following format:\n\nQuestion: the input question you must answer\nThought: you should always think about what to do\nAction: the action to take, should be one of [{tool_names}]\nAction Input: the input to the action\nObservation: the result of the action\n... (this Thought/Action/Action Input/Observation can repeat N times)\nThought: I now know the final answer\nFinal Answer: the final answer to the original input question", # noqa: E501
+        "value": "Use the following format:\n\nQuestion: the input question you must answer\nThought: you should always think about what to do\nAction: the action to take, should be one of [{tool_names}]\nAction Input: the input to the action\nObservation: the result of the action\n... (this Thought/Action/Action Input/Observation can repeat N times)\nThought: I now know the final answer\nFinal Answer: the final answer to the original input question",  # noqa: E501
         "password": False,
         "name": "format_instructions",
         "type": "str",
