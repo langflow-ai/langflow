@@ -132,11 +132,10 @@ export default function PromptAreaModal({
 														}
 													})
 													.catch((error) => {
-                                                        console.log(error)
 														return setErrorData({
 															title:
 																"There is something wrong with this prompt, please review it",
-														});
+														list:[error.response.data.detail]});
 													});
 											}}
 										>
