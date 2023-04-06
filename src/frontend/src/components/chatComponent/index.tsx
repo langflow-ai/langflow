@@ -92,7 +92,7 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 		return Object.keys(template).reduce(
 			(errors: Array<string>, t) =>
 				errors.concat(
-					template[t].required &&
+					(template[t].required && template[t].show) &&
 						(!template[t].value || template[t].value === "") &&
 						!reactFlowInstance
 							.getEdges()
