@@ -1,4 +1,13 @@
 from fastapi.testclient import TestClient
+from langflow.settings import settings
+
+
+def test_chains_settings(client: TestClient):
+    response = client.get("/all")
+    assert response.status_code == 200
+    json_response = response.json()
+    chains = json_response["chains"]
+    assert set(chains.keys()) == set(settings.chains)
 
 
 # Test the ConversationChain object
