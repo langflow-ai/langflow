@@ -1,28 +1,46 @@
 import os
-from typing import List, Optional
+from typing import List
 
 import yaml
-from pydantic import BaseSettings, Field, root_validator
+from pydantic import BaseSettings, root_validator
 
 
 class Settings(BaseSettings):
-    chains: Optional[List[str]] = Field(...)
-    agents: Optional[List[str]] = Field(...)
-    prompts: Optional[List[str]] = Field(...)
-    llms: Optional[List[str]] = Field(...)
-    tools: Optional[List[str]] = Field(...)
-    memories: Optional[List[str]] = Field(...)
-    dev: bool = Field(...)
+    chains: List[str] = []
+    agents: List[str] = []
+    prompts: List[str] = []
+    llms: List[str] = []
+    tools: List[str] = []
+    memories: List[str] = []
+    embeddings: List[str] = []
+    vectorstores: List[str] = []
+    documentloaders: List[str] = []
+    wrappers: List[str] = []
+    toolkits: List[str] = []
+    dev: bool = False
 
     class Config:
         validate_assignment = True
+        extra = "ignore"
 
-    @root_validator
+    @root_validator(allow_reuse=True)
     def validate_lists(cls, values):
         for key, value in values.items():
             if key != "dev" and not value:
                 values[key] = []
         return values
+
+    def update_from_yaml(self, file_path: str):
+        new_settings = load_settings_from_yaml(file_path)
+        self.chains = new_settings.chains or []
+        self.agents = new_settings.agents or []
+        self.prompts = new_settings.prompts or []
+        self.llms = new_settings.llms or []
+        self.tools = new_settings.tools or []
+        self.memories = new_settings.memories or []
+        self.wrappers = new_settings.wrappers or []
+        self.toolkits = new_settings.toolkits or []
+        self.dev = new_settings.dev or False
 
 
 def save_settings_to_yaml(settings: Settings, file_path: str):
@@ -41,9 +59,8 @@ def load_settings_from_yaml(file_path: str) -> Settings:
 
     with open(file_path, "r") as f:
         settings_dict = yaml.safe_load(f)
-        a = Settings.parse_obj(settings_dict)
 
-    return a
+    return Settings(**settings_dict)
 
 
 settings = load_settings_from_yaml("config.yaml")

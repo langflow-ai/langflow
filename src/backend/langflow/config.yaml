@@ -1,27 +1,57 @@
 chains:
   - LLMChain
   - LLMMathChain
-  - LLMChecker
-  # - ConversationChain
+  - LLMCheckerChain
+  - ConversationChain
+  - SeriesCharacterChain
+  - MidJourneyPromptChain
+  - TimeTravelGuideChain
 
 agents:
   - ZeroShotAgent
+  - JsonAgent
+  - CSVAgent
+  - initialize_agent
 
 prompts:
   - PromptTemplate
   - FewShotPromptTemplate
+  - ZeroShotPrompt
+  # Wait more tests
+  # - ChatPromptTemplate
+  # - SystemMessagePromptTemplate
+  # - HumanMessagePromptTemplate
 
 llms:
   - OpenAI
-  - OpenAIChat
+  - AzureOpenAI
+  - ChatOpenAI
 
 tools:
   - Search
   - PAL-MATH
   - Calculator
   - Serper Search
+  - Tool
+  - PythonFunction
+  - JsonSpec
+
+wrappers:
+  - RequestsWrapper
+
+toolkits:
+  - OpenAPIToolkit
+  - JsonToolkit
 
 memories:
-  # - ConversationBufferMemory
+  - ConversationBufferMemory
+  - ConversationSummaryMemory
+  - ConversationKGMemory
+
+embeddings: []
+
+vectorstores: []
+
+documentloaders: []
 
 dev: false

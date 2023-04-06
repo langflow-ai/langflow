@@ -1,6 +1,7 @@
 import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
 import { useContext, useEffect, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
+import CodeAreaModal from "../../modals/codeAreaModal";
 import TextAreaModal from "../../modals/textAreaModal";
 import { TextAreaComponentType } from "../../types/components";
 
@@ -9,8 +10,8 @@ export default function TextAreaComponent({ value, onChange, disabled }:TextArea
   const { openPopUp } = useContext(PopUpContext);
   useEffect(() => {
     if (disabled) {
-      setMyValue([""]);
-      onChange([""]);
+      setMyValue("");
+      onChange("");
     }
   }, [disabled, onChange]);
   return (
