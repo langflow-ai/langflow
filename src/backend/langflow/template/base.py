@@ -178,7 +178,8 @@ class FrontendNode(BaseModel):
         field.show = bool(
             (field.required and key not in ["input_variables"])
             or key in FORCE_SHOW_FIELDS
-            or "api_key" in key
+            or "api" in key
+            or "key" in key
         )
 
         # Add password field
