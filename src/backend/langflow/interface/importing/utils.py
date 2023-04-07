@@ -44,6 +44,7 @@ def import_by_type(_type: str, name: str) -> Any:
         "embeddings": import_embedding,
         "vectorstores": import_vectorstore,
         "documentloaders": import_documentloader,
+        "textsplitters": import_textsplitter,
     }
     if _type == "llms":
         key = "chat" if "chat" in name.lower() else "llm"
@@ -135,3 +136,8 @@ def import_documentloader(documentloader: str) -> Any:
         return CUSTOM_DOCUMENTLOADERS[documentloader]
 
     return import_class(f"langchain.document_loaders.{documentloader}")
+
+
+def import_textsplitter(textsplitter: str) -> Any:
+    """Import textsplitter from textsplitter name"""
+    return import_class(f"langchain.text_splitter.{textsplitter}")

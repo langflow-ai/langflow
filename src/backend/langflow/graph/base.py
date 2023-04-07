@@ -153,8 +153,6 @@ class Node:
                         result = result.run  # type: ignore
                     elif hasattr(result, "get_function"):
                         result = result.get_function()  # type: ignore
-                elif value.base_type == "documentloaders":
-                    result = result.load()
 
                 self.params[key] = result
             elif isinstance(value, list) and all(

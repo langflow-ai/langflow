@@ -10,6 +10,7 @@ from langflow.graph.nodes import (
     LLMNode,
     MemoryNode,
     PromptNode,
+    TextSplitterNode,
     ToolkitNode,
     ToolNode,
     VectorStoreNode,
@@ -22,6 +23,7 @@ from langflow.interface.embeddings.base import embedding_creator
 from langflow.interface.llms.base import llm_creator
 from langflow.interface.memories.base import memory_creator
 from langflow.interface.prompts.base import prompt_creator
+from langflow.interface.textSplitters.base import textsplitter_creator
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.tools.base import tool_creator
 from langflow.interface.tools.constants import FILE_TOOLS
@@ -126,6 +128,7 @@ class Graph:
             **{t: EmbeddingNode for t in embedding_creator.to_list()},
             **{t: VectorStoreNode for t in vectorstore_creator.to_list()},
             **{t: DocumentLoaderNode for t in documentloader_creator.to_list()},
+            **{t: TextSplitterNode for t in textsplitter_creator.to_list()},
         }
 
         if node_type in FILE_TOOLS:

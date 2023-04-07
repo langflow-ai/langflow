@@ -62,6 +62,12 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
         return class_object(**params)
     elif base_type == "vectorstores":
         return class_object.from_documents(**params)
+    elif base_type == "documentloaders":
+        return class_object(**params).load()
+    elif base_type == "textsplitters":
+        documents = params.pop("documents")
+        text_splitter = class_object(**params)
+        return text_splitter.split_documents(documents)
     else:
         return class_object(**params)
 
