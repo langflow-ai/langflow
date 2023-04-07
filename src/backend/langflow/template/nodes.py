@@ -309,12 +309,21 @@ class PromptFrontendNode(FrontendNode):
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         # if field.field_type  == "StringPromptTemplate"
         # change it to str
+        PROMPT_FIELDS = [
+            "template",
+            "suffix",
+            "prefix",
+            "examples",
+        ]
         if field.field_type == "StringPromptTemplate" and "Message" in str(name):
-            field.field_type = "str"
+            field.field_type = "prompt"
             field.multiline = True
             field.value = HUMAN_PROMPT if "Human" in field.name else SYSTEM_PROMPT
         if field.name == "template" and field.value == "":
             field.value = DEFAULT_PROMPT
+
+        if field.name in PROMPT_FIELDS:
+            field.field_type = "prompt"
 
         if (
             "Union" in field.field_type
