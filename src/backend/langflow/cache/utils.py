@@ -6,6 +6,34 @@ import tempfile
 from pathlib import Path
 
 import dill  # type: ignore
+import functools
+from collections import OrderedDict
+
+
+def memoize(maxsize=128):
+    cache = OrderedDict()
+
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            key = (func.__name__, args, frozenset(kwargs.items()))
+            if key not in cache:
+                result = func(*args, **kwargs)
+                cache[key] = result
+                if len(cache) > maxsize:
+                    cache.popitem(last=False)
+            else:
+                result = cache[key]
+            return result
+
+        def clear_cache():
+            cache.clear()
+
+        wrapper.clear_cache = clear_cache
+        return wrapper
+
+    return decorator
+
 
 PREFIX = "langflow_cache"
 
