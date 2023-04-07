@@ -20,11 +20,11 @@ class VectorstoreCreator(LangChainTypeCreator):
 
             signature["template"] = {
                 "documents": {
-                    "type": "BaseLoader",
+                    "type": "TextSplitter",
                     "required": True,
                     "show": True,
                     "name": "documents",
-                    "display_name": "Document Loader",
+                    "display_name": "Text Splitter",
                 },
                 "embedding": {
                     "type": "Embeddings",

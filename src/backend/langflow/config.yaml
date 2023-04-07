@@ -63,4 +63,7 @@ documentloaders:
   - TextLoader
   - WebBaseLoader
 
+textsplitters:
+  - CharacterTextSplitter
+
 dev: false

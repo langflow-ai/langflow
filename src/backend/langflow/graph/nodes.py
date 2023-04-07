@@ -147,3 +147,8 @@ class VectorStoreNode(Node):
 class MemoryNode(Node):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="memory")
+
+
+class TextSplitterNode(Node):
+    def __init__(self, data: Dict):
+        super().__init__(data, base_type="textsplitters")

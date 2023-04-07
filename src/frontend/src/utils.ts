@@ -79,6 +79,7 @@ export const nodeColors: {[char: string]: string} = {
   embeddings:"#FF9135",
   documentloaders:"#FF9135",
   vectorstores: "#FF9135",
+  textsplitters: "#FF9135",
   toolkits:"#DB2C2C",
   wrappers:"#E6277A",
   unknown:"#9CA3AF"
@@ -98,6 +99,7 @@ export const nodeNames:{[char: string]: string} = {
   vectorstores: "Vector Stores",
   toolkits:"Toolkits",
   wrappers:"Wrappers",
+  textsplitters: "Text Splitters",
   unknown:"Unknown"
 };
 
@@ -114,6 +116,7 @@ export const nodeIcons:{[char: string]: React.ForwardRefExoticComponent<React.SV
   documentloaders:PaperClipIcon,
   vectorstores: PaperClipIcon,
   toolkits:WrenchScrewdriverIcon,
+  textsplitters:PaperClipIcon,
   wrappers:GiftIcon,
   unknown:QuestionMarkCircleIcon
 };

@@ -16,7 +16,6 @@ class DocumentLoaderCreator(LangChainTypeCreator):
 
         # Drop some types that are reimplemented with the same name
         types.pop("TextLoader")
-        types.pop("WebBaseLoader")
 
         for name, documentloader in CUSTOM_DOCUMENTLOADERS.items():
             types[name] = documentloader
