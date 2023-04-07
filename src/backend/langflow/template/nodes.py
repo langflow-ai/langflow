@@ -254,25 +254,11 @@ class VectorStoreAgentNode(FrontendNode):
         type_name="vectorstore_agent",
         fields=[
             TemplateField(
-                field_type="str",
+                field_type="VectorStoreInfo",
                 required=True,
                 show=True,
-                name="name",
-                value="",
-            ),
-            TemplateField(
-                field_type="str",
-                required=True,
-                show=True,
-                name="description",
-                value="",
-            ),
-            TemplateField(
-                field_type="VectorStore",
-                required=True,
-                show=True,
-                name="vectorstore",
-                display_name="Vector Store",
+                name="vectorstoreinfo",
+                display_name="Vector Store Info",
             ),
             TemplateField(
                 field_type="BaseLanguageModel",
@@ -283,7 +269,35 @@ class VectorStoreAgentNode(FrontendNode):
             ),
         ],
     )
-    description: str = """Construct a json agent from a CSV and tools."""
+    description: str = """Construct an agent from a Vector Store."""
+    base_classes: list[str] = ["AgentExecutor"]
+
+    def to_dict(self):
+        return super().to_dict()
+
+
+class VectorStoreRouterAgentNode(FrontendNode):
+    name: str = "VectorStoreRouterAgent"
+    template: Template = Template(
+        type_name="vectorstorerouter_agent",
+        fields=[
+            TemplateField(
+                field_type="VectorStoreRouterToolkit",
+                required=True,
+                show=True,
+                name="vectorstoreroutertoolkit",
+                display_name="Vector Store Router Toolkit",
+            ),
+            TemplateField(
+                field_type="BaseLanguageModel",
+                required=True,
+                show=True,
+                name="llm",
+                display_name="LLM",
+            ),
+        ],
+    )
+    description: str = """Construct an agent from a Vector Store Router."""
     base_classes: list[str] = ["AgentExecutor"]
 
     def to_dict(self):

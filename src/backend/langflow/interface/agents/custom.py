@@ -2,21 +2,27 @@ from typing import Any, List, Optional
 
 from langchain import LLMChain
 from langchain.agents import AgentExecutor, Tool, ZeroShotAgent, initialize_agent
+from langchain.agents.agent_toolkits import (
+    VectorStoreInfo,
+    VectorStoreRouterToolkit,
+    VectorStoreToolkit,
+)
 from langchain.agents.agent_toolkits.json.prompt import JSON_PREFIX, JSON_SUFFIX
 from langchain.agents.agent_toolkits.json.toolkit import JsonToolkit
 from langchain.agents.agent_toolkits.pandas.prompt import PREFIX as PANDAS_PREFIX
 from langchain.agents.agent_toolkits.pandas.prompt import SUFFIX as PANDAS_SUFFIX
+from langchain.agents.agent_toolkits.vectorstore.prompt import (
+    PREFIX as VECTORSTORE_PREFIX,
+)
+from langchain.agents.agent_toolkits.vectorstore.prompt import (
+    ROUTER_PREFIX as VECTORSTORE_ROUTER_PREFIX,
+)
 from langchain.agents.mrkl.prompt import FORMAT_INSTRUCTIONS
 from langchain.llms.base import BaseLLM
 from langchain.memory.chat_memory import BaseChatMemory
 from langchain.schema import BaseLanguageModel
 from langchain.tools.python.tool import PythonAstREPLTool
-from langchain.agents.agent_toolkits import (
-    VectorStoreToolkit,
-    VectorStoreInfo,
-)
-from langchain.vectorstores.base import VectorStore
-from langchain.agents.agent_toolkits.vectorstore.prompt import PREFIX as VECTORSTORE_PREFIX, ROUTER_PREFIX as VECTORSTORE_ROUTER_PREFIX
+
 
 class JsonAgent(AgentExecutor):
     """Json agent"""
@@ -118,33 +124,62 @@ class VectorStoreAgent(AgentExecutor):
 
     @classmethod
     def from_toolkit_and_llm(
-        cls,
-        llm: BaseLanguageModel,
-        name: str,
-        description: str,
-        vectorstore: VectorStore,
-        **kwargs: Any
+        cls, llm: BaseLLM, vectorstoreinfo: VectorStoreInfo, **kwargs: Any
     ):
         """Construct a vectorstore agent from an LLM and tools."""
 
-        vectorstore_info = VectorStoreInfo(
-            name=name,
-            description=description,
-            vectorstore=vectorstore
-        )
-        toolkit = VectorStoreToolkit(vectorstore_info=vectorstore_info, llm=llm)
-
+        toolkit = VectorStoreToolkit(vectorstore_info=vectorstoreinfo, llm=llm)
 
         tools = toolkit.get_tools()
         prompt = ZeroShotAgent.create_prompt(tools, prefix=VECTORSTORE_PREFIX)
         llm_chain = LLMChain(
             llm=llm,
             prompt=prompt,
-            callback_manager=None,
         )
         tool_names = [tool.name for tool in tools]
         agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)
-        return AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
+        return AgentExecutor.from_agent_and_tools(
+            agent=agent, tools=tools, verbose=True
+        )
+
+    def run(self, *args, **kwargs):
+        return super().run(*args, **kwargs)
+
+
+class VectorStoreRouterAgent(AgentExecutor):
+    """Vector Store Router Agent"""
+
+    @staticmethod
+    def function_name():
+        return "VectorStoreRouterAgent"
+
+    @classmethod
+    def initialize(cls, *args, **kwargs):
+        return cls.from_toolkit_and_llm(*args, **kwargs)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @classmethod
+    def from_toolkit_and_llm(
+        cls,
+        llm: BaseLanguageModel,
+        vectorstoreroutertoolkit: VectorStoreRouterToolkit,
+        **kwargs: Any
+    ):
+        """Construct a vector store router agent from an LLM and tools."""
+
+        tools = vectorstoreroutertoolkit.get_tools()
+        prompt = ZeroShotAgent.create_prompt(tools, prefix=VECTORSTORE_ROUTER_PREFIX)
+        llm_chain = LLMChain(
+            llm=llm,
+            prompt=prompt,
+        )
+        tool_names = [tool.name for tool in tools]
+        agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)
+        return AgentExecutor.from_agent_and_tools(
+            agent=agent, tools=tools, verbose=True
+        )
 
     def run(self, *args, **kwargs):
         return super().run(*args, **kwargs)
@@ -182,4 +217,5 @@ CUSTOM_AGENTS = {
     "CSVAgent": CSVAgent,
     "initialize_agent": InitializeAgent,
     "VectorStoreAgent": VectorStoreAgent,
+    "VectorStoreRouterAgent": VectorStoreRouterAgent,
 }
