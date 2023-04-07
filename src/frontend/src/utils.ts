@@ -79,6 +79,8 @@ export const nodeColors: {[char: string]: string} = {
   embeddings:"#FF9135",
   documentloaders:"#FF9135",
   vectorstores: "#FF9135",
+  toolkits:"#DB2C2C",
+  wrappers:"#E6277A",
   unknown:"#9CA3AF"
 };
 
