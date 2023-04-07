@@ -1,8 +1,8 @@
-from langflow.utils import validate
-
-
 from typing import Callable, Optional
+
 from pydantic import BaseModel, validator
+
+from langflow.utils import validate
 
 
 class Function(BaseModel):
@@ -30,8 +30,8 @@ class Function(BaseModel):
 
         return validate.create_function(self.code, function_name)
 
+
 class PythonFunction(Function):
     """Python function"""
 
     code: str
-

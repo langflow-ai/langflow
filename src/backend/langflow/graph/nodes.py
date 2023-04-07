@@ -34,7 +34,7 @@ class AgentNode(Node):
             self._build()
 
         #! Cannot deepcopy VectorStore
-        if self.node_type == "VectorStoreAgent":
+        if self.node_type in ["VectorStoreAgent", "VectorStoreRouterAgent"]:
             return self._built_object
         return deepcopy(self._built_object)
 
@@ -42,11 +42,6 @@ class AgentNode(Node):
 class ToolNode(Node):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="tools")
-
-    def build(self, force: bool = False) -> Any:
-        if not self._built or force:
-            self._build()
-        return deepcopy(self._built_object)
 
 
 class PromptNode(Node):
@@ -111,31 +106,15 @@ class LLMNode(Node):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="llms")
 
-    def build(self, force: bool = False) -> Any:
-        if not self._built or force:
-            self._build()
-        return deepcopy(self._built_object)
-
 
 class ToolkitNode(Node):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="toolkits")
 
-    def build(self, force: bool = False) -> Any:
-        if not self._built or force:
-            self._build()
-
-        return deepcopy(self._built_object)
-
 
 class FileToolNode(ToolNode):
     def __init__(self, data: Dict):
         super().__init__(data)
-
-    def build(self, force: bool = False) -> Any:
-        if not self._built or force:
-            self._build()
-        return deepcopy(self._built_object)
 
 
 class WrapperNode(Node):
@@ -155,7 +134,6 @@ class DocumentLoaderNode(Node):
         super().__init__(data, base_type="documentloaders")
 
 
-
 class EmbeddingNode(Node):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="embeddings")
@@ -169,4 +147,3 @@ class VectorStoreNode(Node):
 class MemoryNode(Node):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="memory")
-

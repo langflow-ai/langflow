@@ -19,17 +19,19 @@ class VectorstoreCreator(LangChainTypeCreator):
             signature = build_template_from_class(name, vectorstores_type_to_cls_dict)
 
             signature["template"] = {
-                "Document Loader": {
+                "documents": {
                     "type": "BaseLoader",
                     "required": True,
                     "show": True,
-                    "name": "Document Loader",
+                    "name": "documents",
+                    "display_name": "Document Loader",
                 },
-                "Embedding": {
+                "embedding": {
                     "type": "Embeddings",
                     "required": True,
                     "show": True,
-                    "name": "Embedding",
+                    "name": "embedding",
+                    "display_name": "Embedding",
                 },
             }
             return signature

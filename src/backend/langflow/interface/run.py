@@ -2,7 +2,7 @@ import contextlib
 import io
 from typing import Any, Dict
 
-from langflow.cache.utils import compute_hash, load_cache, save_cache
+from langflow.cache.utils import compute_hash, load_cache
 from langflow.graph.graph import Graph
 from langflow.interface import loading
 from langflow.utils.logger import logger
@@ -67,7 +67,7 @@ def process_graph(data_graph: Dict[str, Any]):
     # We have to save it here because if the
     # memory is updated we need to keep the new values
     logger.debug("Saving langchain object to cache")
-    save_cache(computed_hash, langchain_object, is_first_message)
+    # save_cache(computed_hash, langchain_object, is_first_message)
     logger.debug("Saved langchain object to cache")
     return {"result": str(result), "thought": thought.strip()}
 
