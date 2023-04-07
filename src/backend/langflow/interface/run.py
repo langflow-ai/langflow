@@ -2,7 +2,7 @@ import contextlib
 import io
 from typing import Any, Dict
 
-from langflow.cache.utils import compute_hash, load_cache
+from langflow.cache.utils import compute_hash, load_cache, memoize
 from langflow.graph.graph import Graph
 from langflow.interface import loading
 from langflow.utils.logger import logger
@@ -20,6 +20,32 @@ def load_langchain_object(data_graph, is_first_message=False):
         langchain_object = load_cache(computed_hash)
 
     return computed_hash, langchain_object
+
+
+def load_or_build_langchain_object(data_graph, is_first_message=False):
+    """
+    Load langchain object from cache if it exists, otherwise build it.
+    """
+    if is_first_message:
+        build_langchain_object_with_caching.clear_cache()
+    return build_langchain_object_with_caching(data_graph)
+
+
+@memoize(maxsize=1)
+def build_langchain_object_with_caching(data_graph):
+    """
+    Build langchain object from data_graph.
+    """
+
+    logger.debug("Building langchain object")
+    nodes = data_graph["nodes"]
+    # Add input variables
+    # nodes = payload.extract_input_variables(nodes)
+    # Nodes, edges and root node
+    edges = data_graph["edges"]
+    graph = Graph(nodes, edges)
+
+    return graph.build()
 
 
 def build_langchain_object(data_graph):
@@ -69,6 +95,30 @@ def process_graph(data_graph: Dict[str, Any]):
     logger.debug("Saving langchain object to cache")
     # save_cache(computed_hash, langchain_object, is_first_message)
     logger.debug("Saved langchain object to cache")
+    return {"result": str(result), "thought": thought.strip()}
+
+
+def process_graph_cached(data_graph: Dict[str, Any]):
+    """
+    Process graph by extracting input variables and replacing ZeroShotPrompt
+    with PromptTemplate,then run the graph and return the result and thought.
+    """
+    # Load langchain object
+    message = data_graph.pop("message", "")
+    is_first_message = len(data_graph.get("chatHistory", [])) == 0
+    langchain_object = load_or_build_langchain_object(data_graph, is_first_message)
+    logger.debug("Loaded langchain object")
+
+    if langchain_object is None:
+        # Raise user facing error
+        raise ValueError(
+            "There was an error loading the langchain_object. Please, check all the nodes and try again."
+        )
+
+    # Generate result and thought
+    logger.debug("Generating result and thought")
+    result, thought = get_result_and_thought_using_graph(langchain_object, message)
+    logger.debug("Generated result and thought")
     return {"result": str(result), "thought": thought.strip()}
 
 
