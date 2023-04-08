@@ -27,6 +27,7 @@ llms:
   # - AzureOpenAI
   - ChatOpenAI
   - HuggingFaceHub
+  - LlamaCpp
 
 tools:
   - Search

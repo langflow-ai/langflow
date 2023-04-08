@@ -12,12 +12,14 @@ from langchain import (
 )
 from langchain.agents import agent_toolkits
 from langchain.chat_models import ChatOpenAI
+from langchain.llms import LlamaCpp
 
 from langflow.interface.importing.utils import import_class
 
 ## LLM
 llm_type_to_cls_dict = llms.type_to_cls_dict
 llm_type_to_cls_dict["openai-chat"] = ChatOpenAI  # type: ignore
+llm_type_to_cls_dict["llamacpp"] = LlamaCpp  # type: ignore
 
 ## Chain
 chain_type_to_cls_dict: dict[str, Any] = {
