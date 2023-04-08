@@ -15,7 +15,4 @@ COPY ./ ./
 # Install dependencies
 RUN poetry config virtualenvs.create false && poetry install --no-interaction --no-ansi
 
-# Set the logging level to DEBUG
-ENV LOG_LEVEL=debug
-
 CMD ["uvicorn", "langflow.main:app", "--host", "0.0.0.0", "--port", "5003", "--reload", "log-level", "debug"]
