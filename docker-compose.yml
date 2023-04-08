@@ -10,11 +10,6 @@ services:
     volumes:
       - ./:/app
     command: bash -c "uvicorn langflow.main:app --host 0.0.0.0 --port 7860 --reload"
-    deploy:
-      resources:
-        limits:
-          cpus: '4'
-          memory: 16G
 
 
   frontend:
