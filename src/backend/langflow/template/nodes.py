@@ -289,3 +289,13 @@ class MemoryFrontendNode(FrontendNode):
             field.field_type = "int"
             field.value = 10
             field.display_name = "Memory Size"
+
+
+class ChainFrontendNode(FrontendNode):
+    @staticmethod
+    def format_field(field: TemplateField, name: Optional[str] = None) -> None:
+        FrontendNode.format_field(field, name)
+
+        if "key" in field.name:
+            field.password = False
+            field.show = False

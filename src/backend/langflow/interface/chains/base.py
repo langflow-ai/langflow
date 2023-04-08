@@ -1,9 +1,10 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Type
 
 from langflow.custom.customs import get_custom_nodes
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import chain_type_to_cls_dict
 from langflow.settings import settings
+from langflow.template.nodes import ChainFrontendNode
 from langflow.utils.util import build_template_from_class
 
 # Assuming necessary imports for Field, Template, and FrontendNode classes
@@ -11,6 +12,10 @@ from langflow.utils.util import build_template_from_class
 
 class ChainCreator(LangChainTypeCreator):
     type_name: str = "chains"
+
+    @property
+    def frontend_node_class(self) -> Type[ChainFrontendNode]:
+        return ChainFrontendNode
 
     @property
     def type_to_loader_dict(self) -> Dict:
