@@ -12,6 +12,7 @@ from langflow.graph.utils import load_file
 from langflow.interface import loading
 from langflow.interface.listing import ALL_TYPES_DICT
 from langflow.utils.logger import logger
+import warnings
 
 
 class Node:
@@ -119,7 +120,13 @@ class Node:
                     params[key] = edges[0].source
 
             elif value["required"] or value.get("value"):
-                params[key] = value["value"]
+                # If value does not have value this still passes
+                # but then gives a keyError
+                # so we need to check if value has value
+                new_value = value.get("value")
+                if new_value is None:
+                    warnings.warn(f"Value for {key} in {self.node_type} is None. ")
+                params[key] = new_value
 
         # Add _type to params
         self.params = params

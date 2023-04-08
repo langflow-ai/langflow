@@ -75,7 +75,8 @@ class PromptNode(Node):
             for param in prompt_params:
                 prompt_text = self.params[param]
                 variables = extract_input_variables_from_prompt(prompt_text)
-
+                if self.params["input_variables"] is None:
+                    self.params["input_variables"] = []
                 self.params["input_variables"].extend(variables)
             self.params["input_variables"] = list(set(self.params["input_variables"]))
 
