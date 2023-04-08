@@ -1,5 +1,4 @@
 import contextlib
-import hashlib
 import json
 import os
 import tempfile
@@ -8,15 +7,17 @@ from pathlib import Path
 import dill  # type: ignore
 import functools
 from collections import OrderedDict
+import hashlib
 
 
-def memoize(maxsize=128):
+def memoize_dict(maxsize=128):
     cache = OrderedDict()
 
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            key = (func.__name__, args, frozenset(kwargs.items()))
+            hashed = compute_dict_hash(args[0])
+            key = (func.__name__, hashed, frozenset(kwargs.items()))
             if key not in cache:
                 result = func(*args, **kwargs)
                 cache[key] = result
@@ -52,6 +53,13 @@ def clear_old_cache_files(max_cache_size: int = 3):
                 os.remove(cache_file)
 
 
+def compute_dict_hash(graph_data):
+    graph_data = filter_json(graph_data)
+
+    cleaned_graph_json = json.dumps(graph_data, sort_keys=True)
+    return hashlib.sha256(cleaned_graph_json.encode("utf-8")).hexdigest()
+
+
 def filter_json(json_data):
     filtered_data = json_data.copy()
 
@@ -74,13 +82,6 @@ def filter_json(json_data):
                 del node["dragging"]
 
     return filtered_data
-
-
-def compute_hash(graph_data):
-    graph_data = filter_json(graph_data)
-
-    cleaned_graph_json = json.dumps(graph_data, sort_keys=True)
-    return hashlib.sha256(cleaned_graph_json.encode("utf-8")).hexdigest()
 
 
 def save_cache(hash_val: str, chat_data, clean_old_cache_files: bool):
