@@ -53,7 +53,7 @@ def test_hugging_face_hub(client: TestClient):
     assert template["repo_id"] == {
         "required": False,
         "placeholder": "",
-        "show": False,
+        "show": True,
         "multiline": False,
         "value": "gpt2",
         "password": False,
@@ -62,19 +62,20 @@ def test_hugging_face_hub(client: TestClient):
         "list": False,
     }
     assert template["task"] == {
-        "required": False,
+        "required": True,
         "placeholder": "",
-        "show": False,
+        "show": True,
         "multiline": False,
         "password": False,
+        "options": ["text-generation", "text2text-generation"],
         "name": "task",
         "type": "str",
-        "list": False,
+        "list": True,
     }
     assert template["model_kwargs"] == {
         "required": False,
         "placeholder": "",
-        "show": False,
+        "show": True,
         "multiline": False,
         "password": False,
         "name": "model_kwargs",
@@ -82,12 +83,13 @@ def test_hugging_face_hub(client: TestClient):
         "list": False,
     }
     assert template["huggingfacehub_api_token"] == {
-        "required": False,
+        "required": True,
         "placeholder": "",
         "show": True,
         "multiline": False,
         "password": True,
         "name": "huggingfacehub_api_token",
+        "display_name": "HuggingFace Hub API Token",
         "type": "str",
         "list": False,
     }
@@ -231,7 +233,7 @@ def test_openai(client: TestClient):
     assert template["model_kwargs"] == {
         "required": False,
         "placeholder": "",
-        "show": False,
+        "show": True,
         "multiline": False,
         "password": False,
         "name": "model_kwargs",
@@ -361,7 +363,7 @@ def test_chat_open_ai(client: TestClient):
     assert template["model_kwargs"] == {
         "required": False,
         "placeholder": "",
-        "show": False,
+        "show": True,
         "multiline": False,
         "password": False,
         "name": "model_kwargs",
