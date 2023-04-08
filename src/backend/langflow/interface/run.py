@@ -2,7 +2,7 @@ import contextlib
 import io
 from typing import Any, Dict
 
-from langflow.cache.utils import compute_hash, load_cache, memoize_dict
+from langflow.cache.utils import compute_dict_hash, load_cache, memoize_dict
 from langflow.graph.graph import Graph
 from langflow.interface import loading
 from langflow.utils.logger import logger
@@ -12,7 +12,7 @@ def load_langchain_object(data_graph, is_first_message=False):
     """
     Load langchain object from cache if it exists, otherwise build it.
     """
-    computed_hash = compute_hash(data_graph)
+    computed_hash = compute_dict_hash(data_graph)
     if is_first_message:
         langchain_object = build_langchain_object(data_graph)
     else:
