@@ -2,7 +2,7 @@ import contextlib
 import io
 from typing import Any, Dict
 
-from langflow.cache.utils import compute_hash, load_cache, memoize
+from langflow.cache.utils import compute_hash, load_cache, memoize_dict
 from langflow.graph.graph import Graph
 from langflow.interface import loading
 from langflow.utils.logger import logger
@@ -31,7 +31,7 @@ def load_or_build_langchain_object(data_graph, is_first_message=False):
     return build_langchain_object_with_caching(data_graph)
 
 
-@memoize(maxsize=1)
+@memoize_dict(maxsize=1)
 def build_langchain_object_with_caching(data_graph):
     """
     Build langchain object from data_graph.
