@@ -4,6 +4,7 @@
 #   - Build each inner agent first, then build the outer agent
 
 import types
+import warnings
 from copy import deepcopy
 from typing import Any, Dict, List, Optional
 
@@ -12,7 +13,6 @@ from langflow.graph.utils import load_file
 from langflow.interface import loading
 from langflow.interface.listing import ALL_TYPES_DICT
 from langflow.utils.logger import logger
-import warnings
 
 
 class Node:
