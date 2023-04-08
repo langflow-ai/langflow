@@ -18,6 +18,7 @@ class VectorstoreCreator(LangChainTypeCreator):
         try:
             signature = build_template_from_class(name, vectorstores_type_to_cls_dict)
 
+            # TODO: Use FrontendendNode class to build the signature
             signature["template"] = {
                 "documents": {
                     "type": "TextSplitter",
