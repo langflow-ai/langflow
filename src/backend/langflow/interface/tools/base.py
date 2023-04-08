@@ -73,9 +73,14 @@ class ToolCreator(LangChainTypeCreator):
         base_classes = ["Tool"]
         all_tools = {}
         for tool in self.type_to_loader_dict.keys():
-            if tool_params := get_tool_params(get_tool_by_name(tool)):
+            tool_fcn = get_tool_by_name(tool)
+            if tool_params := get_tool_params(tool_fcn):
                 tool_name = tool_params.get("name") or str(tool)
-                all_tools[tool_name] = {"type": tool, "params": tool_params}
+                all_tools[tool_name] = {
+                    "type": tool,
+                    "params": tool_params,
+                    "fcn": tool_fcn,
+                }
 
         # Raise error if name is not in tools
         if name not in all_tools.keys():
@@ -83,15 +88,21 @@ class ToolCreator(LangChainTypeCreator):
 
         tool_type: str = all_tools[name]["type"]  # type: ignore
 
-        if tool_type in _BASE_TOOLS:
+        if all_tools[tool_type]["fcn"] in _BASE_TOOLS.values():
             params = []
-        elif tool_type in _LLM_TOOLS:
+        elif all_tools[tool_type]["fcn"] in _LLM_TOOLS.values():
             params = ["llm"]
-        elif tool_type in _EXTRA_LLM_TOOLS:
-            _, extra_keys = _EXTRA_LLM_TOOLS[tool_type]
+        elif all_tools[tool_type]["fcn"] in [
+            val[0] for val in _EXTRA_LLM_TOOLS.values()
+        ]:
+            n_dict = {val[0]: val[1] for val in _EXTRA_LLM_TOOLS.values()}
+            extra_keys = n_dict[all_tools[tool_type]["fcn"]]
             params = ["llm"] + extra_keys
-        elif tool_type in _EXTRA_OPTIONAL_TOOLS:
-            _, extra_keys = _EXTRA_OPTIONAL_TOOLS[tool_type]
+        elif all_tools[tool_type]["fcn"] in [
+            val[0] for val in _EXTRA_OPTIONAL_TOOLS.values()
+        ]:
+            n_dict = {val[0]: val[1] for val in _EXTRA_OPTIONAL_TOOLS.values()}  # type: ignore
+            extra_keys = n_dict[all_tools[tool_type]["fcn"]]
             params = extra_keys
         elif tool_type == "Tool":
             params = ["name", "description", "func"]
@@ -104,7 +115,6 @@ class ToolCreator(LangChainTypeCreator):
         elif tool_type in FILE_TOOLS:
             params = all_tools[name]["params"]  # type: ignore
             base_classes += [name]
-
         else:
             params = []
 
