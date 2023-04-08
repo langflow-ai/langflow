@@ -327,3 +327,13 @@ class LLMFrontendNode(FrontendNode):
             field.display_name = display_name
         if field.name == "model_kwargs":
             field.field_type = "code"
+
+
+class ChainFrontendNode(FrontendNode):
+    @staticmethod
+    def format_field(field: TemplateField, name: Optional[str] = None) -> None:
+        FrontendNode.format_field(field, name)
+
+        if "key" in field.name:
+            field.password = False
+            field.show = False
