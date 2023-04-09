@@ -19,7 +19,6 @@ from langflow.interface.importing.utils import import_class
 ## LLM
 llm_type_to_cls_dict = llms.type_to_cls_dict
 llm_type_to_cls_dict["openai-chat"] = ChatOpenAI  # type: ignore
-llm_type_to_cls_dict["llamacpp"] = LlamaCpp  # type: ignore
 
 ## Chain
 chain_type_to_cls_dict: dict[str, Any] = {
