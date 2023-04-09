@@ -24,16 +24,16 @@ prompts:
 
 llms:
   - OpenAI
-  - AzureOpenAI
+  # - AzureOpenAI
   - ChatOpenAI
   - HuggingFaceHub
   - LlamaCpp
 
 tools:
-  # - Search
+  - Search
   - PAL-MATH
   - Calculator
-  # - Serper Search
+  - Serper Search
   - Tool
   - PythonFunction
   - JsonSpec

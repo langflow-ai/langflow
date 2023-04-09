@@ -1,4 +1,4 @@
-from typing import Dict, List, Union
+from typing import Dict, List, Type, Union
 
 from langflow.graph.base import Edge, Node
 from langflow.graph.nodes import (
@@ -15,13 +15,12 @@ from langflow.graph.nodes import (
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
 from langflow.interface.llms.base import llm_creator
+from langflow.interface.memories.base import memory_creator
 from langflow.interface.prompts.base import prompt_creator
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.tools.base import tool_creator
 from langflow.interface.tools.constants import FILE_TOOLS
-from langflow.interface.tools.util import get_tools_dict
 from langflow.interface.wrappers.base import wrapper_creator
-from langflow.interface.memories.base import memory_creator
 from langflow.utils import payload
 
 
@@ -108,6 +107,26 @@ class Graph:
             edges.append(Edge(source, target))
         return edges
 
+    def _get_node_class(self, node_type: str, node_lc_type: str) -> Type[Node]:
+        node_type_map: Dict[str, Type[Node]] = {
+            **{t: PromptNode for t in prompt_creator.to_list()},
+            **{t: AgentNode for t in agent_creator.to_list()},
+            **{t: ChainNode for t in chain_creator.to_list()},
+            **{t: ToolNode for t in tool_creator.to_list()},
+            **{t: ToolkitNode for t in toolkits_creator.to_list()},
+            **{t: WrapperNode for t in wrapper_creator.to_list()},
+            **{t: LLMNode for t in llm_creator.to_list()},
+            **{t: MemoryNode for t in memory_creator.to_list()},
+        }
+
+        if node_type in FILE_TOOLS:
+            return FileToolNode
+        if node_type in node_type_map:
+            return node_type_map[node_type]
+        if node_lc_type in node_type_map:
+            return node_type_map[node_lc_type]
+        return Node
+
     def _build_nodes(self) -> List[Node]:
         nodes: List[Node] = []
         for node in self._nodes:
@@ -115,38 +134,9 @@ class Graph:
             node_type: str = node_data["type"]  # type: ignore
             node_lc_type: str = node_data["node"]["template"]["_type"]  # type: ignore
 
-            if node_type in prompt_creator.to_list():
-                nodes.append(PromptNode(node))
-            elif (
-                node_type in agent_creator.to_list()
-                or node_lc_type in agent_creator.to_list()
-            ):
-                nodes.append(AgentNode(node))
-            elif node_type in chain_creator.to_list():
-                nodes.append(ChainNode(node))
-            elif (
-                node_type in tool_creator.to_list()
-                or node_lc_type in get_tools_dict().keys()
-            ):
-                if node_type in FILE_TOOLS:
-                    nodes.append(FileToolNode(node))
-                nodes.append(ToolNode(node))
-            elif node_type in toolkits_creator.to_list():
-                nodes.append(ToolkitNode(node))
-            elif node_type in wrapper_creator.to_list():
-                nodes.append(WrapperNode(node))
-            elif (
-                node_type in llm_creator.to_list()
-                or node_lc_type in llm_creator.to_list()
-            ):
-                nodes.append(LLMNode(node))
-            elif (
-                node_type in memory_creator.to_list()
-                or node_lc_type in memory_creator.to_list()
-            ):
-                nodes.append(MemoryNode(node))
-            else:
-                nodes.append(Node(node))
+            NodeClass = self._get_node_class(node_type, node_lc_type)
+            nodes.append(NodeClass(node))
+
         return nodes
 
     def get_children_by_node_type(self, node: Node, node_type: str) -> List[Node]:

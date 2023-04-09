@@ -7,7 +7,6 @@ from langflow.api.base import (
     PromptValidationResponse,
     validate_prompt,
 )
-from langflow.graph.utils import extract_input_variables_from_prompt
 from langflow.utils.logger import logger
 from langflow.utils.validate import validate_code
 
