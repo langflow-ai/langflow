@@ -12,7 +12,6 @@ from langchain import (
 )
 from langchain.agents import agent_toolkits
 from langchain.chat_models import ChatOpenAI
-from langchain.llms import LlamaCpp
 
 from langflow.interface.importing.utils import import_class
 
