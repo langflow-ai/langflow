@@ -14,7 +14,7 @@ class TextLoader(BaseLoader):
 
     def load(self) -> List[Document]:
         """Load from file path."""
-        documents = [Document(page_content=self.file, metadata={"source": "loaded"})]
+        return [Document(page_content=self.file, metadata={"source": "loaded"})]
 
 
 CUSTOM_DOCUMENTLOADERS = {
