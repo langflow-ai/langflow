@@ -248,6 +248,62 @@ class CSVAgentNode(FrontendNode):
         return super().to_dict()
 
 
+class VectorStoreAgentNode(FrontendNode):
+    name: str = "VectorStoreAgent"
+    template: Template = Template(
+        type_name="vectorstore_agent",
+        fields=[
+            TemplateField(
+                field_type="VectorStoreInfo",
+                required=True,
+                show=True,
+                name="vectorstoreinfo",
+                display_name="Vector Store Info",
+            ),
+            TemplateField(
+                field_type="BaseLanguageModel",
+                required=True,
+                show=True,
+                name="llm",
+                display_name="LLM",
+            ),
+        ],
+    )
+    description: str = """Construct an agent from a Vector Store."""
+    base_classes: list[str] = ["AgentExecutor"]
+
+    def to_dict(self):
+        return super().to_dict()
+
+
+class VectorStoreRouterAgentNode(FrontendNode):
+    name: str = "VectorStoreRouterAgent"
+    template: Template = Template(
+        type_name="vectorstorerouter_agent",
+        fields=[
+            TemplateField(
+                field_type="VectorStoreRouterToolkit",
+                required=True,
+                show=True,
+                name="vectorstoreroutertoolkit",
+                display_name="Vector Store Router Toolkit",
+            ),
+            TemplateField(
+                field_type="BaseLanguageModel",
+                required=True,
+                show=True,
+                name="llm",
+                display_name="LLM",
+            ),
+        ],
+    )
+    description: str = """Construct an agent from a Vector Store Router."""
+    base_classes: list[str] = ["AgentExecutor"]
+
+    def to_dict(self):
+        return super().to_dict()
+
+
 class PromptFrontendNode(FrontendNode):
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:

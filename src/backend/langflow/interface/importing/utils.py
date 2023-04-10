@@ -10,6 +10,7 @@ from langchain.chat_models.base import BaseChatModel
 from langchain.llms.base import BaseLLM
 from langchain.tools import BaseTool
 
+from langflow.interface.documentLoaders.custom import CUSTOM_DOCUMENTLOADERS
 from langflow.interface.tools.util import get_tool_by_name
 
 
@@ -40,6 +41,10 @@ def import_by_type(_type: str, name: str) -> Any:
         "toolkits": import_toolkit,
         "wrappers": import_wrapper,
         "memory": import_memory,
+        "embeddings": import_embedding,
+        "vectorstores": import_vectorstore,
+        "documentloaders": import_documentloader,
+        "textsplitters": import_textsplitter,
     }
     if _type == "llms":
         key = "chat" if "chat" in name.lower() else "llm"
@@ -113,3 +118,26 @@ def import_chain(chain: str) -> Type[Chain]:
     if chain in CUSTOM_CHAINS:
         return CUSTOM_CHAINS[chain]
     return import_class(f"langchain.chains.{chain}")
+
+
+def import_embedding(embedding: str) -> Any:
+    """Import embedding from embedding name"""
+    return import_class(f"langchain.embeddings.{embedding}")
+
+
+def import_vectorstore(vectorstore: str) -> Any:
+    """Import vectorstore from vectorstore name"""
+    return import_class(f"langchain.vectorstores.{vectorstore}")
+
+
+def import_documentloader(documentloader: str) -> Any:
+    """Import documentloader from documentloader name"""
+    if documentloader in CUSTOM_DOCUMENTLOADERS:
+        return CUSTOM_DOCUMENTLOADERS[documentloader]
+
+    return import_class(f"langchain.document_loaders.{documentloader}")
+
+
+def import_textsplitter(textsplitter: str) -> Any:
+    """Import textsplitter from textsplitter name"""
+    return import_class(f"langchain.text_splitter.{textsplitter}")

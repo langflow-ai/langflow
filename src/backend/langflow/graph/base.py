@@ -160,6 +160,7 @@ class Node:
                         result = result.run  # type: ignore
                     elif hasattr(result, "get_function"):
                         result = result.get_function()  # type: ignore
+
                 self.params[key] = result
             elif isinstance(value, list) and all(
                 isinstance(node, Node) for node in value
@@ -189,6 +190,15 @@ class Node:
     def build(self, force: bool = False) -> Any:
         if not self._built or force:
             self._build()
+
+        #! Deepcopy is breaking for vectorstores
+        if self.base_type in [
+            "vectorstores",
+            "VectorStoreRouterAgent",
+            "VectorStoreAgent",
+            "VectorStoreInfo",
+        ] or self.node_type in ["VectorStoreInfo", "VectorStoreRouterToolkit"]:
+            return self._built_object
         return deepcopy(self._built_object)
 
     def add_edge(self, edge: "Edge") -> None:

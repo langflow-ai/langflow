@@ -12,6 +12,8 @@ agents:
   - JsonAgent
   - CSVAgent
   - initialize_agent
+  - VectorStoreAgent
+  - VectorStoreRouterAgent
 
 prompts:
   - PromptTemplate
@@ -44,16 +46,25 @@ wrappers:
 toolkits:
   - OpenAPIToolkit
   - JsonToolkit
+  - VectorStoreInfo
+  - VectorStoreRouterToolkit
 
 memories:
   - ConversationBufferMemory
   - ConversationSummaryMemory
   - ConversationKGMemory
 
-embeddings: []
+embeddings:
+  - OpenAIEmbeddings
 
-vectorstores: []
+vectorstores:
+  - Chroma
 
-documentloaders: []
+documentloaders:
+  - TextLoader
+  - WebBaseLoader
+
+textsplitters:
+  - CharacterTextSplitter
 
 dev: false

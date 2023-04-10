@@ -1,11 +1,40 @@
 import contextlib
+import functools
 import hashlib
 import json
 import os
 import tempfile
+from collections import OrderedDict
 from pathlib import Path
 
 import dill  # type: ignore
+
+
+def memoize_dict(maxsize=128):
+    cache = OrderedDict()
+
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            hashed = compute_dict_hash(args[0])
+            key = (func.__name__, hashed, frozenset(kwargs.items()))
+            if key not in cache:
+                result = func(*args, **kwargs)
+                cache[key] = result
+                if len(cache) > maxsize:
+                    cache.popitem(last=False)
+            else:
+                result = cache[key]
+            return result
+
+        def clear_cache():
+            cache.clear()
+
+        wrapper.clear_cache = clear_cache
+        return wrapper
+
+    return decorator
+
 
 PREFIX = "langflow_cache"
 
@@ -22,6 +51,13 @@ def clear_old_cache_files(max_cache_size: int = 3):
         for cache_file in cache_files_sorted_by_mtime[max_cache_size:]:
             with contextlib.suppress(OSError):
                 os.remove(cache_file)
+
+
+def compute_dict_hash(graph_data):
+    graph_data = filter_json(graph_data)
+
+    cleaned_graph_json = json.dumps(graph_data, sort_keys=True)
+    return hashlib.sha256(cleaned_graph_json.encode("utf-8")).hexdigest()
 
 
 def filter_json(json_data):
@@ -46,13 +82,6 @@ def filter_json(json_data):
                 del node["dragging"]
 
     return filtered_data
-
-
-def compute_hash(graph_data):
-    graph_data = filter_json(graph_data)
-
-    cleaned_graph_json = json.dumps(graph_data, sort_keys=True)
-    return hashlib.sha256(cleaned_graph_json.encode("utf-8")).hexdigest()
 
 
 def save_cache(hash_val: str, chat_data, clean_old_cache_files: bool):
