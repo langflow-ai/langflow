@@ -40,3 +40,8 @@
     transform: rotate(360deg);
   }
 }
+
+@font-face{
+  font-family: text-security-disc;
+  src: url("assets/text-security-disc.woff") format("woff");
+}

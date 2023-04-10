@@ -34,7 +34,9 @@ module.exports = {
           },
         },
         '.password':{
-          "-webkit-text-security":"disc"
+          "-webkit-text-security":"disc",
+          "font-family": "text-security-disc"
+
         }
       }
       )
