@@ -468,7 +468,7 @@ def test_mid_journey_prompt_chain(client: TestClient):
             "input_variables": ["history", "input"],
             "output_parser": None,
             "partial_variables": {},
-            "template": "The following is a friendly conversation between a human and an AI. The AI is talkative and provides lots of specific details from its context. If the AI does not know the answer to a question, it truthfully says it does not know.\n\nCurrent conversation:\n{history}\nHuman: {input}\nAI:",
+            "template": "The following is a friendly conversation between a human and an AI. The AI is talkative and provides lots of specific details from its context. If the AI does not know the answer to a question, it truthfully says it does not know.\n\nCurrent conversation:\n{history}\nHuman: {input}\nAI:",  # noqa: E501
             "template_format": "f-string",
             "validate_template": True,
             "_type": "prompt",
@@ -596,7 +596,7 @@ def test_time_travel_guide_chain(client: TestClient):
             "input_variables": ["history", "input"],
             "output_parser": None,
             "partial_variables": {},
-            "template": "The following is a friendly conversation between a human and an AI. The AI is talkative and provides lots of specific details from its context. If the AI does not know the answer to a question, it truthfully says it does not know.\n\nCurrent conversation:\n{history}\nHuman: {input}\nAI:",
+            "template": "The following is a friendly conversation between a human and an AI. The AI is talkative and provides lots of specific details from its context. If the AI does not know the answer to a question, it truthfully says it does not know.\n\nCurrent conversation:\n{history}\nHuman: {input}\nAI:",  # noqa: E501
             "template_format": "f-string",
             "validate_template": True,
             "_type": "prompt",
