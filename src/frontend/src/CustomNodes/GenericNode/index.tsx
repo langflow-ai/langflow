@@ -117,6 +117,15 @@ export default function GenericNode({
 								)}
 							</div>
 						))}
+					<div
+						className={classNames(
+							Object.keys(data.node.template).length < 4 ? "hidden" : "",
+							"w-full flex justify-center"
+						)}
+					>
+						{" "}
+						<button className="hover:text-blue-500"> see all </button>
+					</div>
 					<div className="px-5 py-2 mt-2 dark:text-white text-center">
 						Output
 					</div>
