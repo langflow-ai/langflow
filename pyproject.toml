@@ -37,6 +37,7 @@ pandas = "^1.5.3"
 huggingface-hub = "^0.13.3"
 rich = "^13.3.3"
 llama-cpp-python = "0.1.23"
+networkx = "^3.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
