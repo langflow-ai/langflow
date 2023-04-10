@@ -292,6 +292,7 @@ class MemoryFrontendNode(FrontendNode):
             field.field_type = "int"
             field.value = 10
             field.display_name = "Memory Size"
+        field.password = False
 
 
 class ChainFrontendNode(FrontendNode):
@@ -302,6 +303,14 @@ class ChainFrontendNode(FrontendNode):
         if "key" in field.name:
             field.password = False
             field.show = False
+        if field.name in ["input_key", "output_key"]:
+            field.required = True
+            field.show = True
+        # Separated for possible future changes
+        if field.name == "prompt":
+            # if no prompt is provided, use the default prompt
+            field.required = False
+            field.show = True
 
 
 class LLMFrontendNode(FrontendNode):
