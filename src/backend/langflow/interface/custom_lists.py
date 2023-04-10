@@ -1,6 +1,6 @@
+import inspect
 from typing import Any
 
-## LLM
 from langchain import (
     chains,
     document_loaders,
@@ -8,6 +8,7 @@ from langchain import (
     llms,
     memory,
     requests,
+    text_splitter,
     vectorstores,
 )
 from langchain.agents import agent_toolkits
@@ -15,16 +16,17 @@ from langchain.chat_models import ChatOpenAI
 
 from langflow.interface.importing.utils import import_class
 
-## LLM
+## LLMs
 llm_type_to_cls_dict = llms.type_to_cls_dict
 llm_type_to_cls_dict["openai-chat"] = ChatOpenAI  # type: ignore
 
-## Chain
+## Chains
 chain_type_to_cls_dict: dict[str, Any] = {
     chain_name: import_class(f"langchain.chains.{chain_name}")
     for chain_name in chains.__all__
 }
 
+## Toolkits
 toolkit_type_to_loader_dict: dict[str, Any] = {
     toolkit_name: import_class(f"langchain.agents.agent_toolkits.{toolkit_name}")
     # if toolkit_name is lower case it is a loader
@@ -69,3 +71,8 @@ documentloaders_type_to_cls_dict: dict[str, Any] = {
     )
     for documentloader_name in document_loaders.__all__
 }
+
+## Text Splitters
+textsplitter_type_to_cls_dict: dict[str, Any] = dict(
+    inspect.getmembers(text_splitter, inspect.isclass)
+)

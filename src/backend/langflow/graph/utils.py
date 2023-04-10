@@ -38,6 +38,9 @@ def load_file(file_name, file_content, accepted_types) -> Any:
         # Load the csv content
         csv_reader = csv.DictReader(io.StringIO(decoded_string))
         return list(csv_reader)
+    elif suffix == "txt":
+        # Return the text content
+        return decoded_string
     else:
         raise ValueError(f"File {file_name} is not accepted")
 
