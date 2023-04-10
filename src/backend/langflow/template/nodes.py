@@ -275,6 +275,9 @@ class PromptFrontendNode(FrontendNode):
         ):
             field.field_type = "BaseMessagePromptTemplate"
 
+        # All prompt fields should be password=False
+        field.password = False
+
 
 class MemoryFrontendNode(FrontendNode):
     @staticmethod
