@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "0.0.54"
+version = "0.0.55"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
@@ -37,6 +37,7 @@ pandas = "^1.5.3"
 chromadb = "^0.3.21"
 huggingface-hub = "^0.13.3"
 rich = "^13.3.3"
+llama-cpp-python = "0.1.23"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
