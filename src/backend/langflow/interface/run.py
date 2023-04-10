@@ -180,34 +180,6 @@ def get_result_and_thought_using_graph(langchain_object, message: str):
     return result, thought
 
 
-def get_result_and_thought(extracted_json: Dict[str, Any], message: str):
-    """Get result and thought from extracted json"""
-    try:
-        langchain_object = loading.load_langchain_type_from_config(
-            config=extracted_json
-        )
-        with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
-            output = langchain_object(message)
-            intermediate_steps = (
-                output.get("intermediate_steps", []) if isinstance(output, dict) else []
-            )
-            result = (
-                output.get(langchain_object.output_keys[0])
-                if isinstance(output, dict)
-                else output
-            )
-
-            if intermediate_steps:
-                thought = format_intermediate_steps(intermediate_steps)
-            else:
-                thought = output_buffer.getvalue()
-
-    except Exception as e:
-        result = f"Error: {str(e)}"
-        thought = ""
-    return result, thought
-
-
 def format_intermediate_steps(intermediate_steps):
     formatted_chain = "> Entering new AgentExecutor chain...\n"
     for step in intermediate_steps:
