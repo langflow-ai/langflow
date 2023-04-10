@@ -23,7 +23,7 @@ export default function InputComponent({
 				className={classNames(
 					"block w-full form-input dark:bg-gray-900 dark:border-gray-600 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
 					disabled ? " bg-gray-200 dark:bg-gray-700" : "",
-                    password?"password":""
+                    password && myValue.length>0?"password":""
 				)}
 				placeholder="Type a text"
 				onChange={(e) => {
