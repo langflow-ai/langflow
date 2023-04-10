@@ -3,7 +3,7 @@ from typing import Any, Dict
 
 from fastapi import APIRouter, HTTPException
 
-from langflow.interface.run import process_graph
+from langflow.interface.run import process_graph_cached
 from langflow.interface.types import build_langchain_types_dict
 
 # build router
@@ -19,7 +19,7 @@ def get_all():
 @router.post("/predict")
 def get_load(data: Dict[str, Any]):
     try:
-        return process_graph(data)
+        return process_graph_cached(data)
     except Exception as e:
         # Log stack trace
         logger.exception(e)
