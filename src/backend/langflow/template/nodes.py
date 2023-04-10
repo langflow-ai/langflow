@@ -251,14 +251,14 @@ class CSVAgentNode(FrontendNode):
 class PromptFrontendNode(FrontendNode):
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
-        # if field.field_type  == "StringPromptTemplate"
-        # change it to str
         PROMPT_FIELDS = [
             "template",
             "suffix",
             "prefix",
             "examples",
         ]
+        # if field.field_type  == "StringPromptTemplate"
+        # change it to str
         if field.field_type == "StringPromptTemplate" and "Message" in str(name):
             field.field_type = "prompt"
             field.multiline = True
@@ -274,6 +274,11 @@ class PromptFrontendNode(FrontendNode):
             and "BaseMessagePromptTemplate" in field.field_type
         ):
             field.field_type = "BaseMessagePromptTemplate"
+        if field.name == "input_variables":
+            field.show = True
+            field.required = False
+        # No prompt field should be password
+        field.password = False
 
 
 class MemoryFrontendNode(FrontendNode):
