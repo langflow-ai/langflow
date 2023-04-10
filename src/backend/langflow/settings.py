@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     documentloaders: List[str] = []
     wrappers: List[str] = []
     toolkits: List[str] = []
+    textsplitters: List[str] = []
     dev: bool = False
 
     class Config:
@@ -40,6 +41,7 @@ class Settings(BaseSettings):
         self.memories = new_settings.memories or []
         self.wrappers = new_settings.wrappers or []
         self.toolkits = new_settings.toolkits or []
+        self.textsplitters = new_settings.textsplitters or []
         self.dev = new_settings.dev or False
 
 

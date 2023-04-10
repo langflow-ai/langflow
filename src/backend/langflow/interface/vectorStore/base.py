@@ -7,7 +7,7 @@ from langflow.utils.util import build_template_from_class
 
 
 class VectorstoreCreator(LangChainTypeCreator):
-    type_name: str = "vectorstore"
+    type_name: str = "vectorstores"
 
     @property
     def type_to_loader_dict(self) -> Dict:
@@ -16,7 +16,27 @@ class VectorstoreCreator(LangChainTypeCreator):
     def get_signature(self, name: str) -> Optional[Dict]:
         """Get the signature of an embedding."""
         try:
-            return build_template_from_class(name, vectorstores_type_to_cls_dict)
+            signature = build_template_from_class(name, vectorstores_type_to_cls_dict)
+
+            # TODO: Use FrontendendNode class to build the signature
+            signature["template"] = {
+                "documents": {
+                    "type": "TextSplitter",
+                    "required": True,
+                    "show": True,
+                    "name": "documents",
+                    "display_name": "Text Splitter",
+                },
+                "embedding": {
+                    "type": "Embeddings",
+                    "required": True,
+                    "show": True,
+                    "name": "embedding",
+                    "display_name": "Embedding",
+                },
+            }
+            return signature
+
         except ValueError as exc:
             raise ValueError(f"Vector Store {name} not found") from exc
 

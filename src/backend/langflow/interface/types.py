@@ -5,6 +5,7 @@ from langflow.interface.embeddings.base import embedding_creator
 from langflow.interface.llms.base import llm_creator
 from langflow.interface.memories.base import memory_creator
 from langflow.interface.prompts.base import prompt_creator
+from langflow.interface.textSplitters.base import textsplitter_creator
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.tools.base import tool_creator
 from langflow.interface.vectorStore.base import vectorstore_creator
@@ -40,6 +41,7 @@ def build_langchain_types_dict():  # sourcery skip: dict-assign-update-to-union
         embedding_creator,
         vectorstore_creator,
         documentloader_creator,
+        textsplitter_creator,
     ]
 
     all_types = {}
