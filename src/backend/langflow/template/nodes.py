@@ -274,16 +274,10 @@ class PromptFrontendNode(FrontendNode):
             and "BaseMessagePromptTemplate" in field.field_type
         ):
             field.field_type = "BaseMessagePromptTemplate"
-<<<<<<< HEAD
         # Commenting out to use later
         # if field.name == "input_variables":
         #     field.show = True
         #     field.required = False
-=======
-        if field.name == "input_variables":
-            field.show = True
-            field.required = False
->>>>>>> dcb1a995143c4646da72a1cbac78ece75b0bc08b
         # No prompt field should be password
         field.password = False
 
