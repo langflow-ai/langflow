@@ -5,6 +5,7 @@ import Dropdown from "../../../../components/dropdownComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import InputComponent from "../../../../components/inputComponent";
 import ToggleComponent from "../../../../components/toggleComponent";
+import FloatComponent from "../../../../components/floatComponent";
 
 export default function ModalField({ data, title, required, id, name, type }) {
 	const { save } = useContext(TabsContext);
@@ -64,9 +65,16 @@ export default function ModalField({ data, title, required, id, name, type }) {
 						}}
 					/>
 				</div>
-			) : (
-				<div></div>
-			)}
+			) : type ==="float"?(
+                <FloatComponent
+                disabled={false}
+                value={data.node.template[name].value ?? ""}
+                onChange={(t) => {
+                    data.node.template[name].value = t;
+                    save();
+                }}
+            />
+			):(<div>{name}</div>)}
 		</div>
 	);
 }
