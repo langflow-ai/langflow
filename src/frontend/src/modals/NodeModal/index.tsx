@@ -80,7 +80,7 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
 												as="h3"
 												className="text-lg font-medium dark:text-white leading-10 text-gray-900"
 											>
-												Edit text
+												{data.type}
 											</Dialog.Title>
 										</div>
 									</div>
