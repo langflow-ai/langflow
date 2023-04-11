@@ -1,14 +1,16 @@
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import InputListComponent from "../../../../components/inputListComponent";
 import Dropdown from "../../../../components/dropdownComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import InputComponent from "../../../../components/inputComponent";
+import ToggleComponent from "../../../../components/toggleComponent";
 
 export default function ModalField({ data, title, required, id, name, type }) {
 	const { save } = useContext(TabsContext);
-	console.log(name);
-	console.log(data.node.template[name].options);
+    const [enabled, setEnabled] = useState(
+		data.node.template[name]?.value ?? false
+	);
 
 	return (
 		<div>
@@ -49,8 +51,21 @@ export default function ModalField({ data, title, required, id, name, type }) {
 						/>
 					)}
 				</div>
+			) : type === "bool" ? (
+				<div>
+					{" "}
+					<ToggleComponent
+						disabled={false}
+						enabled={enabled}
+						setEnabled={(t) => {
+							data.node.template[name].value = t;
+							setEnabled(t);
+							save();
+						}}
+					/>
+				</div>
 			) : (
-				<div>{name}</div>
+				<div></div>
 			)}
 		</div>
 	);
