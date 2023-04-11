@@ -3,8 +3,9 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { NodeDataType } from "../../types/flow";
-import { nodeColors, nodeIcons } from "../../utils";
+import { nodeColors, nodeIcons, snakeToNormalCase } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
+import ModalField from "./components/ModalField";
 
 export default function NodeModal({ data }: { data: NodeDataType }) {
 	const [open, setOpen] = useState(true);
@@ -86,10 +87,36 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
 										<div className="flex h-full w-full">
 											<div className="overflow-hidden px-4 py-5 sm:p-6 w-full rounded-lg bg-white dark:bg-gray-800 shadow">
 												<div>
+													{/*  str, code, bool, float, int,prompt, file, */}
 													{Object.keys(data.node.template)
 														.filter((t) => t.charAt(0) !== "_")
 														.map((t: string, idx) => (
-															<div key={idx}>{t}</div>
+															<div key={idx}>
+																{
+																	<ModalField
+																		data={data}
+																		title={
+																			data.node.template[t].display_name
+																				? data.node.template[t].display_name
+																				: data.node.template[t].name
+																				? snakeToNormalCase(
+																						data.node.template[t].name
+																				  )
+																				: snakeToNormalCase(t)
+																		}
+																		required={data.node.template[t].required}
+																		id={
+																			data.node.template[t].type +
+																			"|" +
+																			t +
+																			"|" +
+																			data.id
+																		}
+																		name={t}
+																		type={data.node.template[t].type} 
+																	/>
+																}
+															</div>
 														))}
 												</div>
 											</div>
