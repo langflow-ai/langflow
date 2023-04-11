@@ -9,7 +9,7 @@ import FloatComponent from "../../../../components/floatComponent";
 
 export default function ModalField({ data, title, required, id, name, type }) {
 	const { save } = useContext(TabsContext);
-    const [enabled, setEnabled] = useState(
+	const [enabled, setEnabled] = useState(
 		data.node.template[name]?.value ?? false
 	);
 
@@ -65,16 +65,24 @@ export default function ModalField({ data, title, required, id, name, type }) {
 						}}
 					/>
 				</div>
-			) : type ==="float"?(
-                <FloatComponent
-                disabled={false}
-                value={data.node.template[name].value ?? ""}
-                onChange={(t) => {
-                    data.node.template[name].value = t;
-                    save();
-                }}
-            />
-			):(<div>{name}</div>)}
+			) : type === "float" ? (
+				<FloatComponent
+					disabled={false}
+					value={data.node.template[name].value ?? ""}
+					onChange={(t) => {
+						data.node.template[name].value = t;
+						save();
+					}}
+				/>
+			) : type === "str" && data.node.template[name].options ? (
+				<Dropdown
+					options={data.node.template[name].options}
+					onSelect={(newValue) => (data.node.template[name].value = newValue)}
+					value={data.node.template[name].value ?? "Choose an option"}
+				></Dropdown>
+			) : (
+				<div>{name}</div>
+			)}
 		</div>
 	);
 }
