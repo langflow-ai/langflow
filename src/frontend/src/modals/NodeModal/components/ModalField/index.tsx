@@ -7,6 +7,7 @@ import InputComponent from "../../../../components/inputComponent";
 import ToggleComponent from "../../../../components/toggleComponent";
 import FloatComponent from "../../../../components/floatComponent";
 import IntComponent from "../../../../components/intComponent";
+import InputFileComponent from "../../../../components/inputFileComponent";
 
 export default function ModalField({ data, title, required, id, name, type }) {
 	const { save } = useContext(TabsContext);
@@ -91,7 +92,19 @@ export default function ModalField({ data, title, required, id, name, type }) {
 					}}
 				/>
 			) : type === "file" ? (
-				<div>file</div>
+				<InputFileComponent
+					disabled={false}
+					value={data.node.template[name].value ?? ""}
+					onChange={(t: string) => {
+						data.node.template[name].value = t;
+					}}
+					fileTypes={data.node.template[name].fileTypes}
+					suffixes={data.node.template[name].suffixes}
+					onFileChange={(t: string) => {
+						data.node.template[name].content = t;
+						save();
+					}}
+				></InputFileComponent>
 			) : type === "prompt" ? (
 				<div>code</div>
 			) : type === "code" ? (
