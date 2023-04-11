@@ -1,7 +1,5 @@
 import { Dialog, Transition } from "@headlessui/react";
-import {
-	XMarkIcon,
-} from "@heroicons/react/24/outline";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { NodeDataType } from "../../types/flow";
@@ -68,13 +66,13 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
 								</div>
 								<div className="h-full w-full flex flex-col justify-center items-center">
 									<div className="flex w-full pb-4 z-10 justify-center shadow-sm">
-											<Icon
-												className="w-10 mt-4 h-10 p-1 rounded"
-												style={{
-													color:
-														nodeColors[types[data.type]] ?? nodeColors.unknown,
-												}}
-											/>
+										<Icon
+											className="w-10 mt-4 h-10 p-1 rounded"
+											style={{
+												color:
+													nodeColors[types[data.type]] ?? nodeColors.unknown,
+											}}
+										/>
 										<div className="mt-4 text-center sm:ml-4 sm:text-left">
 											<Dialog.Title
 												as="h3"
@@ -87,7 +85,13 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
 									<div className="h-full w-full bg-gray-200 dark:bg-gray-900 p-4 gap-4 flex flex-row justify-center items-center">
 										<div className="flex h-full w-full">
 											<div className="overflow-hidden px-4 py-5 sm:p-6 w-full rounded-lg bg-white dark:bg-gray-800 shadow">
-												<div>content</div>
+												<div>
+													{Object.keys(data.node.template)
+														.filter((t) => t.charAt(0) !== "_")
+														.map((t: string, idx) => (
+															<div key={idx}>{t}</div>
+														))}
+												</div>
 											</div>
 										</div>
 									</div>
