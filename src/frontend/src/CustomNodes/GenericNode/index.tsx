@@ -10,6 +10,8 @@ import { typesContext } from "../../contexts/typesContext";
 import { useContext, useRef } from "react";
 import { NodeDataType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
+import { PopUpContext } from "../../contexts/popUpContext";
+import NodeModal from "../../modals/NodeModal";
 
 export default function GenericNode({
 	data,
@@ -21,6 +23,7 @@ export default function GenericNode({
 	const { setErrorData } = useContext(alertContext);
 	const showError = useRef(true);
 	const { types, deleteNode } = useContext(typesContext);
+	const {openPopUp} = useContext(PopUpContext)
 	const Icon = nodeIcons[types[data.type]];
 	if (!Icon) {
 		if (showError.current) {
@@ -124,7 +127,16 @@ export default function GenericNode({
 						)}
 					>
 						{" "}
-						<button className="hover:text-blue-500"> see all </button>
+						<button
+							onClick={(event) => {
+								event.preventDefault();
+								openPopUp(<NodeModal data={data}/>)
+							}}
+							className="hover:text-blue-500"
+						>
+							{" "}
+							see all{" "}
+						</button>
 					</div>
 					<div className="px-5 py-2 mt-2 dark:text-white text-center">
 						Output
