@@ -6,6 +6,7 @@ import TextAreaComponent from "../../../../components/textAreaComponent";
 import InputComponent from "../../../../components/inputComponent";
 import ToggleComponent from "../../../../components/toggleComponent";
 import FloatComponent from "../../../../components/floatComponent";
+import IntComponent from "../../../../components/intComponent";
 
 export default function ModalField({ data, title, required, id, name, type }) {
 	const { save } = useContext(TabsContext);
@@ -80,6 +81,21 @@ export default function ModalField({ data, title, required, id, name, type }) {
 					onSelect={(newValue) => (data.node.template[name].value = newValue)}
 					value={data.node.template[name].value ?? "Choose an option"}
 				></Dropdown>
+			) : type === "int" ? (
+				<IntComponent
+					disabled={false}
+					value={data.node.template[name].value ?? ""}
+					onChange={(t) => {
+						data.node.template[name].value = t;
+						save();
+					}}
+				/>
+			) : type === "file" ? (
+				<div>file</div>
+			) : type === "prompt" ? (
+				<div>code</div>
+			) : type === "code" ? (
+				<div>code</div>
 			) : (
 				<div>{name}</div>
 			)}
