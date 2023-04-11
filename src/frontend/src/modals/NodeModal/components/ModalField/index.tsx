@@ -34,14 +34,15 @@ export default function ModalField({ data, title, required, id, name, type }) {
 							}}
 						/>
 					) : data.node.template[name].multiline ? (
-						<TextAreaComponent
-							disabled={false}
-							value={data.node.template[name].value ?? ""}
-							onChange={(t: string) => {
-								data.node.template[name].value = t;
-								save();
-							}}
-						/>
+						// <TextAreaComponent
+						// 	disabled={false}
+						// 	value={data.node.template[name].value ?? ""}
+						// 	onChange={(t: string) => {
+						// 		data.node.template[name].value = t;
+						// 		save();
+						// 	}}
+						// />
+                        <div>text area component</div>
 					) : (
 						<InputComponent
 							disabled={false}
