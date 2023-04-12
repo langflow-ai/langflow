@@ -77,7 +77,7 @@ class CSVAgent(AgentExecutor):
     @classmethod
     def from_toolkit_and_llm(
         cls,
-        path: dict,
+        path: str,
         llm: BaseLanguageModel,
         pandas_kwargs: Optional[dict] = None,
         **kwargs: Any
@@ -85,7 +85,7 @@ class CSVAgent(AgentExecutor):
         import pandas as pd  # type: ignore
 
         _kwargs = pandas_kwargs or {}
-        df = pd.DataFrame.from_dict(path, **_kwargs)
+        df = pd.read_csv(path, **_kwargs)
 
         tools = [PythonAstREPLTool(locals={"df": df})]  # type: ignore
         prompt = ZeroShotAgent.create_prompt(
