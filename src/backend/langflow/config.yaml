@@ -70,7 +70,7 @@ documentloaders:
   - GutenbergLoader
   - BSHTMLLoader
   - UnstructuredHTMLLoader
-  - UnstructuredImageLoader
+  # - UnstructuredImageLoader # Issue with Python 3.11 (https://github.com/Unstructured-IO/unstructured-inference/issues/83)
   - UnstructuredMarkdownLoader
   - PyPDFLoader
   - UnstructuredPowerPointLoader
