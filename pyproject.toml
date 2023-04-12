@@ -42,7 +42,6 @@ networkx = "^3.1"
 unstructured = "^0.5.11"
 pypdf = "^3.7.1"
 lxml = "^4.9.2"
-unstructured-inference = "^0.3.2"
 pysrt = "^1.1.2"
 fake-useragent = "^1.1.3"
 
