@@ -1,0 +1,122 @@
+# Project information
+site_name: LangFlow
+site_description: LangFlow is a GUI for LangChain, designed with react-flow to provide an effortless way to experiment and prototype flows with drag-and-drop components and a chat box.
+site_url: https://github.com/logspace-ai/langflow
+
+# Repository
+repo_name: logspace-ai/langflow
+repo_url: https://github.com/logspace-ai/langflow
+
+# Configuration
+theme:
+  name: material
+  language: en
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: light blue + dark purple
+      accent: dark blue
+      toggle:
+        icon: material/lightbulb
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: light blue + dark purple
+      accent: dark blue
+      toggle:
+        icon: material/lightbulb-outline
+        name: Switch to dark mode
+  features:
+    - content.code.annotation
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - announce.dismiss
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+  icon:
+    repo: fontawesome/brands/github-alt
+  logo: img/chain.png
+  favicon: img/chain.png
+
+# Plugins
+plugins:
+  - search:
+      separator: '[\s\-,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+  - minify:
+      minify_html: true
+
+# Page tree
+nav:
+  - Getting Started: index.md
+  - Components:
+    - Chains: chains.md
+    - Agents: agents.md
+    - Prompts: prompts.md
+    - LLMs: llms.md
+    - Memories: memories.md
+    - Tools: tools.md
+    - Toolkits: toolkits.md
+    - Wrappers: wrappers.md
+  - Release Notes: releasenotes.md
+  - Contributing: help-langflow.md
+ 
+
+
+# Customization
+extra:
+  social:
+    - icon: fontawesome/brands/github-alt
+      link: https://github.com/logspace-ai/langflow
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/logspace_ai
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/company/logspace-ai
+
+# Extensions
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+      emoji_index: !!python/name:materialx.emoji.twemoji
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      repo_url_shorthand: true
+      user: squidfunk
+      repo: mkdocs-material
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+copyright: |
+  &copy; 2023 <a href="https://github.com/logspace-ai"  target="_blank" rel="noopener">Logspace</a>
