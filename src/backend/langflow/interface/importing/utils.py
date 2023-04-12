@@ -10,7 +10,6 @@ from langchain.chat_models.base import BaseChatModel
 from langchain.llms.base import BaseLLM
 from langchain.tools import BaseTool
 
-from langflow.interface.documentLoaders.custom import CUSTOM_DOCUMENTLOADERS
 from langflow.interface.tools.util import get_tool_by_name
 
 
@@ -132,8 +131,6 @@ def import_vectorstore(vectorstore: str) -> Any:
 
 def import_documentloader(documentloader: str) -> Any:
     """Import documentloader from documentloader name"""
-    if documentloader in CUSTOM_DOCUMENTLOADERS:
-        return CUSTOM_DOCUMENTLOADERS[documentloader]
 
     return import_class(f"langchain.document_loaders.{documentloader}")
 

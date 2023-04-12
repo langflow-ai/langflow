@@ -61,8 +61,31 @@ vectorstores:
   - Chroma
 
 documentloaders:
+  - AirbyteJSONLoader
+  - CoNLLULoader
+  - CSVLoader
+  - UnstructuredEmailLoader
+  - EverNoteLoader
+  - FacebookChatLoader
+  - GutenbergLoader
+  - BSHTMLLoader
+  - UnstructuredHTMLLoader
+  - UnstructuredImageLoader
+  - UnstructuredMarkdownLoader
+  - PyPDFLoader
+  - UnstructuredPowerPointLoader
+  - SRTLoader
+  - TelegramChatLoader
   - TextLoader
+  - UnstructuredWordDocumentLoader
   - WebBaseLoader
+  - AZLyricsLoader
+  - CollegeConfidentialLoader
+  - HNLoader
+  - IFixitLoader
+  - IMSDbLoader
+  - GitbookLoader
+  - ReadTheDocsLoader
 
 textsplitters:
   - CharacterTextSplitter
