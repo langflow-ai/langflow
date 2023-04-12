@@ -11,6 +11,19 @@ from pathlib import Path
 import dill  # type: ignore
 
 
+def create_cache_folder(func):
+    def wrapper(*args, **kwargs):
+        # Get the destination folder
+        cache_path = Path(tempfile.gettempdir()) / PREFIX
+
+        # Create the destination folder if it doesn't exist
+        os.makedirs(cache_path, exist_ok=True)
+
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
 def memoize_dict(maxsize=128):
     cache = OrderedDict()
 
@@ -40,6 +53,7 @@ def memoize_dict(maxsize=128):
 PREFIX = "langflow_cache"
 
 
+@create_cache_folder
 def clear_old_cache_files(max_cache_size: int = 3):
     cache_dir = Path(tempfile.gettempdir()) / PREFIX
     cache_files = list(cache_dir.glob("*.dill"))
@@ -85,6 +99,7 @@ def filter_json(json_data):
     return filtered_data
 
 
+@create_cache_folder
 def save_binary_file(content: str, file_name: str, accepted_types: list[str]) -> str:
     """
     Save a binary file to the specified folder.
@@ -105,9 +120,6 @@ def save_binary_file(content: str, file_name: str, accepted_types: list[str]) ->
     data = content.split(",")[1]
     decoded_bytes = base64.b64decode(data)
 
-    # Create the destination folder if it doesn't exist
-    os.makedirs(cache_path, exist_ok=True)
-
     # Create the full file path
     file_path = os.path.join(cache_path, file_name)
 
@@ -118,6 +130,7 @@ def save_binary_file(content: str, file_name: str, accepted_types: list[str]) ->
     return file_path
 
 
+@create_cache_folder
 def save_cache(hash_val: str, chat_data, clean_old_cache_files: bool):
     cache_path = Path(tempfile.gettempdir()) / PREFIX / f"{hash_val}.dill"
     with cache_path.open("wb") as cache_file:
@@ -127,6 +140,7 @@ def save_cache(hash_val: str, chat_data, clean_old_cache_files: bool):
         clear_old_cache_files()
 
 
+@create_cache_folder
 def load_cache(hash_val):
     cache_path = Path(tempfile.gettempdir()) / PREFIX / f"{hash_val}.dill"
     if cache_path.exists():
