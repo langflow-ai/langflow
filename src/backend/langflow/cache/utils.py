@@ -40,8 +40,8 @@ PREFIX = "langflow_cache"
 
 
 def clear_old_cache_files(max_cache_size: int = 3):
-    cache_dir = Path(tempfile.gettempdir())
-    cache_files = list(cache_dir.glob(f"{PREFIX}_*.dill"))
+    cache_dir = Path(tempfile.gettempdir()) / PREFIX
+    cache_files = list(cache_dir.glob("*.dill"))
 
     if len(cache_files) > max_cache_size:
         cache_files_sorted_by_mtime = sorted(
@@ -85,7 +85,7 @@ def filter_json(json_data):
 
 
 def save_cache(hash_val: str, chat_data, clean_old_cache_files: bool):
-    cache_path = Path(tempfile.gettempdir()) / f"{PREFIX}_{hash_val}.dill"
+    cache_path = Path(tempfile.gettempdir()) / PREFIX / f"{hash_val}.dill"
     with cache_path.open("wb") as cache_file:
         dill.dump(chat_data, cache_file)
 
@@ -94,7 +94,7 @@ def save_cache(hash_val: str, chat_data, clean_old_cache_files: bool):
 
 
 def load_cache(hash_val):
-    cache_path = Path(tempfile.gettempdir()) / f"{PREFIX}_{hash_val}.dill"
+    cache_path = Path(tempfile.gettempdir()) / PREFIX / f"{hash_val}.dill"
     if cache_path.exists():
         with cache_path.open("rb") as cache_file:
             return dill.load(cache_file)
