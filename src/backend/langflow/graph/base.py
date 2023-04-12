@@ -8,8 +8,8 @@ import warnings
 from copy import deepcopy
 from typing import Any, Dict, List, Optional
 
+from langflow.cache import utils as cache_utils
 from langflow.graph.constants import DIRECT_TYPES
-from langflow.graph.utils import load_file
 from langflow.interface import loading
 from langflow.interface.listing import ALL_TYPES_DICT
 from langflow.utils.logger import logger
@@ -88,8 +88,11 @@ class Node:
                 file_name = value.get("value")
                 content = value.get("content")
                 type_to_load = value.get("suffixes")
-                loaded_dict = load_file(file_name, content, type_to_load)
-                params[key] = loaded_dict
+                file_path = cache_utils.save_binary_file(
+                    content=content, file_name=file_name, accepted_types=type_to_load
+                )
+
+                params[key] = file_path
 
             # We should check if the type is in something not
             # the opposite

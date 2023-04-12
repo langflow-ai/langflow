@@ -1,3 +1,4 @@
+import base64
 import contextlib
 import functools
 import hashlib
@@ -82,6 +83,39 @@ def filter_json(json_data):
                 del node["dragging"]
 
     return filtered_data
+
+
+def save_binary_file(content: str, file_name: str, accepted_types: list[str]) -> str:
+    """
+    Save a binary file to the specified folder.
+
+    Args:
+        content: The content of the file as a bytes object.
+        file_name: The name of the file, including its extension.
+
+    Returns:
+        The path to the saved file.
+    """
+    if not any(file_name.endswith(suffix) for suffix in accepted_types):
+        raise ValueError(f"File {file_name} is not accepted")
+
+    # Get the destination folder
+    cache_path = Path(tempfile.gettempdir()) / PREFIX
+
+    data = content.split(",")[1]
+    decoded_bytes = base64.b64decode(data)
+
+    # Create the destination folder if it doesn't exist
+    os.makedirs(cache_path, exist_ok=True)
+
+    # Create the full file path
+    file_path = os.path.join(cache_path, file_name)
+
+    # Save the binary content to the file
+    with open(file_path, "wb") as file:
+        file.write(decoded_bytes)
+
+    return file_path
 
 
 def save_cache(hash_val: str, chat_data, clean_old_cache_files: bool):
