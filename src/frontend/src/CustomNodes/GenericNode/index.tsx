@@ -122,7 +122,7 @@ export default function GenericNode({
 						))}
 					<div
 						className={classNames(
-							Object.keys(data.node.template).length < 4 ? "hidden" : "",
+							Object.keys(data.node.template).length < 1 ? "hidden" : "",
 							"w-full flex justify-center"
 						)}
 					>
@@ -135,7 +135,7 @@ export default function GenericNode({
 							className="hover:text-blue-500"
 						>
 							{" "}
-							see all{" "}
+							show advanced{" "}
 						</button>
 					</div>
 					<div className="px-5 py-2 mt-2 dark:text-white text-center">
