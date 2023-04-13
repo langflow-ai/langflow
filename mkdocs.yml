@@ -34,9 +34,10 @@ theme:
     - content.tabs.link
     - announce.dismiss
     - navigation.tabs
-    - navigation.sections
+    # - navigation.sections
     - navigation.top
     - navigation.tracking
+    - releases
   icon:
     repo: fontawesome/brands/github-alt
   logo: img/chain.png
@@ -51,9 +52,12 @@ plugins:
 
 # Page tree
 nav:
-  - Getting Started: index.md
+  - Getting Started: 
+    - index.md
   - Components:
-    - Chains: chains.md
+    - Chains: 
+      - chains.md      
+      - LLMChain: llmchain.md
     - Agents: agents.md
     - Prompts: prompts.md
     - LLMs: llms.md
@@ -61,7 +65,7 @@ nav:
     - Tools: tools.md
     - Toolkits: toolkits.md
     - Wrappers: wrappers.md
-  - Release Notes: releasenotes.md
+  - Release Notes: releases.md
   - Contributing: help-langflow.md
  
 
