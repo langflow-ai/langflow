@@ -49,7 +49,7 @@ def test_cache_creation(basic_data_graph):
     )
     save_cache(computed_hash, langchain_object, is_first_message)
     # Check if the cache file exists
-    cache_file = Path(tempfile.gettempdir()) / f"{PREFIX}_{computed_hash}.dill"
+    cache_file = Path(tempfile.gettempdir()) / f"{PREFIX}/{computed_hash}.dill"
 
     assert cache_file.exists()
 
