@@ -35,6 +35,24 @@ class TextSplitterCreator(LangChainTypeCreator):
                 "display_name": "Separator",
             }
 
+            signature["template"]["chunk_size"] = {
+                "type": "int",
+                "required": True,
+                "show": True,
+                "value": 4000,
+                "name": "chunk_size",
+                "display_name": "Chunk Size",
+            }
+
+            signature["template"]["chunk_overlap"] = {
+                "type": "int",
+                "required": True,
+                "show": True,
+                "value": 200,
+                "name": "chunk_overlap",
+                "display_name": "Chunk Overlap",
+            }
+
             return signature
         except ValueError as exc:
             raise ValueError(f"Text Splitter {name} not found") from exc
