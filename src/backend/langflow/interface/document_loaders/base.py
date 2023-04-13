@@ -133,6 +133,7 @@ class DocumentLoaderCreator(LangChainTypeCreator):
             raise ValueError(f"Documment Loader {name} not found") from exc
         except AttributeError as exc:
             logger.error(f"Documment Loader {name} not loaded: {exc}")
+            return None
 
     def to_list(self) -> List[str]:
         return [

@@ -30,6 +30,7 @@ class LLMCreator(LangChainTypeCreator):
 
         except AttributeError as exc:
             logger.error(f"LLM {name} not loaded: {exc}")
+            return None
 
     def to_list(self) -> List[str]:
         return [

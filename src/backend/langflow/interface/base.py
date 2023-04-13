@@ -51,7 +51,7 @@ class LangChainTypeCreator(BaseModel, ABC):
         signature = self.get_signature(name)
         if signature is None:
             logger.error(f"Node {name} not loaded")
-            return
+            return None
         if isinstance(signature, FrontendNode):
             return signature
         fields = [

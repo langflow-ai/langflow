@@ -48,6 +48,7 @@ class PromptCreator(LangChainTypeCreator):
             logger.error(f"Prompt {name} not found: {exc}")
         except AttributeError as exc:
             logger.error(f"Prompt {name} not loaded: {exc}")
+        return None
 
     def to_list(self) -> List[str]:
         custom_prompts = get_custom_nodes("prompts")
