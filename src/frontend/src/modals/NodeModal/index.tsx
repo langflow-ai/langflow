@@ -85,39 +85,36 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
 									</div>
 									<div className="h-full w-full bg-gray-200 dark:bg-gray-900 p-4 gap-4 flex flex-row justify-center items-center">
 										<div className="flex h-full w-full">
-											<div className="overflow-hidden px-4 py-5 sm:p-6 w-full rounded-lg bg-white dark:bg-gray-800 shadow">
-												<div>
-													{/*  str, code, bool, float, int,prompt, file, */}
+											<div className="overflow-hidden px-4 sm:p-4  w-full rounded-lg bg-white dark:bg-gray-800 shadow">
+												<div className="flex flex-col h-full gap-5">
 													{Object.keys(data.node.template)
 														.filter((t) => t.charAt(0) !== "_")
-														.map((t: string, idx) => (
-															<div key={idx}>
-																{
-																	<ModalField
-																		data={data}
-																		title={
-																			data.node.template[t].display_name
-																				? data.node.template[t].display_name
-																				: data.node.template[t].name
-																				? snakeToNormalCase(
-																						data.node.template[t].name
-																				  )
-																				: snakeToNormalCase(t)
-																		}
-																		required={data.node.template[t].required}
-																		id={
-																			data.node.template[t].type +
-																			"|" +
-																			t +
-																			"|" +
-																			data.id
-																		}
-																		name={t}
-																		type={data.node.template[t].type} 
-																	/>
-																}
-															</div>
-														))}
+														.map((t: string, idx) => {
+															return (
+																<ModalField
+																	data={data}
+																	title={
+																		data.node.template[t].display_name
+																			? data.node.template[t].display_name
+																			: data.node.template[t].name
+																			? snakeToNormalCase(
+																					data.node.template[t].name
+																			  )
+																			: snakeToNormalCase(t)
+																	}
+																	required={data.node.template[t].required}
+																	id={
+																		data.node.template[t].type +
+																		"|" +
+																		t +
+																		"|" +
+																		data.id
+																	}
+																	name={t}
+																	type={data.node.template[t].type}
+																/>
+															);
+														})}
 												</div>
 											</div>
 										</div>

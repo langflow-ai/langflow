@@ -10,18 +10,27 @@ import IntComponent from "../../../../components/intComponent";
 import InputFileComponent from "../../../../components/inputFileComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
+import { classNames } from "../../../../utils";
 
 export default function ModalField({ data, title, required, id, name, type }) {
 	const { save } = useContext(TabsContext);
 	const [enabled, setEnabled] = useState(
 		data.node.template[name]?.value ?? false
 	);
+	const display =
+		type === "str" ||
+		type === "int" ||
+		type === "prompt" ||
+		type === "bool" ||
+		type === "float" ||
+		type === "file" ||
+		type === "code";
 
 	return (
-		<div className="flex my-3 flex-row w-full whitespace-nowrap items-center">
-			<span className="mx-2">{title}</span>
+		<div className={classNames("flex flex-row w-full items-center justify-between",display?"":"hidden")}>
+			{display && <span className="mx-2">{title}</span>}
 			{type === "str" && !data.node.template[name].options ? (
-				<div className="w-full">
+				<div className="w-1/2">
 					{data.node.template[name].list ? (
 						<InputListComponent
 							disabled={false}
@@ -71,7 +80,7 @@ export default function ModalField({ data, title, required, id, name, type }) {
 					/>
 				</div>
 			) : type === "float" ? (
-				<div className="w-full">
+				<div className="w-1/2">
 					<FloatComponent
 						disabled={false}
 						value={data.node.template[name].value ?? ""}
@@ -82,7 +91,7 @@ export default function ModalField({ data, title, required, id, name, type }) {
 					/>
 				</div>
 			) : type === "str" && data.node.template[name].options ? (
-				<div className="w-full">
+				<div className="w-1/2">
 					<Dropdown
 						options={data.node.template[name].options}
 						onSelect={(newValue) => (data.node.template[name].value = newValue)}
@@ -90,7 +99,7 @@ export default function ModalField({ data, title, required, id, name, type }) {
 					></Dropdown>
 				</div>
 			) : type === "int" ? (
-				<div className="w-full">
+				<div className="w-1/2">
 					<IntComponent
 						disabled={false}
 						value={data.node.template[name].value ?? ""}
@@ -101,45 +110,45 @@ export default function ModalField({ data, title, required, id, name, type }) {
 					/>
 				</div>
 			) : type === "file" ? (
-				<div className="w-full">
-				<InputFileComponent
-					disabled={false}
-					value={data.node.template[name].value ?? ""}
-					onChange={(t: string) => {
-						data.node.template[name].value = t;
-					}}
-					fileTypes={data.node.template[name].fileTypes}
-					suffixes={data.node.template[name].suffixes}
-					onFileChange={(t: string) => {
-						data.node.template[name].content = t;
-						save();
-					}}
-				></InputFileComponent>
+				<div className="w-1/2">
+					<InputFileComponent
+						disabled={false}
+						value={data.node.template[name].value ?? ""}
+						onChange={(t: string) => {
+							data.node.template[name].value = t;
+						}}
+						fileTypes={data.node.template[name].fileTypes}
+						suffixes={data.node.template[name].suffixes}
+						onFileChange={(t: string) => {
+							data.node.template[name].content = t;
+							save();
+						}}
+					></InputFileComponent>
 				</div>
 			) : type === "prompt" ? (
-				<div className="w-full">
-				<PromptAreaComponent
-					disabled={false}
-					value={data.node.template[name].value ?? ""}
-					onChange={(t: string) => {
-						data.node.template[name].value = t;
-						save();
-					}}
-				/>
+				<div className="w-1/2">
+					<PromptAreaComponent
+						disabled={false}
+						value={data.node.template[name].value ?? ""}
+						onChange={(t: string) => {
+							data.node.template[name].value = t;
+							save();
+						}}
+					/>
 				</div>
 			) : type === "code" ? (
-				<div className="w-full">
-				<CodeAreaComponent
-					disabled={false}
-					value={data.node.template[name].value ?? ""}
-					onChange={(t: string) => {
-						data.node.template[name].value = t;
-						save();
-					}}
-				/>
+				<div className="w-1/2">
+					<CodeAreaComponent
+						disabled={false}
+						value={data.node.template[name].value ?? ""}
+						onChange={(t: string) => {
+							data.node.template[name].value = t;
+							save();
+						}}
+					/>
 				</div>
 			) : (
-				<div>{type}</div>
+				<div className="hidden"></div>
 			)}
 		</div>
 	);
