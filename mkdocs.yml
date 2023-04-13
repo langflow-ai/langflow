@@ -58,7 +58,10 @@ nav:
     - Chains: 
       - chains.md      
       - LLMChain: llmchain.md
-    - Agents: agents.md
+    - Agents: 
+      - agents.md
+      - Vector Store Agent: vectorstore-agent.md
+      - Multiple Vectorstores: multiple-vectorstores.md
     - Prompts: prompts.md
     - LLMs: llms.md
     - Memories: memories.md
@@ -82,6 +85,7 @@ extra:
 
 # Extensions
 markdown_extensions:
+  - lightgallery
   - abbr
   - admonition
   - attr_list
