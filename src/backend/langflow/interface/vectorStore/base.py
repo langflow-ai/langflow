@@ -42,6 +42,7 @@ class VectorstoreCreator(LangChainTypeCreator):
             raise ValueError(f"Vector Store {name} not found") from exc
         except AttributeError as exc:
             logger.error(f"Vector Store {name} not loaded: {exc}")
+            return None
 
     def to_list(self) -> List[str]:
         return [

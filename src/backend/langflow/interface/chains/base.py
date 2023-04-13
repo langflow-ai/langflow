@@ -42,6 +42,7 @@ class ChainCreator(LangChainTypeCreator):
             raise ValueError("Chain not found") from exc
         except AttributeError as exc:
             logger.error(f"Chain {name} not loaded: {exc}")
+            return None
 
     def to_list(self) -> List[str]:
         custom_chains = list(get_custom_nodes("chains").keys())

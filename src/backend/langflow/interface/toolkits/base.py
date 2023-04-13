@@ -47,6 +47,7 @@ class ToolkitCreator(LangChainTypeCreator):
             raise ValueError("Prompt not found") from exc
         except AttributeError as exc:
             logger.error(f"Prompt {name} not loaded: {exc}")
+            return None
 
     def to_list(self) -> List[str]:
         return list(self.type_to_loader_dict.keys())

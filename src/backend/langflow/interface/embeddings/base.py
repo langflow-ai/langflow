@@ -23,6 +23,7 @@ class EmbeddingCreator(LangChainTypeCreator):
 
         except AttributeError as exc:
             logger.error(f"Embedding {name} not loaded: {exc}")
+            return None
 
     def to_list(self) -> List[str]:
         return [

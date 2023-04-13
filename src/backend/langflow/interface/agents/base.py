@@ -34,6 +34,7 @@ class AgentCreator(LangChainTypeCreator):
             raise ValueError("Agent not found") from exc
         except AttributeError as exc:
             logger.error(f"Agent {name} not loaded: {exc}")
+            return None
 
     # Now this is a generator
     def to_list(self) -> List[str]:
