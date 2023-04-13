@@ -26,6 +26,15 @@ class TextSplitterCreator(LangChainTypeCreator):
                 "name": "documents",
             }
 
+            signature["template"]["separator"] = {
+                "type": "str",
+                "required": True,
+                "show": True,
+                "value": ".",
+                "name": "separator",
+                "display_name": "Separator",
+            }
+
             return signature
         except ValueError as exc:
             raise ValueError(f"Text Splitter {name} not found") from exc
