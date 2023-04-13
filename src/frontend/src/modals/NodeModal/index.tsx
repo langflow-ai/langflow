@@ -127,7 +127,7 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
 												setModalOpen(false);
 											}}
 										>
-											Finish editing
+											Done
 										</button>
 									</div>
 								</div>

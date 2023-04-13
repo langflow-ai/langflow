@@ -1,4 +1,4 @@
-import { TrashIcon } from "@heroicons/react/24/outline";
+import { Cog6ToothIcon, TrashIcon } from "@heroicons/react/24/outline";
 import {
 	classNames,
 	nodeColors,
@@ -23,7 +23,7 @@ export default function GenericNode({
 	const { setErrorData } = useContext(alertContext);
 	const showError = useRef(true);
 	const { types, deleteNode } = useContext(typesContext);
-	const {openPopUp} = useContext(PopUpContext)
+	const { openPopUp } = useContext(PopUpContext);
 	const Icon = nodeIcons[types[data.type]];
 	if (!Icon) {
 		if (showError.current) {
@@ -54,17 +54,32 @@ export default function GenericNode({
 					/>
 					<div className="truncate">{data.type}</div>
 				</div>
-				<button
-					onClick={() => {
-						deleteNode(data.id);
-					}}
-				>
-					<TrashIcon className="w-6 h-6 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-500"></TrashIcon>
-				</button>
+				<div className="flex gap-3">
+					<button
+						onClick={(event) => {
+							event.preventDefault();
+							openPopUp(<NodeModal data={data} />);
+						}}
+					>
+						<Cog6ToothIcon
+							className={classNames(
+								Object.keys(data.node.template).length < 1 ? "hidden" : "",
+								"w-6 h-6  dark:text-gray-500  hover:animate-spin"
+							)}
+						></Cog6ToothIcon>
+					</button>
+					<button
+						onClick={() => {
+							deleteNode(data.id);
+						}}
+					>
+						<TrashIcon className="w-6 h-6 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-500"></TrashIcon>
+					</button>
+				</div>
 			</div>
 
 			<div className="w-full h-full py-5">
-				<div className="w-full text-gray-500 px-5 text-sm">
+				<div className="w-full text-gray-500 px-5 pb-3 text-sm">
 					{data.node.description}
 				</div>
 
@@ -73,7 +88,7 @@ export default function GenericNode({
 						.filter((t) => t.charAt(0) !== "_")
 						.map((t: string, idx) => (
 							<div key={idx}>
-								{idx === 0 ? (
+								{/* {idx === 0 ? (
 									<div
 										className={classNames(
 											"px-5 py-2 mt-2 dark:text-white text-center",
@@ -89,7 +104,7 @@ export default function GenericNode({
 									</div>
 								) : (
 									<></>
-								)}
+								)} */}
 								{data.node.template[t].show ? (
 									<ParameterComponent
 										data={data}
@@ -127,20 +142,10 @@ export default function GenericNode({
 						)}
 					>
 						{" "}
-						<button
-							onClick={(event) => {
-								event.preventDefault();
-								openPopUp(<NodeModal data={data}/>)
-							}}
-							className="hover:text-blue-500"
-						>
-							{" "}
-							show advanced{" "}
-						</button>
 					</div>
-					<div className="px-5 py-2 mt-2 dark:text-white text-center">
+					{/* <div className="px-5 py-2 mt-2 dark:text-white text-center">
 						Output
-					</div>
+					</div> */}
 					<ParameterComponent
 						data={data}
 						color={nodeColors[types[data.type]] ?? nodeColors.unknown}
