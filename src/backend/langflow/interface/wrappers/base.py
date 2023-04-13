@@ -4,6 +4,7 @@ from langchain import requests
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.utils.util import build_template_from_class
+from langflow.utils.logger import logger
 
 
 class WrapperCreator(LangChainTypeCreator):
@@ -22,6 +23,8 @@ class WrapperCreator(LangChainTypeCreator):
             return build_template_from_class(name, self.type_to_loader_dict)
         except ValueError as exc:
             raise ValueError("Wrapper not found") from exc
+        except AttributeError as exc:
+            logger.error(f"Wrapper {name} not loaded: {exc}")
 
     def to_list(self) -> List[str]:
         return list(self.type_to_loader_dict.keys())

@@ -2,9 +2,10 @@ from typing import Dict, List, Optional
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import documentloaders_type_to_cls_dict
-from langflow.interface.documentLoaders.custom import CUSTOM_DOCUMENTLOADERS
+from langflow.interface.document_loaders.custom import CUSTOM_DOCUMENTLOADERS
 from langflow.settings import settings
 from langflow.utils.util import build_template_from_class
+from langflow.utils.logger import logger
 
 
 class DocumentLoaderCreator(LangChainTypeCreator):
@@ -52,6 +53,8 @@ class DocumentLoaderCreator(LangChainTypeCreator):
             return signature
         except ValueError as exc:
             raise ValueError(f"Documment Loader {name} not found") from exc
+        except AttributeError as exc:
+            logger.error(f"Documment Loader {name} not loaded: {exc}")
 
     def to_list(self) -> List[str]:
         return [

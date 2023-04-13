@@ -6,6 +6,7 @@ from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class, import_module
 from langflow.settings import settings
 from langflow.utils.util import build_template_from_class
+from langflow.utils.logger import logger
 
 
 class ToolkitCreator(LangChainTypeCreator):
@@ -44,6 +45,8 @@ class ToolkitCreator(LangChainTypeCreator):
             return build_template_from_class(name, self.type_to_loader_dict)
         except ValueError as exc:
             raise ValueError("Prompt not found") from exc
+        except AttributeError as exc:
+            logger.error(f"Prompt {name} not loaded: {exc}")
 
     def to_list(self) -> List[str]:
         return list(self.type_to_loader_dict.keys())
