@@ -3,6 +3,7 @@ from typing import Dict, List, Optional
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import textsplitter_type_to_cls_dict
 from langflow.settings import settings
+from langflow.utils.logger import logger
 from langflow.utils.util import build_template_from_class
 
 
@@ -28,6 +29,8 @@ class TextSplitterCreator(LangChainTypeCreator):
             return signature
         except ValueError as exc:
             raise ValueError(f"Text Splitter {name} not found") from exc
+        except AttributeError as exc:
+            logger.error(f"Text Splitter {name} not loaded: {exc}")
 
     def to_list(self) -> List[str]:
         return [

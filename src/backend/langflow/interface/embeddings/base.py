@@ -4,6 +4,7 @@ from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import embedding_type_to_cls_dict
 from langflow.settings import settings
 from langflow.utils.util import build_template_from_class
+from langflow.utils.logger import logger
 
 
 class EmbeddingCreator(LangChainTypeCreator):
@@ -19,6 +20,9 @@ class EmbeddingCreator(LangChainTypeCreator):
             return build_template_from_class(name, embedding_type_to_cls_dict)
         except ValueError as exc:
             raise ValueError(f"Embedding {name} not found") from exc
+
+        except AttributeError as exc:
+            logger.error(f"Embedding {name} not loaded: {exc}")
 
     def to_list(self) -> List[str]:
         return [

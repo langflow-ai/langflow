@@ -6,6 +6,7 @@ from langflow.custom.customs import get_custom_nodes
 from langflow.interface.agents.custom import CUSTOM_AGENTS
 from langflow.interface.base import LangChainTypeCreator
 from langflow.settings import settings
+from langflow.utils.logger import logger
 from langflow.utils.util import build_template_from_class
 
 
@@ -31,6 +32,8 @@ class AgentCreator(LangChainTypeCreator):
             )
         except ValueError as exc:
             raise ValueError("Agent not found") from exc
+        except AttributeError as exc:
+            logger.error(f"Agent {name} not loaded: {exc}")
 
     # Now this is a generator
     def to_list(self) -> List[str]:

@@ -5,6 +5,7 @@ from langflow.interface.custom_lists import memory_type_to_cls_dict
 from langflow.settings import settings
 from langflow.template.base import FrontendNode
 from langflow.template.nodes import MemoryFrontendNode
+from langflow.utils.logger import logger
 from langflow.utils.util import build_template_from_class
 
 
@@ -28,6 +29,8 @@ class MemoryCreator(LangChainTypeCreator):
             return build_template_from_class(name, memory_type_to_cls_dict)
         except ValueError as exc:
             raise ValueError("Memory not found") from exc
+        except AttributeError as exc:
+            logger.error(f"Memory {name} not loaded: {exc}")
 
     def to_list(self) -> List[str]:
         return [
