@@ -27,8 +27,19 @@ export default function ModalField({ data, title, required, id, name, type }) {
 		type === "code";
 
 	return (
-		<div className={classNames("flex flex-row w-full items-center justify-between",display?"":"hidden")}>
-			{display && <span className="mx-2">{title}</span>}
+		<div
+			className={classNames(
+				"flex flex-row w-full items-center justify-between",
+				display ? "" : "hidden"
+			)}
+		>
+			{display && (
+				<div>
+					<span className="mx-2">{title}</span>
+					<span className="text-red-600">{required ? " *" : ""}</span>
+				</div>
+			)}
+
 			{type === "str" && !data.node.template[name].options ? (
 				<div className="w-1/2">
 					{data.node.template[name].list ? (

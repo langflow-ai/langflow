@@ -12,6 +12,7 @@ import { NodeDataType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import NodeModal from "../../modals/NodeModal";
+import { relative } from "path";
 
 export default function GenericNode({
 	data,
@@ -56,11 +57,21 @@ export default function GenericNode({
 				</div>
 				<div className="flex gap-3">
 					<button
+						className="relative"
 						onClick={(event) => {
 							event.preventDefault();
 							openPopUp(<NodeModal data={data} />);
 						}}
 					>
+						<div className=" absolute text-red-600 -top-2 -right-1">
+							{Object.keys(data.node.template).some(
+								(t) =>
+									// data.node.template[t].advanced &&
+									data.node.template[t].required
+							)
+								? " *"
+								: ""}
+						</div>
 						<Cog6ToothIcon
 							className={classNames(
 								Object.keys(data.node.template).length < 1 ? "hidden" : "",
