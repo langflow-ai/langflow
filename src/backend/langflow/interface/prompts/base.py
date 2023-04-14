@@ -7,8 +7,8 @@ from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class
 from langflow.settings import settings
 from langflow.template.nodes import PromptFrontendNode
-from langflow.utils.util import build_template_from_class
 from langflow.utils.logger import logger
+from langflow.utils.util import build_template_from_class
 
 
 class PromptCreator(LangChainTypeCreator):
@@ -48,6 +48,7 @@ class PromptCreator(LangChainTypeCreator):
             logger.error(f"Prompt {name} not found: {exc}")
         except AttributeError as exc:
             logger.error(f"Prompt {name} not loaded: {exc}")
+        return None
 
     def to_list(self) -> List[str]:
         custom_prompts = get_custom_nodes("prompts")

@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Type, Union
-from langflow.utils.logger import logger
 
 from pydantic import BaseModel
 
 from langflow.template.base import FrontendNode, Template, TemplateField
+from langflow.utils.logger import logger
 
 # Assuming necessary imports for Field, Template, and FrontendNode classes
 
@@ -51,7 +51,7 @@ class LangChainTypeCreator(BaseModel, ABC):
         signature = self.get_signature(name)
         if signature is None:
             logger.error(f"Node {name} not loaded")
-            return
+            return None
         if isinstance(signature, FrontendNode):
             return signature
         fields = [

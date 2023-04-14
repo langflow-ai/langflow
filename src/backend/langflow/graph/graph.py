@@ -27,7 +27,7 @@ from langflow.interface.text_splitters.base import textsplitter_creator
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.tools.base import tool_creator
 from langflow.interface.tools.constants import FILE_TOOLS
-from langflow.interface.vectorstore.base import vectorstore_creator
+from langflow.interface.vector_store.base import vectorstore_creator
 from langflow.interface.wrappers.base import wrapper_creator
 from langflow.utils import payload
 

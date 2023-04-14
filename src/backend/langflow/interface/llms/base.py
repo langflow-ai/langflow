@@ -4,8 +4,8 @@ from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import llm_type_to_cls_dict
 from langflow.settings import settings
 from langflow.template.nodes import LLMFrontendNode
-from langflow.utils.util import build_template_from_class
 from langflow.utils.logger import logger
+from langflow.utils.util import build_template_from_class
 
 
 class LLMCreator(LangChainTypeCreator):
@@ -30,6 +30,7 @@ class LLMCreator(LangChainTypeCreator):
 
         except AttributeError as exc:
             logger.error(f"LLM {name} not loaded: {exc}")
+            return None
 
     def to_list(self) -> List[str]:
         return [

@@ -3,8 +3,8 @@ from typing import Dict, List, Optional
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import documentloaders_type_to_cls_dict
 from langflow.settings import settings
-from langflow.utils.util import build_template_from_class
 from langflow.utils.logger import logger
+from langflow.utils.util import build_template_from_class
 
 
 def build_file_path_template(
@@ -133,6 +133,7 @@ class DocumentLoaderCreator(LangChainTypeCreator):
             raise ValueError(f"Documment Loader {name} not found") from exc
         except AttributeError as exc:
             logger.error(f"Documment Loader {name} not loaded: {exc}")
+            return None
 
     def to_list(self) -> List[str]:
         return [

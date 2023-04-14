@@ -3,6 +3,7 @@
 #   - Defer prompts building to the last moment or when they have all the tools
 #   - Build each inner agent first, then build the outer agent
 
+import contextlib
 import types
 import warnings
 from copy import deepcopy
@@ -94,8 +95,6 @@ class Node:
 
                 params[key] = file_path
 
-            # We should check if the type is in something not
-            # the opposite
             elif value.get("type") not in DIRECT_TYPES:
                 # Get the edge that connects to this node
                 edges = [
@@ -129,6 +128,9 @@ class Node:
                 new_value = value.get("value")
                 if new_value is None:
                     warnings.warn(f"Value for {key} in {self.node_type} is None. ")
+                if value.get("type") == "int":
+                    with contextlib.suppress(TypeError, ValueError):
+                        new_value = int(new_value)  # type: ignore
                 params[key] = new_value
 
         # Add _type to params
