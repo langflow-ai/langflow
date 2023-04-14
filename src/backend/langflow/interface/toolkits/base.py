@@ -5,8 +5,8 @@ from langchain.agents import agent_toolkits
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class, import_module
 from langflow.settings import settings
-from langflow.utils.util import build_template_from_class
 from langflow.utils.logger import logger
+from langflow.utils.util import build_template_from_class
 
 
 class ToolkitCreator(LangChainTypeCreator):
