@@ -47,12 +47,14 @@ TOOL_INPUTS = {
         value="",
         multiline=True,
     ),
-    "dict_": TemplateField(
+    "path": TemplateField(
         field_type="file",
         required=True,
         is_list=False,
         show=True,
         value="",
+        suffixes=[".json", ".yaml", ".yml"],
+        fileTypes=["json", "yaml", "yml"],
     ),
 }
 
@@ -114,6 +116,8 @@ class ToolCreator(LangChainTypeCreator):
                 return node
         elif tool_type in FILE_TOOLS:
             params = all_tools[name]["params"]  # type: ignore
+            if tool_type == "JsonSpec":
+                params["path"] = params.pop("dict_")  # type: ignore
             base_classes += [name]
         else:
             params = []

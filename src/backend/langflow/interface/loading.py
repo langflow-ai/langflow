@@ -22,6 +22,7 @@ from langflow.interface.agents.custom import CUSTOM_AGENTS
 from langflow.interface.importing.utils import import_by_type
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.types import get_type_list
+from langflow.interface.utils import load_file_into_dict
 from langflow.utils import util, validate
 
 
@@ -36,29 +37,44 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
     if base_type == "agents":
         # We need to initialize it differently
         return load_agent_executor(class_object, params)
-    elif node_type == "ZeroShotPrompt":
-        if "tools" not in params:
-            params["tools"] = []
-        return ZeroShotAgent.create_prompt(**params)
-
-    elif node_type == "PythonFunction":
-        # If the node_type is "PythonFunction"
-        # we need to get the function from the params
-        # which will be a str containing a python function
-        # and then we need to compile it and return the function
-        # as the instance
-        function_string = params["code"]
-        if isinstance(function_string, str):
-            return validate.eval_function(function_string)
-        raise ValueError("Function should be a string")
+    elif base_type == "prompts":
+        if node_type == "ZeroShotPrompt":
+            if "tools" not in params:
+                params["tools"] = []
+            return ZeroShotAgent.create_prompt(**params)
+    elif base_type == "tools":
+        if node_type == "JsonSpec":
+            params["dict_"] = load_file_into_dict(params.pop("path"))
+            return class_object(**params)
+        elif node_type == "PythonFunction":
+            # If the node_type is "PythonFunction"
+            # we need to get the function from the params
+            # which will be a str containing a python function
+            # and then we need to compile it and return the function
+            # as the instance
+            function_string = params["code"]
+            if isinstance(function_string, str):
+                return validate.eval_function(function_string)
+            raise ValueError("Function should be a string")
     elif base_type == "toolkits":
         loaded_toolkit = class_object(**params)
         # Check if node_type has a loader
         if toolkits_creator.has_create_function(node_type):
             return load_toolkits_executor(node_type, loaded_toolkit, params)
         return loaded_toolkit
-    else:
+    elif base_type == "embeddings":
+        params.pop("model")
         return class_object(**params)
+    elif base_type == "vectorstores":
+        return class_object.from_documents(**params)
+    elif base_type == "documentloaders":
+        return class_object(**params).load()
+    elif base_type == "textsplitters":
+        documents = params.pop("documents")
+        text_splitter = class_object(**params)
+        return text_splitter.split_documents(documents)
+
+    return class_object(**params)
 
 
 def load_flow_from_json(path: str):

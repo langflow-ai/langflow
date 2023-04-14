@@ -53,9 +53,9 @@ def test_conversation_chain(client: TestClient):
         "list": False,
     }
     assert template["input_key"] == {
-        "required": False,
+        "required": True,
         "placeholder": "",
-        "show": False,
+        "show": True,
         "multiline": False,
         "value": "input",
         "password": False,
@@ -64,9 +64,9 @@ def test_conversation_chain(client: TestClient):
         "list": False,
     }
     assert template["output_key"] == {
-        "required": False,
+        "required": True,
         "placeholder": "",
-        "show": False,
+        "show": True,
         "multiline": False,
         "value": "response",
         "password": False,
@@ -125,9 +125,9 @@ def test_llm_chain(client: TestClient):
         "list": False,
     }
     assert template["output_key"] == {
-        "required": False,
+        "required": True,
         "placeholder": "",
-        "show": False,
+        "show": True,
         "multiline": False,
         "value": "text",
         "password": False,
@@ -179,9 +179,9 @@ def test_llm_checker_chain(client: TestClient):
         "list": False,
     }
     assert template["input_key"] == {
-        "required": False,
+        "required": True,
         "placeholder": "",
-        "show": False,
+        "show": True,
         "multiline": False,
         "value": "query",
         "password": False,
@@ -190,9 +190,9 @@ def test_llm_checker_chain(client: TestClient):
         "list": False,
     }
     assert template["output_key"] == {
-        "required": False,
+        "required": True,
         "placeholder": "",
-        "show": False,
+        "show": True,
         "multiline": False,
         "value": "result",
         "password": False,
@@ -251,9 +251,9 @@ def test_llm_math_chain(client: TestClient):
         "list": False,
     }
     assert template["input_key"] == {
-        "required": False,
+        "required": True,
         "placeholder": "",
-        "show": False,
+        "show": True,
         "multiline": False,
         "value": "question",
         "password": False,
@@ -262,9 +262,9 @@ def test_llm_math_chain(client: TestClient):
         "list": False,
     }
     assert template["output_key"] == {
-        "required": False,
+        "required": True,
         "placeholder": "",
-        "show": False,
+        "show": True,
         "multiline": False,
         "value": "answer",
         "password": False,
@@ -338,9 +338,9 @@ def test_series_character_chain(client: TestClient):
         "list": False,
     }
     assert template["input_key"] == {
-        "required": False,
+        "required": True,
         "placeholder": "",
-        "show": False,
+        "show": True,
         "multiline": False,
         "value": "input",
         "password": False,
@@ -349,9 +349,9 @@ def test_series_character_chain(client: TestClient):
         "list": False,
     }
     assert template["output_key"] == {
-        "required": False,
+        "required": True,
         "placeholder": "",
-        "show": False,
+        "show": True,
         "multiline": False,
         "value": "response",
         "password": False,
@@ -462,7 +462,7 @@ def test_mid_journey_prompt_chain(client: TestClient):
     assert template["prompt"] == {
         "required": False,
         "placeholder": "",
-        "show": False,
+        "show": True,
         "multiline": False,
         "value": {
             "input_variables": ["history", "input"],
@@ -489,9 +489,9 @@ def test_mid_journey_prompt_chain(client: TestClient):
         "list": False,
     }
     assert template["output_key"] == {
-        "required": False,
+        "required": True,
         "placeholder": "",
-        "show": False,
+        "show": True,
         "multiline": False,
         "value": "response",
         "password": False,
@@ -500,9 +500,9 @@ def test_mid_journey_prompt_chain(client: TestClient):
         "list": False,
     }
     assert template["input_key"] == {
-        "required": False,
+        "required": True,
         "placeholder": "",
-        "show": False,
+        "show": True,
         "multiline": False,
         "value": "input",
         "password": False,
@@ -590,7 +590,7 @@ def test_time_travel_guide_chain(client: TestClient):
     assert template["prompt"] == {
         "required": False,
         "placeholder": "",
-        "show": False,
+        "show": True,
         "multiline": False,
         "value": {
             "input_variables": ["history", "input"],
@@ -617,9 +617,9 @@ def test_time_travel_guide_chain(client: TestClient):
         "list": False,
     }
     assert template["output_key"] == {
-        "required": False,
+        "required": True,
         "placeholder": "",
-        "show": False,
+        "show": True,
         "multiline": False,
         "value": "response",
         "password": False,
@@ -629,9 +629,9 @@ def test_time_travel_guide_chain(client: TestClient):
     }
 
     assert template["input_key"] == {
-        "required": False,
+        "required": True,
         "placeholder": "",
-        "show": False,
+        "show": True,
         "multiline": False,
         "value": "input",
         "password": False,
