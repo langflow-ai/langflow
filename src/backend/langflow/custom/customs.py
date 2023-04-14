@@ -10,6 +10,7 @@ CUSTOM_NODES = {
         "initialize_agent": nodes.InitializeAgentNode(),
         "VectorStoreAgent": nodes.VectorStoreAgentNode(),
         "VectorStoreRouterAgent": nodes.VectorStoreRouterAgentNode(),
+        "SQLAgent": nodes.SQLAgentNode(),
     },
 }
 

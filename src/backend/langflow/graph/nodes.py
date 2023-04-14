@@ -33,8 +33,8 @@ class AgentNode(Node):
 
             self._build()
 
-        #! Cannot deepcopy VectorStore
-        if self.node_type in ["VectorStoreAgent", "VectorStoreRouterAgent"]:
+        #! Cannot deepcopy VectorStore, VectorStoreRouter, or SQL agents
+        if self.node_type in ["VectorStoreAgent", "VectorStoreRouterAgent", "SQLAgent"]:
             return self._built_object
         return deepcopy(self._built_object)
 

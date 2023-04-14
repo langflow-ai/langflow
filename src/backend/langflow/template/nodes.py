@@ -304,6 +304,37 @@ class VectorStoreRouterAgentNode(FrontendNode):
         return super().to_dict()
 
 
+class SQLAgentNode(FrontendNode):
+    name: str = "SQLAgent"
+    template: Template = Template(
+        type_name="sql_agent",
+        fields=[
+            TemplateField(
+                field_type="str",
+                required=True,
+                placeholder="",
+                is_list=False,
+                show=True,
+                multiline=False,
+                value="",
+                name="database_uri",
+            ),
+            TemplateField(
+                field_type="BaseLanguageModel",
+                required=True,
+                show=True,
+                name="llm",
+                display_name="LLM",
+            ),
+        ],
+    )
+    description: str = """Construct an agent from a Vector Store Router."""
+    base_classes: list[str] = ["AgentExecutor"]
+
+    def to_dict(self):
+        return super().to_dict()
+
+
 class PromptFrontendNode(FrontendNode):
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
