@@ -3,6 +3,8 @@ import inspect
 import re
 from typing import Dict, Optional
 
+from docstring_parser import parse  # type: ignore
+
 from langflow.template.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants
 
@@ -65,7 +67,8 @@ def build_template_from_function(
         if v.__annotations__["return"].__name__ == name:
             _class = v.__annotations__["return"]
 
-            docs = get_class_doc(_class)
+            # Get the docstring
+            docs = parse(_class.__doc__)
 
             variables = {"_type": _type}
             for class_field_items, value in _class.__fields__.items():
@@ -86,8 +89,8 @@ def build_template_from_function(
                         variables[class_field_items][name_] = value_
 
                 variables[class_field_items]["placeholder"] = (
-                    docs["Attributes"][class_field_items]
-                    if class_field_items in docs["Attributes"]
+                    docs.params[class_field_items]
+                    if class_field_items in docs.params
                     else ""
                 )
             # Adding function to base classes to allow
@@ -98,7 +101,7 @@ def build_template_from_function(
 
             return {
                 "template": format_dict(variables, name),
-                "description": docs["Description"],
+                "description": docs.short_description or "",
                 "base_classes": base_classes,
             }
 
@@ -117,7 +120,7 @@ def build_template_from_class(
             _class = v
 
             # Get the docstring
-            docs = get_class_doc(_class)
+            docs = parse(_class.__doc__)
 
             variables = {"_type": _type}
 
@@ -140,8 +143,8 @@ def build_template_from_class(
                             variables[class_field_items][name_] = value_
 
                     variables[class_field_items]["placeholder"] = (
-                        docs["Attributes"][class_field_items]
-                        if class_field_items in docs["Attributes"]
+                        docs.params[class_field_items]
+                        if class_field_items in docs.params
                         else ""
                     )
             base_classes = get_base_classes(_class)
@@ -151,7 +154,7 @@ def build_template_from_class(
                 base_classes.append("function")
             return {
                 "template": format_dict(variables, name),
-                "description": docs["Description"],
+                "description": docs.short_description or "",
                 "base_classes": base_classes,
             }
 
@@ -186,60 +189,6 @@ def get_default_factory(module: str, function: str):
         imported_module = importlib.import_module(module)
         return getattr(imported_module, match[1])()
     return None
-
-
-def get_class_doc(class_name):
-    """
-    Extracts information from the docstring of a given class.
-
-    Args:
-        class_name: the class to extract information from
-
-    Returns:
-        A dictionary containing the extracted information, with keys
-        for 'Description', 'Parameters', 'Attributes', and 'Returns'.
-    """
-    # Template
-    data = {
-        "Description": "",
-        "Parameters": {},
-        "Attributes": {},
-        "Example": [],
-        "Returns": {},
-    }
-
-    # Get the class docstring
-    docstring = class_name.__doc__
-
-    if not docstring:
-        return data
-
-    # Parse the docstring to extract information
-    lines = docstring.split("\n")
-
-    current_section = "Description"
-
-    for line in lines:
-        line = line.strip()
-
-        if not line:
-            continue
-
-        if (
-            line.startswith(tuple(data.keys()))
-            and len(line.split()) == 1
-            and line.endswith(":")
-        ):
-            current_section = line[:-1]
-            continue
-
-        if current_section in ["Description", "Example"]:
-            data[current_section] += line
-        else:
-            param, desc = line.split(":")
-            data[current_section][param.strip()] = desc.strip()
-
-    return data
 
 
 def format_dict(d, name: Optional[str] = None):
