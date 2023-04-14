@@ -3,8 +3,6 @@ This can also be used to initialize an agent with multiple vectorstores and use 
 ![!Description](img/multiple-vectorstore.png#only-dark)
 ![!Description](img/multiple-vectorstore.png#only-light)
 
-
 [Get json file](data/Multiple-vectorstores.json){: multiple-vectorstore}
 
 [Get txt file](data/state_of_the_union.txt){: state-of-the-union}
-

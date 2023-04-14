@@ -52,26 +52,24 @@ plugins:
 
 # Page tree
 nav:
-  - Getting Started: 
-    - index.md
+  - Getting Started:
+      - index.md
   - Components:
-    - Chains: 
-      - chains.md      
-      - LLMChain: llmchain.md
-    - Agents: 
-      - agents.md
-      - Vector Store Agent: vectorstore-agent.md
-      - Multiple Vectorstores: multiple-vectorstores.md
-    - Prompts: prompts.md
-    - LLMs: llms.md
-    - Memories: memories.md
-    - Tools: tools.md
-    - Toolkits: toolkits.md
-    - Wrappers: wrappers.md
+      - Chains:
+          - chains.md
+          - LLMChain: llmchain.md
+      - Agents:
+          - agents.md
+          - Vector Store Agent: vectorstore-agent.md
+          - Multiple Vectorstores: multiple-vectorstores.md
+      - Prompts: prompts.md
+      - LLMs: llms.md
+      - Memories: memories.md
+      - Tools: tools.md
+      - Toolkits: toolkits.md
+      - Wrappers: wrappers.md
   - Release Notes: releases.md
   - Contributing: help-langflow.md
- 
-
 
 # Customization
 extra:
