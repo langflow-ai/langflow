@@ -3,8 +3,8 @@ from typing import Dict, List, Optional
 from langchain import requests
 
 from langflow.interface.base import LangChainTypeCreator
-from langflow.utils.util import build_template_from_class
 from langflow.utils.logger import logger
+from langflow.utils.util import build_template_from_class
 
 
 class WrapperCreator(LangChainTypeCreator):
