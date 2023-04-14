@@ -33,8 +33,8 @@ theme:
     - search.highlight
     - content.tabs.link
     - announce.dismiss
-    - navigation.tabs
-    # - navigation.sections
+    # - navigation.tabs
+    - navigation.sections
     - navigation.top
     - navigation.tracking
     - releases
@@ -56,10 +56,8 @@ nav:
       - index.md
   - Components:
       - Chains:
-          - chains.md
           - LLMChain: llmchain.md
       - Agents:
-          - agents.md
           - Vector Store Agent: vectorstore-agent.md
           - Multiple Vectorstores: multiple-vectorstores.md
       - Prompts: prompts.md

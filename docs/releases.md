@@ -1,3 +1,24 @@
+## v0.0.56
+
+### What's Changed
+* Add contrib link to readme by @jacobhrussell in https://github.com/logspace-ai/langflow/pull/136
+* Llama Support by @yoazmenda in https://github.com/logspace-ai/langflow/pull/134
+* feat: added LLMFrontendNode by @ogabrielluiz in https://github.com/logspace-ai/langflow/pull/140
+* Firefox password by @anovazzi1 in https://github.com/logspace-ai/langflow/pull/147
+* removable edges implemented by @anovazzi1 in https://github.com/logspace-ai/langflow/pull/149
+* Vector stores, embeddings, document loaders, and text splitters by @ibiscp in https://github.com/logspace-ai/langflow/pull/145
+* Adding new fields to Chain nodes by @ogabrielluiz in https://github.com/logspace-ai/langflow/pull/148
+* Add new docloaders and change the way files are loaded by @ibiscp in https://github.com/logspace-ai/langflow/pull/154
+* Change docstring parser by @ibiscp in https://github.com/logspace-ai/langflow/pull/158
+* Add SQL Agent by @ibiscp in https://github.com/logspace-ai/langflow/pull/159
+* VectorStores, DocumentLoaders, TextSplitters, Embeddings and other additions by @ogabrielluiz in https://github.com/logspace-ai/langflow/pull/157
+
+#### New Contributors
+* @jacobhrussell made their first contribution in https://github.com/logspace-ai/langflow/pull/136
+* @yoazmenda made their first contribution in https://github.com/logspace-ai/langflow/pull/134
+
+**Full Changelog**: https://github.com/logspace-ai/langflow/compare/v0.0.55...v0.0.56
+
 ## v0.0.55
 
 ### What's Changed
@@ -13,7 +34,7 @@
 * Fix tool bug by @ibiscp in https://github.com/logspace-ai/langflow/pull/137
 * Fix bugs, add tests, and refactor code by @ibiscp in https://github.com/logspace-ai/langflow/pull/138
 
-### New Contributors
+#### New Contributors
 * @cayal made their first contribution in https://github.com/logspace-ai/langflow/pull/126
 * @jordi-adame made their first contribution in https://github.com/logspace-ai/langflow/pull/133
 
@@ -103,7 +124,7 @@
 * Add gpt4 by @ibiscp in https://github.com/logspace-ai/langflow/pull/55
 * Release by @ogabrielluiz in https://github.com/logspace-ai/langflow/pull/49
 
-### New Contributors
+#### New Contributors
 * @ScripterSugar made their first contribution in https://github.com/logspace-ai/langflow/pull/51
 
 **Full Changelog**: https://github.com/logspace-ai/langflow/compare/v0.0.40...v0.0.44
@@ -119,7 +140,7 @@
 * version with dinamic port by @ogabrielluiz in https://github.com/logspace-ai/langflow/pull/37
 * Release 0.0.40 by @ogabrielluiz in https://github.com/logspace-ai/langflow/pull/43
 
-### New Contributors
+#### New Contributors
 * @ibiscp made their first contribution in https://github.com/logspace-ai/langflow/pull/31
 
 **Full Changelog**: https://github.com/logspace-ai/langflow/compare/v0.0.33...v0.0.40
@@ -154,7 +175,7 @@
 * Release 0.0.30 by @ogabrielluiz in https://github.com/logspace-ai/langflow/pull/15
 * Release 0.0.31 by @ogabrielluiz in https://github.com/logspace-ai/langflow/pull/16
 
-### New Contributors
+#### New Contributors
 * @anovazzi1 made their first contribution in https://github.com/logspace-ai/langflow/pull/1
 * @CarlosRodrigoCoelho made their first contribution in https://github.com/logspace-ai/langflow/pull/7
 * @ogabrielluiz made their first contribution in https://github.com/logspace-ai/langflow/pull/9
