@@ -8,7 +8,6 @@ from langflow.utils.util import (
     build_template_from_function,
     format_dict,
     get_base_classes,
-    get_class_doc,
     get_default_factory,
 )
 from pydantic import BaseModel
@@ -280,12 +279,3 @@ def test_get_default_factory():
     default_value = get_default_factory(module_name, function_repr)
 
     assert default_value == "default_value"
-
-
-# Test get_class_doc
-def test_get_class_doc():
-    class_doc_parent = get_class_doc(Parent)
-    class_doc_child = get_class_doc(Child)
-
-    assert class_doc_parent["Description"] == "Parent Class"
-    assert class_doc_child["Description"] == "Child Class"
