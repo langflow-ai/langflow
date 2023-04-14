@@ -62,7 +62,12 @@ class Graph:
             if isinstance(node, ToolkitNode):
                 node.params["llm"] = llm_node
         # remove invalid nodes
-        self.nodes = [node for node in self.nodes if self._validate_node(node)]
+        self.nodes = [
+            node
+            for node in self.nodes
+            if self._validate_node(node)
+            or (len(self.nodes) == 1 and len(self.edges) == 0)
+        ]
 
     def _validate_node(self, node: Node) -> bool:
         # All nodes that do not have edges are invalid
