@@ -3,7 +3,7 @@ FROM python:3.10-slim
 WORKDIR /app
 
 # Install Poetry
-RUN apt-get update && apt-get install gcc g++ curl build-essential -y
+RUN apt-get update && apt-get install gcc g++ curl build-essential postgresql-server-dev-all -y
 RUN curl -sSL https://install.python-poetry.org | python3 -
 # # Add Poetry to PATH
 ENV PATH="${PATH}:/root/.local/bin"
