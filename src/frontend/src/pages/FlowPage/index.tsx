@@ -6,9 +6,10 @@ import ReactFlow, {
 	useEdgesState,
 	useNodesState,
 	useReactFlow,
-	ControlButton,
+	updateEdge,
 	EdgeChange,
 	Connection,
+	Edge,
 } from "reactflow";
 import { locationContext } from "../../contexts/locationContext";
 import ExtraSidebar from "./components/extraSidebarComponent";
@@ -20,6 +21,7 @@ import { typesContext } from "../../contexts/typesContext";
 import ConnectionLineComponent from "./components/ConnectionLineComponent";
 import { FlowType, NodeType } from "../../types/flow";
 import { APIClassType } from "../../types/api";
+import { isValidConnection } from "../../utils";
 
 const nodeTypes = {
 	genericNode: GenericNode,
@@ -28,7 +30,7 @@ const nodeTypes = {
 var _ = require("lodash");
 
 export default function FlowPage({ flow }:{flow:FlowType}) {
-	let { updateFlow, incrementNodeId, downloadFlow, uploadFlow } =
+	let { updateFlow, incrementNodeId} =
 		useContext(TabsContext);
 	const { types, reactFlowInstance, setReactFlowInstance } =
 		useContext(typesContext);
@@ -43,6 +45,7 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 		flow.data?.edges ?? []
 	);
 	const { setViewport } = useReactFlow();
+	const edgeUpdateSuccessful = useRef(true)
 
 	useEffect(() => {
 		if (reactFlowInstance && flow) {
@@ -155,6 +158,26 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 		setEdges(edges.filter((ns) => !nodes.some((n) => ns.source === n.id || ns.target === n.id)));
 	}
 
+	const onEdgeUpdateStart = useCallback(() => {
+		edgeUpdateSuccessful.current = false;
+	  }, []);	
+
+	
+	  const onEdgeUpdate = useCallback((oldEdge:Edge, newConnection:Connection) => {
+		if(isValidConnection(newConnection,reactFlowInstance)){
+			edgeUpdateSuccessful.current = true;
+			setEdges((els) => updateEdge(oldEdge, newConnection, els));
+		}
+	}, []);
+
+	const onEdgeUpdateEnd = useCallback((_, edge) => {
+		if (!edgeUpdateSuccessful.current) {
+		  setEdges((eds) => eds.filter((e) => e.id !== edge.id));
+		}
+	
+		edgeUpdateSuccessful.current = true;
+	  }, []);
+	  
 	return (
 		<div className="w-full h-full" ref={reactFlowWrapper}>
 			{Object.keys(types).length > 0 ? (
@@ -171,6 +194,9 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 						onLoad={setReactFlowInstance}
 						onInit={setReactFlowInstance}
 						nodeTypes={nodeTypes}
+						onEdgeUpdate={onEdgeUpdate}
+						onEdgeUpdateStart={onEdgeUpdateStart}
+						onEdgeUpdateEnd={onEdgeUpdateEnd}
 						connectionLineComponent={ConnectionLineComponent}
 						onDragOver={onDragOver}
 						onDrop={onDrop}

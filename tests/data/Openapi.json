@@ -206,7 +206,7 @@
                     "type": "JsonSpec",
                     "node": {
                         "template": {
-                            "dict_": {
+                            "path": {
                                 "required": true,
                                 "placeholder": "",
                                 "show": true,
@@ -218,7 +218,7 @@
                                     ".yml"
                                 ],
                                 "password": false,
-                                "name": "dict_",
+                                "name": "path",
                                 "type": "file",
                                 "list": false,
                                 "fileTypes": [

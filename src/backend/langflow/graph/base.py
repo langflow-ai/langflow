@@ -3,13 +3,14 @@
 #   - Defer prompts building to the last moment or when they have all the tools
 #   - Build each inner agent first, then build the outer agent
 
+import contextlib
 import types
 import warnings
 from copy import deepcopy
 from typing import Any, Dict, List, Optional
 
+from langflow.cache import utils as cache_utils
 from langflow.graph.constants import DIRECT_TYPES
-from langflow.graph.utils import load_file
 from langflow.interface import loading
 from langflow.interface.listing import ALL_TYPES_DICT
 from langflow.utils.logger import logger
@@ -88,11 +89,12 @@ class Node:
                 file_name = value.get("value")
                 content = value.get("content")
                 type_to_load = value.get("suffixes")
-                loaded_dict = load_file(file_name, content, type_to_load)
-                params[key] = loaded_dict
+                file_path = cache_utils.save_binary_file(
+                    content=content, file_name=file_name, accepted_types=type_to_load
+                )
 
-            # We should check if the type is in something not
-            # the opposite
+                params[key] = file_path
+
             elif value.get("type") not in DIRECT_TYPES:
                 # Get the edge that connects to this node
                 edges = [
@@ -126,6 +128,9 @@ class Node:
                 new_value = value.get("value")
                 if new_value is None:
                     warnings.warn(f"Value for {key} in {self.node_type} is None. ")
+                if value.get("type") == "int":
+                    with contextlib.suppress(TypeError, ValueError):
+                        new_value = int(new_value)  # type: ignore
                 params[key] = new_value
 
         # Add _type to params
@@ -160,6 +165,7 @@ class Node:
                         result = result.run  # type: ignore
                     elif hasattr(result, "get_function"):
                         result = result.get_function()  # type: ignore
+
                 self.params[key] = result
             elif isinstance(value, list) and all(
                 isinstance(node, Node) for node in value
@@ -189,6 +195,15 @@ class Node:
     def build(self, force: bool = False) -> Any:
         if not self._built or force:
             self._build()
+
+        #! Deepcopy is breaking for vectorstores
+        if self.base_type in [
+            "vectorstores",
+            "VectorStoreRouterAgent",
+            "VectorStoreAgent",
+            "VectorStoreInfo",
+        ] or self.node_type in ["VectorStoreInfo", "VectorStoreRouterToolkit"]:
+            return self._built_object
         return deepcopy(self._built_object)
 
     def add_edge(self, edge: "Edge") -> None:

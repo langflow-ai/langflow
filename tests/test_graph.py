@@ -1,7 +1,9 @@
 import json
+from typing import Type, Union
 
 import pytest
 from langchain.agents import AgentExecutor
+from langchain.llms.fake import FakeListLLM
 from langflow.graph import Edge, Graph, Node
 from langflow.graph.nodes import (
     AgentNode,
@@ -13,6 +15,7 @@ from langflow.graph.nodes import (
     ToolNode,
     WrapperNode,
 )
+from langflow.interface.run import get_result_and_thought_using_graph
 from langflow.utils.payload import build_json, get_root_node
 
 # Test cases for the graph module
@@ -53,7 +56,7 @@ def openapi_graph():
     return get_graph("openapi")
 
 
-def get_node_by_type(graph, node_type):
+def get_node_by_type(graph, node_type: Type[Node]) -> Union[Node, None]:
     """Get a node by type"""
     return next((node for node in graph.nodes if isinstance(node, node_type)), None)
 
@@ -418,3 +421,28 @@ def test_wrapper_node_build(openapi_graph):
     built_object = wrapper_node.build()
     assert built_object is not None
     # Add any further assertions specific to the WrapperNode's build() method
+
+
+def test_get_result_and_thought(basic_graph):
+    """Test the get_result_and_thought method"""
+    responses = [
+        "Final Answer: I am a response",
+    ]
+    message = "Hello"
+    # Find the node that is an LLMNode and change the
+    # _built_object to a FakeListLLM
+    llm_node = get_node_by_type(basic_graph, LLMNode)
+    assert llm_node is not None
+    llm_node._built_object = FakeListLLM(responses=responses)
+    llm_node._built = True
+    langchain_object = basic_graph.build()
+    # assert all nodes are built
+    assert all(node._built for node in basic_graph.nodes)
+    # now build again and check if FakeListLLM was used
+
+    # Get the result and thought
+    result, thought = get_result_and_thought_using_graph(langchain_object, message)
+    # The result should be a str
+    assert isinstance(result, str)
+    # The thought should be a Thought
+    assert isinstance(thought, str)
