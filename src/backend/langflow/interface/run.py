@@ -191,9 +191,12 @@ def get_result_and_thought_using_graph(langchain_object, message: str):
         if hasattr(langchain_object, "memory") and langchain_object.memory is not None:
             memory_key = langchain_object.memory.memory_key
 
-        for key in langchain_object.input_keys:
-            if key not in [memory_key, "chat_history"]:
-                chat_input = {key: message}
+        if hasattr(langchain_object, "input_keys"):
+            for key in langchain_object.input_keys:
+                if key not in [memory_key, "chat_history"]:
+                    chat_input = {key: message}
+        else:
+            chat_input = message  # type: ignore
 
         if hasattr(langchain_object, "return_intermediate_steps"):
             # https://github.com/hwchase17/langchain/issues/2068
