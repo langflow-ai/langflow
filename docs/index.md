@@ -13,7 +13,7 @@
 <img alt="Github License" src="https://img.shields.io/github/license/logspace-ai/langflow" />
 </p>
 
-<img width="100%" src="https://github.com/logspace-ai/langflow/blob/main/img/langflow-demo.gif?raw=true">
+<img width="100%" src="img/langflow-demo2.gif">
 
 LangFlow is a GUI for [LangChain](https://github.com/hwchase17/langchain), designed with [react-flow](https://github.com/wbkd/react-flow) to provide an effortless way to experiment and prototype flows with drag-and-drop components and a chat box.
 
