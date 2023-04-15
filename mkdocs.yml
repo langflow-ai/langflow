@@ -55,13 +55,13 @@ nav:
   - Getting Started:
       - index.md
   - Components:
-      - Chains:
+      - Chains: 
           - LLMChain: llmchain.md
       - Agents:
           - Vector Store Agent: vectorstore-agent.md
           - Multiple Vectorstores: multiple-vectorstores.md
-      - Prompts: prompts.md
-      - LLMs: llms.md
+      - Prompts: 
+        - Prompt Template: prompt-template.md
       - Memories: memories.md
       - Tools: tools.md
       - Toolkits: toolkits.md
