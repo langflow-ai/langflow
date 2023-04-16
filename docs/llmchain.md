@@ -1,16 +1,22 @@
 The `LLMChain` is a simple chain that takes in a prompt template, formats it with the user input and returns the response from an LLM.
 
-To use the `LLMChain`, first create a prompt template.
+![!Description](img/llm-chain.png#only-dark)
+![!Description](img/llm-chain.png#only-light)
+
+[Get json file](data/llm-chain.json){: llm-chain}
 
 Template:
     
 ``` txt
-"Write a catchphrase for the following company: {company_name}"
+I want you to act as a naming consultant for new companies.
+
+Here are some examples of good company names:
+
+- search engine, Google
+- social media, Facebook
+- video sharing, YouTube
+
+The name should be short, catchy and easy to remember.
+
+What is a good name for a company that makes {product}?
 ```
-
-The we can create a very simple chain that will take user input, format the prompt with it, and then send it to the LLM.
-
-![!Description](img/llm.png#only-dark)
-![!Description](img/llm.png#only-light)
-
-[Get json file](data/Llm-chain.json){: llm-chain}
