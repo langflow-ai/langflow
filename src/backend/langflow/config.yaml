@@ -40,6 +40,10 @@ tools:
   - Tool
   - PythonFunction
   - JsonSpec
+  - News API
+  - TMDB API
+  - Podcast API
+  - QuerySQLDataBaseTool
 
 wrappers:
   - RequestsWrapper
