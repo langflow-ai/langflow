@@ -15,7 +15,7 @@
 
 <img width="100%" src="img/langflow-demo2.gif">
 
-LangFlow is a GUI for [LangChain](https://github.com/hwchase17/langchain), designed with [react-flow](https://github.com/wbkd/react-flow) to provide an effortless way to experiment and prototype flows with drag-and-drop components and a chat box.
+LangFlow is a GUI for [LangChain](https://github.com/hwchase17/langchain){.internal-link target=_blank}, designed with [react-flow](https://github.com/wbkd/react-flow){.internal-link target=_blank} to provide an effortless way to experiment and prototype flows with drag-and-drop components and a chat box.
 
 ## 📦 Installation
 
@@ -32,7 +32,7 @@ langflow
 ---
 ## 🎨 Creating Flows
 
-Creating flows with LangFlow is easy. Simply drag sidebar components onto the canvas and connect them together to create your pipeline. LangFlow provides a range of [LangChain components](https://langchain.readthedocs.io/en/latest/reference.html) to choose from, including LLMs, prompt serializers, agents, and chains.
+Creating flows with LangFlow is easy. Simply drag sidebar components onto the canvas and connect them together to create your pipeline. LangFlow provides a range of [LangChain components](https://langchain.readthedocs.io/en/latest/reference.html){.internal-link target=_blank} to choose from, including LLMs, prompt serializers, agents, and chains.
 
 Explore by editing prompt parameters, link chains and agents, track an agent's thought process, and export your flow.
 
@@ -54,4 +54,4 @@ flow("Hey, have you heard of LangFlow?")
 We welcome contributions from developers of all levels to our open-source project on GitHub. If you'd like to contribute, please check our contributing guidelines and help make LangFlow more accessible.
 
 
-[![Star History Chart](https://api.star-history.com/svg?repos=logspace-ai/langflow&type=Timeline)](https://star-history.com/#logspace-ai/langflow&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=logspace-ai/langflow&type=Timeline)](https://star-history.com/#logspace-ai/langflow&Date){.internal-link target=_blank} 
