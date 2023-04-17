@@ -57,6 +57,7 @@ nav:
   - Components:
       - Chains: 
         - LLMChain: llmchain.md
+        - Series Character Chain: series-character-chain.md
       - Agents:
         - Vector Store Agent: vectorstore-agent.md
         - Multiple Vectorstores: multiple-vectorstores.md
