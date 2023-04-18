@@ -14,20 +14,23 @@ ZONE="us-central1-a"
 REGION="us-central1"
 VPC_NAME="default"
 SUBNET_NAME="default"
+SUBNET_RANGE="10.128.0.0/20"
 NAT_GATEWAY_NAME="nat-gateway"
 CLOUD_ROUTER_NAME="nat-client"
 
 # Set the GCP project's compute region
 gcloud config set compute/region $REGION
 
-# Verify the VPC and subnet exist
+# Check if the VPC exists, and create it if not
 vpc_exists=$(gcloud compute networks list --filter="name=$VPC_NAME" --format="value(name)")
-subnet_exists=$(gcloud compute networks subnets list --filter="name=$SUBNET_NAME AND region=$REGION" --format="value(name)")
+if [[ -z "$vpc_exists" ]]; then
+  gcloud compute networks create $VPC_NAME --subnet-mode=custom
+fi
 
-# Exit with an error message if the VPC or subnet does not exist
-if [[ -z "$vpc_exists" || -z "$subnet_exists" ]]; then
-  echo "Error: VPC '$VPC_NAME' and/or subnet '$SUBNET_NAME' do not exist in region '$REGION'."
-  exit 1
+# Check if the subnet exists, and create it if not
+subnet_exists=$(gcloud compute networks subnets list --filter="name=$SUBNET_NAME AND region=$REGION" --format="value(name)")
+if [[ -z "$subnet_exists" ]]; then
+  gcloud compute networks subnets create $SUBNET_NAME --network=$VPC_NAME --region=$REGION --range=$SUBNET_RANGE
 fi
 
 # Create a firewall rule to allow TCP port 8080 for all instances in the VPC
