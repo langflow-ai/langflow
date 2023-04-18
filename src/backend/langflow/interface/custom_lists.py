@@ -9,6 +9,7 @@ from langchain import (
     memory,
     requests,
     text_splitter,
+    utilities,
     vectorstores,
 )
 from langchain.agents import agent_toolkits
@@ -75,4 +76,9 @@ documentloaders_type_to_cls_dict: dict[str, Any] = {
 ## Text Splitters
 textsplitter_type_to_cls_dict: dict[str, Any] = dict(
     inspect.getmembers(text_splitter, inspect.isclass)
+)
+
+## Utilities
+utility_type_to_cls_dict: dict[str, Any] = dict(
+    inspect.getmembers(utilities, inspect.isclass)
 )
