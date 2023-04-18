@@ -1,9 +1,6 @@
-The `LLMChain` is a simple chain that takes in a prompt template, formats it with the user input and returns the response from an LLM.
+## Nodes used:
 
-![!Description](img/llm-chain.png#only-dark)
-![!Description](img/llm-chain.png#only-light)
-
-[Get json file](data/llm-chain.json){: llm-chain}
+The `PromptTemplate` is a simple template that takes in a product name and returns a prompt. The prompt is used to generate the response from the LLM.
 
 Template:
     
@@ -20,3 +17,14 @@ The name should be short, catchy and easy to remember.
 
 What is a good name for a company that makes {product}?
 ```
+
+We used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/account/api-keys){.internal-link target=_blank} requires you to create an account to get your API key.
+
+The `LLMChain` is a simple chain that takes in a prompt template, formats it with the user input and returns the response from an LLM.
+
+### ⛓️LangFlow example:
+
+![!Description](img/llm-chain.png#only-dark)
+![!Description](img/llm-chain.png#only-light)
+
+[Get json file](data/llm-chain.json){: llm-chain}
