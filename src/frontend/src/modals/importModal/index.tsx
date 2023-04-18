@@ -26,7 +26,7 @@ export default function ImportModal() {
 	const [showExamples, setShowExamples] = useState(false);
 	const [loadingExamples, setLoadingExamples] = useState(false);
 	const [examples, setExamples] = useState<FlowType[]>([]);
-	const { uploadFlow } = useContext(TabsContext);
+	const { uploadFlow, addFlow } = useContext(TabsContext);
 	function setModalOpen(x: boolean) {
 		setOpen(x);
 		if (x === false) {
@@ -181,12 +181,13 @@ export default function ImportModal() {
 														<ButtonBox
 															size="small"
 															bgColor="bg-slate-300"
-															description="Prebuilt Examples"
+															description={example.description??"Prebuilt Examples"}
 															icon={
 																<DocumentDuplicateIcon className="h-6 w-6 flex-shrink-0" />
 															}
 															onClick={() => {
-																console.log("click");
+																addFlow(example)
+																setModalOpen(false)
 															}}
 															textColor="text-slate-400"
 															title={example.name}
