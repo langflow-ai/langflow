@@ -18,7 +18,8 @@ export default function TabComponent({ selected, flow, onClick }:{flow:FlowType,
 						className="dark:text-white flex justify-between select-none truncate w-44 items-center px-4 my-1.5 border-x border-x-gray-300 dark:border-x-gray-600 -ml-px"
 						onClick={onClick}
 					>
-						{flow.name}
+						<span className="w-32 truncate text-left">{flow.name}</span>
+						
 						<button
 							onClick={(e) => {
 								e.stopPropagation();
