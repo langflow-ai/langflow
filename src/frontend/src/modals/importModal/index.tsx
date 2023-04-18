@@ -131,7 +131,7 @@ export default function ImportModal() {
 										className={classNames(
 											"h-full w-full bg-gray-200 dark:bg-gray-900 gap-4",
 											showExamples && !loadingExamples
-												? "flex flex-row start justify-start items-start p-9"
+												? "flex flex-row start justify-start items-start p-9 flex-wrap overflow-auto"
 												: "flex flex-row justify-center items-center p-4"
 										)}
 									>
