@@ -5,6 +5,7 @@ import {
 	DocumentDuplicateIcon,
 	ComputerDesktopIcon,
 	ArrowUpTrayIcon,
+	ArrowLeftIcon,
 } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
@@ -15,6 +16,7 @@ import { error } from "console";
 import { alertContext } from "../../contexts/alertContext";
 import LoadingComponent from "../../components/loadingComponent";
 import { FlowType } from "../../types/flow";
+import { classNames } from "../../utils";
 
 export default function ImportModal() {
 	const [open, setOpen] = useState(true);
@@ -48,6 +50,7 @@ export default function ImportModal() {
 				})
 			);
 	}
+
 
 	return (
 		<Transition.Root show={open} appear={true} as={Fragment}>
@@ -93,6 +96,20 @@ export default function ImportModal() {
 										<XMarkIcon className="h-6 w-6" aria-hidden="true" />
 									</button>
 								</div>
+								{showExamples && (
+									<div className="z-50 absolute top-2 left-0 hidden pt-4 pl-4 sm:block">
+										<button
+											type="button"
+											className="rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+											onClick={() => {
+												setShowExamples(false);
+											}}
+										>
+											<span className="sr-only">Close</span>
+											<ArrowLeftIcon className="h-6 w-6" aria-hidden="true" />
+										</button>
+									</div>
+								)}
 								<div className="h-full w-full flex flex-col justify-center items-center">
 									<div className="flex w-full pb-4 z-10 justify-center shadow-sm">
 										<div className="mx-auto mt-4 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-gray-900 sm:mx-0 sm:h-10 sm:w-10">
@@ -110,16 +127,24 @@ export default function ImportModal() {
 											</Dialog.Title>
 										</div>
 									</div>
-									<div className="h-full w-full bg-gray-200 dark:bg-gray-900 p-4 gap-4 flex flex-row justify-center items-center">
+									<div
+										className={classNames(
+											"h-full w-full bg-gray-200 dark:bg-gray-900 gap-4",
+											showExamples && !loadingExamples
+												? "flex flex-row start justify-start items-start p-9"
+												: "flex flex-row justify-center items-center p-4"
+										)}
+									>
 										{!showExamples && (
 											<div className="flex h-full w-full justify-evenly items-center">
 												<ButtonBox
+													size="big"
 													bgColor="bg-emerald-500"
 													description="Prebuilt Examples"
 													icon={
 														<DocumentDuplicateIcon className="h-10 w-10 flex-shrink-0" />
 													}
-													onClick={() =>{
+													onClick={() => {
 														setShowExamples(true);
 														handleExamples();
 													}}
@@ -127,6 +152,7 @@ export default function ImportModal() {
 													title="Examples"
 												></ButtonBox>
 												<ButtonBox
+													size="big"
 													bgColor="bg-blue-500"
 													description="Import from Local"
 													icon={
@@ -146,13 +172,28 @@ export default function ImportModal() {
 												<LoadingComponent remSize={30} />
 											</div>
 										)}
-										{showExamples && !loadingExamples && (
-											<div>
-												{examples.map((example, index) => {
-													return <div id="index">{example.name}</div>;
-												})}
-											</div>
-										)}
+										{showExamples &&
+											!loadingExamples &&
+											examples.map((example, index) => {
+												return (
+													<div id="index">
+														{" "}
+														<ButtonBox
+															size="small"
+															bgColor="bg-slate-300"
+															description="Prebuilt Examples"
+															icon={
+																<DocumentDuplicateIcon className="h-6 w-6 flex-shrink-0" />
+															}
+															onClick={() => {
+																console.log("click");
+															}}
+															textColor="text-slate-400"
+															title={example.name}
+														></ButtonBox>
+													</div>
+												);
+											})}
 									</div>
 								</div>
 							</Dialog.Panel>
