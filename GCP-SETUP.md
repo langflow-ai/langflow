@@ -100,6 +100,7 @@ gcloud compute instances create $VM_NAME \
   --image-family $IMAGE_FAMILY \
   --image-project $IMAGE_PROJECT \
   --boot-disk-size $BOOT_DISK_SIZE \
+  --machine-type=n1-standard-4 \
   --metadata-from-file startup-script=$tempfile \
   --zone $ZONE \
   --network $VPC_NAME \
