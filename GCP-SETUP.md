@@ -1,8 +1,11 @@
 # Running Langflow from a new GCP project
+This guide will help you set up a Langflow Dev VM in a Google Cloud Platform project using Google Cloud Shell.
+
+
 ## Run the following in your GCP cloudshell:
 
 ```bash
-
+# Set the VM, image, and networking configuration
 VM_NAME="langflow-dev"
 IMAGE_FAMILY="debian-11"
 IMAGE_PROJECT="debian-cloud"
@@ -14,17 +17,20 @@ SUBNET_NAME="default"
 NAT_GATEWAY_NAME="nat-gateway"
 CLOUD_ROUTER_NAME="nat-client"
 
+# Set the GCP project's compute region
 gcloud config set compute/region $REGION
 
 # Verify the VPC and subnet exist
 vpc_exists=$(gcloud compute networks list --filter="name=$VPC_NAME" --format="value(name)")
 subnet_exists=$(gcloud compute networks subnets list --filter="name=$SUBNET_NAME AND region=$REGION" --format="value(name)")
 
+# Exit with an error message if the VPC or subnet does not exist
 if [[ -z "$vpc_exists" || -z "$subnet_exists" ]]; then
   echo "Error: VPC '$VPC_NAME' and/or subnet '$SUBNET_NAME' do not exist in region '$REGION'."
   exit 1
 fi
 
+# Create a firewall rule to allow TCP port 8080 for all instances in the VPC
 gcloud compute firewall-rules create allow-tcp-8080 \
   --network $VPC_NAME \
   --allow tcp:8080 \
@@ -48,11 +54,16 @@ gcloud compute routers nats create $NAT_GATEWAY_NAME \
 STARTUP_SCRIPT=$(cat <<'EOF'
 #!/bin/bash
 
+# Update and upgrade the system
 apt update
 apt upgrade
+
+# Install Python 3 pip, Langflow, and Nginx
 apt install python3-pip
 pip install langflow
 apt-get install nginx
+
+# Configure Nginx for Langflow
 touch /etc/nginx/sites-available/langflow-app
 echo "server {
     listen 0.0.0.0:7860;
@@ -75,6 +86,7 @@ EOF
 tempfile=$(mktemp)
 echo "$STARTUP_SCRIPT" > $tempfile
 
+# Create the VM instance with the specified configuration and startup script
 gcloud compute instances create $VM_NAME \
   --image-family $IMAGE_FAMILY \
   --image-project $IMAGE_PROJECT \
@@ -88,6 +100,9 @@ gcloud compute instances create $VM_NAME \
 rm $tempfile
 
 ```
+> This script sets up a Debian-based VM with the Langflow package, Nginx, and the necessary configurations to run the Langflow Dev environment. The VM will be accessible on TCP port 8080 from any IP address.
+
+<br>
 
 ## Connecting to your new Langflow VM
 1. Navigate to the [VM instances](https://console.cloud.google.com/compute/instances) page
