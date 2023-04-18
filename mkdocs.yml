@@ -55,6 +55,7 @@ nav:
   - Getting Started:
       - index.md
   - Components:
+      - LLMs inputs: llms.md
       - Chains: 
         - LLMChain: llmchain.md
         - Series Character Chain: series-character-chain.md

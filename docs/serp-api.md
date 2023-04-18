@@ -4,6 +4,8 @@
 
 We used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/account/api-keys){.internal-link target=_blank} requires you to create an account to get your API key.
 
+Check the short tutorial of [OpenAI inputs](llms.md){.internal-link target=_blank} available.
+
 The `LLMChain` is a simple chain that takes in a prompt template, formats it with the user input and returns the response from an LLM.
 
 `Search` a search engine. Useful to awnser questions about current events. To use the Serp API, you first need to sign up [Serp API](https://serpapi.com/){.internal-link target=_blank} for an API key on the provider's website.

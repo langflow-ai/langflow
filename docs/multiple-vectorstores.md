@@ -49,6 +49,8 @@ The `VectorStoreRouterToolkit` is a toolkit that allows you to create a `VectorS
 
 We used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/account/api-keys){.internal-link target=_blank} requires you to create an account to get your API key.
 
+Check the short tutorial of [OpenAI inputs](llms.md){.internal-link target=_blank} available.
+
 `VectorStoreRouterAgent` construct an agent that routes between vectorstores.
 
 ### ⛓️LangFlow example:
