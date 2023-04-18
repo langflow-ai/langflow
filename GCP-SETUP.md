@@ -25,6 +25,13 @@ if [[ -z "$vpc_exists" || -z "$subnet_exists" ]]; then
   exit 1
 fi
 
+gcloud compute firewall-rules create allow-tcp-8080 \
+  --network $VPC_NAME \
+  --allow tcp:8080 \
+  --source-ranges 0.0.0.0/0 \
+  --direction INGRESS
+
+
 # Create the Cloud Router and NAT Gateway
 gcloud compute routers create $CLOUD_ROUTER_NAME \
   --network $VPC_NAME \
