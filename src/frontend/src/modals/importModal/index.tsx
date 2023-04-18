@@ -3,19 +3,28 @@ import {
 	XMarkIcon,
 	ArrowDownTrayIcon,
 	DocumentDuplicateIcon,
-    ComputerDesktopIcon,
+	ComputerDesktopIcon,
 	ArrowUpTrayIcon,
 } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import ButtonBox from "./buttonBox";
+import { getExamples } from "../../controllers/API";
+import { error } from "console";
+import { alertContext } from "../../contexts/alertContext";
+import LoadingComponent from "../../components/loadingComponent";
+import { FlowType } from "../../types/flow";
 
 export default function ImportModal() {
 	const [open, setOpen] = useState(true);
+	const { setErrorData } = useContext(alertContext);
 	const { closePopUp } = useContext(PopUpContext);
 	const ref = useRef();
-    const {uploadFlow} = useContext(TabsContext)
+	const [showExamples, setShowExamples] = useState(false);
+	const [loadingExamples, setLoadingExamples] = useState(false);
+	const [examples, setExamples] = useState<FlowType[]>([]);
+	const { uploadFlow } = useContext(TabsContext);
 	function setModalOpen(x: boolean) {
 		setOpen(x);
 		if (x === false) {
@@ -24,6 +33,22 @@ export default function ImportModal() {
 			}, 300);
 		}
 	}
+
+	function handleExamples() {
+		setLoadingExamples(true);
+		getExamples()
+			.then((result) => {
+				setLoadingExamples(false);
+				setExamples(result);
+			})
+			.catch((error) =>
+				setErrorData({
+					title: "there was an error loading examples, please try again",
+					list: [error.message],
+				})
+			);
+	}
+
 	return (
 		<Transition.Root show={open} appear={true} as={Fragment}>
 			<Dialog
@@ -86,31 +111,49 @@ export default function ImportModal() {
 										</div>
 									</div>
 									<div className="h-full w-full bg-gray-200 dark:bg-gray-900 p-4 gap-4 flex flex-row justify-center items-center">
-										<div className="flex h-full w-full justify-evenly items-center">
-											<ButtonBox
-												deactivate
-												bgColor="bg-slate-400"
-												description="Prebuilt Examples"
-												icon={
-													<DocumentDuplicateIcon className="h-10 w-10 flex-shrink-0" />
-												}
-												onClick={() => console.log("sdsds")}
-												textColor="text-slate-400"
-												title="Examples"
-											></ButtonBox>
-											<ButtonBox
-												bgColor="bg-blue-500"
-												description="Import from Local"
-												icon={
-													<ComputerDesktopIcon className="h-10 w-10 flex-shrink-0" />
-												}
-												onClick={() => {uploadFlow();setModalOpen(false)}}
-												textColor="text-blue-500"
-												title="Local file"
-											></ButtonBox>
-										</div>
+										{!showExamples && (
+											<div className="flex h-full w-full justify-evenly items-center">
+												<ButtonBox
+													bgColor="bg-emerald-500"
+													description="Prebuilt Examples"
+													icon={
+														<DocumentDuplicateIcon className="h-10 w-10 flex-shrink-0" />
+													}
+													onClick={() =>{
+														setShowExamples(true);
+														handleExamples();
+													}}
+													textColor="text-emerald-400"
+													title="Examples"
+												></ButtonBox>
+												<ButtonBox
+													bgColor="bg-blue-500"
+													description="Import from Local"
+													icon={
+														<ComputerDesktopIcon className="h-10 w-10 flex-shrink-0" />
+													}
+													onClick={() => {
+														uploadFlow();
+														setModalOpen(false);
+													}}
+													textColor="text-blue-500"
+													title="Local file"
+												></ButtonBox>
+											</div>
+										)}
+										{showExamples && loadingExamples && (
+											<div className="flex align-middle justify-center items-center">
+												<LoadingComponent remSize={30} />
+											</div>
+										)}
+										{showExamples && !loadingExamples && (
+											<div>
+												{examples.map((example, index) => {
+													return <div id="index">{example.name}</div>;
+												})}
+											</div>
+										)}
 									</div>
-
 								</div>
 							</Dialog.Panel>
 						</Transition.Child>
