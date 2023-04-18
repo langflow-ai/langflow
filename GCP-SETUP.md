@@ -40,6 +40,12 @@ gcloud compute firewall-rules create allow-tcp-8080 \
   --source-ranges 0.0.0.0/0 \
   --direction INGRESS
 
+# Create a firewall rule to allow IAP traffic
+gcloud compute firewall-rules create allow-iap \
+  --network $VPC_NAME \
+  --allow tcp:80,tcp:443 \
+  --source-ranges 35.235.240.0/20 \
+  --direction INGRESS
 
 # Create the Cloud Router and NAT Gateway
 gcloud compute routers create $CLOUD_ROUTER_NAME \
