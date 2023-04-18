@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     wrappers: List[str] = []
     toolkits: List[str] = []
     textsplitters: List[str] = []
+    utilities: List[str] = []
     dev: bool = False
 
     class Config:
@@ -42,6 +43,7 @@ class Settings(BaseSettings):
         self.wrappers = new_settings.wrappers or []
         self.toolkits = new_settings.toolkits or []
         self.textsplitters = new_settings.textsplitters or []
+        self.utilities = new_settings.utilities or []
         self.dev = new_settings.dev or False
 
 
