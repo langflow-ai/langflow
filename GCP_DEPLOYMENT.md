@@ -1,5 +1,7 @@
-# Running Langflow from a new GCP project
+# Running Langflow from a new Google Cloud project
 This guide will help you set up a Langflow Dev VM in a Google Cloud Platform project using Google Cloud Shell.
+
+[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/open?git_repo=https://github.com/genome21/langflow&working_dir=scripts&shellonly=true&tutorial=gcp_setup_tutorial.yaml)
 
 
 ## Run the following in your GCP cloudshell:
