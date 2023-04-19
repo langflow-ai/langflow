@@ -1,0 +1,10 @@
+title: Setting up Langflow on GCP
+description: This tutorial guides you through setting up Langflow on GCP
+steps:
+- title: Running setup script
+  content: |
+    Running the setup script to create resources and deploy Langflow on GCP.
+
+    ```bash
+    source gcp_setup.sh
+    ```
