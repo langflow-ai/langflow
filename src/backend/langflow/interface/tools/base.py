@@ -106,8 +106,8 @@ class ToolCreator(LangChainTypeCreator):
             n_dict = {val[0]: val[1] for val in _EXTRA_OPTIONAL_TOOLS.values()}  # type: ignore
             extra_keys = n_dict[all_tools[tool_type]["fcn"]]
             params = extra_keys
-        elif tool_type == "Tool":
-            params = ["name", "description", "func"]
+        # elif tool_type == "Tool":
+        #     params = ["name", "description", "func"]
         elif tool_type in CUSTOM_TOOLS:
             # Get custom tool params
             params = all_tools[name]["params"]  # type: ignore

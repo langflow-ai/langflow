@@ -56,6 +56,8 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
             if isinstance(function_string, str):
                 return validate.eval_function(function_string)
             raise ValueError("Function should be a string")
+        elif node_type.lower() == "tool":
+            return class_object(**params)
     elif base_type == "toolkits":
         loaded_toolkit = class_object(**params)
         # Check if node_type has a loader
