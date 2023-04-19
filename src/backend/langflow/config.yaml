@@ -6,6 +6,7 @@ chains:
   - SeriesCharacterChain
   - MidJourneyPromptChain
   - TimeTravelGuideChain
+  - SQLDatabaseChain
 
 agents:
   - ZeroShotAgent
@@ -122,5 +123,6 @@ utilities:
   - WikipediaAPIWrapper
   - WolframAlphaAPIWrapper
   # - ZapierNLAWrapper
+  - SQLDatabase
 
 dev: false
