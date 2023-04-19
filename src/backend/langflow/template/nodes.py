@@ -415,7 +415,7 @@ class LLMFrontendNode(FrontendNode):
             "huggingfacehub_api_token": "HuggingFace Hub API Token",
         }
         FrontendNode.format_field(field, name)
-        SHOW_FIELDS = ["repo_id", "task", "model_kwargs"]
+        SHOW_FIELDS = ["repo_id"]
         if field.name in SHOW_FIELDS:
             field.show = True
 
@@ -429,8 +429,10 @@ class LLMFrontendNode(FrontendNode):
             field.show = True
             field.is_list = True
             field.options = ["text-generation", "text2text-generation"]
+            field.advanced = True
 
         if display_name := display_names_dict.get(field.name):
             field.display_name = display_name
         if field.name == "model_kwargs":
             field.field_type = "code"
+            field.advanced = True

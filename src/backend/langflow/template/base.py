@@ -23,6 +23,7 @@ class TemplateFieldCreator(BaseModel, ABC):
     options: list[str] = []
     name: str = ""
     display_name: Optional[str] = None
+    advanced: bool = False
 
     def to_dict(self):
         result = self.dict()
@@ -228,3 +229,8 @@ class FrontendNode(BaseModel):
             field.required = True
             if field.value is None:
                 field.value = ""
+
+        if "kwargs" in field.name.lower():
+            field.advanced = True
+            field.required = False
+            field.show = False
