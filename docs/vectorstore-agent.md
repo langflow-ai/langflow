@@ -1,4 +1,4 @@
-## Nodes used:
+## Nodes
 
 By using `WebBaseLoader`, you can load all text from webpages into a document format that we can use downstream. Web path used:
 ``` txt
@@ -34,15 +34,15 @@ Information about the Ruff python linting library
 
 We used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/account/api-keys){.internal-link target=_blank} requires you to create an account to get your API key.
 
-Check the short tutorial of [OpenAI inputs](llms.md){.internal-link target=_blank} available.
+Check the short tutorial of [OpenAI](llms.md){.internal-link target=_blank} options available.
 
 
 
 The `VectoStoreAgent`is an agent designed to retrieve information from one or more vectorstores, either with or without sources.
 
-### ⛓️LangFlow example:
+### ⛓️LangFlow
 
 ![!Description](img/vectorstore-agent.png#only-dark)
 ![!Description](img/vectorstore-agent.png#only-light)
 
-[Get json file](data/Vectorstore-agent.json){: vectorstoreagent}
+[Get JSON file](data/Vectorstore-agent.json){: vectorstoreagent}

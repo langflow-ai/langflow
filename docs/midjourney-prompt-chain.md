@@ -6,25 +6,13 @@ Check the short tutorial of [OpenAI](llms.md){.internal-link target=_blank} opti
 
 The `ConversationSummaryMemory` is a simple memory that stores the conversation summary. The memory of this type creates a record of the conversation over time. You can use this to condense information over time from the conversation.
 
-With `SeriesCharacterChain`, you can chat with the characters in the series you like most. You can just type the name of the character and the series, and the bot will start chatting with the character.
-
-Character:
-    
-``` txt
-Gandalf
-```
-
-Series:
-    
-``` txt
-The Lord of the Rings
-```
-
-Play around with it and see how it works!
+With `MidJourneyPromptChain`, you can use to generate new MidJourney prompts. You can just type anything you like to build an image script.
 
 ### ⛓️LangFlow
 
-![!Description](img/series-character-chain.png#only-dark)
-![!Description](img/series-character-chain.png#only-light)
+![!Description](img/MidJourney-prompt-chain.png#only-dark)
+![!Description](img/MidJourney-prompt-chain.png#only-light)
 
-[Get JSON file](data/Series-character-chain.json){: series-character-chain}
+[Get JSON file](data/Midjourney-prompt-chain.json){: Midjourney-prompt-chain}
+
+Check out the image created by the prompt [here](https://www.bing.com/images/create/imagine-a-mysterious-forest2c-the-trees-are-tall-an/6440616907a941798a21294c224f089c?id=qCNeV4ysTxKW8xKfqsx4zg%3d%3d&view=detailv2&idpp=genimg&FORM=GCRIDP&mode=overlay){.internal-link target=_blank}.
