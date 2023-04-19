@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from langflow.api.endpoints import router as endpoints_router
 from langflow.api.validate import router as validate_router
+from langflow.api.chat import router as chat_router
 
 
 def create_app():
@@ -23,6 +24,7 @@ def create_app():
 
     app.include_router(endpoints_router)
     app.include_router(validate_router)
+    app.include_router(chat_router)
     return app
 
 

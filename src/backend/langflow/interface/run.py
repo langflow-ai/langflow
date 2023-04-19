@@ -86,7 +86,7 @@ def process_graph(data_graph: Dict[str, Any]):
 
     # Generate result and thought
     logger.debug("Generating result and thought")
-    result, thought = get_result_and_thought_using_graph(langchain_object, message)
+    result, thought = get_result_and_steps(langchain_object, message)
     logger.debug("Generated result and thought")
 
     # Save langchain_object to cache
@@ -117,7 +117,7 @@ def process_graph_cached(data_graph: Dict[str, Any]):
 
     # Generate result and thought
     logger.debug("Generating result and thought")
-    result, thought = get_result_and_thought_using_graph(langchain_object, message)
+    result, thought = get_result_and_steps(langchain_object, message)
     logger.debug("Generated result and thought")
     return {"result": str(result), "thought": thought.strip()}
 
@@ -183,7 +183,7 @@ def fix_memory_inputs(langchain_object):
             update_memory_keys(langchain_object, possible_new_mem_key)
 
 
-def get_result_and_thought_using_graph(langchain_object, message: str):
+def get_result_and_steps(langchain_object, message: str):
     """Get result and thought from extracted json"""
     try:
         if hasattr(langchain_object, "verbose"):
