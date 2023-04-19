@@ -34,57 +34,54 @@ if [[ -z "$subnet_exists" ]]; then
 fi
 
 # Create a firewall rule to allow TCP port 8080 for all instances in the VPC
-gcloud compute firewall-rules create allow-tcp-8080 \
-  --network $VPC_NAME \
-  --allow tcp:8080 \
-  --source-ranges 0.0.0.0/0 \
-  --direction INGRESS
+firewall_8080_exists=$(gcloud compute firewall-rules list --filter="name=allow-tcp-8080" --format="value(name)")
+if [[ -z "$firewall_8080_exists" ]]; then
+  gcloud compute firewall-rules create allow-tcp-8080 --network $VPC_NAME --allow tcp:8080 --source-ranges 0.0.0.0/0 --direction INGRESS
+fi
 
 # Create a firewall rule to allow IAP traffic
-gcloud compute firewall-rules create allow-iap \
-  --network $VPC_NAME \
-  --allow tcp:80,tcp:443 \
-  --source-ranges 35.235.240.0/20 \
-  --direction INGRESS
+firewall_iap_exists=$(gcloud compute firewall-rules list --filter="name=allow-iap" --format="value(name)")
+if [[ -z "$firewall_iap_exists" ]]; then
+    gcloud compute firewall-rules create allow-iap --network $VPC_NAME --allow tcp:80,tcp:443 --source-ranges 35.235.240.0/20 --direction INGRESS
+fi
 
 # Create the Cloud Router and NAT Gateway
-gcloud compute routers create $CLOUD_ROUTER_NAME \
-  --network $VPC_NAME \
-  --region $REGION
+cloud_router_exists=$(gcloud compute routers list --filter="name=$CLOUD_ROUTER_NAME" --format="value(name)")
+if [[ -z "$cloud_router_exists" ]]; then
+    gcloud compute routers create $CLOUD_ROUTER_NAME --network $VPC_NAME --region $REGION
+fi
 
-gcloud compute routers nats create $NAT_GATEWAY_NAME \
-  --router $CLOUD_ROUTER_NAME \
-  --auto-allocate-nat-external-ips \
-  --nat-all-subnet-ip-ranges \
-  --enable-logging \
-  --region $REGION
+nat_exists=$(gcloud compute routers list --filter="name=$CLOUD_ROUTER_NAME" --format="value(nats.name)")
+if [[ -z "$nat_exists" ]]; then
+    gcloud compute routers nats create $NAT_GATEWAY_NAME --router $CLOUD_ROUTER_NAME --auto-allocate-nat-external-ips --nat-all-subnet-ip-ranges --enable-logging --region $REGION
+fi
 
 # Define the startup script as a multiline Bash here-doc
 STARTUP_SCRIPT=$(cat <<'EOF'
 #!/bin/bash
 
 # Update and upgrade the system
-apt update
-apt upgrade
+apt -y update
+apt -y upgrade
 
 # Install Python 3 pip, Langflow, and Nginx
-apt install python3-pip
+apt -y install python3-pip
 pip install langflow
-apt-get install nginx
+apt-get -y install nginx
 
 # Configure Nginx for Langflow
 touch /etc/nginx/sites-available/langflow-app
 echo "server {
-    listen 0.0.0.0:7860;
+    listen 0.0.0.0:8080;
 
     location / {
         proxy_pass http://127.0.0.1:7860;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Host "\$host";
+        proxy_set_header X-Real-IP "\$remote_addr";
+        proxy_set_header X-Forwarded-For "\$proxy_add_x_forwarded_for";
     }
 }" >> /etc/nginx/sites-available/langflow-app
-ln -s /etc/nginx/sites-available/my-app /etc/nginx/sites-enabled/
+ln -s /etc/nginx/sites-available/langflow-app /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl restart nginx
 langflow
