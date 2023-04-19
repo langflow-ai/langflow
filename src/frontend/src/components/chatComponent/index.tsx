@@ -93,7 +93,7 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 			(errors: Array<string>, t) =>
 				errors.concat(
 					(template[t].required && template[t].show) &&
-						(!template[t].value || template[t].value === "") &&
+						(!template[t].value && template[t].value !== false && template[t].value === "") &&
 						!reactFlowInstance
 							.getEdges()
 							.some(
@@ -102,12 +102,11 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 									e.targetHandle.split("|")[2] === n.id
 							)
 						? [
-								`${type} is missing ${
-									template.display_name
-										? template.display_name
-										: snakeToNormalCase(template[t].name)
-								}.`,
-						  ]
+							`${type} is missing ${template.display_name
+								? template.display_name
+								: snakeToNormalCase(template[t].name)
+							}.`,
+						]
 						: []
 				),
 			[] as string[]
