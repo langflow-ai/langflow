@@ -66,7 +66,7 @@ export default function GenericNode({
 						<div className=" absolute text-red-600 -top-2 -right-1">
 							{Object.keys(data.node.template).some(
 								(t) =>
-									// data.node.template[t].advanced &&
+									data.node.template[t].advanced &&
 									data.node.template[t].required
 							)
 								? " *"

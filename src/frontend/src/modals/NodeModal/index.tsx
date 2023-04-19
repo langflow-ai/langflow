@@ -88,9 +88,8 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
 											<div className="overflow-hidden px-4 sm:p-4  w-full rounded-lg bg-white dark:bg-gray-800 shadow">
 												<div className="flex flex-col h-full gap-5">
 													{
-														//&& data.node.template[t].advanced
 														Object.keys(data.node.template)
-															.filter((t) => t.charAt(0) !== "_")
+															.filter((t) => t.charAt(0) !== "_"&& data.node.template[t].advanced)
 															.map((t: string, idx) => {
 																return (
 																	<ModalField
