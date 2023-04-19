@@ -14,6 +14,7 @@ agents:
   - initialize_agent
   - VectorStoreAgent
   - VectorStoreRouterAgent
+  - SQLAgent
 
 prompts:
   - PromptTemplate
@@ -61,8 +62,31 @@ vectorstores:
   - Chroma
 
 documentloaders:
+  - AirbyteJSONLoader
+  - CoNLLULoader
+  - CSVLoader
+  - UnstructuredEmailLoader
+  - EverNoteLoader
+  - FacebookChatLoader
+  - GutenbergLoader
+  - BSHTMLLoader
+  - UnstructuredHTMLLoader
+  # - UnstructuredImageLoader # Issue with Python 3.11 (https://github.com/Unstructured-IO/unstructured-inference/issues/83)
+  - UnstructuredMarkdownLoader
+  - PyPDFLoader
+  - UnstructuredPowerPointLoader
+  - SRTLoader
+  - TelegramChatLoader
   - TextLoader
+  - UnstructuredWordDocumentLoader
   - WebBaseLoader
+  - AZLyricsLoader
+  - CollegeConfidentialLoader
+  - HNLoader
+  - IFixitLoader
+  - IMSDbLoader
+  - GitbookLoader
+  - ReadTheDocsLoader
 
 textsplitters:
   - CharacterTextSplitter

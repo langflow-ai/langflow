@@ -104,7 +104,7 @@ class PythonFunctionNode(FrontendNode):
 class ToolNode(FrontendNode):
     name: str = "Tool"
     template: Template = Template(
-        type_name="tool",
+        type_name="Tool",
         fields=[
             TemplateField(
                 field_type="str",
@@ -127,19 +127,27 @@ class ToolNode(FrontendNode):
                 name="description",
             ),
             TemplateField(
-                field_type="str",
+                name="func",
+                field_type="function",
+                required=True,
+                is_list=False,
+                show=True,
+                multiline=True,
+            ),
+            TemplateField(
+                field_type="bool",
                 required=True,
                 placeholder="",
                 is_list=False,
                 show=True,
-                multiline=True,
-                value="",
-                name="func",
+                multiline=False,
+                value=False,
+                name="return_direct",
             ),
         ],
     )
     description: str = "Tool to be used in the flow."
-    base_classes: list[str] = ["BaseTool"]
+    base_classes: list[str] = ["Tool"]
 
     def to_dict(self):
         return super().to_dict()
@@ -304,6 +312,37 @@ class VectorStoreRouterAgentNode(FrontendNode):
         return super().to_dict()
 
 
+class SQLAgentNode(FrontendNode):
+    name: str = "SQLAgent"
+    template: Template = Template(
+        type_name="sql_agent",
+        fields=[
+            TemplateField(
+                field_type="str",
+                required=True,
+                placeholder="",
+                is_list=False,
+                show=True,
+                multiline=False,
+                value="",
+                name="database_uri",
+            ),
+            TemplateField(
+                field_type="BaseLanguageModel",
+                required=True,
+                show=True,
+                name="llm",
+                display_name="LLM",
+            ),
+        ],
+    )
+    description: str = """Construct an agent from a Vector Store Router."""
+    base_classes: list[str] = ["AgentExecutor"]
+
+    def to_dict(self):
+        return super().to_dict()
+
+
 class PromptFrontendNode(FrontendNode):
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
@@ -348,6 +387,7 @@ class MemoryFrontendNode(FrontendNode):
             field.field_type = "int"
             field.value = 10
             field.display_name = "Memory Size"
+        field.password = False
 
 
 class ChainFrontendNode(FrontendNode):
@@ -358,6 +398,14 @@ class ChainFrontendNode(FrontendNode):
         if "key" in field.name:
             field.password = False
             field.show = False
+        if field.name in ["input_key", "output_key"]:
+            field.required = True
+            field.show = True
+        # Separated for possible future changes
+        if field.name == "prompt":
+            # if no prompt is provided, use the default prompt
+            field.required = False
+            field.show = True
 
 
 class LLMFrontendNode(FrontendNode):

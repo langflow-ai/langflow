@@ -5,6 +5,7 @@ from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import chain_type_to_cls_dict
 from langflow.settings import settings
 from langflow.template.nodes import ChainFrontendNode
+from langflow.utils.logger import logger
 from langflow.utils.util import build_template_from_class
 
 # Assuming necessary imports for Field, Template, and FrontendNode classes
@@ -39,6 +40,9 @@ class ChainCreator(LangChainTypeCreator):
             return build_template_from_class(name, self.type_to_loader_dict)
         except ValueError as exc:
             raise ValueError("Chain not found") from exc
+        except AttributeError as exc:
+            logger.error(f"Chain {name} not loaded: {exc}")
+            return None
 
     def to_list(self) -> List[str]:
         custom_chains = list(get_custom_nodes("chains").keys())
