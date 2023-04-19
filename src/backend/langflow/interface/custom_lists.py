@@ -14,6 +14,7 @@ from langchain import (
 )
 from langchain.agents import agent_toolkits
 from langchain.chat_models import ChatOpenAI
+from langchain.sql_database import SQLDatabase
 
 from langflow.interface.importing.utils import import_class
 
@@ -82,3 +83,4 @@ textsplitter_type_to_cls_dict: dict[str, Any] = dict(
 utility_type_to_cls_dict: dict[str, Any] = dict(
     inspect.getmembers(utilities, inspect.isclass)
 )
+utility_type_to_cls_dict["SQLDatabase"] = SQLDatabase
