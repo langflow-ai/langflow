@@ -9,7 +9,7 @@ import warnings
 from copy import deepcopy
 from typing import Any, Dict, List, Optional
 
-from langflow.cache import utils as cache_utils
+from langflow.cache import base as cache_utils
 from langflow.graph.constants import DIRECT_TYPES
 from langflow.interface import loading
 from langflow.interface.listing import ALL_TYPES_DICT
