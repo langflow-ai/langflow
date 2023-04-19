@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Type, Union
 from pydantic import BaseModel
 
 from langflow.template.base import FrontendNode, Template, TemplateField
+from langflow.utils.logger import logger
 
 # Assuming necessary imports for Field, Template, and FrontendNode classes
 
@@ -39,14 +40,18 @@ class LangChainTypeCreator(BaseModel, ABC):
             # frontend_node.to_dict() returns a dict with the following structure:
             # {name: {template: {fields}, description: str}}
             # so we should update the result dict
-            result[self.type_name].update(self.frontend_node(name).to_dict())
+            node = self.frontend_node(name)
+            if node is not None:
+                node = node.to_dict()
+                result[self.type_name].update(node)
 
         return result
 
-    def frontend_node(self, name) -> FrontendNode:
+    def frontend_node(self, name) -> Union[FrontendNode, None]:
         signature = self.get_signature(name)
         if signature is None:
-            raise ValueError(f"{name} not found")
+            logger.error(f"Node {name} not loaded")
+            return None
         if isinstance(signature, FrontendNode):
             return signature
         fields = [

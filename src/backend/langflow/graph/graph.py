@@ -18,16 +18,16 @@ from langflow.graph.nodes import (
 )
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
-from langflow.interface.documentLoaders.base import documentloader_creator
+from langflow.interface.document_loaders.base import documentloader_creator
 from langflow.interface.embeddings.base import embedding_creator
 from langflow.interface.llms.base import llm_creator
 from langflow.interface.memories.base import memory_creator
 from langflow.interface.prompts.base import prompt_creator
-from langflow.interface.textSplitters.base import textsplitter_creator
+from langflow.interface.text_splitters.base import textsplitter_creator
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.tools.base import tool_creator
 from langflow.interface.tools.constants import FILE_TOOLS
-from langflow.interface.vectorStore.base import vectorstore_creator
+from langflow.interface.vector_store.base import vectorstore_creator
 from langflow.interface.wrappers.base import wrapper_creator
 from langflow.utils import payload
 
@@ -62,7 +62,12 @@ class Graph:
             if isinstance(node, ToolkitNode):
                 node.params["llm"] = llm_node
         # remove invalid nodes
-        self.nodes = [node for node in self.nodes if self._validate_node(node)]
+        self.nodes = [
+            node
+            for node in self.nodes
+            if self._validate_node(node)
+            or (len(self.nodes) == 1 and len(self.edges) == 0)
+        ]
 
     def _validate_node(self, node: Node) -> bool:
         # All nodes that do not have edges are invalid

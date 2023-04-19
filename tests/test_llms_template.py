@@ -440,7 +440,7 @@ def test_chat_open_ai(client: TestClient):
     assert template["_type"] == "ChatOpenAI"
     assert (
         model["description"]
-        == "Wrapper around OpenAI Chat large language models.To use, you should have the ``openai`` python package installed, and theenvironment variable ``OPENAI_API_KEY`` set with your API key.Any parameters that are valid to be passed to the openai.create call can be passedin, even if not explicitly saved on this class."  # noqa E501
+        == "Wrapper around OpenAI Chat large language models."  # noqa E501
     )
     assert set(model["base_classes"]) == {
         "BaseChatModel",
