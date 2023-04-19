@@ -170,10 +170,12 @@ def fix_memory_inputs(langchain_object):
             if langchain_object.memory.memory_key in langchain_object.input_variables:
                 return
         except AttributeError:
-            if (
-                langchain_object.memory.memory_key
-                in langchain_object.prompt.input_variables
-            ):
+            input_variables = (
+                langchain_object.prompt.input_variables
+                if hasattr(langchain_object, "prompt")
+                else langchain_object.input_keys
+            )
+            if langchain_object.memory.memory_key in input_variables:
                 return
 
         possible_new_mem_key = get_memory_key(langchain_object)
