@@ -58,10 +58,12 @@ nav:
       - LLMs: llms.md
       - Memories: 
         - Conversation Summary Memory: conversation-summary-memory.md
+        - Conversation Buffer Memory: conversation-buffer-memory.md
       - Chains: 
         - LLMChain: llmchain.md
         - Series Character Chain: series-character-chain.md
         - MidJourney Prompt Chain: midjourney-prompt-chain.md
+        - Time Travel Guide Chain: time-travel-guide-chain.md
       - Agents:
         - Vector Store Agent: vectorstore-agent.md
         - Multiple Vectorstores: multiple-vectorstores.md
