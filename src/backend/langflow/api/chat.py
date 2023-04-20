@@ -7,7 +7,6 @@ router = APIRouter()
 chat_manager = ChatManager()
 
 
-@router.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    client_id = str(uuid4())
+@router.websocket("/ws/{client_id}")
+async def websocket_endpoint(client_id: str, websocket: WebSocket):
     await chat_manager.handle_websocket(client_id, websocket)
