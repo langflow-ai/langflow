@@ -4,29 +4,6 @@ from typing import Dict, Union
 
 from langchain.agents.tools import Tool
 
-from langflow.interface.tools.constants import ALL_TOOLS_NAMES
-
-
-def get_tools_dict():
-    """Get the tools dictionary."""
-
-    all_tools = {}
-
-    for tool, fcn in ALL_TOOLS_NAMES.items():
-        if tool_params := get_tool_params(fcn):
-            tool_name = tool_params.get("name") or str(tool)
-            all_tools[tool_name] = fcn
-
-    return all_tools
-
-
-def get_tool_by_name(name: str):
-    """Get a tool from the tools dictionary."""
-    tools = get_tools_dict()
-    if name not in tools:
-        raise ValueError(f"{name} not found.")
-    return tools[name]
-
 
 def get_func_tool_params(func, **kwargs) -> Union[Dict, None]:
     tree = ast.parse(inspect.getsource(func))
@@ -113,6 +90,8 @@ def get_tool_params(tool, **kwargs) -> Dict:
     elif inspect.isclass(tool):
         # Get the parameters necessary to
         # instantiate the class
+
         return get_class_tool_params(tool, **kwargs) or {}
+
     else:
         raise ValueError("Tool must be a function or class.")
