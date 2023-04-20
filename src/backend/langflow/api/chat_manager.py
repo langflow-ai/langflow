@@ -5,7 +5,7 @@ import json
 from langflow.api.schemas import ChatMessage, ChatResponse
 
 from langflow.interface.run import (
-    get_result_and_steps,
+    async_get_result_and_steps,
     load_or_build_langchain_object,
 )
 from langflow.utils.logger import logger
@@ -38,22 +38,25 @@ class ChatManager:
         websocket = self.active_connections[client_id]
         await websocket.send_text(message)
 
-    async def send_json(self, client_id: str, message: Dict):
+    async def send_json(self, client_id: str, message: ChatMessage):
         websocket = self.active_connections[client_id]
-        await websocket.send_json(message)
+        self.chat_history.add_message(client_id, message)
+        await websocket.send_json(message.dict())
 
     async def process_message(self, client_id: str, payload: Dict):
         # Process the graph data and chat message
 
         chat_message = payload.pop("message", "")
         chat_message = ChatMessage(sender="user", message=chat_message)
+        self.chat_history.add_message(client_id, chat_message)
+
         graph_data = payload
         start_resp = ChatResponse(
-            sender="bot", message="", type="start", intermediate_steps=""
+            sender="bot", message=None, type="start", intermediate_steps=""
         )
-        await self.send_json(client_id, start_resp.dict())
+        await self.send_json(client_id, start_resp)
 
-        is_first_message = len(graph_data.get("chatHistory", [])) == 0
+        is_first_message = len(self.chat_history.get_history(client_id=client_id)) == 0
         langchain_object = load_or_build_langchain_object(graph_data, is_first_message)
         logger.debug("Loaded langchain object")
 
@@ -64,15 +67,20 @@ class ChatManager:
             )
 
         # Generate result and thought
-        logger.debug("Generating result and thought")
-        result, intermediate_steps = get_result_and_steps(
-            langchain_object, chat_message.message
-        )
-
-        logger.debug("Generated result and intermediate_steps")
-        # Save the message to chat history
-        self.chat_history.add_message(client_id, chat_message)
-
+        try:
+            logger.debug("Generating result and thought")
+            result, intermediate_steps = await async_get_result_and_steps(
+                langchain_object, chat_message.message or ""
+            )
+            logger.debug("Generated result and intermediate_steps")
+        except Exception as e:
+            # Log stack trace
+            logger.exception(e)
+            error_resp = ChatResponse(
+                sender="bot", message=str(e), type="error", intermediate_steps=""
+            )
+            await self.send_json(client_id, error_resp)
+            return
         # Send a response back to the frontend, if needed
         response = ChatResponse(
             sender="bot",
@@ -80,16 +88,16 @@ class ChatManager:
             intermediate_steps=intermediate_steps or "",
             type="end",
         )
-        await self.send_json(client_id, response.dict())
+        await self.send_json(client_id, response)
 
     async def handle_websocket(self, client_id: str, websocket: WebSocket):
         await self.connect(client_id, websocket)
         try:
             chat_history = self.chat_history.get_history(client_id)
-            await websocket.send_text(json.dumps(chat_history))
+            await websocket.send_json(json.dumps(chat_history))
 
             while True:
-                json_payload = await websocket.receive_text()
+                json_payload = await websocket.receive_json()
                 payload = json.loads(json_payload)
                 await self.process_message(client_id, payload)
         except Exception as e:

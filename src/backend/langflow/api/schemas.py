@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Union
 from pydantic import BaseModel, validator
 
 
@@ -6,7 +6,7 @@ class ChatMessage(BaseModel):
     """Chat message schema."""
 
     sender: str
-    message: str
+    message: Union[str, None] = None
 
     @validator("sender")
     def sender_must_be_bot_or_you(cls, v):
@@ -21,6 +21,7 @@ class ChatResponse(ChatMessage):
     intermediate_steps: str
     type: str
     data: Any = None
+    data_type: str = ""
 
     @validator("type")
     def validate_message_type(cls, v):
