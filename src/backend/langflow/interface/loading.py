@@ -87,7 +87,7 @@ def load_flow_from_json(path: str):
     from langflow.graph import Graph
 
     """Load flow from json file"""
-    with open(path, "r", encoding='utf-8') as f:
+    with open(path, "r", encoding=utf-8") as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]
     nodes = data_graph["nodes"]
