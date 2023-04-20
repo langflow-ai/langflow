@@ -39,6 +39,8 @@ The script will:
 3. Create a Compute Engine VM instance with the specified configuration and startup script
 4. Configure Nginx to serve Langflow on TCP port 8080
 
+> <walkthrough-pin-section-icon> The process may take approximately 30 minutes to complete. Rest assured that progress is being made, and you'll be able to proceed once the process is finished.
+
 In the next step, you'll learn how to connect to the Langflow VM.
 
 ## Connect to the Langflow VM
