@@ -3,6 +3,7 @@ import { FlowType } from "../types/flow";
 import { TabsContextType } from "../types/tabs";
 import { normalCaseToSnakeCase } from "../utils";
 import { alertContext } from "./alertContext";
+import { TemplatesContext } from "./templatesContext";
 
 const TabsContextInitialValue: TabsContextType = {
 	save:()=>{},
@@ -30,6 +31,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	const [flows, setFlows] = useState<Array<FlowType>>([]);
 	const [id, setId] = useState(0);
 	const [lockChat, setLockChat] = useState(false);
+	const {templates} = useContext(TemplatesContext)
 
 	const newNodeId = useRef(0);
 	function incrementNodeId() {
@@ -53,14 +55,16 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	useEffect(() => {
 		//get tabs locally saved
 		let cookie = window.localStorage.getItem("tabsData");
-		if (cookie) {
+		if (cookie && Object.keys(templates).length>0) {
+			console.log(templates)
+			console.log(Object.keys(templates).length)
 			let cookieObject = JSON.parse(cookie);
 			setTabIndex(cookieObject.tabIndex);
 			setFlows(cookieObject.flows);
 			setId(cookieObject.id);
 			newNodeId.current = cookieObject.nodeId;
 		}
-	}, []);
+	}, [templates]);
 	function hardReset(){
 		newNodeId.current=0;
 		setTabIndex(0);setFlows([]);setId(0);
