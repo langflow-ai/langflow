@@ -67,11 +67,6 @@ If you want to remove the resources created during this tutorial, you can use th
 
 ```sql
 gcloud compute instances delete langflow-dev --zone us-central1-a --quiet
-
-gcloud compute routers nats delete nat-gateway --router nat-client --region us-central1 --quiet
-
-gcloud compute routers delete nat-client --region us-central1 --quiet
-
 ```
 The following network settings and services are used during this walkthrough. If you plan to continue using the project after the walkthrough, you may keep these configurations in place.
 

@@ -38,17 +38,6 @@ if [[ -z "$firewall_iap_exists" ]]; then
     gcloud compute firewall-rules create allow-iap --network $VPC_NAME --allow tcp:80,tcp:443 --source-ranges 35.235.240.0/20 --direction INGRESS
 fi
 
-# Create the Cloud Router and NAT Gateway
-cloud_router_exists=$(gcloud compute routers list --filter="name=$CLOUD_ROUTER_NAME" --format="value(name)")
-if [[ -z "$cloud_router_exists" ]]; then
-    gcloud compute routers create $CLOUD_ROUTER_NAME --network $VPC_NAME --region $REGION
-fi
-
-nat_exists=$(gcloud compute routers list --filter="name=$CLOUD_ROUTER_NAME" --format="value(nats.name)")
-if [[ -z "$nat_exists" ]]; then
-    gcloud compute routers nats create $NAT_GATEWAY_NAME --router $CLOUD_ROUTER_NAME --auto-allocate-nat-external-ips --nat-all-subnet-ip-ranges --enable-logging --region $REGION
-fi
-
 # Define the startup script as a multiline Bash here-doc
 STARTUP_SCRIPT=$(cat <<'EOF'
 #!/bin/bash
