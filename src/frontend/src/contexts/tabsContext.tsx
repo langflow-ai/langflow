@@ -1,6 +1,6 @@
 import { createContext, useEffect, useState, useRef, ReactNode, useContext } from "react";
 import { FlowType } from "../types/flow";
-import { TabsContextType } from "../types/tabs";
+import { LangFlowState, TabsContextType } from "../types/tabs";
 import { normalCaseToSnakeCase } from "../utils";
 import { alertContext } from "./alertContext";
 import { TemplatesContext } from "./templatesContext";
@@ -58,7 +58,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		if (cookie && Object.keys(templates).length>0) {
 			console.log(templates)
 			console.log(Object.keys(templates).length)
-			let cookieObject = JSON.parse(cookie);
+			let cookieObject:LangFlowState = JSON.parse(cookie);
 			setTabIndex(cookieObject.tabIndex);
 			setFlows(cookieObject.flows);
 			setId(cookieObject.id);

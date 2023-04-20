@@ -17,6 +17,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { Connection, Edge, Node, ReactFlowInstance } from "reactflow";
 import { FlowType } from "./types/flow";
+import { APIClassType } from "./types/api";
 var _ = require('lodash')
 
 export function classNames(...classes:Array<string>) {
@@ -383,4 +384,8 @@ export function removeApiKeys(flow:FlowType):FlowType{
     }
   })
   return cleanFLow
+}
+
+export function UpdateTemplate(newTemplate:APIClassType,oldTemplate:APIClassType){
+
 }
