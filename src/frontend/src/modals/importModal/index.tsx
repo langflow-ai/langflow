@@ -143,7 +143,7 @@ export default function ImportModal() {
 												as="h3"
 												className="text-lg font-medium dark:text-white leading-10 text-gray-900"
 											>
-												Import from
+												{showExamples ?"Select an example":"Import from"}
 											</Dialog.Title>
 										</div>
 									</div>
