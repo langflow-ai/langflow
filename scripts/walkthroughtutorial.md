@@ -39,7 +39,7 @@ The script will:
 3. Create a Compute Engine VM instance with the specified configuration and startup script
 4. Configure Nginx to serve Langflow on TCP port 8080
 
-> <walkthrough-pin-section-icon> The process may take approximately 30 minutes to complete. Rest assured that progress is being made, and you'll be able to proceed once the process is finished.
+> <walkthrough-pin-section-icon></walkthrough-pin-section-icon> The process may take approximately 30 minutes to complete. Rest assured that progress is being made, and you'll be able to proceed once the process is finished.
 
 In the next step, you'll learn how to connect to the Langflow VM.
 
@@ -75,7 +75,7 @@ gcloud compute routers delete nat-client --region us-central1 --quiet
 The following network settings and services are used during this walkthrough. If you plan to continue using the project after the walkthrough, you may keep these configurations in place.
 
 However, if you decide to remove them after completing the walkthrough, you can use the following gcloud commands:
-> These commands will delete the firewall rules and network configurations created during the walkthrough. Make sure to run them only if you no longer need these settings.
+> <walkthrough-pin-section-icon></walkthrough-pin-section-icon> These commands will delete the firewall rules and network configurations created during the walkthrough. Make sure to run them only if you no longer need these settings.
 
 ```
 gcloud compute firewall-rules delete allow-tcp-8080 --quiet
