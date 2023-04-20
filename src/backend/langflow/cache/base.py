@@ -152,33 +152,3 @@ def load_cache(hash_val):
         with cache_path.open("rb") as cache_file:
             return dill.load(cache_file)
     return None
-
-
-def add_pandas(name: str, obj: Any):
-    if isinstance(obj, (pd.DataFrame, pd.Series)):
-        CACHE[name] = {"obj": obj, "type": "pandas"}
-    else:
-        raise ValueError("Object is not a pandas DataFrame or Series")
-
-
-def add_image(name: str, obj: Any):
-    if isinstance(obj, Image.Image):
-        CACHE[name] = {"obj": obj, "type": "image"}
-    else:
-        raise ValueError("Object is not a PIL Image")
-
-
-def get(name: str):
-    return CACHE.get(name, {}).get("obj", None)
-
-
-# get last added item
-def get_last():
-    obj_dict = list(CACHE.values())[-1]
-    if obj_dict["type"] == "pandas":
-        # return a csv string
-        return obj_dict["obj"].to_csv()
-    elif obj_dict["type"] == "image":
-        # return a base64 encoded string
-        return base64.b64encode(obj_dict["obj"].tobytes()).decode("utf-8")
-    return obj_dict["obj"]

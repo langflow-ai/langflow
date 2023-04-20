@@ -1,1 +1,1 @@
-from langflow.cache.base import add_pandas, add_image, get  # noqa
+from langflow.cache.manager import cache_manager  # noqa
