@@ -16,7 +16,11 @@ Before you start, make sure you have the following prerequisites:
 - A GCP account with the necessary permissions to create resources
 - A project on GCP where you want to deploy Langflow
 
-[**Select your GCP project**]<walkthrough-project-setup variable="project_id"></walkthrough-project-setup>
+[**Select your GCP project**]<walkthrough-project-setup
+  billing="true"
+  apis="compute.googleapis.com,container.googleapis.com">
+</walkthrough-project-setup>
+
 
 In the next step, you'll configure the GCP environment and deploy Langflow.
 
@@ -24,7 +28,7 @@ In the next step, you'll configure the GCP environment and deploy Langflow.
 Run the deploy_langflow_gcp.sh script to configure the GCP environment and deploy Langflow:
 
 ```sh  
-gcloud config set project {{project_id}}  
+gcloud config set project <walkthrough-project-id/>  
 bash ./deploy_langflow_gcp.sh
 ```
 
