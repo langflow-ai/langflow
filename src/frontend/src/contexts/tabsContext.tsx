@@ -39,6 +39,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		return newNodeId.current;
 	}
 	function save(){
+		console.log("save")
 		if (flows.length !== 0)
 		window.localStorage.setItem(
 			"tabsData",
@@ -59,6 +60,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 			console.log(templates)
 			console.log(Object.keys(templates).length)
 			let cookieObject:LangFlowState = JSON.parse(cookie);
+			cookieObject.flows.forEach(flow=>{
+				console.log(flow)
+				// flow.data.nodes.forEach(node=>{
+				// 	console.log(node.data)
+				// })
+			})
 			setTabIndex(cookieObject.tabIndex);
 			setFlows(cookieObject.flows);
 			setId(cookieObject.id);
