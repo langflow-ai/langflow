@@ -24,7 +24,7 @@ In the next step, you'll configure the GCP environment and deploy Langflow.
 Run the deploy_langflow_gcp.sh script to configure the GCP environment and deploy Langflow:
 
 ```bash
-./deploy_langflow_gcp.sh
+bash ./deploy_langflow_gcp.sh
 ```
 
 The script will:
