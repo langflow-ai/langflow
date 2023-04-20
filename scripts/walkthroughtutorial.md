@@ -46,8 +46,16 @@ To connect to your new Langflow VM, follow these steps:
 
 1. Navigate to the [VM instances](https://console.cloud.google.com/compute/instances) page
 2. Click on the external IP for your VM
-3. Add port 8080 (assuming your VM external IP is 192.168.0.1):
-http://192.168.0.1:8080
+<br>or
+3. Run the following command to store the VM's IP in a variable called `LANGFLOW-IP`:
+```bash
+export LANGFLOW-IP=$(gcloud compute instances list --filter="NAME=langflow-dev" --format="value(EXTERNAL_IP)")
+
+echo http://$LANGFLOW-IP:8080
+```
+
+<walkthrough-input label="Enter the IP shown in Cloudshell" variable="langflow-ip"></walkthrough-input>
+
 4. You will be greeted by the Langflow Dev environment
 
 Congratulations! You have successfully deployed Langflow on Google Cloud Platform.
