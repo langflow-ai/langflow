@@ -69,6 +69,13 @@ gcloud compute routers nats delete nat-gateway --router nat-client --region us-c
 
 gcloud compute routers delete nat-client --region us-central1 --quiet
 
+```
+The following network settings and services are used during this walkthrough. If you plan to continue using the project after the walkthrough, you may keep these configurations in place.
+
+However, if you decide to remove them after completing the walkthrough, you can use the following gcloud commands:
+> These commands will delete the firewall rules and network configurations created during the walkthrough. Make sure to run them only if you no longer need these settings.
+
+```
 gcloud compute firewall-rules delete allow-tcp-8080 --quiet
 
 gcloud compute firewall-rules delete allow-iap --quiet
