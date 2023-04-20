@@ -9,10 +9,12 @@ import {
 	APIKindType,
 	APIObjectType,
 } from "../../../../types/api";
+import { TemplatesContext } from "../../../../contexts/templatesContext";
 
 export default function ExtraSidebar() {
 	const [data, setData] = useState({});
 	const { setTypes } = useContext(typesContext);
+	const { setTemplates } = useContext(TemplatesContext);
 
 	useEffect(() => {
 		async function getTypes(): Promise<void> {
@@ -21,7 +23,14 @@ export default function ExtraSidebar() {
 
 			// Update the state of the component with the retrieved data.
 			setData(result.data);
-
+			setTemplates(
+				Object.keys(result.data).reduce((acc, curr) => {
+					Object.keys(result.data[curr]).forEach((c: keyof APIKindType)=>{
+						acc[c] = result.data[curr][c]
+					})
+					return acc;
+				},{})
+			);
 			// Set the types by reducing over the keys of the result data and updating the accumulator.
 			setTypes(
 				Object.keys(result.data).reduce((acc, curr) => {
@@ -84,7 +93,9 @@ export default function ExtraSidebar() {
 								</div>
 							</div>
 						))}
-						{Object.keys(data[d]).length===0 && <div className="text-gray-400 text-center">Coming soon</div>}
+						{Object.keys(data[d]).length === 0 && (
+							<div className="text-gray-400 text-center">Coming soon</div>
+						)}
 					</div>
 				</DisclosureComponent>
 			))}
