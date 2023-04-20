@@ -6,6 +6,7 @@ chains:
   - SeriesCharacterChain
   - MidJourneyPromptChain
   - TimeTravelGuideChain
+  - SQLDatabaseChain
 
 agents:
   - ZeroShotAgent
@@ -40,6 +41,27 @@ tools:
   - Tool
   - PythonFunction
   - JsonSpec
+  - News API
+  - TMDB API
+  - Podcast API
+  - QuerySQLDataBaseTool
+  - InfoSQLDatabaseTool
+  - ListSQLDatabaseTool
+  # - QueryCheckerTool
+  - BingSearchRun
+  - GoogleSearchRun
+  - GoogleSearchResults
+  - JsonListKeysTool
+  - JsonGetValueTool
+  - PythonREPLTool
+  - PythonAstREPLTool
+  - RequestsGetTool
+  - RequestsPostTool
+  - RequestsPatchTool
+  - RequestsPutTool
+  - RequestsDeleteTool
+  - WikipediaQueryRun
+  - WolframAlphaQueryRun
 
 wrappers:
   - RequestsWrapper
@@ -90,5 +112,17 @@ documentloaders:
 
 textsplitters:
   - CharacterTextSplitter
+
+utilities:
+  - BingSearchAPIWrapper
+  - GoogleSearchAPIWrapper
+  - GoogleSerperAPIWrapper
+  - SearxResults
+  - SearxSearchWrapper
+  - SerpAPIWrapper
+  - WikipediaAPIWrapper
+  - WolframAlphaAPIWrapper
+  # - ZapierNLAWrapper
+  - SQLDatabase
 
 dev: false

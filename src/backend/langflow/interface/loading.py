@@ -75,6 +75,9 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
         documents = params.pop("documents")
         text_splitter = class_object(**params)
         return text_splitter.split_documents(documents)
+    elif base_type == "utilities":
+        if node_type == "SQLDatabase":
+            return class_object.from_uri(params.pop("uri"))
 
     return class_object(**params)
 
