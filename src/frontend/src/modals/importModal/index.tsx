@@ -180,7 +180,7 @@ export default function ImportModal() {
 														{" "}
 														<ButtonBox
 															size="small"
-															bgColor="bg-slate-300"
+															bgColor="bg-emerald-500"
 															description={example.description??"Prebuilt Examples"}
 															icon={
 																<DocumentDuplicateIcon className="h-6 w-6 flex-shrink-0" />
@@ -189,7 +189,7 @@ export default function ImportModal() {
 																addFlow(example)
 																setModalOpen(false)
 															}}
-															textColor="text-slate-400"
+															textColor="text-emerald-400"
 															title={example.name}
 														></ButtonBox>
 													</div>
