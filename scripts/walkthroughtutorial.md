@@ -42,7 +42,6 @@ The script will:
 In the next step, you'll learn how to connect to the Langflow VM.
 
 ## Connect to the Langflow VM
-<walkthrough-conclusion-trophy></walkthrough-conclusion-trophy>
 To connect to your new Langflow VM, follow these steps:
 
 1. Navigate to the [VM instances](https://console.cloud.google.com/compute/instances) page and click on the external IP for your VM.  Make sure to use HTTP and set the port to 8080
@@ -57,6 +56,8 @@ echo http://$LANGFLOW_IP:8080
 4. Click on the Langflow URL in cloudshell to be greeted by the Langflow Dev environment
 
 Congratulations! You have successfully deployed Langflow on Google Cloud Platform.
+
+<walkthrough-conclusion-trophy></walkthrough-conclusion-trophy>
 
 ## Cleanup
 If you want to remove the resources created during this tutorial, you can use the following commands:
