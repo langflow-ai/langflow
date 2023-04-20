@@ -32,8 +32,6 @@ def test_chat_history(client: TestClient):
                 "message": None,
                 "intermediate_steps": "",
                 "type": "start",
-                "data": None,
-                "data_type": "",
             }
             # Send another message
             payload = {"message": "How are you?"}
@@ -46,6 +44,4 @@ def test_chat_history(client: TestClient):
                 "message": "Hello, I'm a mock response!",
                 "intermediate_steps": "",
                 "type": "end",
-                "data": None,
-                "data_type": "",
             }

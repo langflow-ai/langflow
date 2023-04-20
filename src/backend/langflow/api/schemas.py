@@ -20,11 +20,23 @@ class ChatResponse(ChatMessage):
 
     intermediate_steps: str
     type: str
-    data: Any = None
-    data_type: str = ""
 
     @validator("type")
     def validate_message_type(cls, v):
-        if v not in ["start", "stream", "end", "error", "info"]:
-            raise ValueError("type must be start, stream, end, error or info")
+        if v not in ["start", "stream", "end", "error", "info", "file"]:
+            raise ValueError("type must be start, stream, end, error, info, or file")
+        return v
+
+
+class FileResponse(ChatMessage):
+    """File response schema."""
+
+    data: Any
+    data_type: str
+    type: str = "file"
+
+    @validator("data_type")
+    def validate_data_type(cls, v):
+        if v not in ["image", "csv"]:
+            raise ValueError("data_type must be image or csv")
         return v
