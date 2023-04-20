@@ -18,16 +18,16 @@ Before you start, make sure you have the following prerequisites:
 
 [**Select your GCP project**]<walkthrough-project-setup></walkthrough-project-setup>
 
-In the next step, you'll clone the Langflow repository and navigate to the `scripts` directory.
+[comment]: <> (In the next step, you'll clone the Langflow repository and navigate to the `scripts` directory.)
 
-## Clone the repository and navigate to the scripts directory
+[comment]: <> (## Clone the repository and navigate to the scripts directory)
 
-Run the following commands to clone the Langflow repository and navigate to the `scripts` directory:
+[comment]: <> (Run the following commands to clone the Langflow repository and navigate to the `scripts` directory:)
 
-```bash
-git clone https://github.com/genome21/langflow
-cd langflow/scripts
-```
+[comment]: <> (```bash)
+[comment]: <> (git clone https://github.com/genome21/langflow)
+[comment]: <> (cd langflow/scripts)
+[comment]: <> (```)
 
 In the next step, you'll configure the GCP environment and deploy Langflow.
 
