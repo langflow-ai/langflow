@@ -42,6 +42,7 @@ The script will:
 In the next step, you'll learn how to connect to the Langflow VM.
 
 ## Connect to the Langflow VM
+<walkthrough-conclusion-trophy></walkthrough-conclusion-trophy>
 To connect to your new Langflow VM, follow these steps:
 
 1. Navigate to the [VM instances](https://console.cloud.google.com/compute/instances) page
@@ -54,7 +55,7 @@ export LANGFLOW-IP=$(gcloud compute instances list --filter="NAME=langflow-dev" 
 echo http://$LANGFLOW-IP:8080
 ```
 
-<walkthrough-input label="Enter the IP shown in Cloudshell" variable="langflow-ip"></walkthrough-input>
+<walkthrough-text-input="Enter the IP shown in Cloudshell" variable="langflow-ip"></walkthrough-text-input>
 
 4. You will be greeted by the Langflow Dev environment
 
