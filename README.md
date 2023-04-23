@@ -22,11 +22,19 @@ LangFlow is a GUI for [LangChain](https://github.com/hwchase17/langchain), desig
 
 You can install LangFlow from pip:
 
-`pip install langflow`
+```shell
+pip install langflow
+```
 
 Next, run:
 
-`python -m langflow`
+```shell
+python -m langflow
+```
+or 
+```shell
+langflow
+```
 
 ## 🎨 Creating Flows
 
