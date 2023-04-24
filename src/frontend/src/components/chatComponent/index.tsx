@@ -19,6 +19,7 @@ import { TabsContext } from "../../contexts/tabsContext";
 import { ChatType } from "../../types/chat";
 import ChatMessage from "./chatMessage";
 import { NodeType } from "../../types/flow";
+import ChatTrigger from "./chatTrigger";
 
 const _ = require("lodash");
 
@@ -258,34 +259,7 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 					</div>
 				</div>
 			</Transition>
-			<Transition
-				show={!open}
-				appear={true}
-				enter="transition ease-out duration-300"
-				enterFrom="translate-y-96"
-				enterTo="translate-y-0"
-				leave="transition ease-in duration-300"
-				leaveFrom="translate-y-0"
-				leaveTo="translate-y-96"
-			>
-				<div className="absolute bottom-0 right-1">
-					<div className="border flex justify-center align-center py-1 px-3 rounded-xl rounded-b-none bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white shadow">
-						<button
-							onClick={() => {
-								setOpen(true);
-							}}
-						>
-							<div className="flex gap-3  items-center">
-								<Bars3CenterLeftIcon
-									className="h-6 w-6 mt-1"
-									style={{ color: nodeColors["chat"] }}
-								/>
-								Chat
-							</div>
-						</button>
-					</div>
-				</div>
-			</Transition>
+			<ChatTrigger open={open} setOpen={setOpen}/>
 		</>
 	);
 }
