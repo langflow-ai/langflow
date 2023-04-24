@@ -71,6 +71,8 @@ nav:
       - Tools:
         - PAL-MATH: tool-pal-math.md
         - Serp API: serp-api.md
+      - Document Loaders:
+        - PyPDFLoader: py-pdf-loader.md
       # - Toolkits: toolkits.md
       # - Wrappers: wrappers.md
   - Release Notes: releases.md

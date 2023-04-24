@@ -1,16 +1,6 @@
 # Help LangFlow - Get Help
 
-Do you like **LangFlow**?
-
-Would you like to help LangFlow users?
-
-Or would you like to get help with **LangFlow**?
-
-There are very simple ways to help (several involve just one or two clicks).
-
-And there are several ways to get help too.
-
-## 🐦 Follow LangFlow on Twitter
+## 🐦 Stay tunned for LangFlow on Twitter
 
 <a href="https://twitter.com/logspace_ai" class="external-link" target="_blank">Follow @logspace_ai on **Twitter**</a> to get the latest news about **LangFlow**. 🐦
 

@@ -20,6 +20,14 @@ Separator used:
 ``` txt
 .
 ```
+Chunk size used:
+``` txt
+4000
+```
+Chunk overlap used:
+``` txt
+200
+```
 
 The `OpenAIEmbeddings`, wrapper around [OpenAI Embeddings](https://platform.openai.com/docs/guides/embeddings/what-are-embeddings){.internal-link target=_blank} models. Make sure to get the API key from the LLM provider, in this case [OpenAI](https://platform.openai.com/account/api-keys){.internal-link target=_blank}.
 
