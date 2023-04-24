@@ -1,6 +1,7 @@
 import contextlib
 import io
 from typing import Any, Dict
+from chromadb.errors import NotEnoughElementsException
 
 from langflow.cache.utils import compute_dict_hash, load_cache, memoize_dict
 from langflow.graph.graph import Graph
@@ -230,6 +231,10 @@ def get_result_and_thought_using_graph(langchain_object, message: str):
             else:
                 thought = output_buffer.getvalue()
 
+    except NotEnoughElementsException as exc:
+        raise ValueError(
+            "Error: Not enough documents for ChromaDB to index. Try reducing chunk size in TextSplitter."
+        ) from exc
     except Exception as exc:
         raise ValueError(f"Error: {str(exc)}") from exc
     return result, thought
