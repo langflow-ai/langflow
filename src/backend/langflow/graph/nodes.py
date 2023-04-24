@@ -101,6 +101,10 @@ class ChainNode(Node):
                     self.params[key] = value.build(tools=tools, force=force)
 
             self._build()
+
+        #! Cannot deepcopy SQLDatabaseChain
+        if self.node_type in ["SQLDatabaseChain"]:
+            return self._built_object
         return deepcopy(self._built_object)
 
 
