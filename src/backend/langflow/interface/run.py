@@ -39,14 +39,14 @@ def build_langchain_object_with_caching(data_graph):
     """
 
     logger.debug("Building langchain object")
-    nodes = data_graph["nodes"]
-    # Add input variables
-    # nodes = payload.extract_input_variables(nodes)
-    # Nodes, edges and root node
-    edges = data_graph["edges"]
-    graph = Graph(nodes, edges)
-
+    graph = build_graph(data_graph)
     return graph.build()
+
+
+def build_graph(data_graph):
+    nodes = data_graph["nodes"]
+    edges = data_graph["edges"]
+    return Graph(nodes, edges)
 
 
 def build_langchain_object(data_graph):
