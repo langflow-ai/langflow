@@ -82,6 +82,9 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
         documents = params.pop("documents")
         text_splitter = class_object(**params)
         return text_splitter.split_documents(documents)
+    elif base_type == "utilities":
+        if node_type == "SQLDatabase":
+            return class_object.from_uri(params.pop("uri"))
 
     return class_object(**params)
 
@@ -91,7 +94,7 @@ def load_flow_from_json(path: str, build=True):
     from langflow.graph import Graph
 
     """Load flow from json file"""
-    with open(path, "r") as f:
+    with open(path, "r", encoding="utf-8") as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]
     nodes = data_graph["nodes"]
