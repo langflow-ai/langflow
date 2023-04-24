@@ -39,7 +39,7 @@ export default function ButtonBox({
 			padding = "p-2";
 			marginTop = "mt-2";
 			height = "h-36";
-			widht = "w-28";
+			widht = "w-32";
 			break;
 		case "medium":
 			bigCircle = "h-16 w-16";
@@ -74,48 +74,48 @@ export default function ButtonBox({
 	}
 	return (
 		<button disabled={deactivate} onClick={onClick}>
-			<div
-				className={classNames(
-					"col-span-1 flex flex-col divide-y divide-gray-200 rounded-lg text-center shadow border border-gray-300 hover:shadow-lg transform hover:scale-105",
-					bgColor,
-					height,
-					widht
-				)}
-			>
-				<div className={`flex flex-1 flex-col ${padding}`}>
-					<div
-						className={`mx-auto flex items-center justify-center ${bigCircle} bg-white/30 rounded-full`}
-					>
+			<Tooltip title={description} placement="bottom">
+				<div
+					className={classNames(
+						"col-span-1 flex flex-col  divide-y divide-gray-200 rounded-lg text-center shadow border border-gray-300 hover:shadow-lg transform hover:scale-105",
+						bgColor,
+						height,
+						widht
+					)}
+				>
+					<div className={`flex flex-1 flex-col ${padding}`}>
 						<div
-							className={`mx-auto flex items-center justify-center ${smallCircle} bg-white rounded-full`}
+							className={`mx-auto flex items-center justify-center ${bigCircle} bg-white/30 rounded-full`}
 						>
-							<div className={textColor}>{icon}</div>
+							<div
+								className={`mx-auto flex items-center justify-center ${smallCircle} bg-white rounded-full`}
+							>
+								<div className={textColor}>{icon}</div>
+							</div>
 						</div>
-					</div>
-					<h3
-						className={classNames(
-							"font-semibold text-white",
-							titleFontSize,
-							marginTop
-						)}
-					>
-						{title}
-					</h3>
-					<div className="mt-1 flex flex-grow flex-col justify-between">
-						<dt className="sr-only">{title}</dt>
-						<Tooltip title={description} placement="bottom">
-							<dd
+						<h3
+							className={classNames(
+								"font-semibold text-white",
+								titleFontSize,
+								marginTop
+							)}
+						>
+							{title}
+						</h3>
+						<div className="mt-1 flex flex-grow flex-col justify-between">
+							<dt className="sr-only">{title}</dt>
+							{/* <dd
 								className={classNames(
 									"text-gray-100 line-clamp-2",
 									descriptionFontSize
 								)}
 							>
 								{deactivate ? "Coming soon" : description}
-							</dd>
-						</Tooltip>
+							</dd> */}
+						</div>
 					</div>
 				</div>
-			</div>
+			</Tooltip>
 		</button>
 	);
 }
