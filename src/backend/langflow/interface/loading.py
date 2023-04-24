@@ -68,6 +68,13 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
         params.pop("model")
         return class_object(**params)
     elif base_type == "vectorstores":
+        if len(params.get("documents", [])) == 0:
+            # Error when the pdf or other source was not correctly
+            # loaded.
+            raise ValueError(
+                "The source you provided did not load correctly or was empty."
+                "This may cause an error in the vectorstore."
+            )
         return class_object.from_documents(**params)
     elif base_type == "documentloaders":
         return class_object(**params).load()
@@ -79,7 +86,7 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
     return class_object(**params)
 
 
-def load_flow_from_json(path: str):
+def load_flow_from_json(path: str, build=True):
     # This is done to avoid circular imports
     from langflow.graph import Graph
 
@@ -96,7 +103,7 @@ def load_flow_from_json(path: str):
     # Nodes, edges and root node
     edges = data_graph["edges"]
     graph = Graph(nodes, edges)
-    return graph.build()
+    return graph.build() if build else graph
 
 
 def replace_zero_shot_prompt_with_prompt_template(nodes):
