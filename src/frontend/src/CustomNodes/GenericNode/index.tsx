@@ -38,7 +38,7 @@ export default function GenericNode({
 		<div
 			className={classNames(
 				selected ? "border border-blue-500" : "border dark:border-gray-700",
-				"prompt-node relative bg-white dark:bg-gray-900 w-96 rounded-lg flex flex-col justify-center"
+				"prompt-node relative bg-white dark:bg-gray-900 w-96 rounded-lg flex flex-col justify-center drop-shadow-[0_10px_10px_rgba(0,0,0,0.25)]"
 			)}
 		>
 			<div className="w-full dark:text-white flex items-center justify-between p-4 gap-8 bg-gray-50 rounded-t-lg dark:bg-gray-800 border-b dark:border-b-gray-700 ">

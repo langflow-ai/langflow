@@ -78,7 +78,7 @@ export const nodeColors: {[char: string]: string} = {
   tools: "#FF3434",
   memories: "#F5B85A",
   advanced: "#000000",
-  chat: "#454173",
+  chat: "#198BF6",
   thought:"#272541",
   embeddings:"#42BAA7",
   documentloaders:"#7AAE42",

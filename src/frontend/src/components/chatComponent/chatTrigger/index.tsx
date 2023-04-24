@@ -1,8 +1,12 @@
 import { Transition } from "@headlessui/react";
-import { Bars3CenterLeftIcon } from "@heroicons/react/24/outline";
+import { Bars3CenterLeftIcon, ChatBubbleBottomCenterTextIcon } from "@heroicons/react/24/outline";
 import { nodeColors } from "../../../utils";
+import { PopUpContext } from "../../../contexts/popUpContext";
+import { useContext } from "react";
+import ChatModal from "../../../modals/chatModal";
 
 export default function ChatTrigger({open, setOpen}){
+    const {openPopUp} = useContext(PopUpContext)
     return(<Transition
         show={!open}
         appear={true}
@@ -13,19 +17,19 @@ export default function ChatTrigger({open, setOpen}){
         leaveFrom="translate-y-0"
         leaveTo="translate-y-96"
     >
-        <div className="absolute bottom-0 right-1">
-            <div className="border flex justify-center align-center py-1 px-3 rounded-xl rounded-b-none bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white shadow">
+        <div className="absolute bottom-2 right-3">
+            <div style={{backgroundColor:nodeColors['chat']}} className="border flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full dark:bg-gray-800 dark:border-gray-600 dark:text-white">
                 <button
                     onClick={() => {
                         setOpen(true);
+                        openPopUp(<ChatModal/>)
                     }}
                 >
                     <div className="flex gap-3  items-center">
-                        <Bars3CenterLeftIcon
+                        <ChatBubbleBottomCenterTextIcon
                             className="h-6 w-6 mt-1"
-                            style={{ color: nodeColors["chat"] }}
+                            style={{ color: "white" }}
                         />
-                        Chat
                     </div>
                 </button>
             </div>
