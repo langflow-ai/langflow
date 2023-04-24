@@ -5,24 +5,21 @@ import { LocationProvider } from "./locationContext";
 import PopUpProvider from "./popUpContext";
 import { TabsProvider } from "./tabsContext";
 import { TypesProvider } from "./typesContext";
-import { TemplatesProvider } from "./templatesContext";
 
 export default function ContextWrapper({ children }: { children: ReactNode }) {
 	//element to wrap all context
 	return (
 		<>
 			<DarkProvider>
-				<LocationProvider>
-					<AlertProvider>
-						<TemplatesProvider>
+				<TypesProvider>
+					<LocationProvider>
+						<AlertProvider>
 							<TabsProvider>
-								<PopUpProvider>
-									<TypesProvider>{children}</TypesProvider>
-								</PopUpProvider>
+								<PopUpProvider>{children}</PopUpProvider>
 							</TabsProvider>
-						</TemplatesProvider>
-					</AlertProvider>
-				</LocationProvider>
+						</AlertProvider>
+					</LocationProvider>
+				</TypesProvider>
 			</DarkProvider>
 		</>
 	);
