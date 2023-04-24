@@ -3,7 +3,7 @@ import { FlowType } from "../types/flow";
 import { LangFlowState, TabsContextType } from "../types/tabs";
 import { normalCaseToSnakeCase } from "../utils";
 import { alertContext } from "./alertContext";
-import { TemplatesContext } from "./templatesContext";
+import { typesContext } from "./typesContext";
 
 const TabsContextInitialValue: TabsContextType = {
 	save:()=>{},
@@ -31,7 +31,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	const [flows, setFlows] = useState<Array<FlowType>>([]);
 	const [id, setId] = useState(0);
 	const [lockChat, setLockChat] = useState(false);
-	const {templates} = useContext(TemplatesContext)
+	const {templates} = useContext(typesContext	)
 
 	const newNodeId = useRef(0);
 	function incrementNodeId() {
@@ -56,7 +56,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	useEffect(() => {
 		//get tabs locally saved
 		let cookie = window.localStorage.getItem("tabsData");
-		if (cookie && Object.keys(templates).length>0) {
+		if (cookie) {
 			console.log(templates)
 			console.log(Object.keys(templates).length)
 			let cookieObject:LangFlowState = JSON.parse(cookie);

@@ -10,6 +10,8 @@ const initialValue:typesContextType = {
 	deleteNode: () => {},
 	types: {},
 	setTypes: () => {},
+	templates: {},
+	setTemplates: () => {},
 };
 
 export const typesContext = createContext<typesContextType>(initialValue);
@@ -17,6 +19,7 @@ export const typesContext = createContext<typesContextType>(initialValue);
 export function TypesProvider({ children }:{children:ReactNode}) {
 	const [types, setTypes] = useState({});
 	const [reactFlowInstance, setReactFlowInstance] = useState(null);
+	const [templates, setTemplates] = useState({});
 	function deleteNode(idx:string) {
 		reactFlowInstance.setNodes(
 			reactFlowInstance.getNodes().filter((n:Node) => n.id !== idx)
@@ -31,6 +34,8 @@ export function TypesProvider({ children }:{children:ReactNode}) {
 				reactFlowInstance,
 				setReactFlowInstance,
 				deleteNode,
+				setTemplates,
+				templates
 			}}
 		>
 			{children}

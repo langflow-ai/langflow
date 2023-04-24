@@ -9,12 +9,11 @@ import {
 	APIKindType,
 	APIObjectType,
 } from "../../../../types/api";
-import { TemplatesContext } from "../../../../contexts/templatesContext";
 
 export default function ExtraSidebar() {
 	const [data, setData] = useState({});
 	const { setTypes } = useContext(typesContext);
-	const { setTemplates } = useContext(TemplatesContext);
+	const { setTemplates } = useContext(typesContext);
 
 	useEffect(() => {
 		async function getTypes(): Promise<void> {
