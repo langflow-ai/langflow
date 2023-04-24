@@ -7,9 +7,10 @@ import {
 } from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
 import { typesContext } from "../../contexts/typesContext";
-import { useContext, useRef } from "react";
+import { useContext, useState, useEffect, useRef } from "react";
 import { NodeDataType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
+import { useCallback } from 'react';
 
 export default function GenericNode({
 	data,
@@ -22,6 +23,53 @@ export default function GenericNode({
 	const showError = useRef(true);
 	const { types, deleteNode } = useContext(typesContext);
 	const Icon = nodeIcons[types[data.type]];
+
+	// State for outline color
+	const [isGreenOutline, setIsGreenOutline] = useState(false);
+	const [isRedOutline, setIsRedOutline] = useState(false);
+	const { reactFlowInstance } = useContext(typesContext);
+
+	const validateNode = useCallback(async () => {
+		try {
+			const response = await fetch(`/validate/node/${data.id}`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(reactFlowInstance.toObject()),
+			});
+
+			if (response.status === 200) {
+				setIsGreenOutline(true);
+				setIsRedOutline(false);
+			} else if (response.status === 500) {
+				setIsRedOutline(true);
+				setIsGreenOutline(false);
+			}
+		} catch (error) {
+			console.error('Error validating node:', error);
+			setIsRedOutline(true);
+		}
+	}, [data.id, reactFlowInstance]);
+
+	useEffect(() => {
+		validateNode();
+	}, [
+		validateNode,
+		...Object.values(data.node.template).flatMap((t) => Object.values(t)),
+
+	]);
+
+	useEffect(() => {
+		if (isGreenOutline) {
+			setTimeout(() => {
+				setIsGreenOutline(false);
+			}, 1000);
+		}
+	}, [isGreenOutline]);
+
+	const outlineColor = isGreenOutline ? 'animate-pulse-green' : isRedOutline ? 'border-red-outline' : '';
+
 	if (!Icon) {
 		if (showError.current) {
 			setErrorData({
@@ -34,9 +82,11 @@ export default function GenericNode({
 		deleteNode(data.id);
 		return;
 	}
+
 	return (
 		<div
 			className={classNames(
+				outlineColor,
 				selected ? "border border-blue-500" : "border dark:border-gray-700",
 				"prompt-node relative bg-white dark:bg-gray-900 w-96 rounded-lg flex flex-col justify-center"
 			)}
@@ -98,8 +148,8 @@ export default function GenericNode({
 											data.node.template[t].display_name
 												? data.node.template[t].display_name
 												: data.node.template[t].name
-												? snakeToNormalCase(data.node.template[t].name)
-												: snakeToNormalCase(t)
+													? snakeToNormalCase(data.node.template[t].name)
+													: snakeToNormalCase(t)
 										}
 										name={t}
 										tooltipTitle={

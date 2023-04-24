@@ -47,7 +47,7 @@ def post_validate_node(node_id: str, data: dict):
         if node is not None:
             _ = node.build()
             return node.params
-        raise
+        raise Exception(f"Node {node_id} not found")
     except Exception as e:
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e)) from e
