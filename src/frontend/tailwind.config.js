@@ -37,9 +37,23 @@ module.exports = {
           "-webkit-text-security":"disc",
           "font-family": "text-security-disc"
 
+        },
+        '.custom-scroll':{
+          '&::-webkit-scrollbar': {
+            'width': '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            'backgroundColor': '#f1f1f1',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            'backgroundColor': '#ccc',
+            'borderRadius': '999px',
+          },
+          '&::-webkit-scrollbar-thumb:hover': {
+            'backgroundColor': '#bbb'
         }
       }
-      )
+    })
     }),require('@tailwindcss/line-clamp')
   ],
 }
