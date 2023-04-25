@@ -58,7 +58,7 @@ export default function ChatModal({ flow, open, setOpen }:{open:boolean,setOpen:
 	};
 
 	useEffect(() => {
-		const newWs = new WebSocket(`/chat/${flow.id}`);
+		const newWs = new WebSocket(`ws://backend:7860/chat/${flow.id}`);
 		newWs.onopen = () => {
 		  console.log('WebSocket connection established!');
 		};
