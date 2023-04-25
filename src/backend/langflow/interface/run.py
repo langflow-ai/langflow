@@ -1,6 +1,7 @@
 import contextlib
 import io
 from typing import Any, Dict
+from chromadb.errors import NotEnoughElementsException
 
 from langflow.cache.utils import compute_dict_hash, load_cache, memoize_dict
 from langflow.graph.graph import Graph
@@ -170,10 +171,12 @@ def fix_memory_inputs(langchain_object):
             if langchain_object.memory.memory_key in langchain_object.input_variables:
                 return
         except AttributeError:
-            if (
-                langchain_object.memory.memory_key
-                in langchain_object.prompt.input_variables
-            ):
+            input_variables = (
+                langchain_object.prompt.input_variables
+                if hasattr(langchain_object, "prompt")
+                else langchain_object.input_keys
+            )
+            if langchain_object.memory.memory_key in input_variables:
                 return
 
         possible_new_mem_key = get_memory_key(langchain_object)
@@ -191,9 +194,12 @@ def get_result_and_thought_using_graph(langchain_object, message: str):
         if hasattr(langchain_object, "memory") and langchain_object.memory is not None:
             memory_key = langchain_object.memory.memory_key
 
-        for key in langchain_object.input_keys:
-            if key not in [memory_key, "chat_history"]:
-                chat_input = {key: message}
+        if hasattr(langchain_object, "input_keys"):
+            for key in langchain_object.input_keys:
+                if key not in [memory_key, "chat_history"]:
+                    chat_input = {key: message}
+        else:
+            chat_input = message  # type: ignore
 
         if hasattr(langchain_object, "return_intermediate_steps"):
             # https://github.com/hwchase17/langchain/issues/2068
@@ -225,6 +231,10 @@ def get_result_and_thought_using_graph(langchain_object, message: str):
             else:
                 thought = output_buffer.getvalue()
 
+    except NotEnoughElementsException as exc:
+        raise ValueError(
+            "Error: Not enough documents for ChromaDB to index. Try reducing chunk size in TextSplitter."
+        ) from exc
     except Exception as exc:
         raise ValueError(f"Error: {str(exc)}") from exc
     return result, thought
