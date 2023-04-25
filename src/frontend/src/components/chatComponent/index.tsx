@@ -259,7 +259,7 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 					</div>
 				</div>
 			</Transition>
-			<ChatTrigger open={open} setOpen={setOpen}/>
+			<ChatTrigger open={open} setOpen={setOpen} flow={flow}/>
 		</>
 	);
 }
