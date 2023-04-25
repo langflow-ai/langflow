@@ -5,11 +5,14 @@ By using `WebBaseLoader`, you can load all text from webpages into a document fo
 https://beta.ruff.rs/docs/faq/
 ```
 
-`CharacterTextSplitter` implementation of splitting text that looks at characters. Dealing with long pieces of text requires splitting them into smaller chunks, which can be a complex task. It is important to keep semantically related pieces of text together, though what constitutes semantic relatedness can vary depending on the text.
+`CharacterTextSplitter` implements splitting text based on characters. 
+
 Text splitters operate as follows:
 
 - Split the text into small, meaningful chunks (usually sentences).
+
 - Combine these small chunks into larger ones until they reach a certain size (measured by a function).
+
 - Once a chunk reaches the desired size, make it its piece of text and create a new chunk with some overlap to maintain context.
 
 Separator used:
