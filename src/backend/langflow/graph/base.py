@@ -211,7 +211,11 @@ class Node:
             "VectorStoreRouterAgent",
             "VectorStoreAgent",
             "VectorStoreInfo",
-        ] or self.node_type in ["VectorStoreInfo", "VectorStoreRouterToolkit"]:
+        ] or self.node_type in [
+            "VectorStoreInfo",
+            "VectorStoreRouterToolkit",
+            "SQLDatabase",
+        ]:
             return self._built_object
         return deepcopy(self._built_object)
 

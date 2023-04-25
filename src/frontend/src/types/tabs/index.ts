@@ -6,12 +6,10 @@ export type TabsContextType = {
 	setTabIndex: (index: number) => void;
 	flows: Array<FlowType>;
 	removeFlow: (id: string) => void;
-	addFlow: (flowData?: any) => void;
+	addFlow: (flowData?: FlowType) => void;
 	updateFlow: (newFlow: FlowType) => void;
 	incrementNodeId: () => number;
 	downloadFlow: (flow:FlowType) => void;
 	uploadFlow: () => void;
-	lockChat:boolean;
-	setLockChat:(prevState:boolean)=>void;
 	hardReset:()=>void;
 };

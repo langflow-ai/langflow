@@ -13,7 +13,8 @@ import {
   QuestionMarkCircleIcon,
   FingerPrintIcon,
   ScissorsIcon,
-  CircleStackIcon
+  CircleStackIcon,
+  Squares2X2Icon
 } from "@heroicons/react/24/outline";
 import { Connection, Edge, Node, ReactFlowInstance } from "reactflow";
 import { FlowType } from "./types/flow";
@@ -77,7 +78,7 @@ export const nodeColors: {[char: string]: string} = {
   tools: "#FF3434",
   memories: "#F5B85A",
   advanced: "#000000",
-  chat: "#454173",
+  chat: "#198BF6",
   thought:"#272541",
   embeddings:"#42BAA7",
   documentloaders:"#7AAE42",
@@ -85,6 +86,7 @@ export const nodeColors: {[char: string]: string} = {
   textsplitters: "#B47CB5",
   toolkits:"#DB2C2C",
   wrappers:"#E6277A",
+  utilities:"#31A3CC",
   unknown:"#9CA3AF"
 };
 
@@ -103,6 +105,7 @@ export const nodeNames:{[char: string]: string} = {
   toolkits:"Toolkits",
   wrappers:"Wrappers",
   textsplitters: "Text Splitters",
+  utilities:"Utilities",
   unknown:"Unknown"
 };
 
@@ -121,6 +124,7 @@ export const nodeIcons:{[char: string]: React.ForwardRefExoticComponent<React.SV
   toolkits:WrenchScrewdriverIcon,
   textsplitters:ScissorsIcon,
   wrappers:GiftIcon,
+  utilities:Squares2X2Icon,
   unknown:QuestionMarkCircleIcon
 };
 
