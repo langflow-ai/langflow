@@ -83,7 +83,7 @@ def test_hugging_face_hub(client: TestClient):
         "list": False,
     }
     assert template["huggingfacehub_api_token"] == {
-        "required": True,
+        "required": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -241,7 +241,7 @@ def test_openai(client: TestClient):
         "list": False,
     }
     assert template["openai_api_key"] == {
-        "required": True,
+        "required": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -371,7 +371,7 @@ def test_chat_open_ai(client: TestClient):
         "list": False,
     }
     assert template["openai_api_key"] == {
-        "required": True,
+        "required": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
