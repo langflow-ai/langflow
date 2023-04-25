@@ -24,12 +24,13 @@ export default function ChatModal({
 	setOpen: Function;
 	flow: FlowType;
 }) {
-	const { updateFlow, lockChat, setLockChat } = useContext(TabsContext);
+	const { updateFlow } = useContext(TabsContext);
 	const [chatValue, setChatValue] = useState("");
 	const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
 	const { reactFlowInstance } = useContext(typesContext);
 	const { setErrorData, setNoticeData } = useContext(alertContext);
 	const [ws, setWs] = useState<WebSocket | null>(null);
+	const [lockChat, setLockChat] = useState(false);
 	const addChatHistory = (
 		message: string,
 		isSend: boolean,
@@ -79,6 +80,7 @@ export default function ChatModal({
 			}
 			if (data.type === "end") {
 				addChatHistory(data.message, false, data.intermediate_steps);
+				setLockChat(false)
 			}
 			// Do something with the data received from the WebSocket
 		};
@@ -162,25 +164,21 @@ export default function ChatModal({
 					chatHistory,
 					name: flow.name,
 					description: flow.description,
-				})
-					.then(() => {
-						setLockChat(false);
-					})
-					.catch((error) => {
-						setErrorData({
-							title: error.message ?? "Unknown Error",
-							list: [error.response.data.detail],
-						});
-						setLockChat(false);
-						let lastMessage;
-						setChatHistory((chatHistory) => {
-							let newChat = chatHistory;
-
-							lastMessage = newChat.pop().message;
-							return newChat;
-						});
-						setChatValue(lastMessage);
+				}).catch((error) => {
+					setErrorData({
+						title: error.message ?? "Unknown Error",
+						list: [error.response.data.detail],
 					});
+					setLockChat(false);
+					let lastMessage;
+					setChatHistory((chatHistory) => {
+						let newChat = chatHistory;
+
+						lastMessage = newChat.pop().message;
+						return newChat;
+					});
+					setChatValue(lastMessage);
+				});
 			} else {
 				setErrorData({
 					title: "Oops! Looks like you missed some required information:",

@@ -22,8 +22,6 @@ const TabsContextInitialValue: TabsContextType = {
 	incrementNodeId: () => 0,
 	downloadFlow: (flow: FlowType) => {},
 	uploadFlow: () => {},
-	lockChat: false,
-	setLockChat: (prevState: boolean) => {},
 	hardReset: () => {},
 };
 
@@ -192,8 +190,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 			value={{
 				save,
 				hardReset,
-				lockChat,
-				setLockChat,
 				tabIndex,
 				setTabIndex,
 				flows,
