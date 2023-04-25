@@ -25,8 +25,8 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
 					"rounded-full w-8 h-8 flex items-center my-3 justify-center",chat.isSend?"bg-black":"bg-black"
 				)}
 			>
-				{!chat.isSend && <AiFillRobot className="text-white"/>}
-				{chat.isSend && <UserIcon className="text-white w-5 h-5" />}
+				{!chat.isSend && <object data={"../"}></object>}
+				{chat.isSend && <img src={"../../../assets/Gooey Ring-5s-271px.svg"}/>}
 			</div>
 			{!chat.isSend ? (
 				<div className="w-full text-start flex items-center">
