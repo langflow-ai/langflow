@@ -26,7 +26,7 @@ export default function Chat({ flow }: ChatType) {
 		}, []);
 	return (
 		<>
-			<ChatModal flow={flow} open={open} setOpen={setOpen} />
+			<ChatModal key={flow.id} flow={flow} open={open} setOpen={setOpen} />
 			<ChatTrigger open={open} setOpen={setOpen} flow={flow} />
 		</>
 	);
