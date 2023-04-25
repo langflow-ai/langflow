@@ -10,7 +10,7 @@ import { typesContext } from "../../contexts/typesContext";
 import ChatMessage from "./chatMessage";
 import { FaEraser } from "react-icons/fa";
 import { sendAllProps } from "../../types/api";
-import { ChatMessageType } from "../../types/chat";
+import { ChatMessageType, ChatType } from "../../types/chat";
 
 const _ = require("lodash");
 
@@ -23,8 +23,7 @@ export default function ChatModal({
 	setOpen: Function;
 	flow: FlowType;
 }) {
-	const { updateFlow, lockChat, setLockChat} =
-		useContext(TabsContext);
+	const { updateFlow, lockChat, setLockChat } = useContext(TabsContext);
 	const [chatValue, setChatValue] = useState("");
 	const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
 	const { reactFlowInstance } = useContext(typesContext);
@@ -35,7 +34,6 @@ export default function ChatModal({
 		isSend: boolean,
 		thought?: string
 	) => {
-
 		setChatHistory((old) => {
 			let newChat = _.cloneDeep(old);
 			if (thought) {
@@ -55,9 +53,31 @@ export default function ChatModal({
 		newWs.onmessage = (event) => {
 			const data = JSON.parse(event.data);
 			console.log("Received data:", data);
-			if(Array.isArray(data)){
-				console.log("entrou")
-				setChatHistory([{isSend:true,message:"sdsdsad"}])
+			//get chat history
+			if (Array.isArray(data)) {
+				console.log("entrou");
+
+				setChatHistory((_) => {
+					let newChatHistory: ChatMessageType[] = [];
+					data.forEach(
+						(chatItem: {
+							intermediate_steps?: "string";
+							is_bot: boolean;
+							message: string;
+							type: string;
+						}) => {
+							newChatHistory.push({
+								isSend: !chatItem.is_bot,
+								message: chatItem.message,
+								thought:chatItem.intermediate_steps
+							});
+						}
+					);
+					return newChatHistory;
+				});
+			}
+			if(data.type==='end'){
+				addChatHistory(data.message, false, data.intermediate_steps);
 			}
 			// Do something with the data received from the WebSocket
 		};
@@ -72,7 +92,6 @@ export default function ChatModal({
 		if (ws) {
 			ws.send(JSON.stringify(data));
 		}
-		return { data: { result: "sdsdsad", thought: "dsdsad" } };
 	}
 
 	useEffect(() => {
@@ -143,8 +162,7 @@ export default function ChatModal({
 					name: flow.name,
 					description: flow.description,
 				})
-					.then((r) => {
-						addChatHistory(r.data.result, false, r.data.thought);
+					.then(() => {
 						setLockChat(false);
 					})
 					.catch((error) => {
