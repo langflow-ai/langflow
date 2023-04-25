@@ -6,7 +6,6 @@ export type FlowType = {
 	name: string;
 	id: string;
 	data: ReactFlowJsonObject;
-	chat: Array<ChatMessageType>;
 	description:string;
 };
 export type NodeType = {id:string,type:string,position:XYPosition,data:NodeDataType}
