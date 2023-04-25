@@ -10,15 +10,23 @@ import { typesContext } from "../../contexts/typesContext";
 import ChatMessage from "./chatMessage";
 import { FaEraser } from "react-icons/fa";
 import { sendAllProps } from "../../types/api";
+import { ChatMessageType } from "../../types/chat";
 
 const _ = require("lodash");
 
-export default function ChatModal({ flow, open, setOpen }:{open:boolean,setOpen:Function,flow:FlowType}) {
-	const { updateFlow, lockChat, setLockChat, flows, tabIndex } =
+export default function ChatModal({
+	flow,
+	open,
+	setOpen,
+}: {
+	open: boolean;
+	setOpen: Function;
+	flow: FlowType;
+}) {
+	const { updateFlow, lockChat, setLockChat} =
 		useContext(TabsContext);
-	const [saveChat, setSaveChat] = useState(false);
 	const [chatValue, setChatValue] = useState("");
-	const [chatHistory, setChatHistory] = useState(flow.chat);
+	const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
 	const { reactFlowInstance } = useContext(typesContext);
 	const { setErrorData, setNoticeData } = useContext(alertContext);
 	const [ws, setWs] = useState<WebSocket | null>(null);
@@ -27,13 +35,9 @@ export default function ChatModal({ flow, open, setOpen }:{open:boolean,setOpen:
 		isSend: boolean,
 		thought?: string
 	) => {
-		let tabsChange = false;
+
 		setChatHistory((old) => {
 			let newChat = _.cloneDeep(old);
-			if (JSON.stringify(flow.chat) !== JSON.stringify(old)) {
-				tabsChange = true;
-				return old;
-			}
 			if (thought) {
 				newChat.push({ message, isSend, thought });
 			} else {
@@ -41,53 +45,36 @@ export default function ChatModal({ flow, open, setOpen }:{open:boolean,setOpen:
 			}
 			return newChat;
 		});
-		if (tabsChange) {
-			if (thought) {
-				updateFlow({
-					..._.cloneDeep(flow),
-					chat: [...flow.chat, { isSend, message, thought }],
-				});
-			} else {
-				updateFlow({
-					..._.cloneDeep(flow),
-					chat: [...flow.chat, { isSend, message }],
-				});
-			}
-		}
-		setSaveChat((chat) => !chat);
 	};
 
 	useEffect(() => {
 		const newWs = new WebSocket(`ws://localhost:7860/chat/${flow.id}`);
 		newWs.onopen = () => {
-		  console.log('WebSocket connection established!');
+			console.log("WebSocket connection established!");
 		};
 		newWs.onmessage = (event) => {
-		  const data = JSON.parse(event.data);
-		  console.log('Received data:', data);
-		  // Do something with the data received from the WebSocket
+			const data = JSON.parse(event.data);
+			console.log("Received data:", data);
+			if(Array.isArray(data)){
+				console.log("entrou")
+				setChatHistory([{isSend:true,message:"sdsdsad"}])
+			}
+			// Do something with the data received from the WebSocket
 		};
 		setWs(newWs);
-	
+
 		return () => {
-		  newWs.close();
+			newWs.close();
 		};
-	  }, []);
+	}, []);
 
-	  async function sendAll(data: sendAllProps) {
+	async function sendAll(data: sendAllProps) {
 		if (ws) {
-		  ws.send(JSON.stringify(data));
+			ws.send(JSON.stringify(data));
 		}
-		return {data:{result:"sdsdsad",thought:"dsdsad"}}
-	  }
+		return { data: { result: "sdsdsad", thought: "dsdsad" } };
+	}
 
-	useEffect(() => {
-		updateFlow({ ..._.cloneDeep(flow), chat: chatHistory });
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [saveChat]);
-	useEffect(() => {
-		setChatHistory(flow.chat);
-	}, [flow]);
 	useEffect(() => {
 		if (ref.current) ref.current.scrollIntoView({ behavior: "smooth" });
 	}, [chatHistory]);
