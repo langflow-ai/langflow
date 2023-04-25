@@ -5,7 +5,7 @@
 </p>
 
 <p>
-<a href="https://huggingface.co/spaces/Logspace/LangFlow"><img src="https://huggingface.co/datasets/huggingface/badges/raw/main/open-in-hf-spaces-sm.svg" alt="HuggingFace Spaces"></a>
+<a href="https://huggingface.co/spaces/Logspace/LangFlow" target="_blank"><img src="https://huggingface.co/datasets/huggingface/badges/raw/main/open-in-hf-spaces-sm.svg" alt="HuggingFace Spaces"></a>
 <img alt="GitHub Contributors" src="https://img.shields.io/github/contributors/logspace-ai/langflow" />
 <img alt="GitHub Last Commit" src="https://img.shields.io/github/last-commit/logspace-ai/langflow" />
 <img alt="" src="https://img.shields.io/github/repo-size/logspace-ai/langflow" />
