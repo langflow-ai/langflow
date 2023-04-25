@@ -14,22 +14,22 @@ By adding a star, other users will be able to find it more easily and see that i
 
 You can "watch" LangFlow in GitHub (clicking the "watch" button at the top right): <a href="https://github.com/logspace-ai/langflow" class="external-link" target="\_blank">https://github.com/logspace-ai/langflow</a>. 👀
 
-If you select "Watching" instead of "Releases only" you will receive notifications when someone creates a new issue or question. You can also specify that you only want to be notified about new issues, or discussions, or PRs, etc.
+If you select "Watching" instead of "Releases only" you will receive notifications when someone creates a new issue or question. You can also specify that you only want to be notified about new issues, discussions, PRs, etc.
 
 Then you can try and help them solve those questions.
 
 ## 🙏 Help others with questions on GitHub
 
-You can try and help others with their questions in:
+You can try and help others with their questions in the:
 
 - <a href="https://github.com/logspace-ai/langflow/discussions" class="external-link" target="_blank">GitHub Discussions</a>
 - <a href="https://github.com/logspace-ai/langflow/issues" class="external-link" target="_blank">GitHub Issues</a>
 
-In many cases you might already know the answer for those questions. 🤓
+In many cases, you might already know the answer to those questions. 🤓
 
-Just remember, the most important point is: try to be kind. People come with their frustrations and in many cases don't ask in the best way, but try as best as you can to be kind. 🤗
+Just remember, the most important point is: to try to be kind. People come with their frustrations and in many cases don't ask in the best way, but try as best as you can to be kind. 🤗
 
-The idea is for the **LangFlow** community to be kind and welcoming. At the same time, don't accept bullying or disrespectful behavior towards others. We have to take care of each other.
+The idea is for the **LangFlow** community to be kind and welcoming. At the same time, don't accept bullying or disrespectful behavior toward others. We have to take care of each other.
 
 ---
 
@@ -49,7 +49,7 @@ Here's how to help others with questions (in discussions or issues):
 
 For most of the cases and most of the questions there's something related to the person's **original code**.
 
-In many cases they will only copy a fragment of the code, but that's not enough to **reproduce the problem**.
+In many cases, they will only copy a fragment of the code, but that's not enough to **reproduce the problem**.
 
 - If you are feeling too generous, you can try to **create an example** like that yourself, just based on the description of the problem. Just have in mind that this might take a lot of time and it might be better to ask them to clarify the problem first.
 
@@ -91,7 +91,7 @@ Here's what to have in mind and how to review a pull request:
 
 - First, make sure you **understand the problem** that the pull request is trying to solve. It might have a longer discussion in a GitHub Discussion or issue.
 
-- There's also a good chance that the pull request is not actually needed because the problem can be solved in a **different way**. Then you can suggest or ask about that.
+- There's also a good chance that the pull request is not needed because the problem can be solved in a **different way**. Then you can suggest or ask about that.
 
 ### Don't worry about style
 
@@ -99,20 +99,20 @@ Here's what to have in mind and how to review a pull request:
 
 - Also don't worry about style rules, there are already automatized tools checking that.
 
-And if there's any other style or consistency need, I'll ask directly for that, or I'll add commits on top with the needed changes.
+And if there's any other style or consistency needed, I'll ask directly for that, or I'll add commits on top with the needed changes.
 
 ### Check the code
 
-- Check and read the code, see if it makes sense, **run it locally** and see if it actually solves the problem.
+- Check and read the code, see if it makes sense, **run it locally** and see if it solves the problem.
 
-- Then **comment** saying that you did that, that's how I will know you really checked it.
+- Then **comment** saying that you did that, that's how I will know you checked it.
 
 !!! info
 Unfortunately, we can't simply trust PRs that just have several approvals.
 
-    Several times it has happened that there are PRs with 3, 5 or more approvals, probably because the description is appealing, but when I check the PRs, they are actually broken, have a bug, or don't solve the problem they claim to solve. 😅
+    Several times it has happened that there are PRs with 3, 5, or more approvals, probably because the description is appealing, but when I check the PRs, they are broken, have a bug, or don't solve the problem they claim to solve. 😅
 
-    So, it's really important that you actually read and run the code, and let us know in the comments that you did. 🤓
+    So, it's really important that you read and run the code, and let us know in the comments that you did. 🤓
 
 - If the PR can be simplified in a way, you can ask for that, but there's no need to be too picky, there might be a lot of subjective points of view (and we will have our own as well 🙈), so it's better if you can focus on the fundamental things.
 
@@ -124,9 +124,9 @@ Unfortunately, we can't simply trust PRs that just have several approvals.
 
 - Then check that the tests **pass** after the PR. ✅
 
-- Many PRs don't have tests, you can **remind** them to add tests, or you can even **suggest** some tests yourself. That's one of the things that consume most time and you can help a lot with that.
+- Many PRs don't have tests, you can **remind** them to add tests, or you can even **suggest** some tests yourself. That's one of the things that consume the most time and you can help a lot with that.
 
-- Then also comment what you tried, that way I'll know that you checked it. 🤓
+- They also comment on what you tried, that way I'll know that you checked it. 🤓
 
 ### Create a Pull Request
 

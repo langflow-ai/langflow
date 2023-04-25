@@ -1,6 +1,6 @@
 ## Nodes
 
-`JsonSpec` will define the **Max value length** of the input and output of the agent. The **Path** is the path to the json file.
+`JsonSpec` will define the **Max value length** of the input and output of the agent. The **Path** is the path to the JSON file.
 
 Max value length:
 ``` txt
@@ -8,7 +8,7 @@ Max value length:
 ```
 We use the OpenAPI spec for OpenAI API in the ⛓️LangFlow example. Get it [here](https://github.com/openai/openai-openapi/blob/master/openapi.yaml){.internal-link target=_blank}.
 
-We used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/account/api-keys){.internal-link target=_blank} requires you to create an account to get your API key.
+We used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/account/api-keys){.internal-link target=_blank} requires you to create an account to get it yours.
 
 Check the short tutorial of [OpenAI](llms.md){.internal-link target=_blank} options available.
 

@@ -13,16 +13,16 @@ Here are some examples of good company names:
 - social media, Facebook
 - video sharing, YouTube
 
-The name should be short, catchy and easy to remember.
+The name should be short, catchy, and easy to remember.
 
 What is a good name for a company that makes {product}?
 ```
 
-We used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/account/api-keys){.internal-link target=_blank} requires you to create an account to get your API key.
+We used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/account/api-keys){.internal-link target=_blank} requires you to create an account to get it yours.
 
 Check the short tutorial of [OpenAI](llms.md){.internal-link target=_blank} options available.
 
-The `LLMChain` is a simple chain that takes in a prompt template, formats it with the user input and returns the response from an LLM.
+The `LLMChain` is a simple chain that takes in a prompt template, formats it with the user input, and returns the response from an LLM.
 
 ### ⛓️LangFlow
 
