@@ -1,7 +1,5 @@
 import { Dialog, Transition } from "@headlessui/react";
 import {
-	XMarkIcon,
-	ClipboardDocumentListIcon,
 	LockClosedIcon,
 	PaperAirplaneIcon,
 } from "@heroicons/react/24/outline";
@@ -18,7 +16,7 @@ import { FaEraser } from "react-icons/fa";
 
 const _ = require("lodash");
 
-export default function ChatModal({ flow }) {
+export default function ChatModal({ flow,open, setOpen }) {
 	const { updateFlow, lockChat, setLockChat, flows, tabIndex } =
 		useContext(TabsContext);
 	const [saveChat, setSaveChat] = useState(false);
@@ -173,7 +171,6 @@ export default function ChatModal({ flow }) {
 		updateFlow({ ..._.cloneDeep(flow), chat: [] });
 	}
 
-	const [open, setOpen] = useState(true);
 	const { closePopUp } = useContext(PopUpContext);
 	function setModalOpen(x: boolean) {
 		setOpen(x);
