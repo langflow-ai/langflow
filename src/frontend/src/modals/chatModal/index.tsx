@@ -11,6 +11,7 @@ import ChatMessage from "./chatMessage";
 import { FaEraser } from "react-icons/fa";
 import { sendAllProps } from "../../types/api";
 import { ChatMessageType, ChatType } from "../../types/chat";
+import ChatInput from "./chatInput";
 
 const _ = require("lodash");
 
@@ -69,14 +70,14 @@ export default function ChatModal({
 							newChatHistory.push({
 								isSend: !chatItem.is_bot,
 								message: chatItem.message,
-								thought:chatItem.intermediate_steps
+								thought: chatItem.intermediate_steps,
 							});
 						}
 					);
 					return newChatHistory;
 				});
 			}
-			if(data.type==='end'){
+			if (data.type === "end") {
 				addChatHistory(data.message, false, data.intermediate_steps);
 			}
 			// Do something with the data received from the WebSocket
@@ -255,41 +256,12 @@ export default function ChatModal({
 								</div>
 								<div className="w-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center justify-between p-3">
 									<div className="relative w-full mt-1 rounded-md shadow-sm">
-										<input
-											onKeyDown={(event) => {
-												if (event.key === "Enter" && !lockChat) {
-													sendMessage();
-												}
-											}}
-											type="text"
-											disabled={lockChat}
-											value={lockChat ? "Thinking..." : chatValue}
-											onChange={(e) => {
-												setChatValue(e.target.value);
-											}}
-											className={classNames(
-												lockChat
-													? "bg-gray-500 text-white"
-													: "dark:bg-gray-700",
-												"form-input block w-full rounded-md border-gray-300 dark:border-gray-600  dark:text-white pr-10 sm:text-sm"
-											)}
-											placeholder={"Send a message..."}
+										<ChatInput
+											chatValue={chatValue}
+											lockChat={lockChat}
+											sendMessage={sendMessage}
+											setChatValue={setChatValue}
 										/>
-										<div className="absolute inset-y-0 right-0 flex items-center pr-3">
-											<button disabled={lockChat} onClick={() => sendMessage()}>
-												{lockChat ? (
-													<LockClosedIcon
-														className="h-5 w-5 text-gray-400  dark:hover:text-gray-300 animate-pulse"
-														aria-hidden="true"
-													/>
-												) : (
-													<PaperAirplaneIcon
-														className="h-5 w-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-														aria-hidden="true"
-													/>
-												)}
-											</button>
-										</div>
 									</div>
 								</div>
 							</Dialog.Panel>
