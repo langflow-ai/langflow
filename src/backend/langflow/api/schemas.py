@@ -5,14 +5,9 @@ from pydantic import BaseModel, validator
 class ChatMessage(BaseModel):
     """Chat message schema."""
 
-    sender: str
+    is_bot: bool = False
     message: Union[str, None] = None
-
-    @validator("sender")
-    def sender_must_be_bot_or_you(cls, v):
-        if v not in ["bot", "you"]:
-            raise ValueError("sender must be bot or you")
-        return v
+    type: str = "human"
 
 
 class ChatResponse(ChatMessage):
@@ -20,6 +15,7 @@ class ChatResponse(ChatMessage):
 
     intermediate_steps: str
     type: str
+    is_bot: bool = True
 
     @validator("type")
     def validate_message_type(cls, v):
@@ -34,6 +30,7 @@ class FileResponse(ChatMessage):
     data: Any
     data_type: str
     type: str = "file"
+    is_bot: bool = True
 
     @validator("data_type")
     def validate_data_type(cls, v):
