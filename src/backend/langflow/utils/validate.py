@@ -155,7 +155,7 @@ def create_function(code, function_name):
     exec_globals[function_name] = locals()[function_name]
 
     # Return a function that imports necessary modules and calls the target function
-    def wrapped_function(*args, **kwargs):
+    async def wrapped_function(*args, **kwargs):
         for module_name, module in exec_globals.items():
             if isinstance(module, type(importlib)):
                 globals()[module_name] = module
