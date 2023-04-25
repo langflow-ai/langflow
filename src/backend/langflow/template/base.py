@@ -228,3 +228,7 @@ class FrontendNode(BaseModel):
             field.required = False
             if field.value is None:
                 field.value = ""
+        # If the field.name contains api or api and key, then it might be an api key
+        # other conditions are to make sure that it is not an input or output variable
+        if "api" in key.lower() and "key" in key.lower():
+            field.required = False
