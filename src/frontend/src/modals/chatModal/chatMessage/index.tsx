@@ -7,6 +7,7 @@ import { useState } from "react";
 import { ChatMessageType } from "../../../types/chat";
 import { classNames } from "../../../utils";
 import { UserIcon } from "@heroicons/react/24/solid";
+import {AiFillRobot} from "react-icons/ai"
 var Convert = require("ansi-to-html");
 var convert = new Convert({ newline: true });
 
@@ -21,10 +22,10 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
 		>
 			<div
 				className={classNames(
-					"rounded-full w-8 h-8 flex items-center my-3 justify-center bg-black"
+					"rounded-full w-8 h-8 flex items-center my-3 justify-center",chat.isSend?"bg-black":"bg-black"
 				)}
 			>
-				{!chat.isSend && <span>🦜</span>}
+				{!chat.isSend && <AiFillRobot className="text-white"/>}
 				{chat.isSend && <UserIcon className="text-white w-5 h-5" />}
 			</div>
 			{!chat.isSend ? (

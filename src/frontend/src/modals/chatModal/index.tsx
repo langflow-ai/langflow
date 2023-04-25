@@ -14,6 +14,8 @@ import { classNames, snakeToNormalCase } from "../../utils";
 import { sendAll } from "../../controllers/API";
 import { typesContext } from "../../contexts/typesContext";
 import ChatMessage from "./chatMessage";
+import { FaEraser } from "react-icons/fa";
+
 const _ = require("lodash");
 
 export default function ChatModal({ flow }) {
@@ -110,7 +112,7 @@ export default function ChatModal({ flow }) {
 	}
 
 	function validateNodes() {
-		console.log(reactFlowInstance)
+		console.log(reactFlowInstance);
 		return reactFlowInstance
 			.getNodes()
 			.flatMap((n: NodeType) => validateNode(n));
@@ -198,7 +200,7 @@ export default function ChatModal({ flow }) {
 					leaveFrom="opacity-100"
 					leaveTo="opacity-0"
 				>
-					<div className="fixed inset-0 bg-gray-500 dark:bg-gray-600 dark:bg-opacity-75 bg-opacity-75 transition-opacity" />
+					<div className="fixed inset-0 bg-black backdrop-blur-sm dark:bg-gray-600 dark:bg-opacity-80 bg-opacity-80 transition-opacity" />
 				</Transition.Child>
 
 				<div className="fixed inset-0 z-10 overflow-y-auto">
@@ -212,7 +214,13 @@ export default function ChatModal({ flow }) {
 							leaveFrom="opacity-100 translate-y-0 sm:scale-100"
 							leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
 						>
-							<Dialog.Panel className=" drop-shadow-2xl relative flex flex-col justify-between transform h-[600px] overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all sm:my-8 w-[700px]">
+							<Dialog.Panel className=" drop-shadow-2xl relative flex flex-col justify-between transform h-[95%] overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all sm:my-8 w-[690px]">
+								<div className="relative w-full">
+									<button onClick={()=>clearChat()} className="absolute top-2 right-2 hover:text-red-500">
+										
+										<FaEraser className="w-4 h-4"/>
+									</button>
+								</div>
 								<div className="w-full h-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center overflow-scroll scrollbar-hide">
 									{chatHistory.map((c, i) => (
 										<ChatMessage chat={c} key={i} />
