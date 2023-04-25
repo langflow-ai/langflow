@@ -91,6 +91,12 @@ export default function ChatModal({
 		};
 	}, []);
 
+	useEffect(()=>{
+		if(ws && ws.CLOSED){
+			setLockChat(false)
+		}
+	},[lockChat])
+
 	async function sendAll(data: sendAllProps) {
 		if (ws) {
 			ws.send(JSON.stringify(data));
