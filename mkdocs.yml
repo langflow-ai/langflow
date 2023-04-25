@@ -74,6 +74,7 @@ nav:
       - Document Loaders:
         - PyPDFLoader: py-pdf-loader.md
         - CSVLoader: csv-loader.md
+  - GCP Deployment: GCP_DEPLOYMENT.md
   - Release Notes: releases.md
   - Contributing: help-langflow.md
 

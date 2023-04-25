@@ -1,3 +1,8 @@
+## v0.0.57
+
+### What's Changed
+* Hotfix: psygopg2 might break installation by @ogabrielluiz in #168
+
 ## v0.0.56
 
 ### What's Changed
