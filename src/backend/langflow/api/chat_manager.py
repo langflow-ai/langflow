@@ -126,9 +126,10 @@ class ChatManager:
             logger.exception(e)
             raise e
         # Send a response back to the frontend, if needed
+        intermediate_steps = intermediate_steps or ""
         response = ChatResponse(
             message=result or "",
-            intermediate_steps=intermediate_steps or "",
+            intermediate_steps=intermediate_steps.strip(),
             type="end",
         )
         self.chat_history.add_message(client_id, response)
