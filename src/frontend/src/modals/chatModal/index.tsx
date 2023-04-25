@@ -1,22 +1,19 @@
 import { Dialog, Transition } from "@headlessui/react";
-import {
-	LockClosedIcon,
-	PaperAirplaneIcon,
-} from "@heroicons/react/24/outline";
+import { LockClosedIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useEffect, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
-import { NodeType } from "../../types/flow";
+import { FlowType, NodeType } from "../../types/flow";
 import { TabsContext } from "../../contexts/tabsContext";
 import { alertContext } from "../../contexts/alertContext";
 import { classNames, snakeToNormalCase } from "../../utils";
-import { sendAll } from "../../controllers/API";
 import { typesContext } from "../../contexts/typesContext";
 import ChatMessage from "./chatMessage";
 import { FaEraser } from "react-icons/fa";
+import { sendAllProps } from "../../types/api";
 
 const _ = require("lodash");
 
-export default function ChatModal({ flow,open, setOpen }) {
+export default function ChatModal({ flow, open, setOpen }:{open:boolean,setOpen:Function,flow:FlowType}) {
 	const { updateFlow, lockChat, setLockChat, flows, tabIndex } =
 		useContext(TabsContext);
 	const [saveChat, setSaveChat] = useState(false);
@@ -24,6 +21,7 @@ export default function ChatModal({ flow,open, setOpen }) {
 	const [chatHistory, setChatHistory] = useState(flow.chat);
 	const { reactFlowInstance } = useContext(typesContext);
 	const { setErrorData, setNoticeData } = useContext(alertContext);
+	const [ws, setWs] = useState<WebSocket | null>(null);
 	const addChatHistory = (
 		message: string,
 		isSend: boolean,
@@ -58,6 +56,31 @@ export default function ChatModal({ flow,open, setOpen }) {
 		}
 		setSaveChat((chat) => !chat);
 	};
+
+	useEffect(() => {
+		const newWs = new WebSocket(`/chat/${flow.id}`);
+		newWs.onopen = () => {
+		  console.log('WebSocket connection established!');
+		};
+		newWs.onmessage = (event) => {
+		  const data = JSON.parse(event.data);
+		  console.log('Received data:', data);
+		  // Do something with the data received from the WebSocket
+		};
+		setWs(newWs);
+	
+		return () => {
+		  newWs.close();
+		};
+	  }, []);
+
+	  async function sendAll(data: sendAllProps) {
+		if (ws) {
+		  ws.send(JSON.stringify(data));
+		}
+		return {data:{result:"sdsdsad",thought:"dsdsad"}}
+	  }
+
 	useEffect(() => {
 		updateFlow({ ..._.cloneDeep(flow), chat: chatHistory });
 		// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -213,9 +236,11 @@ export default function ChatModal({ flow,open, setOpen }) {
 						>
 							<Dialog.Panel className=" drop-shadow-2xl relative flex flex-col justify-between transform h-[95%] overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all sm:my-8 w-[690px]">
 								<div className="relative w-full">
-									<button onClick={()=>clearChat()} className="absolute top-2 right-2 hover:text-red-500">
-										
-										<FaEraser className="w-4 h-4"/>
+									<button
+										onClick={() => clearChat()}
+										className="absolute top-2 right-2 hover:text-red-500"
+									>
+										<FaEraser className="w-4 h-4" />
 									</button>
 								</div>
 								<div className="w-full h-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center overflow-scroll scrollbar-hide">
