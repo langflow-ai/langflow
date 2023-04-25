@@ -240,7 +240,7 @@ def get_result_and_steps(langchain_object, message: str):
     return result, thought
 
 
-async def async_get_result_and_steps(langchain_object, message: str):
+def async_get_result_and_steps(langchain_object, message: str):
     """Get result and thought from extracted json"""
     try:
         if hasattr(langchain_object, "verbose"):
@@ -267,10 +267,10 @@ async def async_get_result_and_steps(langchain_object, message: str):
 
         with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
             try:
-                if hasattr(langchain_object, "acall"):
-                    output = await langchain_object.acall(chat_input)
-                else:
-                    output = langchain_object(chat_input)
+                # if hasattr(langchain_object, "acall"):
+                #     output = await langchain_object.acall(chat_input)
+                # else:
+                output = langchain_object(chat_input)
             except ValueError as exc:
                 # make the error message more informative
                 logger.debug(f"Error: {str(exc)}")
