@@ -1,3 +1,0 @@
-# Chains
-
-Chains enable the integration of multiple components into a cohesive application. For example, a chain can be designed to gather user input, format it using a PromptTemplate, and then feed the formatted output into an LLM. By combining multiple chains or integrating chains with other components, more intricate application workflows can be created.

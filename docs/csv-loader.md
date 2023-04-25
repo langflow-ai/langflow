@@ -1,8 +1,8 @@
 ## Nodes
 
-With `PyPDFLoader`, you can load a PDF file with pypdf and chunks at a character level.
+The `CSVLoader` loads a CSV file into a list of documents.
 
-File path: [Get PDF file](data/example.pdf){.internal-link target=_blank}
+File path: [Get CSV file](data/organizations-100.csv){.internal-link target=_blank}
 
 
 `CharacterTextSplitter` implements splitting text based on characters. 
@@ -22,13 +22,17 @@ Separator used:
 
 Chunk size used:
 ``` txt
-1000
+4000
 ```
 
 Chunk overlap used:
 ``` txt
 200
 ```
+
+We used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/account/api-keys){.internal-link target=_blank} requires you to create an account to get your API key.
+
+Check the short tutorial of [OpenAI](llms.md){.internal-link target=_blank} options available.
 
 The `OpenAIEmbeddings`, wrapper around [OpenAI Embeddings](https://platform.openai.com/docs/guides/embeddings/what-are-embeddings){.internal-link target=_blank} models. Make sure to get the API key from the LLM provider, in this case [OpenAI](https://platform.openai.com/account/api-keys){.internal-link target=_blank}.
 
@@ -38,24 +42,18 @@ A `VectorStoreInfo` set information about the vector store, such as the name and
 
 Name used:
 ``` txt
-example
+organizations-100
 ```
 Description used:
 ``` txt
-USENIX Example Paper
+A table contains 100 companies.
 ```
-
-We used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/account/api-keys){.internal-link target=_blank} requires you to create an account to get your API key.
-
-Check the short tutorial of [OpenAI](llms.md){.internal-link target=_blank} options available.
-
-
 
 The `VectoStoreAgent`is an agent designed to retrieve information from one or more vector stores, either with or without sources.
 
 ### ⛓️LangFlow
 
-![!Description](img/py-pdf-loader.png#only-dark)
-![!Description](img/py-pdf-loader.png#only-light)
+![!Description](img/csv-loader.png#only-dark)
+![!Description](img/csv-loader.png#only-light)
 
-[Get JSON file](data/Py-pdf-loader.json){: py-pdf-loader}
+[Get JSON file](data/Csv-loader.json){: csv-loader}

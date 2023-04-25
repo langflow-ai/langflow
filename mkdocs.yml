@@ -73,8 +73,7 @@ nav:
         - Serp API: serp-api.md
       - Document Loaders:
         - PyPDFLoader: py-pdf-loader.md
-      # - Toolkits: toolkits.md
-      # - Wrappers: wrappers.md
+        - CSVLoader: csv-loader.md
   - Release Notes: releases.md
   - Contributing: help-langflow.md
 
