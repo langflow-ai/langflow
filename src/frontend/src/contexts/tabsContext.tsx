@@ -1,11 +1,18 @@
-import { createContext, useEffect, useState, useRef, ReactNode, useContext } from "react";
+import {
+	createContext,
+	useEffect,
+	useState,
+	useRef,
+	ReactNode,
+	useContext,
+} from "react";
 import { FlowType } from "../types/flow";
 import { TabsContextType } from "../types/tabs";
 import { normalCaseToSnakeCase } from "../utils";
 import { alertContext } from "./alertContext";
 
 const TabsContextInitialValue: TabsContextType = {
-	save:()=>{},
+	save: () => {},
 	tabIndex: 0,
 	setTabIndex: (index: number) => {},
 	flows: [],
@@ -13,11 +20,9 @@ const TabsContextInitialValue: TabsContextType = {
 	addFlow: (flowData?: any) => {},
 	updateFlow: (newFlow: FlowType) => {},
 	incrementNodeId: () => 0,
-	downloadFlow: (flow:FlowType) => {},
+	downloadFlow: (flow: FlowType) => {},
 	uploadFlow: () => {},
-	lockChat: false,
-	setLockChat:(prevState:boolean)=>{},
-	hardReset:()=>{},
+	hardReset: () => {},
 };
 
 export const TabsContext = createContext<TabsContextType>(
@@ -25,7 +30,7 @@ export const TabsContext = createContext<TabsContextType>(
 );
 
 export function TabsProvider({ children }: { children: ReactNode }) {
-	const {setNoticeData} = useContext(alertContext)
+	const { setNoticeData } = useContext(alertContext);
 	const [tabIndex, setTabIndex] = useState(0);
 	const [flows, setFlows] = useState<Array<FlowType>>([]);
 	const [id, setId] = useState(0);
@@ -36,19 +41,17 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		newNodeId.current = newNodeId.current + 1;
 		return newNodeId.current;
 	}
-	function save(){
+	function save() {
 		if (flows.length !== 0)
-		window.localStorage.setItem(
-			"tabsData",
-			JSON.stringify({ tabIndex, flows, id, nodeId: newNodeId.current })
-		);
+			window.localStorage.setItem(
+				"tabsData",
+				JSON.stringify({ tabIndex, flows, id, nodeId: newNodeId.current })
+			);
 	}
 	useEffect(() => {
 		//save tabs locally
-		save()
+		save();
 	}, [flows, id, tabIndex, newNodeId]);
-
-
 
 	useEffect(() => {
 		//get tabs locally saved
@@ -61,15 +64,17 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 			newNodeId.current = cookieObject.nodeId;
 		}
 	}, []);
-	function hardReset(){
-		newNodeId.current=0;
-		setTabIndex(0);setFlows([]);setId(0);
+	function hardReset() {
+		newNodeId.current = 0;
+		setTabIndex(0);
+		setFlows([]);
+		setId(0);
 	}
 
 	/**
 	 * Downloads the current flow as a JSON file
 	 */
-	function downloadFlow(flow:FlowType) {
+	function downloadFlow(flow: FlowType) {
 		// create a data URI with the current flow data
 		const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
 			JSON.stringify(flow)
@@ -82,7 +87,9 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
 		// simulate a click on the link element to trigger the download
 		link.click();
-		setNoticeData({title:"Warning: Critical data,JSON file may including API keys."})
+		setNoticeData({
+			title: "Warning: Critical data,JSON file may including API keys.",
+		});
 	}
 
 	/**
@@ -139,15 +146,14 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	function addFlow(flow?: FlowType) {
 		// Get data from the flow or set it to null if there's no flow provided.
 		const data = flow?.data ? flow.data : null;
-		const description = flow?.description?flow.description:""
+		const description = flow?.description ? flow.description : "";
 
 		// Create a new flow with a default name if no flow is provided.
 		let newFlow: FlowType = {
 			description,
-			name: "New Flow",
+			name: flow?.name ?? "New Flow",
 			id: id.toString(),
 			data,
-			chat: flow ? flow.chat : [],
 		};
 
 		// Increment the ID counter.
@@ -171,10 +177,9 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 			const newFlows = [...prevState];
 			const index = newFlows.findIndex((flow) => flow.id === newFlow.id);
 			if (index !== -1) {
-				newFlows[index].description = newFlow.description??""
+				newFlows[index].description = newFlow.description ?? "";
 				newFlows[index].data = newFlow.data;
 				newFlows[index].name = newFlow.name;
-				newFlows[index].chat = newFlow.chat;
 			}
 			return newFlows;
 		});
@@ -185,8 +190,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 			value={{
 				save,
 				hardReset,
-				lockChat,
-				setLockChat,
 				tabIndex,
 				setTabIndex,
 				flows,
