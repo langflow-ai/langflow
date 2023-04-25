@@ -118,7 +118,6 @@ class ToolCreator(LangChainTypeCreator):
             params = self.type_to_loader_dict[name]["params"]  # type: ignore
             base_classes += [name]
         elif tool_type in OTHER_TOOLS:
-            print(tool_type)
             tool_dict = build_template_from_class(tool_type, OTHER_TOOLS)
             fields = tool_dict["template"]
 
