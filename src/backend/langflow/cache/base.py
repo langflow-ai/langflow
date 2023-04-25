@@ -2,13 +2,18 @@ import base64
 import contextlib
 import functools
 import hashlib
+
 import json
 import os
 import tempfile
 from collections import OrderedDict
 from pathlib import Path
+from typing import Any
+from PIL import Image
+import dill
+import pandas as pd  # type: ignore
 
-import dill  # type: ignore
+CACHE = {}
 
 
 def create_cache_folder(func):
