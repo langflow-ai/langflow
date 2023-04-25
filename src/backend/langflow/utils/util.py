@@ -312,8 +312,6 @@ def sync_to_async(func):
 
     @wraps(func)
     async def async_wrapper(*args, **kwargs):
-        loop = asyncio.get_event_loop()
-        func_call = partial(func, *args, **kwargs)
-        return await loop.run_in_executor(None, func_call)
+        return func(*args, **kwargs)
 
     return async_wrapper
