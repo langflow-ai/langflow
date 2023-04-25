@@ -22,7 +22,6 @@ export default function ChatTrigger({open, setOpen,flow}){
                 <button
                     onClick={() => {
                         setOpen(true);
-                        openPopUp(<ChatModal flow={flow} />)
                     }}
                 >
                     <div className="flex gap-3  items-center">
