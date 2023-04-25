@@ -58,7 +58,7 @@ export default function ChatModal({ flow, open, setOpen }:{open:boolean,setOpen:
 	};
 
 	useEffect(() => {
-		const newWs = new WebSocket(`ws://backend:7860/chat/${flow.id}`);
+		const newWs = new WebSocket(`ws://localhost:7860/chat/${flow.id}`);
 		newWs.onopen = () => {
 		  console.log('WebSocket connection established!');
 		};
@@ -133,7 +133,6 @@ export default function ChatModal({ flow, open, setOpen }:{open:boolean,setOpen:
 	}
 
 	function validateNodes() {
-		console.log(reactFlowInstance);
 		return reactFlowInstance
 			.getNodes()
 			.flatMap((n: NodeType) => validateNode(n));

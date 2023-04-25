@@ -1,13 +1,11 @@
 import {
-	ChatBubbleLeftEllipsisIcon,
 	ChatBubbleOvalLeftEllipsisIcon,
-	PlusSmallIcon,
 } from "@heroicons/react/24/outline";
 import { useState } from "react";
 import { ChatMessageType } from "../../../types/chat";
 import { classNames } from "../../../utils";
+import AiIcon from  "../../../assets/Gooey Ring-5s-271px.svg"
 import { UserIcon } from "@heroicons/react/24/solid";
-import {AiFillRobot} from "react-icons/ai"
 var Convert = require("ansi-to-html");
 var convert = new Convert({ newline: true });
 
@@ -22,11 +20,11 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
 		>
 			<div
 				className={classNames(
-					"rounded-full w-8 h-8 flex items-center my-3 justify-center",chat.isSend?"bg-black":"bg-black"
+					"rounded-full w-9 h-9 flex items-center my-3 justify-center",chat.isSend?"bg-gray-200":"bg-gray-200"
 				)}
 			>
-				{!chat.isSend && <object data={"../"}></object>}
-				{chat.isSend && <img src={"../../../assets/Gooey Ring-5s-271px.svg"}/>}
+				{!chat.isSend && <img className="scale-150" src={AiIcon}/>}
+				{chat.isSend && <UserIcon/>}
 			</div>
 			{!chat.isSend ? (
 				<div className="w-full text-start flex items-center">
