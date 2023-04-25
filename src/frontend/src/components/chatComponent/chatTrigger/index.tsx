@@ -5,7 +5,7 @@ import { PopUpContext } from "../../../contexts/popUpContext";
 import { useContext } from "react";
 import ChatModal from "../../../modals/chatModal";
 
-export default function ChatTrigger({open, setOpen}){
+export default function ChatTrigger({open, setOpen,flow}){
     const {openPopUp} = useContext(PopUpContext)
     return(<Transition
         show={!open}
@@ -22,7 +22,7 @@ export default function ChatTrigger({open, setOpen}){
                 <button
                     onClick={() => {
                         setOpen(true);
-                        openPopUp(<ChatModal/>)
+                        openPopUp(<ChatModal flow={flow} />)
                     }}
                 >
                     <div className="flex gap-3  items-center">
