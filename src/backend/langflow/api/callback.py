@@ -12,7 +12,5 @@ class StreamingLLMCallbackHandler(AsyncCallbackHandler):
         self.websocket = websocket
 
     async def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
-        resp = ChatResponse(
-            sender="bot", message=token, type="stream", intermediate_steps=""
-        )
+        resp = ChatResponse(message=token, type="stream", intermediate_steps="")
         await self.websocket.send_json(resp.dict())
