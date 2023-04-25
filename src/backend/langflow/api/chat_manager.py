@@ -89,7 +89,7 @@ class ChatManager:
 
     async def send_json(self, client_id: str, message: ChatMessage):
         websocket = self.active_connections[client_id]
-        await websocket.send_json(json.dumps(message.dict()))
+        await websocket.send_json(message.dict())
 
     async def process_message(self, client_id: str, payload: Dict):
         # Process the graph data and chat message
@@ -136,11 +136,16 @@ class ChatManager:
 
         try:
             chat_history = self.chat_history.get_history(client_id)
-            await websocket.send_json(json.dumps(chat_history))
+            # iterate and make BaseModel into dict
+            chat_history = [chat.dict() for chat in chat_history]
+            await websocket.send_json(chat_history)
 
             while True:
                 json_payload = await websocket.receive_json()
-                payload = json.loads(json_payload)
+                try:
+                    payload = json.loads(json_payload)
+                except TypeError:
+                    payload = json_payload
                 with self.cache_manager.set_client_id(client_id):
                     await self.process_message(client_id, payload)
         except Exception as e:
