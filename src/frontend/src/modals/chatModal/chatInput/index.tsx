@@ -24,16 +24,14 @@ export default function ChatInput({
 				}}
 				ref={inputRef}
 				disabled={lockChat}
-				style={{minHeight: "40px", maxHeight: "100px", resize: "none" }}
+				style={{resize: "none" }}
 				value={lockChat ? "Thinking..." : chatValue}
-				onChange={(e) => {
-					inputRef.current.style.height = "auto";
-					inputRef.current.style.height = inputRef.current.scrollHeight + "px";
+				onChange={(e) => {							
 					setChatValue(e.target.value);
 				}}
 				className={classNames(
 					lockChat ? "bg-gray-500 text-white" : "dark:bg-gray-700",
-					"form-input block w-full  custom-scroll rounded-md border-gray-300 dark:border-gray-600  dark:text-white pr-10 sm:text-sm"
+					"form-input block w-full  custom-scroll h-10 rounded-md border-gray-300 dark:border-gray-600  dark:text-white pr-10 sm:text-sm"
 				)}
 				placeholder={"Send a message..."}
 			/>

@@ -53,9 +53,9 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
 								{chat.message}
 								{chat.files && (
 									<div className="my-2 w-full">
-										{chat.files.map((file) => {
+										{chat.files.map((file,index) => {
 											return (
-												<div className="my-2 w-full">
+												<div key={index} className="my-2 w-full">
 													<FileCard
 														fileName={"File"}
 														fileType={file.type}
