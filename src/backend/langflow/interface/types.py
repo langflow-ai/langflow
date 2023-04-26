@@ -8,6 +8,7 @@ from langflow.interface.prompts.base import prompt_creator
 from langflow.interface.text_splitters.base import textsplitter_creator
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.tools.base import tool_creator
+from langflow.interface.utilities.base import utility_creator
 from langflow.interface.vector_store.base import vectorstore_creator
 from langflow.interface.wrappers.base import wrapper_creator
 
@@ -42,6 +43,7 @@ def build_langchain_types_dict():  # sourcery skip: dict-assign-update-to-union
         vectorstore_creator,
         documentloader_creator,
         textsplitter_creator,
+        utility_creator,
     ]
 
     all_types = {}

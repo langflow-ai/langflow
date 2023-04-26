@@ -5,6 +5,7 @@
 ~ A User Interface For [LangChain](https://github.com/hwchase17/langchain) ~
 
 <p>
+<a href="https://huggingface.co/spaces/Logspace/LangFlow"><img src="https://huggingface.co/datasets/huggingface/badges/raw/main/open-in-hf-spaces-sm.svg" alt="HuggingFace Spaces"></a>
 <img alt="GitHub Contributors" src="https://img.shields.io/github/contributors/logspace-ai/langflow" />
 <img alt="GitHub Last Commit" src="https://img.shields.io/github/last-commit/logspace-ai/langflow" />
 <img alt="" src="https://img.shields.io/github/repo-size/logspace-ai/langflow" />
@@ -19,14 +20,31 @@
 LangFlow is a GUI for [LangChain](https://github.com/hwchase17/langchain), designed with [react-flow](https://github.com/wbkd/react-flow) to provide an effortless way to experiment and prototype flows with drag-and-drop components and a chat box.
 
 ## 📦 Installation
-
+### <b>Locally</b>
 You can install LangFlow from pip:
 
-`pip install langflow`
+```shell
+pip install langflow
+```
 
 Next, run:
 
-`langflow`
+```shell
+python -m langflow
+```
+or
+```shell
+langflow
+```
+
+### Deploy Langflow on Google Cloud Platform
+
+Follow our step-by-step guide to deploy Langflow on Google Cloud Platform (GCP) using Google Cloud Shell. The guide is available in the [**Langflow in Google Cloud Platform**](GCP_DEPLOYMENT.md) document.
+
+Alternatively, click the **"Open in Cloud Shell"** button below to launch Google Cloud Shell, clone the Langflow repository, and start an **interactive tutorial** that will guide you through the process of setting up the necessary resources and deploying Langflow on your GCP project.
+
+[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/open?git_repo=https://github.com/genome21/langflow&working_dir=scripts&shellonly=true&tutorial=walkthroughtutorial_spot.md)
+
 
 ## 🎨 Creating Flows
 

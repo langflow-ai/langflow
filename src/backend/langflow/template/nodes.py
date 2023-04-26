@@ -104,7 +104,7 @@ class PythonFunctionNode(FrontendNode):
 class ToolNode(FrontendNode):
     name: str = "Tool"
     template: Template = Template(
-        type_name="tool",
+        type_name="Tool",
         fields=[
             TemplateField(
                 field_type="str",
@@ -127,19 +127,27 @@ class ToolNode(FrontendNode):
                 name="description",
             ),
             TemplateField(
-                field_type="str",
+                name="func",
+                field_type="function",
+                required=True,
+                is_list=False,
+                show=True,
+                multiline=True,
+            ),
+            TemplateField(
+                field_type="bool",
                 required=True,
                 placeholder="",
                 is_list=False,
                 show=True,
-                multiline=True,
-                value="",
-                name="func",
+                multiline=False,
+                value=False,
+                name="return_direct",
             ),
         ],
     )
     description: str = "Tool to be used in the flow."
-    base_classes: list[str] = ["BaseTool"]
+    base_classes: list[str] = ["Tool"]
 
     def to_dict(self):
         return super().to_dict()
@@ -243,6 +251,29 @@ class CSVAgentNode(FrontendNode):
     )
     description: str = """Construct a json agent from a CSV and tools."""
     base_classes: list[str] = ["AgentExecutor"]
+
+    def to_dict(self):
+        return super().to_dict()
+
+
+class SQLDatabaseNode(FrontendNode):
+    name: str = "SQLDatabase"
+    template: Template = Template(
+        type_name="sql_database",
+        fields=[
+            TemplateField(
+                field_type="str",
+                required=True,
+                is_list=False,
+                show=True,
+                multiline=False,
+                value="",
+                name="uri",
+            ),
+        ],
+    )
+    description: str = """SQLAlchemy wrapper around a database."""
+    base_classes: list[str] = ["SQLDatabase"]
 
     def to_dict(self):
         return super().to_dict()
@@ -414,7 +445,9 @@ class LLMFrontendNode(FrontendNode):
         if "api" in field.name and ("key" in field.name or "token" in field.name):
             field.password = True
             field.show = True
-            field.required = True
+            # Required should be False to support
+            # loading the API key from environment variables
+            field.required = False
 
         if field.name == "task":
             field.required = True

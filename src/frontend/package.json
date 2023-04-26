@@ -9,6 +9,7 @@
         "@heroicons/react": "^2.0.15",
         "@mui/material": "^5.11.9",
         "@tailwindcss/forms": "^0.5.3",
+        "@tailwindcss/line-clamp": "^0.4.4",
         "@testing-library/jest-dom": "^5.16.5",
         "@testing-library/react": "^13.4.0",
         "@testing-library/user-event": "^13.5.0",

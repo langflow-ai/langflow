@@ -59,7 +59,12 @@ def eval_function(function_string: str):
     # Execute the code string in the new namespace
     exec(function_string, namespace)
     function_object = next(
-        (obj for name, obj in namespace.items() if isinstance(obj, types.FunctionType)),
+        (
+            obj
+            for name, obj in namespace.items()
+            if isinstance(obj, types.FunctionType)
+            and obj.__code__.co_filename == "<string>"
+        ),
         None,
     )
     if function_object is None:
