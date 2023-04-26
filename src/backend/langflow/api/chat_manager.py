@@ -23,6 +23,7 @@ class ChatHistory(Subject):
         """Add a message to the chat history."""
 
         self.history[client_id].append(message)
+
         if not isinstance(message, FileResponse):
             self.notify()
 
@@ -127,6 +128,9 @@ class ChatManager:
             # Iterate backwards through the history
             for msg in reversed(history):
                 if isinstance(msg, FileResponse):
+                    if msg.data_type == "image":
+                        # Base64 encode the image
+                        msg.data = pil_to_base64(msg.data)
                     file_responses.append(msg)
                 if msg.type == "start":
                     break
