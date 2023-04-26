@@ -73,7 +73,7 @@ export default function ChatModal({
 							type: string;
 							data?:string;
 						}) => {
-							if(chatItem.type==="file"){
+							if(chatItem.type==="end"){
 								newChatHistory.push({
 									isSend: !chatItem.is_bot,
 									message: chatItem.message,
