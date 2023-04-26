@@ -4,16 +4,18 @@
 #   - Build each inner agent first, then build the outer agent
 
 import contextlib
+import inspect
 import types
 import warnings
 from copy import deepcopy
 from typing import Any, Dict, List, Optional
 
-from langflow.cache import utils as cache_utils
+from langflow.cache import base as cache_utils
 from langflow.graph.constants import DIRECT_TYPES
 from langflow.interface import loading
 from langflow.interface.listing import ALL_TYPES_DICT
 from langflow.utils.logger import logger
+from langflow.utils.util import sync_to_async
 
 
 class Node:
@@ -158,13 +160,20 @@ class Node:
                     continue
                 result = value.build()
                 # If the key is "func", then we need to use the run method
-                if key == "func" and not isinstance(result, types.FunctionType):
-                    # func can be PythonFunction(code='\ndef upper_case(text: str) -> str:\n    return text.upper()\n')
-                    # so we need to check if there is an attribute called run
-                    if hasattr(result, "run"):
-                        result = result.run  # type: ignore
-                    elif hasattr(result, "get_function"):
-                        result = result.get_function()  # type: ignore
+                if key == "func":
+                    if not isinstance(result, types.FunctionType):
+                        # func can be PythonFunction(code='\ndef upper_case(text: str) -> str:\n    return text.upper()\n')
+                        # so we need to check if there is an attribute called run
+                        if hasattr(result, "run"):
+                            result = result.run  # type: ignore
+                        elif hasattr(result, "get_function"):
+                            result = result.get_function()  # type: ignore
+                    elif inspect.iscoroutinefunction(result):
+                        self.params["coroutine"] = result
+                    else:
+                        # turn result which is a function into a coroutine
+                        # so that it can be awaited
+                        self.params["coroutine"] = sync_to_async(result)
 
                 self.params[key] = result
             elif isinstance(value, list) and all(

@@ -65,3 +65,17 @@ export type FloatComponentType = {
 	disabled?: boolean;
 	onChange: (value: string) => void;
 };
+
+export type TooltipComponentType={children:ReactElement,title:string,placement?:
+    | 'bottom-end'
+    | 'bottom-start'
+    | 'bottom'
+    | 'left-end'
+    | 'left-start'
+    | 'left'
+    | 'right-end'
+    | 'right-start'
+    | 'right'
+    | 'top-end'
+    | 'top-start'
+    | 'top';}
