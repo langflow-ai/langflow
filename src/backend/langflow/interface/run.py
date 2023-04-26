@@ -1,6 +1,7 @@
 import contextlib
 import io
 from typing import Any, Dict
+
 from chromadb.errors import NotEnoughElementsException
 
 from langflow.cache.utils import compute_dict_hash, load_cache, memoize_dict
@@ -74,9 +75,7 @@ def process_graph(data_graph: Dict[str, Any]):
     logger.debug("Loading langchain object")
     message = data_graph.pop("message", "")
     is_first_message = len(data_graph.get("chatHistory", [])) == 0
-    computed_hash, langchain_object = load_langchain_object(
-        data_graph, is_first_message
-    )
+    _, langchain_object = load_langchain_object(data_graph, is_first_message)
     logger.debug("Loaded langchain object")
 
     if langchain_object is None:

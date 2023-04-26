@@ -20,9 +20,6 @@ class BasePromptFrontendNode(FrontendNode):
     description: str
     base_classes: list[str]
 
-    def to_dict(self):
-        return super().to_dict()
-
 
 class ZeroShotPromptNode(BasePromptFrontendNode):
     name: str = "ZeroShotPrompt"
@@ -64,18 +61,12 @@ class ZeroShotPromptNode(BasePromptFrontendNode):
     description: str = "Prompt template for Zero Shot Agent."
     base_classes: list[str] = ["BasePromptTemplate"]
 
-    def to_dict(self):
-        return super().to_dict()
-
 
 class PromptTemplateNode(FrontendNode):
     name: str = "PromptTemplate"
     template: Template
     description: str
     base_classes: list[str] = ["BasePromptTemplate"]
-
-    def to_dict(self):
-        return super().to_dict()
 
 
 class PythonFunctionNode(FrontendNode):
@@ -96,9 +87,6 @@ class PythonFunctionNode(FrontendNode):
     )
     description: str = "Python function to be executed."
     base_classes: list[str] = ["function"]
-
-    def to_dict(self):
-        return super().to_dict()
 
 
 class ToolNode(FrontendNode):
@@ -149,9 +137,6 @@ class ToolNode(FrontendNode):
     description: str = "Tool to be used in the flow."
     base_classes: list[str] = ["Tool"]
 
-    def to_dict(self):
-        return super().to_dict()
-
 
 class JsonAgentNode(FrontendNode):
     name: str = "JsonAgent"
@@ -174,9 +159,6 @@ class JsonAgentNode(FrontendNode):
     )
     description: str = """Construct a json agent from an LLM and tools."""
     base_classes: list[str] = ["AgentExecutor"]
-
-    def to_dict(self):
-        return super().to_dict()
 
 
 class InitializeAgentNode(FrontendNode):
@@ -218,9 +200,6 @@ class InitializeAgentNode(FrontendNode):
     description: str = """Construct a json agent from an LLM and tools."""
     base_classes: list[str] = ["AgentExecutor"]
 
-    def to_dict(self):
-        return super().to_dict()
-
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         # do nothing and don't return anything
@@ -252,9 +231,6 @@ class CSVAgentNode(FrontendNode):
     description: str = """Construct a json agent from a CSV and tools."""
     base_classes: list[str] = ["AgentExecutor"]
 
-    def to_dict(self):
-        return super().to_dict()
-
 
 class SQLDatabaseNode(FrontendNode):
     name: str = "SQLDatabase"
@@ -274,9 +250,6 @@ class SQLDatabaseNode(FrontendNode):
     )
     description: str = """SQLAlchemy wrapper around a database."""
     base_classes: list[str] = ["SQLDatabase"]
-
-    def to_dict(self):
-        return super().to_dict()
 
 
 class VectorStoreAgentNode(FrontendNode):
@@ -303,9 +276,6 @@ class VectorStoreAgentNode(FrontendNode):
     description: str = """Construct an agent from a Vector Store."""
     base_classes: list[str] = ["AgentExecutor"]
 
-    def to_dict(self):
-        return super().to_dict()
-
 
 class VectorStoreRouterAgentNode(FrontendNode):
     name: str = "VectorStoreRouterAgent"
@@ -330,9 +300,6 @@ class VectorStoreRouterAgentNode(FrontendNode):
     )
     description: str = """Construct an agent from a Vector Store Router."""
     base_classes: list[str] = ["AgentExecutor"]
-
-    def to_dict(self):
-        return super().to_dict()
 
 
 class SQLAgentNode(FrontendNode):
@@ -361,9 +328,6 @@ class SQLAgentNode(FrontendNode):
     )
     description: str = """Construct an agent from a Vector Store Router."""
     base_classes: list[str] = ["AgentExecutor"]
-
-    def to_dict(self):
-        return super().to_dict()
 
 
 class PromptFrontendNode(FrontendNode):

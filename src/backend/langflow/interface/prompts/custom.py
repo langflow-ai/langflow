@@ -29,7 +29,7 @@ class BaseCustomPrompt(PromptTemplate):
     ai_prefix: Optional[str]
 
     @root_validator(pre=False)
-    def build_template(cls, values):
+    def build_template(cls, values):  # pylint: disable=no-self-argument
         format_dict = {}
         ai_prefix_format_dict = {}
         for key in values.get("input_variables", []):

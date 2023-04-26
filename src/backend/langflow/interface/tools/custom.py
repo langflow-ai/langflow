@@ -16,7 +16,7 @@ class Function(BaseModel):
 
     # Validate the function
     @validator("code")
-    def validate_func(cls, v):
+    def validate_func(cls, v):  # pylint: disable=no-self-argument
         try:
             validate.eval_function(v)
         except Exception as e:

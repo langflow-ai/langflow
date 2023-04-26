@@ -17,11 +17,11 @@ class CodeValidationResponse(BaseModel):
     function: dict
 
     @validator("imports")
-    def validate_imports(cls, v):
+    def validate_imports(cls, v):  # pylint: disable=no-self-argument
         return v or {"errors": []}
 
     @validator("function")
-    def validate_function(cls, v):
+    def validate_function(cls, v):  # pylint: disable=no-self-argument
         return v or {"errors": []}
 
 

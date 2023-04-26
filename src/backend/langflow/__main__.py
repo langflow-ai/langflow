@@ -40,11 +40,11 @@ def serve(
 
     configure(log_level=log_level, log_file=log_file)
     update_settings(config)
-    app = create_app()
+    server = create_app()
     # get the directory of the current file
     path = Path(__file__).parent
     static_files_dir = path / "frontend"
-    app.mount(
+    server.mount(
         "/",
         StaticFiles(directory=static_files_dir, html=True),
         name="static",
@@ -62,11 +62,11 @@ def serve(
         # MacOS requires an env variable to be set to use gunicorn
         import uvicorn
 
-        uvicorn.run(app, host=host, port=port, log_level=log_level)
+        uvicorn.run(server, host=host, port=port, log_level=log_level)
     else:
         from langflow.server import LangflowApplication
 
-        LangflowApplication(app, options).run()
+        LangflowApplication(server, options).run()
 
 
 def main():

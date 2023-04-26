@@ -26,7 +26,7 @@ class Settings(BaseSettings):
         extra = "ignore"
 
     @root_validator(allow_reuse=True)
-    def validate_lists(cls, values):
+    def validate_lists(cls, values):  # pylint: disable=no-self-argument
         for key, value in values.items():
             if key != "dev" and not value:
                 values[key] = []
@@ -61,7 +61,7 @@ def load_settings_from_yaml(file_path: str) -> Settings:
 
         file_path = os.path.join(current_path, file_path)
 
-    with open(file_path, "r") as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         settings_dict = yaml.safe_load(f)
 
     return Settings(**settings_dict)

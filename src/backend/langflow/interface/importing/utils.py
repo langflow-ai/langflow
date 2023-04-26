@@ -73,9 +73,10 @@ def import_class(class_path: str) -> Any:
 
 
 def import_prompt(prompt: str) -> Type[PromptTemplate]:
+    """Import prompt from prompt name"""
+
     from langflow.interface.prompts.custom import CUSTOM_PROMPTS
 
-    """Import prompt from prompt name"""
     if prompt == "ZeroShotPrompt":
         return import_class("langchain.prompts.PromptTemplate")
     elif prompt in CUSTOM_PROMPTS:
@@ -95,8 +96,6 @@ def import_toolkit(toolkit: str) -> Any:
 
 def import_agent(agent: str) -> Agent:
     """Import agent from agent name"""
-    # check for custom agent
-
     return import_class(f"langchain.agents.{agent}")
 
 
@@ -107,7 +106,6 @@ def import_llm(llm: str) -> BaseLLM:
 
 def import_tool(tool: str) -> BaseTool:
     """Import tool from tool name"""
-
     return tool_creator.type_to_loader_dict[tool]["fcn"]
 
 

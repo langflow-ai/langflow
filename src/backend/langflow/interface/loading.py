@@ -90,10 +90,11 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
 
 
 def load_flow_from_json(path: str, build=True):
+    """Load flow from json file"""
+
     # This is done to avoid circular imports
     from langflow.graph import Graph
 
-    """Load flow from json file"""
     with open(path, "r", encoding="utf-8") as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]

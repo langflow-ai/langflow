@@ -23,7 +23,7 @@ class BaseCustomChain(ConversationChain):
     """Field to use as the ai_prefix. It needs to be set and has to be in the template"""
 
     @root_validator(pre=False)
-    def build_template(cls, values):
+    def build_template(cls, values):  # pylint: disable=no-self-argument
         format_dict = {}
         input_variables = extract_input_variables_from_prompt(values["template"])
 

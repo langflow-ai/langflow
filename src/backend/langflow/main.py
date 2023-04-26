@@ -7,13 +7,13 @@ from langflow.api.validate import router as validate_router
 
 def create_app():
     """Create the FastAPI app and include the router."""
-    app = FastAPI()
+    server = FastAPI()
 
     origins = [
         "*",
     ]
 
-    app.add_middleware(
+    server.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
         allow_credentials=True,
@@ -21,9 +21,9 @@ def create_app():
         allow_headers=["*"],
     )
 
-    app.include_router(endpoints_router)
-    app.include_router(validate_router)
-    return app
+    server.include_router(endpoints_router)
+    server.include_router(validate_router)
+    return server
 
 
 app = create_app()
