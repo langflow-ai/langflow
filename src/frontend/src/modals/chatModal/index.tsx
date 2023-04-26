@@ -99,7 +99,7 @@ export default function ChatModal({
 			}
 			// Do something with the data received from the WebSocket
 		};
-		newWs.onclose=(e)=>{console.log(e.reason)}
+		newWs.onclose=(e)=>{console.log(e.reason);setLockChat(false)}
 		setWs(newWs);
 
 		return () => {
@@ -107,11 +107,6 @@ export default function ChatModal({
 		};
 	}, []);
 
-	useEffect(()=>{
-		if(ws && ws.CLOSED){
-			setLockChat(false)
-		}
-	},[lockChat])
 
 	async function sendAll(data: sendAllProps) {
 		if (ws) {
