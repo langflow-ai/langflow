@@ -168,7 +168,7 @@ class ChatManager:
             # Handle any exceptions that might occur
             logger.exception(e)
             # send a message to the client
-            await self.send_message(client_id, f"Error: {e}")
+            await self.send_message(client_id, str(e))
             raise e
         finally:
             await self.active_connections[client_id].close(
