@@ -271,7 +271,11 @@ class InitializeAgent(AgentExecutor):
 
     @classmethod
     def initialize(
-        cls, llm: BaseLLM, tools: List[Tool], agent: str, memory: BaseChatMemory
+        cls,
+        llm: BaseLLM,
+        tools: List[Tool],
+        agent: str,
+        memory: Optional[BaseChatMemory] = None,
     ):
         return initialize_agent(
             tools=tools,
