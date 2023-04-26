@@ -1,17 +1,19 @@
-import { ArrowDownTrayIcon, CloudArrowDownIcon, DocumentIcon } from "@heroicons/react/24/outline";
+import {  CloudArrowDownIcon, DocumentIcon } from "@heroicons/react/24/outline";
+import * as base64js from 'base64-js';
 
 export default function FileCard({ fileName, content, fileType }) {
-	const handleDownload = () => {
-		const blob = new Blob([content], { type: "application/octet-stream" });
-		const url = URL.createObjectURL(blob);
-		const link = document.createElement("a");
-		link.href = url;
-		link.download = fileName;
-		document.body.appendChild(link);
-		link.click();
-		document.body.removeChild(link);
-		URL.revokeObjectURL(url);
-	};
+    const handleDownload = () => {
+        const byteArray = new Uint8Array(base64js.toByteArray(content));
+        const blob = new Blob([byteArray], { type: 'application/octet-stream' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      };
 
 	return (
 		<button

@@ -40,8 +40,8 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
 						{chat.thought && chat.thought !== "" && !hidden && (
 							<div
 								onClick={() => setHidden((prev) => !prev)}
-								className=" text-start inline-block rounded-md  h-full
-								bg-white w-[95%] pb-3 pt-3 px-2 ml-3 cursor-pointer scrollbar-hide overflow-scroll"
+								className=" text-start inline-block rounded-md  h-full border border-gray-300
+								bg-gray-100 w-[95%] pb-3 pt-3 px-2 ml-3 cursor-pointer scrollbar-hide overflow-scroll"
 								dangerouslySetInnerHTML={{
 									__html: convert.toHtml(chat.thought),
 								}}
