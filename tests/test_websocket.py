@@ -28,7 +28,7 @@ def test_chat_history(client: TestClient):
             # Receive the response from the server
             response = websocket.receive_json()
             assert json.loads(response) == {
-                "sender": "bot",
+                "is_bot": True,
                 "message": None,
                 "intermediate_steps": "",
                 "type": "start",
@@ -40,7 +40,7 @@ def test_chat_history(client: TestClient):
             # Receive the response from the server
             response = websocket.receive_json()
             assert json.loads(response) == {
-                "sender": "bot",
+                "is_bot": True,
                 "message": "Hello, I'm a mock response!",
                 "intermediate_steps": "",
                 "type": "end",
