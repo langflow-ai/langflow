@@ -20,6 +20,7 @@ from langchain.llms.loading import load_llm_from_config
 
 from langflow.interface.agents.custom import CUSTOM_AGENTS
 from langflow.interface.importing.utils import import_by_type
+from langflow.interface.run import fix_memory_inputs
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.types import get_type_list
 from langflow.interface.utils import load_file_into_dict
@@ -106,7 +107,19 @@ def load_flow_from_json(path: str, build=True):
     # Nodes, edges and root node
     edges = data_graph["edges"]
     graph = Graph(nodes, edges)
-    return graph.build() if build else graph
+    if build:
+        langchain_object = graph.build()
+        if hasattr(langchain_object, "verbose"):
+            langchain_object.verbose = True
+
+        if hasattr(langchain_object, "return_intermediate_steps"):
+            # https://github.com/hwchase17/langchain/issues/2068
+            # Deactivating until we have a frontend solution
+            # to display intermediate steps
+            langchain_object.return_intermediate_steps = False
+        fix_memory_inputs(langchain_object)
+        return langchain_object
+    return graph
 
 
 def replace_zero_shot_prompt_with_prompt_template(nodes):

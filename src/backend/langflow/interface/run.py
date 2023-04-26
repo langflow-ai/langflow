@@ -3,7 +3,7 @@ import io
 from typing import Any, Dict
 from chromadb.errors import NotEnoughElementsException
 
-from langflow.cache.utils import compute_dict_hash, load_cache, memoize_dict
+from langflow.cache.base import compute_dict_hash, load_cache, memoize_dict
 from langflow.graph.graph import Graph
 from langflow.interface import loading
 from langflow.utils.logger import logger
@@ -32,7 +32,7 @@ def load_or_build_langchain_object(data_graph, is_first_message=False):
     return build_langchain_object_with_caching(data_graph)
 
 
-@memoize_dict(maxsize=1)
+@memoize_dict(maxsize=10)
 def build_langchain_object_with_caching(data_graph):
     """
     Build langchain object from data_graph.
@@ -87,7 +87,7 @@ def process_graph(data_graph: Dict[str, Any]):
 
     # Generate result and thought
     logger.debug("Generating result and thought")
-    result, thought = get_result_and_thought_using_graph(langchain_object, message)
+    result, thought = get_result_and_steps(langchain_object, message)
     logger.debug("Generated result and thought")
 
     # Save langchain_object to cache
@@ -118,7 +118,7 @@ def process_graph_cached(data_graph: Dict[str, Any]):
 
     # Generate result and thought
     logger.debug("Generating result and thought")
-    result, thought = get_result_and_thought_using_graph(langchain_object, message)
+    result, thought = get_result_and_steps(langchain_object, message)
     logger.debug("Generated result and thought")
     return {"result": str(result), "thought": thought.strip()}
 
@@ -184,7 +184,7 @@ def fix_memory_inputs(langchain_object):
             update_memory_keys(langchain_object, possible_new_mem_key)
 
 
-def get_result_and_thought_using_graph(langchain_object, message: str):
+def get_result_and_steps(langchain_object, message: str):
     """Get result and thought from extracted json"""
     try:
         if hasattr(langchain_object, "verbose"):
@@ -235,6 +235,61 @@ def get_result_and_thought_using_graph(langchain_object, message: str):
         raise ValueError(
             "Error: Not enough documents for ChromaDB to index. Try reducing chunk size in TextSplitter."
         ) from exc
+    except Exception as exc:
+        raise ValueError(f"Error: {str(exc)}") from exc
+    return result, thought
+
+
+def async_get_result_and_steps(langchain_object, message: str):
+    """Get result and thought from extracted json"""
+    try:
+        if hasattr(langchain_object, "verbose"):
+            langchain_object.verbose = True
+        chat_input = None
+        memory_key = ""
+        if hasattr(langchain_object, "memory") and langchain_object.memory is not None:
+            memory_key = langchain_object.memory.memory_key
+
+        if hasattr(langchain_object, "input_keys"):
+            for key in langchain_object.input_keys:
+                if key not in [memory_key, "chat_history"]:
+                    chat_input = {key: message}
+        else:
+            chat_input = message  # type: ignore
+
+        if hasattr(langchain_object, "return_intermediate_steps"):
+            # https://github.com/hwchase17/langchain/issues/2068
+            # Deactivating until we have a frontend solution
+            # to display intermediate steps
+            langchain_object.return_intermediate_steps = False
+
+        fix_memory_inputs(langchain_object)
+
+        with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
+            try:
+                # if hasattr(langchain_object, "acall"):
+                #     output = await langchain_object.acall(chat_input)
+                # else:
+                output = langchain_object(chat_input)
+            except ValueError as exc:
+                # make the error message more informative
+                logger.debug(f"Error: {str(exc)}")
+                output = langchain_object.run(chat_input)
+
+            intermediate_steps = (
+                output.get("intermediate_steps", []) if isinstance(output, dict) else []
+            )
+
+            result = (
+                output.get(langchain_object.output_keys[0])
+                if isinstance(output, dict)
+                else output
+            )
+            if intermediate_steps:
+                thought = format_intermediate_steps(intermediate_steps)
+            else:
+                thought = output_buffer.getvalue()
+
     except Exception as exc:
         raise ValueError(f"Error: {str(exc)}") from exc
     return result, thought
