@@ -17,7 +17,7 @@ Check the short tutorial of [OpenAI](llms.md){.internal-link target=_blank} opti
 The `JsonAgent` construct an agent that uses a JSON agent from LLM and tools.
 
 ### ⛓️LangFlow
-![!Description](img/json-agent.png#only-dark)
-![!Description](img/json-agent.png#only-light)
+![Description](img/json-agent.png#only-dark)
+![Description](img/json-agent.png#only-light)
 
-[Get JSON file](data/Json-agent.json){: conversation-summary-memory}
+[Get JSON file](data/Json-agent.json){.internal-link target=_blank}

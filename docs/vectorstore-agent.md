@@ -53,7 +53,7 @@ The `VectoStoreAgent`is an agent designed to retrieve information from one or mo
 
 ### ⛓️LangFlow
 
-![!Description](img/vectorstore-agent.png#only-dark)
-![!Description](img/vectorstore-agent.png#only-light)
+![Description](img/vectorstore-agent.png#only-dark)
+![Description](img/vectorstore-agent.png#only-light)
 
-[Get JSON file](data/Vectorstore-agent.json){: vectorstoreagent}
+[Get JSON file](data/Vectorstore-agent.json){.internal-link target=_blank}

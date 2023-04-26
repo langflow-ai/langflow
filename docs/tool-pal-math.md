@@ -14,7 +14,7 @@ The `LLMChain` is a simple chain that takes in a prompt template, formats it wit
 
 ### ⛓️LangFlow
 
-![!Description](img/tool-pal-math.png#only-dark)
-![!Description](img/tool-pal-math.png#only-light)
+![Description](img/tool-pal-math.png#only-dark)
+![Description](img/tool-pal-math.png#only-light)
 
-[Get JSON file](data/Tool-pal-math.json){: pal-math}
+[Get JSON file](data/Tool-pal-math.json){.internal-link target=_blank}

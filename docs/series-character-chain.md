@@ -24,7 +24,7 @@ Play around with it and see how it works!
 
 ### ⛓️LangFlow
 
-![!Description](img/series-character-chain.png#only-dark)
-![!Description](img/series-character-chain.png#only-light)
+![Description](img/series-character-chain.png#only-dark)
+![Description](img/series-character-chain.png#only-light)
 
-[Get JSON file](data/Series-character-chain.json){: series-character-chain}
+[Get JSON file](data/Series-character-chain.json){.internal-link target=_blank}

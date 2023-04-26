@@ -66,7 +66,7 @@ Check the short tutorial of [OpenAI](llms.md){.internal-link target=_blank} opti
 `VectorStoreRouterAgent` construct an agent that routes between vector stores.
 
 ### ⛓️LangFlow
-![!Description](img/multiple-vectorstores.png#only-dark)
-![!Description](img/multiple-vectorstores.png#only-light)
+![Description](img/multiple-vectorstores.png#only-dark)
+![Description](img/multiple-vectorstores.png#only-light)
 
-[Get JSON file](data/Multiple-vectorstores.json){: multiple-vectorstores}
+[Get JSON file](data/Multiple-vectorstores.json){.internal-link target=_blank}

@@ -11,7 +11,7 @@ Check the short tutorial of [ChatOpenAI](llms.md#chatopenai){.internal-link targ
 Output Key used the default: ``` response ``` and Input Key used the default: ``` input ```.
 
 ### ⛓️LangFlow
-![!Description](img/conversation-summary-memory.png#only-dark)
-![!Description](img/conversation-summary-memory.png#only-light)
+![Description](img/conversation-summary-memory.png#only-dark)
+![Description](img/conversation-summary-memory.png#only-light)
 
-[Get JSON file](data/Conversation-summary-memory.json){: conversation-summary-memory}
+[Get JSON file](data/Conversation-summary-memory.json){.internal-link target=_blank}

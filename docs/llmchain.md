@@ -26,7 +26,7 @@ The `LLMChain` is a simple chain that takes in a prompt template, formats it wit
 
 ### ⛓️LangFlow
 
-![!Description](img/llm-chain.png#only-dark)
-![!Description](img/llm-chain.png#only-light)
+![Description](img/llm-chain.png#only-dark)
+![Description](img/llm-chain.png#only-light)
 
-[Get JSON file](data/llm-chain.json){: llm-chain}
+[Get JSON file](data/llm-chain.json){.internal-link target=_blank}

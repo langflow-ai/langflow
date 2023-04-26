@@ -53,7 +53,7 @@ The `VectoStoreAgent`is an agent designed to retrieve information from one or mo
 
 ### ⛓️LangFlow
 
-![!Description](img/csv-loader.png#only-dark)
-![!Description](img/csv-loader.png#only-light)
+![Description](img/csv-loader.png#only-dark)
+![Description](img/csv-loader.png#only-light)
 
-[Get JSON file](data/Csv-loader.json){: csv-loader}
+[Get JSON file](data/Csv-loader.json){.internal-link target=_blank}

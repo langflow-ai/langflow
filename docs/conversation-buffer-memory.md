@@ -12,7 +12,8 @@ Output Key used the default: ``` response ``` and Input Key used the default: ``
 
 
 ### ⛓️LangFlow
-![!Description](img/conversation-buffer-memory.png#only-dark)
-![!Description](img/conversation-buffer-memory.png#only-light)
+<!-- <figure markdown> -->
+![Description](img/conversation-buffer-memory.png#only-dark)
+![Description](img/conversation-buffer-memory.png#only-light)
 
-[Get JSON file](data/Conversation-buffer-memory.json){: conversation-buffer-memory}
+[Get JSON file](data/Conversation-buffer-memory.json){.internal-link target=_blank}

@@ -10,7 +10,7 @@ Check the short tutorial of [OpenAI](llms.md){.internal-link target=_blank} opti
 
 ### ⛓️LangFlow
 
-![!Description](img/time-travel-guide-chain.png#only-dark)
-![!Description](img/time-travel-guide-chain.png#only-light)
+![Description](img/time-travel-guide-chain.png#only-dark)
+![Description](img/time-travel-guide-chain.png#only-light)
 
-[Get JSON file](data/Time-travel-guide-chain.json){: Time-travel-guide-chain}
+[Get JSON file](data/Time-travel-guide-chain.json){.internal-link target=_blank}

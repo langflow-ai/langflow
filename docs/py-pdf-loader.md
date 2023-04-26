@@ -55,7 +55,7 @@ The `VectoStoreAgent`is an agent designed to retrieve information from one or mo
 
 ### ⛓️LangFlow
 
-![!Description](img/py-pdf-loader.png#only-dark)
-![!Description](img/py-pdf-loader.png#only-light)
+![Description](img/py-pdf-loader.png#only-dark)
+![Description](img/py-pdf-loader.png#only-light)
 
-[Get JSON file](data/Py-pdf-loader.json){: py-pdf-loader}
+[Get JSON file](data/Py-pdf-loader.json){.internal-link target=_blank}
