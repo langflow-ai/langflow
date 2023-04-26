@@ -49,20 +49,24 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
 						)}
 						{chat.thought && chat.thought !== "" && !hidden && <br></br>}
 						<div className="w-full px-4 pb-3 pt-3 pr-8">
-							{chat.files ? (
-								<div></div>
-							) : (
-								<span>
-									{chat.message}
+							<span>
+								{chat.message}
+								{chat.files && (
 									<div className="my-2 w-full">
-										<FileCard
-											fileName={"FileType"}
-											fileType={"jpeg"}
-											content={""}
-										/>
+										{chat.files.map((file) => {
+											return (
+												<div className="my-2 w-full">
+													<FileCard
+														fileName={"File"}
+														fileType={file.type}
+														content={file.data}
+													/>
+												</div>
+											);
+										})}
 									</div>
-								</span>
-							)}
+								)}
+							</span>
 						</div>
 					</div>
 				</div>

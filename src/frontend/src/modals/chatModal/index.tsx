@@ -35,14 +35,13 @@ export default function ChatModal({
 		message: string,
 		isSend: boolean,
 		thought?: string,
-		file?:Blob
+		files?: Array<any>
 	) => {
 		setChatHistory((old) => {
 			let newChat = _.cloneDeep(old);
-			if(file){
-				newChat.push({ message, isSend,file });
-			}
-			else if (thought) {
+			if (files) {
+				newChat.push({ message, isSend, files });
+			} else if (thought) {
 				newChat.push({ message, isSend, thought });
 			} else {
 				newChat.push({ message, isSend });
@@ -71,42 +70,57 @@ export default function ChatModal({
 							is_bot: boolean;
 							message: string;
 							type: string;
-							data?:string;
+							files?: Array<any>;
 						}) => {
-							if(chatItem.type==="end"){
-								newChatHistory.push({
-									isSend: !chatItem.is_bot,
-									message: chatItem.message,
-									thought: chatItem.intermediate_steps,
-								});	
+							if (chatItem.message) {
+								newChatHistory.push(
+									chatItem.files
+										? {
+												isSend: !chatItem.is_bot,
+												message: chatItem.message,
+												thought: chatItem.intermediate_steps,
+												files: chatItem.files,
+										  }
+										: {
+												isSend: !chatItem.is_bot,
+												message: chatItem.message,
+												thought: chatItem.intermediate_steps,
+										  }
+								);
 							}
-							newChatHistory.push({
-								isSend: !chatItem.is_bot,
-								message: chatItem.message,
-								thought: chatItem.intermediate_steps,
-							});
 						}
 					);
 					return newChatHistory;
 				});
 			}
 			if (data.type === "end") {
-				addChatHistory(data.message, false, data.intermediate_steps);
-				setLockChat(false)
+				if (data.files) {
+					addChatHistory(
+						data.message,
+						false,
+						data.intermediate_steps,
+						data.files
+					);
+				} else {
+					addChatHistory(data.message, false, data.intermediate_steps);
+				}
+				setLockChat(false);
 			}
-			if (data.type=="file"){
-				console.log(data)
+			if (data.type == "file") {
+				console.log(data);
 			}
 			// Do something with the data received from the WebSocket
 		};
-		newWs.onclose=(e)=>{console.log(e.reason);setLockChat(false)}
+		newWs.onclose = (e) => {
+			console.log(e.code);
+			setLockChat(false);
+		};
 		setWs(newWs);
 
 		return () => {
 			newWs.close();
 		};
 	}, []);
-
 
 	async function sendAll(data: sendAllProps) {
 		if (ws) {
@@ -211,8 +225,7 @@ export default function ChatModal({
 	}
 	function clearChat() {
 		setChatHistory([]);
-		ws.send(JSON.stringify({clear_history:true}))
-
+		ws.send(JSON.stringify({ clear_history: true }));
 	}
 
 	const { closePopUp } = useContext(PopUpContext);

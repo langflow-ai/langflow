@@ -6,5 +6,5 @@ export type ChatMessageType = {
 	message: string;
 	isSend: boolean;
 	thought?: string;
-	files?: Array<{content:string,type:string}>;
+	files?: Array<{data:string,type:string}>;
 };
