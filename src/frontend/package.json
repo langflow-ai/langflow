@@ -20,6 +20,7 @@
         "ace-builds": "^1.16.0",
         "ansi-to-html": "^0.7.2",
         "axios": "^1.3.2",
+        "base64-js": "^1.5.1",
         "lodash": "^4.17.21",
         "react": "^18.2.0",
         "react-ace": "^10.1.0",

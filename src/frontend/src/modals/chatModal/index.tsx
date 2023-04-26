@@ -34,11 +34,15 @@ export default function ChatModal({
 	const addChatHistory = (
 		message: string,
 		isSend: boolean,
-		thought?: string
+		thought?: string,
+		file?:Blob
 	) => {
 		setChatHistory((old) => {
 			let newChat = _.cloneDeep(old);
-			if (thought) {
+			if(file){
+				newChat.push({ message, isSend,file });
+			}
+			else if (thought) {
 				newChat.push({ message, isSend, thought });
 			} else {
 				newChat.push({ message, isSend });
@@ -57,7 +61,7 @@ export default function ChatModal({
 			console.log("Received data:", data);
 			//get chat history
 			if (Array.isArray(data)) {
-				console.log("entrou");
+				console.log(data);
 
 				setChatHistory((_) => {
 					let newChatHistory: ChatMessageType[] = [];
@@ -67,7 +71,16 @@ export default function ChatModal({
 							is_bot: boolean;
 							message: string;
 							type: string;
+							data?:string;
 						}) => {
+							if(chatItem.type==="file"){
+								newChatHistory.push({
+									isSend: !chatItem.is_bot,
+									message: chatItem.message,
+									thought: chatItem.intermediate_steps,
+									file:chatItem.data
+								});	
+							}
 							newChatHistory.push({
 								isSend: !chatItem.is_bot,
 								message: chatItem.message,
@@ -82,8 +95,12 @@ export default function ChatModal({
 				addChatHistory(data.message, false, data.intermediate_steps);
 				setLockChat(false)
 			}
+			if (data.type=="file"){
+				console.log(data)
+			}
 			// Do something with the data received from the WebSocket
 		};
+		newWs.onclose=(e)=>{console.log(e.reason)}
 		setWs(newWs);
 
 		return () => {
