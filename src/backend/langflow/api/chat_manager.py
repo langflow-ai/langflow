@@ -124,7 +124,8 @@ class ChatManager:
         history = self.chat_history.get_history(client_id, filter=False)
         file_responses = []
         if history:
-            for msg in history:
+            # Iterate backwards through the history
+            for msg in reversed(history):
                 if isinstance(msg, FileResponse):
                     file_responses.append(msg)
                 if msg.type == "start":
