@@ -14,7 +14,7 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
 		<div
 			className={classNames(
 				"w-full py-2 pl-2 flex",
-				chat.isSend ? "bg-white" : "bg-gray-200"
+				chat.isSend ? "bg-gray-100" : "bg-gray-200"
 			)}
 		>
 			<div
@@ -23,7 +23,7 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
 					chat.isSend ? "bg-gray-900" : "bg-gray-200"
 				)}
 			>
-				{!chat.isSend && <img className="scale-150" src={AiIcon} />}
+				{!chat.isSend && <img className="scale-150" src={AiIcon}/>}
 				{chat.isSend && <UserIcon className="w-6 h-6 -mb-1 text-gray-200" />}
 			</div>
 			{!chat.isSend ? (
