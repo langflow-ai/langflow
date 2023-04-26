@@ -57,6 +57,7 @@ export default function ChatModal({
 		};
 		newWs.onmessage = (event) => {
 			try {
+				setLockChat(false);
 				const data = JSON.parse(event.data);
 				console.log("Received data:", data);
 				//get chat history
@@ -105,7 +106,6 @@ export default function ChatModal({
 					} else {
 						addChatHistory(data.message, false, data.intermediate_steps);
 					}
-					setLockChat(false);
 				}
 				if (data.type == "file") {
 					console.log(data);
