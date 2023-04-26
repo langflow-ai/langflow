@@ -55,6 +55,7 @@ class CacheManager(Subject):
         super().__init__()
         self.CACHE = {}
         self.current_client_id = None
+        self.current_cache = {}
 
     @contextmanager
     def set_client_id(self, client_id: str):
