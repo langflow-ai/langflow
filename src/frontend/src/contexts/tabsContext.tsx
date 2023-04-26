@@ -10,6 +10,7 @@ import { FlowType } from "../types/flow";
 import { TabsContextType } from "../types/tabs";
 import { normalCaseToSnakeCase } from "../utils";
 import { alertContext } from "./alertContext";
+const { v4: uuidv4 } = require('uuid');
 
 const TabsContextInitialValue: TabsContextType = {
 	save: () => {},
@@ -33,8 +34,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	const { setNoticeData } = useContext(alertContext);
 	const [tabIndex, setTabIndex] = useState(0);
 	const [flows, setFlows] = useState<Array<FlowType>>([]);
-	const [id, setId] = useState(0);
-	const [lockChat, setLockChat] = useState(false);
+	const [id, setId] = useState("");
 
 	const newNodeId = useRef(0);
 	function incrementNodeId() {
@@ -68,7 +68,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		newNodeId.current = 0;
 		setTabIndex(0);
 		setFlows([]);
-		setId(0);
+		setId(uuidv4());
 	}
 
 	/**
@@ -157,7 +157,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		};
 
 		// Increment the ID counter.
-		setId((old) => old + 1);
+		setId(uuidv4());
 
 		// Add the new flow to the list of flows.
 		setFlows((prevState) => {
