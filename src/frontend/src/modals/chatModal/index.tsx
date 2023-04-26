@@ -112,8 +112,11 @@ export default function ChatModal({
 			// Do something with the data received from the WebSocket
 		};
 		newWs.onclose = (e) => {
-			console.log(e.code);
+			console.log("close");
 			setLockChat(false);
+		};
+		newWs.onerror = (e) => {
+			window.alert("error");
 		};
 		setWs(newWs);
 
@@ -131,6 +134,12 @@ export default function ChatModal({
 	useEffect(() => {
 		if (ref.current) ref.current.scrollIntoView({ behavior: "smooth" });
 	}, [chatHistory]);
+
+	useEffect(() => {
+		if (ws &&ws.readyState===ws.CLOSED) {
+			setLockChat(false);
+		}
+	}, [lockChat]);
 
 	function validateNode(n: NodeType): Array<string> {
 		if (!n.data?.node?.template || !Object.keys(n.data.node.template)) {
@@ -195,20 +204,6 @@ export default function ChatModal({
 					chatHistory,
 					name: flow.name,
 					description: flow.description,
-				}).catch((error) => {
-					setErrorData({
-						title: error.message ?? "Unknown Error",
-						list: [error.response.data.detail],
-					});
-					setLockChat(false);
-					let lastMessage;
-					setChatHistory((chatHistory) => {
-						let newChat = chatHistory;
-
-						lastMessage = newChat.pop().message;
-						return newChat;
-					});
-					setChatValue(lastMessage);
 				});
 			} else {
 				setErrorData({
