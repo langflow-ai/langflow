@@ -44,7 +44,7 @@ export default function ChatModal({
 		setChatHistory((old) => {
 			let newChat = _.cloneDeep(old);
 			if (files) {
-				newChat.push({ message, isSend, files });
+				newChat.push({ message, isSend, files,thought });
 			} else if (thought) {
 				newChat.push({ message, isSend, thought });
 			} else {
