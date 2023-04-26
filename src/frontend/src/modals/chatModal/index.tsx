@@ -52,7 +52,7 @@ export default function ChatModal({
 	};
 
 	useEffect(() => {
-		const newWs = new WebSocket(`ws://localhost:7860/chat/${flow.id}`);
+		const newWs = new WebSocket(`ws://127.0.0.1:5003/chat/${flow.id}`);
 		newWs.onopen = () => {
 			console.log("WebSocket connection established!");
 		};
@@ -78,7 +78,6 @@ export default function ChatModal({
 									isSend: !chatItem.is_bot,
 									message: chatItem.message,
 									thought: chatItem.intermediate_steps,
-									file:chatItem.data
 								});	
 							}
 							newChatHistory.push({
@@ -217,7 +216,8 @@ export default function ChatModal({
 	}
 	function clearChat() {
 		setChatHistory([]);
-		updateFlow({ ..._.cloneDeep(flow), chat: [] });
+		ws.send(JSON.stringify({clear_history:true}))
+
 	}
 
 	const { closePopUp } = useContext(PopUpContext);
