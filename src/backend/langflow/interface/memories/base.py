@@ -30,7 +30,7 @@ class MemoryCreator(LangChainTypeCreator):
         except ValueError as exc:
             raise ValueError("Memory not found") from exc
         except AttributeError as exc:
-            logger.error(f"Memory {name} not loaded: {exc}")
+            logger.error("Memory %s not loaded: %s", name, exc)
             return None
 
     def to_list(self) -> List[str]:

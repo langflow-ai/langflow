@@ -25,6 +25,6 @@ def configure(log_level: str = "INFO", log_file: Path = None):  # type: ignore
         file_handler.setFormatter(logging.Formatter(log_format))
         logger.addHandler(file_handler)
 
-    logger.info(f"Logger set up with log level: {log_level_value}({log_level})")
+    logger.info("Logger set up with log level: %s(%s)", log_level_value, log_level)
     if log_file:
-        logger.info(f"Log file: {log_file}")
+        logger.info("Log file: %s", log_file)

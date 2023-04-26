@@ -57,7 +57,7 @@ class TextSplitterCreator(LangChainTypeCreator):
         except ValueError as exc:
             raise ValueError(f"Text Splitter {name} not found") from exc
         except AttributeError as exc:
-            logger.error(f"Text Splitter {name} not loaded: {exc}")
+            logger.error("Text Splitter %s not loaded: %s", name, exc)
             return None
 
     def to_list(self) -> List[str]:

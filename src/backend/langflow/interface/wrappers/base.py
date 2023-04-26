@@ -24,7 +24,7 @@ class WrapperCreator(LangChainTypeCreator):
         except ValueError as exc:
             raise ValueError("Wrapper not found") from exc
         except AttributeError as exc:
-            logger.error(f"Wrapper {name} not loaded: {exc}")
+            logger.error("Wrapper %s not loaded: %s", name, exc)
             return None
 
     def to_list(self) -> List[str]:

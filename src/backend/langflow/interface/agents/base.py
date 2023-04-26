@@ -33,7 +33,7 @@ class AgentCreator(LangChainTypeCreator):
         except ValueError as exc:
             raise ValueError("Agent not found") from exc
         except AttributeError as exc:
-            logger.error(f"Agent {name} not loaded: {exc}")
+            logger.error("Agent %s not loaded: %s", name, exc)
             return None
 
     # Now this is a generator

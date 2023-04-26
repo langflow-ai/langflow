@@ -25,7 +25,7 @@ class UtilityCreator(LangChainTypeCreator):
             raise ValueError(f"Utility {name} not found") from exc
 
         except AttributeError as exc:
-            logger.error(f"Utility {name} not loaded: {exc}")
+            logger.error("Utility %s not loaded: %s", name, exc)
             return None
 
     def to_list(self) -> List[str]:

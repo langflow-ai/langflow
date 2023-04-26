@@ -213,7 +213,7 @@ def get_result_and_thought_using_graph(langchain_object, message: str):
                 output = langchain_object(chat_input)
             except ValueError as exc:
                 # make the error message more informative
-                logger.debug(f"Error: {str(exc)}")
+                logger.debug("Error: %s", str(exc))
                 output = langchain_object.run(chat_input)
 
             intermediate_steps = (

@@ -50,7 +50,7 @@ class LangChainTypeCreator(BaseModel, ABC):
     def frontend_node(self, name) -> Union[FrontendNode, None]:
         signature = self.get_signature(name)
         if signature is None:
-            logger.error(f"Node {name} not loaded")
+            logger.error("Node %s not loaded", name)
             return None
         if isinstance(signature, FrontendNode):
             return signature

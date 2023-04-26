@@ -147,7 +147,7 @@ class Node:
         # and continue
         # Another aspect is that the node_type is the class that we need to import
         # and instantiate with these built params
-        logger.debug(f"Building {self.node_type}")
+        logger.debug("Building %s", self.node_type)
         # Build each node in the params dict
         for key, value in self.params.copy().items():
             # Check if Node or list of Nodes and not self

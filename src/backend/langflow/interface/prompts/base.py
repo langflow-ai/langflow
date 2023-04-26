@@ -1,6 +1,7 @@
 from typing import Dict, List, Optional, Type
 
 from langchain import prompts
+
 from langflow.custom.customs import get_custom_nodes
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class
@@ -44,9 +45,9 @@ class PromptCreator(LangChainTypeCreator):
             return build_template_from_class(name, self.type_to_loader_dict)
         except ValueError as exc:
             # raise ValueError("Prompt not found") from exc
-            logger.error(f"Prompt {name} not found: {exc}")
+            logger.error("Prompt %s not found: %s", name, exc)
         except AttributeError as exc:
-            logger.error(f"Prompt {name} not loaded: {exc}")
+            logger.error("Prompt %s not loaded: %s", name, exc)
         return None
 
     def to_list(self) -> List[str]:
