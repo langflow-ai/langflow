@@ -8,12 +8,12 @@ export default function ChatInput({
 	sendMessage,
 	setChatValue,
 }: {
-	lockChat:boolean;
-	chatValue:string;
-	sendMessage:Function;
-	setChatValue:Function;
+	lockChat: boolean;
+	chatValue: string;
+	sendMessage: Function;
+	setChatValue: Function;
 }) {
-    const inputRef = useRef(null);
+	const inputRef = useRef(null);
 	return (
 		<>
 			<textarea
@@ -24,7 +24,7 @@ export default function ChatInput({
 				}}
 				ref={inputRef}
 				disabled={lockChat}
-				style={{ minHeight: "50px", maxHeight: "100px", resize: "none" }}
+				style={{minHeight: "40px", maxHeight: "100px", resize: "none" }}
 				value={lockChat ? "Thinking..." : chatValue}
 				onChange={(e) => {
 					inputRef.current.style.height = "auto";
