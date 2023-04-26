@@ -115,9 +115,9 @@ export default function ChatModal({
 					console.log(data);
 				}
 			} catch (error) {
-				setErrorData({ title: event.data });
-				if (newWs.readyState === newWs.CLOSED) {
-					window.alert(error);
+				if(event.data!=="Error: 1005"){
+					setErrorData({ title: event.data });
+
 				}
 			}
 		};
