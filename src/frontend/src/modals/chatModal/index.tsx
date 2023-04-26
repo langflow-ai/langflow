@@ -1,5 +1,9 @@
 import { Dialog, Transition } from "@headlessui/react";
-import { LockClosedIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
+import {
+	ChatBubbleOvalLeftEllipsisIcon,
+	LockClosedIcon,
+	PaperAirplaneIcon,
+} from "@heroicons/react/24/outline";
 import { Fragment, useContext, useEffect, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { FlowType, NodeType } from "../../types/flow";
@@ -49,8 +53,8 @@ export default function ChatModal({
 			return newChat;
 		});
 	};
-	
-	function connectWS(){
+
+	function connectWS() {
 		const newWs = new WebSocket(`ws://127.0.0.1:5003/chat/${flow.id}`);
 		newWs.onopen = () => {
 			console.log("WebSocket connection established!");
@@ -111,30 +115,27 @@ export default function ChatModal({
 					console.log(data);
 				}
 			} catch (error) {
-				setErrorData({title:event.data})
-				if(newWs.readyState===newWs.CLOSED){
-					window.alert(error)
-					
+				setErrorData({ title: event.data });
+				if (newWs.readyState === newWs.CLOSED) {
+					window.alert(error);
 				}
 			}
-
 		};
 		newWs.onclose = (_) => {
-			if(open){
-			setLockChat(false);
-			setTimeout(() => {
-				connectWS()
-			  }, 100);
+			if (open) {
+				setLockChat(false);
+				setTimeout(() => {
+					connectWS();
+				}, 100);
 			}
 		};
 		setWs(newWs);
 
-		return newWs
-
+		return newWs;
 	}
 
 	useEffect(() => {
-		let newWs = connectWS()
+		let newWs = connectWS();
 		return () => {
 			newWs.close();
 		};
@@ -288,9 +289,25 @@ export default function ChatModal({
 									</button>
 								</div>
 								<div className="w-full h-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center overflow-scroll scrollbar-hide">
-									{chatHistory.map((c, i) => (
-										<ChatMessage chat={c} key={i} />
-									))}
+									{chatHistory.length > 0 ? (
+										chatHistory.map((c, i) => <ChatMessage chat={c} key={i} />)
+									) : (
+										<div className="flex flex-col h-full text-center justify-center w-full items-center align-middle ">
+											<span>
+												👋  <span className="text-gray-600 text-lg">LangFlow Chat</span>
+											</span>
+											<br />
+											<div className="bg-gray-100 rounded-md w-2/4 px-6 py-8 border border-gray-200">
+												<span className="text-base text-gray-500">
+													Start a conversation and click the agent’s thoughts{" "}
+													<span>
+														<ChatBubbleOvalLeftEllipsisIcon className="w-6 h-6 inline animate-bounce " />
+													</span>{" "}
+													to inspect the chaining process.
+												</span>
+											</div>
+										</div>
+									)}
 									<div ref={ref}></div>
 								</div>
 								<div className="w-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center justify-between p-3">
