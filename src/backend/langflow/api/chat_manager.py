@@ -120,10 +120,20 @@ class ChatManager:
             raise e
         # Send a response back to the frontend, if needed
         intermediate_steps = intermediate_steps or ""
+        history = self.chat_history.get_history(client_id, filter=False)
+        file_responses = []
+        if history:
+            for msg in history:
+                if isinstance(msg, FileResponse):
+                    file_responses.append(msg)
+                if msg.type == "start":
+                    break
+
         response = ChatResponse(
             message=result or "",
             intermediate_steps=intermediate_steps.strip(),
             type="end",
+            files=file_responses,
         )
         self.chat_history.add_message(client_id, response)
 

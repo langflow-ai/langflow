@@ -16,6 +16,7 @@ class ChatResponse(ChatMessage):
     intermediate_steps: str
     type: str
     is_bot: bool = True
+    files: list = []
 
     @validator("type")
     def validate_message_type(cls, v):
