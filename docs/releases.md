@@ -1,3 +1,22 @@
+## v0.0.58
+
+### What's Changed
+* Fix bug when running LLM alone by @ibiscp in https://github.com/logspace-ai/langflow/pull/160
+* Refactor tools by @ibiscp in https://github.com/logspace-ai/langflow/pull/176
+* load_flow_from_json("path/to/flow.json") returns UnicodeDecodeError by @bigKeter in https://github.com/logspace-ai/langflow/pull/165
+* Create a VM in a GCP project that serves the Langflow app by @genome21 in https://github.com/logspace-ai/langflow/pull/169
+* Correct run instructions in Readme by @PaulLockett in https://github.com/logspace-ai/langflow/pull/87
+* Add Import Examples Feature to Flow Editor by @anovazzi1 in https://github.com/logspace-ai/langflow/pull/175
+* Change button placement by @ogabrielluiz in https://github.com/logspace-ai/langflow/pull/193
+* API keys for LLMs and Embeddings are now loaded from env if available by @ogabrielluiz in https://github.com/logspace-ai/langflow/pull/195
+* style(langflow): fix formatting and add type hinting to custom.py and run.py files by @ogabrielluiz in https://github.com/logspace-ai/langflow/pull/194
+* Example loader and bugfixes by @ogabrielluiz in https://github.com/logspace-ai/langflow/pull/199
+
+## New Contributors
+* @bigKeter made their first contribution in https://github.com/logspace-ai/langflow/pull/165
+* @genome21 made their first contribution in https://github.com/logspace-ai/langflow/pull/169
+* @PaulLockett made their first contribution in https://github.com/logspace-ai/langflow/pull/87
+
 ## v0.0.57
 
 ### What's Changed
