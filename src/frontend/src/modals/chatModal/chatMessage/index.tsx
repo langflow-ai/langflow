@@ -14,7 +14,7 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
 		<div
 			className={classNames(
 				"w-full py-2 pl-2 flex",
-				chat.isSend ? "bg-slate-100" : "bg-gray-200"
+				chat.isSend ? "bg-white" : "bg-gray-200"
 			)}
 		>
 			<div
