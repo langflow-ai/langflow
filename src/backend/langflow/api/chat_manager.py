@@ -167,6 +167,8 @@ class ChatManager:
         except Exception as e:
             # Handle any exceptions that might occur
             print(f"Error: {e}")
+            # send a message to the client
+            await self.send_message(client_id, f"Error: {e}")
             raise e
         finally:
             self.disconnect(client_id)
