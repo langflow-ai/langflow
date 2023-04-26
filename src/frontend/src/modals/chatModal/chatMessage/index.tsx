@@ -57,7 +57,7 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
 											return (
 												<div key={index} className="my-2 w-full">
 													<FileCard
-														fileName={"File"}
+														fileName={"Generated File"}
 														fileType={file.type}
 														content={file.data}
 													/>
