@@ -36,9 +36,6 @@ class MalfoyAgent(AgentExecutor):
         agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names)
         return cls.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
 
-    def run(self, *args, **kwargs):
-        return super().run(*args, **kwargs)
-
 
 PREBUILT_AGENTS = {
     "MalfoyAgent": MalfoyAgent,
