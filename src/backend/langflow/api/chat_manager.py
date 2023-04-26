@@ -144,6 +144,7 @@ class ChatManager:
                     payload = json_payload
                 if "clear_history" in payload:
                     self.chat_history.history[client_id] = []
+                    continue
 
                 with self.cache_manager.set_client_id(client_id):
                     await self.process_message(client_id, payload)
