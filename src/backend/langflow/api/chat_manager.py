@@ -23,7 +23,8 @@ class ChatHistory(Subject):
         """Add a message to the chat history."""
 
         self.history[client_id].append(message)
-        self.notify()
+        if not isinstance(message, FileResponse):
+            self.notify()
 
     def get_history(self, client_id: str, filter=True) -> List[ChatMessage]:
         """Get the chat history for a client."""
