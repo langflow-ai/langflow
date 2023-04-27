@@ -5,7 +5,7 @@ import { DropDownComponentType } from "../../types/components";
 import { classNames } from "../../utils";
 
 export default function Dropdown({value, options, onSelect}:DropDownComponentType) {
-  let [internalValue,setInternalValue] = useState(value??"choose an option")
+  let [internalValue,setInternalValue] = useState(value===""||!value?"Choose an option":value)
   return (
     <>
       <Listbox value={internalValue} onChange={(value)=>{

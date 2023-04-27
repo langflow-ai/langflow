@@ -10,6 +10,11 @@ import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
 import FloatComponent from "../../../../components/floatComponent";
 import Dropdown from "../../../../components/dropdownComponent";
+import CodeAreaComponent from "../../../../components/codeAreaComponent";
+import InputFileComponent from "../../../../components/inputFileComponent";
+import { TabsContext } from "../../../../contexts/tabsContext";
+import IntComponent from "../../../../components/intComponent";
+import PromptAreaComponent from "../../../../components/promptComponent";
 
 export default function ParameterComponent({
 	left,
@@ -42,6 +47,7 @@ export default function ParameterComponent({
 	const { reactFlowInstance } = useContext(typesContext);
 	let disabled =
 		reactFlowInstance?.getEdges().some((e) => e.targetHandle === id) ?? false;
+	const { save } = useContext(TabsContext);
 
 	return (
 		<div
@@ -49,11 +55,18 @@ export default function ParameterComponent({
 			className="w-full flex flex-wrap justify-between items-center bg-gray-50 dark:bg-gray-800 dark:text-white mt-1 px-5 py-2"
 		>
 			<>
-				<div className="text-sm truncate">
+				<div className={"text-sm truncate w-full " + (left ? "" : "text-end")}>
 					{title}
 					<span className="text-red-600">{required ? " *" : ""}</span>
 				</div>
-				{left && (type === "str" || type === "bool" || type === "float") ? (
+				{left &&
+				(type === "str" ||
+					type === "bool" ||
+					type === "float" ||
+					type === "code" ||
+					type === "prompt" ||
+					type === "file" ||
+					type === "int") ? (
 					<></>
 				) : (
 					<Tooltip title={tooltipTitle + (required ? " (required)" : "")}>
@@ -91,6 +104,7 @@ export default function ParameterComponent({
 								}
 								onChange={(t: string[]) => {
 									data.node.template[name].value = t;
+									save();
 								}}
 							/>
 						) : data.node.template[name].multiline ? (
@@ -99,15 +113,17 @@ export default function ParameterComponent({
 								value={data.node.template[name].value ?? ""}
 								onChange={(t: string) => {
 									data.node.template[name].value = t;
+									save();
 								}}
 							/>
 						) : (
 							<InputComponent
 								disabled={disabled}
-								password={data.node.template[name].password ?? true}
+								password={data.node.template[name].password ?? false}
 								value={data.node.template[name].value ?? ""}
 								onChange={(t) => {
 									data.node.template[name].value = t;
+									save();
 								}}
 							/>
 						)}
@@ -120,6 +136,7 @@ export default function ParameterComponent({
 							setEnabled={(t) => {
 								data.node.template[name].value = t;
 								setEnabled(t);
+								save();
 							}}
 						/>
 					</div>
@@ -129,6 +146,7 @@ export default function ParameterComponent({
 						value={data.node.template[name].value ?? ""}
 						onChange={(t) => {
 							data.node.template[name].value = t;
+							save();
 						}}
 					/>
 				) : left === true &&
@@ -136,12 +154,51 @@ export default function ParameterComponent({
 				  data.node.template[name].options ? (
 					<Dropdown
 						options={data.node.template[name].options}
-						onSelect={(newValue) => data.node.template[name].value=newValue}
-						value={data.node.template[name].value??"chose an option"}
+						onSelect={(newValue) => (data.node.template[name].value = newValue)}
+						value={data.node.template[name].value ?? "Choose an option"}
 					></Dropdown>
-				) : (
-					<></>
-				)}
+				) : left === true && type === "code" ? (
+					<CodeAreaComponent
+						disabled={disabled}
+						value={data.node.template[name].value ?? ""}
+						onChange={(t: string) => {
+							data.node.template[name].value = t;
+							save();
+						}}
+					/>
+				) : left === true && type === "file" ? (
+					<InputFileComponent
+						disabled={disabled}
+						value={data.node.template[name].value ?? ""}
+						onChange={(t: string) => {
+							data.node.template[name].value = t;
+						}}
+						fileTypes={data.node.template[name].fileTypes}
+						suffixes={data.node.template[name].suffixes}
+						onFileChange={(t: string) => {
+							data.node.template[name].content = t;
+							save();
+						}}
+					></InputFileComponent>
+				) : left === true && type === "int" ? (
+					<IntComponent
+						disabled={disabled}
+						value={data.node.template[name].value ?? ""}
+						onChange={(t) => {
+							data.node.template[name].value = t;
+							save();
+						}}
+					/>
+				) : left === true && type === "prompt" ? (
+					<PromptAreaComponent
+						disabled={disabled}
+						value={data.node.template[name].value ?? ""}
+						onChange={(t: string) => {
+							data.node.template[name].value = t;
+							save();
+						}}
+					/>
+				):(<></>)}
 			</>
 		</div>
 	);

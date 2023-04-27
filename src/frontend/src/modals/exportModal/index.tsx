@@ -26,6 +26,7 @@ export default function ExportModal() {
 		}
 	}
 	const [checked,setChecked] = useState(true)
+	const [name,setName] = useState(flows[tabIndex].name)
 	return (
 		<Transition.Root show={open} appear={true} as={Fragment}>
 			<Dialog
@@ -100,15 +101,16 @@ export default function ExportModal() {
                                                     if(event.target.value!=""){
                                                         let newFlow = flows[tabIndex];
                                                         newFlow.name = event.target.value;
+														setName(event.target.value)
                                                         updateFlow(newFlow);
                                                     }
                                                     else{
-                                                        setErrorData({title:"Flow name can't be empty"})
+														setName(event.target.value)
                                                     }
 												}}
 												type="text"
 												name="name"
-												value={flows[tabIndex].name ?? null}
+												value={name ?? null}
 												placeholder="File name"
 												id="name"
 												className="focus:border focus:border-blue block w-full px-3 py-2 border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:focus:border-blue-500 dark:focus:ring-blue-500"

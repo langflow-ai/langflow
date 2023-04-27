@@ -1,42 +1,23 @@
-from langchain.agents.mrkl import prompt
+from langflow.template import nodes
+
+# These should always be instantiated
+CUSTOM_NODES = {
+    "prompts": {"ZeroShotPrompt": nodes.ZeroShotPromptNode()},
+    "tools": {"PythonFunction": nodes.PythonFunctionNode(), "Tool": nodes.ToolNode()},
+    "agents": {
+        "JsonAgent": nodes.JsonAgentNode(),
+        "CSVAgent": nodes.CSVAgentNode(),
+        "initialize_agent": nodes.InitializeAgentNode(),
+        "VectorStoreAgent": nodes.VectorStoreAgentNode(),
+        "VectorStoreRouterAgent": nodes.VectorStoreRouterAgentNode(),
+        "SQLAgent": nodes.SQLAgentNode(),
+    },
+    "utilities": {
+        "SQLDatabase": nodes.SQLDatabaseNode(),
+    },
+}
 
 
-def get_custom_prompts():
-    """Get custom prompts."""
-
-    return {
-        "ZeroShotPrompt": {
-            "template": {
-                "_type": "zero_shot",
-                "prefix": {
-                    "type": "str",
-                    "required": False,
-                    "placeholder": "",
-                    "list": False,
-                    "show": True,
-                    "multiline": True,
-                    "value": prompt.PREFIX,
-                },
-                "suffix": {
-                    "type": "str",
-                    "required": True,
-                    "placeholder": "",
-                    "list": False,
-                    "show": True,
-                    "multiline": True,
-                    "value": prompt.SUFFIX,
-                },
-                "format_instructions": {
-                    "type": "str",
-                    "required": False,
-                    "placeholder": "",
-                    "list": False,
-                    "show": True,
-                    "multiline": True,
-                    "value": prompt.FORMAT_INSTRUCTIONS,
-                },
-            },
-            "description": "Prompt template for Zero Shot Agent.",
-            "base_classes": ["BasePromptTemplate"],
-        }
-    }
+def get_custom_nodes(node_type: str):
+    """Get custom nodes."""
+    return CUSTOM_NODES.get(node_type, {})

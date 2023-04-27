@@ -23,7 +23,6 @@ export default function GenericNode({
 	const { types, deleteNode } = useContext(typesContext);
 	const Icon = nodeIcons[types[data.type]];
 	if (!Icon) {
-		console.log(data);
 		if (showError.current) {
 			setErrorData({
 				title: data.type
@@ -32,9 +31,9 @@ export default function GenericNode({
 			});
 			showError.current = false;
 		}
+		deleteNode(data.id);
 		return;
 	}
-
 	return (
 		<div
 			className={classNames(
@@ -72,8 +71,18 @@ export default function GenericNode({
 						.map((t: string, idx) => (
 							<div key={idx}>
 								{idx === 0 ? (
-									<div className="px-5 py-2 mt-2 dark:text-white text-center">
-										Inputs:
+									<div
+										className={classNames(
+											"px-5 py-2 mt-2 dark:text-white text-center",
+											Object.keys(data.node.template).filter(
+												(key) =>
+													!key.startsWith("_") && data.node.template[key].show
+											).length === 0
+												? "hidden"
+												: ""
+										)}
+									>
+										Inputs
 									</div>
 								) : (
 									<></>
@@ -85,7 +94,13 @@ export default function GenericNode({
 											nodeColors[types[data.node.template[t].type]] ??
 											nodeColors.unknown
 										}
-										title={snakeToNormalCase(t)}
+										title={
+											data.node.template[t].display_name
+												? data.node.template[t].display_name
+												: data.node.template[t].name
+												? snakeToNormalCase(data.node.template[t].name)
+												: snakeToNormalCase(t)
+										}
 										name={t}
 										tooltipTitle={
 											"Type: " +
@@ -103,7 +118,7 @@ export default function GenericNode({
 							</div>
 						))}
 					<div className="px-5 py-2 mt-2 dark:text-white text-center">
-						Output:
+						Output
 					</div>
 					<ParameterComponent
 						data={data}
@@ -111,7 +126,7 @@ export default function GenericNode({
 						title={data.type}
 						tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
 						id={[data.type, data.id, ...data.node.base_classes].join("|")}
-						type={"str"}
+						type={data.node.base_classes.join("|")}
 						left={false}
 					/>
 				</>
