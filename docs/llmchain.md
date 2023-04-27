@@ -1,4 +1,4 @@
-### ⛓️LangFlow
+### ⛓️LangFlow example:
 
 ![Description](img/llm-chain.png#only-dark)
 ![Description](img/llm-chain.png#only-light)
@@ -25,7 +25,7 @@ The name should be short, catchy, and easy to remember.
 What is a good name for a company that makes {product}?
 ```
 
-We used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/account/api-keys){.internal-link target=_blank} requires you to create an account to get it yours.
+We used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/){.internal-link target=_blank} requires you to create an account to get your API key.
 
 Check the short tutorial of [OpenAI](llms.md){.internal-link target=_blank} options available.
 

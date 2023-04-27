@@ -1,4 +1,4 @@
-### ⛓️LangFlow
+### ⛓️LangFlow example:
 ![Description](img/multiple-vectorstores.png#only-dark)
 ![Description](img/multiple-vectorstores.png#only-light)
 
@@ -39,7 +39,7 @@ Chunk overlap used:
 200
 ```
 
-The `OpenAIEmbeddings`, wrapper around [OpenAI Embeddings](https://platform.openai.com/docs/guides/embeddings/what-are-embeddings){.internal-link target=_blank} models. Make sure to get the API key from the LLM provider, in this case [OpenAI](https://platform.openai.com/account/api-keys){.internal-link target=_blank}.
+The `OpenAIEmbeddings`, wrapper around [OpenAI Embeddings](https://platform.openai.com/docs/guides/embeddings/what-are-embeddings){.internal-link target=_blank} models. Make sure to get the API key from the LLM provider, in this case [OpenAI](https://platform.openai.com/){.internal-link target=_blank}.
 
 `Chroma` vector databases can be used as vector stores to conduct a semantic search or to select examples, thanks to a wrapper around them.
 
@@ -65,7 +65,7 @@ Information about the Ruff python linting library
 ```
 The `VectorStoreRouterToolkit` is a toolkit that allows you to create a `VectorStoreRouter` agent. This allows it to route between vector stores.
 
-We used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/account/api-keys){.internal-link target=_blank} requires you to create an account to get it yours.
+We used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/){.internal-link target=_blank} requires you to create an account to get your API key.
 
 Check the short tutorial of [OpenAI](llms.md){.internal-link target=_blank} options available.
 

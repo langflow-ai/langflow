@@ -1,4 +1,4 @@
-### ⛓️LangFlow
+### ⛓️LangFlow example:
 ![Description](img/conversation-summary-memory.png#only-dark)
 ![Description](img/conversation-summary-memory.png#only-light)
 
@@ -6,7 +6,7 @@
 
 ## Nodes
 
-We used `ChatOpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [ChatOpenAI](https://platform.openai.com/account/api-keys){.internal-link target=_blank} requires you to create an account to get your API key.
+We used `ChatOpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [ChatOpenAI](https://platform.openai.com/){.internal-link target=_blank} requires you to create an account to get your API key.
 
 Check the short tutorial of [ChatOpenAI](llms.md#chatopenai){.internal-link target=_blank} options available.
 

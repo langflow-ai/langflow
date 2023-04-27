@@ -67,8 +67,7 @@ plugins:
 nav:
   - Getting Started:
       - index.md
-  - Components:
-      - LLMs: llms.md
+  - LangFlow Examples:
       - Memories: 
         - Conversation Summary Memory: conversation-summary-memory.md
         - Conversation Buffer Memory: conversation-buffer-memory.md
@@ -87,6 +86,7 @@ nav:
       - Document Loaders:
         - PyPDFLoader: py-pdf-loader.md
         - CSVLoader: csv-loader.md
+      - LLMs: llms.md
   - GCP Deployment: GCP_DEPLOYMENT.md
   - Release Notes: releases.md
   - Contributing: help-langflow.md

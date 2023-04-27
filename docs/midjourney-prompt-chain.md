@@ -1,4 +1,4 @@
-### ⛓️LangFlow
+### ⛓️LangFlow example:
 
 ![Description](img/MidJourney-prompt-chain.png#only-dark)
 ![Description](img/MidJourney-prompt-chain.png#only-light)
@@ -11,7 +11,7 @@ Check out the image created by the prompt [here](https://www.bing.com/images/cre
 
 With `MidJourneyPromptChain`, you can use it to generate new MidJourney prompts. You can just type anything you like to build an image script.
 
-We used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/account/api-keys){.internal-link target=_blank} requires you to create an account to get it yours.
+We used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/){.internal-link target=_blank} requires you to create an account to get your API key.
 
 Check the short tutorial of [OpenAI](llms.md){.internal-link target=_blank} options available.
 

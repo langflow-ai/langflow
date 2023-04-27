@@ -60,13 +60,16 @@ Alternatively, click the **"Open in Cloud Shell"** button below to launch Google
 [![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/open?git_repo=https://github.com/genome21/langflow&working_dir=scripts&shellonly=true&tutorial=walkthroughtutorial_spot.md){.internal-link target=_blank}
 
 ---
-## 👋 Attention
+## ⚠️ Attention
 
 During your process to create flows, you may notice a red asterisk <span style="color:red">*</span>,
 which indicates that you must connect a component there to make your flow work.
 You will be able to see the component that needs to be connected if you hover over the small circle next to the asterisk.
 
-We welcome contributions from developers of all levels to our open-source project on [GitHub](https://github.com/logspace-ai/langflow){.internal-link target=_blank}. If you'd like to contribute, please check our [contributing](help-langflow.md){.internal-link target=_blank} guidelines and help make LangFlow more accessible.
+Flows can be exported as JSON files and imported as JSON files.
 
+---
+## 👋 Contributing
+We welcome contributions from developers of all levels to our open-source project on [GitHub](https://github.com/logspace-ai/langflow){.internal-link target=_blank}. If you'd like to contribute, please check our [contributing](help-langflow.md){.internal-link target=_blank} guidelines and help make LangFlow more accessible.
 
 [![Star History Chart](https://api.star-history.com/svg?repos=logspace-ai/langflow&type=Timeline)](https://star-history.com/#logspace-ai/langflow&Date){.internal-link target=_blank} 

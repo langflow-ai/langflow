@@ -1,4 +1,4 @@
-### ⛓️LangFlow
+### ⛓️LangFlow example:
 
 ![Description](img/series-character-chain.png#only-dark)
 ![Description](img/series-character-chain.png#only-light)
@@ -7,7 +7,7 @@
 
 ## Nodes
 
-We used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/account/api-keys){.internal-link target=_blank} requires you to create an account to get your API key.
+We used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/){.internal-link target=_blank} requires you to create an account to get your API key.
 
 Check the short tutorial of [OpenAI](llms.md){.internal-link target=_blank} options available.
 
