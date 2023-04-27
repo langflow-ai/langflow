@@ -39,7 +39,7 @@
         "web-vitals": "^2.1.4"
     },
     "scripts": {
-        "start": "react-scripts start",
+        "start": "NODE_ENV=development react-scripts start",
         "build": "react-scripts build",
         "test": "react-scripts test",
         "eject": "react-scripts eject"
@@ -62,5 +62,5 @@
             "last 1 safari version"
         ]
     },
-    "proxy": "http://127.0.0.1:5003"
+    "proxy": "http://backend:7860"
 }

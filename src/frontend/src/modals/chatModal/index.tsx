@@ -55,7 +55,14 @@ export default function ChatModal({
   };
 
   function connectWS() {
-    const newWs = new WebSocket(`ws://127.0.0.1:7860/chat/${flow.id}`);
+    // Check if the app is running with npm start or npm run build
+    // if npm start, use localhost, otherwise use the windows.location.host
+    const urlWs =
+      process.env.NODE_ENV === "development"
+        ? `ws://localhost:7860/chat/${flow.id}`
+        : `wss://${window.location.host}/chat/${flow.id}`;
+
+    const newWs = new WebSocket(urlWs);
     newWs.onopen = () => {
       console.log("WebSocket connection established!");
     };
