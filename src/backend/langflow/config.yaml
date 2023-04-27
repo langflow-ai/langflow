@@ -1,27 +1,128 @@
 chains:
   - LLMChain
   - LLMMathChain
-  - LLMChecker
-  # - ConversationChain
+  - LLMCheckerChain
+  - ConversationChain
+  - SeriesCharacterChain
+  - MidJourneyPromptChain
+  - TimeTravelGuideChain
+  - SQLDatabaseChain
 
 agents:
   - ZeroShotAgent
+  - JsonAgent
+  - CSVAgent
+  - initialize_agent
+  - VectorStoreAgent
+  - VectorStoreRouterAgent
+  - SQLAgent
 
 prompts:
   - PromptTemplate
   - FewShotPromptTemplate
+  - ZeroShotPrompt
+  # Wait more tests
+  # - ChatPromptTemplate
+  # - SystemMessagePromptTemplate
+  # - HumanMessagePromptTemplate
 
 llms:
   - OpenAI
-  - OpenAIChat
+  # - AzureOpenAI
+  - ChatOpenAI
+  - HuggingFaceHub
+  - LlamaCpp
 
 tools:
   - Search
   - PAL-MATH
   - Calculator
   - Serper Search
+  - Tool
+  - PythonFunction
+  - JsonSpec
+  - News API
+  - TMDB API
+  - Podcast API
+  - QuerySQLDataBaseTool
+  - InfoSQLDatabaseTool
+  - ListSQLDatabaseTool
+  # - QueryCheckerTool
+  - BingSearchRun
+  - GoogleSearchRun
+  - GoogleSearchResults
+  - JsonListKeysTool
+  - JsonGetValueTool
+  - PythonREPLTool
+  - PythonAstREPLTool
+  - RequestsGetTool
+  - RequestsPostTool
+  - RequestsPatchTool
+  - RequestsPutTool
+  - RequestsDeleteTool
+  - WikipediaQueryRun
+  - WolframAlphaQueryRun
+
+wrappers:
+  - RequestsWrapper
+
+toolkits:
+  - OpenAPIToolkit
+  - JsonToolkit
+  - VectorStoreInfo
+  - VectorStoreRouterToolkit
 
 memories:
-  # - ConversationBufferMemory
+  - ConversationBufferMemory
+  - ConversationSummaryMemory
+  - ConversationKGMemory
+
+embeddings:
+  - OpenAIEmbeddings
+
+vectorstores:
+  - Chroma
+
+documentloaders:
+  - AirbyteJSONLoader
+  - CoNLLULoader
+  - CSVLoader
+  - UnstructuredEmailLoader
+  - EverNoteLoader
+  - FacebookChatLoader
+  - GutenbergLoader
+  - BSHTMLLoader
+  - UnstructuredHTMLLoader
+  # - UnstructuredImageLoader # Issue with Python 3.11 (https://github.com/Unstructured-IO/unstructured-inference/issues/83)
+  - UnstructuredMarkdownLoader
+  - PyPDFLoader
+  - UnstructuredPowerPointLoader
+  - SRTLoader
+  - TelegramChatLoader
+  - TextLoader
+  - UnstructuredWordDocumentLoader
+  - WebBaseLoader
+  - AZLyricsLoader
+  - CollegeConfidentialLoader
+  - HNLoader
+  - IFixitLoader
+  - IMSDbLoader
+  - GitbookLoader
+  - ReadTheDocsLoader
+
+textsplitters:
+  - CharacterTextSplitter
+
+utilities:
+  - BingSearchAPIWrapper
+  - GoogleSearchAPIWrapper
+  - GoogleSerperAPIWrapper
+  - SearxResults
+  - SearxSearchWrapper
+  - SerpAPIWrapper
+  - WikipediaAPIWrapper
+  - WolframAlphaAPIWrapper
+  # - ZapierNLAWrapper
+  - SQLDatabase
 
 dev: false

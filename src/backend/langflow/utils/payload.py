@@ -1,5 +1,6 @@
 import contextlib
 import re
+from typing import Dict
 
 
 def extract_input_variables(nodes):
@@ -27,48 +28,63 @@ def extract_input_variables(nodes):
     return nodes
 
 
-def get_root_node(nodes, edges):
+def get_root_node(graph):
     """
     Returns the root node of the template.
     """
-    incoming_edges = {edge["source"] for edge in edges}
-    return next((node for node in nodes if node["id"] not in incoming_edges), None)
+    incoming_edges = {edge.source for edge in graph.edges}
+
+    if not incoming_edges and len(graph.nodes) == 1:
+        return graph.nodes[0]
+
+    return next((node for node in graph.nodes if node not in incoming_edges), None)
 
 
-def build_json(root, nodes, edges):
-    """
-    Builds a json from the nodes and edges
-    """
-    edge_ids = [edge["source"] for edge in edges if edge["target"] == root["id"]]
-    local_nodes = [node for node in nodes if node["id"] in edge_ids]
+def build_json(root, graph) -> Dict:
+    if "node" not in root.data:
+        # If the root node has no "node" key, then it has only one child,
+        # which is the target of the single outgoing edge
+        edge = root.edges[0]
+        local_nodes = [edge.target]
+    else:
+        # Otherwise, find all children whose type matches the type
+        # specified in the template
+        node_type = root.node_type
+        local_nodes = graph.get_nodes_with_target(root)
 
-    if "node" not in root["data"]:
-        return build_json(local_nodes[0], nodes, edges)
-
-    final_dict = root["data"]["node"]["template"].copy()
+    if len(local_nodes) == 1:
+        return build_json(local_nodes[0], graph)
+    # Build a dictionary from the template
+    template = root.data["node"]["template"]
+    final_dict = template.copy()
 
     for key, value in final_dict.items():
         if key == "_type":
             continue
 
-        module_type = value["type"]
+        node_type = value["type"]
 
         if "value" in value and value["value"] is not None:
+            # If the value is specified, use it
             value = value["value"]
-        elif "dict" in module_type:
+        elif "dict" in node_type:
+            # If the value is a dictionary, create an empty dictionary
             value = {}
         else:
+            # Otherwise, recursively build the child nodes
             children = []
-            for c in local_nodes:
-                module_types = [c["data"]["type"]]
-                if "node" in c["data"]:
-                    module_types += c["data"]["node"]["base_classes"]
-                if module_type in module_types:
-                    children.append(c)
+            for local_node in local_nodes:
+                node_children = graph.get_children_by_node_type(local_node, node_type)
+                children.extend(node_children)
 
             if value["required"] and not children:
-                raise ValueError(f"No child with type {module_type} found")
-            values = [build_json(child, nodes, edges) for child in children]
-            value = list(values) if value["list"] else next(iter(values), None)
+                raise ValueError(f"No child with type {node_type} found")
+            values = [build_json(child, graph) for child in children]
+            value = (
+                list(values)
+                if value["list"]
+                else next(iter(values), None)  # type: ignore
+            )
         final_dict[key] = value
+
     return final_dict

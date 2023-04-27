@@ -5,34 +5,42 @@ import {
 	PaperAirplaneIcon,
 	XMarkIcon,
 } from "@heroicons/react/24/outline";
-import { MouseEventHandler, useContext, useEffect, useRef, useState } from "react";
-import { sendAll } from "../../controllers/NodesServices";
+import {
+	MouseEventHandler,
+	useContext,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
+import { sendAll } from "../../controllers/API";
 import { alertContext } from "../../contexts/alertContext";
-import { classNames, nodeColors } from "../../utils";
+import { classNames, nodeColors, snakeToNormalCase } from "../../utils";
 import { TabsContext } from "../../contexts/tabsContext";
 import { ChatType } from "../../types/chat";
 import ChatMessage from "./chatMessage";
+import { NodeType } from "../../types/flow";
 
 const _ = require("lodash");
 
 export default function Chat({ flow, reactFlowInstance }: ChatType) {
-	const { updateFlow,lockChat,setLockChat,flows,tabIndex } = useContext(TabsContext);
+	const { updateFlow, lockChat, setLockChat, flows, tabIndex } =
+		useContext(TabsContext);
 	const [saveChat, setSaveChat] = useState(false);
 	const [open, setOpen] = useState(true);
 	const [chatValue, setChatValue] = useState("");
 	const [chatHistory, setChatHistory] = useState(flow.chat);
-	const { setErrorData } = useContext(alertContext);
+	const { setErrorData, setNoticeData } = useContext(alertContext);
 	const addChatHistory = (
 		message: string,
 		isSend: boolean,
-		thought?: string,
+		thought?: string
 	) => {
 		let tabsChange = false;
 		setChatHistory((old) => {
 			let newChat = _.cloneDeep(old);
-			if(JSON.stringify(flow.chat) !==JSON.stringify(old)){
-				tabsChange = true
-				return old
+			if (JSON.stringify(flow.chat) !== JSON.stringify(old)) {
+				tabsChange = true;
+				return old;
 			}
 			if (thought) {
 				newChat.push({ message, isSend, thought });
@@ -41,12 +49,17 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 			}
 			return newChat;
 		});
-		if(tabsChange){
-			if(thought){
-				updateFlow({..._.cloneDeep(flow),chat:[...flow.chat,{isSend,message,thought}]})
-			}
-			else{
-				updateFlow({..._.cloneDeep(flow),chat:[...flow.chat,{isSend,message}]})
+		if (tabsChange) {
+			if (thought) {
+				updateFlow({
+					..._.cloneDeep(flow),
+					chat: [...flow.chat, { isSend, message, thought }],
+				});
+			} else {
+				updateFlow({
+					..._.cloneDeep(flow),
+					chat: [...flow.chat, { isSend, message }],
+				});
 			}
 		}
 		setSaveChat((chat) => !chat);
@@ -61,55 +74,93 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 	useEffect(() => {
 		if (ref.current) ref.current.scrollIntoView({ behavior: "smooth" });
 	}, [chatHistory]);
-	function validateNodes() {
-		if (
-			reactFlowInstance
-				.getNodes()
-				.some(
-					(n) =>
-						n.data.node &&
-						Object.keys(n.data.node.template).some(
-							(t: any) =>
-								n.data.node.template[t].required &&
-								n.data.node.template[t].value === "" &&
-								n.data.node.template[t].required &&
-								!reactFlowInstance
-									.getEdges()
-									.some(
-										(e) =>
-											e.sourceHandle.split("|")[1] === t &&
-											e.sourceHandle.split("|")[2] === n.id
-									)
-						)
-				)
-		) {
-			return false;
+
+	function validateNode(n: NodeType): Array<string> {
+		if (!n.data?.node?.template || !Object.keys(n.data.node.template)) {
+			setNoticeData({
+				title:
+					"We've noticed a potential issue with a node in the flow. Please review it and, if necessary, submit a bug report with your exported flow file. Thank you for your help!",
+			});
+			return [];
 		}
-		return true;
+
+		const {
+			type,
+			node: { template },
+		} = n.data;
+
+		return Object.keys(template).reduce(
+			(errors: Array<string>, t) =>
+				errors.concat(
+					(template[t].required && template[t].show) &&
+						(!template[t].value || template[t].value === "") &&
+						!reactFlowInstance
+							.getEdges()
+							.some(
+								(e) =>
+									e.targetHandle.split("|")[1] === t &&
+									e.targetHandle.split("|")[2] === n.id
+							)
+						? [
+								`${type} is missing ${
+									template.display_name
+										? template.display_name
+										: snakeToNormalCase(template[t].name)
+								}.`,
+						  ]
+						: []
+				),
+			[] as string[]
+		);
 	}
+
+	function validateNodes() {
+		return reactFlowInstance
+			.getNodes()
+			.flatMap((n: NodeType) => validateNode(n));
+	}
+
 	const ref = useRef(null);
 
 	function sendMessage() {
 		if (chatValue !== "") {
-			if (validateNodes()) {
+			let nodeValidationErrors = validateNodes();
+			if (nodeValidationErrors.length === 0) {
 				setLockChat(true);
 				let message = chatValue;
 				setChatValue("");
 				addChatHistory(message, true);
 
-				sendAll({ ...reactFlowInstance.toObject(), message, chatHistory,name:flow.name,description:flow.description})
+				sendAll({
+					...reactFlowInstance.toObject(),
+					message,
+					chatHistory,
+					name: flow.name,
+					description: flow.description,
+				})
 					.then((r) => {
 						addChatHistory(r.data.result, false, r.data.thought);
 						setLockChat(false);
 					})
 					.catch((error) => {
-						setErrorData({ title: error.message ?? "unknow error" });
+						setErrorData({
+							title: error.message ?? "Unknown Error",
+							list: [error.response.data.detail],
+						});
 						setLockChat(false);
+						let lastMessage;
+						setChatHistory((chatHistory) => {
+							let newChat = chatHistory;
+
+							lastMessage = newChat.pop().message;
+							return newChat;
+						});
+						setChatValue(lastMessage);
 					});
 			} else {
 				setErrorData({
-					title: "Error sending message",
-					list: [ "Oops! Looks like you missed some required information. Please fill in all the required fields before continuing."],
+					title: "Oops! Looks like you missed some required information:",
+					list: nodeValidationErrors,
 				});
 			}
 		} else {
@@ -120,8 +171,8 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 		}
 	}
 	function clearChat() {
-		setChatHistory([])
-		updateFlow({ ..._.cloneDeep(flow), chat: []});
+		setChatHistory([]);
+		updateFlow({ ..._.cloneDeep(flow), chat: [] });
 	}
 
 	return (
@@ -151,9 +202,10 @@ export default function Chat({ flow, reactFlowInstance }: ChatType) {
 								/>
 								Chat
 							</div>
-							<button className="hover:text-blue-500"
+							<button
+								className="hover:text-blue-500 dark:text-white"
 								onClick={(e) => {
-									e.stopPropagation()
+									e.stopPropagation();
 									clearChat();
 								}}
 							>
