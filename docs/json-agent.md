@@ -2,7 +2,7 @@
 ![Description](img/json-agent.png#only-dark)
 ![Description](img/json-agent.png#only-light)
 
-[Get JSON file](data/Json-agent.json){.internal-link target=_blank}
+[Get JSON file](data/Json-agent.json){: .md-button download="Json-agent"} 
 
 ## Nodes
 

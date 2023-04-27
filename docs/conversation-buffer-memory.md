@@ -3,8 +3,7 @@
 ![Description](img/conversation-buffer-memory.png#only-dark)
 ![Description](img/conversation-buffer-memory.png#only-light)
 
-[Get JSON file](data/Conversation-buffer-memory.json){.internal-link target=_blank}
-
+[Get JSON file](data/Conversation-buffer-memory.json){: .md-button download="Conversation-buffer-memory"} 
 ## Nodes
 
 `ConversationBufferMemory` allows you to store messages and then extract the messages in a variable.

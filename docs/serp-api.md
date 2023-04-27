@@ -3,7 +3,7 @@
 ![Description](img/serp-api.png#only-dark)
 ![Description](img/serp-api.png#only-light)
 
-[Get JSON file](data/Serp-api.json){.internal-link target=_blank}
+[Get JSON file](data/Serp-api.json){: .md-button download="Serp-api"} 
 
 ## Nodes
 

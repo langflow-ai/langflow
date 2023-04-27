@@ -3,7 +3,7 @@
 ![Description](img/time-travel-guide-chain.png#only-dark)
 ![Description](img/time-travel-guide-chain.png#only-light)
 
-[Get JSON file](data/Time-travel-guide-chain.json){.internal-link target=_blank}
+[Get JSON file](data/Time-travel-guide-chain.json){: .md-button download="Time-travel-guide-chain"} 
 
 ## Nodes
 

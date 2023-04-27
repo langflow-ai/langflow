@@ -3,7 +3,7 @@
 ![Description](img/py-pdf-loader.png#only-dark)
 ![Description](img/py-pdf-loader.png#only-light)
 
-[Get JSON file](data/Py-pdf-loader.json){.internal-link target=_blank}
+[Get JSON file](data/Py-pdf-loader.json){: .md-button download="Py-pdf-loader"} 
 
 ## Nodes
 

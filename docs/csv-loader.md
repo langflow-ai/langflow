@@ -3,7 +3,7 @@
 ![Description](img/csv-loader.png#only-dark)
 ![Description](img/csv-loader.png#only-light)
 
-[Get JSON file](data/Csv-loader.json){.internal-link target=_blank}
+[Get JSON file](data/Csv-loader.json){: .md-button download="Csv-loader"} 
 
 ## Nodes
 
