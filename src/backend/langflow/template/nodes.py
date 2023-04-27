@@ -256,6 +256,29 @@ class CSVAgentNode(FrontendNode):
         return super().to_dict()
 
 
+class SQLDatabaseNode(FrontendNode):
+    name: str = "SQLDatabase"
+    template: Template = Template(
+        type_name="sql_database",
+        fields=[
+            TemplateField(
+                field_type="str",
+                required=True,
+                is_list=False,
+                show=True,
+                multiline=False,
+                value="",
+                name="uri",
+            ),
+        ],
+    )
+    description: str = """SQLAlchemy wrapper around a database."""
+    base_classes: list[str] = ["SQLDatabase"]
+
+    def to_dict(self):
+        return super().to_dict()
+
+
 class VectorStoreAgentNode(FrontendNode):
     name: str = "VectorStoreAgent"
     template: Template = Template(
