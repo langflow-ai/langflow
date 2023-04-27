@@ -66,13 +66,14 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 			let cookieObject: LangFlowState = JSON.parse(cookie);
 			cookieObject.flows.forEach((flow) => {
 				flow.data.nodes.forEach((node) => {
-					node.data.node.template = updateObject(
-						node.data.node.template as TemplateVariableType,
-						templates[node.data.type][
-							"template"
-						] as unknown as TemplateVariableType
-					);
-					console.log(node)
+					if (Object.keys(templates[node.data.type]["template"]).length>0) {
+						node.data.node.template = updateObject(
+							node.data.node.template as TemplateVariableType,
+							templates[node.data.type][
+								"template"
+							] as unknown as TemplateVariableType
+						);
+					}
 				});
 			});
 			setTabIndex(cookieObject.tabIndex);
@@ -127,7 +128,19 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 				// read the file as text
 				file.text().then((text) => {
 					// parse the text into a JSON object
-					addFlow(JSON.parse(text));
+					let flow: FlowType = JSON.parse(text);
+					flow.data.nodes.forEach((node) => {
+						if (Object.keys(templates[node.data.type]["template"]).length>0) {
+							node.data.node.template = updateObject(
+								node.data.node.template as TemplateVariableType,
+								templates[node.data.type][
+									"template"
+								] as unknown as TemplateVariableType
+							);
+						}
+					});
+
+					addFlow();
 				});
 			}
 		};
