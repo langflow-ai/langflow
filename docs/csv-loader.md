@@ -1,3 +1,10 @@
+### ⛓️LangFlow
+
+![Description](img/csv-loader.png#only-dark)
+![Description](img/csv-loader.png#only-light)
+
+[Get JSON file](data/Csv-loader.json){.internal-link target=_blank}
+
 ## Nodes
 
 The `CSVLoader` loads a CSV file into a list of documents.
@@ -50,10 +57,3 @@ A table contains 100 companies.
 ```
 
 The `VectoStoreAgent`is an agent designed to retrieve information from one or more vector stores, either with or without sources.
-
-### ⛓️LangFlow
-
-![Description](img/csv-loader.png#only-dark)
-![Description](img/csv-loader.png#only-light)
-
-[Get JSON file](data/Csv-loader.json){.internal-link target=_blank}

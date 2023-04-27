@@ -1,3 +1,10 @@
+### ⛓️LangFlow
+
+![Description](img/llm-chain.png#only-dark)
+![Description](img/llm-chain.png#only-light)
+
+[Get JSON file](data/llm-chain.json){.internal-link target=_blank}
+
 ## Nodes
 
 The `PromptTemplate` is a simple template that takes in a product name and returns a prompt. The prompt is used to generate the response from the LLM.
@@ -23,10 +30,3 @@ We used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure 
 Check the short tutorial of [OpenAI](llms.md){.internal-link target=_blank} options available.
 
 The `LLMChain` is a simple chain that takes in a prompt template, formats it with the user input, and returns the response from an LLM.
-
-### ⛓️LangFlow
-
-![Description](img/llm-chain.png#only-dark)
-![Description](img/llm-chain.png#only-light)
-
-[Get JSON file](data/llm-chain.json){.internal-link target=_blank}

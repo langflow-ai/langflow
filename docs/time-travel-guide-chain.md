@@ -1,3 +1,10 @@
+### ⛓️LangFlow
+
+![Description](img/time-travel-guide-chain.png#only-dark)
+![Description](img/time-travel-guide-chain.png#only-light)
+
+[Get JSON file](data/Time-travel-guide-chain.json){.internal-link target=_blank}
+
 ## Nodes
 
 `TimeTravelGuideChain` will provide you with the historical period or future time you want to visit and you will suggest the best events, sights, or people to experience. **Output Key** and **Input Key** are simply unique identifiers used to represent the data being passed between different modules.
@@ -7,10 +14,3 @@ The `ConversationSummaryMemory`. A memory of this type creates a summary of the 
 We used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/account/api-keys){.internal-link target=_blank} requires you to create an account to get it yours.
 
 Check the short tutorial of [OpenAI](llms.md){.internal-link target=_blank} options available.
-
-### ⛓️LangFlow
-
-![Description](img/time-travel-guide-chain.png#only-dark)
-![Description](img/time-travel-guide-chain.png#only-light)
-
-[Get JSON file](data/Time-travel-guide-chain.json){.internal-link target=_blank}

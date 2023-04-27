@@ -1,3 +1,10 @@
+### ⛓️LangFlow
+
+![Description](img/vectorstore-agent.png#only-dark)
+![Description](img/vectorstore-agent.png#only-light)
+
+[Get JSON file](data/Vectorstore-agent.json){.internal-link target=_blank}
+
 ## Nodes
 
 By using `WebBaseLoader`, you can load all text from webpages into a document format that we can use downstream. Web path used:
@@ -50,10 +57,3 @@ Check the short tutorial of [OpenAI](llms.md){.internal-link target=_blank} opti
 
 
 The `VectoStoreAgent`is an agent designed to retrieve information from one or more vector stores, either with or without sources.
-
-### ⛓️LangFlow
-
-![Description](img/vectorstore-agent.png#only-dark)
-![Description](img/vectorstore-agent.png#only-light)
-
-[Get JSON file](data/Vectorstore-agent.json){.internal-link target=_blank}

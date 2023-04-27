@@ -1,3 +1,10 @@
+### ⛓️LangFlow
+
+![Description](img/series-character-chain.png#only-dark)
+![Description](img/series-character-chain.png#only-light)
+
+[Get JSON file](data/Series-character-chain.json){.internal-link target=_blank}
+
 ## Nodes
 
 We used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/account/api-keys){.internal-link target=_blank} requires you to create an account to get your API key.
@@ -21,10 +28,3 @@ The Lord of the Rings
 ```
 
 Play around with it and see how it works!
-
-### ⛓️LangFlow
-
-![Description](img/series-character-chain.png#only-dark)
-![Description](img/series-character-chain.png#only-light)
-
-[Get JSON file](data/Series-character-chain.json){.internal-link target=_blank}

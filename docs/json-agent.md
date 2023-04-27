@@ -1,3 +1,9 @@
+### ⛓️LangFlow
+![Description](img/json-agent.png#only-dark)
+![Description](img/json-agent.png#only-light)
+
+[Get JSON file](data/Json-agent.json){.internal-link target=_blank}
+
 ## Nodes
 
 `JsonSpec` will define the **Max value length** of the input and output of the agent. The **Path** is the path to the JSON file.
@@ -15,9 +21,3 @@ Check the short tutorial of [OpenAI](llms.md){.internal-link target=_blank} opti
 `JsonToolkit` for interacting with the JSON spec.
 
 The `JsonAgent` construct an agent that uses a JSON agent from LLM and tools.
-
-### ⛓️LangFlow
-![Description](img/json-agent.png#only-dark)
-![Description](img/json-agent.png#only-light)
-
-[Get JSON file](data/Json-agent.json){.internal-link target=_blank}

@@ -1,3 +1,10 @@
+### ⛓️LangFlow
+
+![Description](img/py-pdf-loader.png#only-dark)
+![Description](img/py-pdf-loader.png#only-light)
+
+[Get JSON file](data/Py-pdf-loader.json){.internal-link target=_blank}
+
 ## Nodes
 
 With `PyPDFLoader`, you can load a PDF file with pypdf and chunks at a character level.
@@ -52,10 +59,3 @@ Check the short tutorial of [OpenAI](llms.md){.internal-link target=_blank} opti
 
 
 The `VectoStoreAgent`is an agent designed to retrieve information from one or more vector stores, either with or without sources.
-
-### ⛓️LangFlow
-
-![Description](img/py-pdf-loader.png#only-dark)
-![Description](img/py-pdf-loader.png#only-light)
-
-[Get JSON file](data/Py-pdf-loader.json){.internal-link target=_blank}

@@ -1,3 +1,9 @@
+### ⛓️LangFlow
+![Description](img/multiple-vectorstores.png#only-dark)
+![Description](img/multiple-vectorstores.png#only-light)
+
+[Get JSON file](data/Multiple-vectorstores.json){.internal-link target=_blank}
+
 ## Nodes
 
 `TextLoader` loads text from a file.
@@ -64,9 +70,3 @@ We used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure 
 Check the short tutorial of [OpenAI](llms.md){.internal-link target=_blank} options available.
 
 `VectorStoreRouterAgent` construct an agent that routes between vector stores.
-
-### ⛓️LangFlow
-![Description](img/multiple-vectorstores.png#only-dark)
-![Description](img/multiple-vectorstores.png#only-light)
-
-[Get JSON file](data/Multiple-vectorstores.json){.internal-link target=_blank}
