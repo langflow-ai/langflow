@@ -2,51 +2,14 @@ import { Bars2Icon } from "@heroicons/react/24/outline";
 import DisclosureComponent from "../DisclosureComponent";
 import { nodeColors, nodeIcons, nodeNames } from "../../../../utils";
 import { useContext, useEffect, useState } from "react";
-import { getAll } from "../../../../controllers/API";
 import { typesContext } from "../../../../contexts/typesContext";
 import {
 	APIClassType,
-	APIKindType,
 	APIObjectType,
 } from "../../../../types/api";
 
 export default function ExtraSidebar() {
-	const [data, setData] = useState({});
-	const { setTypes } = useContext(typesContext);
-	const { setTemplates } = useContext(typesContext);
-
-	useEffect(() => {
-		async function getTypes(): Promise<void> {
-			// Make an asynchronous API call to retrieve all data.
-			let result = await getAll();
-
-			// Update the state of the component with the retrieved data.
-			setData(result.data);
-			setTemplates(
-				Object.keys(result.data).reduce((acc, curr) => {
-					Object.keys(result.data[curr]).forEach((c: keyof APIKindType)=>{
-						acc[c] = result.data[curr][c]
-					})
-					return acc;
-				},{})
-			);
-			// Set the types by reducing over the keys of the result data and updating the accumulator.
-			setTypes(
-				Object.keys(result.data).reduce((acc, curr) => {
-					Object.keys(result.data[curr]).forEach((c: keyof APIKindType) => {
-						acc[c] = curr;
-						// Add the base classes to the accumulator as well.
-						result.data[curr][c].base_classes?.forEach((b) => {
-							acc[b] = curr;
-						});
-					});
-					return acc;
-				}, {})
-			);
-		}
-		// Call the getTypes function.
-		getTypes();
-	}, [setTypes]);
+	const {data} = useContext(typesContext)
 
 	function onDragStart(
 		event: React.DragEvent<any>,
