@@ -445,7 +445,9 @@ class LLMFrontendNode(FrontendNode):
         if "api" in field.name and ("key" in field.name or "token" in field.name):
             field.password = True
             field.show = True
-            field.required = True
+            # Required should be False to support
+            # loading the API key from environment variables
+            field.required = False
 
         if field.name == "task":
             field.required = True

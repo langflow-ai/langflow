@@ -174,7 +174,7 @@ class SQLAgent(AgentExecutor):
     def from_toolkit_and_llm(cls, llm: BaseLLM, database_uri: str, **kwargs: Any):
         """Construct a sql agent from an LLM and tools."""
         db = SQLDatabase.from_uri(database_uri)
-        toolkit = SQLDatabaseToolkit(db=db)
+        toolkit = SQLDatabaseToolkit(db=db, llm=llm)
 
         # The right code should be this, but there is a problem with tools = toolkit.get_tools()
         # related to `OPENAI_API_KEY`
@@ -274,7 +274,11 @@ class InitializeAgent(AgentExecutor):
 
     @classmethod
     def initialize(
-        cls, llm: BaseLLM, tools: List[Tool], agent: str, memory: BaseChatMemory
+        cls,
+        llm: BaseLLM,
+        tools: List[Tool],
+        agent: str,
+        memory: Optional[BaseChatMemory] = None,
     ):
         return initialize_agent(
             tools=tools,
