@@ -28,7 +28,6 @@ export default function ChatModal({
   setOpen: Function;
   flow: FlowType;
 }) {
-  const { updateFlow } = useContext(TabsContext);
   const [chatValue, setChatValue] = useState("");
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
   const { reactFlowInstance } = useContext(typesContext);
@@ -55,101 +54,136 @@ export default function ChatModal({
   };
 
   function connectWS() {
-    // Check if the app is running with npm start or npm run build
-    // if npm start, use localhost, otherwise use the windows.location.host
-    const urlWs =
-      process.env.NODE_ENV === "development"
-        ? `ws://localhost:7860/chat/${flow.id}`
-        : `wss://${window.location.host}/chat/${flow.id}`;
+    console.log("conectou");
+    try {
+      const urlWs =
+        process.env.NODE_ENV === "development"
+          ? `ws://localhost:7860/chat/${flow.id}`
+          : `wss://${window.location.host}/chat/${flow.id}`;
 
-    const newWs = new WebSocket(urlWs);
-    newWs.onopen = () => {
-      console.log("WebSocket connection established!");
-    };
-    newWs.onmessage = (event) => {
-      try {
-        setLockChat(false);
-        const data = JSON.parse(event.data);
-        console.log("Received data:", data);
-        //get chat history
-        if (Array.isArray(data)) {
-          console.log(data);
+      const newWs = new WebSocket(urlWs);
+      newWs.onopen = () => {
+        console.log("WebSocket connection established!");
+      };
+      newWs.onmessage = (event) => {
+        try {
+          setLockChat(false);
+          const data = JSON.parse(event.data);
+          console.log("Received data:", data);
+          //get chat history
+          if (Array.isArray(data)) {
+            console.log(data);
 
-          setChatHistory((_) => {
-            let newChatHistory: ChatMessageType[] = [];
-            data.forEach(
-              (chatItem: {
-                intermediate_steps?: "string";
-                is_bot: boolean;
-                message: string;
-                type: string;
-                files?: Array<any>;
-              }) => {
-                if (chatItem.message) {
-                  newChatHistory.push(
-                    chatItem.files
-                      ? {
-                          isSend: !chatItem.is_bot,
-                          message: chatItem.message,
-                          thought: chatItem.intermediate_steps,
-                          files: chatItem.files,
-                        }
-                      : {
-                          isSend: !chatItem.is_bot,
-                          message: chatItem.message,
-                          thought: chatItem.intermediate_steps,
-                        }
-                  );
+            setChatHistory((_) => {
+              let newChatHistory: ChatMessageType[] = [];
+              data.forEach(
+                (chatItem: {
+                  intermediate_steps?: "string";
+                  is_bot: boolean;
+                  message: string;
+                  type: string;
+                  files?: Array<any>;
+                }) => {
+                  if (chatItem.message) {
+                    newChatHistory.push(
+                      chatItem.files
+                        ? {
+                            isSend: !chatItem.is_bot,
+                            message: chatItem.message,
+                            thought: chatItem.intermediate_steps,
+                            files: chatItem.files,
+                          }
+                        : {
+                            isSend: !chatItem.is_bot,
+                            message: chatItem.message,
+                            thought: chatItem.intermediate_steps,
+                          }
+                    );
+                  }
                 }
-              }
-            );
-            return newChatHistory;
-          });
-        }
-        if (data.type === "end") {
-          if (data.files) {
-            addChatHistory(
-              data.message,
-              false,
-              data.intermediate_steps,
-              data.files
-            );
-          } else {
-            addChatHistory(data.message, false, data.intermediate_steps);
+              );
+              return newChatHistory;
+            });
+          }
+          if (data.type === "end") {
+            if (data.files) {
+              addChatHistory(
+                data.message,
+                false,
+                data.intermediate_steps,
+                data.files
+              );
+            } else {
+              addChatHistory(data.message, false, data.intermediate_steps);
+            }
+          }
+          if (data.type == "file") {
+            console.log(data);
+          }
+        } catch (error) {
+          if (event.data !== "Error: 1005") {
+            setErrorData({ title: event.data });
+            newWs.close();
+            connectWS();
           }
         }
-        if (data.type == "file") {
-          console.log(data);
+      };
+      newWs.onclose = (_) => {
+        if (open) {
+          setLockChat(false);
+          setTimeout(() => {
+            connectWS();
+          }, 1000);
         }
-      } catch (error) {
-        if (event.data !== "Error: 1005") {
-          setErrorData({ title: event.data });
-        }
-      }
-    };
-    newWs.onclose = (_) => {
-      if (open) {
-        setLockChat(false);
-        setTimeout(() => {
-          connectWS();
-        }, 100);
-      }
-    };
-    setWs(newWs);
+      };
+      newWs.onerror = (ev) => {
+        console.log(ev, "error");
+      };
+      setWs(newWs);
 
-    return newWs;
+      return newWs;
+    } catch {
+      setErrorData({
+        title: "There was an error on web connection, please: ",
+        list: [
+          "refresh the page",
+          "use a new flow tab",
+          "check if the backend is up",
+        ],
+      });
+    }
   }
+
+  useEffect(() => {
+    if (ws && (ws.readyState === ws.CLOSED || ws.readyState === ws.CLOSING)) {
+      let newWs = connectWS();
+      return () => {
+        console.log("trigger");
+        newWs.close();
+      };
+    }
+  }, [lockChat]);
 
   useEffect(() => {
     let newWs = connectWS();
     return () => {
+      console.log("trigger");
       newWs.close();
     };
   }, []);
 
   async function sendAll(data: sendAllProps) {
-    if (ws) {
-      ws.send(JSON.stringify(data));
+    try {
+      if (ws) {
+        ws.send(JSON.stringify(data));
+      }
+    } catch (error) {
+      setErrorData({
+        title: "There was an erro sending the message",
+        list: [error.message],
+      });
+      setChatValue(data.message);
+      connectWS();
     }
   }
 
