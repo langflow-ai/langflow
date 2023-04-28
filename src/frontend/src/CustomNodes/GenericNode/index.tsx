@@ -74,7 +74,7 @@ export default function GenericNode({
 						<Cog6ToothIcon
 							className={classNames(
 								Object.keys(data.node.template).some(
-									(t) => data.node.template[t].advanced===true
+									(t) => data.node.template[t].advanced && data.node.template[t].show
 								)
 									? ""
 									: "hidden",
