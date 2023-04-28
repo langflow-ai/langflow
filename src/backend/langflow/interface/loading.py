@@ -25,6 +25,7 @@ from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.types import get_type_list
 from langflow.interface.utils import load_file_into_dict
 from langflow.utils import util, validate
+from pydantic import BaseModel
 
 
 def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
@@ -34,6 +35,11 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
             return custom_agent.initialize(**params)  # type: ignore
 
     class_object = import_by_type(_type=base_type, name=node_type)
+
+    if issubclass(class_object, BaseModel):
+        # validate params
+        fields = class_object.__fields__
+        params = {key: value for key, value in params.items() if key in fields}
 
     if base_type == "agents":
         # We need to initialize it differently
@@ -66,6 +72,7 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
             return load_toolkits_executor(node_type, loaded_toolkit, params)
         return loaded_toolkit
     elif base_type == "embeddings":
+        # ? Why remove model from params?
         params.pop("model")
         return class_object(**params)
     elif base_type == "vectorstores":
