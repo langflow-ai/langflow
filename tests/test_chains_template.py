@@ -462,7 +462,7 @@ def test_mid_journey_prompt_chain(client: TestClient):
     assert template["prompt"] == {
         "required": False,
         "placeholder": "",
-        "show": True,
+        "show": False,
         "multiline": False,
         "value": {
             "input_variables": ["history", "input"],
@@ -590,7 +590,7 @@ def test_time_travel_guide_chain(client: TestClient):
     assert template["prompt"] == {
         "required": False,
         "placeholder": "",
-        "show": True,
+        "show": False,
         "multiline": False,
         "value": {
             "input_variables": ["history", "input"],
