@@ -76,7 +76,7 @@ export default function GenericNode({
 											"px-5 py-2 mt-2 dark:text-white text-center",
 											Object.keys(data.node.template).filter(
 												(key) =>
-													!key.startsWith("_") && data.node.template[key].show
+													!key.startsWith("_") && data.node.template[key].show && !data.node.template[key].advanced 
 											).length === 0
 												? "hidden"
 												: ""
