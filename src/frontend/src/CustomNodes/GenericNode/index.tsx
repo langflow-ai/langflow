@@ -12,7 +12,6 @@ import { NodeDataType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import NodeModal from "../../modals/NodeModal";
-import { relative } from "path";
 
 export default function GenericNode({
 	data,
@@ -74,7 +73,11 @@ export default function GenericNode({
 						</div>
 						<Cog6ToothIcon
 							className={classNames(
-								Object.keys(data.node.template).length < 1 ? "hidden" : "",
+								Object.keys(data.node.template).some(
+									(t) => data.node.template[t].advanced===true
+								)
+									? ""
+									: "hidden",
 								"w-6 h-6  dark:text-gray-500  hover:animate-spin"
 							)}
 						></Cog6ToothIcon>
