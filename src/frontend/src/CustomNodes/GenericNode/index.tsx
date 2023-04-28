@@ -32,7 +32,7 @@ export default function GenericNode({
 
   const debouncedValidateNode = useDebouncedCallback(async () => {
     // Check if the validationStatus is "success"
-    if (validationStatus === "success") return;
+    // if (validationStatus === "success") return;
 
     try {
       const response = await fetch(`/validate/node/${data.id}`, {
@@ -62,7 +62,11 @@ export default function GenericNode({
     validateNode();
   }, [
     validateNode,
-    ...Object.values(data.node.template).flatMap((t) => Object.values(t)),
+    // Use the result of ...reactFlowInstance.toObject()
+    // to determine if the node has changed
+    // turn into an array of nodes and edges
+    // and compare the length of the array
+    ...Object.values(reactFlowInstance.toObject()),
   ]);
 
   useEffect(() => {
