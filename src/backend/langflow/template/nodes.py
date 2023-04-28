@@ -425,7 +425,7 @@ class ChainFrontendNode(FrontendNode):
             field.required = True
             field.show = True
         # Separated for possible future changes
-        if field.name == "prompt":
+        if field.name == "prompt" and field.value is None:
             # if no prompt is provided, use the default prompt
             field.required = False
             field.show = True
