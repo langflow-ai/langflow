@@ -5,9 +5,9 @@ from fastapi.testclient import TestClient
 
 
 def test_websocket_connection(client: TestClient):
-    with client.websocket_connect("/ws/test_client") as websocket:
+    with client.websocket_connect("/chat/test_client") as websocket:
         assert websocket.scope["client"] == ["testclient", 50000]
-        assert websocket.scope["path"] == "/ws/test_client"
+        assert websocket.scope["path"] == "/chat/test_client"
 
 
 def test_chat_history(client: TestClient):
@@ -17,21 +17,22 @@ def test_chat_history(client: TestClient):
     with patch("langflow.api.chat_manager.process_graph") as mock_process_graph:
         mock_process_graph.return_value = ("Hello, I'm a mock response!", "")
 
-        with client.websocket_connect("/ws/test_client") as websocket:
+        with client.websocket_connect("/chat/test_client") as websocket:
             # First message should be the history
             history = websocket.receive_json()
-            assert json.loads(history) == []  # Empty history
+            assert history == []  # Empty history
             # Send a message
             payload = {"message": "Hello"}
             websocket.send_json(json.dumps(payload))
 
             # Receive the response from the server
             response = websocket.receive_json()
-            assert json.loads(response) == {
+            assert response == {
                 "is_bot": True,
                 "message": None,
-                "intermediate_steps": "",
                 "type": "start",
+                "intermediate_steps": "",
+                "files": [],
             }
             # Send another message
             payload = {"message": "How are you?"}
@@ -39,9 +40,10 @@ def test_chat_history(client: TestClient):
 
             # Receive the response from the server
             response = websocket.receive_json()
-            assert json.loads(response) == {
+            assert response == {
                 "is_bot": True,
                 "message": "Hello, I'm a mock response!",
-                "intermediate_steps": "",
                 "type": "end",
+                "intermediate_steps": "",
+                "files": [],
             }
