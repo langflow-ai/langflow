@@ -3,7 +3,7 @@
 ![Description](img/MidJourney-prompt-chain.png#only-dark)
 ![Description](img/MidJourney-prompt-chain.png#only-light)
 
-[Get JSON file](data/Midjourney-prompt-chain.json){: .md-button download="Midjourney-prompt-chain"} 
+[Get JSON file](data/Midjourney_prompt_chain.json){: .md-button download="Midjourney_prompt_chain"} 
 
 Check out the image created by the prompt [here](https://www.bing.com/images/create/imagine-a-mysterious-forest2c-the-trees-are-tall-an/6440616907a941798a21294c224f089c?id=qCNeV4ysTxKW8xKfqsx4zg%3d%3d&view=detailv2&idpp=genimg&FORM=GCRIDP&mode=overlay){.internal-link target=_blank}.
 

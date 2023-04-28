@@ -3,7 +3,7 @@
 ![Description](img/series-character-chain.png#only-dark)
 ![Description](img/series-character-chain.png#only-light)
 
-[Get JSON file](data/Series-character-chain.json){: .md-button download="Series-character-chain"} 
+[Get JSON file](data/Series_character_chain.json){: .md-button download="Series_character_chain"} 
 
 ## Nodes
 

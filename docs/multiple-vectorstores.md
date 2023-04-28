@@ -2,7 +2,7 @@
 ![Description](img/multiple-vectorstores.png#only-dark)
 ![Description](img/multiple-vectorstores.png#only-light)
 
-[Get JSON file](data/Multiple-vectorstores.json){: .md-button download="Multiple-vectorstores"} 
+[Get JSON file](data/Multiple_vectorstores.json){: .md-button download="Multiple_vectorstores"} 
 
 ## Nodes
 

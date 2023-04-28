@@ -62,11 +62,11 @@ pytest-cov = "^4.0.0"
 
 
 [tool.poetry.group.docs.dependencies]
-mkdocs-glightbox = "^0.3.4"
 mkdocs = "^1.4.2"
 mkdocs-material = "^9.1.8"
 lightgallery = "^0.5"
 mkdocs-minify-plugin = "^0.6.4"
+mkdocs-glightbox = "^0.3.4"
 
 [tool.ruff]
 line-length = 120

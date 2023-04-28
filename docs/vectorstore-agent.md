@@ -3,7 +3,7 @@
 ![Description](img/vectorstore-agent.png#only-dark)
 ![Description](img/vectorstore-agent.png#only-light)
 
-[Get JSON file](data/Vectorstore-agent.json){: .md-button download="Vectorstore-agent"} 
+[Get JSON file](data/Vectorstore_agent.json){: .md-button download="Vectorstore_agent"} 
 
 ## Nodes
 

@@ -3,7 +3,7 @@
 ![Description](img/llm-chain.png#only-dark)
 ![Description](img/llm-chain.png#only-light)
 
-[Get JSON file](data/llm-chain.json){: .md-button download="llm-chain"} 
+[Get JSON file](data/llm_chain.json){: .md-button download="llm_chain"} 
 
 ## Nodes
 

@@ -3,7 +3,7 @@
 ![Description](img/tool-pal-math.png#only-dark)
 ![Description](img/tool-pal-math.png#only-light)
 
-[Get JSON file](data/Tool-pal-math.json){: .md-button download="Tool-pal-math"} 
+[Get JSON file](data/Tool_pal_math.json){: .md-button download="Tool_pal_math"} 
 
 ## Nodes
 

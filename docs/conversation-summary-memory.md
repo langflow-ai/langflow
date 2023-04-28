@@ -2,7 +2,7 @@
 ![Description](img/conversation-summary-memory.png#only-dark)
 ![Description](img/conversation-summary-memory.png#only-light)
 
-[Get JSON file](data/Conversation-summary-memory.json){: .md-button download="Conversation-summary-memory"} 
+[Get JSON file](data/Conversation_summary_memory.json){: .md-button download="Conversation_summary_memory"} 
 
 ## Nodes
 
