@@ -119,7 +119,7 @@ export default function GenericNode({
 								) : (
 									<></>
 								)} */}
-								{data.node.template[t].show ? (
+								{data.node.template[t].show && !data.node.template[t].advanced  ? (
 									<ParameterComponent
 										data={data}
 										color={
