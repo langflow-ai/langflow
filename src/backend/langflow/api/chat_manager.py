@@ -36,6 +36,10 @@ class ChatHistory(Subject):
         else:
             return []
 
+    def empty_history(self, client_id: str):
+        """Empty the chat history for a client."""
+        self.history[client_id] = []
+
 
 class ChatManager:
     def __init__(self):
@@ -119,6 +123,7 @@ class ChatManager:
         except Exception as e:
             # Log stack trace
             logger.exception(e)
+            self.chat_history.empty_history(client_id)
             raise e
         # Send a response back to the frontend, if needed
         intermediate_steps = intermediate_steps or ""
