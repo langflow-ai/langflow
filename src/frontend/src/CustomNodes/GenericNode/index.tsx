@@ -29,6 +29,13 @@ export default function GenericNode({
   const [isGreenOutline, setIsGreenOutline] = useState(false);
   const [isRedOutline, setIsRedOutline] = useState(false);
   const { reactFlowInstance } = useContext(typesContext);
+  const [params, setParams] = useState([]);
+
+  useEffect(() => {
+    if (reactFlowInstance) {
+      setParams(Object.values(reactFlowInstance.toObject()));
+    }
+  }, [reactFlowInstance]);
 
   const debouncedValidateNode = useDebouncedCallback(async () => {
     // Check if the validationStatus is "success"
@@ -60,14 +67,7 @@ export default function GenericNode({
 
   useEffect(() => {
     validateNode();
-  }, [
-    validateNode,
-    // Use the result of ...reactFlowInstance.toObject()
-    // to determine if the node has changed
-    // turn into an array of nodes and edges
-    // and compare the length of the array
-    ...Object.values(reactFlowInstance.toObject()),
-  ]);
+  }, [validateNode, params]);
 
   useEffect(() => {
     if (validationStatus === "success") {
