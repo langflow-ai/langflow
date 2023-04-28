@@ -93,6 +93,7 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
 															.map((t: string, idx) => {
 																return (
 																	<ModalField
+																	key={idx}
 																		data={data}
 																		title={
 																			data.node.template[t].display_name
