@@ -14,8 +14,8 @@ export default function Chat({ flow }: ChatType) {
 	const [open, setOpen] = useState(false);
 	useEffect(() => {
 		const handleKeyDown = (event: KeyboardEvent) => {
-			event.preventDefault()
 		  if ((event.key === "K"||event.key==="k") && (event.metaKey||event.ctrlKey)) {
+			event.preventDefault()
 			setOpen(oldState=>!oldState);
 		  }
 		};
