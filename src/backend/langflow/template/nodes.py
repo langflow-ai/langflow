@@ -448,6 +448,7 @@ class LLMFrontendNode(FrontendNode):
             # Required should be False to support
             # loading the API key from environment variables
             field.required = False
+            field.advanced = False
 
         if field.name == "task":
             field.required = True
@@ -461,3 +462,7 @@ class LLMFrontendNode(FrontendNode):
         if field.name == "model_kwargs":
             field.field_type = "code"
             field.advanced = True
+            field.show = True
+        elif field.name in ["model_name", "temperature"]:
+            field.advanced = False
+            field.show = True
