@@ -141,9 +141,11 @@ class ToolCreator(LangChainTypeCreator):
         for param in params:
             field = TOOL_INPUTS.get(param, TOOL_INPUTS["str"]).copy()
             field.name = param
+            field.advanced = False
             if param == "aiosession":
                 field.show = False
                 field.required = False
+
             fields.append(field)
 
         template = Template(fields=fields, type_name=tool_type)

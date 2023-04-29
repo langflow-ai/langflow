@@ -77,6 +77,12 @@ class PromptTemplateNode(FrontendNode):
     def to_dict(self):
         return super().to_dict()
 
+    @staticmethod
+    def format_field(field: TemplateField, name: Optional[str] = None) -> None:
+        FrontendNode.format_field(field, name)
+        if field.name == "examples":
+            field.advanced = False
+
 
 class PythonFunctionNode(FrontendNode):
     name: str = "PythonFunction"
@@ -91,6 +97,7 @@ class PythonFunctionNode(FrontendNode):
                 show=True,
                 value=DEFAULT_PYTHON_FUNCTION,
                 name="code",
+                advanced=False,
             )
         ],
     )
@@ -217,6 +224,7 @@ class ToolNode(FrontendNode):
                 multiline=True,
                 value="",
                 name="name",
+                advanced=False,
             ),
             TemplateField(
                 field_type="str",
@@ -227,6 +235,7 @@ class ToolNode(FrontendNode):
                 multiline=True,
                 value="",
                 name="description",
+                advanced=False,
             ),
             TemplateField(
                 name="func",
@@ -235,6 +244,7 @@ class ToolNode(FrontendNode):
                 is_list=False,
                 show=True,
                 multiline=True,
+                advanced=False,
             ),
             TemplateField(
                 field_type="bool",
@@ -295,12 +305,14 @@ class InitializeAgentNode(FrontendNode):
                 options=list(NON_CHAT_AGENTS.keys()),
                 value=list(NON_CHAT_AGENTS.keys())[0],
                 name="agent",
+                advanced=False,
             ),
             TemplateField(
                 field_type="BaseChatMemory",
                 required=False,
                 show=True,
                 name="memory",
+                advanced=False,
             ),
             TemplateField(
                 field_type="Tool",
@@ -308,12 +320,14 @@ class InitializeAgentNode(FrontendNode):
                 show=True,
                 name="tools",
                 is_list=True,
+                advanced=False,
             ),
             TemplateField(
                 field_type="BaseLanguageModel",
                 required=True,
                 show=True,
                 name="llm",
+                advanced=False,
             ),
         ],
     )
@@ -478,6 +492,7 @@ class PromptFrontendNode(FrontendNode):
             "suffix",
             "prefix",
             "examples",
+            "format_instructions",
         ]
         if field.field_type == "StringPromptTemplate" and "Message" in str(name):
             field.field_type = "prompt"
@@ -488,6 +503,7 @@ class PromptFrontendNode(FrontendNode):
 
         if field.name in PROMPT_FIELDS:
             field.field_type = "prompt"
+            field.advanced = False
 
         if (
             "Union" in field.field_type
