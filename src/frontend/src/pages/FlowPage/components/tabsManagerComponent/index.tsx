@@ -16,21 +16,23 @@ import AlertDropdown from "../../../../alerts/alertDropDown";
 import { alertContext } from "../../../../contexts/alertContext";
 import ImportModal from "../../../../modals/importModal";
 import ExportModal from "../../../../modals/exportModal";
+import { typesContext } from "../../../../contexts/typesContext";
 
 export default function TabsManagerComponent() {
 	const { flows, addFlow, tabIndex, setTabIndex, uploadFlow, downloadFlow } =
 		useContext(TabsContext);
 	const { openPopUp } = useContext(PopUpContext);
+	const {templates} = useContext(typesContext)
 	const AlertWidth = 256;
 	const { dark, setDark } = useContext(darkContext);
 	const { notificationCenter, setNotificationCenter } =
 		useContext(alertContext);
 	useEffect(() => {
 		//create the first flow
-		if (flows.length === 0) {
+		if (flows.length === 0&& Object.keys(templates).length>0) {
 			addFlow();
 		}
-	}, [addFlow, flows.length]);
+	}, [addFlow, flows.length,templates]);
 
 	return (
 		<div className="h-full w-full flex flex-col">

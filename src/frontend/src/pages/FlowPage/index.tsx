@@ -32,7 +32,7 @@ var _ = require("lodash");
 export default function FlowPage({ flow }:{flow:FlowType}) {
 	let { updateFlow, incrementNodeId} =
 		useContext(TabsContext);
-	const { types, reactFlowInstance, setReactFlowInstance } =
+	const { types, reactFlowInstance, setReactFlowInstance, templates } =
 		useContext(typesContext);
 	const reactFlowWrapper = useRef(null);
 
@@ -180,7 +180,7 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 	  
 	return (
 		<div className="w-full h-full" ref={reactFlowWrapper}>
-			{Object.keys(types).length > 0 ? (
+			{Object.keys(templates).length > 0 && Object.keys(types).length > 0 ? (
 				<>
 					<ReactFlow
 						nodes={nodes}
