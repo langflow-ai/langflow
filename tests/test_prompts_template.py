@@ -60,7 +60,7 @@ def test_prompt_template(client: TestClient):
         "name": "template",
         "type": "prompt",
         "list": False,
-        "advanced": True,
+        "advanced": False,
     }
     assert template["template_format"] == {
         "required": False,
@@ -106,7 +106,7 @@ def test_few_shot_prompt_template(client: TestClient):
         "name": "examples",
         "type": "prompt",
         "list": True,
-        "advanced": True,
+        "advanced": False,
     }
     assert template["example_selector"] == {
         "required": False,
@@ -139,7 +139,7 @@ def test_few_shot_prompt_template(client: TestClient):
         "name": "suffix",
         "type": "prompt",
         "list": False,
-        "advanced": True,
+        "advanced": False,
     }
     assert template["example_separator"] == {
         "required": False,
@@ -163,7 +163,7 @@ def test_few_shot_prompt_template(client: TestClient):
         "name": "prefix",
         "type": "prompt",
         "list": False,
-        "advanced": True,
+        "advanced": False,
     }
 
 
