@@ -77,6 +77,12 @@ class PromptTemplateNode(FrontendNode):
     def to_dict(self):
         return super().to_dict()
 
+    @staticmethod
+    def format_field(field: TemplateField, name: Optional[str] = None) -> None:
+        FrontendNode.format_field(field, name)
+        if field.name == "examples":
+            field.advanced = False
+
 
 class PythonFunctionNode(FrontendNode):
     name: str = "PythonFunction"
@@ -486,6 +492,7 @@ class PromptFrontendNode(FrontendNode):
             "suffix",
             "prefix",
             "examples",
+            "format_instructions",
         ]
         if field.field_type == "StringPromptTemplate" and "Message" in str(name):
             field.field_type = "prompt"
@@ -496,6 +503,7 @@ class PromptFrontendNode(FrontendNode):
 
         if field.name in PROMPT_FIELDS:
             field.field_type = "prompt"
+            field.advanced = False
 
         if (
             "Union" in field.field_type
