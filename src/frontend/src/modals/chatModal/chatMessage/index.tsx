@@ -34,7 +34,7 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
                 onClick={() => setHidden((prev) => !prev)}
                 className="absolute -top-1 -left-2 cursor-pointer"
               >
-                <ChatBubbleOvalLeftEllipsisIcon className="w-5 h-5 animate-bounce" />
+                <ChatBubbleOvalLeftEllipsisIcon className="w-5 h-5 animate-bounce dark:text-white" />
               </div>
             )}
             {chat.thought && chat.thought !== "" && !hidden && (
