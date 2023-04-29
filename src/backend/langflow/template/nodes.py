@@ -199,6 +199,7 @@ class SeriesCharacterChainNode(FrontendNode):
         "Chain",
         "ConversationChain",
         "SeriesCharacterChain",
+        "function",
     ]
 
 
@@ -317,7 +318,7 @@ class InitializeAgentNode(FrontendNode):
         ],
     )
     description: str = """Construct a json agent from an LLM and tools."""
-    base_classes: list[str] = ["AgentExecutor"]
+    base_classes: list[str] = ["AgentExecutor", "function"]
 
     def to_dict(self):
         return super().to_dict()
@@ -529,7 +530,7 @@ class ChainFrontendNode(FrontendNode):
             field.advanced = True
 
         # Separated for possible future changes
-        if field.name == "prompt":
+        if field.name == "prompt" and field.value is None:
             # if no prompt is provided, use the default prompt
             field.required = False
             field.show = True

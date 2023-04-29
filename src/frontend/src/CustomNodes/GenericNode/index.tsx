@@ -7,12 +7,13 @@ import {
 } from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
 import { typesContext } from "../../contexts/typesContext";
-import { useContext, useRef } from "react";
+import { useContext, useState, useEffect, useRef } from "react";
 import { NodeDataType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import NodeModal from "../../modals/NodeModal";
-
+import { useCallback } from "react";
+import { TabsContext } from "../../contexts/tabsContext";
 export default function GenericNode({
 	data,
 	selected,
@@ -25,6 +26,52 @@ export default function GenericNode({
 	const { types, deleteNode } = useContext(typesContext);
 	const { openPopUp } = useContext(PopUpContext);
 	const Icon = nodeIcons[types[data.type]];
+	const [validationStatus, setValidationStatus] = useState("idle");
+	// State for outline color
+	const [isValid, setIsValid] = useState(false);
+  const {save} = useContext(TabsContext)
+	const { reactFlowInstance } = useContext(typesContext);
+	const [params, setParams] = useState([]);
+
+	console.log();
+
+	useEffect(() => {
+		if (reactFlowInstance) {
+			setParams(Object.values(reactFlowInstance.toObject()));
+		}
+	}, [save]);
+
+	useEffect(() => {
+		try {
+			fetch(`/validate/node/${data.id}`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(reactFlowInstance.toObject()),
+			}).then((response) => {
+				console.log(response.status, response.body);
+
+				if (response.status === 200) {
+					setValidationStatus("success");
+				} else if (response.status === 500) {
+					setValidationStatus("error");
+				}
+			});
+		} catch (error) {
+			console.error("Error validating node:", error);
+			setValidationStatus("error");
+		}
+	}, [params]);
+
+	useEffect(() => {
+		if (validationStatus === "success") {
+			setIsValid(true);
+		} else {
+			setIsValid(false);
+		}
+	}, [validationStatus]);
+
 	if (!Icon) {
 		if (showError.current) {
 			setErrorData({
@@ -37,9 +84,11 @@ export default function GenericNode({
 		deleteNode(data.id);
 		return;
 	}
+
 	return (
 		<div
 			className={classNames(
+				isValid ? "animate-pulse-green" : "border-red-outline",
 				selected ? "border border-blue-500" : "border dark:border-gray-700",
 				"prompt-node relative bg-white dark:bg-gray-900 w-96 rounded-lg flex flex-col justify-center"
 			)}
@@ -108,7 +157,9 @@ export default function GenericNode({
 											"px-5 py-2 mt-2 dark:text-white text-center",
 											Object.keys(data.node.template).filter(
 												(key) =>
-													!key.startsWith("_") && data.node.template[key].show
+													!key.startsWith("_") &&
+													data.node.template[key].show &&
+													!data.node.template[key].advanced
 											).length === 0
 												? "hidden"
 												: ""
