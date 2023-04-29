@@ -199,6 +199,7 @@ class SeriesCharacterChainNode(FrontendNode):
         "Chain",
         "ConversationChain",
         "SeriesCharacterChain",
+        "function",
     ]
 
 

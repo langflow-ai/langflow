@@ -1,6 +1,5 @@
 import json
 from unittest.mock import patch
-from langflow.api.schemas import ChatMessage
 from fastapi.testclient import TestClient
 
 
@@ -11,8 +10,6 @@ def test_websocket_connection(client: TestClient):
 
 
 def test_chat_history(client: TestClient):
-    chat_history = []
-
     # Mock the process_graph function to return a specific value
     with patch("langflow.api.chat_manager.process_graph") as mock_process_graph:
         mock_process_graph.return_value = ("Hello, I'm a mock response!", "")

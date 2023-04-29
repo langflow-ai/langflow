@@ -130,7 +130,7 @@ def test_initialize_agent(client: TestClient):
     agents = json_response["agents"]
 
     initialize_agent = agents["initialize_agent"]
-    assert initialize_agent["base_classes"] == ["AgentExecutor"]
+    assert initialize_agent["base_classes"] == ["AgentExecutor", "function"]
     template = initialize_agent["template"]
 
     assert template["agent"] == {
