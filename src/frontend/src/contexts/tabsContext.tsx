@@ -12,6 +12,7 @@ import { normalCaseToSnakeCase, updateObject } from "../utils";
 import { alertContext } from "./alertContext";
 import { typesContext } from "./typesContext";
 import { TemplateVariableType } from "../types/api";
+const { v4: uuidv4 } = require('uuid');
 
 const TabsContextInitialValue: TabsContextType = {
 	save: () => {},
@@ -24,8 +25,6 @@ const TabsContextInitialValue: TabsContextType = {
 	incrementNodeId: () => 0,
 	downloadFlow: (flow: FlowType) => {},
 	uploadFlow: () => {},
-	lockChat: false,
-	setLockChat: (prevState: boolean) => {},
 	hardReset: () => {},
 };
 
@@ -37,8 +36,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	const { setNoticeData } = useContext(alertContext);
 	const [tabIndex, setTabIndex] = useState(0);
 	const [flows, setFlows] = useState<Array<FlowType>>([]);
-	const [id, setId] = useState(0);
-	const [lockChat, setLockChat] = useState(false);
+	const [id, setId] = useState("");
 	const { templates } = useContext(typesContext);
 
 	const newNodeId = useRef(0);
@@ -47,7 +45,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		return newNodeId.current;
 	}
 	function save() {
-		console.log("save");
 		if (flows.length !== 0)
 			window.localStorage.setItem(
 				"tabsData",
@@ -86,7 +83,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		newNodeId.current = 0;
 		setTabIndex(0);
 		setFlows([]);
-		setId(0);
+		setId("");
 	}
 
 	/**
@@ -181,14 +178,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		// Create a new flow with a default name if no flow is provided.
 		let newFlow: FlowType = {
 			description,
-			name: flow?.name??"New Flow",
+			name: flow?.name ?? "New Flow",
 			id: id.toString(),
 			data,
-			chat: flow ? flow.chat : [],
 		};
 
 		// Increment the ID counter.
-		setId((old) => old + 1);
+		setId(uuidv4());
 
 		// Add the new flow to the list of flows.
 		setFlows((prevState) => {
@@ -211,7 +207,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 				newFlows[index].description = newFlow.description ?? "";
 				newFlows[index].data = newFlow.data;
 				newFlows[index].name = newFlow.name;
-				newFlows[index].chat = newFlow.chat;
 			}
 			return newFlows;
 		});
@@ -222,8 +217,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 			value={{
 				save,
 				hardReset,
-				lockChat,
-				setLockChat,
 				tabIndex,
 				setTabIndex,
 				flows,

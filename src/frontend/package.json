@@ -20,13 +20,14 @@
         "ace-builds": "^1.16.0",
         "ansi-to-html": "^0.7.2",
         "axios": "^1.3.2",
+        "base64-js": "^1.5.1",
         "lodash": "^4.17.21",
         "react": "^18.2.0",
         "react-ace": "^10.1.0",
         "react-cookie": "^4.1.1",
         "react-dom": "^18.2.0",
         "react-error-boundary": "^4.0.2",
-        "react-icons": "^4.7.1",
+        "react-icons": "^4.8.0",
         "react-laag": "^2.0.5",
         "react-router-dom": "^6.8.1",
         "react-scripts": "5.0.1",
@@ -37,7 +38,7 @@
         "web-vitals": "^2.1.4"
     },
     "scripts": {
-        "start": "react-scripts start",
+        "start": "NODE_ENV=development react-scripts start",
         "build": "react-scripts build",
         "test": "react-scripts test",
         "eject": "react-scripts eject"
@@ -60,5 +61,5 @@
             "last 1 safari version"
         ]
     },
-    "proxy": "http://backend:7860"
+    "proxy": "http://127.0.0.1:7860"
 }

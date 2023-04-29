@@ -20,7 +20,12 @@ def test_conversation_chain(client: TestClient):
     chain = chains["ConversationChain"]
 
     # Test the base classes, template, memory, verbose, llm, input_key, output_key, and _type objects
-    assert set(chain["base_classes"]) == {"LLMChain", "ConversationChain", "Chain"}
+    assert set(chain["base_classes"]) == {
+        "function",
+        "LLMChain",
+        "ConversationChain",
+        "Chain",
+    }
     template = chain["template"]
     assert template["memory"] == {
         "required": False,
@@ -96,7 +101,7 @@ def test_llm_chain(client: TestClient):
     chain = chains["LLMChain"]
 
     # Test the base classes, template, memory, verbose, llm, input_key, output_key, and _type objects
-    assert set(chain["base_classes"]) == {"LLMChain", "Chain"}
+    assert set(chain["base_classes"]) == {"function", "LLMChain", "Chain"}
     template = chain["template"]
     assert template["memory"] == {
         "required": False,
@@ -154,7 +159,7 @@ def test_llm_checker_chain(client: TestClient):
     chain = chains["LLMCheckerChain"]
 
     # Test the base classes, template, memory, verbose, llm, input_key, output_key, and _type objects
-    assert set(chain["base_classes"]) == {"LLMCheckerChain", "Chain"}
+    assert set(chain["base_classes"]) == {"function", "LLMCheckerChain", "Chain"}
     template = chain["template"]
     assert template["memory"] == {
         "required": False,
@@ -231,7 +236,7 @@ def test_llm_math_chain(client: TestClient):
     chain = chains["LLMMathChain"]
 
     # Test the base classes, template, memory, verbose, llm, input_key, output_key, and _type objects
-    assert set(chain["base_classes"]) == {"LLMMathChain", "Chain"}
+    assert set(chain["base_classes"]) == {"function", "LLMMathChain", "Chain"}
     template = chain["template"]
     assert template["memory"] == {
         "required": False,
@@ -310,6 +315,7 @@ def test_series_character_chain(client: TestClient):
 
     # Test the base classes, template, memory, verbose, llm, input_key, output_key, and _type objects
     assert set(chain["base_classes"]) == {
+        "function",
         "LLMChain",
         "BaseCustomChain",
         "Chain",

@@ -1,6 +1,0 @@
-#! /bin/bash
-
-docker build -t logspace/backend_build -f build.Dockerfile .
-VERSION=$(toml get --toml-path pyproject.toml tool.poetry.version)
-docker build --build-arg VERSION=$VERSION -t ibiscp/langflow:$VERSION .
-docker push ibiscp/langflow:$VERSION
