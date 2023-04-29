@@ -14,7 +14,7 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
     <div
       className={classNames(
         "w-full py-2 pl-2 flex",
-        chat.isSend ? "bg-white" : "bg-gray-200"
+        chat.isSend ? "bg-white dark:bg-gray-800 " : "bg-gray-200  dark:bg-gray-700"
       )}
     >
       <div
@@ -49,7 +49,7 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
             )}
             {chat.thought && chat.thought !== "" && !hidden && <br></br>}
             <div className="w-full px-4 pb-3 pt-3 pr-8">
-              <span>
+              <span className="dark:text-white">
                 {chat.message}
                 {chat.files && (
                   <div className="my-2 w-full">
@@ -72,7 +72,7 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
         </div>
       ) : (
         <div className="w-full flex items-center">
-          <div className="text-start inline-block px-3 text-sm text-gray-600 dark:text-white dark:bg-gray-700">
+          <div className="text-start inline-block px-3 text-sm text-gray-600 dark:text-white">
             {chat.message}
           </div>
         </div>
