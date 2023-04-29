@@ -137,7 +137,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 						}
 					});
 
-					addFlow();
+					addFlow(flow);
 				});
 			}
 		};
