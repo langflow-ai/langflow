@@ -15,6 +15,11 @@ CUSTOM_NODES = {
     "utilities": {
         "SQLDatabase": nodes.SQLDatabaseNode(),
     },
+    "chains": {
+        "SeriesCharacterChain": nodes.SeriesCharacterChainNode(),
+        "TimeTravelGuideChain": nodes.TimeTravelGuideChainNode(),
+        "MidJourneyPromptChain": nodes.MidJourneyPromptChainNode(),
+    },
 }
 
 
