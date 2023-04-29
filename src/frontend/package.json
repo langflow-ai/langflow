@@ -62,5 +62,5 @@
             "last 1 safari version"
         ]
     },
-    "proxy": "http://backend:7860"
+    "proxy": "http://127.0.0.1:7860"
 }

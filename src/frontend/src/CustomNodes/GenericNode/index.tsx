@@ -1,10 +1,10 @@
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { useDebouncedCallback } from "use-debounce";
 import {
-  classNames,
-  nodeColors,
-  nodeIcons,
-  snakeToNormalCase,
+	classNames,
+	nodeColors,
+	nodeIcons,
+	snakeToNormalCase,
 } from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
 import { typesContext } from "../../contexts/typesContext";
@@ -12,198 +12,177 @@ import { useContext, useState, useEffect, useRef } from "react";
 import { NodeDataType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
 import { useCallback } from "react";
-
+import { TabsContext } from "../../contexts/tabsContext";
 export default function GenericNode({
-  data,
-  selected,
+	data,
+	selected,
 }: {
-  data: NodeDataType;
-  selected: boolean;
+	data: NodeDataType;
+	selected: boolean;
 }) {
-  const { setErrorData } = useContext(alertContext);
-  const showError = useRef(true);
-  const { types, deleteNode } = useContext(typesContext);
-  const Icon = nodeIcons[types[data.type]];
-  const [validationStatus, setValidationStatus] = useState("idle");
-  // State for outline color
-  const [isGreenOutline, setIsGreenOutline] = useState(false);
-  const [isRedOutline, setIsRedOutline] = useState(false);
-  const { reactFlowInstance } = useContext(typesContext);
-  const [params, setParams] = useState([]);
+	const { setErrorData } = useContext(alertContext);
+	const showError = useRef(true);
+	const { types, deleteNode } = useContext(typesContext);
+	const Icon = nodeIcons[types[data.type]];
+	const [validationStatus, setValidationStatus] = useState("idle");
+	// State for outline color
+	const [isValid, setIsValid] = useState(false);
+  const {save} = useContext(TabsContext)
+	const { reactFlowInstance } = useContext(typesContext);
+	const [params, setParams] = useState([]);
 
-  useEffect(() => {
-    if (reactFlowInstance) {
-      setParams(Object.values(reactFlowInstance.toObject()));
-    }
-  }, [reactFlowInstance]);
+	console.log();
 
-  const debouncedValidateNode = useDebouncedCallback(async () => {
-    // Check if the validationStatus is "success"
-    // if (validationStatus === "success") return;
+	useEffect(() => {
+		if (reactFlowInstance) {
+			setParams(Object.values(reactFlowInstance.toObject()));
+		}
+	}, [save]);
 
-    try {
-      const response = await fetch(`/validate/node/${data.id}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(reactFlowInstance.toObject()),
-      });
+	useEffect(() => {
+		try {
+			fetch(`/validate/node/${data.id}`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(reactFlowInstance.toObject()),
+			}).then((response) => {
+				console.log(response.status, response.body);
 
-      if (response.status === 200) {
-        setValidationStatus("success");
-      } else if (response.status === 500) {
-        setValidationStatus("error");
-      }
-    } catch (error) {
-      console.error("Error validating node:", error);
-      setValidationStatus("error");
-    }
-  }, 1000);
+				if (response.status === 200) {
+					setValidationStatus("success");
+				} else if (response.status === 500) {
+					setValidationStatus("error");
+				}
+			});
+		} catch (error) {
+			console.error("Error validating node:", error);
+			setValidationStatus("error");
+		}
+	}, [params]);
 
-  const validateNode = useCallback(() => {
-    debouncedValidateNode();
-  }, [debouncedValidateNode]);
+	useEffect(() => {
+		if (validationStatus === "success") {
+			setIsValid(true);
+		} else {
+			setIsValid(false);
+		}
+	}, [validationStatus]);
 
-  useEffect(() => {
-    validateNode();
-  }, [validateNode, params]);
+	if (!Icon) {
+		if (showError.current) {
+			setErrorData({
+				title: data.type
+					? `The ${data.type} node could not be rendered, please review your json file`
+					: "There was a node that can't be rendered, please review your json file",
+			});
+			showError.current = false;
+		}
+		deleteNode(data.id);
+		return;
+	}
 
-  useEffect(() => {
-    if (validationStatus === "success") {
-      setIsGreenOutline(true);
-      setIsRedOutline(false);
-      setTimeout(() => {
-        setIsGreenOutline(false);
-      }, 1000);
-    } else if (validationStatus === "error") {
-      setIsRedOutline(true);
-      setIsGreenOutline(false);
-    } else {
-      setIsGreenOutline(false);
-      setIsRedOutline(false);
-    }
-  }, [validationStatus]);
+	return (
+		<div
+			className={classNames(
+				isValid ? "animate-pulse-green" : "border-red-outline",
+				selected ? "border border-blue-500" : "border dark:border-gray-700",
+				"prompt-node relative bg-white dark:bg-gray-900 w-96 rounded-lg flex flex-col justify-center"
+			)}
+		>
+			<div className="w-full dark:text-white flex items-center justify-between p-4 gap-8 bg-gray-50 rounded-t-lg dark:bg-gray-800 border-b dark:border-b-gray-700 ">
+				<div className="w-full flex items-center truncate gap-4 text-lg">
+					<Icon
+						className="w-10 h-10 p-1 rounded"
+						style={{
+							color: nodeColors[types[data.type]] ?? nodeColors.unknown,
+						}}
+					/>
+					<div className="truncate">{data.type}</div>
+				</div>
+				<button
+					onClick={() => {
+						deleteNode(data.id);
+					}}
+				>
+					<TrashIcon className="w-6 h-6 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-500"></TrashIcon>
+				</button>
+			</div>
 
-  const outlineColor = isGreenOutline
-    ? "animate-pulse-green"
-    : isRedOutline
-    ? "border-red-outline"
-    : "";
+			<div className="w-full h-full py-5">
+				<div className="w-full text-gray-500 px-5 text-sm">
+					{data.node.description}
+				</div>
 
-  if (!Icon) {
-    if (showError.current) {
-      setErrorData({
-        title: data.type
-          ? `The ${data.type} node could not be rendered, please review your json file`
-          : "There was a node that can't be rendered, please review your json file",
-      });
-      showError.current = false;
-    }
-    deleteNode(data.id);
-    return;
-  }
-
-  return (
-    <div
-      className={classNames(
-        outlineColor,
-        selected ? "border border-blue-500" : "border dark:border-gray-700",
-        "prompt-node relative bg-white dark:bg-gray-900 w-96 rounded-lg flex flex-col justify-center"
-      )}
-    >
-      <div className="w-full dark:text-white flex items-center justify-between p-4 gap-8 bg-gray-50 rounded-t-lg dark:bg-gray-800 border-b dark:border-b-gray-700 ">
-        <div className="w-full flex items-center truncate gap-4 text-lg">
-          <Icon
-            className="w-10 h-10 p-1 rounded"
-            style={{
-              color: nodeColors[types[data.type]] ?? nodeColors.unknown,
-            }}
-          />
-          <div className="truncate">{data.type}</div>
-        </div>
-        <button
-          onClick={() => {
-            deleteNode(data.id);
-          }}
-        >
-          <TrashIcon className="w-6 h-6 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-500"></TrashIcon>
-        </button>
-      </div>
-
-      <div className="w-full h-full py-5">
-        <div className="w-full text-gray-500 px-5 text-sm">
-          {data.node.description}
-        </div>
-
-        <>
-          {Object.keys(data.node.template)
-            .filter((t) => t.charAt(0) !== "_")
-            .map((t: string, idx) => (
-              <div key={idx}>
-                {idx === 0 ? (
-                  <div
-                    className={classNames(
-                      "px-5 py-2 mt-2 dark:text-white text-center",
-                      Object.keys(data.node.template).filter(
-                        (key) =>
-                          !key.startsWith("_") &&
-                          data.node.template[key].show &&
-                          !data.node.template[key].advanced
-                      ).length === 0
-                        ? "hidden"
-                        : ""
-                    )}
-                  >
-                    Inputs
-                  </div>
-                ) : (
-                  <></>
-                )}
-                {data.node.template[t].show ? (
-                  <ParameterComponent
-                    data={data}
-                    color={
-                      nodeColors[types[data.node.template[t].type]] ??
-                      nodeColors.unknown
-                    }
-                    title={
-                      data.node.template[t].display_name
-                        ? data.node.template[t].display_name
-                        : data.node.template[t].name
-                        ? snakeToNormalCase(data.node.template[t].name)
-                        : snakeToNormalCase(t)
-                    }
-                    name={t}
-                    tooltipTitle={
-                      "Type: " +
-                      data.node.template[t].type +
-                      (data.node.template[t].list ? " list" : "")
-                    }
-                    required={data.node.template[t].required}
-                    id={data.node.template[t].type + "|" + t + "|" + data.id}
-                    left={true}
-                    type={data.node.template[t].type}
-                  />
-                ) : (
-                  <></>
-                )}
-              </div>
-            ))}
-          <div className="px-5 py-2 mt-2 dark:text-white text-center">
-            Output
-          </div>
-          <ParameterComponent
-            data={data}
-            color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-            title={data.type}
-            tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
-            id={[data.type, data.id, ...data.node.base_classes].join("|")}
-            type={data.node.base_classes.join("|")}
-            left={false}
-          />
-        </>
-      </div>
-    </div>
-  );
+				<>
+					{Object.keys(data.node.template)
+						.filter((t) => t.charAt(0) !== "_")
+						.map((t: string, idx) => (
+							<div key={idx}>
+								{idx === 0 ? (
+									<div
+										className={classNames(
+											"px-5 py-2 mt-2 dark:text-white text-center",
+											Object.keys(data.node.template).filter(
+												(key) =>
+													!key.startsWith("_") &&
+													data.node.template[key].show &&
+													!data.node.template[key].advanced
+											).length === 0
+												? "hidden"
+												: ""
+										)}
+									>
+										Inputs
+									</div>
+								) : (
+									<></>
+								)}
+								{data.node.template[t].show ? (
+									<ParameterComponent
+										data={data}
+										color={
+											nodeColors[types[data.node.template[t].type]] ??
+											nodeColors.unknown
+										}
+										title={
+											data.node.template[t].display_name
+												? data.node.template[t].display_name
+												: data.node.template[t].name
+												? snakeToNormalCase(data.node.template[t].name)
+												: snakeToNormalCase(t)
+										}
+										name={t}
+										tooltipTitle={
+											"Type: " +
+											data.node.template[t].type +
+											(data.node.template[t].list ? " list" : "")
+										}
+										required={data.node.template[t].required}
+										id={data.node.template[t].type + "|" + t + "|" + data.id}
+										left={true}
+										type={data.node.template[t].type}
+									/>
+								) : (
+									<></>
+								)}
+							</div>
+						))}
+					<div className="px-5 py-2 mt-2 dark:text-white text-center">
+						Output
+					</div>
+					<ParameterComponent
+						data={data}
+						color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+						title={data.type}
+						tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
+						id={[data.type, data.id, ...data.node.base_classes].join("|")}
+						type={data.node.base_classes.join("|")}
+						left={false}
+					/>
+				</>
+			</div>
+		</div>
+	);
 }
