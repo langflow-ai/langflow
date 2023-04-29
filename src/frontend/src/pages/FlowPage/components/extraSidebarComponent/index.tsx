@@ -51,7 +51,7 @@ export default function ExtraSidebar() {
 
 	return (
 		<div className="mt-1 w-full">
-			{Object.keys(data).map((d: keyof APIObjectType, i) => (
+			{Object.keys(data).sort().map((d: keyof APIObjectType, i) => (
 				<DisclosureComponent
 					key={i}
 					button={{
@@ -60,7 +60,7 @@ export default function ExtraSidebar() {
 					}}
 				>
 					<div className="p-2 flex flex-col gap-2">
-						{Object.keys(data[d]).map((t: string, k) => (
+						{Object.keys(data[d]).sort().map((t: string, k) => (
 							<div key={k}>
 								<div
 									draggable
