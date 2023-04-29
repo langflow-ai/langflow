@@ -197,6 +197,7 @@ class FrontendNode(BaseModel):
             "examples",
             "code",
             "headers",
+            "description",
         }
 
         # Replace dict type with str
@@ -238,3 +239,4 @@ class FrontendNode(BaseModel):
         # other conditions are to make sure that it is not an input or output variable
         if "api" in key.lower() and "key" in key.lower():
             field.required = False
+            field.advanced = False
