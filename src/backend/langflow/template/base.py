@@ -197,6 +197,7 @@ class FrontendNode(BaseModel):
             "examples",
             "code",
             "headers",
+            "description",
         }
 
         # Replace dict type with str
