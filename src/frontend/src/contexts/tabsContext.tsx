@@ -7,9 +7,11 @@ import {
 	useContext,
 } from "react";
 import { FlowType } from "../types/flow";
-import { TabsContextType } from "../types/tabs";
-import { normalCaseToSnakeCase } from "../utils";
+import { LangFlowState, TabsContextType } from "../types/tabs";
+import { normalCaseToSnakeCase, updateObject } from "../utils";
 import { alertContext } from "./alertContext";
+import { typesContext } from "./typesContext";
+import { TemplateVariableType } from "../types/api";
 const { v4: uuidv4 } = require('uuid');
 
 const TabsContextInitialValue: TabsContextType = {
@@ -35,6 +37,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	const [tabIndex, setTabIndex] = useState(0);
 	const [flows, setFlows] = useState<Array<FlowType>>([]);
 	const [id, setId] = useState("");
+	const { templates } = useContext(typesContext);
 
 	const newNodeId = useRef(0);
 	function incrementNodeId() {
@@ -56,19 +59,31 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	useEffect(() => {
 		//get tabs locally saved
 		let cookie = window.localStorage.getItem("tabsData");
-		if (cookie) {
-			let cookieObject = JSON.parse(cookie);
+		if (cookie && Object.keys(templates).length > 0) {
+			let cookieObject: LangFlowState = JSON.parse(cookie);
+			cookieObject.flows.forEach((flow) => {
+				flow.data.nodes.forEach((node) => {
+					if (Object.keys(templates[node.data.type]["template"]).length>0) {
+						node.data.node.template = updateObject(
+							node.data.node.template as TemplateVariableType,
+							templates[node.data.type][
+								"template"
+							] as unknown as TemplateVariableType
+						);
+					}
+				});
+			});
 			setTabIndex(cookieObject.tabIndex);
 			setFlows(cookieObject.flows);
 			setId(cookieObject.id);
 			newNodeId.current = cookieObject.nodeId;
 		}
-	}, []);
+	}, [templates]);
 	function hardReset() {
 		newNodeId.current = 0;
 		setTabIndex(0);
 		setFlows([]);
-		setId(uuidv4());
+		setId("");
 	}
 
 	/**
@@ -110,7 +125,19 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 				// read the file as text
 				file.text().then((text) => {
 					// parse the text into a JSON object
-					addFlow(JSON.parse(text));
+					let flow: FlowType = JSON.parse(text);
+					flow.data.nodes.forEach((node) => {
+						if (Object.keys(templates[node.data.type]["template"]).length>0) {
+							node.data.node.template = updateObject(
+								node.data.node.template as TemplateVariableType,
+								templates[node.data.type][
+									"template"
+								] as unknown as TemplateVariableType
+							);
+						}
+					});
+
+					addFlow();
 				});
 			}
 		};

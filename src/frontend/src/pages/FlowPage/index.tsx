@@ -29,11 +29,12 @@ const nodeTypes = {
 
 var _ = require("lodash");
 
-export default function FlowPage({ flow }: { flow: FlowType }) {
-  let { updateFlow, incrementNodeId } = useContext(TabsContext);
-  const { types, reactFlowInstance, setReactFlowInstance } =
-    useContext(typesContext);
-  const reactFlowWrapper = useRef(null);
+export default function FlowPage({ flow }:{flow:FlowType}) {
+	let { updateFlow, incrementNodeId} =
+		useContext(TabsContext);
+	const { types, reactFlowInstance, setReactFlowInstance, templates } =
+		useContext(typesContext);
+	const reactFlowWrapper = useRef(null);
 
   const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
   const { setErrorData } = useContext(alertContext);
@@ -176,46 +177,47 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
     []
   );
 
-  const onEdgeUpdateEnd = useCallback((_, edge) => {
-    if (!edgeUpdateSuccessful.current) {
-      setEdges((eds) => eds.filter((e) => e.id !== edge.id));
-    }
-
-    edgeUpdateSuccessful.current = true;
-  }, []);
-
-  return (
-    <div className="w-full h-full" ref={reactFlowWrapper}>
-      {Object.keys(types).length > 0 ? (
-        <>
-          <ReactFlow
-            nodes={nodes}
-            onMove={() =>
-              updateFlow({ ...flow, data: reactFlowInstance.toObject() })
-            }
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChangeMod}
-            onConnect={onConnect}
-            onLoad={setReactFlowInstance}
-            onInit={setReactFlowInstance}
-            nodeTypes={nodeTypes}
-            onEdgeUpdate={onEdgeUpdate}
-            onEdgeUpdateStart={onEdgeUpdateStart}
-            onEdgeUpdateEnd={onEdgeUpdateEnd}
-            connectionLineComponent={ConnectionLineComponent}
-            onDragOver={onDragOver}
-            onDrop={onDrop}
-            onNodesDelete={onDelete}
-          >
-            <Background className="dark:bg-gray-900" />
-            <Controls className="[&>button]:text-black  [&>button]:dark:bg-gray-800 hover:[&>button]:dark:bg-gray-700 [&>button]:dark:text-gray-400 [&>button]:dark:fill-gray-400 [&>button]:dark:border-gray-600"></Controls>
-          </ReactFlow>
-          <Chat flow={flow} reactFlowInstance={reactFlowInstance} />
-        </>
-      ) : (
-        <></>
-      )}
-    </div>
-  );
+	const onEdgeUpdateEnd = useCallback((_, edge) => {
+		if (!edgeUpdateSuccessful.current) {
+		  setEdges((eds) => eds.filter((e) => e.id !== edge.id));
+		}
+	
+		edgeUpdateSuccessful.current = true;
+	  }, []);
+	  
+	return (
+		<div className="w-full h-full" ref={reactFlowWrapper}>
+			{Object.keys(templates).length > 0 && Object.keys(types).length > 0 ? (
+				<>
+					<ReactFlow
+						nodes={nodes}
+						onMove={() =>
+							updateFlow({ ...flow, data: reactFlowInstance.toObject() })
+						}
+						edges={edges}
+						onNodesChange={onNodesChange}
+						onEdgesChange={onEdgesChangeMod}
+						onConnect={onConnect}
+						onLoad={setReactFlowInstance}
+						onInit={setReactFlowInstance}
+						nodeTypes={nodeTypes}
+						onEdgeUpdate={onEdgeUpdate}
+						onEdgeUpdateStart={onEdgeUpdateStart}
+						onEdgeUpdateEnd={onEdgeUpdateEnd}
+						connectionLineComponent={ConnectionLineComponent}
+						onDragOver={onDragOver}
+						onDrop={onDrop}
+						onNodesDelete={onDelete}
+					>
+						<Background className="dark:bg-gray-900"/>
+						<Controls className="[&>button]:text-black  [&>button]:dark:bg-gray-800 hover:[&>button]:dark:bg-gray-700 [&>button]:dark:text-gray-400 [&>button]:dark:fill-gray-400 [&>button]:dark:border-gray-600">
+						</Controls>
+					</ReactFlow>
+					<Chat flow={flow} reactFlowInstance={reactFlowInstance} />
+				</>
+			) : (
+				<></>
+			)}
+		</div>
+	);
 }

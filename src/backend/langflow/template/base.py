@@ -23,6 +23,7 @@ class TemplateFieldCreator(BaseModel, ABC):
     options: list[str] = []
     name: str = ""
     display_name: Optional[str] = None
+    advanced: bool = True
 
     def to_dict(self):
         result = self.dict()
@@ -225,6 +226,19 @@ class FrontendNode(BaseModel):
                 field.is_list = True
         if "api_key" in key and "OpenAI" in str(name):
             field.display_name = "OpenAI API Key"
-            field.required = True
+            field.required = False
             if field.value is None:
                 field.value = ""
+        # If the field.name contains api or api and key, then it might be an api key
+        # other conditions are to make sure that it is not an input or output variable
+        if "api" in key.lower() and "key" in key.lower():
+            field.required = False
+
+        if "kwargs" in field.name.lower():
+            field.advanced = True
+            field.required = False
+            field.show = False
+        # If the field.name contains api or api and key, then it might be an api key
+        # other conditions are to make sure that it is not an input or output variable
+        if "api" in key.lower() and "key" in key.lower():
+            field.required = False

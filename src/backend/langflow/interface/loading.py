@@ -186,7 +186,9 @@ def load_agent_executor(agent_class: type[agent_module.Agent], params, **kwargs)
     allowed_tools = params["allowed_tools"]
     llm_chain = params["llm_chain"]
     tool_names = [tool.name for tool in allowed_tools]
-    agent = agent_class(allowed_tools=tool_names, llm_chain=llm_chain)
+    # Agent class requires an output_parser but Agent classes
+    # have a default output_parser.
+    agent = agent_class(allowed_tools=tool_names, llm_chain=llm_chain)  # type: ignore
     return AgentExecutor.from_agent_and_tools(
         agent=agent,
         tools=allowed_tools,
