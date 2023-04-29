@@ -13,3 +13,5 @@ export type TabsContextType = {
   uploadFlow: () => void;
   hardReset: () => void;
 };
+
+export type LangFlowState={ tabIndex:number, flows:FlowType[], id:string, nodeId:number }

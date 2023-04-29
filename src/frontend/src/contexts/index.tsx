@@ -11,15 +11,15 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
 	return (
 		<>
 			<DarkProvider>
-				<LocationProvider>
-					<AlertProvider>
-						<TabsProvider>
-							<TypesProvider>
+				<TypesProvider>
+					<LocationProvider>
+						<AlertProvider>
+							<TabsProvider>
 								<PopUpProvider>{children}</PopUpProvider>
-							</TypesProvider>
-						</TabsProvider>
-					</AlertProvider>
-				</LocationProvider>
+							</TabsProvider>
+						</AlertProvider>
+					</LocationProvider>
+				</TypesProvider>
 			</DarkProvider>
 		</>
 	);

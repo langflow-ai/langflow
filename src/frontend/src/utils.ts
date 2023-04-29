@@ -398,3 +398,22 @@ export function removeApiKeys(flow: FlowType): FlowType {
   });
   return cleanFLow;
 }
+
+export function updateObject<T extends Record<string, any>>(reference: T, objectToUpdate: T): T {
+  let clonedObject = _.cloneDeep(objectToUpdate)
+  // Loop through each key in the object to update
+  for (const key in clonedObject) {
+    // If the key is not in the reference object, delete it
+    if (!(key in reference)) {
+      delete clonedObject[key];
+    }
+  }
+  // Loop through each key in the reference object
+  for (const key in reference) {
+    // If the key is not in the object to update, add it
+    if (!(key in clonedObject)) {
+      clonedObject[key] = reference[key];
+    }
+  }
+  return clonedObject;
+}
