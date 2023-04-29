@@ -26,8 +26,15 @@ install_frontend:
 run_frontend:
 	cd src/frontend && npm start
 
-run_backend:
-	poetry run uvicorn langflow.main:app --port 5003 --reload
+frontend:
+	make install_frontend
+	make run_frontend
+
+install_backend:
+	poetry install
+
+backend:
+	poetry run uvicorn langflow.main:app --port 7860 --reload --log-level debug
 
 build_frontend:
 	cd src/frontend && CI='' npm run build

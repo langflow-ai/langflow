@@ -1,3 +1,4 @@
+from functools import wraps
 import importlib
 import inspect
 import re
@@ -301,3 +302,15 @@ def update_verbose(d: dict, new_value: bool) -> dict:
         elif k == "verbose":
             d[k] = new_value
     return d
+
+
+def sync_to_async(func):
+    """
+    Decorator to convert a sync function to an async function.
+    """
+
+    @wraps(func)
+    async def async_wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    return async_wrapper

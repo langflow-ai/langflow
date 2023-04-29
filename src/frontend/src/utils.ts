@@ -14,13 +14,13 @@ import {
   FingerPrintIcon,
   ScissorsIcon,
   CircleStackIcon,
-  Squares2X2Icon
+  Squares2X2Icon,
 } from "@heroicons/react/24/outline";
 import { Connection, Edge, Node, ReactFlowInstance } from "reactflow";
 import { FlowType } from "./types/flow";
-var _ = require('lodash')
+var _ = require("lodash");
 
-export function classNames(...classes:Array<string>) {
+export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
 }
 
@@ -70,7 +70,7 @@ export const borderLColors = {
   gray: "border-l-gray-500",
 };
 
-export const nodeColors: {[char: string]: string} = {
+export const nodeColors: { [char: string]: string } = {
   prompts: "#4367BF",
   llms: "#6344BE",
   chains: "#FE7500",
@@ -78,19 +78,19 @@ export const nodeColors: {[char: string]: string} = {
   tools: "#FF3434",
   memories: "#F5B85A",
   advanced: "#000000",
-  chat: "#454173",
-  thought:"#272541",
-  embeddings:"#42BAA7",
-  documentloaders:"#7AAE42",
+  chat: "#198BF6",
+  thought: "#272541",
+  embeddings: "#42BAA7",
+  documentloaders: "#7AAE42",
   vectorstores: "#AA8742",
   textsplitters: "#B47CB5",
-  toolkits:"#DB2C2C",
-  wrappers:"#E6277A",
-  utilities:"#31A3CC",
-  unknown:"#9CA3AF"
+  toolkits: "#DB2C2C",
+  wrappers: "#E6277A",
+  utilities: "#31A3CC",
+  unknown: "#9CA3AF",
 };
 
-export const nodeNames:{[char: string]: string} = {
+export const nodeNames: { [char: string]: string } = {
   prompts: "Prompts",
   llms: "LLMs",
   chains: "Chains",
@@ -102,14 +102,18 @@ export const nodeNames:{[char: string]: string} = {
   embeddings: "Embeddings",
   documentloaders: "Document Loaders",
   vectorstores: "Vector Stores",
-  toolkits:"Toolkits",
-  wrappers:"Wrappers",
+  toolkits: "Toolkits",
+  wrappers: "Wrappers",
   textsplitters: "Text Splitters",
-  utilities:"Utilities",
-  unknown:"Unknown"
+  utilities: "Utilities",
+  unknown: "Unknown",
 };
 
-export const nodeIcons:{[char: string]: React.ForwardRefExoticComponent<React.SVGProps<SVGSVGElement>>} = {
+export const nodeIcons: {
+  [char: string]: React.ForwardRefExoticComponent<
+    React.SVGProps<SVGSVGElement>
+  >;
+} = {
   agents: RocketLaunchIcon,
   chains: LinkIcon,
   memories: CpuChipIcon,
@@ -118,14 +122,14 @@ export const nodeIcons:{[char: string]: React.ForwardRefExoticComponent<React.SV
   tools: WrenchIcon,
   advanced: ComputerDesktopIcon,
   chat: Bars3CenterLeftIcon,
-  embeddings:FingerPrintIcon,
-  documentloaders:PaperClipIcon,
+  embeddings: FingerPrintIcon,
+  documentloaders: PaperClipIcon,
   vectorstores: CircleStackIcon,
-  toolkits:WrenchScrewdriverIcon,
-  textsplitters:ScissorsIcon,
-  wrappers:GiftIcon,
-  utilities:Squares2X2Icon,
-  unknown:QuestionMarkCircleIcon
+  toolkits: WrenchScrewdriverIcon,
+  textsplitters: ScissorsIcon,
+  wrappers: GiftIcon,
+  utilities: Squares2X2Icon,
+  unknown: QuestionMarkCircleIcon,
 };
 
 export const bgColors = {
@@ -218,7 +222,7 @@ export const taskTypeMap: { [key: string]: string } = {
   MULTICLASS_CLASSIFICATION: "Multiclass Classification",
 };
 
-const charWidths:{[char: string]: number} = {
+const charWidths: { [char: string]: number } = {
   " ": 0.2,
   "!": 0.2,
   '"': 0.3,
@@ -260,7 +264,7 @@ for (let i = 97; i <= 122; i++) {
   charWidths[String.fromCharCode(i)] = 0.5;
 }
 
-export function measureTextWidth(text: string, fontSize:number) {
+export function measureTextWidth(text: string, fontSize: number) {
   let wordWidth = 0;
   for (let j = 0; j < text.length; j++) {
     let char = text[j];
@@ -270,7 +274,11 @@ export function measureTextWidth(text: string, fontSize:number) {
   return wordWidth;
 }
 
-export function measureTextHeight(text: string, width:number, fontSize:number) {
+export function measureTextHeight(
+  text: string,
+  width: number,
+  fontSize: number
+) {
   const charHeight = fontSize;
   const lineHeight = charHeight * 1.5;
   const words = text.split(" ");
@@ -319,19 +327,19 @@ export function snakeToNormalCase(str: string) {
     .join(" ");
 }
 
-export function normalCaseToSnakeCase(str:string){
+export function normalCaseToSnakeCase(str: string) {
   return str
-  .split(" ")
-  .map((word, index) => {
-    if (index === 0) {
-      return word[0].toUpperCase() + word.slice(1).toLowerCase();
-    }
-    return word.toLowerCase();
-  })
-  .join("_");
+    .split(" ")
+    .map((word, index) => {
+      if (index === 0) {
+        return word[0].toUpperCase() + word.slice(1).toLowerCase();
+      }
+      return word.toLowerCase();
+    })
+    .join("_");
 }
 
-export function roundNumber(x:number, decimals:number) {
+export function roundNumber(x: number, decimals: number) {
   return Math.round(x * Math.pow(10, decimals)) / Math.pow(10, decimals);
 }
 
@@ -345,12 +353,15 @@ export function getConnectedNodes(edge: Edge, nodes: Array<Node>): Array<Node> {
 }
 
 export function isValidConnection(
-  { source, target, sourceHandle, targetHandle }:Connection,
-  reactFlowInstance:ReactFlowInstance
+  { source, target, sourceHandle, targetHandle }: Connection,
+  reactFlowInstance: ReactFlowInstance
 ) {
   if (
-    sourceHandle.split('|')[0] === targetHandle.split("|")[0] ||
-    sourceHandle.split('|').slice(2).some((t) => t === targetHandle.split("|")[0]) ||
+    sourceHandle.split("|")[0] === targetHandle.split("|")[0] ||
+    sourceHandle
+      .split("|")
+      .slice(2)
+      .some((t) => t === targetHandle.split("|")[0]) ||
     targetHandle.split("|")[0] === "str"
   ) {
     let targetNode = reactFlowInstance.getNode(target).data.node;
@@ -375,16 +386,34 @@ export function isValidConnection(
   return false;
 }
 
-export function removeApiKeys(flow:FlowType):FlowType{
-  let cleanFLow = _.cloneDeep(flow)
-  cleanFLow.data.nodes.forEach(node=>{
-    for(const key in node.data.node.template)
-    {
-      if(key.includes('api')){
-        console.log(node.data.node.template[key])
-        node.data.node.template[key].value = ''
+export function removeApiKeys(flow: FlowType): FlowType {
+  let cleanFLow = _.cloneDeep(flow);
+  cleanFLow.data.nodes.forEach((node) => {
+    for (const key in node.data.node.template) {
+      if (key.includes("api")) {
+        console.log(node.data.node.template[key]);
+        node.data.node.template[key].value = "";
       }
     }
-  })
-  return cleanFLow
+  });
+  return cleanFLow;
+}
+
+export function updateObject<T extends Record<string, any>>(reference: T, objectToUpdate: T): T {
+  let clonedObject = _.cloneDeep(objectToUpdate)
+  // Loop through each key in the object to update
+  for (const key in clonedObject) {
+    // If the key is not in the reference object, delete it
+    if (!(key in reference)) {
+      delete clonedObject[key];
+    }
+  }
+  // Loop through each key in the reference object
+  for (const key in reference) {
+    // If the key is not in the object to update, add it
+    if (!(key in clonedObject)) {
+      clonedObject[key] = reference[key];
+    }
+  }
+  return clonedObject;
 }
