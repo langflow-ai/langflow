@@ -8,12 +8,10 @@ import os
 import tempfile
 from collections import OrderedDict
 from pathlib import Path
-from typing import Any
-from PIL import Image
-import dill
-import pandas as pd  # type: ignore
+from typing import Any, Dict
+import dill  # type: ignore
 
-CACHE = {}
+CACHE: Dict[str, Any] = {}
 
 
 def create_cache_folder(func):

@@ -162,7 +162,8 @@ class Node:
                 # If the key is "func", then we need to use the run method
                 if key == "func":
                     if not isinstance(result, types.FunctionType):
-                        # func can be PythonFunction(code='\ndef upper_case(text: str) -> str:\n    return text.upper()\n')
+                        # func can be
+                        # PythonFunction(code='\ndef upper_case(text: str) -> str:\n    return text.upper()\n')
                         # so we need to check if there is an attribute called run
                         if hasattr(result, "run"):
                             result = result.run  # type: ignore
