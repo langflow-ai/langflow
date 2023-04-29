@@ -15,3 +15,5 @@ export type TabsContextType = {
 	setLockChat:(prevState:boolean)=>void;
 	hardReset:()=>void;
 };
+
+export type LangFlowState={ tabIndex:number, flows:FlowType[], id:number, nodeId:number }
