@@ -425,12 +425,10 @@ class ChainFrontendNode(FrontendNode):
             field.required = True
             field.show = True
         # Separated for possible future changes
-        elif field.name == "prompt":
+        if field.name == "prompt":
             # if no prompt is provided, use the default prompt
             field.required = False
             field.show = True
-        else:
-            field.advanced = False
 
 
 class LLMFrontendNode(FrontendNode):
