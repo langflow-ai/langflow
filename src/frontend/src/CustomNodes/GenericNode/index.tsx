@@ -1,4 +1,4 @@
-import { TrashIcon } from "@heroicons/react/24/outline";
+import { Cog6ToothIcon, TrashIcon } from "@heroicons/react/24/outline";
 import {
 	classNames,
 	nodeColors,
@@ -10,6 +10,8 @@ import { typesContext } from "../../contexts/typesContext";
 import { useContext, useRef } from "react";
 import { NodeDataType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
+import { PopUpContext } from "../../contexts/popUpContext";
+import NodeModal from "../../modals/NodeModal";
 
 export default function GenericNode({
 	data,
@@ -21,6 +23,7 @@ export default function GenericNode({
 	const { setErrorData } = useContext(alertContext);
 	const showError = useRef(true);
 	const { types, deleteNode } = useContext(typesContext);
+	const { openPopUp } = useContext(PopUpContext);
 	const Icon = nodeIcons[types[data.type]];
 	if (!Icon) {
 		if (showError.current) {
@@ -51,17 +54,46 @@ export default function GenericNode({
 					/>
 					<div className="truncate">{data.type}</div>
 				</div>
-				<button
-					onClick={() => {
-						deleteNode(data.id);
-					}}
-				>
-					<TrashIcon className="w-6 h-6 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-500"></TrashIcon>
-				</button>
+				<div className="flex gap-3">
+					<button
+						className="relative"
+						onClick={(event) => {
+							event.preventDefault();
+							openPopUp(<NodeModal data={data} />);
+						}}
+					>
+						<div className=" absolute text-red-600 -top-2 -right-1">
+							{Object.keys(data.node.template).some(
+								(t) =>
+									data.node.template[t].advanced &&
+									data.node.template[t].required
+							)
+								? " *"
+								: ""}
+						</div>
+						<Cog6ToothIcon
+							className={classNames(
+								Object.keys(data.node.template).some(
+									(t) => data.node.template[t].advanced && data.node.template[t].show
+								)
+									? ""
+									: "hidden",
+								"w-6 h-6  dark:text-gray-500  hover:animate-spin"
+							)}
+						></Cog6ToothIcon>
+					</button>
+					<button
+						onClick={() => {
+							deleteNode(data.id);
+						}}
+					>
+						<TrashIcon className="w-6 h-6 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-500"></TrashIcon>
+					</button>
+				</div>
 			</div>
 
 			<div className="w-full h-full py-5">
-				<div className="w-full text-gray-500 px-5 text-sm">
+				<div className="w-full text-gray-500 px-5 pb-3 text-sm">
 					{data.node.description}
 				</div>
 
@@ -70,7 +102,7 @@ export default function GenericNode({
 						.filter((t) => t.charAt(0) !== "_")
 						.map((t: string, idx) => (
 							<div key={idx}>
-								{idx === 0 ? (
+								{/* {idx === 0 ? (
 									<div
 										className={classNames(
 											"px-5 py-2 mt-2 dark:text-white text-center",
@@ -86,8 +118,8 @@ export default function GenericNode({
 									</div>
 								) : (
 									<></>
-								)}
-								{data.node.template[t].show ? (
+								)} */}
+								{data.node.template[t].show && !data.node.template[t].advanced  ? (
 									<ParameterComponent
 										data={data}
 										color={
@@ -117,9 +149,17 @@ export default function GenericNode({
 								)}
 							</div>
 						))}
-					<div className="px-5 py-2 mt-2 dark:text-white text-center">
-						Output
+					<div
+						className={classNames(
+							Object.keys(data.node.template).length < 1 ? "hidden" : "",
+							"w-full flex justify-center"
+						)}
+					>
+						{" "}
 					</div>
+					{/* <div className="px-5 py-2 mt-2 dark:text-white text-center">
+						Output
+					</div> */}
 					<ParameterComponent
 						data={data}
 						color={nodeColors[types[data.type]] ?? nodeColors.unknown}
