@@ -181,7 +181,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		// Create a new flow with a default name if no flow is provided.
 		let newFlow: FlowType = {
 			description,
-			name: "New Flow",
+			name: flow?.name??"New Flow",
 			id: id.toString(),
 			data,
 			chat: flow ? flow.chat : [],
