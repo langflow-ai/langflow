@@ -19,11 +19,19 @@ def get_func_tool_params(func, **kwargs) -> Union[Dict, None]:
                         tool_params = {}
                         for keyword in tool.keywords:
                             if keyword.arg == "name":
-                                tool_params["name"] = ast.literal_eval(keyword.value)
+                                try:
+                                    tool_params["name"] = ast.literal_eval(
+                                        keyword.value
+                                    )
+                                except ValueError:
+                                    break
                             elif keyword.arg == "description":
-                                tool_params["description"] = ast.literal_eval(
-                                    keyword.value
-                                )
+                                try:
+                                    tool_params["description"] = ast.literal_eval(
+                                        keyword.value
+                                    )
+                                except ValueError:
+                                    continue
 
                         return tool_params
                     return {
