@@ -3,7 +3,7 @@ from langchain.agents import AgentExecutor, ZeroShotAgent
 from langchain.agents.agent_toolkits.json.prompt import JSON_PREFIX, JSON_SUFFIX
 from langchain.agents.agent_toolkits.json.toolkit import JsonToolkit
 from langchain.agents.mrkl.prompt import FORMAT_INSTRUCTIONS
-from langchain.schema import BaseLanguageModel
+from langchain.base_language import BaseLanguageModel
 
 
 class MalfoyAgent(AgentExecutor):

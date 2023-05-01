@@ -3,7 +3,7 @@ from io import BytesIO
 import json
 import os
 from PIL.Image import Image
-from langchain.callbacks.base import AsyncCallbackManager
+from langchain.callbacks.manager import AsyncCallbackManager
 from langchain.chat_models import AzureChatOpenAI, ChatOpenAI
 from langchain.llms import AzureOpenAI, OpenAI
 from langflow.api.callback import StreamingLLMCallbackHandler

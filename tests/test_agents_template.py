@@ -149,7 +149,7 @@ def test_initialize_agent(client: TestClient):
         "name": "agent",
         "type": "str",
         "list": True,
-        "advanced": True,
+        "advanced": False,
     }
     assert template["memory"] == {
         "required": False,
@@ -160,7 +160,7 @@ def test_initialize_agent(client: TestClient):
         "name": "memory",
         "type": "BaseChatMemory",
         "list": False,
-        "advanced": True,
+        "advanced": False,
     }
     assert template["tools"] == {
         "required": False,
@@ -171,7 +171,7 @@ def test_initialize_agent(client: TestClient):
         "name": "tools",
         "type": "Tool",
         "list": True,
-        "advanced": True,
+        "advanced": False,
     }
     assert template["llm"] == {
         "required": True,
@@ -182,5 +182,5 @@ def test_initialize_agent(client: TestClient):
         "name": "llm",
         "type": "BaseLanguageModel",
         "list": False,
-        "advanced": True,
+        "advanced": False,
     }
