@@ -28,7 +28,7 @@ from langchain.agents.mrkl.prompt import FORMAT_INSTRUCTIONS
 from langchain.agents.mrkl.prompt import FORMAT_INSTRUCTIONS as SQL_FORMAT_INSTRUCTIONS
 from langchain.llms.base import BaseLLM
 from langchain.memory.chat_memory import BaseChatMemory
-from langchain.schema import BaseLanguageModel
+from langchain.base_language import BaseLanguageModel
 from langchain.sql_database import SQLDatabase
 from langchain.tools.python.tool import PythonAstREPLTool
 from langchain.tools.sql_database.prompt import QUERY_CHECKER
