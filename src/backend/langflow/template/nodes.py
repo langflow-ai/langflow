@@ -559,6 +559,10 @@ class ChainFrontendNode(FrontendNode):
             field.required = False
             field.show = True
             field.advanced = True
+        if field.name == "llm":
+            field.required = True
+            field.show = True
+            field.advanced = False
 
 
 class LLMFrontendNode(FrontendNode):
