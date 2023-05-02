@@ -26,9 +26,6 @@ export default function InputComponent({
                     password && myValue.length>0?"password":""
 				)}
 				placeholder="Type a text"
-				onCopy={(e)=>{
-					if(password) e.preventDefault();
-				}}
 				onChange={(e) => {
 					setMyValue(e.target.value);
 					onChange(e.target.value);
