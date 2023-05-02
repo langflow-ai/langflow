@@ -48,6 +48,7 @@ docstring-parser = "^0.15"
 psycopg2-binary = "^2.9.6"
 pyarrow = "^11.0.0"
 websockets = "^11.0.2"
+tiktoken = "^0.3.3"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
