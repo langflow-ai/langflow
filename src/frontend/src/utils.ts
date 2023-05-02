@@ -399,8 +399,11 @@ export function removeApiKeys(flow: FlowType): FlowType {
   return cleanFLow;
 }
 
-export function updateObject<T extends Record<string, any>>(reference: T, objectToUpdate: T): T {
-  let clonedObject = _.cloneDeep(objectToUpdate)
+export function updateObject<T extends Record<string, any>>(
+  reference: T,
+  objectToUpdate: T
+): T {
+  let clonedObject = _.cloneDeep(objectToUpdate);
   // Loop through each key in the object to update
   for (const key in clonedObject) {
     // If the key is not in the reference object, delete it
@@ -416,4 +419,13 @@ export function updateObject<T extends Record<string, any>>(reference: T, object
     }
   }
   return clonedObject;
+}
+
+export function debounce(func, wait) {
+  let timeout;
+  return function (...args) {
+    const context = this;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(context, args), wait);
+  };
 }
