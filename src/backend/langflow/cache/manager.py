@@ -1,7 +1,8 @@
 from contextlib import contextmanager
 from typing import Any, Awaitable, Callable, List, Optional
-from PIL import Image
+
 import pandas as pd
+from PIL import Image
 
 
 class Subject:
