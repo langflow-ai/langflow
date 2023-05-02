@@ -51,7 +51,7 @@ class JsonAgent(AgentExecutor):
     @classmethod
     def from_toolkit_and_llm(cls, toolkit: JsonToolkit, llm: BaseLanguageModel):
         tools = toolkit.get_tools()
-        tool_names = {tool.name for tool in tools}
+        tool_names = [tool.name for tool in tools]
         prompt = ZeroShotAgent.create_prompt(
             tools,
             prefix=JSON_PREFIX,
@@ -109,7 +109,7 @@ class CSVAgent(AgentExecutor):
             llm=llm,
             prompt=partial_prompt,
         )
-        tool_names = {tool.name for tool in tools}
+        tool_names = [tool.name for tool in tools]
         agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)
 
         return cls.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
@@ -146,7 +146,7 @@ class VectorStoreAgent(AgentExecutor):
             llm=llm,
             prompt=prompt,
         )
-        tool_names = {tool.name for tool in tools}
+        tool_names = [tool.name for tool in tools]
         agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)
         return AgentExecutor.from_agent_and_tools(
             agent=agent, tools=tools, verbose=True
@@ -212,7 +212,7 @@ class SQLAgent(AgentExecutor):
             llm=llm,
             prompt=prompt,
         )
-        tool_names = {tool.name for tool in tools}  # type: ignore
+        tool_names = [tool.name for tool in tools]  # type: ignore
         agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)
         return AgentExecutor.from_agent_and_tools(
             agent=agent,
@@ -255,7 +255,7 @@ class VectorStoreRouterAgent(AgentExecutor):
             llm=llm,
             prompt=prompt,
         )
-        tool_names = {tool.name for tool in tools}
+        tool_names = [tool.name for tool in tools]
         agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)
         return AgentExecutor.from_agent_and_tools(
             agent=agent, tools=tools, verbose=True
