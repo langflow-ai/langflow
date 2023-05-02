@@ -162,13 +162,22 @@ class FrontendNode(BaseModel):
             _type = _type.replace("Optional[", "")[:-1]
 
         # Check for list type
-        if "List" in _type:
-            _type = _type.replace("List[", "")[:-1]
+        if "List" in _type or "Sequence" in _type:
+            _type = _type.replace("List[", "")
+            _type = _type.replace("Sequence[", "")[:-1]
             field.is_list = True
 
         # Replace 'Mapping' with 'dict'
         if "Mapping" in _type:
             _type = _type.replace("Mapping", "dict")
+
+        # {'type': 'Union[float, Tuple[float, float], NoneType]'} != {'type': 'float'}
+        if "Union" in _type:
+            _type = _type.replace("Union[", "")[:-1]
+            _type = _type.split(",")[0]
+            _type = _type.replace("]", "").replace("[", "")
+
+        field.field_type = _type
 
         # Change type from str to Tool
         field.field_type = "Tool" if key in {"allowed_tools"} else field.field_type
