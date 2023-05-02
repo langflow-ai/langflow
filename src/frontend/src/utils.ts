@@ -315,8 +315,8 @@ export function toFirstUpperCase(str: string) {
     .join("");
 }
 
-export function snakeToNormalCase(str: string) {
-  return str
+export function toNormalCase(str: string) {
+  let result =  str
     .split("_")
     .map((word, index) => {
       if (index === 0) {
@@ -325,6 +325,15 @@ export function snakeToNormalCase(str: string) {
       return word.toLowerCase();
     })
     .join(" ");
+
+  return result.split("-")
+  .map((word, index) => {
+    if (index === 0) {
+      return word[0].toUpperCase() + word.slice(1).toLowerCase();
+    }
+    return word.toLowerCase();
+  })
+  .join(" ");
 }
 
 export function normalCaseToSnakeCase(str: string) {

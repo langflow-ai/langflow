@@ -16,7 +16,7 @@ import { error } from "console";
 import { alertContext } from "../../contexts/alertContext";
 import LoadingComponent from "../../components/loadingComponent";
 import { FlowType } from "../../types/flow";
-import { classNames } from "../../utils";
+import { classNames, toNormalCase } from "../../utils";
 
 export default function ImportModal() {
   const [open, setOpen] = useState(true);
@@ -215,7 +215,7 @@ export default function ImportModal() {
                                 setModalOpen(false);
                               }}
                               textColor="text-emerald-400"
-                              title={example.name}
+                              title={toNormalCase(example.name)}
                             ></ButtonBox>
                           </div>
                         );

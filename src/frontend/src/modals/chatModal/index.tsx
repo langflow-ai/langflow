@@ -9,7 +9,7 @@ import { PopUpContext } from "../../contexts/popUpContext";
 import { FlowType, NodeType } from "../../types/flow";
 import { TabsContext } from "../../contexts/tabsContext";
 import { alertContext } from "../../contexts/alertContext";
-import { classNames, snakeToNormalCase } from "../../utils";
+import { toNormalCase } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import ChatMessage from "./chatMessage";
 import { FaEraser } from "react-icons/fa";
@@ -230,7 +230,7 @@ export default function ChatModal({
                 `${type} is missing ${
                   template.display_name
                     ? template.display_name
-                    : snakeToNormalCase(template[t].name)
+                    : toNormalCase(template[t].name)
                 }.`,
               ]
             : []
