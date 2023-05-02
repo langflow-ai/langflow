@@ -59,7 +59,7 @@ export default function ChatModal({
       const urlWs =
         process.env.NODE_ENV === "development"
           ? `ws://localhost:7860/chat/${flow.id}`
-          : `wss://${window.location.host}/chat/${flow.id}`;
+          : `ws://${window.location.host}/chat/${flow.id}`;
 
       const newWs = new WebSocket(urlWs);
       newWs.onopen = () => {
