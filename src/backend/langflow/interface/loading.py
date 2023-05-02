@@ -25,6 +25,7 @@ from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.types import get_type_list
 from langflow.interface.utils import load_file_into_dict
 from langflow.utils import util, validate
+from pydantic import ValidationError
 
 
 def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
@@ -74,7 +75,16 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
     elif base_type == "embeddings":
         # ? Why remove model from params?
         params.pop("model")
-        return class_object(**params)
+        # remove all params that are not in class_object.__fields__
+        try:
+            return class_object(**params)
+        except ValidationError:
+            params = {
+                key: value
+                for key, value in params.items()
+                if key in class_object.__fields__
+            }
+            return class_object(**params)
     elif base_type == "vectorstores":
         if len(params.get("documents", [])) == 0:
             # Error when the pdf or other source was not correctly
@@ -170,7 +180,7 @@ def load_agent_executor_from_config(
     **kwargs: Any,
 ):
     tools = load_tools_from_config(config["allowed_tools"])
-    config["allowed_tools"] = [tool.name for tool in tools] if tools else []
+    config["allowed_tools"] = {tool.name for tool in tools} if tools else []
     agent_obj = load_agent_from_config(config, llm, tools, **kwargs)
 
     return AgentExecutor.from_agent_and_tools(
