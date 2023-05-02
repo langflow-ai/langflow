@@ -217,7 +217,7 @@ def format_dict(d, name: Optional[str] = None):
             _type = _type.replace("Optional[", "")[:-1]
 
         # Check for list type
-        if "List" in _type:
+        if "List" in _type or "Sequence" in _type or "Set" in _type:
             _type = _type.replace("List[", "")[:-1]
             value["list"] = True
         else:
