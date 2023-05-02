@@ -8,10 +8,10 @@ import {
 } from "react";
 import { FlowType } from "../types/flow";
 import { LangFlowState, TabsContextType } from "../types/tabs";
-import { normalCaseToSnakeCase, updateObject } from "../utils";
+import { normalCaseToSnakeCase, updateObject, updateTemplate } from "../utils";
 import { alertContext } from "./alertContext";
 import { typesContext } from "./typesContext";
-import { TemplateVariableType } from "../types/api";
+import { APITemplateType, TemplateVariableType } from "../types/api";
 const { v4: uuidv4 } = require("uuid");
 
 const TabsContextInitialValue: TabsContextType = {
@@ -64,12 +64,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       cookieObject.flows.forEach((flow) => {
         flow.data.nodes.forEach((node) => {
           if (Object.keys(templates[node.data.type]["template"]).length > 0) {
-            node.data.node.template = updateObject(
+            node.data.node.template = updateTemplate(
               templates[node.data.type][
                 "template"
-              ] as unknown as TemplateVariableType,
+              ] as unknown as APITemplateType,
 
-              node.data.node.template as TemplateVariableType
+              node.data.node.template as APITemplateType
             );
           }
         });
@@ -127,16 +127,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         file.text().then((text) => {
           // parse the text into a JSON object
           let flow: FlowType = JSON.parse(text);
-          flow.data.nodes.forEach((node) => {
-            if (Object.keys(templates[node.data.type]["template"]).length > 0) {
-              node.data.node.template = updateObject(
-                templates[node.data.type][
-                  "template"
-                ] as unknown as TemplateVariableType,
-                node.data.node.template as TemplateVariableType
-              );
-            }
-          });
 
           addFlow(flow);
         });
@@ -176,6 +166,18 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     const data = flow?.data ? flow.data : null;
     const description = flow?.description ? flow.description : "";
 
+	if(data){
+		data.nodes.forEach((node) => {
+            if (Object.keys(templates[node.data.type]["template"]).length > 0) {
+              node.data.node.template = updateTemplate(
+                templates[node.data.type][
+                  "template"
+                ] as unknown as APITemplateType,
+                node.data.node.template as APITemplateType
+              );
+            }
+          });
+	}
     // Create a new flow with a default name if no flow is provided.
     let newFlow: FlowType = {
       description,
