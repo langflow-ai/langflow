@@ -33,7 +33,7 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
     if node_type in CUSTOM_AGENTS:
         if custom_agent := CUSTOM_AGENTS.get(node_type):
             return custom_agent.initialize(**params)  # type: ignore
-
+    params = process_params(params)
     class_object = import_by_type(_type=base_type, name=node_type)
     # check if it is a class before using issubclass
 
@@ -105,6 +105,15 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
             return class_object.from_uri(params.pop("uri"))
 
     return class_object(**params)
+
+
+def process_params(params):
+    """Process params"""
+    if "allowed_special" in params:
+        params["allowed_special"] = set(params["allowed_special"])
+    if "disallowed_special" in params:
+        params["disallowed_special"] = set(params["disallowed_special"])
+    return params
 
 
 def load_flow_from_json(path: str, build=True):
