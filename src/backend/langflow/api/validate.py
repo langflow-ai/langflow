@@ -45,6 +45,8 @@ def post_validate_node(node_id: str, data: dict):
         # validate node
         node = graph.get_node(node_id)
         if node is not None:
+            if "VectorStore" in node.output:
+                return "Vector store not built to spare resoureces."
             _ = node.build()
             return str(node.params)
         raise Exception(f"Node {node_id} not found")

@@ -143,8 +143,7 @@ class DocumentLoaderCreator(LangChainTypeCreator):
                     "value": True,
                     "display_name": "Silent Errors",
                     "advanced": True,
-
-
+                }
             return signature
         except ValueError as exc:
             raise ValueError(f"Documment Loader {name} not found") from exc
