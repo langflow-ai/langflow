@@ -36,7 +36,7 @@ def test_zero_shot_agent(client: TestClient):
         "name": "llm_chain",
         "type": "LLMChain",
         "list": False,
-        "advanced": True,
+        "advanced": False,
     }
     assert template["allowed_tools"] == {
         "required": False,
@@ -47,7 +47,7 @@ def test_zero_shot_agent(client: TestClient):
         "name": "allowed_tools",
         "type": "Tool",
         "list": True,
-        "advanced": True,
+        "advanced": False,
     }
 
 
@@ -70,7 +70,7 @@ def test_json_agent(client: TestClient):
         "name": "toolkit",
         "type": "BaseToolkit",
         "list": False,
-        "advanced": True,
+        "advanced": False,
     }
     assert template["llm"] == {
         "required": True,
@@ -81,7 +81,7 @@ def test_json_agent(client: TestClient):
         "name": "llm",
         "type": "BaseLanguageModel",
         "list": False,
-        "advanced": True,
+        "advanced": False,
     }
 
 
@@ -108,7 +108,7 @@ def test_csv_agent(client: TestClient):
         "type": "file",
         "list": False,
         "content": None,
-        "advanced": True,
+        "advanced": False,
     }
     assert template["llm"] == {
         "required": True,
@@ -119,7 +119,7 @@ def test_csv_agent(client: TestClient):
         "name": "llm",
         "type": "BaseLanguageModel",
         "list": False,
-        "advanced": True,
+        "advanced": False,
     }
 
 

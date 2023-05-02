@@ -27,7 +27,7 @@ def test_prompt_template(client: TestClient):
         "name": "input_variables",
         "type": "str",
         "list": True,
-        "advanced": True,
+        "advanced": False,
     }
     assert template["output_parser"] == {
         "required": False,
@@ -38,7 +38,7 @@ def test_prompt_template(client: TestClient):
         "name": "output_parser",
         "type": "BaseOutputParser",
         "list": False,
-        "advanced": True,
+        "advanced": False,
     }
     assert template["partial_variables"] == {
         "required": False,
@@ -49,7 +49,7 @@ def test_prompt_template(client: TestClient):
         "name": "partial_variables",
         "type": "code",
         "list": False,
-        "advanced": True,
+        "advanced": False,
     }
     assert template["template"] == {
         "required": True,
@@ -72,7 +72,7 @@ def test_prompt_template(client: TestClient):
         "name": "template_format",
         "type": "str",
         "list": False,
-        "advanced": True,
+        "advanced": False,
     }
     assert template["validate_template"] == {
         "required": False,
@@ -84,7 +84,7 @@ def test_prompt_template(client: TestClient):
         "name": "validate_template",
         "type": "bool",
         "list": False,
-        "advanced": True,
+        "advanced": False,
     }
 
 
@@ -117,7 +117,7 @@ def test_few_shot_prompt_template(client: TestClient):
         "name": "example_selector",
         "type": "BaseExampleSelector",
         "list": False,
-        "advanced": True,
+        "advanced": False,
     }
     assert template["example_prompt"] == {
         "required": True,
@@ -128,7 +128,7 @@ def test_few_shot_prompt_template(client: TestClient):
         "name": "example_prompt",
         "type": "PromptTemplate",
         "list": False,
-        "advanced": True,
+        "advanced": False,
     }
     assert template["suffix"] == {
         "required": True,
@@ -151,7 +151,7 @@ def test_few_shot_prompt_template(client: TestClient):
         "name": "example_separator",
         "type": "str",
         "list": False,
-        "advanced": True,
+        "advanced": False,
     }
     assert template["prefix"] == {
         "required": False,
@@ -184,7 +184,7 @@ def test_zero_shot_prompt(client: TestClient):
         "name": "prefix",
         "type": "str",
         "list": False,
-        "advanced": True,
+        "advanced": False,
     }
     assert template["suffix"] == {
         "required": True,
@@ -196,7 +196,7 @@ def test_zero_shot_prompt(client: TestClient):
         "name": "suffix",
         "type": "str",
         "list": False,
-        "advanced": True,
+        "advanced": False,
     }
     assert template["format_instructions"] == {
         "required": False,
@@ -208,5 +208,5 @@ def test_zero_shot_prompt(client: TestClient):
         "name": "format_instructions",
         "type": "str",
         "list": False,
-        "advanced": True,
+        "advanced": False,
     }
