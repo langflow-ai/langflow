@@ -48,6 +48,7 @@ def test_zero_shot_agent(client: TestClient):
         "type": "Tool",
         "list": True,
         "advanced": False,
+        "value": [],
     }
 
 
