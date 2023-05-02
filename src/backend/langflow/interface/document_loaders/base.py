@@ -24,6 +24,50 @@ def build_file_path_template(
 
 class DocumentLoaderCreator(LangChainTypeCreator):
     type_name: str = "documentloaders"
+    file_path_templates = {
+        "AirbyteJSONLoader": build_file_path_template(
+            suffixes=[".json"], fileTypes=["json"]
+        ),
+        "CoNLLULoader": build_file_path_template(suffixes=[".csv"], fileTypes=["csv"]),
+        "CSVLoader": build_file_path_template(suffixes=[".csv"], fileTypes=["csv"]),
+        "UnstructuredEmailLoader": build_file_path_template(
+            suffixes=[".eml"], fileTypes=["eml"]
+        ),
+        "EverNoteLoader": build_file_path_template(
+            suffixes=[".xml"], fileTypes=["xml"]
+        ),
+        "FacebookChatLoader": build_file_path_template(
+            suffixes=[".json"], fileTypes=["json"]
+        ),
+        "GutenbergLoader": build_file_path_template(
+            suffixes=[".txt"], fileTypes=["txt"]
+        ),
+        "BSHTMLLoader": build_file_path_template(
+            suffixes=[".html"], fileTypes=["html"]
+        ),
+        "UnstructuredHTMLLoader": build_file_path_template(
+            suffixes=[".html"], fileTypes=["html"]
+        ),
+        "UnstructuredImageLoader": build_file_path_template(
+            suffixes=[".jpg", ".jpeg", ".png", ".gif", ".bmp"],
+            fileTypes=["jpg", "jpeg", "png", "gif", "bmp"],
+        ),
+        "UnstructuredMarkdownLoader": build_file_path_template(
+            suffixes=[".md"], fileTypes=["md"]
+        ),
+        "PyPDFLoader": build_file_path_template(suffixes=[".pdf"], fileTypes=["pdf"]),
+        "UnstructuredPowerPointLoader": build_file_path_template(
+            suffixes=[".pptx", ".ppt"], fileTypes=["pptx", "ppt"]
+        ),
+        "SRTLoader": build_file_path_template(suffixes=[".srt"], fileTypes=["srt"]),
+        "TelegramChatLoader": build_file_path_template(
+            suffixes=[".json"], fileTypes=["json"]
+        ),
+        "TextLoader": build_file_path_template(suffixes=[".txt"], fileTypes=["txt"]),
+        "UnstructuredWordDocumentLoader": build_file_path_template(
+            suffixes=[".docx", ".doc"], fileTypes=["docx", "doc"]
+        ),
+    }
 
     @property
     def type_to_loader_dict(self) -> Dict:
@@ -36,63 +80,8 @@ class DocumentLoaderCreator(LangChainTypeCreator):
                 name, documentloaders_type_to_cls_dict
             )
 
-            file_path_templates = {
-                "AirbyteJSONLoader": build_file_path_template(
-                    suffixes=[".json"], fileTypes=["json"]
-                ),
-                "CoNLLULoader": build_file_path_template(
-                    suffixes=[".csv"], fileTypes=["csv"]
-                ),
-                "CSVLoader": build_file_path_template(
-                    suffixes=[".csv"], fileTypes=["csv"]
-                ),
-                "UnstructuredEmailLoader": build_file_path_template(
-                    suffixes=[".eml"], fileTypes=["eml"]
-                ),
-                "EverNoteLoader": build_file_path_template(
-                    suffixes=[".xml"], fileTypes=["xml"]
-                ),
-                "FacebookChatLoader": build_file_path_template(
-                    suffixes=[".json"], fileTypes=["json"]
-                ),
-                "GutenbergLoader": build_file_path_template(
-                    suffixes=[".txt"], fileTypes=["txt"]
-                ),
-                "BSHTMLLoader": build_file_path_template(
-                    suffixes=[".html"], fileTypes=["html"]
-                ),
-                "UnstructuredHTMLLoader": build_file_path_template(
-                    suffixes=[".html"], fileTypes=["html"]
-                ),
-                "UnstructuredImageLoader": build_file_path_template(
-                    suffixes=[".jpg", ".jpeg", ".png", ".gif", ".bmp"],
-                    fileTypes=["jpg", "jpeg", "png", "gif", "bmp"],
-                ),
-                "UnstructuredMarkdownLoader": build_file_path_template(
-                    suffixes=[".md"], fileTypes=["md"]
-                ),
-                "PyPDFLoader": build_file_path_template(
-                    suffixes=[".pdf"], fileTypes=["pdf"]
-                ),
-                "UnstructuredPowerPointLoader": build_file_path_template(
-                    suffixes=[".pptx", ".ppt"], fileTypes=["pptx", "ppt"]
-                ),
-                "SRTLoader": build_file_path_template(
-                    suffixes=[".srt"], fileTypes=["srt"]
-                ),
-                "TelegramChatLoader": build_file_path_template(
-                    suffixes=[".json"], fileTypes=["json"]
-                ),
-                "TextLoader": build_file_path_template(
-                    suffixes=[".txt"], fileTypes=["txt"]
-                ),
-                "UnstructuredWordDocumentLoader": build_file_path_template(
-                    suffixes=[".docx", ".doc"], fileTypes=["docx", "doc"]
-                ),
-            }
-
-            if name in file_path_templates:
-                signature["template"]["file_path"] = file_path_templates[name]
+            if name in self.file_path_templates:
+                signature["template"]["file_path"] = self.file_path_templates[name]
             elif name in {
                 "WebBaseLoader",
                 "AZLyricsLoader",
@@ -127,6 +116,34 @@ class DocumentLoaderCreator(LangChainTypeCreator):
                     "value": "",
                     "display_name": "Web Page",
                 }
+            elif name in {"DirectoryLoader"}:
+                # fields are "path" and "glob"
+                signature["template"]["path"] = {
+                    "type": "str",
+                    "required": True,
+                    "show": True,
+                    "name": "path",
+                    "value": "",
+                    "display_name": "Path",
+                }
+                signature["template"]["glob"] = {
+                    "type": "str",
+                    "required": True,
+                    "show": True,
+                    "name": "glob",
+                    "value": "",
+                    "display_name": "Glob",
+                }
+                # silent_errors
+                signature["template"]["silent_errors"] = {
+                    "type": "bool",
+                    "required": False,
+                    "show": True,
+                    "name": "silent_errors",
+                    "value": True,
+                    "display_name": "Silent Errors",
+                    "advanced": True,
+
 
             return signature
         except ValueError as exc:

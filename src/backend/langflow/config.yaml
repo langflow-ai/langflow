@@ -109,6 +109,7 @@ documentloaders:
   - IMSDbLoader
   - GitbookLoader
   - ReadTheDocsLoader
+  - DirectoryLoader
 
 textsplitters:
   - CharacterTextSplitter
