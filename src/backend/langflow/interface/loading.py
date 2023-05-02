@@ -180,7 +180,7 @@ def load_agent_executor_from_config(
     **kwargs: Any,
 ):
     tools = load_tools_from_config(config["allowed_tools"])
-    config["allowed_tools"] = [tool.name for tool in tools] if tools else []
+    config["allowed_tools"] = {tool.name for tool in tools} if tools else []
     agent_obj = load_agent_from_config(config, llm, tools, **kwargs)
 
     return AgentExecutor.from_agent_and_tools(
