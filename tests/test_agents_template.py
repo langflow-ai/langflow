@@ -36,6 +36,7 @@ def test_zero_shot_agent(client: TestClient):
         "name": "llm_chain",
         "type": "LLMChain",
         "list": False,
+        "advanced": False,
     }
     assert template["allowed_tools"] == {
         "required": False,
@@ -46,6 +47,8 @@ def test_zero_shot_agent(client: TestClient):
         "name": "allowed_tools",
         "type": "Tool",
         "list": True,
+        "advanced": False,
+        "value": [],
     }
 
 
@@ -68,6 +71,7 @@ def test_json_agent(client: TestClient):
         "name": "toolkit",
         "type": "BaseToolkit",
         "list": False,
+        "advanced": False,
     }
     assert template["llm"] == {
         "required": True,
@@ -78,6 +82,7 @@ def test_json_agent(client: TestClient):
         "name": "llm",
         "type": "BaseLanguageModel",
         "list": False,
+        "advanced": False,
     }
 
 
@@ -104,6 +109,7 @@ def test_csv_agent(client: TestClient):
         "type": "file",
         "list": False,
         "content": None,
+        "advanced": False,
     }
     assert template["llm"] == {
         "required": True,
@@ -114,6 +120,7 @@ def test_csv_agent(client: TestClient):
         "name": "llm",
         "type": "BaseLanguageModel",
         "list": False,
+        "advanced": False,
     }
 
 
@@ -124,7 +131,7 @@ def test_initialize_agent(client: TestClient):
     agents = json_response["agents"]
 
     initialize_agent = agents["initialize_agent"]
-    assert initialize_agent["base_classes"] == ["AgentExecutor"]
+    assert initialize_agent["base_classes"] == ["AgentExecutor", "function"]
     template = initialize_agent["template"]
 
     assert template["agent"] == {
@@ -143,6 +150,7 @@ def test_initialize_agent(client: TestClient):
         "name": "agent",
         "type": "str",
         "list": True,
+        "advanced": False,
     }
     assert template["memory"] == {
         "required": False,
@@ -153,6 +161,7 @@ def test_initialize_agent(client: TestClient):
         "name": "memory",
         "type": "BaseChatMemory",
         "list": False,
+        "advanced": False,
     }
     assert template["tools"] == {
         "required": False,
@@ -163,6 +172,7 @@ def test_initialize_agent(client: TestClient):
         "name": "tools",
         "type": "Tool",
         "list": True,
+        "advanced": False,
     }
     assert template["llm"] == {
         "required": True,
@@ -173,4 +183,5 @@ def test_initialize_agent(client: TestClient):
         "name": "llm",
         "type": "BaseLanguageModel",
         "list": False,
+        "advanced": False,
     }

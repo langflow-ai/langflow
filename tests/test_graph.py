@@ -1,4 +1,3 @@
-import json
 from typing import Type, Union
 
 import pytest
@@ -15,45 +14,13 @@ from langflow.graph.nodes import (
     ToolNode,
     WrapperNode,
 )
-from langflow.interface.run import get_result_and_thought_using_graph
+from langflow.interface.run import get_result_and_steps
 from langflow.utils.payload import build_json, get_root_node
 
 # Test cases for the graph module
 
 # now we have three types of graph:
 # BASIC_EXAMPLE_PATH, COMPLEX_EXAMPLE_PATH, OPENAPI_EXAMPLE_PATH
-
-
-def get_graph(_type="basic"):
-    """Get a graph from a json file"""
-    if _type == "basic":
-        path = pytest.BASIC_EXAMPLE_PATH
-    elif _type == "complex":
-        path = pytest.COMPLEX_EXAMPLE_PATH
-    elif _type == "openapi":
-        path = pytest.OPENAPI_EXAMPLE_PATH
-
-    with open(path, "r") as f:
-        flow_graph = json.load(f)
-    data_graph = flow_graph["data"]
-    nodes = data_graph["nodes"]
-    edges = data_graph["edges"]
-    return Graph(nodes, edges)
-
-
-@pytest.fixture
-def basic_graph():
-    return get_graph()
-
-
-@pytest.fixture
-def complex_graph():
-    return get_graph("complex")
-
-
-@pytest.fixture
-def openapi_graph():
-    return get_graph("openapi")
 
 
 def get_node_by_type(graph, node_type: Type[Node]) -> Union[Node, None]:
@@ -441,7 +408,7 @@ def test_get_result_and_thought(basic_graph):
     # now build again and check if FakeListLLM was used
 
     # Get the result and thought
-    result, thought = get_result_and_thought_using_graph(langchain_object, message)
+    result, thought = get_result_and_steps(langchain_object, message)
     # The result should be a str
     assert isinstance(result, str)
     # The thought should be a Thought

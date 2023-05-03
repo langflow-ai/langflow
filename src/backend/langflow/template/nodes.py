@@ -77,6 +77,12 @@ class PromptTemplateNode(FrontendNode):
     def to_dict(self):
         return super().to_dict()
 
+    @staticmethod
+    def format_field(field: TemplateField, name: Optional[str] = None) -> None:
+        FrontendNode.format_field(field, name)
+        if field.name == "examples":
+            field.advanced = False
+
 
 class PythonFunctionNode(FrontendNode):
     name: str = "PythonFunction"
@@ -91,6 +97,7 @@ class PythonFunctionNode(FrontendNode):
                 show=True,
                 value=DEFAULT_PYTHON_FUNCTION,
                 name="code",
+                advanced=False,
             )
         ],
     )
@@ -99,6 +106,108 @@ class PythonFunctionNode(FrontendNode):
 
     def to_dict(self):
         return super().to_dict()
+
+
+class MidJourneyPromptChainNode(FrontendNode):
+    name: str = "MidJourneyPromptChain"
+    template: Template = Template(
+        type_name="MidJourneyPromptChain",
+        fields=[
+            TemplateField(
+                field_type="BaseLanguageModel",
+                required=True,
+                placeholder="",
+                is_list=False,
+                show=True,
+                advanced=False,
+                multiline=False,
+                name="llm",
+            ),
+        ],
+    )
+    description: str = "MidJourneyPromptChain is a chain you can use to generate new MidJourney prompts."
+    base_classes: list[str] = [
+        "LLMChain",
+        "BaseCustomChain",
+        "Chain",
+        "ConversationChain",
+        "MidJourneyPromptChain",
+    ]
+
+
+class TimeTravelGuideChainNode(FrontendNode):
+    name: str = "TimeTravelGuideChain"
+    template: Template = Template(
+        type_name="TimeTravelGuideChain",
+        fields=[
+            TemplateField(
+                field_type="BaseLanguageModel",
+                required=True,
+                placeholder="",
+                is_list=False,
+                show=True,
+                advanced=False,
+                multiline=False,
+                name="llm",
+            ),
+        ],
+    )
+    description: str = "Time travel guide chain to be used in the flow."
+    base_classes: list[str] = [
+        "LLMChain",
+        "BaseCustomChain",
+        "TimeTravelGuideChain",
+        "Chain",
+        "ConversationChain",
+    ]
+
+
+class SeriesCharacterChainNode(FrontendNode):
+    name: str = "SeriesCharacterChain"
+    template: Template = Template(
+        type_name="SeriesCharacterChain",
+        fields=[
+            TemplateField(
+                field_type="str",
+                required=True,
+                placeholder="",
+                is_list=False,
+                show=True,
+                advanced=False,
+                multiline=False,
+                name="character",
+            ),
+            TemplateField(
+                field_type="str",
+                required=True,
+                placeholder="",
+                is_list=False,
+                show=True,
+                advanced=False,
+                multiline=False,
+                name="series",
+            ),
+            TemplateField(
+                field_type="BaseLanguageModel",
+                required=True,
+                placeholder="",
+                is_list=False,
+                show=True,
+                advanced=False,
+                multiline=False,
+                name="llm",
+            ),
+        ],
+    )
+    description: str = "SeriesCharacterChain is a chain you can use to have a conversation with a character from a series."  # noqa
+    base_classes: list[str] = [
+        "LLMChain",
+        "BaseCustomChain",
+        "Chain",
+        "ConversationChain",
+        "SeriesCharacterChain",
+        "function",
+    ]
 
 
 class ToolNode(FrontendNode):
@@ -115,6 +224,7 @@ class ToolNode(FrontendNode):
                 multiline=True,
                 value="",
                 name="name",
+                advanced=False,
             ),
             TemplateField(
                 field_type="str",
@@ -125,6 +235,7 @@ class ToolNode(FrontendNode):
                 multiline=True,
                 value="",
                 name="description",
+                advanced=False,
             ),
             TemplateField(
                 name="func",
@@ -133,6 +244,7 @@ class ToolNode(FrontendNode):
                 is_list=False,
                 show=True,
                 multiline=True,
+                advanced=False,
             ),
             TemplateField(
                 field_type="bool",
@@ -193,12 +305,14 @@ class InitializeAgentNode(FrontendNode):
                 options=list(NON_CHAT_AGENTS.keys()),
                 value=list(NON_CHAT_AGENTS.keys())[0],
                 name="agent",
+                advanced=False,
             ),
             TemplateField(
                 field_type="BaseChatMemory",
                 required=False,
                 show=True,
                 name="memory",
+                advanced=False,
             ),
             TemplateField(
                 field_type="Tool",
@@ -206,17 +320,19 @@ class InitializeAgentNode(FrontendNode):
                 show=True,
                 name="tools",
                 is_list=True,
+                advanced=False,
             ),
             TemplateField(
                 field_type="BaseLanguageModel",
                 required=True,
                 show=True,
                 name="llm",
+                advanced=False,
             ),
         ],
     )
     description: str = """Construct a json agent from an LLM and tools."""
-    base_classes: list[str] = ["AgentExecutor"]
+    base_classes: list[str] = ["AgentExecutor", "function"]
 
     def to_dict(self):
         return super().to_dict()
@@ -376,6 +492,7 @@ class PromptFrontendNode(FrontendNode):
             "suffix",
             "prefix",
             "examples",
+            "format_instructions",
         ]
         if field.field_type == "StringPromptTemplate" and "Message" in str(name):
             field.field_type = "prompt"
@@ -386,6 +503,7 @@ class PromptFrontendNode(FrontendNode):
 
         if field.name in PROMPT_FIELDS:
             field.field_type = "prompt"
+            field.advanced = False
 
         if (
             "Union" in field.field_type
@@ -418,17 +536,33 @@ class ChainFrontendNode(FrontendNode):
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         FrontendNode.format_field(field, name)
 
+        field.advanced = False
         if "key" in field.name:
             field.password = False
             field.show = False
         if field.name in ["input_key", "output_key"]:
             field.required = True
             field.show = True
+            field.advanced = True
+
         # Separated for possible future changes
-        if field.name == "prompt":
+        if field.name == "prompt" and field.value is None:
             # if no prompt is provided, use the default prompt
             field.required = False
             field.show = True
+            field.advanced = False
+        if field.name == "memory":
+            field.required = False
+            field.show = True
+            field.advanced = False
+        if field.name == "verbose":
+            field.required = False
+            field.show = True
+            field.advanced = True
+        if field.name == "llm":
+            field.required = True
+            field.show = True
+            field.advanced = False
 
 
 class LLMFrontendNode(FrontendNode):
@@ -438,7 +572,7 @@ class LLMFrontendNode(FrontendNode):
             "huggingfacehub_api_token": "HuggingFace Hub API Token",
         }
         FrontendNode.format_field(field, name)
-        SHOW_FIELDS = ["repo_id", "task", "model_kwargs"]
+        SHOW_FIELDS = ["repo_id"]
         if field.name in SHOW_FIELDS:
             field.show = True
 
@@ -448,14 +582,21 @@ class LLMFrontendNode(FrontendNode):
             # Required should be False to support
             # loading the API key from environment variables
             field.required = False
+            field.advanced = False
 
         if field.name == "task":
             field.required = True
             field.show = True
             field.is_list = True
             field.options = ["text-generation", "text2text-generation"]
+            field.advanced = True
 
         if display_name := display_names_dict.get(field.name):
             field.display_name = display_name
         if field.name == "model_kwargs":
             field.field_type = "code"
+            field.advanced = True
+            field.show = True
+        elif field.name in ["model_name", "temperature"]:
+            field.advanced = False
+            field.show = True
