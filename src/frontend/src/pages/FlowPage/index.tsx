@@ -158,7 +158,7 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
   const onDelete = (mynodes) => {
     setEdges(
       edges.filter(
-        (ns) => !nodes.some((n) => ns.source === n.id || ns.target === n.id)
+        (ns) => !mynodes.some((n) => ns.source === n.id || ns.target === n.id)
       )
     );
   };
