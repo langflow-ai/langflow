@@ -400,7 +400,6 @@ export function removeApiKeys(flow: FlowType): FlowType {
   cleanFLow.data.nodes.forEach((node) => {
     for (const key in node.data.node.template) {
       if (key.includes("api")) {
-        console.log(node.data.node.template[key]);
         node.data.node.template[key].value = "";
       }
     }
