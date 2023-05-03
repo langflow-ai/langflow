@@ -21,7 +21,7 @@ class MalfoyAgent(AgentExecutor):
     @classmethod
     def from_toolkit_and_llm(cls, toolkit: JsonToolkit, llm: BaseLanguageModel):
         tools = toolkit.get_tools()
-        tool_names = [tool.name for tool in tools]
+        tool_names = {tool.name for tool in tools}
         prompt = ZeroShotAgent.create_prompt(
             tools,
             prefix=JSON_PREFIX,

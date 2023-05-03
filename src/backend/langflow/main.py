@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from langflow.api.chat import router as chat_router
 from langflow.api.endpoints import router as endpoints_router
 from langflow.api.validate import router as validate_router
-from langflow.api.chat import router as chat_router
 
 
 def create_app():

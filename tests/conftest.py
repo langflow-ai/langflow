@@ -1,11 +1,10 @@
 import json
 from pathlib import Path
 from typing import AsyncGenerator
-from httpx import AsyncClient
-
 
 import pytest
 from fastapi.testclient import TestClient
+from httpx import AsyncClient
 
 
 def pytest_configure():
