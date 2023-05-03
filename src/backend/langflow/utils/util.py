@@ -1,7 +1,7 @@
-from functools import wraps
 import importlib
 import inspect
 import re
+from functools import wraps
 from typing import Dict, Optional
 
 from docstring_parser import parse  # type: ignore

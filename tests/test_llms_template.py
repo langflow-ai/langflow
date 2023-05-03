@@ -291,7 +291,7 @@ def test_openai(client: TestClient):
         "multiline": False,
         "password": False,
         "name": "request_timeout",
-        "type": "Union[float, Tuple[float, float], NoneType]",
+        "type": "float",
         "list": False,
         "advanced": False,
     }
@@ -418,10 +418,9 @@ def test_chat_open_ai(client: TestClient):
         "placeholder": "",
         "show": False,
         "multiline": False,
-        "value": 60,
         "password": False,
         "name": "request_timeout",
-        "type": "int",
+        "type": "float",
         "list": False,
         "advanced": False,
     }
