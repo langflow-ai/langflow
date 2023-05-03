@@ -1,3 +1,96 @@
+## Latest Changes
+
+:sparkles: Release: Chat and Cache Improvements, Websocket Integration, and Dark Mode Enhancements :crescent_moon:
+This release brings a series of new features and improvements, including:
+
+- :speech_balloon: Chat and Cache Improvements:
+    - Refactored cache-related functions and moved them to a new base.py module
+    - Simplified the Chat component and added chat history support
+    - Implemented the ability to send file responses in chat
+    - Real-time Node validation for improved user experience
+    - CacheManager was added to share data between tools and display them in the chat.
+- :globe_with_meridians: Websocket Integration:
+    - Implemented websocket connection for the chat (WIP)
+- :crescent_moon: Dark Mode Enhancements:
+    - Fixed dark mode for dropdown components
+    - Improved dark mode styling for the chat interface
+    - Updated thought icon for dark mode
+- :rocket: Other Improvements:
+    - Migrated chat logic to chat modal
+    - Implemented unique IDs for flow management
+    - Sorted sidebar items for better organization
+    - Removed unused imports and optimized codebase
+---
+
+## v0.0.68
+
+### What's Changed
+* refactor(loading.py): use get method to set allowed_tools to an empty list if it is not present in params dictionary by @ogabrielluiz in https://github.com/logspace-ai/langflow/pull/237
+
+
+**Full Changelog**: https://github.com/logspace-ai/langflow/compare/v0.0.67...v0.0.68
+## v0.0.67
+
+### What's Changed
+* Fix to allowed_tools by @ogabrielluiz in https://github.com/logspace-ai/langflow/pull/235
+
+
+**Full Changelog**: https://github.com/logspace-ai/langflow/compare/v0.0.66...v0.0.67
+## v0.0.66
+
+### What's Changed
+* Hotfix to websocket url by @ogabrielluiz in https://github.com/logspace-ai/langflow/pull/234
+
+
+**Full Changelog**: https://github.com/logspace-ai/langflow/compare/v0.0.65...v0.0.66
+## v0.0.65
+
+### What's Changed
+* Hotfix by @ogabrielluiz in https://github.com/logspace-ai/langflow/pull/231
+
+
+**Full Changelog**: https://github.com/logspace-ai/langflow/compare/v0.0.64...v0.0.65
+## v0.0.64
+
+### What's Changed
+* Fix LangChain imports by @ogabrielluiz in https://github.com/logspace-ai/langflow/pull/229
+* fix tests to comply with updates and hotfixes by @ogabrielluiz in https://github.com/logspace-ai/langflow/pull/230
+
+
+**Full Changelog**: https://github.com/logspace-ai/langflow/compare/v0.0.63...v0.0.64
+
+## v0.0.63
+
+### What's Changed
+* Layout hotfixes by @ogabrielluiz in https://github.com/logspace-ai/langflow/pull/223
+
+
+**Full Changelog**: https://github.com/logspace-ai/langflow/compare/v0.0.62...v0.0.63
+## v0.0.62
+
+### What's Changed
+* Hotfix bug on import from local by @ogabrielluiz in https://github.com/logspace-ai/langflow/pull/222
+
+
+**Full Changelog**: https://github.com/logspace-ai/langflow/compare/v0.0.61...v0.0.62
+
+## v0.0.61
+### What's Changed
+* refactor(validate.py): extract build_graph function to langflow.inter… by @ogabrielluiz in https://github.com/logspace-ai/langflow/pull/204
+* Update LangChain version by @ogabrielluiz in https://github.com/logspace-ai/langflow/pull/211
+* Update the Semver Specifier for `langchain` to allow for all <0.1.0 versions. by @darthtrevino in https://github.com/logspace-ai/langflow/pull/86
+* feat: add demo devcontainer by @aaronsteers in https://github.com/logspace-ai/langflow/pull/201
+* Node modal by @anovazzi1 in https://github.com/logspace-ai/langflow/pull/174
+* Auto update nodes by @anovazzi1 in https://github.com/logspace-ai/langflow/pull/218
+* Chat_and_cache by @ogabrielluiz in https://github.com/logspace-ai/langflow/pull/219
+* :sparkles: Release: Chat and Cache Improvements, Websocket Integration, and Dark Mode Enhancements :crescent_moon: by @ogabrielluiz in https://github.com/logspace-ai/langflow/pull/220
+
+#### New Contributors
+* @darthtrevino made their first contribution in https://github.com/logspace-ai/langflow/pull/86
+* @aaronsteers made their first contribution in https://github.com/logspace-ai/langflow/pull/201
+
+**Full Changelog**: https://github.com/logspace-ai/langflow/compare/v0.0.58...v0.0.61
+
 ## v0.0.58
 
 ### What's Changed
@@ -12,7 +105,7 @@
 * style(langflow): fix formatting and add type hinting to custom.py and run.py files by @ogabrielluiz in https://github.com/logspace-ai/langflow/pull/194
 * Example loader and bugfixes by @ogabrielluiz in https://github.com/logspace-ai/langflow/pull/199
 
-## New Contributors
+#### New Contributors
 * @bigKeter made their first contribution in https://github.com/logspace-ai/langflow/pull/165
 * @genome21 made their first contribution in https://github.com/logspace-ai/langflow/pull/169
 * @PaulLockett made their first contribution in https://github.com/logspace-ai/langflow/pull/87
