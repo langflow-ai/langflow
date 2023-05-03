@@ -1,0 +1,53 @@
+{
+  "mensagens": [
+    {
+      "autor": "Usuário",
+      "texto": "Olá, estou interessado em contratar um plano de telefone. Vocês poderiam me fornecer informações sobre os produtos e planos disponíveis?"
+    },
+    {
+      "autor": "Companhia de telefone",
+      "texto": "Olá! Claro, podemos te ajudar. Nós oferecemos diversos tipos de planos, que variam de acordo com a quantidade de dados, minutos de ligação e mensagens de texto. Você tem alguma preferência?"
+    },
+    {
+      "autor": "Usuário",
+      "texto": "Gostaria de saber mais sobre o plano com a maior quantidade de dados e minutos de ligação, e qual o valor mensal."
+    },
+    {
+      "autor": "Companhia de telefone",
+      "texto": "Certo, nosso plano com a maior quantidade de dados e minutos de ligação é o 'Plano Super'. Ele possui 10GB de dados, minutos de ligações ilimitados para qualquer operadora e mensagens de texto ilimitadas. O valor mensal é de R$ 120,00."
+    },
+    {
+      "autor": "Usuário",
+      "texto": "E quanto ao tempo de contrato? É possível contratar por um período menor que 1 ano?"
+    },
+    {
+      "autor": "Companhia de telefone",
+      "texto": "Sim, é possível contratar por períodos menores que 1 ano. Nós temos contratos de 6 meses e 1 ano, mas os valores podem ser diferentes. Você tem alguma preferência?"
+    },
+    {
+      "autor": "Usuário",
+      "texto": "Gostaria de saber os valores para ambos os períodos, por favor."
+    },
+    {
+      "autor": "Companhia de telefone",
+      "texto": "Para o Plano Super, o valor mensal para o contrato de 6 meses é de R$ 130,00, enquanto que para o contrato de 1 ano é de R$ 120,00."
+    },
+    {
+      "autor": "Usuário",
+      "texto": "Entendi. E em relação às regiões que vocês atendem, há alguma limitação?"
+    },
+    {
+      "autor": "Companhia de telefone",
+      "texto": "Atendemos todo o território nacional, sem limitações. Temos cobertura em todas as regiões do país."
+    },
+    {
+      "autor": "Usuário",
+      "texto": "Ótimo, muito obrigado pelas informações. Vou analisar com calma e entrar em contato novamente se tiver mais alguma dúvida."
+    },
+    {
+      "autor": "Companhia de telefone",
+      "texto": "Por nada, estamos à disposição para qualquer esclarecimento adicional. Tenha um ótimo dia!"
+    }
+  ]
+}
+
