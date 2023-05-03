@@ -3,7 +3,7 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { NodeDataType } from "../../types/flow";
-import { nodeColors, nodeIcons, snakeToNormalCase } from "../../utils";
+import { nodeColors, nodeIcons, toNormalCase } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import ModalField from "./components/ModalField";
 
@@ -99,10 +99,10 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
 																			data.node.template[t].display_name
 																				? data.node.template[t].display_name
 																				: data.node.template[t].name
-																				? snakeToNormalCase(
+																				? toNormalCase(
 																						data.node.template[t].name
 																				  )
-																				: snakeToNormalCase(t)
+																				: toNormalCase(t)
 																		}
 																		required={data.node.template[t].required}
 																		id={

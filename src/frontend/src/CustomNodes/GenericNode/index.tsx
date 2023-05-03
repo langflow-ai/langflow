@@ -3,7 +3,7 @@ import {
   classNames,
   nodeColors,
   nodeIcons,
-  snakeToNormalCase,
+  toNormalCase,
 } from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
 import { typesContext } from "../../contexts/typesContext";
@@ -192,8 +192,8 @@ export default function GenericNode({
                       data.node.template[t].display_name
                         ? data.node.template[t].display_name
                         : data.node.template[t].name
-                        ? snakeToNormalCase(data.node.template[t].name)
-                        : snakeToNormalCase(t)
+                        ? toNormalCase(data.node.template[t].name)
+                        : toNormalCase(t)
                     }
                     name={t}
                     tooltipTitle={
