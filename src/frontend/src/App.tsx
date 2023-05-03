@@ -24,7 +24,7 @@ export default function App() {
 		setShowSideBar(true);
 		setIsStackedOpen(true);
 	}, [location.pathname, setCurrent, setIsStackedOpen, setShowSideBar]);
-	const {hardReset} = useContext(TabsContext)
+	const { hardReset } = useContext(TabsContext);
 	const {
 		errorData,
 		errorOpen,
@@ -108,7 +108,7 @@ export default function App() {
 				onReset={() => {
 					window.localStorage.removeItem("tabsData");
 					window.localStorage.clear();
-					hardReset()
+					hardReset();
 					window.location.href = window.location.href;
 				}}
 				FallbackComponent={CrashErrorComponent}
@@ -158,7 +158,7 @@ export default function App() {
 			<a
 				target={"_blank"}
 				href="https://logspace.ai/"
-				className="absolute bottom-1 left-1 text-gray-500 text-xs cursor-pointer font-sans tracking-wide"
+				className="absolute bottom-2 left-6 text-gray-300 px-2 rounded-lg text-xs cursor-pointer font-sans tracking-wide bg-gray-800 dark:bg-gray-300 dark:text-gray-800	"
 			>
 				Created by Logspace
 			</a>
