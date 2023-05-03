@@ -28,9 +28,17 @@ pip install langflow
 ```
 
 Next, run:
+
+``` py
+python -m langflow
+```
+
+or
+
 ``` py
 langflow
 ```
+
 ---
 ## 🎨 Creating Flows
 
@@ -62,9 +70,12 @@ Alternatively, click the **"Open in Cloud Shell"** button below to launch Google
 ---
 ## ⚠️ Attention
 
-During your process to create flows, you may notice a red asterisk <span style="color:red">*</span>,
-which indicates that you must connect a component there to make your flow work.
-You will be able to see the component that needs to be connected if you hover over the small circle next to the asterisk.
+During your process to create flows, you may notice a colored circle <span style="color:green">o</span>, the ones that contains red asterisk <span style="color:red">*</span>, indicates that you must connect a component there to make your flow work. You will be able to see the component that needs to be connected if you hover over the small circle.
+
+At the top of the node you will see a small gear icon ⚙️, which you can click to edit the component's parameters. You also have the option to delete the component by clicking the trash can icon 🗑️.
+
+![Description](img/node_sample2.png#only-dark)
+![Description](img/node_sample.png#only-light)
 
 Flows can be exported as JSON files and imported as JSON files.
 
