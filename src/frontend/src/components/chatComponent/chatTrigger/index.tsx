@@ -5,7 +5,7 @@ import { PopUpContext } from "../../../contexts/popUpContext";
 import { useContext } from "react";
 import ChatModal from "../../../modals/chatModal";
 
-export default function ChatTrigger({open, setOpen,flow}){
+export default function ChatTrigger({open, setOpen}){
     const {openPopUp} = useContext(PopUpContext)
     return(<Transition
         show={!open}
