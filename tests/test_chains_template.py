@@ -435,5 +435,16 @@ def test_time_travel_guide_chain(client: TestClient):
         "list": False,
         "advanced": False,
     }
+    assert template["memory"] == {
+        "required": False,
+        "placeholder": "",
+        "show": True,
+        "multiline": False,
+        "password": False,
+        "name": "memory",
+        "type": "BaseChatMemory",
+        "list": False,
+        "advanced": False,
+    }
 
     assert chain["description"] == "Time travel guide chain to be used in the flow."
