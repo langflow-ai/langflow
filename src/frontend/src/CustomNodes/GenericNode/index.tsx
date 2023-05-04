@@ -34,7 +34,6 @@ export default function GenericNode({
   const { reactFlowInstance } = useContext(typesContext);
   const [params, setParams] = useState([]);
 
-  console.log();
 
   useEffect(() => {
     if (reactFlowInstance) {
@@ -53,15 +52,13 @@ export default function GenericNode({
           body: JSON.stringify(reactFlowInstance.toObject()),
         });
 
-        console.log(response.status, response.body);
-
         if (response.status === 200) {
           setValidationStatus("success");
         } else if (response.status === 500) {
           setValidationStatus("error");
         }
       } catch (error) {
-        console.error("Error validating node:", error);
+        // console.error("Error validating node:", error);
         setValidationStatus("error");
       }
     }, 1000), // Adjust the debounce delay (500ms) as needed
