@@ -150,6 +150,13 @@ class TimeTravelGuideChainNode(FrontendNode):
                 multiline=False,
                 name="llm",
             ),
+            TemplateField(
+                field_type="BaseChatMemory",
+                required=False,
+                show=True,
+                name="memory",
+                advanced=False,
+            ),
         ],
     )
     description: str = "Time travel guide chain to be used in the flow."
