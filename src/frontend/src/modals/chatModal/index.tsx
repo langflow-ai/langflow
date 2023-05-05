@@ -26,9 +26,15 @@ export default function ChatModal({
 	const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
 	const { reactFlowInstance } = useContext(typesContext);
 	const { setErrorData, setNoticeData } = useContext(alertContext);
-	const [isStreaming,setIsStreaming] = useState()
-	const [ws, setWs] = useState<WebSocket | null>(null);
+	const ws = useRef<WebSocket|null>(null)
 	const [lockChat, setLockChat] = useState(false);
+	const isOpen = useRef(open);
+
+	useEffect(() => {
+		isOpen.current = open;
+	}, [open]);
+	var isStream = false;
+
 	const addChatHistory = (
 		message: string,
 		isSend: boolean,
@@ -47,9 +53,86 @@ export default function ChatModal({
 			return newChat;
 		});
 	};
+	
 
-	function checkOpenFunction(){
-		return open
+	function updateLastMessage(str: string) {
+		console.log(str);
+		setChatHistory((old) => {
+			let newChat = [...old];
+			newChat[newChat.length - 1].message =
+				newChat[newChat.length - 1].message + str;
+			return newChat;
+		});
+	}
+
+	function handleOnClose(event: CloseEvent) {
+		if (isOpen.current) {
+			setLockChat(false);
+			setTimeout(() => {
+				connectWS()
+			}, 1000);
+		}
+	}
+
+	function handleWsMessage(data: any) {
+		if (Array.isArray(data)) {
+			//set chat history
+			setChatHistory((_) => {
+				let newChatHistory: ChatMessageType[] = [];
+				data.forEach(
+					(chatItem: {
+						intermediate_steps?: "string";
+						is_bot: boolean;
+						message: string;
+						type: string;
+						files?: Array<any>;
+					}) => {
+						if (chatItem.message) {
+							newChatHistory.push(
+								chatItem.files
+									? {
+											isSend: !chatItem.is_bot,
+											message: chatItem.message,
+											thought: chatItem.intermediate_steps,
+											files: chatItem.files,
+									  }
+									: {
+											isSend: !chatItem.is_bot,
+											message: chatItem.message,
+											thought: chatItem.intermediate_steps,
+									  }
+							);
+						}
+					}
+				);
+				return newChatHistory;
+			});
+		}
+		if (data.type === "start") {
+			console.log("start");
+			addChatHistory("", false);
+			isStream = true;
+		}
+		if (data.type === "end") {
+			setLockChat(false);
+			isStream = false;
+			// if (data.files) {
+			// 	addChatHistory(
+			// 		data.message,
+			// 		false,
+			// 		data.intermediate_steps,
+			// 		data.files
+			// 	);
+			// } else {
+			// 	addChatHistory(data.message, false, data.intermediate_steps);
+			// }
+		}
+		if (data.type === "file") {
+			console.log(data);
+		}
+		if (data.type === "stream" && isStream) {
+			updateLastMessage(data.message);
+		}
 	}
 
 	function connectWS() {
@@ -65,76 +148,28 @@ export default function ChatModal({
 			newWs.onopen = () => {
 				console.log("WebSocket connection established!");
 			};
-			console.log(flow.id)
+			console.log(flow.id);
 			newWs.onmessage = (event) => {
-				setLockChat(false);
 				const data = JSON.parse(event.data);
 				console.log("Received data:", data);
+				handleWsMessage(data);
 				//get chat history
-				if (Array.isArray(data)) {
-					console.log(data);
-
-					setChatHistory((_) => {
-						let newChatHistory: ChatMessageType[] = [];
-						data.forEach(
-							(chatItem: {
-								intermediate_steps?: "string";
-								is_bot: boolean;
-								message: string;
-								type: string;
-								files?: Array<any>;
-							}) => {
-								if (chatItem.message) {
-									newChatHistory.push(
-										chatItem.files
-											? {
-													isSend: !chatItem.is_bot,
-													message: chatItem.message,
-													thought: chatItem.intermediate_steps,
-													files: chatItem.files,
-											  }
-											: {
-													isSend: !chatItem.is_bot,
-													message: chatItem.message,
-													thought: chatItem.intermediate_steps,
-											  }
-									);
-								}
-							}
-						);
-						return newChatHistory;
-					});
-				}
-				if (data.type === "end") {
-					if (data.files) {
-						addChatHistory(
-							data.message,
-							false,
-							data.intermediate_steps,
-							data.files
-						);
-					} else {
-						addChatHistory(data.message, false, data.intermediate_steps);
-					}
-				}
-				if (data.type === "file") {
-					console.log(data);
-				}
 			};
-			newWs.onclose = (_) => {
-				if(checkOpenFunction){
-					setLockChat(false);
-					setTimeout(() => {
-						connectWS();
-					}, 1000);
-				}
+			newWs.onclose = (event) => {
+				handleOnClose(event);
 			};
 			newWs.onerror = (ev) => {
 				console.log(ev, "error");
+				setErrorData({
+					title: "There was an error on web connection, please: ",
+					list: [
+						"Refresh the page",
+						"Use a new flow tab",
+						"Check if the backend is up",
+					],
+				});
 			};
-			setWs(newWs);
-
-			return newWs;
+			ws.current=newWs
 		} catch {
 			setErrorData({
 				title: "There was an error on web connection, please: ",
@@ -148,25 +183,21 @@ export default function ChatModal({
 	}
 
 	useEffect(() => {
-		let newWs = connectWS();
+		connectWS();
 		return () => {
-			newWs.close();
+			console.log("unmount")
+			console.log(ws)
+			if (ws) {
+				ws.current.close();
+			}
 		};
 	}, []);
 
-	useEffect(() => {
-		if (ws && (ws.readyState === ws.CLOSED || ws.readyState === ws.CLOSING)) {
-			let newWs = connectWS();
-			return () => {
-				newWs.close();
-			};
-		}
-	}, [lockChat]);
 
 	async function sendAll(data: sendAllProps) {
 		try {
 			if (ws) {
-				ws.send(JSON.stringify(data));
+				ws.current.send(JSON.stringify(data));
 			}
 		} catch (error) {
 			setErrorData({
@@ -181,12 +212,6 @@ export default function ChatModal({
 	useEffect(() => {
 		if (ref.current) ref.current.scrollIntoView({ behavior: "smooth" });
 	}, [chatHistory]);
-
-	useEffect(() => {
-		if (ws && ws.readyState === ws.CLOSED) {
-			setLockChat(false);
-		}
-	}, [lockChat]);
 
 	function validateNode(n: NodeType): Array<string> {
 		if (!n.data?.node?.template || !Object.keys(n.data.node.template)) {
@@ -244,7 +269,6 @@ export default function ChatModal({
 				let message = chatValue;
 				setChatValue("");
 				addChatHistory(message, true);
-
 				sendAll({
 					...reactFlowInstance.toObject(),
 					message,
@@ -267,7 +291,7 @@ export default function ChatModal({
 	}
 	function clearChat() {
 		setChatHistory([]);
-		ws.send(JSON.stringify({ clear_history: true }));
+		ws.current.send(JSON.stringify({ clear_history: true }));
 	}
 
 	function setModalOpen(x: boolean) {
