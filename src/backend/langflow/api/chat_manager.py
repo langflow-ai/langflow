@@ -106,18 +106,18 @@ class ChatManager:
         # Process the graph data and chat message
         chat_message = payload.pop("message", "")
         chat_message = ChatMessage(message=chat_message)
-        self.chat_history.add_message(client_id, chat_message)
+        await self.send_json(client_id, chat_message)
 
         graph_data = payload
         start_resp = ChatResponse(message=None, type="start", intermediate_steps="")
-        self.chat_history.add_message(client_id, start_resp)
+        await self.send_json(client_id, start_resp)
 
         is_first_message = len(self.chat_history.get_history(client_id=client_id)) == 0
         # Generate result and thought
         try:
             logger.debug("Generating result and thought")
 
-            result, intermediate_steps = await process_graph(
+            _, intermediate_steps = await process_graph(
                 graph_data=graph_data,
                 is_first_message=is_first_message,
                 chat_message=chat_message,
@@ -149,7 +149,7 @@ class ChatManager:
             type="end",
             files=file_responses,
         )
-        self.chat_history.add_message(client_id, response)
+        await self.send_json(client_id, response)
 
     async def handle_websocket(self, client_id: str, websocket: WebSocket):
         await self.connect(client_id, websocket)
@@ -172,15 +172,24 @@ class ChatManager:
 
                 with self.cache_manager.set_client_id(client_id):
                     await self.process_message(client_id, payload)
+                # After the message is sent, wait for message built
+                final_message = await websocket.receive_json()
+                # If the message is a string, it is a chat message
+                chat_response = ChatResponse.parse_obj(final_message)
+                self.chat_history.add_message(client_id, chat_response)
+
         except Exception as e:
             # Handle any exceptions that might occur
             logger.exception(e)
             # send a message to the client
-            await self.active_connections[client_id].close(code=1000, reason=str(e))
+            raise e
         finally:
-            # await self.active_connections[client_id].close(
-            #     code=1000, reason="Client disconnected"
-            # )
+            try:
+                await self.active_connections[client_id].close(
+                    code=1000, reason="Client disconnected"
+                )
+            except Exception as e:
+                logger.exception(e)
             self.disconnect(client_id)
 
 
