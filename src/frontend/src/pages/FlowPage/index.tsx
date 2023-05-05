@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useRef } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import ReactFlow, {
   Background,
   Controls,
@@ -10,6 +10,8 @@ import ReactFlow, {
   EdgeChange,
   Connection,
   Edge,
+  useKeyPress,
+  useOnSelectionChange,
 } from "reactflow";
 import { locationContext } from "../../contexts/locationContext";
 import ExtraSidebar from "./components/extraSidebarComponent";
@@ -36,6 +38,76 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 		useContext(typesContext);
 	const reactFlowWrapper = useRef(null);
 
+  const copied = useKeyPress(['Meta+c', 'Strg+c'])
+  const pasted = useKeyPress(['Meta+v', 'Strg+v'])
+  const [lastSelection, setLastSelection] = useState(null);
+  const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
+
+  useOnSelectionChange({
+    onChange: (flow) => {setLastSelection(flow);},
+  })
+
+  useEffect(() => {
+    if(copied === true && lastSelection){
+      setLastCopiedSelection(lastSelection);
+    }
+  }, [copied])
+
+  useEffect(() => {
+    if(pasted === true && lastCopiedSelection){
+      let maximumHeight = 0;
+      let minimumHeight = Infinity;
+      let idsMap = {};
+      lastCopiedSelection.nodes.forEach((n) => {
+        if(n.height + n.position.y > maximumHeight){
+          maximumHeight = n.height + n.position.y;
+        }
+        if(n.position.y < minimumHeight){
+          minimumHeight = n.position.y;
+        }
+      });
+      let heightDifference = maximumHeight - minimumHeight + 30;
+
+      lastCopiedSelection.nodes.forEach((n) => {
+
+        // Generate a unique node ID
+        let newId = getId();
+        idsMap[n.id] = newId;
+
+        // Create a new node object
+        const newNode: NodeType = {
+          id: newId,
+          type: "genericNode",
+          position: {
+            x: n.position.x,
+            y: n.position.y + heightDifference,
+          },
+          data: {
+            ...n.data,
+            id: newId,
+          },
+        };
+
+        // Add the new node to the list of nodes in state
+        setNodes((nds) => nds.map((e) => ({...e, selected: false})).concat({...newNode, selected: false}));
+      })
+
+      lastCopiedSelection.edges.forEach((e) => {
+        let source = idsMap[e.source];
+        let target = idsMap[e.target];
+        let sourceHandleSplitted = e.sourceHandle.split('|');
+        let sourceHandle = sourceHandleSplitted[0] + '|' + source + '|' + sourceHandleSplitted.slice(2).join('|');
+        let targetHandleSplitted = e.targetHandle.split('|');
+        let targetHandle = targetHandleSplitted.slice(0, -1).join('|') + '|' + target;
+        let id = "reactflow__edge-" + source + sourceHandle + "-" + target + targetHandle;
+        setEdges((eds) =>
+          addEdge({ source, target, sourceHandle, targetHandle, id, className: "animate-pulse", selected: false }, eds.map((e) => ({...e, selected: false})))
+        );
+      })
+    }
+  }, [pasted])
+
+
   const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
   const { setErrorData } = useContext(alertContext);
   const [nodes, setNodes, onNodesChange] = useNodesState(
@@ -46,6 +118,10 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
   );
   const { setViewport } = useReactFlow();
   const edgeUpdateSuccessful = useRef(true);
+
+  function getId() {
+    return `dndnode_` + incrementNodeId();
+  }
 
   useEffect(() => {
     if (reactFlowInstance && flow) {
@@ -100,11 +176,6 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
-
-      // Helper function to generate a unique node ID
-      function getId() {
-        return `dndnode_` + incrementNodeId();
-      }
 
       // Get the current bounds of the ReactFlow wrapper element
       const reactflowBounds = reactFlowWrapper.current.getBoundingClientRect();
