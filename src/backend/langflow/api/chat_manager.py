@@ -144,7 +144,7 @@ class ChatManager:
                     break
 
         response = ChatResponse(
-            message=result or "",
+            message="",
             intermediate_steps=intermediate_steps.strip(),
             type="end",
             files=file_responses,
