@@ -185,8 +185,11 @@ def fix_memory_inputs(langchain_object):
             update_memory_keys(langchain_object, possible_new_mem_key)
 
 
-def get_result_and_steps(langchain_object, message: str):
+async def get_result_and_steps(langchain_object, message: str, callbacks=None):
     """Get result and thought from extracted json"""
+
+    if callbacks is None:
+        callbacks = []
     try:
         if hasattr(langchain_object, "verbose"):
             langchain_object.verbose = True
@@ -206,17 +209,17 @@ def get_result_and_steps(langchain_object, message: str):
             # https://github.com/hwchase17/langchain/issues/2068
             # Deactivating until we have a frontend solution
             # to display intermediate steps
-            langchain_object.return_intermediate_steps = False
+            langchain_object.return_intermediate_steps = True
 
         fix_memory_inputs(langchain_object)
 
         with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
             try:
-                output = langchain_object(chat_input)
+                output = await langchain_object.acall(chat_input, callbacks=callbacks)
             except ValueError as exc:
                 # make the error message more informative
                 logger.debug(f"Error: {str(exc)}")
-                output = langchain_object.run(chat_input)
+                output = langchain_object.run(chat_input, callbacks=callbacks)
 
             intermediate_steps = (
                 output.get("intermediate_steps", []) if isinstance(output, dict) else []

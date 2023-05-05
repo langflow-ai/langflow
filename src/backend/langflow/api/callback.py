@@ -1,6 +1,7 @@
+import asyncio
 from typing import Any
 
-from langchain.callbacks.base import AsyncCallbackHandler
+from langchain.callbacks.base import AsyncCallbackHandler, BaseCallbackHandler
 
 from langflow.api.schemas import ChatResponse
 
