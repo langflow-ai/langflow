@@ -40,12 +40,30 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 
   const copied = useKeyPress(['Meta+c', 'Strg+c'])
   const pasted = useKeyPress(['Meta+v', 'Strg+v'])
+  const undo = useKeyPress(['Meta+z', 'Strg+z'])
+  const redo = useKeyPress(['Meta+Shift+z', 'Strg+Shift+z'])
   const [lastSelection, setLastSelection] = useState(null);
   const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
+  const [actualActionIndex] = useState(0);
+
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = (event) => {
+    setPosition({ x: event.clientX, y: event.clientY });
+  };
 
   useOnSelectionChange({
     onChange: (flow) => {setLastSelection(flow);},
   })
+
+  useEffect(() => {
+    if(undo) {
+      
+    }
+    else if(redo) {
+      
+    }
+  }, [redo, undo])
 
   useEffect(() => {
     if(copied === true && lastSelection){
@@ -55,18 +73,23 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 
   useEffect(() => {
     if(pasted === true && lastCopiedSelection){
-      let maximumHeight = 0;
-      let minimumHeight = Infinity;
+      let minimumX = Infinity;
+      let minimumY = Infinity;
       let idsMap = {};
       lastCopiedSelection.nodes.forEach((n) => {
-        if(n.height + n.position.y > maximumHeight){
-          maximumHeight = n.height + n.position.y;
+        if(n.position.y < minimumY){
+          minimumY = n.position.y
         }
-        if(n.position.y < minimumHeight){
-          minimumHeight = n.position.y;
+        if(n.position.x < minimumX){
+          minimumX = n.position.x;
         }
       });
-      let heightDifference = maximumHeight - minimumHeight + 30;
+
+      const bounds = reactFlowWrapper.current.getBoundingClientRect();
+      const insidePosition = reactFlowInstance.project({
+            x: position.x - bounds.left,
+            y: position.y - bounds.top
+      });
 
       lastCopiedSelection.nodes.forEach((n) => {
 
@@ -79,8 +102,8 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
           id: newId,
           type: "genericNode",
           position: {
-            x: n.position.x,
-            y: n.position.y + heightDifference,
+            x: insidePosition.x + n.position.x - minimumX,
+            y: insidePosition.y + n.position.y - minimumY,
           },
           data: {
             ...n.data,
@@ -257,7 +280,7 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 	  }, []);
 	  
 	return (
-		<div className="w-full h-full" ref={reactFlowWrapper}>
+		<div className="w-full h-full" onMouseMove={handleMouseMove} ref={reactFlowWrapper}>
 			{Object.keys(templates).length > 0 && Object.keys(types).length > 0 ? (
 				<>
 					<ReactFlow
