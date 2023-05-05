@@ -12,6 +12,10 @@ import ReactFlow, {
   Edge,
   useKeyPress,
   useOnSelectionChange,
+  NodeDragHandler,
+  OnEdgesDelete,
+  OnNodesDelete,
+  SelectionDragHandler,
 } from "reactflow";
 import { locationContext } from "../../contexts/locationContext";
 import ExtraSidebar from "./components/extraSidebarComponent";
@@ -24,6 +28,7 @@ import ConnectionLineComponent from "./components/ConnectionLineComponent";
 import { FlowType, NodeType } from "../../types/flow";
 import { APIClassType } from "../../types/api";
 import { isValidConnection } from "../../utils";
+import useUndoRedo from "./hooks/useUndoRedo";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -38,13 +43,25 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 		useContext(typesContext);
 	const reactFlowWrapper = useRef(null);
 
-  const copied = useKeyPress(['Meta+c', 'Strg+c'])
-  const pasted = useKeyPress(['Meta+v', 'Strg+v'])
-  const undo = useKeyPress(['Meta+z', 'Strg+z'])
-  const redo = useKeyPress(['Meta+Shift+z', 'Strg+Shift+z'])
+  const { undo, redo, canUndo, canRedo, takeSnapshot } = useUndoRedo();
+
+  const copied = useKeyPress(['Meta+c', 'Strg+c']);
+  const pasted = useKeyPress(['Meta+v', 'Strg+v']);
+  const undoed = useKeyPress(['Meta+z', 'Strg+z']);
+  const redoed = useKeyPress(['Meta+Shift+z', 'Strg+Shift+z']);
+
+  useEffect(() => {
+    if(canUndo && undoed){
+      undo();
+    }
+    if(canRedo && redoed){
+      redo();
+    }
+
+  }, [undoed, redoed])
+
   const [lastSelection, setLastSelection] = useState(null);
   const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
-  const [actualActionIndex] = useState(0);
 
   const [position, setPosition] = useState({ x: 0, y: 0 });
 
@@ -55,15 +72,6 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
   useOnSelectionChange({
     onChange: (flow) => {setLastSelection(flow);},
   })
-
-  useEffect(() => {
-    if(undo) {
-      
-    }
-    else if(redo) {
-      
-    }
-  }, [redo, undo])
 
   useEffect(() => {
     if(copied === true && lastSelection){
@@ -180,6 +188,7 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 
   const onConnect = useCallback(
     (params: Connection) => {
+      takeSnapshot();
       setEdges((eds) =>
         addEdge({ ...params, className: "animate-pulse" }, eds)
       );
@@ -188,8 +197,25 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
         return newX;
       });
     },
-    [setEdges, setNodes]
+    [setEdges, setNodes, takeSnapshot]
   );
+
+  const onNodeDragStart: NodeDragHandler = useCallback(() => {
+    // 👇 make dragging a node undoable
+    takeSnapshot();
+    // 👉 you can place your event handlers here
+  }, [takeSnapshot]);
+
+  const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
+    // 👇 make dragging a selection undoable
+    takeSnapshot();
+  }, [takeSnapshot]);
+
+
+  const onEdgesDelete: OnEdgesDelete = useCallback(() => {
+    // 👇 make deleting edges undoable
+    takeSnapshot();
+  }, [takeSnapshot]);
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -199,6 +225,7 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
+      takeSnapshot();
 
       // Get the current bounds of the ReactFlow wrapper element
       const reactflowBounds = reactFlowWrapper.current.getBoundingClientRect();
@@ -246,16 +273,17 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
       }
     },
     // Specify dependencies for useCallback
-    [incrementNodeId, reactFlowInstance, setErrorData, setNodes]
+    [incrementNodeId, reactFlowInstance, setErrorData, setNodes, takeSnapshot]
   );
 
-  const onDelete = (mynodes) => {
+  const onDelete = useCallback((mynodes) => {
+    takeSnapshot();
     setEdges(
       edges.filter(
         (ns) => !mynodes.some((n) => ns.source === n.id || ns.target === n.id)
       )
     );
-  };
+  }, [takeSnapshot, edges, setEdges]);
 
   const onEdgeUpdateStart = useCallback(() => {
     edgeUpdateSuccessful.current = false;
@@ -298,6 +326,9 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 						onEdgeUpdate={onEdgeUpdate}
 						onEdgeUpdateStart={onEdgeUpdateStart}
 						onEdgeUpdateEnd={onEdgeUpdateEnd}
+            onNodeDragStart={onNodeDragStart}
+            onSelectionDragStart={onSelectionDragStart}
+            onEdgesDelete={onEdgesDelete}
 						connectionLineComponent={ConnectionLineComponent}
 						onDragOver={onDragOver}
 						onDrop={onDrop}
