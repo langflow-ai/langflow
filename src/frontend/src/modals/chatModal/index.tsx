@@ -26,6 +26,7 @@ export default function ChatModal({
 	const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
 	const { reactFlowInstance } = useContext(typesContext);
 	const { setErrorData, setNoticeData } = useContext(alertContext);
+	const [isStreaming,setIsStreaming] = useState()
 	const [ws, setWs] = useState<WebSocket | null>(null);
 	const [lockChat, setLockChat] = useState(false);
 	const addChatHistory = (
@@ -47,6 +48,10 @@ export default function ChatModal({
 		});
 	};
 
+	function checkOpenFunction(){
+		return open
+	}
+
 	function connectWS() {
 		try {
 			const urlWs =
@@ -60,6 +65,7 @@ export default function ChatModal({
 			newWs.onopen = () => {
 				console.log("WebSocket connection established!");
 			};
+			console.log(flow.id)
 			newWs.onmessage = (event) => {
 				setLockChat(false);
 				const data = JSON.parse(event.data);
@@ -116,10 +122,12 @@ export default function ChatModal({
 				}
 			};
 			newWs.onclose = (_) => {
-				setLockChat(false);
-				setTimeout(() => {
-					connectWS();
-				}, 1000);
+				if(checkOpenFunction){
+					setLockChat(false);
+					setTimeout(() => {
+						connectWS();
+					}, 1000);
+				}
 			};
 			newWs.onerror = (ev) => {
 				console.log(ev, "error");
@@ -142,7 +150,6 @@ export default function ChatModal({
 	useEffect(() => {
 		let newWs = connectWS();
 		return () => {
-			console.log("trigger");
 			newWs.close();
 		};
 	}, []);
@@ -151,7 +158,6 @@ export default function ChatModal({
 		if (ws && (ws.readyState === ws.CLOSED || ws.readyState === ws.CLOSING)) {
 			let newWs = connectWS();
 			return () => {
-				console.log("trigger");
 				newWs.close();
 			};
 		}
