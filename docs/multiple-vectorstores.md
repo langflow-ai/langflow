@@ -1,10 +1,15 @@
-### ⛓️LangFlow example:
+`VectorStoreRouterAgent` construct an agent that routes between vector stores.
+
+![Description](img/single_node/mult_vect.png#only-light)
+![Description](img/single_node/mult_vect2.png#only-dark)
+
+For more information about [VectorStoreRouterAgent](https://python.langchain.com/en/latest/modules/agents/agent_executors/examples/agent_vectorstore.html?highlight=Router){.internal-link target=_blank}, check out the LangChain documentation.
+
+### ⛓️LangFlow example
 ![Description](img/multiple-vectorstores.png#only-dark)
 ![Description](img/multiple-vectorstores.png#only-light)
 
 [Get JSON file](data/Multiple_vectorstores.json){: .md-button download="Multiple_vectorstores"} 
-
-## Nodes
 
 `TextLoader` loads text from a file.
 
@@ -45,7 +50,8 @@ The `OpenAIEmbeddings`, wrapper around [OpenAI Embeddings](https://platform.open
 
 A `VectorStoreInfo` set information about the vector store, such as the name and description.
 
-#### First VectorStoreInfo
+**First VectorStoreInfo**
+
 Name:
 ``` txt
 state_of_union_address
@@ -54,7 +60,8 @@ Description:
 ``` txt
 the most recent state of the Union address
 ```
-#### Second VectorStoreInfo
+**Second VectorStoreInfo**
+
 Name:
 ``` txt
 ruff
@@ -65,8 +72,6 @@ Information about the Ruff python linting library
 ```
 The `VectorStoreRouterToolkit` is a toolkit that allows you to create a `VectorStoreRouter` agent. This allows it to route between vector stores.
 
-We used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/){.internal-link target=_blank} requires you to create an account to get your API key.
+For the example, we used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/){.internal-link target=_blank} requires you to create an account to get your API key.
 
-Check the short tutorial of [OpenAI](llms.md){.internal-link target=_blank} options available.
-
-`VectorStoreRouterAgent` construct an agent that routes between vector stores.
+Check out the [OpenAI](https://platform.openai.com/docs/introduction/overview){.internal-link target=_blank} documentation to learn more about the API and the options that contain in the node.

@@ -27,17 +27,29 @@ theme:
         icon: material/lightbulb-outline
         name: Switch to dark mode
   features:
-    - content.code.annotation
-    - content.code.copy
-    - search.suggest
-    - search.highlight
-    - content.tabs.link
     - announce.dismiss
-    # - navigation.tabs
-    - navigation.sections
+    # - content.action.edit
+    # - content.action.view
+    - content.code.annotate
+    - content.code.copy
+    - content.tabs.link
+    - content.tooltips
+    # - header.autohide
+    # - navigation.expand
+    - navigation.footer
+    - navigation.indexes
+    - navigation.instant
+    - navigation.prune
+    # - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.top
     - navigation.tracking
-    - releases
+    - search.highlight
+    - search.share
+    - search.suggest
+    - toc.follow
+    
   icon:
     repo: fontawesome/brands/github-alt
   logo: img/chain.png
@@ -65,30 +77,35 @@ plugins:
 
 # Page tree
 nav:
-  - Getting Started:
-      - index.md
-  - LangFlow Examples:
-      - Memories: 
-        - Conversation Summary Memory: conversation-summary-memory.md
-        - Conversation Buffer Memory: conversation-buffer-memory.md
-      - Chains: 
-        - LLMChain: llmchain.md
-        - Series Character Chain: series-character-chain.md
-        - MidJourney Prompt Chain: midjourney-prompt-chain.md
-        - Time Travel Guide Chain: time-travel-guide-chain.md
-      - Agents:
-        - Vector Store Agent: vectorstore-agent.md
-        - Multiple Vectorstores: multiple-vectorstores.md
-        - JSON Agent: json-agent.md
-      - Tools:
-        - PAL-MATH: tool-pal-math.md
-        - Serp API: serp-api.md
-      - Document Loaders:
-        - PyPDFLoader: py-pdf-loader.md
-        - CSVLoader: csv-loader.md
-      - LLMs: llms.md
-  - GCP Deployment: GCP_DEPLOYMENT.md
-  - Release Notes: releases.md
+  - Getting started:
+    - LangFlow: 
+        - index.md
+    - Installation: installation.md
+    - Create Flow: create-flows.md
+    - Guidelines: guidelines.md
+  - Examples:
+    - Memories:
+      - Conversation Summary Memory: conversation-summary-memory.md
+      - Conversation Buffer Memory: conversation-buffer-memory.md  
+    - Chains:
+      - LLMChain: llmchain.md
+      - Series Character Chain: series-character-chain.md
+      - MidJourney Prompt Chain: midjourney-prompt-chain.md
+      - Time Travel Guide Chain: time-travel-guide-chain.md  
+    - Agents:
+      - Vector Store Agent: vectorstore-agent.md
+      - Multiple Vectorstores: multiple-vectorstores.md
+      - JSON Agent: json-agent.md  
+    - Tools:
+      - PAL-MATH: tool-pal-math.md
+      - Serp API: serp-api.md
+    - Document Loaders:
+      - PyPDFLoader: py-pdf-loader.md
+      - CSVLoader: csv-loader.md
+  - GCP Deployment: 
+    - GCP_DEPLOYMENT.md
+  - Release Notes:
+    - releases.md
   - Contributing: help-langflow.md
 
 # Customization

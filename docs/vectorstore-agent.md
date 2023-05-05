@@ -1,11 +1,16 @@
-### ⛓️LangFlow example:
+The `VectoStoreAgent`is an agent designed to retrieve information from one or more vector stores, either with or without sources.
+
+![Description](img/single_node/vec_sto_agt.png#only-light)
+![Description](img/single_node/vec_sto_agt2.png#only-dark)
+
+Check out the [VectoStoreAgent](https://python.langchain.com/en/latest/modules/agents/toolkits/examples/vectorstore.html){.internal-link target=_blank} in the LangChain documentation.
+
+### ⛓️LangFlow example
 
 ![Description](img/vectorstore-agent.png#only-dark)
 ![Description](img/vectorstore-agent.png#only-light)
 
 [Get JSON file](data/Vectorstore_agent.json){: .md-button download="Vectorstore_agent"} 
-
-## Nodes
 
 By using `WebBaseLoader`, you can load all text from webpages into a document format that we can use downstream. Web path used:
 ``` txt
@@ -50,10 +55,6 @@ Description used:
 Information about the Ruff python linting library
 ```
 
-We used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/){.internal-link target=_blank} requires you to create an account to get it yours.
+For the example, we used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/){.internal-link target=_blank} requires you to create an account to get your API key.
 
-Check the short tutorial of [OpenAI](llms.md){.internal-link target=_blank} options available.
-
-
-
-The `VectoStoreAgent`is an agent designed to retrieve information from one or more vector stores, either with or without sources.
+Check out the [OpenAI](https://platform.openai.com/docs/introduction/overview){.internal-link target=_blank} documentation to learn more about the API and the options that contain in the node.

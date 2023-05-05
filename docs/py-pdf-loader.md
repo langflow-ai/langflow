@@ -1,16 +1,17 @@
-### ⛓️LangFlow example:
+With `PyPDFLoader`, you can load a PDF file with pypdf and chunks at a character level.
+
+File path: [Get PDF file](data/example.pdf){.internal-link target=_blank}
+
+![Description](img/single_node/pypdf.png#only-light)
+![Description](img/single_node/pypdf2.png#only-dark)
+
+You can check more about the [PyPDFLoader](https://python.langchain.com/en/latest/modules/indexes/document_loaders/examples/pdf.html?highlight=PDF){.internal-link target=_blank} in the LangChain documentation.
+### ⛓️LangFlow example
 
 ![Description](img/py-pdf-loader.png#only-dark)
 ![Description](img/py-pdf-loader.png#only-light)
 
 [Get JSON file](data/Py_pdf_loader.json){: .md-button download="Py_pdf_loader"} 
-
-## Nodes
-
-With `PyPDFLoader`, you can load a PDF file with pypdf and chunks at a character level.
-
-File path: [Get PDF file](data/example.pdf){.internal-link target=_blank}
-
 
 `CharacterTextSplitter` implements splitting text based on characters. 
 
@@ -52,9 +53,9 @@ Description used:
 USENIX Example Paper.
 ```
 
-We used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/){.internal-link target=_blank} requires you to create an account to get your API key.
+For the example, we used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/){.internal-link target=_blank} requires you to create an account to get your API key.
 
-Check the short tutorial of [OpenAI](llms.md){.internal-link target=_blank} options available.
+Check out the [OpenAI](https://platform.openai.com/docs/introduction/overview){.internal-link target=_blank} documentation to learn more about the API and the options that contain in the node.
 
 
 

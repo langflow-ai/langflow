@@ -1,4 +1,4 @@
-## Latest Changes
+# Latest Changes
 
 :sparkles: Release: Chat and Cache Improvements, Websocket Integration, and Dark Mode Enhancements :crescent_moon:
 This release brings a series of new features and improvements, including:
