@@ -47,7 +47,7 @@ def memoize_dict(maxsize=128):
         def clear_cache():
             cache.clear()
 
-        wrapper.clear_cache = clear_cache
+        wrapper.clear_cache = clear_cache  # type: ignore
         return wrapper
 
     return decorator
@@ -119,7 +119,8 @@ def save_binary_file(content: str, file_name: str, accepted_types: list[str]) ->
 
     # Get the destination folder
     cache_path = Path(tempfile.gettempdir()) / PREFIX
-
+    if content is None:
+        raise ValueError("Please, reload the file in the loader.")
     data = content.split(",")[1]
     decoded_bytes = base64.b64decode(data)
 

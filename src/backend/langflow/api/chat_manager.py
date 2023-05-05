@@ -5,6 +5,7 @@ from typing import Dict, List
 
 from fastapi import WebSocket
 
+from langflow.api.callback import StreamingLLMCallbackHandler
 from langflow.api.schemas import ChatMessage, ChatResponse, FileResponse
 from langflow.cache import cache_manager
 from langflow.cache.manager import Subject
@@ -143,7 +144,7 @@ class ChatManager:
                     break
 
         response = ChatResponse(
-            message=result or "",
+            message="",
             intermediate_steps=intermediate_steps.strip(),
             type="end",
             files=file_responses,
@@ -175,14 +176,11 @@ class ChatManager:
             # Handle any exceptions that might occur
             logger.exception(e)
             # send a message to the client
-            await self.active_connections[client_id].close(
-                code=1011, reason=str(e)
-            )
-
+            await self.active_connections[client_id].close(code=1000, reason=str(e))
         finally:
-            await self.active_connections[client_id].close(
-                code=1000, reason="Client disconnected"
-            )
+            # await self.active_connections[client_id].close(
+            #     code=1000, reason="Client disconnected"
+            # )
             self.disconnect(client_id)
 
 
@@ -205,8 +203,9 @@ async def process_graph(
     # Generate result and thought
     try:
         logger.debug("Generating result and thought")
-        result, intermediate_steps = get_result_and_steps(
-            langchain_object, chat_message.message or ""
+        stream_handler = StreamingLLMCallbackHandler(websocket)
+        result, intermediate_steps = await get_result_and_steps(
+            langchain_object, chat_message.message or "", callbacks=[stream_handler]
         )
         logger.debug("Generated result and intermediate_steps")
         return result, intermediate_steps
