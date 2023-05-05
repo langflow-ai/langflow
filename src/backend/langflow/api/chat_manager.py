@@ -175,8 +175,10 @@ class ChatManager:
             # Handle any exceptions that might occur
             logger.exception(e)
             # send a message to the client
-            await self.send_message(client_id, str(e))
-            raise e
+            await self.active_connections[client_id].close(
+                code=1011, reason=str(e)
+            )
+
         finally:
             await self.active_connections[client_id].close(
                 code=1000, reason="Client disconnected"
