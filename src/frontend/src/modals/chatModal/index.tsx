@@ -26,7 +26,7 @@ export default function ChatModal({
 	const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
 	const { reactFlowInstance } = useContext(typesContext);
 	const { setErrorData, setNoticeData } = useContext(alertContext);
-	const ws = useRef<WebSocket|null>(null)
+	const ws = useRef<WebSocket | null>(null);
 	const [lockChat, setLockChat] = useState(false);
 	const isOpen = useRef(open);
 
@@ -53,14 +53,19 @@ export default function ChatModal({
 			return newChat;
 		});
 	};
-	
 
-	function updateLastMessage(str: string) {
-		console.log(str);
+	//add proper type signature for function
+
+	function updateLastMessage({str,thought}:{str?: string, thought?: string}) {
 		setChatHistory((old) => {
 			let newChat = [...old];
-			newChat[newChat.length - 1].message =
-				newChat[newChat.length - 1].message + str;
+			if (str) {
+				newChat[newChat.length - 1].message =
+					newChat[newChat.length - 1].message + str;
+			}
+			if(thought){
+				newChat[newChat.length - 1].thought = thought
+			}
 			return newChat;
 		});
 	}
@@ -69,7 +74,7 @@ export default function ChatModal({
 		if (isOpen.current) {
 			setLockChat(false);
 			setTimeout(() => {
-				connectWS()
+				connectWS();
 			}, 1000);
 		}
 	}
@@ -114,6 +119,9 @@ export default function ChatModal({
 			isStream = true;
 		}
 		if (data.type === "end") {
+			if(data.intermediate_steps){
+				updateLastMessage({thought:data.intermediate_steps});
+			}
 			setLockChat(false);
 			isStream = false;
 			// if (data.files) {
@@ -131,7 +139,7 @@ export default function ChatModal({
 			console.log(data);
 		}
 		if (data.type === "stream" && isStream) {
-			updateLastMessage(data.message);
+			updateLastMessage({str:data.message});
 		}
 	}
 
@@ -169,7 +177,7 @@ export default function ChatModal({
 					],
 				});
 			};
-			ws.current=newWs
+			ws.current = newWs;
 		} catch {
 			setErrorData({
 				title: "There was an error on web connection, please: ",
@@ -185,14 +193,13 @@ export default function ChatModal({
 	useEffect(() => {
 		connectWS();
 		return () => {
-			console.log("unmount")
-			console.log(ws)
+			console.log("unmount");
+			console.log(ws);
 			if (ws) {
 				ws.current.close();
 			}
 		};
 	}, []);
-
 
 	async function sendAll(data: sendAllProps) {
 		try {
