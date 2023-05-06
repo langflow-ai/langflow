@@ -10,8 +10,6 @@ from langchain.chat_models.base import BaseChatModel
 from langchain.llms.base import BaseLLM
 from langchain.tools import BaseTool
 
-from langflow.interface.tools.base import tool_creator
-
 
 def import_module(module_path: str) -> Any:
     """Import module from module path"""
@@ -107,8 +105,13 @@ def import_llm(llm: str) -> BaseLLM:
 
 def import_tool(tool: str) -> BaseTool:
     """Import tool from tool name"""
+    from langflow.interface.tools.base import tool_creator
+    from langflow.interface.tools.constants import ALL_TOOLS_NAMES
 
-    return tool_creator.type_to_loader_dict[tool]["fcn"]
+    if tool in ALL_TOOLS_NAMES:
+        return tool_creator.type_to_loader_dict[tool]["fcn"]
+
+    return import_class(f"langchain.tools.{tool}")
 
 
 def import_chain(chain: str) -> Type[Chain]:
