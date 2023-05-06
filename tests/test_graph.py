@@ -15,7 +15,7 @@ from langflow.graph.nodes import (
     WrapperNode,
 )
 from langflow.interface.run import get_result_and_steps
-from langflow.utils.payload import build_json, get_root_node
+from langflow.utils.payload import get_root_node
 
 # Test cases for the graph module
 
