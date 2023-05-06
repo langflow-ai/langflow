@@ -1,7 +1,7 @@
 import json
 
 import pytest
-from langchain.agents import AgentExecutor
+from langchain.chains.base import Chain
 from langflow import load_flow_from_json
 from langflow.graph import Graph
 from langflow.utils.payload import get_root_node
@@ -11,7 +11,7 @@ def test_load_flow_from_json():
     """Test loading a flow from a json file"""
     loaded = load_flow_from_json(pytest.BASIC_EXAMPLE_PATH)
     assert loaded is not None
-    assert isinstance(loaded, AgentExecutor)
+    assert isinstance(loaded, Chain)
 
 
 def test_get_root_node():
