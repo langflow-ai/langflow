@@ -49,5 +49,5 @@ def post_validate_node(node_id: str, data: dict):
             return str(node.params)
         raise Exception(f"Node {node_id} not found")
     except Exception as e:
-        logger.exception(e)
+        logger.error(e)
         raise HTTPException(status_code=500, detail=str(e)) from e
