@@ -117,7 +117,7 @@ class ChatManager:
         try:
             logger.debug("Generating result and thought")
 
-            _, intermediate_steps = await process_graph(
+            result, intermediate_steps = await process_graph(
                 graph_data=graph_data,
                 is_first_message=is_first_message,
                 chat_message=chat_message,
@@ -144,7 +144,7 @@ class ChatManager:
                     break
 
         response = ChatResponse(
-            message="",
+            message=result,
             intermediate_steps=intermediate_steps.strip(),
             type="end",
             files=file_responses,
@@ -212,9 +212,8 @@ async def process_graph(
     # Generate result and thought
     try:
         logger.debug("Generating result and thought")
-        stream_handler = StreamingLLMCallbackHandler(websocket)
         result, intermediate_steps = await get_result_and_steps(
-            langchain_object, chat_message.message or "", callbacks=[stream_handler]
+            langchain_object, chat_message.message or "", websocket=websocket
         )
         logger.debug("Generated result and intermediate_steps")
         return result, intermediate_steps
