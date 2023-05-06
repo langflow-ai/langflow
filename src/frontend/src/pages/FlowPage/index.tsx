@@ -45,10 +45,10 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 
   const { undo, redo, canUndo, canRedo, takeSnapshot } = useUndoRedo();
 
-  const copied = useKeyPress(['Meta+c', 'Strg+c']);
-  const pasted = useKeyPress(['Meta+v', 'Strg+v']);
-  const undoed = useKeyPress(['Meta+z', 'Strg+z']);
-  const redoed = useKeyPress(['Meta+Shift+z', 'Strg+Shift+z']);
+  const copied = useKeyPress(['Meta+c', 'Strg+c', 'Ctrl+c']);
+  const pasted = useKeyPress(['Meta+v', 'Strg+v', 'Ctrl+v']);
+  const undoed = useKeyPress(['Meta+z', 'Strg+z', 'Ctrl+z']);
+  const redoed = useKeyPress(['Meta+Shift+z', 'Strg+Shift+z', 'Ctrl+Shift+z']);
 
   useEffect(() => {
     if(canUndo && undoed){
