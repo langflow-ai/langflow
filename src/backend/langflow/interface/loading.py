@@ -74,7 +74,10 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
         return loaded_toolkit
     elif base_type == "embeddings":
         # ? Why remove model from params?
-        params.pop("model")
+        try:
+            params.pop("model")
+        except KeyError:
+            pass
         # remove all params that are not in class_object.__fields__
         try:
             return class_object(**params)
