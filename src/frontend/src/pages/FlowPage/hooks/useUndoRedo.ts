@@ -81,6 +81,10 @@ export const useUndoRedo: UseUndoRedo = ({
     const keyDownHandler = (event: KeyboardEvent) => {
       if (event.key === 'z' && (event.ctrlKey || event.metaKey) && event.shiftKey) {
         redo();
+      } 
+      else if (event.key === 'y' && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault(); // prevent the default action
+        redo();
       } else if (event.key === 'z' && (event.ctrlKey || event.metaKey)) {
         undo();
       }
@@ -97,8 +101,8 @@ export const useUndoRedo: UseUndoRedo = ({
     undo,
     redo,
     takeSnapshot,
-    canUndo: !past.length,
-    canRedo: !future.length,
+    canUndo: !!past.length,
+    canRedo: !!future.length,
   };
 };
 

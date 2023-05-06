@@ -45,20 +45,16 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 
   const { undo, redo, canUndo, canRedo, takeSnapshot } = useUndoRedo();
 
-  const copied = useKeyPress(['Meta+c', 'Strg+c', 'Ctrl+c']);
-  const pasted = useKeyPress(['Meta+v', 'Strg+v', 'Ctrl+v']);
-  const undoed = useKeyPress(['Meta+z', 'Strg+z', 'Ctrl+z']);
-  const redoed = useKeyPress(['Meta+Shift+z', 'Strg+Shift+z', 'Ctrl+Shift+z']);
-
-  useEffect(() => {
-    if(canUndo && undoed){
-      undo();
+  const onKeyDown = (event : React.KeyboardEvent<HTMLDivElement>) => {
+    if ((event.ctrlKey || event.metaKey) && (event.key === 'c') && lastSelection){
+      event.preventDefault();
+      setLastCopiedSelection(lastSelection);
     }
-    if(canRedo && redoed){
-      redo();
+    if ((event.ctrlKey || event.metaKey) && (event.key === 'v') && lastCopiedSelection){
+      event.preventDefault();
+      paste();
     }
-
-  }, [undoed, redoed])
+  }
 
   const [lastSelection, setLastSelection] = useState(null);
   const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
@@ -73,15 +69,8 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
     onChange: (flow) => {setLastSelection(flow);},
   })
 
-  useEffect(() => {
-    if(copied === true && lastSelection){
-      setLastCopiedSelection(lastSelection);
-    }
-  }, [copied])
-
-  useEffect(() => {
-    if(pasted === true && lastCopiedSelection){
-      let minimumX = Infinity;
+  let paste = () => {
+    let minimumX = Infinity;
       let minimumY = Infinity;
       let idsMap = {};
       lastCopiedSelection.nodes.forEach((n) => {
@@ -135,8 +124,7 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
           addEdge({ source, target, sourceHandle, targetHandle, id, className: "animate-pulse", selected: false }, eds.map((e) => ({...e, selected: false})))
         );
       })
-    }
-  }, [pasted])
+  }
 
 
   const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
@@ -319,6 +307,7 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 						edges={edges}
 						onNodesChange={onNodesChange}
 						onEdgesChange={onEdgesChangeMod}
+            onKeyDown={(e) => onKeyDown(e)}
 						onConnect={onConnect}
 						onLoad={setReactFlowInstance}
 						onInit={setReactFlowInstance}
