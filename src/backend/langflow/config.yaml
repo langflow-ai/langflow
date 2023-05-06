@@ -51,6 +51,7 @@ tools:
   - BingSearchRun
   - GoogleSearchRun
   - GoogleSearchResults
+  - GoogleSerperRun
   - JsonListKeysTool
   - JsonGetValueTool
   - PythonREPLTool
