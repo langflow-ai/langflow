@@ -5,6 +5,7 @@ import { classNames } from "../../../utils";
 import AiIcon from "../../../assets/Gooey Ring-5s-271px.svg";
 import { UserIcon } from "@heroicons/react/24/solid";
 import FileCard from "../fileComponent";
+import ReactMarkdown from "react-markdown";
 var Convert = require("ansi-to-html");
 var convert = new Convert({ newline: true });
 
@@ -50,7 +51,7 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
             {chat.thought && chat.thought !== "" && !hidden && <br></br>}
             <div className="w-full px-4 pb-3 pt-3 pr-8">
               <span className="dark:text-white">
-                {chat.message}
+              <ReactMarkdown>{chat.message}</ReactMarkdown>
                 {chat.files && (
                   <div className="my-2 w-full">
                     {chat.files.map((file, index) => {
@@ -73,7 +74,7 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
       ) : (
         <div className="w-full flex items-center">
           <div className="text-start inline-block px-3 text-sm text-gray-600 dark:text-white">
-            {chat.message}
+            <ReactMarkdown>{chat.message}</ReactMarkdown>
           </div>
         </div>
       )}
