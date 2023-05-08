@@ -78,12 +78,12 @@ plugins:
 # Page tree
 nav:
   - Getting started:
-    - LangFlow: 
-        - index.md
+    - LangFlow: langflow.md
     - Installation: installation.md
     - Creating Flows: create-flows.md
     - Guidelines: guidelines.md
   - Examples:
+    - LangFlow Examples: langflow-examples.md
     - Memories:
       - Conversation Summary Memory: conversation-summary-memory.md
       - Conversation Buffer Memory: conversation-buffer-memory.md  

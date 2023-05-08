@@ -1,4 +1,4 @@
-# 🤔 What is LangFlow? 
+# ⛓️ LangFlow
 <p>
     ~ A User Interface For
     <a href="https://github.com/hwchase17/langchain" target="_blank">LangChain</a> 🦜🔗 ~
@@ -14,8 +14,9 @@
 <img alt="Github License" src="https://img.shields.io/github/license/logspace-ai/langflow" />
 </p>
 
-<img width="100%" src="img/langflow-demo2.gif">
+![Description](img/langflow-demo2.gif#only-light)
+![Description](img/langflow-demo2.gif#only-dark)
 
-LangFlow is a GUI for [LangChain](https://github.com/hwchase17/langchain){.internal-link target=_blank}, designed with [react-flow](https://github.com/wbkd/react-flow){.internal-link target=_blank} to provide an effortless way to experiment and prototype flows with drag-and-drop components and a chat box.
+LangFlow is a GUI for [LangChain](https://github.com/hwchase17/langchain){.internal-link target=_blank}, designed with [react-flow](https://github.com/wbkd/react-flow){.internal-link target=_blank}. 
 
----
+The drag-and-drop feature provides a quick and effortless way to experiment and prototype, and the built-in chat interface enables real-time interaction. With LangFlow, you can edit prompt parameters, create chains and agents, track the agent’s thought process, and export your flow.
