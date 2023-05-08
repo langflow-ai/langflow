@@ -29,7 +29,9 @@ TOOL_INPUTS = {
         placeholder="",
         value="",
     ),
-    "llm": TemplateField(field_type="BaseLLM", required=True, is_list=False, show=True),
+    "llm": TemplateField(
+        field_type="BaseLanguageModel", required=True, is_list=False, show=True
+    ),
     "func": TemplateField(
         field_type="function",
         required=True,

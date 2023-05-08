@@ -15,7 +15,7 @@ from langchain.agents.loading import load_agent_from_config
 from langchain.agents.tools import Tool
 from langchain.callbacks.base import BaseCallbackManager
 from langchain.chains.loading import load_chain_from_config
-from langchain.llms.base import BaseLLM
+from langchain.base_language import BaseLanguageModel
 from langchain.llms.loading import load_llm_from_config
 from pydantic import ValidationError
 
@@ -186,7 +186,7 @@ def load_langchain_type_from_config(config: Dict[str, Any]):
 
 def load_agent_executor_from_config(
     config: dict,
-    llm: Optional[BaseLLM] = None,
+    llm: Optional[BaseLanguageModel] = None,
     tools: Optional[list[Tool]] = None,
     callback_manager: Optional[BaseCallbackManager] = None,
     **kwargs: Any,
