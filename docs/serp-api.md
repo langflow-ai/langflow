@@ -13,7 +13,7 @@ To understand more, check out the LangChain [Search](https://python.langchain.co
 
 [Get JSON file](data/Serp_api.json){: .md-button download="Serp_api"} 
 
-`ZeroShotPrompt` is a tool that allows you to create a prompt template for Zero-Shot Agent. You can set the *Prefix* and *Suffix*. The *Prefix* is the text that will be added before the input text. The *Suffix* is the text that will be added after the input text. In the example, we used the *default* that is automatically set.
+`ZeroShotPrompt` creates a prompt template for Zero-Shot Agent. You can set the *Prefix* and *Suffix*. The *Prefix* is the text that will be added before the input text. The *Suffix* is the text that will be added after the input text. In the example, we used the *default* that is automatically set..
 
 For the example, we used `OpenAI` as the LLM, but you can use any LLM that has an API. Make sure to get the API key from the LLM provider. For example, [OpenAI](https://platform.openai.com/){.internal-link target=_blank} requires you to create an account to get your API key.
 

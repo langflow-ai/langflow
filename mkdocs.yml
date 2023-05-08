@@ -81,7 +81,7 @@ nav:
     - LangFlow: 
         - index.md
     - Installation: installation.md
-    - Create Flow: create-flows.md
+    - Creating Flows: create-flows.md
     - Guidelines: guidelines.md
   - Examples:
     - Memories:

@@ -57,6 +57,4 @@ For the example, we used `OpenAI` as the LLM, but you can use any LLM that has a
 
 Check out the [OpenAI](https://platform.openai.com/docs/introduction/overview){.internal-link target=_blank} documentation to learn more about the API and the options that contain in the node.
 
-
-
 The `VectoStoreAgent`is an agent designed to retrieve information from one or more vector stores, either with or without sources.
