@@ -99,6 +99,7 @@ nav:
     - Tools:
       - PAL-MATH: tool-pal-math.md
       - Serp API: serp-api.md
+      - News API: news-api.md
     - Document Loaders:
       - PyPDFLoader: py-pdf-loader.md
       - CSVLoader: csv-loader.md
