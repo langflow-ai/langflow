@@ -140,16 +140,6 @@ export default function ChatModal({
       }
       setLockChat(false);
       isStream = false;
-      // if (data.files) {
-      // 	addChatHistory(
-      // 		data.message,
-      // 		false,
-      // 		data.intermediate_steps,
-      // 		data.files
-      // 	);
-      // } else {
-      // 	addChatHistory(data.message, false, data.intermediate_steps);
-      // }
     }
     if (data.type === "file") {
       console.log(data);
