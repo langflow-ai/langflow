@@ -106,7 +106,15 @@ nav:
     - GCP_DEPLOYMENT.md
   - Release Notes:
     - releases.md
-  - Contributing: help-langflow.md
+  - Contributing:
+    - Contribute: contribute.md
+    - GitHub Issues: github-issues.md
+    - Run Locally: locally.md
+    - Run Docker: local-development.md
+    - Community: community.md
+
+     
+
 
 # Customization
 extra:
@@ -127,6 +135,8 @@ markdown_extensions:
   - def_list
   - footnotes
   - md_in_html
+  - markdown.extensions.codehilite:
+      guess_lang: false
   - toc:
       permalink: true
   - pymdownx.arithmatex:
@@ -160,6 +170,13 @@ markdown_extensions:
   - pymdownx.tasklist:
       custom_checkbox: true
   - pymdownx.tilde
+extra:
+  extra_css:
+  - css/termynal.css
+  - css/custom.css
+  extra_javascript:
+  - js/termynal.js
+  - js/custom.js
 
 copyright: |
   &copy; 2023 <a href="https://github.com/logspace-ai"  target="_blank" rel="noopener">Logspace</a>

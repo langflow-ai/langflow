@@ -2,13 +2,13 @@ The `CSVLoader` loads a CSV file into a list of documents.
 
 File path: [Get CSV file](data/organizations-100.csv){.internal-link target=_blank}
 
-![Description](img/single_node/csv_loader.png#only-light)
-![Description](img/single_node/csv_loader2.png#only-dark)
+![Description](img/single_node/csv_loader.png#only-light){width=60%}
+![Description](img/single_node/csv_loader2.png#only-dark){width=60%}
 
 ### ⛓️LangFlow example:
 
-![Description](img/csv-loader.png#only-dark)
-![Description](img/csv-loader.png#only-light)
+![Description](img/csv-loader.png#only-dark){width=80%}
+![Description](img/csv-loader.png#only-light){width=80%}
 
 [Get JSON file](data/Csv_loader.json){: .md-button download="Csv_loader"} 
 

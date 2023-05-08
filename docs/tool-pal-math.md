@@ -1,13 +1,13 @@
 `PAL-MATH` is a language model that is good at solving complex math problems. The input should be a fully worded hard-word math problem.
 
-![Description](img/single_node/pal_math.png#only-light)
-![Description](img/single_node/pal_math2.png#only-dark)
+![Description](img/single_node/pal_math.png#only-light){width=60%}
+![Description](img/single_node/pal_math2.png#only-dark){width=60%}
 
 To understand more, check out the LangChain [PAL-MATH](https://python.langchain.com/en/latest/modules/chains/examples/pal.html?highlight=PAL-MATH){.internal-link target=_blank} documentation.
 ### ⛓️LangFlow example
 
-![Description](img/tool-pal-math.png#only-dark)
-![Description](img/tool-pal-math.png#only-light)
+![Description](img/tool-pal-math.png#only-dark){width=80%}
+![Description](img/tool-pal-math.png#only-light){width=80%}
 
 [Get JSON file](data/Tool_pal_math.json){: .md-button download="Tool_pal_math"} 
 

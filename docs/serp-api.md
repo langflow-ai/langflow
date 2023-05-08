@@ -2,14 +2,14 @@
 
 The Serp API (Search Engine Results Page API) is an API (Application Programming Interface) that allows developers to scrape search engine results from various search engines such as Google, Bing, Yahoo, and more.
 
-![Description](img/single_node/serp.png#only-light)
-![Description](img/single_node/serp2.png#only-dark)
+![Description](img/single_node/serp.png#only-light){width=60%}
+![Description](img/single_node/serp2.png#only-dark){width=60%}
 
 To understand more, check out the LangChain [Search](https://python.langchain.com/en/latest/modules/agents/tools/examples/google_serper.html){.internal-link target=_blank} documentation.
 ### ⛓️LangFlow example
 
-![Description](img/serp-api.png#only-dark)
-![Description](img/serp-api.png#only-light)
+![Description](img/serp-api.png#only-dark){width=80%}
+![Description](img/serp-api.png#only-light){width=80%}
 
 [Get JSON file](data/Serp_api.json){: .md-button download="Serp_api"} 
 

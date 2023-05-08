@@ -1,11 +1,11 @@
 `TimeTravelGuideChain` will provide you with the historical period or future time you want to visit and you will suggest the best events, sights, or people to experience. **Output Key** and **Input Key** are simply unique identifiers used to represent the data being passed between different modules.
 
-![Description](img/single_node/time_travel2.png#only-dark)
-![Description](img/single_node/time_travel.png#only-light)
+![Description](img/single_node/time_travel2.png#only-dark){width=60%}
+![Description](img/single_node/time_travel.png#only-light){width=60%}
 ### ⛓️LangFlow example
 
-![Description](img/time-travel-guide-chain.png#only-dark)
-![Description](img/time-travel-guide-chain.png#only-light)
+![Description](img/time-travel-guide-chain.png#only-dark){width=80%}
+![Description](img/time-travel-guide-chain.png#only-light){width=80%}
 
 [Get JSON file](data/Time_travel_guide_chain.json){: .md-button download="Time_travel_guide_chain"} 
 

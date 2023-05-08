@@ -12,14 +12,14 @@ Series:
 The Lord of the Rings
 ```
 
-![Description](img/single_node/series_cha_chain2.png#only-dark)
-![Description](img/single_node/series_cha_chain.png#only-light)
+![Description](img/single_node/series_cha_chain2.png#only-dark){width=60%}
+![Description](img/single_node/series_cha_chain.png#only-light){width=60%}
 
 Play around with it and see how it works!
 ### ⛓️LangFlow example
 
-![Description](img/series-character-chain.png#only-dark)
-![Description](img/series-character-chain.png#only-light)
+![Description](img/series-character-chain.png#only-dark){width=80%}
+![Description](img/series-character-chain.png#only-light){width=80%}
 
 [Get JSON file](data/Series_character_chain.json){: .md-button download="Series_character_chain"} 
 

@@ -1,14 +1,14 @@
 The `LLMChain` is a simple chain that takes in a prompt template, formats it with the user input, and returns the response from an LLM.
 
-![Description](img/single_node/guideline2.png#only-dark)
-![Description](img/single_node/guideline.png#only-light)
+![Description](img/single_node/guideline2.png#only-dark){width=60%}
+![Description](img/single_node/guideline.png#only-light){width=60%}
 
 More information about the [LLMChain](https://python.langchain.com/en/latest/modules/chains/generic/llm_chain.html){.internal-link target=_blank} can be found in the LangChain documentation.
 
 ### ⛓️LangFlow example
 
-![Description](img/llm-chain.png#only-dark)
-![Description](img/llm-chain.png#only-light)
+![Description](img/llm-chain.png#only-dark){width=80%}
+![Description](img/llm-chain.png#only-light){width=80%}
 
 [Get JSON file](data/llm_chain.json){: .md-button download="llm_chain"} 
 

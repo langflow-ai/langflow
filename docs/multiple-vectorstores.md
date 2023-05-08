@@ -1,13 +1,13 @@
 `VectorStoreRouterAgent` construct an agent that routes between vector stores.
 
-![Description](img/single_node/mult_vect.png#only-light)
-![Description](img/single_node/mult_vect2.png#only-dark)
+![Description](img/single_node/mult_vect.png#only-light){width=60%}
+![Description](img/single_node/mult_vect2.png#only-dark){width=60%}
 
 For more information about [VectorStoreRouterAgent](https://python.langchain.com/en/latest/modules/agents/agent_executors/examples/agent_vectorstore.html?highlight=Router){.internal-link target=_blank}, check out the LangChain documentation.
 
 ### ⛓️LangFlow example
-![Description](img/multiple-vectorstores.png#only-dark)
-![Description](img/multiple-vectorstores.png#only-light)
+![Description](img/multiple-vectorstores.png#only-dark){width=80%}
+![Description](img/multiple-vectorstores.png#only-light){width=80%}
 
 [Get JSON file](data/Multiple_vectorstores.json){: .md-button download="Multiple_vectorstores"} 
 

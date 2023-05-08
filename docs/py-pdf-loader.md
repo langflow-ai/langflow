@@ -2,14 +2,14 @@ With `PyPDFLoader`, you can load a PDF file with pypdf and chunks at a character
 
 File path: [Get PDF file](data/example.pdf){.internal-link target=_blank}
 
-![Description](img/single_node/pypdf.png#only-light)
-![Description](img/single_node/pypdf2.png#only-dark)
+![Description](img/single_node/pypdf.png#only-light){width=60%}
+![Description](img/single_node/pypdf2.png#only-dark){width=60%}
 
 You can check more about the [PyPDFLoader](https://python.langchain.com/en/latest/modules/indexes/document_loaders/examples/pdf.html?highlight=PDF){.internal-link target=_blank} in the LangChain documentation.
 ### ⛓️LangFlow example
 
-![Description](img/py-pdf-loader.png#only-dark)
-![Description](img/py-pdf-loader.png#only-light)
+![Description](img/py-pdf-loader.png#only-dark){width=80%}
+![Description](img/py-pdf-loader.png#only-light){width=80%}
 
 [Get JSON file](data/Py_pdf_loader.json){: .md-button download="Py_pdf_loader"} 
 

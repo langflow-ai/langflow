@@ -1,12 +1,12 @@
 With `MidJourneyPromptChain`, you can use it to generate new MidJourney prompts. You can just type anything you like to build an image script.
 
-![Description](img/single_node/mid_jour_chain2.png#only-dark)
-![Description](img/single_node/mid_jour_chain.png#only-light)
+![Description](img/single_node/mid_jour_chain2.png#only-dark){width=60%}
+![Description](img/single_node/mid_jour_chain.png#only-light){width=60%}
 
 ### ⛓️LangFlow example
 
-![Description](img/MidJourney-prompt-chain.png#only-dark)
-![Description](img/MidJourney-prompt-chain.png#only-light)
+![Description](img/MidJourney-prompt-chain.png#only-dark){width=80%}
+![Description](img/MidJourney-prompt-chain.png#only-light){width=80%}
 
 [Get JSON file](data/Midjourney_prompt_chain.json){: .md-button download="Midjourney_prompt_chain"} 
 

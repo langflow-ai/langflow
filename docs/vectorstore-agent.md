@@ -1,14 +1,14 @@
 The `VectoStoreAgent`is an agent designed to retrieve information from one or more vector stores, either with or without sources.
 
-![Description](img/single_node/vec_sto_agt.png#only-light)
-![Description](img/single_node/vec_sto_agt2.png#only-dark)
+![Description](img/single_node/vec_sto_agt.png#only-light){width=60%}
+![Description](img/single_node/vec_sto_agt2.png#only-dark){width=60%}
 
 Check out the [VectoStoreAgent](https://python.langchain.com/en/latest/modules/agents/toolkits/examples/vectorstore.html){.internal-link target=_blank} in the LangChain documentation.
 
 ### ⛓️LangFlow example
 
-![Description](img/vectorstore-agent.png#only-dark)
-![Description](img/vectorstore-agent.png#only-light)
+![Description](img/vectorstore-agent.png#only-dark){width=80%}
+![Description](img/vectorstore-agent.png#only-light){width=80%}
 
 [Get JSON file](data/Vectorstore_agent.json){: .md-button download="Vectorstore_agent"} 
 
