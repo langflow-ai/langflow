@@ -8,6 +8,7 @@ import {
 	ArrowDownTrayIcon,
 	ArrowUpTrayIcon,
 	BellIcon,
+	CodeBracketSquareIcon,
 	MoonIcon,
 	SunIcon,
 } from "@heroicons/react/24/outline";
@@ -17,6 +18,7 @@ import { alertContext } from "../../../../contexts/alertContext";
 import ImportModal from "../../../../modals/importModal";
 import ExportModal from "../../../../modals/exportModal";
 import { typesContext } from "../../../../contexts/typesContext";
+import ApiModal from "../../../../modals/ApiModal";
 
 export default function TabsManagerComponent() {
 	const { flows, addFlow, tabIndex, setTabIndex, uploadFlow, downloadFlow } =
@@ -55,6 +57,12 @@ export default function TabsManagerComponent() {
 					flow={null}
 				/>
 				<div className="ml-auto mr-2 flex gap-3">
+					<button
+						onClick={() => openPopUp(<ApiModal />)}
+						className="flex items-center gap-1 pr-2 border-gray-400 border-r text-sm text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
+					>
+						API <CodeBracketSquareIcon className="w-5 h-5" />
+					</button>
 					<button
 						onClick={() => openPopUp(<ImportModal />)}
 						className="flex items-center gap-1 pr-2 border-gray-400 border-r text-sm text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
