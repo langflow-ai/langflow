@@ -65,6 +65,14 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
 										remarkPlugins={[remarkGfm, remarkMath]}
 										rehypePlugins={[rehypeMathjax]}
 										className="markdown prose"
+										// components={{
+										// 	code: (props) => (
+										// 		<code
+										// 			className="bg-pink-600 dark:bg-gray-700 rounded-md p-1"
+										// 			{...props}
+										// 		/>
+										// 	),
+										// }}
 									>
 										{message}
 									</ReactMarkdown>
