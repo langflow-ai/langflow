@@ -91,7 +91,13 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
 			) : (
 				<div className="w-full flex items-center">
 					<div className="text-start inline-block px-3 text-sm text-gray-600 dark:text-white">
-						<ReactMarkdown className="markdown prose">{message}</ReactMarkdown>
+						<ReactMarkdown
+							remarkPlugins={[remarkGfm, remarkMath]}
+							rehypePlugins={[rehypeMathjax]}
+							className="markdown prose"
+						>
+							{message}
+						</ReactMarkdown>
 					</div>
 				</div>
 			)}
