@@ -6,14 +6,17 @@ import AiIcon from "../../../assets/Gooey Ring-5s-271px.svg";
 import { UserIcon } from "@heroicons/react/24/solid";
 import FileCard from "../fileComponent";
 import ReactMarkdown from "react-markdown";
+import rehypeMathjax from "rehype-mathjax";
+import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 var Convert = require("ansi-to-html");
 var convert = new Convert({ newline: true });
 
 export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
-  const [message,setMessage] = useState("");
-  useEffect(() => {
-    setMessage(chat.message)
-  },[chat.message])
+	const [message, setMessage] = useState("");
+	useEffect(() => {
+		setMessage(chat.message);
+	}, [chat.message]);
 	const [hidden, setHidden] = useState(true);
 	return (
 		<div
@@ -57,9 +60,15 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
 						{chat.thought && chat.thought !== "" && !hidden && <br></br>}
 						<div className="w-full px-4 pb-3 pt-3 pr-8">
 							<div className="dark:text-white">
-                <div>
-                <ReactMarkdown className="markdown prose">{message}</ReactMarkdown>
-                </div>
+								<div>
+									<ReactMarkdown
+										remarkPlugins={[remarkGfm, remarkMath]}
+										rehypePlugins={[rehypeMathjax]}
+										className="markdown prose"
+									>
+										{message}
+									</ReactMarkdown>
+								</div>
 								{chat.files && (
 									<div className="my-2 w-full">
 										{chat.files.map((file, index) => {

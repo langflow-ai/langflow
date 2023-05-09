@@ -137,6 +137,7 @@ export default function ChatModal({
           thought: data.intermediate_steps,
           end: true,
         });
+		
       }
       setLockChat(false);
       isStream = false;
