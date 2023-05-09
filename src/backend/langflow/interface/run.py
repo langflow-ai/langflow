@@ -2,7 +2,8 @@ import contextlib
 import io
 from typing import Any, Dict
 
-from chromadb.errors import NotEnoughElementsException  # type: ignore
+from chromadb.errors import NotEnoughElementsException
+from langflow.api.callback import AsyncStreamingLLMCallbackHandler, StreamingLLMCallbackHandler  # type: ignore
 
 from langflow.cache.base import compute_dict_hash, load_cache, memoize_dict
 from langflow.graph.graph import Graph
@@ -185,11 +186,9 @@ def fix_memory_inputs(langchain_object):
             update_memory_keys(langchain_object, possible_new_mem_key)
 
 
-async def get_result_and_steps(langchain_object, message: str, callbacks=None):
+async def get_result_and_steps(langchain_object, message: str, **kwargs):
     """Get result and thought from extracted json"""
 
-    if callbacks is None:
-        callbacks = []
     try:
         if hasattr(langchain_object, "verbose"):
             langchain_object.verbose = True
@@ -215,11 +214,15 @@ async def get_result_and_steps(langchain_object, message: str, callbacks=None):
 
         with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
             try:
-                output = await langchain_object.acall(chat_input, callbacks=callbacks)
-            except ValueError as exc:
+                async_callbacks = [AsyncStreamingLLMCallbackHandler(**kwargs)]
+                output = await langchain_object.acall(
+                    chat_input, callbacks=async_callbacks
+                )
+            except Exception as exc:
                 # make the error message more informative
                 logger.debug(f"Error: {str(exc)}")
-                output = langchain_object.run(chat_input, callbacks=callbacks)
+                sync_callbacks = [StreamingLLMCallbackHandler(**kwargs)]
+                output = langchain_object(chat_input, callbacks=sync_callbacks)
 
             intermediate_steps = (
                 output.get("intermediate_steps", []) if isinstance(output, dict) else []
