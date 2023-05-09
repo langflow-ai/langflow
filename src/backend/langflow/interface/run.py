@@ -100,13 +100,12 @@ def process_graph(data_graph: Dict[str, Any]):
     return {"result": str(result), "thought": thought.strip()}
 
 
-def process_graph_cached(data_graph: Dict[str, Any]):
+def process_graph_cached(data_graph: Dict[str, Any], message: str):
     """
     Process graph by extracting input variables and replacing ZeroShotPrompt
     with PromptTemplate,then run the graph and return the result and thought.
     """
     # Load langchain object
-    message = data_graph.pop("message", "")
     is_first_message = len(data_graph.get("chatHistory", [])) == 0
     langchain_object = load_or_build_langchain_object(data_graph, is_first_message)
     logger.debug("Loaded langchain object")
@@ -119,7 +118,7 @@ def process_graph_cached(data_graph: Dict[str, Any]):
 
     # Generate result and thought
     logger.debug("Generating result and thought")
-    result, thought = get_result_and_steps(langchain_object, message)
+    result, thought = get_result_and_thought(langchain_object, message)
     logger.debug("Generated result and thought")
     return {"result": str(result), "thought": thought.strip()}
 
@@ -241,7 +240,7 @@ def get_result_and_steps(langchain_object, message: str):
     return result, thought
 
 
-def async_get_result_and_steps(langchain_object, message: str):
+def get_result_and_thought(langchain_object, message: str):
     """Get result and thought from extracted json"""
     try:
         if hasattr(langchain_object, "verbose"):
@@ -293,34 +292,6 @@ def async_get_result_and_steps(langchain_object, message: str):
 
     except Exception as exc:
         raise ValueError(f"Error: {str(exc)}") from exc
-    return result, thought
-
-
-def get_result_and_thought(extracted_json: Dict[str, Any], message: str):
-    """Get result and thought from extracted json"""
-    try:
-        langchain_object = loading.load_langchain_type_from_config(
-            config=extracted_json
-        )
-        with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
-            output = langchain_object(message)
-            intermediate_steps = (
-                output.get("intermediate_steps", []) if isinstance(output, dict) else []
-            )
-            result = (
-                output.get(langchain_object.output_keys[0])
-                if isinstance(output, dict)
-                else output
-            )
-
-            if intermediate_steps:
-                thought = format_intermediate_steps(intermediate_steps)
-            else:
-                thought = output_buffer.getvalue()
-
-    except Exception as e:
-        result = f"Error: {str(e)}"
-        thought = ""
     return result, thought
 
 
