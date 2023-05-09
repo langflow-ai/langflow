@@ -181,3 +181,9 @@ extra:
 
 copyright: |
   &copy; 2023 <a href="https://github.com/logspace-ai"  target="_blank" rel="noopener">Logspace</a>
+
+extra_css:
+  - stylesheets/custom.css
+
+extra_javascript:
+  - javascripts/mendablesearch.js
