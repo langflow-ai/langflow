@@ -78,7 +78,7 @@ plugins:
 # Page tree
 nav:
   - Getting started:
-    - LangFlow: langflow.md
+    - LangFlow: index.md
     - Installation: installation.md
     - Creating Flows: create-flows.md
     - Guidelines: guidelines.md
