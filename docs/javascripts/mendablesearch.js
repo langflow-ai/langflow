@@ -19,6 +19,34 @@ document.addEventListener('DOMContentLoaded', () => {
   function initializeMendable() {
     const rootElement = createRootElement();
     const { MendableFloatingButton } = Mendable;
+
+    const textObserver = new MutationObserver(() => {
+      const textArea = document.querySelector('#headlessui-portal-root textarea');
+      if(textArea) {
+        let sibling = textArea.nextSibling;
+        if(sibling){
+          if(textArea.scrollHeight == 37) {
+            sibling.style.display = "none";
+          } else {
+            sibling.style.display = "block";
+          }
+        }
+        
+      }
+    });
+
+    const observer = new MutationObserver(() => {
+      const textArea = document.querySelector('#headlessui-portal-root textarea');
+      if(textArea){
+        let sibling = textArea.nextSibling;
+        if(sibling){
+          sibling.style.display = "none";
+        }
+        textObserver.observe(textArea, {attributes: true, childList: true, subtree: true})
+      }
+    });
+    
+    observer.observe(rootElement, {attributes: true, childList: true, subtree: true})
     
 
     const iconSpan1 = React.createElement('img', {
@@ -36,12 +64,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const mendableFloatingButton = React.createElement(
       MendableFloatingButton,
       {
-        style: { darkMode: false, accentColor: '#010810' },
+        style: { darkMode: true, accentColor: '#4051b5' },
         floatingButtonStyle: { color: '#ffffff', backgroundColor: '#010810' },
         anon_key: 'b7f52734-297c-41dc-8737-edbd13196394', // Mendable Search Public ANON key, ok to be public
         messageSettings: {
           openSourcesInNewTab: false,
         },
+        showSimpleSearch: false,
         icon: icon,
       }
     );
@@ -55,3 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 });
+
+
+
+

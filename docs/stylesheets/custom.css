@@ -15,3 +15,7 @@ pre {
 #my-component-root *, #headlessui-portal-root * {
   z-index: 1000000000000;
 }
+
+#headlessui-portal-root textarea {
+  overflow-y: hidden;
+}
