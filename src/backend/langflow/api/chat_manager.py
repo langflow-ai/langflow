@@ -5,7 +5,7 @@ from typing import Dict, List
 
 from fastapi import WebSocket
 
-from langflow.api.callback import StreamingLLMCallbackHandler
+
 from langflow.api.schemas import ChatMessage, ChatResponse, FileResponse
 from langflow.cache import cache_manager
 from langflow.cache.manager import Subject
@@ -107,6 +107,7 @@ class ChatManager:
         chat_message = payload.pop("message", "")
         chat_message = ChatMessage(message=chat_message)
         await self.send_json(client_id, chat_message)
+        self.chat_history.add_message(client_id, chat_message)
 
         graph_data = payload
         start_resp = ChatResponse(message=None, type="start", intermediate_steps="")
@@ -150,6 +151,7 @@ class ChatManager:
             files=file_responses,
         )
         await self.send_json(client_id, response)
+        self.chat_history.add_message(client_id, chat_message)
 
     async def handle_websocket(self, client_id: str, websocket: WebSocket):
         await self.connect(client_id, websocket)
