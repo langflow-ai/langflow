@@ -71,9 +71,10 @@ export default function ChatModal({
       if (str) {
         if (end && !newChat[newChat.length - 1].message) {
           newChat[newChat.length - 1].message = str;
+        } else if (!end) {
+          newChat[newChat.length - 1].message =
+            newChat[newChat.length - 1].message + str;
         }
-        newChat[newChat.length - 1].message =
-          newChat[newChat.length - 1].message + str;
       }
       if (thought) {
         newChat[newChat.length - 1].thought = thought;
