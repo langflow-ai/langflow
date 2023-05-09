@@ -38,7 +38,7 @@ export default function InputComponent({
         }}
       />
       <button
-        className="absolute inset-y-0 right-0 items-center px-4 text-gray-600"
+        className="absolute inset-y-0 right-0 items-center px-4 text-gray-600 dark:text-gray-300"
         onClick={() => {
           setPwdVisible(!pwdVisible);
         }}

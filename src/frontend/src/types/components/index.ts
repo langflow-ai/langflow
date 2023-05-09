@@ -1,4 +1,4 @@
-import { ForwardRefExoticComponent, ReactElement, ReactNode } from "react";
+import { ForwardRefExoticComponent, ReactElement, ReactFragment, ReactNode } from "react";
 import { NodeDataType } from "../flow/index";
 export type InputComponentType = {
   value: string;
@@ -68,7 +68,7 @@ export type FloatComponentType = {
 
 export type TooltipComponentType = {
   children: ReactElement;
-  title: string;
+  title: string | ReactElement;
   placement?:
     | "bottom-end"
     | "bottom-start"
