@@ -174,11 +174,6 @@ class ChatManager:
 
                 with self.cache_manager.set_client_id(client_id):
                     await self.process_message(client_id, payload)
-                # After the message is sent, wait for message built
-                final_message = await websocket.receive_json()
-                # If the message is a string, it is a chat message
-                chat_response = ChatResponse.parse_obj(final_message)
-                self.chat_history.add_message(client_id, chat_response)
 
         except Exception as e:
             # Handle any exceptions that might occur
