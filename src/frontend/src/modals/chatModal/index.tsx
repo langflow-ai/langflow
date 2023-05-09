@@ -60,11 +60,14 @@ export default function ChatModal({
 		str,
 		thought,
 		end = false,
+		files
+	
 	}: {
 		str?: string;
 		thought?: string;
 		// end param default is false
 		end?: boolean;
+		files?: Array<any>
 	}) {
 		setChatHistory((old) => {
 			let newChat = [...old];
@@ -78,6 +81,9 @@ export default function ChatModal({
 			}
 			if (thought) {
 				newChat[newChat.length - 1].thought = thought;
+			}
+			if(files){
+				newChat[newChat.length - 1].files = files;
 			}
 			return newChat;
 		});
@@ -133,17 +139,22 @@ export default function ChatModal({
 		}
 		if (data.type === "end") {
 			if (data.intermediate_steps) {
+				
 				updateLastMessage({
 					str: data.message,
 					thought: data.intermediate_steps,
 					end: true,
 				});
 			}
+			if(data.files){
+				updateLastMessage({
+					end: true,
+					files: data.files
+				});
+			}
+
 			setLockChat(false);
 			isStream = false;
-		}
-		if (data.type === "file") {
-			console.log(data);
 		}
 		if (data.type === "stream" && isStream) {
 			updateLastMessage({ str: data.message });
