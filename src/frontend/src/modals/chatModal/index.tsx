@@ -60,18 +60,20 @@ export default function ChatModal({
     str,
     thought,
     end = false,
+    files,
   }: {
     str?: string;
     thought?: string;
     // end param default is false
     end?: boolean;
+    files?: Array<any>;
   }) {
     setChatHistory((old) => {
       let newChat = [...old];
       if (str) {
-        if (end && !newChat[newChat.length - 1].message) {
+        if (end) {
           newChat[newChat.length - 1].message = str;
-        } else if (!end) {
+        } else {
           newChat[newChat.length - 1].message =
             newChat[newChat.length - 1].message + str;
         }
@@ -79,12 +81,16 @@ export default function ChatModal({
       if (thought) {
         newChat[newChat.length - 1].thought = thought;
       }
+      if (files) {
+        newChat[newChat.length - 1].files = files;
+      }
       return newChat;
     });
   }
 
   function handleOnClose(event: CloseEvent) {
     if (isOpen.current) {
+      console.log(event);
       setLockChat(false);
       setTimeout(() => {
         connectWS();
@@ -139,11 +145,15 @@ export default function ChatModal({
           end: true,
         });
       }
+      if (data.files) {
+        updateLastMessage({
+          end: true,
+          files: data.files,
+        });
+      }
+
       setLockChat(false);
       isStream = false;
-    }
-    if (data.type === "file") {
-      console.log(data);
     }
     if (data.type === "stream" && isStream) {
       updateLastMessage({ str: data.message });
@@ -346,7 +356,7 @@ export default function ChatModal({
                 <div className="relative w-full">
                   <button
                     onClick={() => clearChat()}
-                    className="absolute top-2 right-2 hover:text-red-500"
+                    className="absolute top-2 right-2 hover:text-red-500 z-30"
                   >
                     <FaEraser className="w-4 h-4" />
                   </button>
