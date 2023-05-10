@@ -1,6 +1,6 @@
 import { CloudArrowDownIcon, DocumentIcon } from "@heroicons/react/24/outline";
 import * as base64js from "base64-js";
-import Tooltip from "../../../components/TooltipComponent";
+import { useState } from "react";
 
 export default function FileCard({ fileName, content, fileType }) {
 	const handleDownload = () => {
@@ -15,6 +15,38 @@ export default function FileCard({ fileName, content, fileType }) {
 		document.body.removeChild(link);
 		URL.revokeObjectURL(url);
 	};
+	const [isHovered, setIsHovered] = useState(false);
+	function handleMouseEnter() {
+		setIsHovered(true);
+	}
+	function handleMouseLeave() {
+		setIsHovered(false);
+	}
+
+	if (fileType === "image") {
+		return (
+			<div
+				className="relative w-1/4 h-1/4"
+				onMouseEnter={handleMouseEnter}
+				onMouseLeave={handleMouseLeave}
+			>
+				<img
+					src={`data:image/png;base64,${content}`}
+					alt="generated image"
+					className="rounded-lg  w-full h-full"
+				/>
+				{isHovered && (
+					<div
+						className={`absolute top-0 right-0 bg-gray-100 text-gray-700 rounded-bl-lg px-1 text-sm font-bold`}
+					>
+						<button className="hover:scale-125 text-blue-500 py-1 px-2" onClick={handleDownload}>
+							<CloudArrowDownIcon className="w-5 h-5 text-current"></CloudArrowDownIcon>
+						</button>
+					</div>
+				)}
+			</div>
+		);
+	}
 
 	return (
 		<button
