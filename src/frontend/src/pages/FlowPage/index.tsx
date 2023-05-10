@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useRef } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import ReactFlow, {
   Background,
   Controls,
@@ -10,6 +10,12 @@ import ReactFlow, {
   EdgeChange,
   Connection,
   Edge,
+  useKeyPress,
+  useOnSelectionChange,
+  NodeDragHandler,
+  OnEdgesDelete,
+  OnNodesDelete,
+  SelectionDragHandler,
 } from "reactflow";
 import { locationContext } from "../../contexts/locationContext";
 import ExtraSidebar from "./components/extraSidebarComponent";
@@ -22,6 +28,7 @@ import ConnectionLineComponent from "./components/ConnectionLineComponent";
 import { FlowType, NodeType } from "../../types/flow";
 import { APIClassType } from "../../types/api";
 import { isValidConnection } from "../../utils";
+import useUndoRedo from "./hooks/useUndoRedo";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -36,6 +43,90 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 		useContext(typesContext);
 	const reactFlowWrapper = useRef(null);
 
+  const { undo, redo, canUndo, canRedo, takeSnapshot } = useUndoRedo();
+
+  const onKeyDown = (event : React.KeyboardEvent<HTMLDivElement>) => {
+    if ((event.ctrlKey || event.metaKey) && (event.key === 'c') && lastSelection){
+      event.preventDefault();
+      setLastCopiedSelection(lastSelection);
+    }
+    if ((event.ctrlKey || event.metaKey) && (event.key === 'v') && lastCopiedSelection){
+      event.preventDefault();
+      paste();
+    }
+  }
+
+  const [lastSelection, setLastSelection] = useState(null);
+  const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
+
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = (event) => {
+    setPosition({ x: event.clientX, y: event.clientY });
+  };
+
+  useOnSelectionChange({
+    onChange: (flow) => {setLastSelection(flow);},
+  })
+
+  let paste = () => {
+    let minimumX = Infinity;
+      let minimumY = Infinity;
+      let idsMap = {};
+      lastCopiedSelection.nodes.forEach((n) => {
+        if(n.position.y < minimumY){
+          minimumY = n.position.y
+        }
+        if(n.position.x < minimumX){
+          minimumX = n.position.x;
+        }
+      });
+
+      const bounds = reactFlowWrapper.current.getBoundingClientRect();
+      const insidePosition = reactFlowInstance.project({
+            x: position.x - bounds.left,
+            y: position.y - bounds.top
+      });
+
+      lastCopiedSelection.nodes.forEach((n) => {
+
+        // Generate a unique node ID
+        let newId = getId();
+        idsMap[n.id] = newId;
+
+        // Create a new node object
+        const newNode: NodeType = {
+          id: newId,
+          type: "genericNode",
+          position: {
+            x: insidePosition.x + n.position.x - minimumX,
+            y: insidePosition.y + n.position.y - minimumY,
+          },
+          data: {
+            ...n.data,
+            id: newId,
+          },
+        };
+
+        // Add the new node to the list of nodes in state
+        setNodes((nds) => nds.map((e) => ({...e, selected: false})).concat({...newNode, selected: false}));
+      })
+
+      lastCopiedSelection.edges.forEach((e) => {
+        let source = idsMap[e.source];
+        let target = idsMap[e.target];
+        let sourceHandleSplitted = e.sourceHandle.split('|');
+        let sourceHandle = sourceHandleSplitted[0] + '|' + source + '|' + sourceHandleSplitted.slice(2).join('|');
+        let targetHandleSplitted = e.targetHandle.split('|');
+        let targetHandle = targetHandleSplitted.slice(0, -1).join('|') + '|' + target;
+        let id = "reactflow__edge-" + source + sourceHandle + "-" + target + targetHandle;
+        setEdges((eds) =>
+          addEdge({ source, target, sourceHandle, targetHandle, id, className: "animate-pulse", selected: false }, eds.map((e) => ({...e, selected: false})))
+        );
+      })
+  }
+
+
   const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
   const { setErrorData } = useContext(alertContext);
   const [nodes, setNodes, onNodesChange] = useNodesState(
@@ -46,6 +137,10 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
   );
   const { setViewport } = useReactFlow();
   const edgeUpdateSuccessful = useRef(true);
+
+  function getId() {
+    return `dndnode_` + incrementNodeId();
+  }
 
   useEffect(() => {
     if (reactFlowInstance && flow) {
@@ -81,6 +176,7 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 
   const onConnect = useCallback(
     (params: Connection) => {
+      takeSnapshot();
       setEdges((eds) =>
         addEdge({ ...params, className: "animate-pulse" }, eds)
       );
@@ -89,8 +185,25 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
         return newX;
       });
     },
-    [setEdges, setNodes]
+    [setEdges, setNodes, takeSnapshot]
   );
+
+  const onNodeDragStart: NodeDragHandler = useCallback(() => {
+    // 👇 make dragging a node undoable
+    takeSnapshot();
+    // 👉 you can place your event handlers here
+  }, [takeSnapshot]);
+
+  const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
+    // 👇 make dragging a selection undoable
+    takeSnapshot();
+  }, [takeSnapshot]);
+
+
+  const onEdgesDelete: OnEdgesDelete = useCallback(() => {
+    // 👇 make deleting edges undoable
+    takeSnapshot();
+  }, [takeSnapshot]);
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -100,11 +213,7 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
-
-      // Helper function to generate a unique node ID
-      function getId() {
-        return `dndnode_` + incrementNodeId();
-      }
+      takeSnapshot();
 
       // Get the current bounds of the ReactFlow wrapper element
       const reactflowBounds = reactFlowWrapper.current.getBoundingClientRect();
@@ -152,16 +261,17 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
       }
     },
     // Specify dependencies for useCallback
-    [incrementNodeId, reactFlowInstance, setErrorData, setNodes]
+    [incrementNodeId, reactFlowInstance, setErrorData, setNodes, takeSnapshot]
   );
 
-  const onDelete = (mynodes) => {
+  const onDelete = useCallback((mynodes) => {
+    takeSnapshot();
     setEdges(
       edges.filter(
         (ns) => !mynodes.some((n) => ns.source === n.id || ns.target === n.id)
       )
     );
-  };
+  }, [takeSnapshot, edges, setEdges]);
 
   const onEdgeUpdateStart = useCallback(() => {
     edgeUpdateSuccessful.current = false;
@@ -186,7 +296,7 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 	  }, []);
 	  
 	return (
-		<div className="w-full h-full" ref={reactFlowWrapper}>
+		<div className="w-full h-full" onMouseMove={handleMouseMove} ref={reactFlowWrapper}>
 			{Object.keys(templates).length > 0 && Object.keys(types).length > 0 ? (
 				<>
 					<ReactFlow
@@ -197,6 +307,7 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 						edges={edges}
 						onNodesChange={onNodesChange}
 						onEdgesChange={onEdgesChangeMod}
+            onKeyDown={(e) => onKeyDown(e)}
 						onConnect={onConnect}
 						onLoad={setReactFlowInstance}
 						onInit={setReactFlowInstance}
@@ -204,6 +315,9 @@ export default function FlowPage({ flow }:{flow:FlowType}) {
 						onEdgeUpdate={onEdgeUpdate}
 						onEdgeUpdateStart={onEdgeUpdateStart}
 						onEdgeUpdateEnd={onEdgeUpdateEnd}
+            onNodeDragStart={onNodeDragStart}
+            onSelectionDragStart={onSelectionDragStart}
+            onEdgesDelete={onEdgesDelete}
 						connectionLineComponent={ConnectionLineComponent}
 						onDragOver={onDragOver}
 						onDrop={onDrop}
