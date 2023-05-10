@@ -1,4 +1,5 @@
 import { Dialog, Transition } from "@headlessui/react";
+import { IconCheck, IconClipboard, IconDownload } from '@tabler/icons-react';
 import { XMarkIcon, CommandLineIcon, CodeBracketSquareIcon } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
@@ -12,6 +13,8 @@ import { darkContext } from "../../contexts/darkContext";
 import { checkCode } from "../../controllers/API";
 import { alertContext } from "../../contexts/alertContext";
 import { FaPython } from "react-icons/fa";
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
 const pythonCode = `import requests
 
@@ -51,6 +54,21 @@ export default function ApiModal() {
 	const { closePopUp } = useContext(PopUpContext);
 	const [activeTab, setActiveTab] = useState(0);
 	const ref = useRef();
+	const [isCopied, setIsCopied] = useState<Boolean>(false);
+
+	const copyToClipboard = () => {
+		if (!navigator.clipboard || !navigator.clipboard.writeText) {
+			return;
+		}
+
+		navigator.clipboard.writeText(tabs[activeTab].code).then(() => {
+			setIsCopied(true);
+
+			setTimeout(() => {
+				setIsCopied(false);
+			}, 2000);
+		});
+	};
 	function setModalOpen(x: boolean) {
 		setOpen(x);
 		if (x === false) {
@@ -126,26 +144,29 @@ export default function ApiModal() {
 												{tabs.map((tab, index) => (
 													<button onClick={() => {
 														setActiveTab(index);
-													}} className={"p-2 rounded-t-lg w-44 border border-b-0 border-gray-300 -mr-px flex justify-center items-center gap-4 " + (activeTab === index ? " bg-white" : "bg-gray-100")}>
+													}} className={"p-2 rounded-t-lg w-44 border border-b-0 border-gray-300 dark:border-gray-700 dark:text-gray-300 -mr-px flex justify-center items-center gap-4 " + (activeTab === index ? " bg-white dark:bg-gray-800" : "bg-gray-100 dark:bg-gray-900")}>
 														{tab.name}
 														<img src={tab.image} className="w-6" />
 													</button>
 												))}
 											</div>
 											<div className="overflow-hidden px-4 py-5 sm:p-6 w-full h-full rounded-lg shadow bg-white dark:bg-gray-800">
-												<AceEditor
-													value={tabs[activeTab].code}
-													mode={tabs[activeTab].mode}
-													highlightActiveLine={true}
-													showPrintMargin={false}
-													fontSize={14}
-													showGutter
-													enableLiveAutocompletion
-													readOnly={true}
-													theme={dark ? "twilight" : "github"}
-													name="API"
-													className="h-full w-full rounded-lg"
-												/>
+												<div className="w-full flex justify-end mb-2">
+													<button
+														className="flex gap-1.5 items-center rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
+														onClick={copyToClipboard}
+													>
+														{isCopied ? <IconCheck size={18} /> : <IconClipboard size={18} />}
+														{isCopied ? 'Copied!' : 'Copy code'}
+													</button>
+												</div>
+												<SyntaxHighlighter
+													language={tabs[activeTab].mode}
+													style={oneDark}
+													customStyle={{ margin: 0 }}
+												>
+													{tabs[activeTab].code}
+												</SyntaxHighlighter>
 											</div>
 										</div>
 									</div>
