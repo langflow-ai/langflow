@@ -12,7 +12,7 @@ import { sendAllProps } from "../../types/api";
 import { ChatMessageType, ChatType } from "../../types/chat";
 import ChatInput from "./chatInput";
 
-const _ = require("lodash");
+import _ from "lodash";
 
 export default function ChatModal({
   flow,
