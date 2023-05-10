@@ -5,7 +5,7 @@ import { classNames } from "../../../utils";
 import AiIcon from "../../../assets/Gooey Ring-5s-271px.svg";
 import { UserIcon } from "@heroicons/react/24/solid";
 import FileCard from "../fileComponent";
-var Convert = require("ansi-to-html");
+import Convert from "ansi-to-html";
 var convert = new Convert({ newline: true });
 
 export default function ChatMessage({ chat }: { chat: ChatMessageType }) {

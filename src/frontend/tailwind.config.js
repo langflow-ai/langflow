@@ -1,7 +1,10 @@
 /** @type {import('tailwindcss').Config} */
-const plugin = require("tailwindcss/plugin");
+import plugin from "tailwindcss/plugin";
 module.exports = {
-  content: ["./src/**/*.{js,ts,tsx,jsx}"],
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,tsx,jsx}",
+  ],
   darkMode: "class",
   important: true,
   theme: {

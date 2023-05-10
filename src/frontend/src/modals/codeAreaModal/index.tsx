@@ -7,7 +7,7 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 import "ace-builds/src-noconflict/ext-language_tools";
-import "ace-builds/webpack-resolver";
+// import "ace-builds/webpack-resolver";
 import { darkContext } from "../../contexts/darkContext";
 import { checkCode } from "../../controllers/API";
 import { alertContext } from "../../contexts/alertContext";
