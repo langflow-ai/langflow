@@ -1,4 +1,4 @@
-.PHONY: all format lint build
+.PHONY: all format lint build build_frontend install_frontend run_frontend run_backend dev help tests coverage
 
 all: help
 
@@ -8,7 +8,7 @@ coverage:
 		--cov-report xml \
 		--cov-report term-missing:skip-covered
 
-test:
+tests:
 	poetry run pytest tests
 
 format:
@@ -71,3 +71,6 @@ help:
 	@echo 'build               - build the frontend static files and package the project'
 	@echo 'publish             - build the frontend static files and package the project and publish it to PyPI'
 	@echo 'dev                 - run the project in development mode with docker compose'
+	@echo 'tests               - run the tests'
+	@echo 'coverage            - run the tests and generate a coverage report'
+	@echo '----'

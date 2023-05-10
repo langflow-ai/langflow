@@ -29,7 +29,9 @@ TOOL_INPUTS = {
         placeholder="",
         value="",
     ),
-    "llm": TemplateField(field_type="BaseLLM", required=True, is_list=False, show=True),
+    "llm": TemplateField(
+        field_type="BaseLanguageModel", required=True, is_list=False, show=True
+    ),
     "func": TemplateField(
         field_type="function",
         required=True,
@@ -65,6 +67,7 @@ class ToolCreator(LangChainTypeCreator):
     def type_to_loader_dict(self) -> Dict:
         if self.tools_dict is None:
             all_tools = {}
+
             for tool, tool_fcn in ALL_TOOLS_NAMES.items():
                 tool_params = get_tool_params(tool_fcn)
                 tool_name = tool_params.get("name", tool)

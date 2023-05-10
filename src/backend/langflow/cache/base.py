@@ -48,6 +48,7 @@ def memoize_dict(maxsize=128):
             cache.clear()
 
         wrapper.clear_cache = clear_cache  # type: ignore
+        wrapper.cache = cache  # type: ignore
         return wrapper
 
     return decorator
