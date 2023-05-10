@@ -3,7 +3,7 @@ import json
 from collections import defaultdict
 from typing import Dict, List
 
-from fastapi import WebSocket
+from fastapi import WebSocket, status
 
 from langflow.api.schemas import ChatMessage, ChatResponse, FileResponse
 from langflow.cache import cache_manager
@@ -176,7 +176,9 @@ class ChatManager:
             # Handle any exceptions that might occur
             logger.exception(e)
             # send a message to the client
-            raise e
+            await self.active_connections[client_id].close(
+                code=status.WS_1011_INTERNAL_ERROR, reason=str(e)
+            )
         finally:
             try:
                 await self.active_connections[client_id].close(
