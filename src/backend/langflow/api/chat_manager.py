@@ -148,7 +148,7 @@ class ChatManager:
             files=file_responses,
         )
         await self.send_json(client_id, response)
-        self.chat_history.add_message(client_id, chat_message)
+        self.chat_history.add_message(client_id, response)
 
     async def handle_websocket(self, client_id: str, websocket: WebSocket):
         await self.connect(client_id, websocket)
