@@ -2,7 +2,7 @@ import { ChatBubbleLeftEllipsisIcon, ChatBubbleOvalLeftEllipsisIcon, PlusSmallIc
 import { useState } from "react";
 import { ChatMessageType } from "../../../types/chat";
 import { nodeColors } from "../../../utils";
-var Convert = require('ansi-to-html');
+import Convert from "ansi-to-html";
 var convert = new Convert({newline:true});
 
 export default function ChatMessage({ chat }: { chat: ChatMessageType }) {

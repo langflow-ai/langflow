@@ -17,7 +17,7 @@ import { sendAllProps } from "../../types/api";
 import { ChatMessageType, ChatType } from "../../types/chat";
 import ChatInput from "./chatInput";
 
-const _ = require("lodash");
+import _ from "lodash";
 
 export default function ChatModal({
   flow,
@@ -56,10 +56,7 @@ export default function ChatModal({
   function connectWS() {
     console.log("conectou");
     try {
-      const urlWs =
-        process.env.NODE_ENV === "development"
-          ? `ws://localhost:7860/chat/${flow.id}`
-          : `${window.location.protocol === "https:" ? "wss" : "ws"}://${
+      const urlWs = `${window.location.protocol === "https:" ? "wss" : "ws"}://${
               window.location.host
             }/chat/${flow.id}`;
 
