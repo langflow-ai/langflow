@@ -191,7 +191,7 @@ def test_llm_checker_chain(client: TestClient):
         "multiline": False,
         "password": False,
         "name": "llm",
-        "type": "BaseLLM",
+        "type": "BaseLanguageModel",
         "list": False,
         "advanced": False,
     }
