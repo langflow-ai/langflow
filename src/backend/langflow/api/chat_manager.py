@@ -48,7 +48,6 @@ class ChatManager:
     def __init__(self):
         self.active_connections: Dict[str, WebSocket] = {}
         self.chat_history = ChatHistory()
-        self.chat_history.attach(self.on_chat_history_update)
         self.cache_manager = cache_manager
         self.cache_manager.attach(self.update)
 
@@ -106,7 +105,6 @@ class ChatManager:
         # Process the graph data and chat message
         chat_message = payload.pop("message", "")
         chat_message = ChatMessage(message=chat_message)
-        await self.send_json(client_id, chat_message)
         self.chat_history.add_message(client_id, chat_message)
 
         graph_data = payload
