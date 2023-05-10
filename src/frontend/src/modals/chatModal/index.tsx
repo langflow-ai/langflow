@@ -91,6 +91,7 @@ export default function ChatModal({
 
 	function handleOnClose(event: CloseEvent) {
 		if (isOpen.current) {
+			console.log(event)
 			setLockChat(false);
 			setTimeout(() => {
 				connectWS();
