@@ -4,6 +4,7 @@ from collections import defaultdict
 from typing import Dict, List
 
 from fastapi import WebSocket, status
+from fastapi.websockets import WebSocketState
 
 from langflow.api.schemas import ChatMessage, ChatResponse, FileResponse
 from langflow.cache import cache_manager
@@ -179,11 +180,13 @@ class ChatManager:
             await self.active_connections[client_id].close(
                 code=status.WS_1011_INTERNAL_ERROR, reason=str(e)
             )
+            self.disconnect(client_id)
         finally:
             try:
-                await self.active_connections[client_id].close(
-                    code=1000, reason="Client disconnected"
-                )
+                connection = self.active_connections.get(client_id)
+                if connection:
+                    await connection.close(code=1000, reason="Client disconnected")
+                    self.disconnect(client_id)
             except Exception as e:
                 logger.exception(e)
             self.disconnect(client_id)
