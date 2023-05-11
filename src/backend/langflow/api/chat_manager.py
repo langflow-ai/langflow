@@ -177,7 +177,7 @@ class ChatManager:
             logger.exception(e)
             # send a message to the client
             await self.active_connections[client_id].close(
-                code=status.WS_1011_INTERNAL_ERROR, reason=str(e)
+                code=status.WS_1011_INTERNAL_ERROR, reason=str(e)[:120]
             )
             self.disconnect(client_id)
         finally:
