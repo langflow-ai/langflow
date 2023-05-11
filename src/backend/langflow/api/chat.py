@@ -1,4 +1,10 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, WebSocketException, status
+from fastapi import (
+    APIRouter,
+    WebSocket,
+    WebSocketDisconnect,
+    WebSocketException,
+    status,
+)
 
 from langflow.api.chat_manager import ChatManager
 from langflow.utils.logger import logger
