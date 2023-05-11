@@ -198,7 +198,9 @@ export default function ParameterComponent({
 							save();
 						}}
 					/>
-				):(<></>)}
+				) : (
+					<></>
+				)}
 			</>
 		</div>
 	);

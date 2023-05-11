@@ -1,12 +1,12 @@
 import { createContext, ReactNode, useEffect, useState } from "react";
-import { Node} from "reactflow";
+import { Node } from "reactflow";
 import { typesContextType } from "../types/typesContext";
 import { getAll } from "../controllers/API";
 import { APIKindType } from "../types/api";
 
 //context to share types adn functions from nodes to flow
 
-const initialValue:typesContextType = {
+const initialValue: typesContextType = {
 	reactFlowInstance: null,
 	setReactFlowInstance: () => {},
 	deleteNode: () => {},
@@ -14,13 +14,13 @@ const initialValue:typesContextType = {
 	setTypes: () => {},
 	templates: {},
 	setTemplates: () => {},
-	data:{},
-	setData:()=>{}
+	data: {},
+	setData: () => {},
 };
 
 export const typesContext = createContext<typesContextType>(initialValue);
 
-export function TypesProvider({ children }:{children:ReactNode}) {
+export function TypesProvider({ children }: { children: ReactNode }) {
 	const [types, setTypes] = useState({});
 	const [reactFlowInstance, setReactFlowInstance] = useState(null);
 	const [templates, setTemplates] = useState({});
@@ -35,11 +35,11 @@ export function TypesProvider({ children }:{children:ReactNode}) {
 			setData(result.data);
 			setTemplates(
 				Object.keys(result.data).reduce((acc, curr) => {
-					Object.keys(result.data[curr]).forEach((c: keyof APIKindType)=>{
-						acc[c] = result.data[curr][c]
-					})
+					Object.keys(result.data[curr]).forEach((c: keyof APIKindType) => {
+						acc[c] = result.data[curr][c];
+					});
 					return acc;
-				},{})
+				}, {})
 			);
 			// Set the types by reducing over the keys of the result data and updating the accumulator.
 			setTypes(
@@ -59,11 +59,15 @@ export function TypesProvider({ children }:{children:ReactNode}) {
 		getTypes();
 	}, [setTypes]);
 
-	function deleteNode(idx:string) {
+	function deleteNode(idx: string) {
 		reactFlowInstance.setNodes(
-			reactFlowInstance.getNodes().filter((n:Node) => n.id !== idx)
+			reactFlowInstance.getNodes().filter((n: Node) => n.id !== idx)
 		);
-		reactFlowInstance.setEdges(reactFlowInstance.getEdges().filter((ns) => ns.source !== idx && ns.target !== idx));
+		reactFlowInstance.setEdges(
+			reactFlowInstance
+				.getEdges()
+				.filter((ns) => ns.source !== idx && ns.target !== idx)
+		);
 	}
 	return (
 		<typesContext.Provider
@@ -76,7 +80,7 @@ export function TypesProvider({ children }:{children:ReactNode}) {
 				setTemplates,
 				templates,
 				data,
-				setData
+				setData,
 			}}
 		>
 			{children}
