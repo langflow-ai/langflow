@@ -360,7 +360,7 @@ export default function ChatModal({
                     <FaEraser className="w-4 h-4" />
                   </button>
                 </div>
-                <div className="w-full h-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center overflow-scroll scrollbar-hide p-3">
+                <div className="w-full h-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center overflow-scroll scrollbar-hide">
                   {chatHistory.length > 0 ? (
                     chatHistory.map((c, i) => <ChatMessage chat={c} key={i} />)
                   ) : (
