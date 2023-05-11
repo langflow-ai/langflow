@@ -58,7 +58,7 @@ export default function TabsManagerComponent() {
 				/>
 				<div className="ml-auto mr-2 flex gap-3">
 					<button
-						onClick={() => openPopUp(<ApiModal />)}
+						onClick={() => openPopUp(<ApiModal flowName={flows[tabIndex].name} />)}
 						className="flex items-center gap-1 pr-2 border-gray-400 border-r text-sm text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
 					>
 						API <CodeBracketSquareIcon className="w-5 h-5" />
