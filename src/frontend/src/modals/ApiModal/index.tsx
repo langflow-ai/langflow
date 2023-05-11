@@ -3,44 +3,18 @@ import { IconCheck, IconClipboard, IconDownload } from '@tabler/icons-react';
 import { XMarkIcon, CommandLineIcon, CodeBracketSquareIcon } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
-import AceEditor from "react-ace";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/webpack-resolver";
 import { darkContext } from "../../contexts/darkContext";
-import { checkCode } from "../../controllers/API";
-import { alertContext } from "../../contexts/alertContext";
-import { FaPython } from "react-icons/fa";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
-const pythonCode = `import requests
 
-API_URL = "{window.location.protocol}//{window.location.host}/predict"
 
-def predict(message):
-    with open("FLOW NAME.json:, "r") as f:
-        json_data = json.load(f)
-    payload['exported_flow'] = json_data
-    payload['message'] = message
-    response = requests.post(API_URL, json=payload)
-    return response.json() # JSON {"result": "Response"}
-
-print(predict("Your message"))`;
-
-const tabs = [
-	{
-		name: "Python",
-		mode: "python",
-		image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-		code: pythonCode,
-	},
-
-]
-
-export default function ApiModal() {
+export default function ApiModal({flowName}) {
 	const [open, setOpen] = useState(true);
 	const { dark } = useContext(darkContext);
 	const { closePopUp } = useContext(PopUpContext);
@@ -69,6 +43,30 @@ export default function ApiModal() {
 			}, 300);
 		}
 	}
+
+	const pythonCode = `import requests
+
+API_URL = "${window.location.protocol}//${window.location.host}/predict"
+
+def predict(message):
+    with open("${flowName}.json:, "r") as f:
+        json_data = json.load(f)
+    payload['exported_flow'] = json_data
+    payload['message'] = message
+    response = requests.post(API_URL, json=payload)
+    return response.json() # JSON {"result": "Response"}
+
+print(predict("Your message"))`;
+
+const tabs = [
+	{
+		name: "Python",
+		mode: "python",
+		image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+		code: pythonCode,
+	},
+
+]
 	return (
 		<Transition.Root show={open} appear={true} as={Fragment}>
 			<Dialog
