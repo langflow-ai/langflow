@@ -90,7 +90,7 @@ class ChatManager:
         self.active_connections[client_id] = websocket
 
     def disconnect(self, client_id: str):
-        del self.active_connections[client_id]
+        self.active_connections.pop(client_id, None)
 
     async def send_message(self, client_id: str, message: str):
         websocket = self.active_connections[client_id]
