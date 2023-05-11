@@ -14,7 +14,7 @@ import { oneDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
 
 
-export default function ApiModal({flowName}) {
+export default function ApiModal({ flowName }) {
 	const [open, setOpen] = useState(true);
 	const { dark } = useContext(darkContext);
 	const { closePopUp } = useContext(PopUpContext);
@@ -49,24 +49,23 @@ export default function ApiModal({flowName}) {
 API_URL = "${window.location.protocol}//${window.location.host}/predict"
 
 def predict(message):
-    with open("${flowName}.json:, "r") as f:
+    with open("${flowName}.json", "r") as f:
         json_data = json.load(f)
-    payload['exported_flow'] = json_data
-    payload['message'] = message
+    payload = {'exported_flow': json_data, 'message': message}
     response = requests.post(API_URL, json=payload)
     return response.json() # JSON {"result": "Response"}
 
 print(predict("Your message"))`;
 
-const tabs = [
-	{
-		name: "Python",
-		mode: "python",
-		image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-		code: pythonCode,
-	},
+	const tabs = [
+		{
+			name: "Python",
+			mode: "python",
+			image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+			code: pythonCode,
+		},
 
-]
+	]
 	return (
 		<Transition.Root show={open} appear={true} as={Fragment}>
 			<Dialog
