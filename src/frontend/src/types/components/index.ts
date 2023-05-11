@@ -1,4 +1,4 @@
-import { ForwardRefExoticComponent, ReactElement, ReactNode } from "react";
+import { ForwardRefExoticComponent, ReactElement, ReactFragment, ReactNode } from "react";
 import { NodeDataType } from "../flow/index";
 export type InputComponentType = {
 	value: string;
@@ -67,19 +67,19 @@ export type FloatComponentType = {
 };
 
 export type TooltipComponentType = {
-	children: ReactElement;
-	title: string;
-	placement?:
-		| "bottom-end"
-		| "bottom-start"
-		| "bottom"
-		| "left-end"
-		| "left-start"
-		| "left"
-		| "right-end"
-		| "right-start"
-		| "right"
-		| "top-end"
-		| "top-start"
-		| "top";
+  children: ReactElement;
+  title: string | ReactElement;
+  placement?:
+    | "bottom-end"
+    | "bottom-start"
+    | "bottom"
+    | "left-end"
+    | "left-start"
+    | "left"
+    | "right-end"
+    | "right-start"
+    | "right"
+    | "top-end"
+    | "top-start"
+    | "top";
 };
