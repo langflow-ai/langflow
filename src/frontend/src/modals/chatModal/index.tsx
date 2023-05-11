@@ -115,16 +115,16 @@ export default function ChatModal({
               newChatHistory.push(
                 chatItem.files
                   ? {
-                      isSend: !chatItem.is_bot,
-                      message: chatItem.message,
-                      thought: chatItem.intermediate_steps,
-                      files: chatItem.files,
-                    }
+                    isSend: !chatItem.is_bot,
+                    message: chatItem.message,
+                    thought: chatItem.intermediate_steps,
+                    files: chatItem.files,
+                  }
                   : {
-                      isSend: !chatItem.is_bot,
-                      message: chatItem.message,
-                      thought: chatItem.intermediate_steps,
-                    }
+                    isSend: !chatItem.is_bot,
+                    message: chatItem.message,
+                    thought: chatItem.intermediate_steps,
+                  }
               );
             }
           }
@@ -164,9 +164,8 @@ export default function ChatModal({
       const urlWs =
         process.env.NODE_ENV === "development"
           ? `ws://localhost:7860/chat/${flow.id}`
-          : `${window.location.protocol === "https:" ? "wss" : "ws"}://${
-              window.location.host
-            }/chat/${flow.id}`;
+          : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host
+          }/chat/${flow.id}`;
 
       const newWs = new WebSocket(urlWs);
       newWs.onopen = () => {
@@ -224,7 +223,7 @@ export default function ChatModal({
       }
     } catch (error) {
       setErrorData({
-        title: "There was an erro sending the message",
+        title: "There was an error sending the message",
         list: [error.message],
       });
       setChatValue(data.message);
@@ -264,12 +263,11 @@ export default function ChatModal({
                   e.targetHandle.split("|")[2] === n.id
               )
             ? [
-                `${type} is missing ${
-                  template.display_name
-                    ? template.display_name
-                    : toNormalCase(template[t].name)
-                }.`,
-              ]
+              `${type} is missing ${template.display_name
+                ? template.display_name
+                : toNormalCase(template[t].name)
+              }.`,
+            ]
             : []
         ),
       [] as string[]
