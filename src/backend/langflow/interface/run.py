@@ -2,12 +2,11 @@ import contextlib
 import io
 from typing import Any, Dict
 
-from chromadb.errors import NotEnoughElementsException
+from chromadb.errors import NotEnoughElementsException  # type: ignore
 
 from langflow.api.callback import AsyncStreamingLLMCallbackHandler, StreamingLLMCallbackHandler  # type: ignore
 from langflow.cache.base import compute_dict_hash, load_cache, memoize_dict
 from langflow.graph.graph import Graph
-from langflow.interface import loading
 from langflow.utils.logger import logger
 
 
