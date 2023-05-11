@@ -1,6 +1,35 @@
-from typing import Any, Union
+from typing import Any, Dict, List, Union
 
 from pydantic import BaseModel, validator
+
+
+class GraphData(BaseModel):
+    """Data inside the exported flow."""
+
+    nodes: List[Dict[str, Any]]
+    edges: List[Dict[str, Any]]
+
+
+class ExportedFlow(BaseModel):
+    """Exported flow from LangFlow."""
+
+    description: str
+    name: str
+    id: str
+    data: GraphData
+
+
+class PredictRequest(BaseModel):
+    """Predict request schema."""
+
+    message: str
+    exported_flow: ExportedFlow
+
+
+class PredictResponse(BaseModel):
+    """Predict response schema."""
+
+    result: str
 
 
 class ChatMessage(BaseModel):

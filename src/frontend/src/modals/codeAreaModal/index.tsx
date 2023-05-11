@@ -134,7 +134,7 @@ export default function CodeAreaModal({
 																	title: "Code is ready to run",
 																});
 																setModalOpen(false);
-																setValue(code)
+																setValue(code);
 															} else {
 																if (funcErrors.length !== 0) {
 																	setErrorData({
@@ -142,7 +142,7 @@ export default function CodeAreaModal({
 																		list: funcErrors,
 																	});
 																}
-																if(importsErrors.length!==0){
+																if (importsErrors.length !== 0) {
 																	setErrorData({
 																		title: "There is an error in your imports",
 																		list: importsErrors,

@@ -11,8 +11,7 @@ const root = ReactDOM.createRoot(
 root.render(
 	<ContextWrapper>
 		<BrowserRouter>
-
-				<App />
+			<App />
 		</BrowserRouter>
 	</ContextWrapper>
 );

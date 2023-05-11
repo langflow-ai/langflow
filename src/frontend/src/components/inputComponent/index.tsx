@@ -3,10 +3,10 @@ import { InputComponentType } from "../../types/components";
 import { classNames } from "../../utils";
 
 export default function InputComponent({
-  value,
-  onChange,
-  disabled,
-  password,
+	value,
+	onChange,
+	disabled,
+	password,
 }: InputComponentType) {
   const [myValue, setMyValue] = useState(value ?? "");
   const [pwdVisible, setPwdVisible] = useState(false);

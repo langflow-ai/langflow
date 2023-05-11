@@ -20,13 +20,13 @@ type alertContextType = {
 	notificationCenter: boolean;
 	setNotificationCenter: (newState: boolean) => void;
 	notificationList: Array<AlertItemType>;
-	pushNotificationList: (Object:AlertItemType) => void;
+	pushNotificationList: (Object: AlertItemType) => void;
 	clearNotificationList: () => void;
 	removeFromNotificationList: (index: string) => void;
 };
 
 //initial values to alertContextType
-const initialValue:alertContextType = {
+const initialValue: alertContextType = {
 	errorData: { title: "", list: [] },
 	setErrorData: () => {},
 	errorOpen: false,
@@ -49,7 +49,7 @@ const initialValue:alertContextType = {
 
 export const alertContext = createContext<alertContextType>(initialValue);
 
-export function AlertProvider({ children }:{children:ReactNode}) {
+export function AlertProvider({ children }: { children: ReactNode }) {
 	const [errorData, setErrorDataState] = useState<{
 		title: string;
 		list?: Array<string>;
@@ -73,68 +73,69 @@ export function AlertProvider({ children }:{children:ReactNode}) {
 			return newNotificationList;
 		});
 	};
-/**
- * Sets the error data state, opens the error dialog and pushes the new error notification to the notification list
- * @param newState An object containing the new error data, including title and optional list of error messages
- */
-function setErrorData(newState: { title: string; list?: Array<string> }) {
-	setErrorDataState(newState);
-	setErrorOpen(true);
-	if (newState.title) {
-		setNotificationCenter(true);
-		pushNotificationList({
-			type: "error",
-			title: newState.title,
-			list: newState.list,
-			id: _.uniqueId(),
-		});
+	/**
+	 * Sets the error data state, opens the error dialog and pushes the new error notification to the notification list
+	 * @param newState An object containing the new error data, including title and optional list of error messages
+	 */
+	function setErrorData(newState: { title: string; list?: Array<string> }) {
+		setErrorDataState(newState);
+		setErrorOpen(true);
+		if (newState.title) {
+			setNotificationCenter(true);
+			pushNotificationList({
+				type: "error",
+				title: newState.title,
+				list: newState.list,
+				id: _.uniqueId(),
+			});
+		}
 	}
-}
-/**
- * Sets the state of the notice data and opens the notice modal, also adds a new notice to the notification center if the title is defined.
- * @param newState An object containing the title of the notice and optionally a link.
- */
-function setNoticeData(newState: { title: string; link?: string }) {
-	setNoticeDataState(newState);
-	setNoticeOpen(true);
-	if (newState.title) {
-		// Add new notice to notification center
-		setNotificationCenter(true);
-		pushNotificationList({
-			type: "notice",
-			title: newState.title,
-			link: newState.link,
-			id: _.uniqueId(),
-		});
+	/**
+	 * Sets the state of the notice data and opens the notice modal, also adds a new notice to the notification center if the title is defined.
+	 * @param newState An object containing the title of the notice and optionally a link.
+	 */
+	function setNoticeData(newState: { title: string; link?: string }) {
+		setNoticeDataState(newState);
+		setNoticeOpen(true);
+		if (newState.title) {
+			// Add new notice to notification center
+			setNotificationCenter(true);
+			pushNotificationList({
+				type: "notice",
+				title: newState.title,
+				link: newState.link,
+				id: _.uniqueId(),
+			});
+		}
 	}
-}
-/**
- * Update the success data state and show a success alert notification.
- * @param newState - A state object with a "title" property to set in the success data state.
- */
-function setSuccessData(newState: { title: string }) {
-	setSuccessDataState(newState); // update the success data state with the provided new state
-	setSuccessOpen(true); // open the success alert
+	/**
+	 * Update the success data state and show a success alert notification.
+	 * @param newState - A state object with a "title" property to set in the success data state.
+	 */
+	function setSuccessData(newState: { title: string }) {
+		setSuccessDataState(newState); // update the success data state with the provided new state
+		setSuccessOpen(true); // open the success alert
 
-	// If the new state has a "title" property, add a new success notification to the list
-	if (newState.title) {
-		setNotificationCenter(true); // show the notification center
-		pushNotificationList({ // add the new notification to the list
-			type: "success",
-			title: newState.title,
-			id: _.uniqueId(),
-		});
+		// If the new state has a "title" property, add a new success notification to the list
+		if (newState.title) {
+			setNotificationCenter(true); // show the notification center
+			pushNotificationList({
+				// add the new notification to the list
+				type: "success",
+				title: newState.title,
+				id: _.uniqueId(),
+			});
+		}
 	}
-}
 	function clearNotificationList() {
 		setNotificationList([]);
 	}
 	function removeFromNotificationList(index: string) {
 		// set the notification list to a new array that filters out the alert with the matching id
 		setNotificationList((prevAlertsList) =>
-		  prevAlertsList.filter((alert) => alert.id !== index)
+			prevAlertsList.filter((alert) => alert.id !== index)
 		);
-	  }
+	}
 	return (
 		<alertContext.Provider
 			value={{

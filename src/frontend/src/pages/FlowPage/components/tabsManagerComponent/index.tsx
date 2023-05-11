@@ -102,9 +102,7 @@ export default function TabsManagerComponent() {
 									>
 										<AlertDropdown />
 									</div>
-                  <div className="h-screen w-screen fixed top-0 left-0">
-                    
-                  </div>
+									<div className="h-screen w-screen fixed top-0 left-0"></div>
 								</>
 							);
 						}}
