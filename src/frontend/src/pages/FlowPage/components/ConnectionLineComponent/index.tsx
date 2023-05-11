@@ -1,14 +1,12 @@
-import { ConnectionLineComponentProps } from 'reactflow';
-
-
+import { ConnectionLineComponentProps } from "reactflow";
 
 const ConnectionLineComponent = ({
 	fromX,
 	fromY,
 	toX,
 	toY,
-	connectionLineStyle = {} // provide a default value for connectionLineStyle
-}:ConnectionLineComponentProps) => {
+	connectionLineStyle = {}, // provide a default value for connectionLineStyle
+}: ConnectionLineComponentProps) => {
 	return (
 		<g>
 			<path

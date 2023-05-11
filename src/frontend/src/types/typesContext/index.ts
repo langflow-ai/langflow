@@ -1,12 +1,11 @@
 import { ReactFlowInstance } from "reactflow";
 
-const types:{[char: string]: string}={};
-const template:{[char: string]: string}={}
-const data:{[char: string]: string}={}
-
+const types: { [char: string]: string } = {};
+const template: { [char: string]: string } = {};
+const data: { [char: string]: string } = {};
 
 export type typesContextType = {
-	reactFlowInstance: ReactFlowInstance|null;
+	reactFlowInstance: ReactFlowInstance | null;
 	setReactFlowInstance: any;
 	deleteNode: (idx: string) => void;
 	types: typeof types;

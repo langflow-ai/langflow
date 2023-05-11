@@ -1,14 +1,11 @@
-import {
-	ChevronRightIcon,
-} from "@heroicons/react/24/solid";
+import { ChevronRightIcon } from "@heroicons/react/24/solid";
 import { Disclosure } from "@headlessui/react";
 import { DisclosureComponentType } from "../../../../types/components";
 
 export default function DisclosureComponent({
 	button: { title, Icon, buttons = [] },
 	children,
-}: DisclosureComponentType
-) {
+}: DisclosureComponentType) {
 	return (
 		<Disclosure as="div" key={title}>
 			{({ open }) => (

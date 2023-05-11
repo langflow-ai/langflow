@@ -8,6 +8,7 @@
         "@headlessui/react": "^1.7.10",
         "@heroicons/react": "^2.0.15",
         "@mui/material": "^5.11.9",
+        "@tabler/icons-react": "^2.17.0",
         "@tailwindcss/forms": "^0.5.3",
         "@tailwindcss/line-clamp": "^0.4.4",
         "@testing-library/jest-dom": "^5.16.5",
@@ -29,10 +30,15 @@
         "react-error-boundary": "^4.0.2",
         "react-icons": "^4.8.0",
         "react-laag": "^2.0.5",
+        "react-markdown": "^8.0.7",
         "react-router-dom": "^6.8.1",
         "react-scripts": "5.0.1",
+        "react-syntax-highlighter": "^15.5.0",
         "react-tabs": "^6.0.0",
         "reactflow": "^11.5.5",
+        "rehype-mathjax": "^4.0.2",
+        "remark-gfm": "^3.0.1",
+        "remark-math": "^5.1.1",
         "tailwindcss": "^3.2.6",
         "typescript": "^4.9.5",
         "web-vitals": "^2.1.4"
@@ -61,5 +67,8 @@
             "last 1 safari version"
         ]
     },
-    "proxy": "http://127.0.0.1:7860"
+    "proxy": "http://127.0.0.1:7860",
+    "devDependencies": {
+        "@tailwindcss/typography": "^0.5.9"
+    }
 }

@@ -1,5 +1,4 @@
-
-const template:{[char: string]: string}={}
+const template: { [char: string]: string } = {};
 
 export type TemplateContextType = {
 	templates: typeof template;

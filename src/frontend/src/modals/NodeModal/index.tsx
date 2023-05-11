@@ -87,37 +87,38 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
 										<div className="flex h-full w-full">
 											<div className="overflow-hidden px-4 sm:p-4  w-full rounded-lg bg-white dark:bg-gray-800 shadow">
 												<div className="flex flex-col h-full gap-5">
-													{
-														Object.keys(data.node.template)
-															.filter((t) => t.charAt(0) !== "_"&& data.node.template[t].advanced && data.node.template[t].show)
-															.map((t: string, idx) => {
-																return (
-																	<ModalField
+													{Object.keys(data.node.template)
+														.filter(
+															(t) =>
+																t.charAt(0) !== "_" &&
+																data.node.template[t].advanced &&
+																data.node.template[t].show
+														)
+														.map((t: string, idx) => {
+															return (
+																<ModalField
 																	key={idx}
-																		data={data}
-																		title={
-																			data.node.template[t].display_name
-																				? data.node.template[t].display_name
-																				: data.node.template[t].name
-																				? toNormalCase(
-																						data.node.template[t].name
-																				  )
-																				: toNormalCase(t)
-																		}
-																		required={data.node.template[t].required}
-																		id={
-																			data.node.template[t].type +
-																			"|" +
-																			t +
-																			"|" +
-																			data.id
-																		}
-																		name={t}
-																		type={data.node.template[t].type}
-																	/>
-																);
-															})
-													}
+																	data={data}
+																	title={
+																		data.node.template[t].display_name
+																			? data.node.template[t].display_name
+																			: data.node.template[t].name
+																			? toNormalCase(data.node.template[t].name)
+																			: toNormalCase(t)
+																	}
+																	required={data.node.template[t].required}
+																	id={
+																		data.node.template[t].type +
+																		"|" +
+																		t +
+																		"|" +
+																		data.id
+																	}
+																	name={t}
+																	type={data.node.template[t].type}
+																/>
+															);
+														})}
 												</div>
 											</div>
 										</div>

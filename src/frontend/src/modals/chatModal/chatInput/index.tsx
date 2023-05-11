@@ -24,9 +24,9 @@ export default function ChatInput({
 				}}
 				ref={inputRef}
 				disabled={lockChat}
-				style={{resize: "none" }}
+				style={{ resize: "none" }}
 				value={lockChat ? "Thinking..." : chatValue}
-				onChange={(e) => {							
+				onChange={(e) => {
 					setChatValue(e.target.value);
 				}}
 				className={classNames(

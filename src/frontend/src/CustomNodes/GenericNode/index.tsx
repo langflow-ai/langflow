@@ -1,10 +1,5 @@
 import { Cog6ToothIcon, TrashIcon } from "@heroicons/react/24/outline";
-import {
-  classNames,
-  nodeColors,
-  nodeIcons,
-  toNormalCase,
-} from "../../utils";
+import { classNames, nodeColors, nodeIcons, toNormalCase } from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
 import { typesContext } from "../../contexts/typesContext";
 import { useContext, useState, useEffect, useRef } from "react";
@@ -16,149 +11,148 @@ import { useCallback } from "react";
 import { TabsContext } from "../../contexts/tabsContext";
 import { debounce } from "../../utils";
 export default function GenericNode({
-  data,
-  selected,
+	data,
+	selected,
 }: {
-  data: NodeDataType;
-  selected: boolean;
+	data: NodeDataType;
+	selected: boolean;
 }) {
-  const { setErrorData } = useContext(alertContext);
-  const showError = useRef(true);
-  const { types, deleteNode } = useContext(typesContext);
-  const { openPopUp } = useContext(PopUpContext);
-  const Icon = nodeIcons[types[data.type]];
-  const [validationStatus, setValidationStatus] = useState("idle");
-  // State for outline color
-  const [isValid, setIsValid] = useState(false);
-  const { save } = useContext(TabsContext);
-  const { reactFlowInstance } = useContext(typesContext);
-  const [params, setParams] = useState([]);
+	const { setErrorData } = useContext(alertContext);
+	const showError = useRef(true);
+	const { types, deleteNode } = useContext(typesContext);
+	const { openPopUp } = useContext(PopUpContext);
+	const Icon = nodeIcons[types[data.type]];
+	const [validationStatus, setValidationStatus] = useState("idle");
+	// State for outline color
+	const [isValid, setIsValid] = useState(false);
+	const { save } = useContext(TabsContext);
+	const { reactFlowInstance } = useContext(typesContext);
+	const [params, setParams] = useState([]);
 
+	useEffect(() => {
+		if (reactFlowInstance) {
+			setParams(Object.values(reactFlowInstance.toObject()));
+		}
+	}, [save]);
 
-  useEffect(() => {
-    if (reactFlowInstance) {
-      setParams(Object.values(reactFlowInstance.toObject()));
-    }
-  }, [save]);
+	const validateNode = useCallback(
+		debounce(async () => {
+			try {
+				const response = await fetch(`/validate/node/${data.id}`, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify(reactFlowInstance.toObject()),
+				});
 
-  const validateNode = useCallback(
-    debounce(async () => {
-      try {
-        const response = await fetch(`/validate/node/${data.id}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(reactFlowInstance.toObject()),
-        });
+				if (response.status === 200) {
+					setValidationStatus("success");
+				} else if (response.status === 500) {
+					setValidationStatus("error");
+				}
+			} catch (error) {
+				// console.error("Error validating node:", error);
+				setValidationStatus("error");
+			}
+		}, 1000), // Adjust the debounce delay (500ms) as needed
+		[reactFlowInstance, data.id]
+	);
+	useEffect(() => {
+		if (params.length > 0) {
+			validateNode();
+		}
+	}, [params, validateNode]);
 
-        if (response.status === 200) {
-          setValidationStatus("success");
-        } else if (response.status === 500) {
-          setValidationStatus("error");
-        }
-      } catch (error) {
-        // console.error("Error validating node:", error);
-        setValidationStatus("error");
-      }
-    }, 1000), // Adjust the debounce delay (500ms) as needed
-    [reactFlowInstance, data.id]
-  );
-  useEffect(() => {
-    if (params.length > 0) {
-      validateNode();
-    }
-  }, [params, validateNode]);
+	useEffect(() => {
+		if (validationStatus === "success") {
+			setIsValid(true);
+		} else {
+			setIsValid(false);
+		}
+	}, [validationStatus]);
 
-  useEffect(() => {
-    if (validationStatus === "success") {
-      setIsValid(true);
-    } else {
-      setIsValid(false);
-    }
-  }, [validationStatus]);
+	if (!Icon) {
+		if (showError.current) {
+			setErrorData({
+				title: data.type
+					? `The ${data.type} node could not be rendered, please review your json file`
+					: "There was a node that can't be rendered, please review your json file",
+			});
+			showError.current = false;
+		}
+		deleteNode(data.id);
+		return;
+	}
 
-  if (!Icon) {
-    if (showError.current) {
-      setErrorData({
-        title: data.type
-          ? `The ${data.type} node could not be rendered, please review your json file`
-          : "There was a node that can't be rendered, please review your json file",
-      });
-      showError.current = false;
-    }
-    deleteNode(data.id);
-    return;
-  }
+	return (
+		<div
+			className={classNames(
+				isValid ? "animate-pulse-green" : "border-red-outline",
+				selected ? "border border-blue-500" : "border dark:border-gray-700",
+				"prompt-node relative bg-white dark:bg-gray-900 w-96 rounded-lg flex flex-col justify-center"
+			)}
+		>
+			<div className="w-full dark:text-white flex items-center justify-between p-4 gap-8 bg-gray-50 rounded-t-lg dark:bg-gray-800 border-b dark:border-b-gray-700 ">
+				<div className="w-full flex items-center truncate gap-4 text-lg">
+					<Icon
+						className="w-10 h-10 p-1 rounded"
+						style={{
+							color: nodeColors[types[data.type]] ?? nodeColors.unknown,
+						}}
+					/>
+					<div className="truncate">{data.type}</div>
+				</div>
+				<div className="flex gap-3">
+					<button
+						className="relative"
+						onClick={(event) => {
+							event.preventDefault();
+							openPopUp(<NodeModal data={data} />);
+						}}
+					>
+						<div className=" absolute text-red-600 -top-2 -right-1">
+							{Object.keys(data.node.template).some(
+								(t) =>
+									data.node.template[t].advanced &&
+									data.node.template[t].required
+							)
+								? " *"
+								: ""}
+						</div>
+						<Cog6ToothIcon
+							className={classNames(
+								Object.keys(data.node.template).some(
+									(t) =>
+										data.node.template[t].advanced && data.node.template[t].show
+								)
+									? ""
+									: "hidden",
+								"w-6 h-6  dark:text-gray-500  hover:animate-spin"
+							)}
+						></Cog6ToothIcon>
+					</button>
+					<button
+						onClick={() => {
+							deleteNode(data.id);
+						}}
+					>
+						<TrashIcon className="w-6 h-6 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-500"></TrashIcon>
+					</button>
+				</div>
+			</div>
 
-  return (
-    <div
-      className={classNames(
-        isValid ? "animate-pulse-green" : "border-red-outline",
-        selected ? "border border-blue-500" : "border dark:border-gray-700",
-        "prompt-node relative bg-white dark:bg-gray-900 w-96 rounded-lg flex flex-col justify-center"
-      )}
-    >
-      <div className="w-full dark:text-white flex items-center justify-between p-4 gap-8 bg-gray-50 rounded-t-lg dark:bg-gray-800 border-b dark:border-b-gray-700 ">
-        <div className="w-full flex items-center truncate gap-4 text-lg">
-          <Icon
-            className="w-10 h-10 p-1 rounded"
-            style={{
-              color: nodeColors[types[data.type]] ?? nodeColors.unknown,
-            }}
-          />
-          <div className="truncate">{data.type}</div>
-        </div>
-        <div className="flex gap-3">
-          <button
-            className="relative"
-            onClick={(event) => {
-              event.preventDefault();
-              openPopUp(<NodeModal data={data} />);
-            }}
-          >
-            <div className=" absolute text-red-600 -top-2 -right-1">
-              {Object.keys(data.node.template).some(
-                (t) =>
-                  data.node.template[t].advanced &&
-                  data.node.template[t].required
-              )
-                ? " *"
-                : ""}
-            </div>
-            <Cog6ToothIcon
-              className={classNames(
-                Object.keys(data.node.template).some(
-                  (t) =>
-                    data.node.template[t].advanced && data.node.template[t].show
-                )
-                  ? ""
-                  : "hidden",
-                "w-6 h-6  dark:text-gray-500  hover:animate-spin"
-              )}
-            ></Cog6ToothIcon>
-          </button>
-          <button
-            onClick={() => {
-              deleteNode(data.id);
-            }}
-          >
-            <TrashIcon className="w-6 h-6 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-500"></TrashIcon>
-          </button>
-        </div>
-      </div>
+			<div className="w-full h-full py-5">
+				<div className="w-full text-gray-500 px-5 pb-3 text-sm">
+					{data.node.description}
+				</div>
 
-      <div className="w-full h-full py-5">
-        <div className="w-full text-gray-500 px-5 pb-3 text-sm">
-          {data.node.description}
-        </div>
-
-        <>
-          {Object.keys(data.node.template)
-            .filter((t) => t.charAt(0) !== "_")
-            .map((t: string, idx) => (
-              <div key={idx}>
-                {/* {idx === 0 ? (
+				<>
+					{Object.keys(data.node.template)
+						.filter((t) => t.charAt(0) !== "_")
+						.map((t: string, idx) => (
+							<div key={idx}>
+								{/* {idx === 0 ? (
 									<div
 										className={classNames(
 											"px-5 py-2 mt-2 dark:text-white text-center",
@@ -177,59 +171,59 @@ export default function GenericNode({
 								) : (
 									<></>
 								)} */}
-                {data.node.template[t].show &&
-                !data.node.template[t].advanced ? (
-                  <ParameterComponent
-                    data={data}
-                    color={
-                      nodeColors[types[data.node.template[t].type]] ??
-                      nodeColors.unknown
-                    }
-                    title={
-                      data.node.template[t].display_name
-                        ? data.node.template[t].display_name
-                        : data.node.template[t].name
-                        ? toNormalCase(data.node.template[t].name)
-                        : toNormalCase(t)
-                    }
-                    name={t}
-                    tooltipTitle={
-                      "Type: " +
-                      data.node.template[t].type +
-                      (data.node.template[t].list ? " list" : "")
-                    }
-                    required={data.node.template[t].required}
-                    id={data.node.template[t].type + "|" + t + "|" + data.id}
-                    left={true}
-                    type={data.node.template[t].type}
-                  />
-                ) : (
-                  <></>
-                )}
-              </div>
-            ))}
-          <div
-            className={classNames(
-              Object.keys(data.node.template).length < 1 ? "hidden" : "",
-              "w-full flex justify-center"
-            )}
-          >
-            {" "}
-          </div>
-          {/* <div className="px-5 py-2 mt-2 dark:text-white text-center">
+								{data.node.template[t].show &&
+								!data.node.template[t].advanced ? (
+									<ParameterComponent
+										data={data}
+										color={
+											nodeColors[types[data.node.template[t].type]] ??
+											nodeColors.unknown
+										}
+										title={
+											data.node.template[t].display_name
+												? data.node.template[t].display_name
+												: data.node.template[t].name
+												? toNormalCase(data.node.template[t].name)
+												: toNormalCase(t)
+										}
+										name={t}
+										tooltipTitle={
+											"Type: " +
+											data.node.template[t].type +
+											(data.node.template[t].list ? " list" : "")
+										}
+										required={data.node.template[t].required}
+										id={data.node.template[t].type + "|" + t + "|" + data.id}
+										left={true}
+										type={data.node.template[t].type}
+									/>
+								) : (
+									<></>
+								)}
+							</div>
+						))}
+					<div
+						className={classNames(
+							Object.keys(data.node.template).length < 1 ? "hidden" : "",
+							"w-full flex justify-center"
+						)}
+					>
+						{" "}
+					</div>
+					{/* <div className="px-5 py-2 mt-2 dark:text-white text-center">
 						Output
 					</div> */}
-          <ParameterComponent
-            data={data}
-            color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-            title={data.type}
-            tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
-            id={[data.type, data.id, ...data.node.base_classes].join("|")}
-            type={data.node.base_classes.join("|")}
-            left={false}
-          />
-        </>
-      </div>
-    </div>
-  );
+					<ParameterComponent
+						data={data}
+						color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+						title={data.type}
+						tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
+						id={[data.type, data.id, ...data.node.base_classes].join("|")}
+						type={data.node.base_classes.join("|")}
+						left={false}
+					/>
+				</>
+			</div>
+		</div>
+	);
 }
