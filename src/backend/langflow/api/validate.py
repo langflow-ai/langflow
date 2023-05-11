@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, HTTPException
 
 from langflow.api.base import (
@@ -10,7 +12,6 @@ from langflow.api.base import (
 from langflow.interface.run import build_graph
 from langflow.utils.logger import logger
 from langflow.utils.validate import validate_code
-import json
 
 # build router
 router = APIRouter(prefix="/validate", tags=["validate"])
@@ -47,8 +48,8 @@ def post_validate_node(node_id: str, data: dict):
         node = graph.get_node(node_id)
         if node is not None:
             _ = node.build()
-            return json.dumps({'valid': True, 'params': str(node.params)})
+            return json.dumps({"valid": True, "params": str(node.params)})
         else:
-            return json.dumps({'valid': False})
+            return json.dumps({"valid": False})
     except Exception as e:
         logger.error(e)
