@@ -353,7 +353,7 @@ export default function ChatModal({
                 <div className="relative w-full p-4">
                   <button
                     onClick={() => clearChat()}
-                    className="absolute top-2 right-3 hover:text-red-500 z-30"
+                    className="absolute top-2 right-3 hover:text-red-500 dark:text-gray-300 dark:hover:text-red-500 z-30"
                   >
                     <FaEraser className="w-4 h-4" />
                   </button>
@@ -365,12 +365,12 @@ export default function ChatModal({
                     <div className="flex flex-col h-full text-center justify-center w-full items-center align-middle">
                       <span>
                         👋{" "}
-                        <span className="text-gray-600 text-lg">
+                        <span className="text-gray-600 dark:text-gray-300 text-lg">
                           LangFlow Chat
                         </span>
                       </span>
                       <br />
-                      <div className="bg-gray-100 rounded-md w-2/4 px-6 py-8 border border-gray-200">
+                      <div className="bg-gray-100 dark:bg-gray-900 rounded-md w-2/4 px-6 py-8 border border-gray-200 dark:border-gray-700">
                         <span className="text-base text-gray-500">
                           Start a conversation and click the agent’s thoughts{" "}
                           <span>
