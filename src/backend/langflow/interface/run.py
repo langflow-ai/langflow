@@ -4,9 +4,9 @@ from typing import Any, Dict
 
 from chromadb.errors import NotEnoughElementsException  # type: ignore
 
+from langflow.api.callback import AsyncStreamingLLMCallbackHandler, StreamingLLMCallbackHandler  # type: ignore
 from langflow.cache.base import compute_dict_hash, load_cache, memoize_dict
 from langflow.graph.graph import Graph
-from langflow.interface import loading
 from langflow.utils.logger import logger
 
 
@@ -64,40 +64,6 @@ def build_langchain_object(data_graph):
     graph = Graph(nodes, edges)
 
     return graph.build()
-
-
-def process_graph(data_graph: Dict[str, Any]):
-    """
-    Process graph by extracting input variables and replacing ZeroShotPrompt
-    with PromptTemplate,then run the graph and return the result and thought.
-    """
-    # Load langchain object
-    logger.debug("Loading langchain object")
-    message = data_graph.pop("message", "")
-    is_first_message = len(data_graph.get("chatHistory", [])) == 0
-    computed_hash, langchain_object = load_langchain_object(
-        data_graph, is_first_message
-    )
-    logger.debug("Loaded langchain object")
-
-    if langchain_object is None:
-        # Raise user facing error
-        raise ValueError(
-            "There was an error loading the langchain_object. Please, check all the nodes and try again."
-        )
-
-    # Generate result and thought
-    logger.debug("Generating result and thought")
-    result, thought = get_result_and_steps(langchain_object, message)
-    logger.debug("Generated result and thought")
-
-    # Save langchain_object to cache
-    # We have to save it here because if the
-    # memory is updated we need to keep the new values
-    logger.debug("Saving langchain object to cache")
-    # save_cache(computed_hash, langchain_object, is_first_message)
-    logger.debug("Saved langchain object to cache")
-    return {"result": str(result), "thought": thought.strip()}
 
 
 def process_graph_cached(data_graph: Dict[str, Any], message: str):
@@ -184,8 +150,9 @@ def fix_memory_inputs(langchain_object):
             update_memory_keys(langchain_object, possible_new_mem_key)
 
 
-def get_result_and_steps(langchain_object, message: str):
+async def get_result_and_steps(langchain_object, message: str, **kwargs):
     """Get result and thought from extracted json"""
+
     try:
         if hasattr(langchain_object, "verbose"):
             langchain_object.verbose = True
@@ -205,17 +172,21 @@ def get_result_and_steps(langchain_object, message: str):
             # https://github.com/hwchase17/langchain/issues/2068
             # Deactivating until we have a frontend solution
             # to display intermediate steps
-            langchain_object.return_intermediate_steps = False
+            langchain_object.return_intermediate_steps = True
 
         fix_memory_inputs(langchain_object)
 
         with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
             try:
-                output = langchain_object(chat_input)
-            except ValueError as exc:
+                async_callbacks = [AsyncStreamingLLMCallbackHandler(**kwargs)]
+                output = await langchain_object.acall(
+                    chat_input, callbacks=async_callbacks
+                )
+            except Exception as exc:
                 # make the error message more informative
                 logger.debug(f"Error: {str(exc)}")
-                output = langchain_object.run(chat_input)
+                sync_callbacks = [StreamingLLMCallbackHandler(**kwargs)]
+                output = langchain_object(chat_input, callbacks=sync_callbacks)
 
             intermediate_steps = (
                 output.get("intermediate_steps", []) if isinstance(output, dict) else []

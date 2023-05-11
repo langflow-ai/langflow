@@ -14,12 +14,23 @@ export default function IntComponent({
 		}
 	}, [disabled, onChange]);
 	return (
-		<div className={disabled ? "pointer-events-none cursor-not-allowed w-full" : "w-full"}>
+		<div
+			className={
+				disabled ? "pointer-events-none cursor-not-allowed w-full" : "w-full"
+			}
+		>
 			<input
 				onKeyDown={(event) => {
-                    if (event.key !== 'Backspace' && event.key !== 'Enter' && event.key !== 'Delete' && event.key !== 'ArrowLeft' && event.key !== 'ArrowRight' && !/^[-]?\d*$/.test(event.key)) {
-                        event.preventDefault();
-                    }
+					if (
+						event.key !== "Backspace" &&
+						event.key !== "Enter" &&
+						event.key !== "Delete" &&
+						event.key !== "ArrowLeft" &&
+						event.key !== "ArrowRight" &&
+						!/^[-]?\d*$/.test(event.key)
+					) {
+						event.preventDefault();
+					}
 				}}
 				type="number"
 				value={myValue}

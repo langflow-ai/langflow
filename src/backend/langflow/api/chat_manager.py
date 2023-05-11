@@ -3,7 +3,7 @@ import json
 from collections import defaultdict
 from typing import Dict, List
 
-from fastapi import WebSocket
+from fastapi import WebSocket, status
 
 from langflow.api.schemas import ChatMessage, ChatResponse, FileResponse
 from langflow.cache import cache_manager
@@ -47,7 +47,6 @@ class ChatManager:
     def __init__(self):
         self.active_connections: Dict[str, WebSocket] = {}
         self.chat_history = ChatHistory()
-        self.chat_history.attach(self.on_chat_history_update)
         self.cache_manager = cache_manager
         self.cache_manager.attach(self.update)
 
@@ -91,7 +90,7 @@ class ChatManager:
         self.active_connections[client_id] = websocket
 
     def disconnect(self, client_id: str):
-        del self.active_connections[client_id]
+        self.active_connections.pop(client_id, None)
 
     async def send_message(self, client_id: str, message: str):
         websocket = self.active_connections[client_id]
@@ -109,7 +108,7 @@ class ChatManager:
 
         graph_data = payload
         start_resp = ChatResponse(message=None, type="start", intermediate_steps="")
-        self.chat_history.add_message(client_id, start_resp)
+        await self.send_json(client_id, start_resp)
 
         is_first_message = len(self.chat_history.get_history(client_id=client_id)) == 0
         # Generate result and thought
@@ -143,11 +142,12 @@ class ChatManager:
                     break
 
         response = ChatResponse(
-            message=result or "",
+            message=result,
             intermediate_steps=intermediate_steps.strip(),
             type="end",
             files=file_responses,
         )
+        await self.send_json(client_id, response)
         self.chat_history.add_message(client_id, response)
 
     async def handle_websocket(self, client_id: str, websocket: WebSocket):
@@ -171,16 +171,23 @@ class ChatManager:
 
                 with self.cache_manager.set_client_id(client_id):
                     await self.process_message(client_id, payload)
+
         except Exception as e:
             # Handle any exceptions that might occur
             logger.exception(e)
             # send a message to the client
-            await self.send_message(client_id, str(e))
-            raise e
-        finally:
             await self.active_connections[client_id].close(
-                code=1000, reason="Client disconnected"
+                code=status.WS_1011_INTERNAL_ERROR, reason=str(e)[:120]
             )
+            self.disconnect(client_id)
+        finally:
+            try:
+                connection = self.active_connections.get(client_id)
+                if connection:
+                    await connection.close(code=1000, reason="Client disconnected")
+                    self.disconnect(client_id)
+            except Exception as e:
+                logger.exception(e)
             self.disconnect(client_id)
 
 
@@ -203,8 +210,8 @@ async def process_graph(
     # Generate result and thought
     try:
         logger.debug("Generating result and thought")
-        result, intermediate_steps = get_result_and_steps(
-            langchain_object, chat_message.message or ""
+        result, intermediate_steps = await get_result_and_steps(
+            langchain_object, chat_message.message or "", websocket=websocket
         )
         logger.debug("Generated result and intermediate_steps")
         return result, intermediate_steps

@@ -5,9 +5,16 @@ import { FlowType } from "../../../../types/flow";
 
 var _ = require("lodash");
 
-export default function TabComponent({ selected, flow, onClick }:{flow:FlowType,selected:boolean,onClick:()=>void}) {
-	const { removeFlow, updateFlow, flows } =
-		useContext(TabsContext);
+export default function TabComponent({
+	selected,
+	flow,
+	onClick,
+}: {
+	flow: FlowType;
+	selected: boolean;
+	onClick: () => void;
+}) {
+	const { removeFlow, updateFlow, flows } = useContext(TabsContext);
 	const [isRename, setIsRename] = useState(false);
 	const [value, setValue] = useState("");
 	return (
@@ -19,7 +26,7 @@ export default function TabComponent({ selected, flow, onClick }:{flow:FlowType,
 						onClick={onClick}
 					>
 						<span className="w-32 truncate text-left">{flow.name}</span>
-						
+
 						<button
 							onClick={(e) => {
 								e.stopPropagation();
@@ -85,4 +92,3 @@ export default function TabComponent({ selected, flow, onClick }:{flow:FlowType,
 		</>
 	);
 }
-
