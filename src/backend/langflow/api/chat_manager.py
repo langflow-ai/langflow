@@ -4,7 +4,6 @@ from collections import defaultdict
 from typing import Dict, List
 
 from fastapi import WebSocket, status
-from fastapi.websockets import WebSocketState
 
 from langflow.api.schemas import ChatMessage, ChatResponse, FileResponse
 from langflow.cache import cache_manager
