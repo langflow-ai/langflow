@@ -351,7 +351,7 @@ export default function ChatModal({
 							leaveFrom="opacity-100 translate-y-0 sm:scale-100"
 							leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
 						>
-							<Dialog.Panel className=" drop-shadow-2xl relative flex flex-col justify-between transform h-[95%] overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all sm:my-8 w-[690px]">
+							<Dialog.Panel className=" drop-shadow-2xl relative flex flex-col justify-between transform h-[95%] overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all w-[690px]">
 								<div className="relative w-full">
 									<button
 										onClick={() => clearChat()}
@@ -385,7 +385,7 @@ export default function ChatModal({
 									)}
 									<div ref={ref}></div>
 								</div>
-								<div className="w-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center justify-between p-3">
+								<div className="w-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center justify-between p-2">
 									<div className="relative w-full mt-1 rounded-md shadow-sm">
 										<ChatInput
 											chatValue={chatValue}
