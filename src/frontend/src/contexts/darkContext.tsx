@@ -14,13 +14,13 @@ export const darkContext = createContext<darkContextType>(initialValue);
 
 export function DarkProvider({ children }) {
 	const [dark, setDark] = useState(false);
-	useEffect(()=>{
-		if(dark){
+	useEffect(() => {
+		if (dark) {
 			document.getElementById("body").classList.add("dark");
 		} else {
 			document.getElementById("body").classList.remove("dark");
 		}
-	}, [dark])
+	}, [dark]);
 	return (
 		<darkContext.Provider
 			value={{

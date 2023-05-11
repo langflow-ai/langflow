@@ -1,10 +1,5 @@
 import { BugAntIcon, Cog6ToothIcon, ExclamationCircleIcon, InformationCircleIcon, TrashIcon } from "@heroicons/react/24/outline";
-import {
-  classNames,
-  nodeColors,
-  nodeIcons,
-  toNormalCase,
-} from "../../utils";
+import { classNames, nodeColors, nodeIcons, toNormalCase } from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
 import { typesContext } from "../../contexts/typesContext";
 import { useContext, useState, useEffect, useRef, Fragment } from "react";
@@ -17,11 +12,11 @@ import { TabsContext } from "../../contexts/tabsContext";
 import { debounce } from "../../utils";
 import Tooltip from "../../components/TooltipComponent";
 export default function GenericNode({
-  data,
-  selected,
+	data,
+	selected,
 }: {
-  data: NodeDataType;
-  selected: boolean;
+	data: NodeDataType;
+	selected: boolean;
 }) {
   const { setErrorData } = useContext(alertContext);
   const showError = useRef(true);
@@ -35,23 +30,22 @@ export default function GenericNode({
   const { reactFlowInstance } = useContext(typesContext);
   const [params, setParams] = useState([]);
 
+	useEffect(() => {
+		if (reactFlowInstance) {
+			setParams(Object.values(reactFlowInstance.toObject()));
+		}
+	}, [save]);
 
-  useEffect(() => {
-    if (reactFlowInstance) {
-      setParams(Object.values(reactFlowInstance.toObject()));
-    }
-  }, [save]);
-
-  const validateNode = useCallback(
-    debounce(async () => {
-      try {
-        const response = await fetch(`/validate/node/${data.id}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(reactFlowInstance.toObject()),
-        });
+	const validateNode = useCallback(
+		debounce(async () => {
+			try {
+				const response = await fetch(`/validate/node/${data.id}`, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify(reactFlowInstance.toObject()),
+				});
 
         if (response.status === 200) {
           let jsonResponse = await response.json();
@@ -84,18 +78,18 @@ export default function GenericNode({
     }
   }, [validationStatus]);
 
-  if (!Icon) {
-    if (showError.current) {
-      setErrorData({
-        title: data.type
-          ? `The ${data.type} node could not be rendered, please review your json file`
-          : "There was a node that can't be rendered, please review your json file",
-      });
-      showError.current = false;
-    }
-    deleteNode(data.id);
-    return;
-  }
+	if (!Icon) {
+		if (showError.current) {
+			setErrorData({
+				title: data.type
+					? `The ${data.type} node could not be rendered, please review your json file`
+					: "There was a node that can't be rendered, please review your json file",
+			});
+			showError.current = false;
+		}
+		deleteNode(data.id);
+		return;
+	}
 
   return (
     <div
@@ -168,12 +162,12 @@ export default function GenericNode({
           {data.node.description}
         </div>
 
-        <>
-          {Object.keys(data.node.template)
-            .filter((t) => t.charAt(0) !== "_")
-            .map((t: string, idx) => (
-              <div key={idx}>
-                {/* {idx === 0 ? (
+				<>
+					{Object.keys(data.node.template)
+						.filter((t) => t.charAt(0) !== "_")
+						.map((t: string, idx) => (
+							<div key={idx}>
+								{/* {idx === 0 ? (
 									<div
 										className={classNames(
 											"px-5 py-2 mt-2 dark:text-white text-center",
@@ -192,59 +186,59 @@ export default function GenericNode({
 								) : (
 									<></>
 								)} */}
-                {data.node.template[t].show &&
-                !data.node.template[t].advanced ? (
-                  <ParameterComponent
-                    data={data}
-                    color={
-                      nodeColors[types[data.node.template[t].type]] ??
-                      nodeColors.unknown
-                    }
-                    title={
-                      data.node.template[t].display_name
-                        ? data.node.template[t].display_name
-                        : data.node.template[t].name
-                        ? toNormalCase(data.node.template[t].name)
-                        : toNormalCase(t)
-                    }
-                    name={t}
-                    tooltipTitle={
-                      "Type: " +
-                      data.node.template[t].type +
-                      (data.node.template[t].list ? " list" : "")
-                    }
-                    required={data.node.template[t].required}
-                    id={data.node.template[t].type + "|" + t + "|" + data.id}
-                    left={true}
-                    type={data.node.template[t].type}
-                  />
-                ) : (
-                  <></>
-                )}
-              </div>
-            ))}
-          <div
-            className={classNames(
-              Object.keys(data.node.template).length < 1 ? "hidden" : "",
-              "w-full flex justify-center"
-            )}
-          >
-            {" "}
-          </div>
-          {/* <div className="px-5 py-2 mt-2 dark:text-white text-center">
+								{data.node.template[t].show &&
+								!data.node.template[t].advanced ? (
+									<ParameterComponent
+										data={data}
+										color={
+											nodeColors[types[data.node.template[t].type]] ??
+											nodeColors.unknown
+										}
+										title={
+											data.node.template[t].display_name
+												? data.node.template[t].display_name
+												: data.node.template[t].name
+												? toNormalCase(data.node.template[t].name)
+												: toNormalCase(t)
+										}
+										name={t}
+										tooltipTitle={
+											"Type: " +
+											data.node.template[t].type +
+											(data.node.template[t].list ? " list" : "")
+										}
+										required={data.node.template[t].required}
+										id={data.node.template[t].type + "|" + t + "|" + data.id}
+										left={true}
+										type={data.node.template[t].type}
+									/>
+								) : (
+									<></>
+								)}
+							</div>
+						))}
+					<div
+						className={classNames(
+							Object.keys(data.node.template).length < 1 ? "hidden" : "",
+							"w-full flex justify-center"
+						)}
+					>
+						{" "}
+					</div>
+					{/* <div className="px-5 py-2 mt-2 dark:text-white text-center">
 						Output
 					</div> */}
-          <ParameterComponent
-            data={data}
-            color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-            title={data.type}
-            tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
-            id={[data.type, data.id, ...data.node.base_classes].join("|")}
-            type={data.node.base_classes.join("|")}
-            left={false}
-          />
-        </>
-      </div>
-    </div>
-  );
+					<ParameterComponent
+						data={data}
+						color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+						title={data.type}
+						tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
+						id={[data.type, data.id, ...data.node.base_classes].join("|")}
+						type={data.node.base_classes.join("|")}
+						left={false}
+					/>
+				</>
+			</div>
+		</div>
+	);
 }

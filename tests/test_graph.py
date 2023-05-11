@@ -14,7 +14,7 @@ from langflow.graph.nodes import (
     ToolNode,
     WrapperNode,
 )
-from langflow.interface.run import get_result_and_steps
+from langflow.interface.run import get_result_and_thought
 from langflow.utils.payload import get_root_node
 
 # Test cases for the graph module
@@ -335,7 +335,7 @@ def test_get_result_and_thought(basic_graph):
     # now build again and check if FakeListLLM was used
 
     # Get the result and thought
-    result, thought = get_result_and_steps(langchain_object, message)
+    result, thought = get_result_and_thought(langchain_object, message)
     # The result should be a str
     assert isinstance(result, str)
     # The thought should be a Thought

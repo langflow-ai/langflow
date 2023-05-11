@@ -99,7 +99,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		// create a link element and set its properties
 		const link = document.createElement("a");
 		link.href = jsonString;
-		link.download = `${normalCaseToSnakeCase(flows[tabIndex].name)}.json`;
+		link.download = `${flows[tabIndex].name}.json`;
 
 		// simulate a click on the link element to trigger the download
 		link.click();

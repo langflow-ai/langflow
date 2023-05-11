@@ -135,7 +135,8 @@ export default function PromptAreaModal({
 														return setErrorData({
 															title:
 																"There is something wrong with this prompt, please review it",
-														list:[error.response.data.detail]});
+															list: [error.response.data.detail],
+														});
 													});
 											}}
 										>
