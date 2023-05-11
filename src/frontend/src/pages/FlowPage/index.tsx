@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useRef } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import ReactFlow, {
 	Background,
 	Controls,
@@ -22,6 +22,7 @@ import ConnectionLineComponent from "./components/ConnectionLineComponent";
 import { FlowType, NodeType } from "../../types/flow";
 import { APIClassType } from "../../types/api";
 import { isValidConnection } from "../../utils";
+import useUndoRedo from "./hooks/useUndoRedo";
 
 const nodeTypes = {
 	genericNode: GenericNode,
@@ -185,7 +186,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
 	}, []);
 
 	return (
-		<div className="w-full h-full" ref={reactFlowWrapper}>
+		<div className="w-full h-full" onMouseMove={handleMouseMove} ref={reactFlowWrapper}>
 			{Object.keys(templates).length > 0 && Object.keys(types).length > 0 ? (
 				<>
 					<ReactFlow
@@ -196,6 +197,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
 						edges={edges}
 						onNodesChange={onNodesChange}
 						onEdgesChange={onEdgesChangeMod}
+						onKeyDown={(e) => onKeyDown(e)}
 						onConnect={onConnect}
 						onLoad={setReactFlowInstance}
 						onInit={setReactFlowInstance}
@@ -203,6 +205,9 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
 						onEdgeUpdate={onEdgeUpdate}
 						onEdgeUpdateStart={onEdgeUpdateStart}
 						onEdgeUpdateEnd={onEdgeUpdateEnd}
+						onNodeDragStart={onNodeDragStart}
+						onSelectionDragStart={onSelectionDragStart}
+						onEdgesDelete={onEdgesDelete}
 						connectionLineComponent={ConnectionLineComponent}
 						onDragOver={onDragOver}
 						onDrop={onDrop}
