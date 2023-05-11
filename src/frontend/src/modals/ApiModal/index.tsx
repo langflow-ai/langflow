@@ -144,7 +144,7 @@ export default function ApiModal() {
 												{tabs.map((tab, index) => (
 													<button onClick={() => {
 														setActiveTab(index);
-													}} className={"p-2 rounded-t-lg w-44 border border-b-0 border-gray-300 dark:border-gray-700 dark:text-gray-300 -mr-px flex justify-center items-center gap-4 " + (activeTab === index ? " bg-white dark:bg-gray-800" : "bg-gray-100 dark:bg-gray-9	00")}>
+													}} className={"p-2 rounded-t-lg w-44 border border-b-0 border-gray-300 dark:border-gray-700 dark:text-gray-300 -mr-px flex justify-center items-center gap-4 " + (activeTab === index ? " bg-white dark:bg-gray-800" : "bg-gray-100 dark:bg-gray-900")}>
 														{tab.name}
 														<img src={tab.image} className="w-6" />
 													</button>
