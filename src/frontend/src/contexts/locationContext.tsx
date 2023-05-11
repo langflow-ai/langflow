@@ -32,7 +32,7 @@ type locationContextType = {
 
 //initial value for location context
 const initialValue = {
-    //actual
+	//actual
 	current: window.location.pathname.replace(/\/$/g, "").split("/"),
 	isStackedOpen:
 		window.innerWidth > 1024 && window.location.pathname.split("/")[1]
@@ -50,7 +50,7 @@ const initialValue = {
 
 export const locationContext = createContext<locationContextType>(initialValue);
 
-export function LocationProvider({ children }:{children:ReactNode}) {
+export function LocationProvider({ children }: { children: ReactNode }) {
 	const [current, setCurrent] = useState(initialValue.current);
 	const [isStackedOpen, setIsStackedOpen] = useState(
 		initialValue.isStackedOpen

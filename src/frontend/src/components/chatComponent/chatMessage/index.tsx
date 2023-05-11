@@ -1,9 +1,13 @@
-import { ChatBubbleLeftEllipsisIcon, ChatBubbleOvalLeftEllipsisIcon, PlusSmallIcon } from "@heroicons/react/24/outline";
+import {
+	ChatBubbleLeftEllipsisIcon,
+	ChatBubbleOvalLeftEllipsisIcon,
+	PlusSmallIcon,
+} from "@heroicons/react/24/outline";
 import { useState } from "react";
 import { ChatMessageType } from "../../../types/chat";
 import { nodeColors } from "../../../utils";
-var Convert = require('ansi-to-html');
-var convert = new Convert({newline:true});
+var Convert = require("ansi-to-html");
+var convert = new Convert({ newline: true });
 
 export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
 	const [hidden, setHidden] = useState(true);
@@ -29,13 +33,16 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
 								style={{ backgroundColor: nodeColors["thought"] }}
 								className=" text-start inline-block w-full pb-3 pt-3 px-5 cursor-pointer"
 								dangerouslySetInnerHTML={{
-									__html: convert.toHtml(chat.thought)
+									__html: convert.toHtml(chat.thought),
 								}}
 							></div>
 						)}
 						{chat.thought && chat.thought !== "" && !hidden && <br></br>}
-						<div  className="w-full rounded-b-md px-4 pb-3 pt-3 pr-8" style={{ backgroundColor: nodeColors["chat"] }}>
-						{chat.message}
+						<div
+							className="w-full rounded-b-md px-4 pb-3 pt-3 pr-8"
+							style={{ backgroundColor: nodeColors["chat"] }}
+						>
+							{chat.message}
 						</div>
 					</div>
 				</div>
