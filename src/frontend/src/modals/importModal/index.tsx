@@ -16,7 +16,7 @@ import { error } from "console";
 import { alertContext } from "../../contexts/alertContext";
 import LoadingComponent from "../../components/loadingComponent";
 import { FlowType } from "../../types/flow";
-import { classNames, toNormalCase } from "../../utils";
+import { classNames, snakeToSpaces, toNormalCase } from "../../utils";
 
 export default function ImportModal() {
 	const [open, setOpen] = useState(true);
@@ -140,7 +140,7 @@ export default function ImportModal() {
 											<div className="flex h-full w-full justify-evenly items-center">
 												<ButtonBox
 													size="big"
-													bgColor="bg-emerald-500"
+													bgColor="bg-emerald-500 dark:bg-emerald-500/75"
 													description="Prebuilt Examples"
 													icon={
 														<DocumentDuplicateIcon className="h-10 w-10 flex-shrink-0" />
@@ -149,12 +149,12 @@ export default function ImportModal() {
 														setShowExamples(true);
 														handleExamples();
 													}}
-													textColor="text-emerald-400"
+													textColor="text-emerald-500 dark:text-emerald-500/75"
 													title="Examples"
 												></ButtonBox>
 												<ButtonBox
 													size="big"
-													bgColor="bg-blue-500"
+													bgColor="bg-blue-500 dark:bg-blue-500/75"
 													description="Import from Local"
 													icon={
 														<ComputerDesktopIcon className="h-10 w-10 flex-shrink-0" />
@@ -163,8 +163,8 @@ export default function ImportModal() {
 														uploadFlow();
 														setModalOpen(false);
 													}}
-													textColor="text-blue-500"
-													title="Local file"
+													textColor="text-blue-500 dark:text-blue-500/75"
+													title="Local File"
 												></ButtonBox>
 											</div>
 										)}
@@ -181,7 +181,7 @@ export default function ImportModal() {
 														{" "}
 														<ButtonBox
 															size="small"
-															bgColor="bg-emerald-500"
+															bgColor="bg-emerald-500 dark:bg-emerald-500/75"
 															description={
 																example.description ?? "Prebuilt Examples"
 															}
@@ -192,8 +192,8 @@ export default function ImportModal() {
 																addFlow(example);
 																setModalOpen(false);
 															}}
-															textColor="text-emerald-400"
-															title={toNormalCase(example.name)}
+															textColor="text-emerald-500 dark:text-emerald-500/75"
+															title={example.name}
 														></ButtonBox>
 													</div>
 												);

@@ -1,5 +1,5 @@
 import { Dialog, Transition } from "@headlessui/react";
-import { ChatBubbleOvalLeftEllipsisIcon } from "@heroicons/react/24/outline";
+import { ChatBubbleOvalLeftEllipsisIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useEffect, useRef, useState } from "react";
 import { FlowType, NodeType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
@@ -7,6 +7,7 @@ import { toNormalCase } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import ChatMessage from "./chatMessage";
 import { FaEraser } from "react-icons/fa";
+import { HiX } from "react-icons/hi";
 import { sendAllProps } from "../../types/api";
 import { ChatMessageType, ChatType } from "../../types/chat";
 import ChatInput from "./chatInput";
@@ -353,14 +354,20 @@ export default function ChatModal({
                 <div className="relative w-full p-4">
                   <button
                     onClick={() => clearChat()}
-                    className="absolute top-2 right-3 hover:text-red-500 dark:text-gray-300 dark:hover:text-red-500 z-30"
+                    className="absolute top-2 right-10 hover:text-red-500 text-gray-600 dark:text-gray-300 dark:hover:text-red-500 z-30"
                   >
                     <FaEraser className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setModalOpen(false)}
+                    className="absolute top-1.5 right-2 hover:text-red-500 text-gray-600 dark:text-gray-300 dark:hover:text-red-500 z-30"
+                  >
+                    <HiX className="w-5 h-5" />
                   </button>
                 </div>
                 <div className="w-full h-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center overflow-scroll scrollbar-hide">
                   {chatHistory.length > 0 ? (
-                    chatHistory.map((c, i) => <ChatMessage chat={c} key={i} />)
+                    chatHistory.map((c, i) => <ChatMessage lockChat={lockChat} chat={c} key={i} />)
                   ) : (
                     <div className="flex flex-col h-full text-center justify-center w-full items-center align-middle">
                       <span>

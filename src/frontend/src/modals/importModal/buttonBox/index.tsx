@@ -85,10 +85,10 @@ export default function ButtonBox({
 					)}
 				>
 						<div
-							className={`flex items-center justify-center ${bigCircle} bg-white/30 rounded-full`}
+							className={`flex items-center justify-center ${bigCircle} bg-white/30 dark:bg-white/30 rounded-full`}
 						>
 							<div
-								className={`flex items-center justify-center ${smallCircle} bg-white rounded-full`}
+								className={`flex items-center justify-center ${smallCircle} bg-white dark:bg-white/80 rounded-full`}
 							>
 								<div className={textColor}>{icon}</div>
 							</div>
@@ -96,7 +96,7 @@ export default function ButtonBox({
 						<div className="mt-auto mb-auto">
 						<h3
 							className={classNames(
-								"font-semibold text-white",
+								"font-semibold text-white dark:text-white/80",
 								titleFontSize,
 								marginTop
 							)}

@@ -1,8 +1,9 @@
 import { ChatBubbleOvalLeftEllipsisIcon } from "@heroicons/react/24/outline";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChatMessageType } from "../../../types/chat";
 import { classNames } from "../../../utils";
 import AiIcon from "../../../assets/Gooey Ring-5s-271px.svg";
+import AiIconStill from "../../../assets/froze-flow.png"
 import { UserIcon } from "@heroicons/react/24/solid";
 import FileCard from "../fileComponent";
 import ReactMarkdown from "react-markdown";
@@ -13,8 +14,9 @@ import { CodeBlock } from "./codeBlock";
 var Convert = require("ansi-to-html");
 var convert = new Convert({ newline: true });
 
-export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
+export default function ChatMessage({ chat, lockChat }: { chat: ChatMessageType, lockChat: boolean }) {
 	const [message, setMessage] = useState("");
+	const imgRef = useRef(null);
 	useEffect(() => {
 		setMessage(chat.message);
 	}, [chat.message]);
@@ -24,22 +26,25 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
 			className={classNames(
 				"w-full py-2 pl-2 flex",
 				chat.isSend
-					? "bg-white dark:bg-gray-800 "
-					: "bg-gray-200  dark:bg-gray-700"
+					? "bg-white dark:bg-gray-900 "
+					: "bg-gray-200  dark:bg-gray-800"
 			)}
 		>
 			<div
 				className={classNames(
-					"rounded-full w-8 h-8 flex items-center my-3 justify-center",
-					chat.isSend ? "bg-gray-900" : "bg-gray-200"
+					"rounded-full overflow-hidden w-8 h-8 flex items-center my-3 justify-center",
+					chat.isSend ? "bg-gray-900" : ""
 				)}
 			>
-				{!chat.isSend && <img className="scale-150" src={AiIcon} />}
+				{!chat.isSend && <div className="relative w-8 h-8">
+				<img className={"absolute transition-opacity duration-500 scale-150 " + (lockChat ? "opacity-100" : "opacity-0")} src={AiIcon} />
+				<img className={"absolute transition-opacity duration-500 scale-150 " + (lockChat ? "opacity-0" : "opacity-100")} src={AiIconStill} />
+					</div>}
 				{chat.isSend && <UserIcon className="w-6 h-6 -mb-1 text-gray-200" />}
 			</div>
 			{!chat.isSend ? (
 				<div className="w-full text-start flex items-center">
-					<div className="w-full relative text-start inline-block text-gray-600 text-sm font-normal">
+					<div className="w-full relative text-start inline-block text-gray-600 dark:text-gray-300 text-sm font-normal">
 						{hidden && chat.thought && chat.thought !== "" && (
 							<div
 								onClick={() => setHidden((prev) => !prev)}
@@ -51,8 +56,8 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
 						{chat.thought && chat.thought !== "" && !hidden && (
 							<div
 								onClick={() => setHidden((prev) => !prev)}
-								className=" text-start inline-block rounded-md  h-full border border-gray-300
-								bg-gray-100 w-[95%] pb-3 pt-3 px-2 ml-3 cursor-pointer scrollbar-hide overflow-scroll"
+								className=" text-start inline-block rounded-md text-gray-600 dark:text-gray-200 h-full border border-gray-300 dark:border-gray-500
+								bg-gray-100 dark:bg-gray-800 w-[95%] pb-3 pt-3 px-2 ml-3 cursor-pointer scrollbar-hide overflow-scroll"
 								dangerouslySetInnerHTML={{
 									__html: convert.toHtml(chat.thought),
 								}}
@@ -60,12 +65,12 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
 						)}
 						{chat.thought && chat.thought !== "" && !hidden && <br></br>}
 						<div className="w-full px-4 pb-3 pt-3 pr-8">
-							<div className="dark:text-white">
-								<div>
+							<div className="dark:text-white w-full">
+								<div className="w-full">
 									<ReactMarkdown
 										remarkPlugins={[remarkGfm, remarkMath]}
 										rehypePlugins={[rehypeMathjax]}
-										className="markdown prose"
+										className="markdown prose dark:prose-invert text-gray-600 dark:text-gray-200"
 										components={{
 											code({ node, inline, className, children, ...props }) {
 												if (children.length) {
@@ -128,7 +133,7 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
 						<ReactMarkdown
 							remarkPlugins={[remarkGfm, remarkMath]}
 							rehypePlugins={[rehypeMathjax]}
-							className="markdown prose"
+							className="markdown prose dark:prose-invert text-gray-600 dark:text-gray-200"
 						>
 							{message}
 						</ReactMarkdown>
