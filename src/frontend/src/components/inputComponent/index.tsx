@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { InputComponentType } from "../../types/components";
 import { classNames } from "../../utils";
+import { TabsContext } from "../../contexts/tabsContext";
 
 export default function InputComponent({
 	value,
@@ -10,6 +11,7 @@ export default function InputComponent({
 }: InputComponentType) {
 	const [myValue, setMyValue] = useState(value ?? "");
 	const [pwdVisible, setPwdVisible] = useState(false);
+	const {setDisableCP} =  useContext(TabsContext)
 	useEffect(() => {
 		if (disabled) {
 			setMyValue("");
@@ -26,6 +28,12 @@ export default function InputComponent({
 		>
 			<input
 				value={myValue}
+				onBlur={() => {
+					setDisableCP(false)
+				}}
+				onFocus={() => {
+					setDisableCP(true)
+				}}
 				className={classNames(
 					"block w-full pr-12 form-input dark:bg-gray-900 dark:border-gray-600 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
 					disabled ? " bg-gray-200 dark:bg-gray-700" : "",
