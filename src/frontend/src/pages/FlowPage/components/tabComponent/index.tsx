@@ -37,7 +37,7 @@ export default function TabComponent({
 						</button>
 					</div>
 				) : (
-					<div className="bg-white dark:text-white dark:bg-gray-700 flex select-none justify-between w-44 items-center border border-b-0 border-gray-300 dark:border-gray-600 px-4 py-1 rounded-t-xl -ml-px">
+					<div className="bg-white dark:text-white dark:bg-gray-700/60 flex select-none justify-between w-44 items-center border border-b-0 border-gray-300 dark:border-gray-600 px-4 py-1 rounded-t-xl -ml-px">
 						{isRename ? (
 							<input
 								autoFocus
