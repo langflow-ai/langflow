@@ -1,6 +1,7 @@
 import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { InputListComponentType } from "../../types/components";
+import { TabsContext } from "../../contexts/tabsContext";
 
 var _ = require("lodash");
 
@@ -16,6 +17,7 @@ export default function InputListComponent({
 			onChange([""]);
 		}
 	}, [disabled, onChange]);
+	const {setDisableCP} = useContext(TabsContext)
 	return (
 		<div
 			className={
@@ -40,6 +42,12 @@ export default function InputListComponent({
 								return newInputList;
 							});
 							onChange(inputList);
+						}}
+						onBlur={() => {
+							setDisableCP(false)
+						}}
+						onFocus={() => {
+							setDisableCP(true)
 						}}
 					/>
 					{idx === inputList.length - 1 ? (
