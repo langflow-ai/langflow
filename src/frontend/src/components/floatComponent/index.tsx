@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { FloatComponentType } from "../../types/components";
+import { TabsContext } from "../../contexts/tabsContext";
 
 export default function FloatComponent({
 	value,
@@ -13,6 +14,7 @@ export default function FloatComponent({
 			onChange("");
 		}
 	}, [disabled, onChange]);
+	const {setDisableCP} =  useContext(TabsContext)
 	return (
 		<div className={disabled ? "pointer-events-none cursor-not-allowed" : ""}>
 			<input
@@ -26,6 +28,12 @@ export default function FloatComponent({
 				onChange={(e) => {
 					setMyValue(e.target.value);
 					onChange(e.target.value);
+				}}
+				onBlur={() => {
+					setDisableCP(false)
+				}}
+				onFocus={() => {
+					setDisableCP(true)
 				}}
 			/>
 		</div>

@@ -37,7 +37,7 @@ const nodeTypes = {
 var _ = require("lodash");
 
 export default function FlowPage({ flow }: { flow: FlowType }) {
-	let { updateFlow, incrementNodeId } =
+	let { updateFlow, incrementNodeId, disableCP} =
 		useContext(TabsContext);
 	const { types, reactFlowInstance, setReactFlowInstance, templates } =
 		useContext(typesContext);
@@ -46,11 +46,11 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
 	const { undo, redo, canUndo, canRedo, takeSnapshot } = useUndoRedo();
 
 	const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-		if ((event.ctrlKey || event.metaKey) && (event.key === 'c') && lastSelection) {
+		if ((event.ctrlKey || event.metaKey) && (event.key === 'c') && lastSelection && !disableCP) {
 			event.preventDefault();
 			setLastCopiedSelection(lastSelection);
 		}
-		if ((event.ctrlKey || event.metaKey) && (event.key === 'v') && lastCopiedSelection) {
+		if ((event.ctrlKey || event.metaKey) && (event.key === 'v') && lastCopiedSelection && !disableCP) {
 			event.preventDefault();
 			paste();
 		}

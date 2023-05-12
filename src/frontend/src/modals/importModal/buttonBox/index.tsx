@@ -74,7 +74,6 @@ export default function ButtonBox({
 	}
 	return (
 		<button disabled={deactivate} onClick={onClick}>
-			<Tooltip title={description} placement="bottom">
 				<div
 					className={classNames(
 						"flex flex-col justify-center items-center rounded-lg text-center shadow border border-gray-300 dark:border-gray-800 hover:shadow-lg transform hover:scale-105",
@@ -105,7 +104,6 @@ export default function ButtonBox({
 						</h3>
 						</div>
 				</div>
-			</Tooltip>
 		</button>
 	);
 }

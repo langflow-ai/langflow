@@ -26,6 +26,8 @@ const TabsContextInitialValue: TabsContextType = {
 	downloadFlow: (flow: FlowType) => {},
 	uploadFlow: () => {},
 	hardReset: () => {},
+	disableCP:false,
+	setDisableCP:(state:boolean)=>{},
 };
 
 export const TabsContext = createContext<TabsContextType>(
@@ -212,10 +214,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 			return newFlows;
 		});
 	}
+	const [disableCP, setDisableCP] = useState(false);
 
 	return (
 		<TabsContext.Provider
 			value={{
+				disableCP,
+				setDisableCP,
 				save,
 				hardReset,
 				tabIndex,
