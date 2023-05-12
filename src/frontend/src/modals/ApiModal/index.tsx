@@ -44,7 +44,7 @@ export default function ApiModal({ flowName }) {
 		}
 	}
 
-	const pythonCode = `import requests
+	const pythonApiCode = `import requests
 
 API_URL = "${window.location.protocol}//${window.location.host}/predict"
 
@@ -57,9 +57,21 @@ def predict(message):
 
 print(predict("Your message"))`;
 
+const pythonCode = `from langflow import load_flow_from_json
+
+flow = load_flow_from_json("${flowName}.json")
+# Now you can use it like any chain
+flow("Hey, have you heard of LangFlow?")`;
+
 	const tabs = [
 		{
-			name: "Python",
+			name: "Python API",
+			mode: "python",
+			image: "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
+			code: pythonApiCode,
+		},
+		{
+			name: "Python Code",
 			mode: "python",
 			image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
 			code: pythonCode,
@@ -99,7 +111,7 @@ print(predict("Your message"))`;
 						>
 							<Dialog.Panel className="relative flex flex-col justify-between transform h-[600px] overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all sm:my-8 w-[700px]">
 								<div className=" z-50 absolute top-0 right-0 hidden pt-4 pr-4 sm:block">
-								<button
+									<button
 										type="button"
 										className="rounded-md text-gray-400 hover:text-gray-500"
 										onClick={() => {
@@ -123,7 +135,7 @@ print(predict("Your message"))`;
 												as="h3"
 												className="text-lg font-medium dark:text-white leading-10 text-gray-900"
 											>
-												Use API
+												Code
 											</Dialog.Title>
 										</div>
 									</div>
@@ -140,7 +152,10 @@ print(predict("Your message"))`;
 												))}
 											</div>
 											<div className="overflow-hidden px-4 py-5 sm:p-6 w-full h-full rounded-lg shadow bg-white dark:bg-gray-800">
-												<div className="w-full flex justify-end mb-2">
+												<div className="w-full flex items-center justify-between mb-2">
+													<span className="text-sm text-gray-500 dark:text-gray-300">
+														Export your flow to use it with this code.
+													</span>
 													<button
 														className="flex gap-1.5 items-center rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
 														onClick={copyToClipboard}
@@ -150,6 +165,7 @@ print(predict("Your message"))`;
 													</button>
 												</div>
 												<SyntaxHighlighter
+												className="h-[370px]"
 													language={tabs[activeTab].mode}
 													style={oneDark}
 													customStyle={{ margin: 0 }}
