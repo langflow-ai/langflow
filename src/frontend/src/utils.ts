@@ -316,6 +316,14 @@ export function toFirstUpperCase(str: string) {
 		.join("");
 }
 
+export function snakeToSpaces(str: string) {
+	let result = str
+		.split("_")
+		.join(" ");
+
+	return result
+}
+
 export function toNormalCase(str: string) {
 	let result = str
 		.split("_")

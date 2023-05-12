@@ -232,6 +232,9 @@ class Node:
     def __hash__(self) -> int:
         return id(self)
 
+    def _built_object_repr(self):
+        return repr(self._built_object)
+
 
 class Edge:
     def __init__(self, source: "Node", target: "Node"):

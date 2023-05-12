@@ -1,29 +1,40 @@
 import { Dialog, Transition } from "@headlessui/react";
-import { XMarkIcon, CommandLineIcon } from "@heroicons/react/24/outline";
+import { IconCheck, IconClipboard, IconDownload } from '@tabler/icons-react';
+import { XMarkIcon, CommandLineIcon, CodeBracketSquareIcon } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
-import AceEditor from "react-ace";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/webpack-resolver";
 import { darkContext } from "../../contexts/darkContext";
-import { checkCode } from "../../controllers/API";
-import { alertContext } from "../../contexts/alertContext";
-export default function CodeAreaModal({
-	value,
-	setValue,
-}: {
-	setValue: (value: string) => void;
-	value: string;
-}) {
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
+
+
+
+export default function ApiModal({ flowName }) {
 	const [open, setOpen] = useState(true);
-	const [code, setCode] = useState(value);
 	const { dark } = useContext(darkContext);
-	const { setErrorData, setSuccessData } = useContext(alertContext);
 	const { closePopUp } = useContext(PopUpContext);
+	const [activeTab, setActiveTab] = useState(0);
 	const ref = useRef();
+	const [isCopied, setIsCopied] = useState<Boolean>(false);
+
+	const copyToClipboard = () => {
+		if (!navigator.clipboard || !navigator.clipboard.writeText) {
+			return;
+		}
+
+		navigator.clipboard.writeText(tabs[activeTab].code).then(() => {
+			setIsCopied(true);
+
+			setTimeout(() => {
+				setIsCopied(false);
+			}, 2000);
+		});
+	};
 	function setModalOpen(x: boolean) {
 		setOpen(x);
 		if (x === false) {
@@ -32,6 +43,41 @@ export default function CodeAreaModal({
 			}, 300);
 		}
 	}
+
+	const pythonApiCode = `import requests
+
+API_URL = "${window.location.protocol}//${window.location.host}/predict"
+
+def predict(message):
+    with open("${flowName}.json", "r") as f:
+        json_data = json.load(f)
+    payload = {'exported_flow': json_data, 'message': message}
+    response = requests.post(API_URL, json=payload)
+    return response.json() # JSON {"result": "Response"}
+
+print(predict("Your message"))`;
+
+const pythonCode = `from langflow import load_flow_from_json
+
+flow = load_flow_from_json("${flowName}.json")
+# Now you can use it like any chain
+flow("Hey, have you heard of LangFlow?")`;
+
+	const tabs = [
+		{
+			name: "Python API",
+			mode: "python",
+			image: "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
+			code: pythonApiCode,
+		},
+		{
+			name: "Python Code",
+			mode: "python",
+			image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+			code: pythonCode,
+		},
+
+	]
 	return (
 		<Transition.Root show={open} appear={true} as={Fragment}>
 			<Dialog
@@ -65,7 +111,7 @@ export default function CodeAreaModal({
 						>
 							<Dialog.Panel className="relative flex flex-col justify-between transform h-[600px] overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all sm:my-8 w-[700px]">
 								<div className=" z-50 absolute top-0 right-0 hidden pt-4 pr-4 sm:block">
-								<button
+									<button
 										type="button"
 										className="rounded-md text-gray-400 hover:text-gray-500"
 										onClick={() => {
@@ -79,7 +125,7 @@ export default function CodeAreaModal({
 								<div className="h-full w-full flex flex-col justify-center items-center">
 									<div className="flex w-full pb-4 z-10 justify-center shadow-sm">
 										<div className="mx-auto mt-4 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-gray-900 sm:mx-0 sm:h-10 sm:w-10">
-											<CommandLineIcon
+											<CodeBracketSquareIcon
 												className="h-6 w-6 text-blue-600"
 												aria-hidden="true"
 											/>
@@ -89,82 +135,45 @@ export default function CodeAreaModal({
 												as="h3"
 												className="text-lg font-medium dark:text-white leading-10 text-gray-900"
 											>
-												Edit Code
+												Code
 											</Dialog.Title>
 										</div>
 									</div>
 									<div className="h-full w-full bg-gray-200 overflow-auto dark:bg-gray-900 p-4 gap-4 flex flex-row justify-center items-center">
-										<div className="flex h-full w-full">
-											<div className="overflow-hidden px-4 py-5 sm:p-6 w-full h-full rounded-lg bg-white dark:bg-gray-800 shadow">
-												<AceEditor
-													value={code}
-													mode="python"
-													highlightActiveLine={true}
-													showPrintMargin={false}
-													fontSize={14}
-													showGutter
-													enableLiveAutocompletion
-													theme={dark ? "twilight" : "github"}
-													name="CodeEditor"
-													onChange={(value) => {
-														setCode(value);
-													}}
-													className="h-full w-full rounded-lg"
-												/>
+										<div className="flex flex-col h-full w-full ">
+											<div className="flex px-5 z-10">
+												{tabs.map((tab, index) => (
+													<button onClick={() => {
+														setActiveTab(index);
+													}} className={"p-2 rounded-t-lg w-44 border border-b-0 border-gray-300 dark:border-gray-700 dark:text-gray-300 -mr-px flex justify-center items-center gap-4 " + (activeTab === index ? " bg-white dark:bg-gray-800" : "bg-gray-100 dark:bg-gray-900")}>
+														{tab.name}
+														<img src={tab.image} className="w-6" />
+													</button>
+												))}
+											</div>
+											<div className="overflow-hidden px-4 py-5 sm:p-6 w-full h-full rounded-lg shadow bg-white dark:bg-gray-800">
+												<div className="w-full flex items-center justify-between mb-2">
+													<span className="text-sm text-gray-500 dark:text-gray-300">
+														Export your flow to use it with this code.
+													</span>
+													<button
+														className="flex gap-1.5 items-center rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
+														onClick={copyToClipboard}
+													>
+														{isCopied ? <IconCheck size={18} /> : <IconClipboard size={18} />}
+														{isCopied ? 'Copied!' : 'Copy code'}
+													</button>
+												</div>
+												<SyntaxHighlighter
+												className="h-[370px]"
+													language={tabs[activeTab].mode}
+													style={oneDark}
+													customStyle={{ margin: 0 }}
+												>
+													{tabs[activeTab].code}
+												</SyntaxHighlighter>
 											</div>
 										</div>
-									</div>
-									<div className="bg-gray-200 dark:bg-gray-900 w-full pb-3 flex flex-row-reverse px-4">
-										<button
-											type="button"
-											className="inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm"
-											onClick={() => {
-												checkCode(code)
-													.then((apiReturn) => {
-														console.log(apiReturn);
-														if (apiReturn.data) {
-															console.log(apiReturn.data);
-															let importsErrors = apiReturn.data.imports.errors;
-															let funcErrors = apiReturn.data.function.errors;
-															if (
-																funcErrors.length === 0 &&
-																importsErrors.length === 0
-															) {
-																setSuccessData({
-																	title: "Code is ready to run",
-																});
-																setModalOpen(false);
-																setValue(code);
-															} else {
-																if (funcErrors.length !== 0) {
-																	setErrorData({
-																		title: "There is an error in your function",
-																		list: funcErrors,
-																	});
-																}
-																if (importsErrors.length !== 0) {
-																	setErrorData({
-																		title: "There is an error in your imports",
-																		list: importsErrors,
-																	});
-																}
-															}
-														} else {
-															setErrorData({
-																title: "Something went wrong, please try again",
-															});
-														}
-													})
-													.catch((_) =>
-														setErrorData({
-															title:
-																"There is something wrong with this code, please review it",
-														})
-													);
-											}}
-										>
-											Check & Save
-										</button>
 									</div>
 								</div>
 							</Dialog.Panel>

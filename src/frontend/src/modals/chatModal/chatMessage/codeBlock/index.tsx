@@ -47,7 +47,7 @@ export const CodeBlock: FC<Props> = memo(({ language, value }) => {
 		URL.revokeObjectURL(url);
 	};
 	return (
-		<div className="codeblock relative font-sans text-[16px]">
+		<div className="codeblock font-sans text-[16px]">
 			<div className="flex items-center justify-between py-1.5 px-4">
 				<span className="text-xs lowercase text-white">{language}</span>
 
@@ -69,6 +69,7 @@ export const CodeBlock: FC<Props> = memo(({ language, value }) => {
 			</div>
 
 			<SyntaxHighlighter
+			className=" w-[570px]"
 				language={language}
 				style={oneDark}
 				customStyle={{ margin: 0 }}

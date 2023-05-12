@@ -16,7 +16,7 @@ export default function ExportModal() {
 	const { closePopUp } = useContext(PopUpContext);
 	const ref = useRef();
 	const { setErrorData } = useContext(alertContext);
-	const { flows, tabIndex, updateFlow, downloadFlow } = useContext(TabsContext);
+	const { flows, tabIndex, updateFlow, downloadFlow,setDisableCP } = useContext(TabsContext);
 	function setModalOpen(x: boolean) {
 		setOpen(x);
 		if (x === false) {
@@ -60,9 +60,9 @@ export default function ExportModal() {
 						>
 							<Dialog.Panel className="relative flex flex-col justify-between transform h-[600px] overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all sm:my-8 w-[700px]">
 								<div className=" z-50 absolute top-0 right-0 hidden pt-4 pr-4 sm:block">
-									<button
+								<button
 										type="button"
-										className="rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+										className="rounded-md text-gray-400 hover:text-gray-500"
 										onClick={() => {
 											setModalOpen(false);
 										}}
@@ -113,6 +113,12 @@ export default function ExportModal() {
 												placeholder="File name"
 												id="name"
 												className="focus:border focus:border-blue block w-full px-3 py-2 border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:focus:border-blue-500 dark:focus:ring-blue-500 text-gray-900 dark:text-gray-100"
+												onBlur={() => {
+													setDisableCP(false);
+												}}
+												onFocus={() => {
+													setDisableCP(true);
+												}}
 											/>
 										</div>
 										<div className="w-full">
@@ -127,6 +133,12 @@ export default function ExportModal() {
 												</span>
 											</label>
 											<textarea
+												onBlur={() => {
+													setDisableCP(false);
+												}}
+												onFocus={() => {
+													setDisableCP(true);
+												}}
 												name="description"
 												id="description"
 												onChange={(event) => {
@@ -151,6 +163,12 @@ export default function ExportModal() {
 													id="checkbox"
 													type="checkbox"
 													className="h-4 w-4 text-blue-600 border-gray-300 rounded dark:bg-gray-800 dark:border-gray-600 dark:focus:border-blue-500 dark:focus:ring-blue-500"
+													onBlur={() => {
+														setDisableCP(false);
+													}}
+													onFocus={() => {
+														setDisableCP(true);
+													}}
 												/>
 												<span className="ml-2 font-medium text-gray-700 dark:text-white">
 													Save with my API keys
