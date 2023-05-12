@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, HTTPException
 
 from langflow.api.base import (
@@ -46,8 +48,8 @@ def post_validate_node(node_id: str, data: dict):
         node = graph.get_node(node_id)
         if node is not None:
             _ = node.build()
-            return str(node.params)
-        raise Exception(f"Node {node_id} not found")
+            return json.dumps({"valid": True, "params": str(node.params)})
+        else:
+            return json.dumps({"valid": False})
     except Exception as e:
         logger.error(e)
-        raise HTTPException(status_code=500, detail=str(e)) from e
