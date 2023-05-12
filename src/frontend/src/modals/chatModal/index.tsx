@@ -13,6 +13,7 @@ import { ChatMessageType, ChatType } from "../../types/chat";
 import ChatInput from "./chatInput";
 
 import _ from "lodash";
+import _ from "lodash";
 
 export default function ChatModal({
   flow,
