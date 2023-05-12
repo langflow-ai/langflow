@@ -12,6 +12,9 @@ export type TabsContextType = {
 	downloadFlow: (flow: FlowType) => void;
 	uploadFlow: () => void;
 	hardReset: () => void;
+	//disable CopyPaste
+	disableCP: boolean;
+	setDisableCP: (value: boolean) => void;
 };
 
 export type LangFlowState = {
