@@ -32,15 +32,14 @@ export default function ChatMessage({ chat, lockChat }: { chat: ChatMessageType,
 		>
 			<div
 				className={classNames(
-					"rounded-full overflow-hidden w-8 h-8 flex items-center my-3 justify-center",
-					chat.isSend ? "bg-gray-900" : ""
+					"rounded-full overflow-hidden w-8 h-8 flex items-center my-3 justify-center"
 				)}
 			>
 				{!chat.isSend && <div className="relative w-8 h-8">
 				<img className={"absolute transition-opacity duration-500 scale-150 " + (lockChat ? "opacity-100" : "opacity-0")} src={AiIcon} />
 				<img className={"absolute transition-opacity duration-500 scale-150 " + (lockChat ? "opacity-0" : "opacity-100")} src={AiIconStill} />
 					</div>}
-				{chat.isSend && <UserIcon className="w-6 h-6 -mb-1 text-gray-200" />}
+				{chat.isSend && <UserIcon className="w-6 h-6 -mb-1 text-gray-800 dark:text-gray-200" />}
 			</div>
 			{!chat.isSend ? (
 				<div className="w-full text-start flex items-center">

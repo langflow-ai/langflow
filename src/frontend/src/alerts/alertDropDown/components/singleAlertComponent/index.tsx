@@ -30,7 +30,7 @@ export default function SingleAlert({
 		>
 			{type === "error" ? (
 				<div
-					className="flex bg-red-50 dark:bg-red-600/50 rounded-md p-3 mb-2 mx-2"
+					className="flex bg-red-50 dark:bg-red-900 rounded-md p-3 mb-2 mx-2"
 					key={dropItem.id}
 				>
 					<div className="flex-shrink-0">
@@ -72,7 +72,7 @@ export default function SingleAlert({
 				</div>
 			) : type === "notice" ? (
 				<div
-					className="flex rounded-md bg-blue-50 dark:bg-blue-600/50 p-3 mb-2 mx-2"
+					className="flex rounded-md bg-blue-50 dark:bg-blue-900 p-3 mb-2 mx-2"
 					key={dropItem.id}
 				>
 					<div className="flex-shrink-0">
@@ -116,7 +116,7 @@ export default function SingleAlert({
 				</div>
 			) : (
 				<div
-					className="flex bg-green-50 dark:bg-green-600/50 p-3 mb-2 mx-2 rounded-md"
+					className="flex bg-green-50 dark:bg-green-900 p-3 mb-2 mx-2 rounded-md"
 					key={dropItem.id}
 				>
 					<div className="flex-shrink-0">

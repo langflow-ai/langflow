@@ -100,9 +100,9 @@ const tabs = [
 						>
 							<Dialog.Panel className="relative flex flex-col justify-between transform h-[600px] overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all sm:my-8 w-[700px]">
 								<div className=" z-50 absolute top-0 right-0 hidden pt-4 pr-4 sm:block">
-									<button
+								<button
 										type="button"
-										className="rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+										className="rounded-md text-gray-400 hover:text-gray-500"
 										onClick={() => {
 											setModalOpen(false);
 										}}
