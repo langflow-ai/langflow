@@ -139,6 +139,13 @@ class DocumentLoaderNode(Node):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="documentloaders")
 
+    def _built_object_repr(self):
+        # This built_object is a list of documents. Maybe we should
+        # show how many documents are in the list?
+        if self._built_object:
+            return f"""{self.node_type}({len(self._built_object)} documents)\nDocuments: {self._built_object[:3]}..."""
+        return f"{self.node_type}()"
+
 
 class EmbeddingNode(Node):
     def __init__(self, data: Dict):
@@ -149,6 +156,9 @@ class VectorStoreNode(Node):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="vectorstores")
 
+    def _built_object_repr(self):
+        return "Vector stores can take time to build. It will build on the first query."
+
 
 class MemoryNode(Node):
     def __init__(self, data: Dict):
@@ -158,3 +168,10 @@ class MemoryNode(Node):
 class TextSplitterNode(Node):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="textsplitters")
+
+    def _built_object_repr(self):
+        # This built_object is a list of documents. Maybe we should
+        # show how many documents are in the list?
+        if self._built_object:
+            return f"""{self.node_type}({len(self._built_object)} documents)\nDocuments: {self._built_object[:3]}..."""
+        return f"{self.node_type}()"
