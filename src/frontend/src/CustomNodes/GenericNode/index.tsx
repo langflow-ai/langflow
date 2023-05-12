@@ -1,8 +1,8 @@
-import { Cog6ToothIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { BugAntIcon, Cog6ToothIcon, ExclamationCircleIcon, InformationCircleIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { classNames, nodeColors, nodeIcons, toNormalCase } from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
 import { typesContext } from "../../contexts/typesContext";
-import { useContext, useState, useEffect, useRef } from "react";
+import { useContext, useState, useEffect, useRef, Fragment } from "react";
 import { NodeDataType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
 import { PopUpContext } from "../../contexts/popUpContext";
@@ -10,6 +10,7 @@ import NodeModal from "../../modals/NodeModal";
 import { useCallback } from "react";
 import { TabsContext } from "../../contexts/tabsContext";
 import { debounce } from "../../utils";
+import Tooltip from "../../components/TooltipComponent";
 export default function GenericNode({
 	data,
 	selected,
@@ -17,17 +18,17 @@ export default function GenericNode({
 	data: NodeDataType;
 	selected: boolean;
 }) {
-	const { setErrorData } = useContext(alertContext);
-	const showError = useRef(true);
-	const { types, deleteNode } = useContext(typesContext);
-	const { openPopUp } = useContext(PopUpContext);
-	const Icon = nodeIcons[types[data.type]];
-	const [validationStatus, setValidationStatus] = useState("idle");
-	// State for outline color
-	const [isValid, setIsValid] = useState(false);
-	const { save } = useContext(TabsContext);
-	const { reactFlowInstance } = useContext(typesContext);
-	const [params, setParams] = useState([]);
+  const { setErrorData } = useContext(alertContext);
+  const showError = useRef(true);
+  const { types, deleteNode } = useContext(typesContext);
+  const { openPopUp } = useContext(PopUpContext);
+  const Icon = nodeIcons[types[data.type]];
+  const [validationStatus, setValidationStatus] = useState(null);
+  // State for outline color
+  const [isValid, setIsValid] = useState(false);
+  const { save } = useContext(TabsContext);
+  const { reactFlowInstance } = useContext(typesContext);
+  const [params, setParams] = useState([]);
 
 	useEffect(() => {
 		if (reactFlowInstance) {
@@ -46,31 +47,36 @@ export default function GenericNode({
 					body: JSON.stringify(reactFlowInstance.toObject()),
 				});
 
-				if (response.status === 200) {
-					setValidationStatus("success");
-				} else if (response.status === 500) {
-					setValidationStatus("error");
-				}
-			} catch (error) {
-				// console.error("Error validating node:", error);
-				setValidationStatus("error");
-			}
-		}, 1000), // Adjust the debounce delay (500ms) as needed
-		[reactFlowInstance, data.id]
-	);
-	useEffect(() => {
-		if (params.length > 0) {
-			validateNode();
-		}
-	}, [params, validateNode]);
+        if (response.status === 200) {
+          let jsonResponse = await response.json();
+          let jsonResponseParsed = await JSON.parse(jsonResponse);
+          console.log(jsonResponseParsed);
+          if(jsonResponseParsed.valid){
+            setValidationStatus(jsonResponseParsed.params);
+          } else {
+            setValidationStatus("error");
+          }
+        }
+      } catch (error) {
+        // console.error("Error validating node:", error);
+        setValidationStatus("error");
+      }
+    }, 1000), // Adjust the debounce delay (500ms) as needed
+    [reactFlowInstance, data.id]
+  );
+  useEffect(() => {
+    if (params.length > 0) {
+      validateNode();
+    }
+  }, [params, validateNode]);
 
-	useEffect(() => {
-		if (validationStatus === "success") {
-			setIsValid(true);
-		} else {
-			setIsValid(false);
-		}
-	}, [validationStatus]);
+  useEffect(() => {
+    if (validationStatus !== "error") {
+      setIsValid(true);
+    } else {
+      setIsValid(false);
+    }
+  }, [validationStatus]);
 
 	if (!Icon) {
 		if (showError.current) {
@@ -85,67 +91,76 @@ export default function GenericNode({
 		return;
 	}
 
-	return (
-		<div
-			className={classNames(
-				isValid ? "animate-pulse-green" : "border-red-outline",
-				selected ? "border border-blue-500" : "border dark:border-gray-700",
-				"prompt-node relative bg-white dark:bg-gray-900 w-96 rounded-lg flex flex-col justify-center"
-			)}
-		>
-			<div className="w-full dark:text-white flex items-center justify-between p-4 gap-8 bg-gray-50 rounded-t-lg dark:bg-gray-800 border-b dark:border-b-gray-700 ">
-				<div className="w-full flex items-center truncate gap-4 text-lg">
-					<Icon
-						className="w-10 h-10 p-1 rounded"
-						style={{
-							color: nodeColors[types[data.type]] ?? nodeColors.unknown,
-						}}
-					/>
-					<div className="truncate">{data.type}</div>
-				</div>
-				<div className="flex gap-3">
-					<button
-						className="relative"
-						onClick={(event) => {
-							event.preventDefault();
-							openPopUp(<NodeModal data={data} />);
-						}}
-					>
-						<div className=" absolute text-red-600 -top-2 -right-1">
-							{Object.keys(data.node.template).some(
-								(t) =>
-									data.node.template[t].advanced &&
-									data.node.template[t].required
-							)
-								? " *"
-								: ""}
-						</div>
-						<Cog6ToothIcon
-							className={classNames(
-								Object.keys(data.node.template).some(
-									(t) =>
-										data.node.template[t].advanced && data.node.template[t].show
-								)
-									? ""
-									: "hidden",
-								"w-6 h-6  dark:text-gray-500  hover:animate-spin"
-							)}
-						></Cog6ToothIcon>
-					</button>
-					<button
-						onClick={() => {
-							deleteNode(data.id);
-						}}
-					>
-						<TrashIcon className="w-6 h-6 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-500"></TrashIcon>
-					</button>
-				</div>
-			</div>
+  return (
+    <div
+      className={classNames(
+        isValid ? "animate-pulse-green" : "border-red-outline",
+        selected ? "border border-blue-500" : "border dark:border-gray-700",
+        "prompt-node relative bg-white dark:bg-gray-900 w-96 rounded-lg flex flex-col justify-center"
+      )}
+    >
+      <div className="w-full dark:text-white flex items-center justify-between p-4 gap-8 bg-gray-50 rounded-t-lg dark:bg-gray-800 border-b dark:border-b-gray-700 ">
+        <div className="w-full flex items-center truncate gap-2 text-lg">
+          <Icon
+            className="w-10 h-10 p-1 rounded"
+            style={{
+              color: nodeColors[types[data.type]] ?? nodeColors.unknown,
+            }}
+          />
+          <div className="ml-2 truncate">{data.type}</div>
+          {validationStatus && validationStatus !== "error" ? 
+          <Tooltip title={
+              <div className="max-h-96 overflow-auto">
+                {validationStatus}
+              </div>}>
+            <ExclamationCircleIcon className="w-5 hover:text-gray-500 hover:dark:text-gray-300" /> 
+          </Tooltip>
+          : <></>
+}
+        </div>
+        <div className="flex gap-3">
+          <button
+            className="relative"
+            onClick={(event) => {
+              event.preventDefault();
+              openPopUp(<NodeModal data={data} />);
+            }}
+          >
+            <div className=" absolute text-red-600 -top-2 -right-1">
+              {Object.keys(data.node.template).some(
+                (t) =>
+                  data.node.template[t].advanced &&
+                  data.node.template[t].required
+              )
+                ? " *"
+                : ""}
+            </div>
+            <Cog6ToothIcon
+              className={classNames(
+                Object.keys(data.node.template).some(
+                  (t) =>
+                    data.node.template[t].advanced && data.node.template[t].show
+                )
+                  ? ""
+                  : "hidden",
+                "w-6 h-6  dark:text-gray-300  hover:animate-spin"
+              )}
+            ></Cog6ToothIcon>
+          </button>
+          <button
+            onClick={() => {
+              deleteNode(data.id);
+            }}
+          >
+            <TrashIcon className="w-6 h-6 hover:text-red-500 dark:text-gray-300 dark:hover:text-red-500"></TrashIcon>
+          </button>
+        </div>
+      </div>
 
-			<div className="w-full h-full py-5">
-				<div className="w-full text-gray-500 px-5 pb-3 text-sm">
-					{data.node.description}
-				</div>
+      <div className="w-full h-full py-5">
+        <div className="w-full text-gray-500 dark:text-gray-300 px-5 pb-3 text-sm">
+          {data.node.description}
+        </div>
 
 				<>
 					{Object.keys(data.node.template)
