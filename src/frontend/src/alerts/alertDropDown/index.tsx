@@ -24,7 +24,7 @@ export default function AlertDropdown({}: AlertDropdownType) {
 	return (
 		<div
 			ref={componentRef}
-			className="z-10 py-3 pb-4 rounded-md bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 shadow-lg focus:outline-none overflow-hidden w-[16rem] h-[28rem] flex flex-col"
+			className="z-10 py-3 pb-4 rounded-md bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 shadow-lg focus:outline-none overflow-hidden w-[400px] h-[500px] flex flex-col"
 		>
 			<div className="flex pl-3 flex-row justify-between text-md font-medium text-gray-800 dark:text-gray-200">
 				Notifications

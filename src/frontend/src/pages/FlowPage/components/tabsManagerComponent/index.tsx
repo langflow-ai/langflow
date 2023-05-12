@@ -25,7 +25,7 @@ export default function TabsManagerComponent() {
 		useContext(TabsContext);
 	const { openPopUp } = useContext(PopUpContext);
 	const { templates } = useContext(typesContext);
-	const AlertWidth = 256;
+	const AlertWidth = 384;
 	const { dark, setDark } = useContext(darkContext);
 	const { notificationCenter, setNotificationCenter } =
 		useContext(alertContext);
@@ -71,7 +71,7 @@ export default function TabsManagerComponent() {
 					</button>
 					<button
 						onClick={() => openPopUp(<ExportModal />)}
-						className="flex items-center gap-1 mr-2 text-sm text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
+						className="flex items-center gap-1 pr-2 text-sm text-gray-600  border-gray-400 border-r hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
 					>
 						Export <ArrowDownTrayIcon className="h-5 w-5" />
 					</button>
@@ -98,7 +98,7 @@ export default function TabsManagerComponent() {
 								<>
 									<div
 										className="z-10 absolute"
-										style={{ top: top + 20, left: left - AlertWidth }}
+										style={{ top: top + 34, left: left - AlertWidth }}
 									>
 										<AlertDropdown />
 									</div>
