@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { FloatComponentType } from "../../types/components";
+import { TabsContext } from "../../contexts/tabsContext";
 
 export default function IntComponent({
 	value,
@@ -13,6 +14,7 @@ export default function IntComponent({
 			onChange("");
 		}
 	}, [disabled, onChange]);
+	const {setDisableCP} =useContext(TabsContext)
 	return (
 		<div
 			className={
@@ -43,7 +45,14 @@ export default function IntComponent({
 					setMyValue(e.target.value);
 					onChange(e.target.value);
 				}}
+				onBlur={() => {
+					setDisableCP(false)
+				}}
+				onFocus={() => {
+					setDisableCP(true)
+				}}
 			/>
+			
 		</div>
 	);
 }
