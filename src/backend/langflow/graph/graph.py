@@ -1,7 +1,7 @@
-from typing import Dict, List, Type, Union
+from typing import Dict, List, Optional, Tuple, Type, Union
 
 from langflow.graph.base import Edge, Node
-from langflow.graph.nodes import (
+from langflow.graph.langchain_nodes import (
     AgentNode,
     ChainNode,
     DocumentLoaderNode,
@@ -35,14 +35,72 @@ from langflow.utils import payload
 class Graph:
     def __init__(
         self,
-        nodes: List[Dict[str, Union[str, Dict[str, Union[str, List[str]]]]]],
-        edges: List[Dict[str, str]],
+        graph_data: Optional[Dict] = None,
+        nodes: Optional[List[Node]] = None,
+        edges: Optional[List[Edge]] = None,
     ) -> None:
-        self._nodes = nodes
-        self._edges = edges
-        self._build_graph()
+        self.has_connectors = False
 
-    def _build_graph(self) -> None:
+        if graph_data:
+            _nodes = graph_data["nodes"]
+            _edges = graph_data["edges"]
+            self._nodes = _nodes
+            self._edges = _edges
+            self._build_nodes_and_edges()
+        elif nodes and edges:
+            self.nodes = nodes
+            self.edges = edges
+
+    @classmethod
+    def from_root_node(cls, root_node: Node):
+        # Starting at the root node
+        # Iterate all of its edges to find
+        # all nodes and edges
+        nodes, edges = cls.traverse_graph(root_node)
+        return cls(nodes=nodes, edges=edges)
+
+    @staticmethod
+    def traverse_graph(root_node: Node) -> Tuple[List[Node], List[Edge]]:
+        """
+        Traverses the graph from the root_node using depth-first search (DFS) and returns all the nodes and edges.
+
+        Args:
+            root_node (Node): The root node to start traversal from.
+
+        Returns:
+            tuple: A tuple containing a set of all nodes and all edges visited in the graph.
+        """
+        # Initialize empty sets for visited nodes and edges.
+        visited_nodes = set()
+        visited_edges = set()
+
+        # Initialize a stack with the root node.
+        stack = [root_node]
+
+        # Continue while there are nodes to be visited in the stack.
+        while stack:
+            # Pop a node from the stack.
+            node = stack.pop()
+
+            # If this node has not been visited, add it to visited_nodes.
+            if node not in visited_nodes:
+                visited_nodes.add(node)
+
+                # Iterate over the edges of the current node.
+                for edge in node.edges:
+                    # If this edge has not been visited, add it to visited_edges.
+                    if edge not in visited_edges:
+                        visited_edges.add(edge)
+
+                        # Add the adjacent node (the one that's not the current node) to the stack for future exploration.
+                        stack.append(
+                            edge.source if edge.source != node else edge.target
+                        )
+
+        # Return the sets of visited nodes and edges.
+        return list(visited_nodes), list(visited_edges)
+
+    def _build_nodes_and_edges(self) -> None:
         self.nodes = self._build_nodes()
         self.edges = self._build_edges()
         for edge in self.edges:
@@ -153,6 +211,8 @@ class Graph:
 
             NodeClass = self._get_node_class(node_type, node_lc_type)
             nodes.append(NodeClass(node))
+            if NodeClass == "ConnectorNode":
+                self.has_connectors = True
 
         return nodes
 
@@ -164,3 +224,13 @@ class Graph:
         if node_type in node_types:
             children.append(node)
         return children
+
+    def __hash__(self):
+        nodes_hash = hash(tuple(self.nodes))
+        edges_hash = hash(tuple(self.edges))
+        return hash((nodes_hash, edges_hash))
+
+    def __eq__(self, other):
+        if isinstance(other, Graph):
+            return self.nodes == other.nodes and self.edges == other.edges
+        return False

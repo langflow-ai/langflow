@@ -1,6 +1,6 @@
 import contextlib
 import io
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from chromadb.errors import NotEnoughElementsException  # type: ignore
 
@@ -45,9 +45,7 @@ def build_langchain_object_with_caching(data_graph):
 
 
 def build_graph(data_graph):
-    nodes = data_graph["nodes"]
-    edges = data_graph["edges"]
-    return Graph(nodes, edges)
+    return Graph(graph_data=data_graph)
 
 
 def build_langchain_object(data_graph):
@@ -150,7 +148,9 @@ def fix_memory_inputs(langchain_object):
             update_memory_keys(langchain_object, possible_new_mem_key)
 
 
-async def get_result_and_steps(langchain_object, message: str, **kwargs):
+async def get_result_and_steps(
+    langchain_object, message: str, callbacks_kwargs: Optional[dict] = None
+):
     """Get result and thought from extracted json"""
 
     try:
@@ -178,14 +178,22 @@ async def get_result_and_steps(langchain_object, message: str, **kwargs):
 
         with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
             try:
-                async_callbacks = [AsyncStreamingLLMCallbackHandler(**kwargs)]
+                if callbacks_kwargs:
+                    async_callbacks = [
+                        AsyncStreamingLLMCallbackHandler(**callbacks_kwargs)
+                    ]
+                else:
+                    async_callbacks = None
                 output = await langchain_object.acall(
                     chat_input, callbacks=async_callbacks
                 )
             except Exception as exc:
                 # make the error message more informative
                 logger.debug(f"Error: {str(exc)}")
-                sync_callbacks = [StreamingLLMCallbackHandler(**kwargs)]
+                if callbacks_kwargs:
+                    sync_callbacks = [StreamingLLMCallbackHandler(**callbacks_kwargs)]
+                else:
+                    sync_callbacks = None
                 output = langchain_object(chat_input, callbacks=sync_callbacks)
 
             intermediate_steps = (
