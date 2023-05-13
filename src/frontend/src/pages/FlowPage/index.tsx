@@ -17,6 +17,7 @@ import ReactFlow, {
 	OnNodesDelete,
 	SelectionDragHandler,
 } from "reactflow";
+import _ from "lodash";
 import { locationContext } from "../../contexts/locationContext";
 import ExtraSidebar from "./components/extraSidebarComponent";
 import Chat from "../../components/chatComponent";
@@ -34,7 +35,6 @@ const nodeTypes = {
 	genericNode: GenericNode,
 };
 
-var _ = require("lodash");
 
 export default function FlowPage({ flow }: { flow: FlowType }) {
 	let { updateFlow, incrementNodeId, disableCP} =
