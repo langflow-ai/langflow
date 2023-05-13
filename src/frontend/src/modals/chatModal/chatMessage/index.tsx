@@ -11,8 +11,7 @@ import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { CodeBlock } from "./codeBlock";
-var Convert = require("ansi-to-html");
-var convert = new Convert({ newline: true });
+import Convert from "ansi-to-html";
 
 export default function ChatMessage({ chat, lockChat }: { chat: ChatMessageType, lockChat: boolean }) {
 	const [message, setMessage] = useState("");
