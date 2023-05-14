@@ -3,7 +3,7 @@ from langchain.agents import AgentExecutor, ZeroShotAgent
 from langchain.agents.agent_toolkits.json.prompt import JSON_PREFIX, JSON_SUFFIX
 from langchain.agents.agent_toolkits.json.toolkit import JsonToolkit
 from langchain.agents.mrkl.prompt import FORMAT_INSTRUCTIONS
-from langchain.schema import BaseLanguageModel
+from langchain.base_language import BaseLanguageModel
 
 
 class MalfoyAgent(AgentExecutor):
@@ -21,7 +21,7 @@ class MalfoyAgent(AgentExecutor):
     @classmethod
     def from_toolkit_and_llm(cls, toolkit: JsonToolkit, llm: BaseLanguageModel):
         tools = toolkit.get_tools()
-        tool_names = [tool.name for tool in tools]
+        tool_names = {tool.name for tool in tools}
         prompt = ZeroShotAgent.create_prompt(
             tools,
             prefix=JSON_PREFIX,
@@ -33,7 +33,7 @@ class MalfoyAgent(AgentExecutor):
             llm=llm,
             prompt=prompt,
         )
-        agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names)
+        agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names)  # type: ignore
         return cls.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
 
     def run(self, *args, **kwargs):

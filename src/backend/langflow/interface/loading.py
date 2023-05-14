@@ -13,13 +13,15 @@ from langchain.agents.load_tools import (
 )
 from langchain.agents.loading import load_agent_from_config
 from langchain.agents.tools import Tool
+from langchain.base_language import BaseLanguageModel
 from langchain.callbacks.base import BaseCallbackManager
 from langchain.chains.loading import load_chain_from_config
-from langchain.llms.base import BaseLLM
 from langchain.llms.loading import load_llm_from_config
+from pydantic import ValidationError
 
 from langflow.interface.agents.custom import CUSTOM_AGENTS
 from langflow.interface.importing.utils import import_by_type
+from langflow.interface.run import fix_memory_inputs
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.types import get_type_list
 from langflow.interface.utils import load_file_into_dict
@@ -28,61 +30,126 @@ from langflow.utils import util, validate
 
 def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
     """Instantiate class from module type and key, and params"""
+    params = convert_params_to_sets(params)
+
     if node_type in CUSTOM_AGENTS:
-        if custom_agent := CUSTOM_AGENTS.get(node_type):
-            return custom_agent.initialize(**params)  # type: ignore
+        custom_agent = CUSTOM_AGENTS.get(node_type)
+        if custom_agent:
+            return custom_agent.initialize(**params)
 
     class_object = import_by_type(_type=base_type, name=node_type)
+    return instantiate_based_on_type(class_object, base_type, node_type, params)
 
+
+def convert_params_to_sets(params):
+    """Convert certain params to sets"""
+    if "allowed_special" in params:
+        params["allowed_special"] = set(params["allowed_special"])
+    if "disallowed_special" in params:
+        params["disallowed_special"] = set(params["disallowed_special"])
+    return params
+
+
+def instantiate_based_on_type(class_object, base_type, node_type, params):
     if base_type == "agents":
-        # We need to initialize it differently
-        return load_agent_executor(class_object, params)
+        return instantiate_agent(class_object, params)
     elif base_type == "prompts":
-        if node_type == "ZeroShotPrompt":
-            if "tools" not in params:
-                params["tools"] = []
-            return ZeroShotAgent.create_prompt(**params)
+        return instantiate_prompt(node_type, params)
     elif base_type == "tools":
-        if node_type == "JsonSpec":
-            params["dict_"] = load_file_into_dict(params.pop("path"))
-            return class_object(**params)
-        elif node_type == "PythonFunction":
-            # If the node_type is "PythonFunction"
-            # we need to get the function from the params
-            # which will be a str containing a python function
-            # and then we need to compile it and return the function
-            # as the instance
-            function_string = params["code"]
-            if isinstance(function_string, str):
-                return validate.eval_function(function_string)
-            raise ValueError("Function should be a string")
+        return instantiate_tool(node_type, class_object, params)
     elif base_type == "toolkits":
-        loaded_toolkit = class_object(**params)
-        # Check if node_type has a loader
-        if toolkits_creator.has_create_function(node_type):
-            return load_toolkits_executor(node_type, loaded_toolkit, params)
-        return loaded_toolkit
+        return instantiate_toolkit(node_type, class_object, params)
     elif base_type == "embeddings":
-        params.pop("model")
-        return class_object(**params)
+        return instantiate_embedding(class_object, params)
     elif base_type == "vectorstores":
-        return class_object.from_documents(**params)
+        return instantiate_vectorstore(class_object, params)
     elif base_type == "documentloaders":
-        return class_object(**params).load()
+        return instantiate_documentloader(class_object, params)
     elif base_type == "textsplitters":
-        documents = params.pop("documents")
-        text_splitter = class_object(**params)
-        return text_splitter.split_documents(documents)
+        return instantiate_textsplitter(class_object, params)
+    elif base_type == "utilities":
+        return instantiate_utility(node_type, class_object, params)
+    else:
+        return class_object(**params)
 
+
+def instantiate_agent(class_object, params):
+    return load_agent_executor(class_object, params)
+
+
+def instantiate_prompt(node_type, params):
+    if node_type == "ZeroShotPrompt":
+        if "tools" not in params:
+            params["tools"] = []
+        return ZeroShotAgent.create_prompt(**params)
+    return None  # Or some other default action
+
+
+def instantiate_tool(node_type, class_object, params):
+    if node_type == "JsonSpec":
+        params["dict_"] = load_file_into_dict(params.pop("path"))
+        return class_object(**params)
+    elif node_type == "PythonFunction":
+        function_string = params["code"]
+        if isinstance(function_string, str):
+            return validate.eval_function(function_string)
+        raise ValueError("Function should be a string")
+    elif node_type.lower() == "tool":
+        return class_object(**params)
+    return None  # Or some other default action
+
+
+def instantiate_toolkit(node_type, class_object, params):
+    loaded_toolkit = class_object(**params)
+    if toolkits_creator.has_create_function(node_type):
+        return load_toolkits_executor(node_type, loaded_toolkit, params)
+    return loaded_toolkit
+
+
+def instantiate_embedding(class_object, params):
+    params.pop("model", None)
+    try:
+        return class_object(**params)
+    except ValidationError:
+        params = {
+            key: value
+            for key, value in params.items()
+            if key in class_object.__fields__
+        }
+        return class_object(**params)
+
+
+def instantiate_vectorstore(class_object, params):
+    if len(params.get("documents", [])) == 0:
+        raise ValueError(
+            "The source you provided did not load correctly or was empty."
+            "This may cause an error in the vectorstore."
+        )
+    return class_object.from_documents(**params)
+
+
+def instantiate_documentloader(class_object, params):
+    return class_object(**params).load()
+
+
+def instantiate_textsplitter(class_object, params):
+    documents = params.pop("documents")
+    text_splitter = class_object(**params)
+    return text_splitter.split_documents(documents)
+
+
+def instantiate_utility(node_type, class_object, params):
+    if node_type == "SQLDatabase":
+        return class_object.from_uri(params.pop("uri"))
     return class_object(**params)
 
 
-def load_flow_from_json(path: str):
+def load_flow_from_json(path: str, build=True):
     # This is done to avoid circular imports
     from langflow.graph import Graph
 
     """Load flow from json file"""
-    with open(path, "r") as f:
+    with open(path, "r", encoding="utf-8") as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]
     nodes = data_graph["nodes"]
@@ -94,7 +161,19 @@ def load_flow_from_json(path: str):
     # Nodes, edges and root node
     edges = data_graph["edges"]
     graph = Graph(nodes, edges)
-    return graph.build()
+    if build:
+        langchain_object = graph.build()
+        if hasattr(langchain_object, "verbose"):
+            langchain_object.verbose = True
+
+        if hasattr(langchain_object, "return_intermediate_steps"):
+            # https://github.com/hwchase17/langchain/issues/2068
+            # Deactivating until we have a frontend solution
+            # to display intermediate steps
+            langchain_object.return_intermediate_steps = False
+        fix_memory_inputs(langchain_object)
+        return langchain_object
+    return graph
 
 
 def replace_zero_shot_prompt_with_prompt_template(nodes):
@@ -132,7 +211,7 @@ def load_langchain_type_from_config(config: Dict[str, Any]):
 
 def load_agent_executor_from_config(
     config: dict,
-    llm: Optional[BaseLLM] = None,
+    llm: Optional[BaseLanguageModel] = None,
     tools: Optional[list[Tool]] = None,
     callback_manager: Optional[BaseCallbackManager] = None,
     **kwargs: Any,
@@ -151,10 +230,15 @@ def load_agent_executor_from_config(
 
 def load_agent_executor(agent_class: type[agent_module.Agent], params, **kwargs):
     """Load agent executor from agent class, tools and chain"""
-    allowed_tools = params["allowed_tools"]
+    allowed_tools = params.get("allowed_tools", [])
     llm_chain = params["llm_chain"]
+    # if allowed_tools is not a list or set, make it a list
+    if not isinstance(allowed_tools, (list, set)):
+        allowed_tools = [allowed_tools]
     tool_names = [tool.name for tool in allowed_tools]
-    agent = agent_class(allowed_tools=tool_names, llm_chain=llm_chain)
+    # Agent class requires an output_parser but Agent classes
+    # have a default output_parser.
+    agent = agent_class(allowed_tools=tool_names, llm_chain=llm_chain)  # type: ignore
     return AgentExecutor.from_agent_and_tools(
         agent=agent,
         tools=allowed_tools,

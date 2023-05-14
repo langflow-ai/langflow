@@ -12,6 +12,14 @@ CUSTOM_NODES = {
         "VectorStoreRouterAgent": nodes.VectorStoreRouterAgentNode(),
         "SQLAgent": nodes.SQLAgentNode(),
     },
+    "utilities": {
+        "SQLDatabase": nodes.SQLDatabaseNode(),
+    },
+    "chains": {
+        "SeriesCharacterChain": nodes.SeriesCharacterChainNode(),
+        "TimeTravelGuideChain": nodes.TimeTravelGuideChainNode(),
+        "MidJourneyPromptChain": nodes.MidJourneyPromptChainNode(),
+    },
 }
 
 

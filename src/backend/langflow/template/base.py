@@ -23,6 +23,7 @@ class TemplateFieldCreator(BaseModel, ABC):
     options: list[str] = []
     name: str = ""
     display_name: Optional[str] = None
+    advanced: bool = False
 
     def to_dict(self):
         result = self.dict()
@@ -161,13 +162,22 @@ class FrontendNode(BaseModel):
             _type = _type.replace("Optional[", "")[:-1]
 
         # Check for list type
-        if "List" in _type:
-            _type = _type.replace("List[", "")[:-1]
+        if "List" in _type or "Sequence" in _type:
+            _type = _type.replace("List[", "")
+            _type = _type.replace("Sequence[", "")[:-1]
             field.is_list = True
 
         # Replace 'Mapping' with 'dict'
         if "Mapping" in _type:
             _type = _type.replace("Mapping", "dict")
+
+        # {'type': 'Union[float, Tuple[float, float], NoneType]'} != {'type': 'float'}
+        if "Union" in _type:
+            _type = _type.replace("Union[", "")[:-1]
+            _type = _type.split(",")[0]
+            _type = _type.replace("]", "").replace("[", "")
+
+        field.field_type = _type
 
         # Change type from str to Tool
         field.field_type = "Tool" if key in {"allowed_tools"} else field.field_type
@@ -196,6 +206,7 @@ class FrontendNode(BaseModel):
             "examples",
             "code",
             "headers",
+            "description",
         }
 
         # Replace dict type with str
@@ -225,6 +236,16 @@ class FrontendNode(BaseModel):
                 field.is_list = True
         if "api_key" in key and "OpenAI" in str(name):
             field.display_name = "OpenAI API Key"
-            field.required = True
+            field.required = False
             if field.value is None:
                 field.value = ""
+
+        if "kwargs" in field.name.lower():
+            field.advanced = True
+            field.required = False
+            field.show = False
+        # If the field.name contains api or api and key, then it might be an api key
+        # other conditions are to make sure that it is not an input or output variable
+        if "api" in key.lower() and "key" in key.lower():
+            field.required = False
+            field.advanced = False

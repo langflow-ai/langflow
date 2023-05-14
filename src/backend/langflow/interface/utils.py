@@ -1,7 +1,11 @@
+import base64
 import json
 import os
+from io import BytesIO
 
 import yaml
+from langchain.base_language import BaseLanguageModel
+from PIL.Image import Image
 
 
 def load_file_into_dict(file_path: str) -> dict:
@@ -20,3 +24,27 @@ def load_file_into_dict(file_path: str) -> dict:
         raise ValueError("Unsupported file type. Please provide a JSON or YAML file.")
 
     return data
+
+
+def pil_to_base64(image: Image) -> str:
+    buffered = BytesIO()
+    image.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue())
+    return img_str.decode("utf-8")
+
+
+def try_setting_streaming_options(langchain_object, websocket):
+    # If the LLM type is OpenAI or ChatOpenAI,
+    # set streaming to True
+    # First we need to find the LLM
+    llm = None
+    if hasattr(langchain_object, "llm"):
+        llm = langchain_object.llm
+    elif hasattr(langchain_object, "llm_chain") and hasattr(
+        langchain_object.llm_chain, "llm"
+    ):
+        llm = langchain_object.llm_chain.llm
+    if isinstance(llm, BaseLanguageModel):
+        llm.streaming = bool(hasattr(llm, "streaming"))
+
+    return langchain_object
