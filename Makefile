@@ -1,4 +1,4 @@
-.PHONY: all format lint build
+.PHONY: all format lint build build_frontend install_frontend run_frontend run_backend dev help tests coverage
 
 all: help
 
@@ -8,7 +8,7 @@ coverage:
 		--cov-report xml \
 		--cov-report term-missing:skip-covered
 
-test:
+tests:
 	poetry run pytest tests
 
 format:
@@ -26,8 +26,15 @@ install_frontend:
 run_frontend:
 	cd src/frontend && npm start
 
-run_backend:
-	poetry run uvicorn langflow.main:app --port 5003 --reload
+frontend:
+	make install_frontend
+	make run_frontend
+
+install_backend:
+	poetry install
+
+backend:
+	poetry run uvicorn langflow.main:app --port 7860 --reload --log-level debug
 
 build_frontend:
 	cd src/frontend && CI='' npm run build
@@ -64,3 +71,6 @@ help:
 	@echo 'build               - build the frontend static files and package the project'
 	@echo 'publish             - build the frontend static files and package the project and publish it to PyPI'
 	@echo 'dev                 - run the project in development mode with docker compose'
+	@echo 'tests               - run the tests'
+	@echo 'coverage            - run the tests and generate a coverage report'
+	@echo '----'

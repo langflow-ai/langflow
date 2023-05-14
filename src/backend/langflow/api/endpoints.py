@@ -1,8 +1,13 @@
 import logging
-from typing import Any, Dict
 
 from fastapi import APIRouter, HTTPException
 
+from langflow.api.schemas import (
+    ExportedFlow,
+    GraphData,
+    PredictRequest,
+    PredictResponse,
+)
 from langflow.interface.run import process_graph_cached
 from langflow.interface.types import build_langchain_types_dict
 
@@ -16,10 +21,14 @@ def get_all():
     return build_langchain_types_dict()
 
 
-@router.post("/predict")
-def get_load(data: Dict[str, Any]):
+@router.post("/predict", response_model=PredictResponse)
+async def get_load(predict_request: PredictRequest):
     try:
-        return process_graph_cached(data)
+        exported_flow: ExportedFlow = predict_request.exported_flow
+        graph_data: GraphData = exported_flow.data
+        data = graph_data.dict()
+        response = process_graph_cached(data, predict_request.message)
+        return PredictResponse(result=response.get("result", ""))
     except Exception as e:
         # Log stack trace
         logger.exception(e)

@@ -1,11 +1,21 @@
-import { createContext, useEffect, useState, useRef, ReactNode, useContext } from "react";
+import {
+	createContext,
+	useEffect,
+	useState,
+	useRef,
+	ReactNode,
+	useContext,
+} from "react";
 import { FlowType } from "../types/flow";
-import { TabsContextType } from "../types/tabs";
-import { normalCaseToSnakeCase } from "../utils";
+import { LangFlowState, TabsContextType } from "../types/tabs";
+import { normalCaseToSnakeCase, updateObject, updateTemplate } from "../utils";
 import { alertContext } from "./alertContext";
+import { typesContext } from "./typesContext";
+import { APITemplateType, TemplateVariableType } from "../types/api";
+import { v4 as uuidv4 } from "uuid";
 
 const TabsContextInitialValue: TabsContextType = {
-	save:()=>{},
+	save: () => {},
 	tabIndex: 0,
 	setTabIndex: (index: number) => {},
 	flows: [],
@@ -13,11 +23,11 @@ const TabsContextInitialValue: TabsContextType = {
 	addFlow: (flowData?: any) => {},
 	updateFlow: (newFlow: FlowType) => {},
 	incrementNodeId: () => 0,
-	downloadFlow: (flow:FlowType) => {},
+	downloadFlow: (flow: FlowType) => {},
 	uploadFlow: () => {},
-	lockChat: false,
-	setLockChat:(prevState:boolean)=>{},
-	hardReset:()=>{},
+	hardReset: () => {},
+	disableCP:false,
+	setDisableCP:(state:boolean)=>{},
 };
 
 export const TabsContext = createContext<TabsContextType>(
@@ -25,51 +35,64 @@ export const TabsContext = createContext<TabsContextType>(
 );
 
 export function TabsProvider({ children }: { children: ReactNode }) {
-	const {setNoticeData} = useContext(alertContext)
+	const { setNoticeData } = useContext(alertContext);
 	const [tabIndex, setTabIndex] = useState(0);
 	const [flows, setFlows] = useState<Array<FlowType>>([]);
-	const [id, setId] = useState(0);
-	const [lockChat, setLockChat] = useState(false);
+	const [id, setId] = useState("");
+	const { templates } = useContext(typesContext);
 
 	const newNodeId = useRef(0);
 	function incrementNodeId() {
 		newNodeId.current = newNodeId.current + 1;
 		return newNodeId.current;
 	}
-	function save(){
+	function save() {
 		if (flows.length !== 0)
-		window.localStorage.setItem(
-			"tabsData",
-			JSON.stringify({ tabIndex, flows, id, nodeId: newNodeId.current })
-		);
+			window.localStorage.setItem(
+				"tabsData",
+				JSON.stringify({ tabIndex, flows, id, nodeId: newNodeId.current })
+			);
 	}
 	useEffect(() => {
 		//save tabs locally
-		save()
+		save();
 	}, [flows, id, tabIndex, newNodeId]);
-
-
 
 	useEffect(() => {
 		//get tabs locally saved
 		let cookie = window.localStorage.getItem("tabsData");
-		if (cookie) {
-			let cookieObject = JSON.parse(cookie);
+		if (cookie && Object.keys(templates).length > 0) {
+			let cookieObject: LangFlowState = JSON.parse(cookie);
+			cookieObject.flows.forEach((flow) => {
+				flow.data.nodes.forEach((node) => {
+					if (Object.keys(templates[node.data.type]["template"]).length > 0) {
+						node.data.node.template = updateTemplate(
+							templates[node.data.type][
+								"template"
+							] as unknown as APITemplateType,
+
+							node.data.node.template as APITemplateType
+						);
+					}
+				});
+			});
 			setTabIndex(cookieObject.tabIndex);
 			setFlows(cookieObject.flows);
 			setId(cookieObject.id);
 			newNodeId.current = cookieObject.nodeId;
 		}
-	}, []);
-	function hardReset(){
-		newNodeId.current=0;
-		setTabIndex(0);setFlows([]);setId(0);
+	}, [templates]);
+	function hardReset() {
+		newNodeId.current = 0;
+		setTabIndex(0);
+		setFlows([]);
+		setId("");
 	}
 
 	/**
 	 * Downloads the current flow as a JSON file
 	 */
-	function downloadFlow(flow:FlowType) {
+	function downloadFlow(flow: FlowType) {
 		// create a data URI with the current flow data
 		const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
 			JSON.stringify(flow)
@@ -78,11 +101,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		// create a link element and set its properties
 		const link = document.createElement("a");
 		link.href = jsonString;
-		link.download = `${normalCaseToSnakeCase(flows[tabIndex].name)}.json`;
+		link.download = `${flows[tabIndex].name}.json`;
 
 		// simulate a click on the link element to trigger the download
 		link.click();
-		setNoticeData({title:"Warning: Critical data,JSON file may including API keys."})
+		setNoticeData({
+			title: "Warning: Critical data,JSON file may including API keys.",
+		});
 	}
 
 	/**
@@ -103,7 +128,9 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 				// read the file as text
 				file.text().then((text) => {
 					// parse the text into a JSON object
-					addFlow(JSON.parse(text));
+					let flow: FlowType = JSON.parse(text);
+
+					addFlow(flow);
 				});
 			}
 		};
@@ -139,19 +166,28 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	function addFlow(flow?: FlowType) {
 		// Get data from the flow or set it to null if there's no flow provided.
 		const data = flow?.data ? flow.data : null;
-		const description = flow?.description?flow.description:""
+		const description = flow?.description ? flow.description : "";
 
+		if (data) {
+			data.nodes.forEach((node) => {
+				if (Object.keys(templates[node.data.type]["template"]).length > 0) {
+					node.data.node.template = updateTemplate(
+						templates[node.data.type]["template"] as unknown as APITemplateType,
+						node.data.node.template as APITemplateType
+					);
+				}
+			});
+		}
 		// Create a new flow with a default name if no flow is provided.
 		let newFlow: FlowType = {
 			description,
-			name: "New Flow",
+			name: flow?.name ?? "New Flow",
 			id: id.toString(),
 			data,
-			chat: flow ? flow.chat : [],
 		};
 
 		// Increment the ID counter.
-		setId((old) => old + 1);
+		setId(uuidv4());
 
 		// Add the new flow to the list of flows.
 		setFlows((prevState) => {
@@ -171,22 +207,22 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 			const newFlows = [...prevState];
 			const index = newFlows.findIndex((flow) => flow.id === newFlow.id);
 			if (index !== -1) {
-				newFlows[index].description = newFlow.description??""
+				newFlows[index].description = newFlow.description ?? "";
 				newFlows[index].data = newFlow.data;
 				newFlows[index].name = newFlow.name;
-				newFlows[index].chat = newFlow.chat;
 			}
 			return newFlows;
 		});
 	}
+	const [disableCP, setDisableCP] = useState(false);
 
 	return (
 		<TabsContext.Provider
 			value={{
+				disableCP,
+				setDisableCP,
 				save,
 				hardReset,
-				lockChat,
-				setLockChat,
 				tabIndex,
 				setTabIndex,
 				flows,

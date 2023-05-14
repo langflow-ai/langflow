@@ -1,4 +1,4 @@
-import { ForwardRefExoticComponent, ReactElement, ReactNode } from "react";
+import { ForwardRefExoticComponent, ReactElement, ReactFragment, ReactNode } from "react";
 import { NodeDataType } from "../flow/index";
 export type InputComponentType = {
 	value: string;
@@ -43,9 +43,9 @@ export type FileComponentType = {
 	disabled: boolean;
 	onChange: (value: string[] | string) => void;
 	value: string;
-	suffixes:Array<string>;
-	fileTypes:Array<string>;
-	onFileChange:(value: string) => void;
+	suffixes: Array<string>;
+	fileTypes: Array<string>;
+	onFileChange: (value: string) => void;
 };
 
 export type DisclosureComponentType = {
@@ -64,4 +64,22 @@ export type FloatComponentType = {
 	value: string;
 	disabled?: boolean;
 	onChange: (value: string) => void;
+};
+
+export type TooltipComponentType = {
+  children: ReactElement;
+  title: string | ReactElement;
+  placement?:
+    | "bottom-end"
+    | "bottom-start"
+    | "bottom"
+    | "left-end"
+    | "left-start"
+    | "left"
+    | "right-end"
+    | "right-start"
+    | "right"
+    | "top-end"
+    | "top-start"
+    | "top";
 };

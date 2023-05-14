@@ -1,6 +1,7 @@
 import importlib
 import inspect
 import re
+from functools import wraps
 from typing import Dict, Optional
 
 from docstring_parser import parse  # type: ignore
@@ -216,7 +217,7 @@ def format_dict(d, name: Optional[str] = None):
             _type = _type.replace("Optional[", "")[:-1]
 
         # Check for list type
-        if "List" in _type:
+        if "List" in _type or "Sequence" in _type or "Set" in _type:
             _type = _type.replace("List[", "")[:-1]
             value["list"] = True
         else:
@@ -301,3 +302,15 @@ def update_verbose(d: dict, new_value: bool) -> dict:
         elif k == "verbose":
             d[k] = new_value
     return d
+
+
+def sync_to_async(func):
+    """
+    Decorator to convert a sync function to an async function.
+    """
+
+    @wraps(func)
+    async def async_wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    return async_wrapper

@@ -8,6 +8,7 @@ import {
 	ArrowDownTrayIcon,
 	ArrowUpTrayIcon,
 	BellIcon,
+	CodeBracketSquareIcon,
 	MoonIcon,
 	SunIcon,
 } from "@heroicons/react/24/outline";
@@ -16,21 +17,24 @@ import AlertDropdown from "../../../../alerts/alertDropDown";
 import { alertContext } from "../../../../contexts/alertContext";
 import ImportModal from "../../../../modals/importModal";
 import ExportModal from "../../../../modals/exportModal";
+import { typesContext } from "../../../../contexts/typesContext";
+import ApiModal from "../../../../modals/ApiModal";
 
 export default function TabsManagerComponent() {
 	const { flows, addFlow, tabIndex, setTabIndex, uploadFlow, downloadFlow } =
 		useContext(TabsContext);
 	const { openPopUp } = useContext(PopUpContext);
-	const AlertWidth = 256;
+	const { templates } = useContext(typesContext);
+	const AlertWidth = 384;
 	const { dark, setDark } = useContext(darkContext);
 	const { notificationCenter, setNotificationCenter } =
 		useContext(alertContext);
 	useEffect(() => {
 		//create the first flow
-		if (flows.length === 0) {
+		if (flows.length === 0 && Object.keys(templates).length > 0) {
 			addFlow();
 		}
-	}, [addFlow, flows.length]);
+	}, [addFlow, flows.length, templates]);
 
 	return (
 		<div className="h-full w-full flex flex-col">
@@ -54,24 +58,25 @@ export default function TabsManagerComponent() {
 				/>
 				<div className="ml-auto mr-2 flex gap-3">
 					<button
-						onClick={() =>
-							openPopUp(
-								<ImportModal
-								/>
-							)
-						}
-						className="flex items-center gap-1 pr-2 border-gray-400 border-r text-sm text-gray-400 hover:text-gray-500"
+						onClick={() => openPopUp(<ApiModal flowName={flows[tabIndex].name} />)}
+						className="flex items-center gap-1 pr-2 border-gray-400 border-r text-sm text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
+					>
+						Code <CodeBracketSquareIcon className="w-5 h-5" />
+					</button>
+					<button
+						onClick={() => openPopUp(<ImportModal />)}
+						className="flex items-center gap-1 pr-2 border-gray-400 border-r text-sm text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
 					>
 						Import <ArrowUpTrayIcon className="w-5 h-5" />
 					</button>
 					<button
-						onClick={() =>openPopUp(<ExportModal/>)}
-						className="flex items-center gap-1 mr-2 text-sm text-gray-400 hover:text-gray-500"
+						onClick={() => openPopUp(<ExportModal />)}
+						className="flex items-center gap-1 pr-2 text-sm text-gray-600  border-gray-400 border-r hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
 					>
 						Export <ArrowDownTrayIcon className="h-5 w-5" />
 					</button>
 					<button
-						className="text-gray-400 hover:text-gray-500 "
+						className="text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
 						onClick={() => {
 							setDark(!dark);
 						}}
@@ -83,19 +88,22 @@ export default function TabsManagerComponent() {
 						)}
 					</button>
 					<button
-						className="text-gray-400 hover:text-gray-500 relative"
+						className="text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200 relative"
 						onClick={(event: React.MouseEvent<HTMLElement>) => {
 							setNotificationCenter(false);
 							const top = (event.target as Element).getBoundingClientRect().top;
 							const left = (event.target as Element).getBoundingClientRect()
 								.left;
 							openPopUp(
-								<div
-									className="z-10 absolute"
-									style={{ top: top + 20, left: left - AlertWidth }}
-								>
-									<AlertDropdown />
-								</div>
+								<>
+									<div
+										className="z-10 absolute"
+										style={{ top: top + 34, left: left - AlertWidth }}
+									>
+										<AlertDropdown />
+									</div>
+									<div className="h-screen w-screen fixed top-0 left-0"></div>
+								</>
 							);
 						}}
 					>

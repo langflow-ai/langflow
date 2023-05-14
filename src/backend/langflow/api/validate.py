@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, HTTPException
 
 from langflow.api.base import (
@@ -7,6 +9,8 @@ from langflow.api.base import (
     PromptValidationResponse,
     validate_prompt,
 )
+from langflow.graph.nodes import VectorStoreNode
+from langflow.interface.run import build_graph
 from langflow.utils.logger import logger
 from langflow.utils.validate import validate_code
 
@@ -33,3 +37,21 @@ def post_validate_prompt(prompt: Prompt):
     except Exception as e:
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# validate node
+@router.post("/node/{node_id}", status_code=200)
+def post_validate_node(node_id: str, data: dict):
+    try:
+        # build graph
+        graph = build_graph(data)
+        # validate node
+        node = graph.get_node(node_id)
+        if node is None:
+            raise ValueError(f"Node {node_id} not found")
+        if not isinstance(node, VectorStoreNode):
+            node.build()
+        return json.dumps({"valid": True, "params": str(node._built_object_repr())})
+    except Exception as e:
+        logger.exception(e)
+        return json.dumps({"valid": False})
