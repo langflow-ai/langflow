@@ -27,9 +27,9 @@ if [[ -z "$subnet_exists" ]]; then
 fi
 
 # Create a firewall rule to allow TCP port 8080 for all instances in the VPC
-firewall_8080_exists=$(gcloud compute firewall-rules list --filter="name=allow-tcp-8080" --format="value(name)")
-if [[ -z "$firewall_8080_exists" ]]; then
-  gcloud compute firewall-rules create allow-tcp-8080 --network $VPC_NAME --allow tcp:8080 --source-ranges 0.0.0.0/0 --direction INGRESS
+firewall_7860_exists=$(gcloud compute firewall-rules list --filter="name=allow-tcp-7860" --format="value(name)")
+if [[ -z "$firewall_7860_exists" ]]; then
+  gcloud compute firewall-rules create allow-tcp-7860 --network $VPC_NAME --allow tcp:7860 --source-ranges 0.0.0.0/0 --direction INGRESS
 fi
 
 # Create a firewall rule to allow IAP traffic
