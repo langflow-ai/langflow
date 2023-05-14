@@ -54,7 +54,7 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
     if base_type == "agents":
         return instantiate_agent(class_object, params)
     elif base_type == "prompts":
-        return instantiate_prompt(node_type, params)
+        return instantiate_prompt(class_object, node_type, params)
     elif base_type == "tools":
         return instantiate_tool(node_type, class_object, params)
     elif base_type == "toolkits":
@@ -77,12 +77,12 @@ def instantiate_agent(class_object, params):
     return load_agent_executor(class_object, params)
 
 
-def instantiate_prompt(node_type, params):
+def instantiate_prompt(class_object, node_type, params):
     if node_type == "ZeroShotPrompt":
         if "tools" not in params:
             params["tools"] = []
         return ZeroShotAgent.create_prompt(**params)
-    return None  # Or some other default action
+    return class_object(**params)
 
 
 def instantiate_tool(node_type, class_object, params):
