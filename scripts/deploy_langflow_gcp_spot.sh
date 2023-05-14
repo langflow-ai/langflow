@@ -84,7 +84,7 @@ gcloud compute instances create $VM_NAME \
   --zone $ZONE \
   --network $VPC_NAME \
   --subnet $SUBNET_NAME \
-  -preemptible
+  --preemptible
 
 # Remove the temporary file after the VM is created
 rm $tempfile
