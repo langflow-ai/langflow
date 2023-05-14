@@ -49,24 +49,24 @@ apt -y upgrade
 # Install Python 3 pip, Langflow, and Nginx
 apt -y install python3-pip
 pip install langflow
-apt-get -y install nginx
+# apt-get -y install nginx
 
-# Configure Nginx for Langflow
-touch /etc/nginx/sites-available/langflow-app
-echo "server {
-    listen 0.0.0.0:8080;
+# # Configure Nginx for Langflow
+# touch /etc/nginx/sites-available/langflow-app
+# echo "server {
+#     listen 0.0.0.0:8080;
 
-    location / {
-        proxy_pass http://127.0.0.1:7860;
-        proxy_set_header Host "\$host";
-        proxy_set_header X-Real-IP "\$remote_addr";
-        proxy_set_header X-Forwarded-For "\$proxy_add_x_forwarded_for";
-    }
-}" >> /etc/nginx/sites-available/langflow-app
-ln -s /etc/nginx/sites-available/langflow-app /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl restart nginx
-langflow
+#     location / {
+#         proxy_pass http://127.0.0.1:7860;
+#         proxy_set_header Host "\$host";
+#         proxy_set_header X-Real-IP "\$remote_addr";
+#         proxy_set_header X-Forwarded-For "\$proxy_add_x_forwarded_for";
+#     }
+# }" >> /etc/nginx/sites-available/langflow-app
+# ln -s /etc/nginx/sites-available/langflow-app /etc/nginx/sites-enabled/
+# sudo nginx -t
+# sudo systemctl restart nginx
+langflow --host 0.0.0.0 --port 7860
 EOF
 )
 
