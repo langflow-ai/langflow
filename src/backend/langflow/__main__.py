@@ -78,9 +78,10 @@ def jcloud():
     from importlib.metadata import version as mod_version
 
     app_name = "langflow.lcserve:app"
+    app_dir = str(Path(__file__).parent)
     version = mod_version("langflow")
-    uses = f"jinaai+docker://langflow:{version}"
-    os.system(f"lc-serve deploy jcloud --app {app_name} --app-dir . --uses {uses}")
+    base_image = "jinaai+docker://deepankarm/langflow"
+    os.system(f"lc-serve deploy jcloud --app {app_name} --app-dir {app_dir} --uses {base_image}:{version}")
 
 
 def main():
