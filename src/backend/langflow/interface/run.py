@@ -1,6 +1,6 @@
 import contextlib
 import io
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from chromadb.errors import NotEnoughElementsException  # type: ignore
 
@@ -150,7 +150,7 @@ def fix_memory_inputs(langchain_object):
 
 
 async def get_result_and_steps(
-    langchain_object, message: str, callbacks_kwargs: Optional[dict] = None
+    langchain_object, message: str, callbacks_kwargs: Optional[dict[str, Any]] = None
 ):
     """Get result and thought from extracted json"""
 
@@ -176,14 +176,6 @@ async def get_result_and_steps(
             langchain_object.return_intermediate_steps = True
 
         fix_memory_inputs(langchain_object)
-        try:
-            async_callbacks = [AsyncStreamingLLMCallbackHandler(**kwargs)]
-            output = await langchain_object.acall(chat_input, callbacks=async_callbacks)
-        except Exception as exc:
-            # make the error message more informative
-            logger.debug(f"Error: {str(exc)}")
-            sync_callbacks = [StreamingLLMCallbackHandler(**kwargs)]
-            output = langchain_object(chat_input, callbacks=sync_callbacks)
 
         try:
             if callbacks_kwargs:
