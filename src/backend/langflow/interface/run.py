@@ -1,13 +1,14 @@
 import contextlib
 import io
-from typing import Any, Dict
+from typing import Any, Dict, List, Tuple
 
 from chromadb.errors import NotEnoughElementsException  # type: ignore
 
+from langflow.api.callback import AsyncStreamingLLMCallbackHandler, StreamingLLMCallbackHandler  # type: ignore
 from langflow.cache.base import compute_dict_hash, load_cache, memoize_dict
 from langflow.graph.graph import Graph
-from langflow.interface import loading
 from langflow.utils.logger import logger
+from langchain.schema import AgentAction
 
 
 def load_langchain_object(data_graph, is_first_message=False):
@@ -64,40 +65,6 @@ def build_langchain_object(data_graph):
     graph = Graph(nodes, edges)
 
     return graph.build()
-
-
-def process_graph(data_graph: Dict[str, Any]):
-    """
-    Process graph by extracting input variables and replacing ZeroShotPrompt
-    with PromptTemplate,then run the graph and return the result and thought.
-    """
-    # Load langchain object
-    logger.debug("Loading langchain object")
-    message = data_graph.pop("message", "")
-    is_first_message = len(data_graph.get("chatHistory", [])) == 0
-    computed_hash, langchain_object = load_langchain_object(
-        data_graph, is_first_message
-    )
-    logger.debug("Loaded langchain object")
-
-    if langchain_object is None:
-        # Raise user facing error
-        raise ValueError(
-            "There was an error loading the langchain_object. Please, check all the nodes and try again."
-        )
-
-    # Generate result and thought
-    logger.debug("Generating result and thought")
-    result, thought = get_result_and_steps(langchain_object, message)
-    logger.debug("Generated result and thought")
-
-    # Save langchain_object to cache
-    # We have to save it here because if the
-    # memory is updated we need to keep the new values
-    logger.debug("Saving langchain object to cache")
-    # save_cache(computed_hash, langchain_object, is_first_message)
-    logger.debug("Saved langchain object to cache")
-    return {"result": str(result), "thought": thought.strip()}
 
 
 def process_graph_cached(data_graph: Dict[str, Any], message: str):
@@ -184,8 +151,9 @@ def fix_memory_inputs(langchain_object):
             update_memory_keys(langchain_object, possible_new_mem_key)
 
 
-def get_result_and_steps(langchain_object, message: str):
+async def get_result_and_steps(langchain_object, message: str, **kwargs):
     """Get result and thought from extracted json"""
+
     try:
         if hasattr(langchain_object, "verbose"):
             langchain_object.verbose = True
@@ -205,32 +173,28 @@ def get_result_and_steps(langchain_object, message: str):
             # https://github.com/hwchase17/langchain/issues/2068
             # Deactivating until we have a frontend solution
             # to display intermediate steps
-            langchain_object.return_intermediate_steps = False
+            langchain_object.return_intermediate_steps = True
 
         fix_memory_inputs(langchain_object)
+        try:
+            async_callbacks = [AsyncStreamingLLMCallbackHandler(**kwargs)]
+            output = await langchain_object.acall(chat_input, callbacks=async_callbacks)
+        except Exception as exc:
+            # make the error message more informative
+            logger.debug(f"Error: {str(exc)}")
+            sync_callbacks = [StreamingLLMCallbackHandler(**kwargs)]
+            output = langchain_object(chat_input, callbacks=sync_callbacks)
 
-        with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
-            try:
-                output = langchain_object(chat_input)
-            except ValueError as exc:
-                # make the error message more informative
-                logger.debug(f"Error: {str(exc)}")
-                output = langchain_object.run(chat_input)
+        intermediate_steps = (
+            output.get("intermediate_steps", []) if isinstance(output, dict) else []
+        )
 
-            intermediate_steps = (
-                output.get("intermediate_steps", []) if isinstance(output, dict) else []
-            )
-
-            result = (
-                output.get(langchain_object.output_keys[0])
-                if isinstance(output, dict)
-                else output
-            )
-            if intermediate_steps:
-                thought = format_intermediate_steps(intermediate_steps)
-            else:
-                thought = output_buffer.getvalue()
-
+        result = (
+            output.get(langchain_object.output_keys[0])
+            if isinstance(output, dict)
+            else output
+        )
+        thought = format_actions(intermediate_steps) if intermediate_steps else ""
     except NotEnoughElementsException as exc:
         raise ValueError(
             "Error: Not enough documents for ChromaDB to index. Try reducing chunk size in TextSplitter."
@@ -286,7 +250,7 @@ def get_result_and_thought(langchain_object, message: str):
                 else output
             )
             if intermediate_steps:
-                thought = format_intermediate_steps(intermediate_steps)
+                thought = format_actions(intermediate_steps)
             else:
                 thought = output_buffer.getvalue()
 
@@ -295,19 +259,17 @@ def get_result_and_thought(langchain_object, message: str):
     return result, thought
 
 
-def format_intermediate_steps(intermediate_steps):
-    formatted_chain = "> Entering new AgentExecutor chain...\n"
-    for step in intermediate_steps:
-        action = step[0]
-        observation = step[1]
-
-        formatted_chain += (
-            f" {action.log}\nAction: {action.tool}\nAction Input: {action.tool_input}\n"
-        )
-        formatted_chain += f"Observation: {observation}\n"
-
-    final_answer = f"Final Answer: {observation}\n"
-    formatted_chain += f"Thought: I now know the final answer\n{final_answer}\n"
-    formatted_chain += "> Finished chain.\n"
-
-    return formatted_chain
+def format_actions(actions: List[Tuple[AgentAction, str]]) -> str:
+    """Format a list of (AgentAction, answer) tuples into a string."""
+    output = []
+    for action, answer in actions:
+        log = action.log
+        tool = action.tool
+        tool_input = action.tool_input
+        output.append(f"Log: {log}")
+        if "Action" not in log and "Action Input" not in log:
+            output.append(f"Tool: {tool}")
+            output.append(f"Tool Input: {tool_input}")
+        output.append(f"Answer: {answer}")
+        output.append("")  # Add a blank line
+    return "\n".join(output)

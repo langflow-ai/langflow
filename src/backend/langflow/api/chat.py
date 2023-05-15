@@ -1,4 +1,10 @@
-from fastapi import APIRouter, WebSocket
+from fastapi import (
+    APIRouter,
+    WebSocket,
+    WebSocketDisconnect,
+    WebSocketException,
+    status,
+)
 
 from langflow.api.chat_manager import ChatManager
 from langflow.utils.logger import logger
@@ -12,7 +18,9 @@ async def websocket_endpoint(client_id: str, websocket: WebSocket):
     """Websocket endpoint for chat."""
     try:
         await chat_manager.handle_websocket(client_id, websocket)
-    except Exception as e:
-        # Log stack trace
-        logger.exception(e)
-        raise e
+    except WebSocketException as exc:
+        logger.error(exc)
+        await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=str(exc))
+    except WebSocketDisconnect as exc:
+        logger.error(exc)
+        await websocket.close(code=status.WS_1000_NORMAL_CLOSURE, reason=str(exc))

@@ -19,7 +19,7 @@ import {
 import { Connection, Edge, Node, ReactFlowInstance } from "reactflow";
 import { FlowType } from "./types/flow";
 import { APITemplateType, TemplateVariableType } from "./types/api";
-var _ = require("lodash");
+import _ from "lodash";
 
 export function classNames(...classes: Array<string>) {
 	return classes.filter(Boolean).join(" ");
@@ -316,25 +316,34 @@ export function toFirstUpperCase(str: string) {
 		.join("");
 }
 
-export function toNormalCase(str: string) {
-  let result =  str
-    .split("_")
-    .map((word, index) => {
-      if (index === 0) {
-        return word[0].toUpperCase() + word.slice(1).toLowerCase();
-      }
-      return word.toLowerCase();
-    })
-    .join(" ");
+export function snakeToSpaces(str: string) {
+	let result = str
+		.split("_")
+		.join(" ");
 
-  return result.split("-")
-  .map((word, index) => {
-    if (index === 0) {
-      return word[0].toUpperCase() + word.slice(1).toLowerCase();
-    }
-    return word.toLowerCase();
-  })
-  .join(" ");
+	return result
+}
+
+export function toNormalCase(str: string) {
+	let result = str
+		.split("_")
+		.map((word, index) => {
+			if (index === 0) {
+				return word[0].toUpperCase() + word.slice(1).toLowerCase();
+			}
+			return word.toLowerCase();
+		})
+		.join(" ");
+
+	return result
+		.split("-")
+		.map((word, index) => {
+			if (index === 0) {
+				return word[0].toUpperCase() + word.slice(1).toLowerCase();
+			}
+			return word.toLowerCase();
+		})
+		.join(" ");
 }
 
 export function normalCaseToSnakeCase(str: string) {
@@ -397,15 +406,15 @@ export function isValidConnection(
 }
 
 export function removeApiKeys(flow: FlowType): FlowType {
-  let cleanFLow = _.cloneDeep(flow);
-  cleanFLow.data.nodes.forEach((node) => {
-    for (const key in node.data.node.template) {
-      if (key.includes("api")) {
-        node.data.node.template[key].value = "";
-      }
-    }
-  });
-  return cleanFLow;
+	let cleanFLow = _.cloneDeep(flow);
+	cleanFLow.data.nodes.forEach((node) => {
+		for (const key in node.data.node.template) {
+			if (key.includes("api")) {
+				node.data.node.template[key].value = "";
+			}
+		}
+	});
+	return cleanFLow;
 }
 
 export function updateObject<T extends Record<string, any>>(
@@ -443,7 +452,7 @@ export function updateTemplate(
 	reference: APITemplateType,
 	objectToUpdate: APITemplateType
 ): APITemplateType {
-	let clonedObject:APITemplateType = _.cloneDeep(reference);
+	let clonedObject: APITemplateType = _.cloneDeep(reference);
 
 	// Loop through each key in the reference object
 	for (const key in clonedObject) {
@@ -454,3 +463,34 @@ export function updateTemplate(
 	}
 	return clonedObject;
 }
+
+interface languageMap {
+	[key: string]: string | undefined;
+}
+
+export const programmingLanguages: languageMap = {
+	javascript: ".js",
+	python: ".py",
+	java: ".java",
+	c: ".c",
+	cpp: ".cpp",
+	"c++": ".cpp",
+	"c#": ".cs",
+	ruby: ".rb",
+	php: ".php",
+	swift: ".swift",
+	"objective-c": ".m",
+	kotlin: ".kt",
+	typescript: ".ts",
+	go: ".go",
+	perl: ".pl",
+	rust: ".rs",
+	scala: ".scala",
+	haskell: ".hs",
+	lua: ".lua",
+	shell: ".sh",
+	sql: ".sql",
+	html: ".html",
+	css: ".css",
+	// add more file extensions here, make sure the key is same as language prop in CodeBlock.tsx component
+};

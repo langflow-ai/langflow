@@ -39,16 +39,16 @@ export default function ErrorAlert({
 						removeAlert(id);
 					}, 500);
 				}}
-				className="rounded-md w-96 mt-6 shadow-xl bg-red-50 p-4 cursor-pointer"
+				className="rounded-md w-96 mt-6 shadow-xl bg-red-50 dark:bg-red-900 p-4 cursor-pointer"
 			>
 				<div className="flex">
 					<div className="flex-shrink-0">
-						<XCircleIcon className="h-5 w-5 text-red-400" aria-hidden="true" />
+						<XCircleIcon className="h-5 w-5 text-red-400 dark:text-red-50" aria-hidden="true" />
 					</div>
 					<div className="ml-3">
-						<h3 className="text-sm font-medium text-red-800">{title}</h3>
+						<h3 className="text-sm font-medium text-red-800 dark:text-white/80">{title}</h3>
 						{list.length !== 0 ? (
-							<div className="mt-2 text-sm text-red-700">
+							<div className="mt-2 text-sm text-red-700 dark:text-red-50">
 								<ul className="list-disc space-y-1 pl-5">
 									{list.map((item, index) => (
 										<li key={index}>{item}</li>

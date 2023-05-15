@@ -3,11 +3,18 @@ import { useContext, useState } from "react";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { FlowType } from "../../../../types/flow";
 
-var _ = require("lodash");
+import _ from "lodash";
 
-export default function TabComponent({ selected, flow, onClick }:{flow:FlowType,selected:boolean,onClick:()=>void}) {
-	const { removeFlow, updateFlow, flows } =
-		useContext(TabsContext);
+export default function TabComponent({
+	selected,
+	flow,
+	onClick,
+}: {
+	flow: FlowType;
+	selected: boolean;
+	onClick: () => void;
+}) {
+	const { removeFlow, updateFlow, flows, setDisableCP } = useContext(TabsContext);
 	const [isRename, setIsRename] = useState(false);
 	const [value, setValue] = useState("");
 	return (
@@ -19,7 +26,7 @@ export default function TabComponent({ selected, flow, onClick }:{flow:FlowType,
 						onClick={onClick}
 					>
 						<span className="w-32 truncate text-left">{flow.name}</span>
-						
+
 						<button
 							onClick={(e) => {
 								e.stopPropagation();
@@ -30,14 +37,18 @@ export default function TabComponent({ selected, flow, onClick }:{flow:FlowType,
 						</button>
 					</div>
 				) : (
-					<div className="bg-white dark:text-white dark:bg-gray-700 flex select-none justify-between w-44 items-center border border-b-0 border-gray-300 dark:border-gray-600 px-4 py-1 rounded-t-xl -ml-px">
+					<div className="bg-white dark:text-white dark:bg-gray-700/60 flex select-none justify-between w-44 items-center border border-b-0 border-gray-300 dark:border-gray-600 px-4 py-1 rounded-t-xl -ml-px">
 						{isRename ? (
 							<input
+								onFocus={() => {
+									setDisableCP(true);
+								}}
 								autoFocus
 								className="bg-transparent focus:border-none active:outline hover:outline focus:outline outline-gray-300 rounded-md  w-28"
 								onBlur={() => {
 									setIsRename(false);
 									if (value !== "") {
+										setDisableCP(false);
 										let newFlow = _.cloneDeep(flow);
 										newFlow.name = value;
 										updateFlow(newFlow);
@@ -85,4 +96,3 @@ export default function TabComponent({ selected, flow, onClick }:{flow:FlowType,
 		</>
 	);
 }
-

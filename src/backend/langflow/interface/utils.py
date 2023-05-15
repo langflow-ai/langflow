@@ -4,12 +4,8 @@ import os
 from io import BytesIO
 
 import yaml
-from langchain.callbacks.manager import AsyncCallbackManager
-from langchain.chat_models import AzureChatOpenAI, ChatOpenAI
-from langchain.llms import AzureOpenAI, OpenAI
+from langchain.base_language import BaseLanguageModel
 from PIL.Image import Image
-
-from langflow.api.callback import StreamingLLMCallbackHandler
 
 
 def load_file_into_dict(file_path: str) -> dict:
@@ -48,10 +44,7 @@ def try_setting_streaming_options(langchain_object, websocket):
         langchain_object.llm_chain, "llm"
     ):
         llm = langchain_object.llm_chain.llm
-    if isinstance(llm, (OpenAI, ChatOpenAI, AzureOpenAI, AzureChatOpenAI)):
+    if isinstance(llm, BaseLanguageModel):
         llm.streaming = bool(hasattr(llm, "streaming"))
-        stream_handler = StreamingLLMCallbackHandler(websocket)
-        stream_manager = AsyncCallbackManager([stream_handler])
-        llm.callback_manager = stream_manager
 
     return langchain_object
