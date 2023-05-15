@@ -57,7 +57,7 @@ export default function CodeAreaComponent({
 						);
 					}}
 				>
-					<ArrowTopRightOnSquareIcon className="w-6 h-6 hover:text-blue-600" />
+					<ArrowTopRightOnSquareIcon className="w-6 h-6 hover:text-blue-600 dark:text-gray-300" />
 				</button>
 			</div>
 		</div>

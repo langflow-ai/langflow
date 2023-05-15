@@ -76,6 +76,17 @@ module.exports = {
           '&::-webkit-scrollbar-thumb:hover': {
             'backgroundColor': '#bbb'
         }
+      },
+      '.theme-attribution .react-flow__attribution':{
+        'borderRadius':'0.2rem',
+        'top':'5px',
+        'right':'5px',
+      },
+      '.dark .theme-attribution .react-flow__attribution':{
+        'backgroundColor': 'rgba(255, 255, 255, 0.2)',
+      },
+      '.dark .theme-attribution .react-flow__attribution a':{
+        'color':'black',
       }
     })
     }),require('@tailwindcss/line-clamp'),require('@tailwindcss/typography'),
