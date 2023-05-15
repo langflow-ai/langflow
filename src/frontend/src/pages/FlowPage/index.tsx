@@ -11,7 +11,6 @@ import ReactFlow, {
 	Connection,
 	Edge,
 	useKeyPress,
-	useOnSelectionChange,
 	NodeDragHandler,
 	OnEdgesDelete,
 	OnNodesDelete,
@@ -30,6 +29,7 @@ import { FlowType, NodeType } from "../../types/flow";
 import { APIClassType } from "../../types/api";
 import { isValidConnection } from "../../utils";
 import useUndoRedo from "./hooks/useUndoRedo";
+import SelectionMenu from "./components/SelectionMenuComponent";
 
 const nodeTypes = {
 	genericNode: GenericNode,
@@ -61,13 +61,12 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
 
 	const [position, setPosition] = useState({ x: 0, y: 0 });
 
+	const [selectionMenuPosition, setSelectionMenuPosition] = useState({ x: 0, y: 0 });
+	const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
+
 	const handleMouseMove = (event) => {
 		setPosition({ x: event.clientX, y: event.clientY });
 	};
-
-	useOnSelectionChange({
-		onChange: (flow) => { setLastSelection(flow); },
-	})
 
 	let paste = () => {
 		let minimumX = Infinity;
@@ -245,6 +244,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
 					position,
 					data: {
 						...data,
+						getPosition: () => {},
 						id: newId,
 						value: null,
 					},
@@ -295,6 +295,26 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
 		edgeUpdateSuccessful.current = true;
 	}, []);
 
+	const onSelectionEnd = useCallback(() => {
+		setSelectionMenuVisible(true);
+		let minPositionX = Infinity;
+		let maxPositionX = 0;
+		let minPositionY = Infinity;
+		console.log(lastSelection)
+		if(lastSelection)
+			lastSelection.nodes.forEach((node) => {
+				let position = node.data.getPosition()
+				console.log(position)
+				minPositionX = Math.min(minPositionX, position.x);
+				maxPositionX = Math.max(maxPositionX, position.x + position.width);
+				minPositionY = Math.min(minPositionY, position.y);
+			});
+		setSelectionMenuPosition({ x: ((minPositionX + maxPositionX) / 2), y: minPositionY });
+		console.log({ x: ((minPositionX + maxPositionX) / 2), y: minPositionY })
+	}, [lastSelection]);
+
+	const onSelectionChange = useCallback((flow) => { setLastSelection(flow); }, [])
+
 	return (
 		<div className="w-full h-full" onMouseMove={handleMouseMove} ref={reactFlowWrapper}>
 			{Object.keys(templates).length > 0 && Object.keys(types).length > 0 ? (
@@ -317,11 +337,13 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
 						onEdgeUpdateEnd={onEdgeUpdateEnd}
 						onNodeDragStart={onNodeDragStart}
 						onSelectionDragStart={onSelectionDragStart}
+						onSelectionEnd={onSelectionEnd}
 						onEdgesDelete={onEdgesDelete}
 						connectionLineComponent={ConnectionLineComponent}
 						onDragOver={onDragOver}
 						onDrop={onDrop}
 						onNodesDelete={onDelete}
+						onSelectionChange={onSelectionChange}
 						selectNodesOnDrag={false}
 					>
 						<Background className="dark:bg-gray-900" />
@@ -329,6 +351,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
 						</Controls>
 					</ReactFlow>
 					<Chat flow={flow} reactFlowInstance={reactFlowInstance} />
+					<SelectionMenu position={selectionMenuPosition} onClick={()=>{}} isVisible={selectionMenuVisible}/>
 				</>
 			) : (
 				<></>
