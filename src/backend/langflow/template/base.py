@@ -134,6 +134,7 @@ class Template(BaseModel):
         self.process_fields(self.type_name, format_field_func)
         result = {field.name: field.to_dict() for field in self.fields}
         result["_type"] = self.type_name  # type: ignore
+        result["can_be_root"] = self.can_be_root  # type: ignore
         return result
 
 
