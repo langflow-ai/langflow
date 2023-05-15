@@ -14,6 +14,7 @@ import { CodeBlock } from "./codeBlock";
 import Convert from "ansi-to-html";
 
 export default function ChatMessage({ chat, lockChat }: { chat: ChatMessageType, lockChat: boolean }) {
+	var convert = new Convert({newline:true});
 	const [message, setMessage] = useState("");
 	const imgRef = useRef(null);
 	useEffect(() => {
