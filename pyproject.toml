@@ -51,6 +51,7 @@ websockets = "^11.0.2"
 tiktoken = "^0.3.3"
 wikipedia = "^1.4.0"
 gptcache = "^0.1.23"
+langchain-serve = "^0.0.28"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
