@@ -54,7 +54,8 @@ lcserve_push:
 
 lcserve_deploy:
 	@:$(if $(uses),,$(error `uses` is not set. Please run `make uses=... lcserve_deploy`))
-	lc-serve deploy jcloud --app langflow.lcserve:app --app-dir . --uses $(uses) --verbose
+	lc-serve deploy jcloud --app langflow.lcserve:app --app-dir . \
+		--uses $(uses) --config src/backend/langflow/jcloud.yml --verbose
 
 dev:
 	make install_frontend
