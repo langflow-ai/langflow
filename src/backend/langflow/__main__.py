@@ -69,6 +69,20 @@ def serve(
         LangflowApplication(app, options).run()
 
 
+@app.command()
+def jcloud():
+    """
+    Deploy Langflow server on Jina AI Cloud
+    """
+    import os
+    from importlib.metadata import version as mod_version
+
+    app_name = "langflow.lcserve:app"
+    version = mod_version("langflow")
+    uses = f"jinaai+docker://langflow:{version}"
+    os.system(f"lc-serve deploy jcloud --app {app_name} --app-dir . --uses {uses}")
+
+
 def main():
     app()
 
