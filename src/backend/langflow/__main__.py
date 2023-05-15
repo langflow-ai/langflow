@@ -74,14 +74,37 @@ def jcloud():
     """
     Deploy Langflow server on Jina AI Cloud
     """
-    import os
+    import asyncio
+
+    import click
+    from lcserve.__main__ import serve_on_jcloud
     from importlib.metadata import version as mod_version
 
     app_name = "langflow.lcserve:app"
     app_dir = str(Path(__file__).parent)
     version = mod_version("langflow")
     base_image = "jinaai+docker://deepankarm/langflow"
-    os.system(f"lc-serve deploy jcloud --app {app_name} --app-dir {app_dir} --uses {base_image}:{version}")
+
+    click.echo("🚀 Deploying Langflow server on Jina AI Cloud")
+    app_id = asyncio.run(
+        serve_on_jcloud(
+            fastapi_app_str=app_name,
+            app_dir=app_dir,
+            uses=f"{base_image}:{version}",
+            name="langflow",
+        )
+    )
+    click.secho(
+        "🎉 Langflow server successfully deployed on Jina AI Cloud 🎉", fg="green"
+    )
+    click.secho(
+        "🔗 Click on the link to open the server (please allow ~1-2 minutes for the server to startup): ",
+        nl=False,
+        fg="green",
+    )
+    click.secho(f"https://{app_id}.wolf.jina.ai/", fg="blue")
+    click.secho("📖 Read more about managing the server: ", nl=False, fg="green")
+    click.secho("https://github.com/jina-ai/langchain-serve", fg="blue")
 
 
 def main():
