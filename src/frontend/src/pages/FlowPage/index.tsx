@@ -28,7 +28,7 @@ import { typesContext } from "../../contexts/typesContext";
 import ConnectionLineComponent from "./components/ConnectionLineComponent";
 import { FlowType, NodeType } from "../../types/flow";
 import { APIClassType } from "../../types/api";
-import { isValidConnection } from "../../utils";
+import { getMiddlePoint, isValidConnection } from "../../utils";
 import useUndoRedo from "./hooks/useUndoRedo";
 
 const nodeTypes = {
@@ -53,6 +53,13 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
 		if ((event.ctrlKey || event.metaKey) && (event.key === 'v') && lastCopiedSelection && !disableCP) {
 			event.preventDefault();
 			paste();
+		}
+		if ((event.ctrlKey || event.metaKey) && (event.key === 'g') && lastSelection) {
+			event.preventDefault();
+			console.log(lastSelection);
+			console.log(getMiddlePoint(lastSelection.nodes));
+			
+
 		}
 	}
 

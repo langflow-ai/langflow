@@ -15,6 +15,7 @@ import {
 	ScissorsIcon,
 	CircleStackIcon,
 	Squares2X2Icon,
+	PencilSquareIcon,
 } from "@heroicons/react/24/outline";
 import { Connection, Edge, Node, ReactFlowInstance } from "reactflow";
 import { FlowType } from "./types/flow";
@@ -89,6 +90,7 @@ export const nodeColors: { [char: string]: string } = {
 	wrappers: "#E6277A",
 	utilities: "#31A3CC",
 	unknown: "#9CA3AF",
+	custom: "#9CA3AF",
 };
 
 export const nodeNames: { [char: string]: string } = {
@@ -108,6 +110,7 @@ export const nodeNames: { [char: string]: string } = {
 	textsplitters: "Text Splitters",
 	utilities: "Utilities",
 	unknown: "Unknown",
+	custom: "Custom",
 };
 
 export const nodeIcons: {
@@ -131,6 +134,7 @@ export const nodeIcons: {
 	wrappers: GiftIcon,
 	utilities: Squares2X2Icon,
 	unknown: QuestionMarkCircleIcon,
+	custom: PencilSquareIcon
 };
 
 export const bgColors = {
@@ -494,3 +498,20 @@ export const programmingLanguages: languageMap = {
 	css: ".css",
 	// add more file extensions here, make sure the key is same as language prop in CodeBlock.tsx component
 };
+
+
+export function getMiddlePoint(nodes: Node[]) {
+	let middlePointX = 0;
+	let middlePointY = 0;
+  
+	nodes.forEach(node => {
+	  middlePointX += node.position.x;
+	  middlePointY += node.position.y;
+	});
+  
+	const totalNodes = nodes.length;
+	const averageX = middlePointX / totalNodes;
+	const averageY = middlePointY / totalNodes;
+  
+	return { x: averageX, y: averageY };
+  }
