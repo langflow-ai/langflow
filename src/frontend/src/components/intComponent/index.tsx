@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { FloatComponentType } from "../../types/components";
+import { TabsContext } from "../../contexts/tabsContext";
 
 export default function IntComponent({
 	value,
@@ -13,13 +14,25 @@ export default function IntComponent({
 			onChange("");
 		}
 	}, [disabled, onChange]);
+	const {setDisableCP} =useContext(TabsContext)
 	return (
-		<div className={disabled ? "pointer-events-none cursor-not-allowed w-full" : "w-full"}>
+		<div
+			className={
+				disabled ? "pointer-events-none cursor-not-allowed w-full" : "w-full"
+			}
+		>
 			<input
 				onKeyDown={(event) => {
-                    if (event.key !== 'Backspace' && event.key !== 'Enter' && event.key !== 'Delete' && event.key !== 'ArrowLeft' && event.key !== 'ArrowRight' && !/^[-]?\d*$/.test(event.key)) {
-                        event.preventDefault();
-                    }
+					if (
+						event.key !== "Backspace" &&
+						event.key !== "Enter" &&
+						event.key !== "Delete" &&
+						event.key !== "ArrowLeft" &&
+						event.key !== "ArrowRight" &&
+						!/^[-]?\d*$/.test(event.key)
+					) {
+						event.preventDefault();
+					}
 				}}
 				type="number"
 				value={myValue}
@@ -32,7 +45,14 @@ export default function IntComponent({
 					setMyValue(e.target.value);
 					onChange(e.target.value);
 				}}
+				onBlur={() => {
+					setDisableCP(false)
+				}}
+				onFocus={() => {
+					setDisableCP(true)
+				}}
 			/>
+			
 		</div>
 	);
 }

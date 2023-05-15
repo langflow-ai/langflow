@@ -1,3 +1,4 @@
+from abc import ABC
 from typing import Any, List, Optional
 
 from langchain import LLMChain
@@ -27,14 +28,31 @@ from langchain.agents.agent_toolkits.vectorstore.prompt import (
 from langchain.agents.mrkl.prompt import FORMAT_INSTRUCTIONS
 from langchain.agents.mrkl.prompt import FORMAT_INSTRUCTIONS as SQL_FORMAT_INSTRUCTIONS
 from langchain.base_language import BaseLanguageModel
-
 from langchain.memory.chat_memory import BaseChatMemory
 from langchain.sql_database import SQLDatabase
 from langchain.tools.python.tool import PythonAstREPLTool
 from langchain.tools.sql_database.prompt import QUERY_CHECKER
 
 
-class JsonAgent(AgentExecutor):
+class CustomAgentExecutor(AgentExecutor, ABC):
+    """Custom agent executor"""
+
+    @staticmethod
+    def function_name():
+        return "CustomAgentExecutor"
+
+    @classmethod
+    def initialize(cls, *args, **kwargs):
+        pass
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def run(self, *args, **kwargs):
+        return super().run(*args, **kwargs)
+
+
+class JsonAgent(CustomAgentExecutor):
     """Json agent"""
 
     @staticmethod
@@ -70,7 +88,7 @@ class JsonAgent(AgentExecutor):
         return super().run(*args, **kwargs)
 
 
-class CSVAgent(AgentExecutor):
+class CSVAgent(CustomAgentExecutor):
     """CSV agent"""
 
     @staticmethod
@@ -118,7 +136,7 @@ class CSVAgent(AgentExecutor):
         return super().run(*args, **kwargs)
 
 
-class VectorStoreAgent(AgentExecutor):
+class VectorStoreAgent(CustomAgentExecutor):
     """Vector Store agent"""
 
     @staticmethod
@@ -156,7 +174,7 @@ class VectorStoreAgent(AgentExecutor):
         return super().run(*args, **kwargs)
 
 
-class SQLAgent(AgentExecutor):
+class SQLAgent(CustomAgentExecutor):
     """SQL agent"""
 
     @staticmethod
@@ -228,7 +246,7 @@ class SQLAgent(AgentExecutor):
         return super().run(*args, **kwargs)
 
 
-class VectorStoreRouterAgent(AgentExecutor):
+class VectorStoreRouterAgent(CustomAgentExecutor):
     """Vector Store Router Agent"""
 
     @staticmethod
@@ -267,7 +285,7 @@ class VectorStoreRouterAgent(AgentExecutor):
         return super().run(*args, **kwargs)
 
 
-class InitializeAgent(AgentExecutor):
+class InitializeAgent(CustomAgentExecutor):
     """Implementation of initialize_agent function"""
 
     @staticmethod

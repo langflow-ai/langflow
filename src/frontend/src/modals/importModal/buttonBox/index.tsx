@@ -29,93 +29,81 @@ export default function ButtonBox({
 	let padding: string;
 	let marginTop: string;
 	let height: string;
-	let widht: string;
+	let width: string;
 	switch (size) {
 		case "small":
 			bigCircle = "h-12 w-12";
 			smallCircle = "h-8 w-8";
 			titleFontSize = "text-sm";
 			descriptionFontSize = "text-xs";
-			padding = "p-2";
+			padding = "p-2 py-3";
 			marginTop = "mt-2";
 			height = "h-36";
-			widht = "w-32";
+			width = "w-32";
 			break;
 		case "medium":
 			bigCircle = "h-16 w-16";
 			smallCircle = "h-12 w-12";
 			titleFontSize = "text-base";
 			descriptionFontSize = "text-sm";
-			padding = "p-4";
+			padding = "p-4 py-5";
 			marginTop = "mt-3";
 			height = "h-44";
-			widht = "w-36";
+			width = "w-36";
 			break;
 		case "big":
 			bigCircle = "h-20 w-20";
 			smallCircle = "h-16 w-16";
 			titleFontSize = "text-lg";
 			descriptionFontSize = "text-sm";
-			padding = "p-8";
+			padding = "p-8 py-10";
 			marginTop = "mt-6";
 			height = "h-56";
-			widht = "w-44";
+			width = "w-44";
 			break;
 		default:
 			bigCircle = "h-20 w-20";
 			smallCircle = "h-16 w-16";
 			titleFontSize = "text-lg";
 			descriptionFontSize = "text-sm";
-			padding = "p-8";
+			padding = "p-8 py-10";
 			marginTop = "mt-6";
 			height = "h-56";
-			widht = "w-44";
+			width = "w-44";
 			break;
 	}
 	return (
 		<button disabled={deactivate} onClick={onClick}>
-			<Tooltip title={description} placement="bottom">
 				<div
 					className={classNames(
-						"col-span-1 flex flex-col  divide-y divide-gray-200 rounded-lg text-center shadow border border-gray-300 hover:shadow-lg transform hover:scale-105",
+						"flex flex-col justify-center items-center rounded-lg text-center shadow border border-gray-300 dark:border-gray-800 hover:shadow-lg transform hover:scale-105",
 						bgColor,
 						height,
-						widht
+						width,
+						padding
 					)}
 				>
-					<div className={`flex flex-1 flex-col ${padding}`}>
 						<div
-							className={`mx-auto flex items-center justify-center ${bigCircle} bg-white/30 rounded-full`}
+							className={`flex items-center justify-center ${bigCircle} bg-white/30 dark:bg-white/30 rounded-full`}
 						>
 							<div
-								className={`mx-auto flex items-center justify-center ${smallCircle} bg-white rounded-full`}
+								className={`flex items-center justify-center ${smallCircle} bg-white dark:bg-white/80 rounded-full`}
 							>
 								<div className={textColor}>{icon}</div>
 							</div>
 						</div>
+						<div className="mt-auto mb-auto">
 						<h3
 							className={classNames(
-								"font-semibold text-white",
+								"font-semibold text-white dark:text-white/80",
 								titleFontSize,
 								marginTop
 							)}
 						>
 							{title}
 						</h3>
-						<div className="mt-1 flex flex-grow flex-col justify-between">
-							<dt className="sr-only">{title}</dt>
-							{/* <dd
-								className={classNames(
-									"text-gray-100 line-clamp-2",
-									descriptionFontSize
-								)}
-							>
-								{deactivate ? "Coming soon" : description}
-							</dd> */}
 						</div>
-					</div>
 				</div>
-			</Tooltip>
 		</button>
 	);
 }

@@ -35,7 +35,7 @@ export default function ModalField({ data, title, required, id, name, type }) {
 		>
 			{display && (
 				<div>
-					<span className="mx-2">{title}</span>
+					<span className="mx-2 dark:text-gray-300">{title}</span>
 					<span className="text-red-600">{required ? " *" : ""}</span>
 				</div>
 			)}

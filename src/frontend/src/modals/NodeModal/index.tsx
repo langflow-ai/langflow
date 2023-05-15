@@ -54,9 +54,9 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
 						>
 							<Dialog.Panel className="relative flex flex-col justify-between transform h-[600px] overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all sm:my-8 w-[700px]">
 								<div className=" z-50 absolute top-0 right-0 hidden pt-4 pr-4 sm:block">
-									<button
+								<button
 										type="button"
-										className="rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+										className="rounded-md text-gray-400 hover:text-gray-500"
 										onClick={() => {
 											setModalOpen(false);
 										}}
@@ -87,37 +87,38 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
 										<div className="flex h-full w-full">
 											<div className="overflow-hidden px-4 sm:p-4  w-full rounded-lg bg-white dark:bg-gray-800 shadow">
 												<div className="flex flex-col h-full gap-5">
-													{
-														Object.keys(data.node.template)
-															.filter((t) => t.charAt(0) !== "_"&& data.node.template[t].advanced && data.node.template[t].show)
-															.map((t: string, idx) => {
-																return (
-																	<ModalField
+													{Object.keys(data.node.template)
+														.filter(
+															(t) =>
+																t.charAt(0) !== "_" &&
+																data.node.template[t].advanced &&
+																data.node.template[t].show
+														)
+														.map((t: string, idx) => {
+															return (
+																<ModalField
 																	key={idx}
-																		data={data}
-																		title={
-																			data.node.template[t].display_name
-																				? data.node.template[t].display_name
-																				: data.node.template[t].name
-																				? toNormalCase(
-																						data.node.template[t].name
-																				  )
-																				: toNormalCase(t)
-																		}
-																		required={data.node.template[t].required}
-																		id={
-																			data.node.template[t].type +
-																			"|" +
-																			t +
-																			"|" +
-																			data.id
-																		}
-																		name={t}
-																		type={data.node.template[t].type}
-																	/>
-																);
-															})
-													}
+																	data={data}
+																	title={
+																		data.node.template[t].display_name
+																			? data.node.template[t].display_name
+																			: data.node.template[t].name
+																			? toNormalCase(data.node.template[t].name)
+																			: toNormalCase(t)
+																	}
+																	required={data.node.template[t].required}
+																	id={
+																		data.node.template[t].type +
+																		"|" +
+																		t +
+																		"|" +
+																		data.id
+																	}
+																	name={t}
+																	type={data.node.template[t].type}
+																/>
+															);
+														})}
 												</div>
 											</div>
 										</div>

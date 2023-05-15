@@ -1,23 +1,18 @@
 import { Dialog, Transition } from "@headlessui/react";
-import {
-  ChatBubbleOvalLeftEllipsisIcon,
-  LockClosedIcon,
-  PaperAirplaneIcon,
-} from "@heroicons/react/24/outline";
+import { ChatBubbleOvalLeftEllipsisIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useEffect, useRef, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
 import { FlowType, NodeType } from "../../types/flow";
-import { TabsContext } from "../../contexts/tabsContext";
 import { alertContext } from "../../contexts/alertContext";
 import { toNormalCase } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import ChatMessage from "./chatMessage";
 import { FaEraser } from "react-icons/fa";
+import { HiX } from "react-icons/hi";
 import { sendAllProps } from "../../types/api";
 import { ChatMessageType, ChatType } from "../../types/chat";
 import ChatInput from "./chatInput";
 
-const _ = require("lodash");
+import _ from "lodash";
 
 export default function ChatModal({
   flow,
@@ -32,8 +27,15 @@ export default function ChatModal({
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
   const { reactFlowInstance } = useContext(typesContext);
   const { setErrorData, setNoticeData } = useContext(alertContext);
-  const [ws, setWs] = useState<WebSocket | null>(null);
+  const ws = useRef<WebSocket | null>(null);
   const [lockChat, setLockChat] = useState(false);
+  const isOpen = useRef(open);
+
+  useEffect(() => {
+    isOpen.current = open;
+  }, [open]);
+  var isStream = false;
+
   const addChatHistory = (
     message: string,
     isSend: boolean,
@@ -53,135 +55,176 @@ export default function ChatModal({
     });
   };
 
+  //add proper type signature for function
+
+  function updateLastMessage({
+    str,
+    thought,
+    end = false,
+    files,
+  }: {
+    str?: string;
+    thought?: string;
+    // end param default is false
+    end?: boolean;
+    files?: Array<any>;
+  }) {
+    setChatHistory((old) => {
+      let newChat = [...old];
+      if (str) {
+        if (end) {
+          newChat[newChat.length - 1].message = str;
+        } else {
+          newChat[newChat.length - 1].message =
+            newChat[newChat.length - 1].message + str;
+        }
+      }
+      if (thought) {
+        newChat[newChat.length - 1].thought = thought;
+      }
+      if (files) {
+        newChat[newChat.length - 1].files = files;
+      }
+      return newChat;
+    });
+  }
+
+  function handleOnClose(event: CloseEvent) {
+    if (isOpen.current) {
+      setErrorData({ title: event.reason });
+      setLockChat(false);
+      setTimeout(() => {
+        connectWS();
+      }, 1000);
+    }
+  }
+
+  function handleWsMessage(data: any) {
+    if (Array.isArray(data)) {
+      //set chat history
+      setChatHistory((_) => {
+        let newChatHistory: ChatMessageType[] = [];
+        data.forEach(
+          (chatItem: {
+            intermediate_steps?: "string";
+            is_bot: boolean;
+            message: string;
+            type: string;
+            files?: Array<any>;
+          }) => {
+            if (chatItem.message) {
+              newChatHistory.push(
+                chatItem.files
+                  ? {
+                    isSend: !chatItem.is_bot,
+                    message: chatItem.message,
+                    thought: chatItem.intermediate_steps,
+                    files: chatItem.files,
+                  }
+                  : {
+                    isSend: !chatItem.is_bot,
+                    message: chatItem.message,
+                    thought: chatItem.intermediate_steps,
+                  }
+              );
+            }
+          }
+        );
+        return newChatHistory;
+      });
+    }
+    if (data.type === "start") {
+      addChatHistory("", false);
+      isStream = true;
+    }
+    if (data.type === "end") {
+      if (data.intermediate_steps) {
+        updateLastMessage({
+          str: data.message,
+          thought: data.intermediate_steps,
+          end: true,
+        });
+      }
+      if (data.files) {
+        updateLastMessage({
+          end: true,
+          files: data.files,
+        });
+      }
+
+      setLockChat(false);
+      isStream = false;
+    }
+    if (data.type === "stream" && isStream) {
+      updateLastMessage({ str: data.message });
+    }
+  }
+
   function connectWS() {
-    console.log("conectou");
     try {
       const urlWs =
         process.env.NODE_ENV === "development"
           ? `ws://localhost:7860/chat/${flow.id}`
-          : `${window.location.protocol === "https:" ? "wss" : "ws"}://${
-              window.location.host
-            }/chat/${flow.id}`;
+          : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host
+          }/chat/${flow.id}`;
 
       const newWs = new WebSocket(urlWs);
       newWs.onopen = () => {
         console.log("WebSocket connection established!");
       };
+      console.log(flow.id);
       newWs.onmessage = (event) => {
-        try {
-          setLockChat(false);
-          const data = JSON.parse(event.data);
-          console.log("Received data:", data);
-          //get chat history
-          if (Array.isArray(data)) {
-            console.log(data);
-
-            setChatHistory((_) => {
-              let newChatHistory: ChatMessageType[] = [];
-              data.forEach(
-                (chatItem: {
-                  intermediate_steps?: "string";
-                  is_bot: boolean;
-                  message: string;
-                  type: string;
-                  files?: Array<any>;
-                }) => {
-                  if (chatItem.message) {
-                    newChatHistory.push(
-                      chatItem.files
-                        ? {
-                            isSend: !chatItem.is_bot,
-                            message: chatItem.message,
-                            thought: chatItem.intermediate_steps,
-                            files: chatItem.files,
-                          }
-                        : {
-                            isSend: !chatItem.is_bot,
-                            message: chatItem.message,
-                            thought: chatItem.intermediate_steps,
-                          }
-                    );
-                  }
-                }
-              );
-              return newChatHistory;
-            });
-          }
-          if (data.type === "end") {
-            if (data.files) {
-              addChatHistory(
-                data.message,
-                false,
-                data.intermediate_steps,
-                data.files
-              );
-            } else {
-              addChatHistory(data.message, false, data.intermediate_steps);
-            }
-          }
-          if (data.type == "file") {
-            console.log(data);
-          }
-        } catch (error) {
-          if (event.data !== "Error: 1005") {
-            setErrorData({ title: event.data });
-            newWs.close();
-            connectWS();
-          }
-        }
+        const data = JSON.parse(event.data);
+        console.log("Received data:", data);
+        handleWsMessage(data);
+        //get chat history
       };
-      newWs.onclose = (_) => {
-        if (open) {
-          setLockChat(false);
-          setTimeout(() => {
-            connectWS();
-          }, 1000);
-        }
+      newWs.onclose = (event) => {
+        handleOnClose(event);
       };
       newWs.onerror = (ev) => {
         console.log(ev, "error");
+        setErrorData({
+          title: "There was an error on web connection, please: ",
+          list: [
+            "Refresh the page",
+            "Use a new flow tab",
+            "Check if the backend is up",
+          ],
+        });
       };
-      setWs(newWs);
-
-      return newWs;
+      ws.current = newWs;
     } catch {
       setErrorData({
         title: "There was an error on web connection, please: ",
         list: [
-          "refresh the page",
-          "use a new flow tab",
-          "check if the backend is up",
+          "Refresh the page",
+          "Use a new flow tab",
+          "Check if the backend is up",
         ],
       });
     }
   }
 
   useEffect(() => {
-    if (ws && (ws.readyState === ws.CLOSED || ws.readyState === ws.CLOSING)) {
-      let newWs = connectWS();
-      return () => {
-        console.log("trigger");
-        newWs.close();
-      };
-    }
-  }, [lockChat]);
-
-  useEffect(() => {
-    let newWs = connectWS();
+    connectWS();
     return () => {
-      console.log("trigger");
-      newWs.close();
+      console.log("unmount");
+      console.log(ws);
+      if (ws) {
+        ws.current.close();
+      }
     };
   }, []);
 
   async function sendAll(data: sendAllProps) {
     try {
       if (ws) {
-        ws.send(JSON.stringify(data));
+        ws.current.send(JSON.stringify(data));
       }
     } catch (error) {
       setErrorData({
-        title: "There was an erro sending the message",
+        title: "There was an error sending the message",
         list: [error.message],
       });
       setChatValue(data.message);
@@ -192,12 +235,6 @@ export default function ChatModal({
   useEffect(() => {
     if (ref.current) ref.current.scrollIntoView({ behavior: "smooth" });
   }, [chatHistory]);
-
-  useEffect(() => {
-    if (ws && ws.readyState === ws.CLOSED) {
-      setLockChat(false);
-    }
-  }, [lockChat]);
 
   function validateNode(n: NodeType): Array<string> {
     if (!n.data?.node?.template || !Object.keys(n.data.node.template)) {
@@ -227,12 +264,11 @@ export default function ChatModal({
                   e.targetHandle.split("|")[2] === n.id
               )
             ? [
-                `${type} is missing ${
-                  template.display_name
-                    ? template.display_name
-                    : toNormalCase(template[t].name)
-                }.`,
-              ]
+              `${type} is missing ${template.display_name
+                ? template.display_name
+                : toNormalCase(template[t].name)
+              }.`,
+            ]
             : []
         ),
       [] as string[]
@@ -255,7 +291,6 @@ export default function ChatModal({
         let message = chatValue;
         setChatValue("");
         addChatHistory(message, true);
-
         sendAll({
           ...reactFlowInstance.toObject(),
           message,
@@ -278,20 +313,14 @@ export default function ChatModal({
   }
   function clearChat() {
     setChatHistory([]);
-    ws.send(JSON.stringify({ clear_history: true }));
+    ws.current.send(JSON.stringify({ clear_history: true }));
   }
 
-  const { closePopUp } = useContext(PopUpContext);
   function setModalOpen(x: boolean) {
     setOpen(x);
-    if (x === false) {
-      setTimeout(() => {
-        closePopUp();
-      }, 300);
-    }
   }
   return (
-    <Transition.Root show={open} appear={true} as={Fragment}>
+    <Transition.Root show={open} appear={open} as={Fragment}>
       <Dialog
         as="div"
         className="relative z-10"
@@ -321,28 +350,34 @@ export default function ChatModal({
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className=" drop-shadow-2xl relative flex flex-col justify-between transform h-[95%] overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all sm:my-8 w-[690px]">
-                <div className="relative w-full">
+              <Dialog.Panel className=" drop-shadow-2xl relative flex flex-col justify-between transform h-[95%] overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all w-[690px]">
+                <div className="relative w-full p-4">
                   <button
                     onClick={() => clearChat()}
-                    className="absolute top-2 right-2 hover:text-red-500"
+                    className="absolute top-2 right-10 hover:text-red-500 text-gray-600 dark:text-gray-300 dark:hover:text-red-500 z-30"
                   >
                     <FaEraser className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setModalOpen(false)}
+                    className="absolute top-1.5 right-2 hover:text-red-500 text-gray-600 dark:text-gray-300 dark:hover:text-red-500 z-30"
+                  >
+                    <HiX className="w-5 h-5" />
                   </button>
                 </div>
                 <div className="w-full h-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center overflow-scroll scrollbar-hide">
                   {chatHistory.length > 0 ? (
-                    chatHistory.map((c, i) => <ChatMessage chat={c} key={i} />)
+                    chatHistory.map((c, i) => <ChatMessage lockChat={lockChat} chat={c} key={i} />)
                   ) : (
-                    <div className="flex flex-col h-full text-center justify-center w-full items-center align-middle ">
+                    <div className="flex flex-col h-full text-center justify-center w-full items-center align-middle">
                       <span>
                         👋{" "}
-                        <span className="text-gray-600 text-lg">
+                        <span className="text-gray-600 dark:text-gray-300 text-lg">
                           LangFlow Chat
                         </span>
                       </span>
                       <br />
-                      <div className="bg-gray-100 rounded-md w-2/4 px-6 py-8 border border-gray-200">
+                      <div className="bg-gray-100 dark:bg-gray-900 rounded-md w-2/4 px-6 py-8 border border-gray-200 dark:border-gray-700">
                         <span className="text-base text-gray-500">
                           Start a conversation and click the agent’s thoughts{" "}
                           <span>

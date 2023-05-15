@@ -9,7 +9,7 @@ export default function InputFileComponent({
 	disabled,
 	suffixes,
 	fileTypes,
-	onFileChange
+	onFileChange,
 }: FileComponentType) {
 	const [myValue, setMyValue] = useState(value);
 	const { setErrorData } = useContext(alertContext);
@@ -17,23 +17,23 @@ export default function InputFileComponent({
 		if (disabled) {
 			setMyValue("");
 			onChange("");
-			onFileChange("")
+			onFileChange("");
 		}
 	}, [disabled, onChange]);
 
 	function attachFile(fileReadEvent: ProgressEvent<FileReader>) {
 		fileReadEvent.preventDefault();
 		const file = fileReadEvent.target.result;
-		onFileChange(file as string)
+		onFileChange(file as string);
 	}
 
-	function checkFileType(fileName:string):boolean{
+	function checkFileType(fileName: string): boolean {
 		for (let index = 0; index < suffixes.length; index++) {
-			if(fileName.endsWith(suffixes[index])){
-				return true
+			if (fileName.endsWith(suffixes[index])) {
+				return true;
 			}
 		}
-		return false
+		return false;
 	}
 
 	const handleButtonClick = () => {
@@ -69,9 +69,9 @@ export default function InputFileComponent({
 		>
 			<div className="w-full flex items-center gap-3">
 				<span
-				onClick={handleButtonClick}
+					onClick={handleButtonClick}
 					className={
-						"truncate block w-full text-gray-500 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" +
+						"truncate block w-full text-gray-500 dark:text-gray-300 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" +
 						(disabled ? " bg-gray-200" : "")
 					}
 				>

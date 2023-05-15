@@ -5,14 +5,15 @@ import reportWebVitals from "./reportWebVitals";
 import { BrowserRouter } from "react-router-dom";
 import ContextWrapper from "./contexts";
 
+import './index.css';
+
 const root = ReactDOM.createRoot(
 	document.getElementById("root") as HTMLElement
 );
 root.render(
 	<ContextWrapper>
 		<BrowserRouter>
-
-				<App />
+			<App />
 		</BrowserRouter>
 	</ContextWrapper>
 );
