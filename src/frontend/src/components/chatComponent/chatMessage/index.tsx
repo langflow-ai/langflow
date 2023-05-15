@@ -7,7 +7,7 @@ import { useState } from "react";
 import { ChatMessageType } from "../../../types/chat";
 import { nodeColors } from "../../../utils";
 import Convert from "ansi-to-html";
-var convert = new Convert({newline:true});
+const convert = new Convert({ newline: true });
 
 export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
 	const [hidden, setHidden] = useState(true);
