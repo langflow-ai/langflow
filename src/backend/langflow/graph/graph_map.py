@@ -1,65 +1,86 @@
-from typing import Any, List, Union
-from langflow.graph.graph import Graph
-from langflow.graph.nodes import ConnectorNode
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+from langflow.cache.base import memoize_dict
 from langflow.graph.base import Node
-from langchain.chains.base import Chain
+from langflow.graph.graph import Graph
+from langflow.graph.langchain_nodes import LangChainNode
+from langflow.graph.nodes import ConnectorNode
 from langflow.interface.run import get_result_and_steps
 
 
 class GraphMap:
-    def __init__(self, graph: Graph) -> None:
-        self.graph = graph
-        self.elements = self._build_elements()
-        self.intermediate_steps = []
+    def __init__(self, graph_data: Dict, is_first_message: bool) -> None:
+        self.graph_data = graph_data
+        if is_first_message:
+            self._build_elements.clear_cache()
+        self.graph, self.elements = GraphMap._build_elements(graph_data)
+        self.intermediate_steps: List[str] = []
+        self.node_cache: Dict[Union[Node, "ConnectorNode"], Any] = {}
+        self.last_node: Optional[Union[Node, "ConnectorNode"]] = None
 
-    async def process(self, input: Any) -> Any:
+    async def process(self, input: str, **kwargs) -> Tuple[str, str]:
         result = input
+        built_object = None
+        self.results = []
         for element in self.elements:
-            # Build the graph or connector node and get the root node
-            built_object = element.build()
-            # check if it is a
-            if isinstance(built_object, Chain):
-                # result must be a str
-                result = str(result)
-                result, steps = await get_result_and_steps(built_object, result)
-                self.intermediate_steps.append(steps)
+            # If the element is the same as the last one, reuse the cached result
+            if element == self.last_node:
+                result = self.node_cache[element]
             else:
-                result = built_object(result)
-        return result, self.intermediate_steps
+                # Build the graph or connector node and get the root node
+                built_object = element.build()
+                # check if it is a
+                if isinstance(element, LangChainNode):
+                    # result must be a str
+                    result = str(result)
+                    result, steps = await get_result_and_steps(
+                        built_object, result, **kwargs
+                    )
+                    self.intermediate_steps.append(steps)
+                else:
+                    result = built_object(result)
+                # Store the result in the cache
+                self.node_cache[element] = result
+                # Update the last node
+                self.last_node = element
+                self.results.append((element.base_type, result))
+        # str(result) is a temporary solution
+        return str(result), "\n".join(self.intermediate_steps)
 
-    def _build_elements(self) -> List[Union[Node, "ConnectorNode"]]:
+    @memoize_dict(maxsize=20)
+    @staticmethod
+    def _build_elements(
+        graph_data: Dict,
+    ) -> Tuple[Graph, List[Union[Node, ConnectorNode]]]:
+        graph = Graph(graph_data=graph_data)
+
         elements = []
-        if not self.graph.has_connectors:
-            elements.append(self.graph)
-            return elements
 
-        # Create a list of connectors and their neighbors
-        connectors_and_neighbors = []
-
-        # Iterate over all nodes
-        for node in self.graph.nodes:
-            # Check if the current node is a ConnectorNode
-            if isinstance(node, ConnectorNode):
-                # Get all the neighboring nodes of the connector
-                neighbors = self.graph.get_node_neighbors(node)
-
-                # Add the connector and its neighbors to the list
-                connectors_and_neighbors.append((node, neighbors))
-
-        # For each connector and its neighbors
-        for connector, neighbors in connectors_and_neighbors:
-            # For each edge of the connector
-            for edge in connector.edges:
-                # If the edge's source is the connector, it means the edge is outgoing from the connector to a graph
-                if edge.source == connector:
-                    # So, add the target of the edge (which is a graph) to the elements list
-                    elements.append(edge.target)
-
-                # If the edge's target is the connector, it means the edge is incoming from a graph to the connector
-                elif edge.target == connector:
-                    # So, add the source of the edge (which is a graph) to the elements list
-                    elements.append(edge.source)
-
-            # Add the connector to the elements list
-            elements.append(connector)
-        return elements
+        current_root = graph.root_node
+        while current_root:
+            if current_root.can_be_root:
+                graph.nodes.remove(current_root)
+                edges_to_remove = [
+                    edge
+                    for edge in graph.edges
+                    if edge.source == current_root or edge.target == current_root
+                ]
+                for edge in edges_to_remove:
+                    graph.edges.remove(edge)
+                for node in graph.nodes:
+                    node.edges = [
+                        edge
+                        for edge in node.edges
+                        if edge.source != current_root and edge.target != current_root
+                    ]
+                elements.append(current_root)
+                current_root = graph.root_node
+            else:
+                current_root = next(
+                    (node for node in graph.nodes if node.can_be_root), None
+                )
+        # Build elements to cache built objects
+        for element in elements:
+            # Build the element but keep the node instead of the object
+            element.build()
+        return Graph(graph_data=graph_data), elements

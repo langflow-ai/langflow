@@ -117,7 +117,6 @@ export default function GenericNode({
 								className={classNames(
 									isValid ? "text-green-500" : "text-red-500",
 									"w-5",
-									"duration-200 ease-in-out", // Add transition
 									"hover:text-gray-500 hover:dark:text-gray-300")}
 							/>
 						</Tooltip>
@@ -126,7 +125,6 @@ export default function GenericNode({
 							className={classNames(
 								isValid ? "text-green-500" : "text-red-500",
 								"w-5",
-								"duration-200 ease-in-out",  // Add transition
 								"hover:text-gray-500 hover:dark:text-gray-600")}
 						/>
 					) : (
@@ -134,7 +132,6 @@ export default function GenericNode({
 							className={classNames(
 								isValid ? "text-yellow-500" : "text-red-500",
 								"w-5",
-								"duration-200 ease-in-out",   // Add transition
 								"hover:text-gray-500 hover:dark:text-gray-600")}
 						/>
 					)}

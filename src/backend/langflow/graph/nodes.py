@@ -1,16 +1,24 @@
+from typing import Any, Dict
+
 from langflow.graph.base import Node
-
-
-from typing import Dict
+from langflow.interface.connectors.custom import ConnectorFunction
 
 
 class ConnectorNode(Node):
-    def __init__(self, data: Dict):
+    _built_object: Any = None
+    _built: bool = False
+
+    def __init__(self, data: Dict) -> None:
         super().__init__(data, base_type="connectors")
 
     def _build(self) -> None:
-        def connector(input):
-            return input
+        func = None
+        for param, value in self.params.items():
+            if param == "code":
+                conn_func = ConnectorFunction(code=value)
+                func = conn_func.get_function()
 
-        self._built_object = connector
+        if func is None:
+            raise ValueError("Connector function not found")
+        self._built_object = func
         self._built = True

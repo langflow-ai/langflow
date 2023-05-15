@@ -16,8 +16,10 @@ from langflow.graph.langchain_nodes import (
     VectorStoreNode,
     WrapperNode,
 )
+from langflow.graph.nodes import ConnectorNode
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
+from langflow.interface.connectors.base import connector_creator
 from langflow.interface.document_loaders.base import documentloader_creator
 from langflow.interface.embeddings.base import embedding_creator
 from langflow.interface.llms.base import llm_creator
@@ -92,7 +94,8 @@ class Graph:
                     if edge not in visited_edges:
                         visited_edges.add(edge)
 
-                        # Add the adjacent node (the one that's not the current node) to the stack for future exploration.
+                        # Add the adjacent node (the one that's not the current node)
+                        #  to the stack for future exploration.
                         stack.append(
                             edge.source if edge.source != node else edge.target
                         )
@@ -147,6 +150,10 @@ class Graph:
             raise ValueError("No root node found")
         return root_node.build()
 
+    @property
+    def root_node(self) -> Union[None, Node]:
+        return payload.get_root_node(self)
+
     def get_node_neighbors(self, node: Node) -> Dict[Node, int]:
         neighbors: Dict[Node, int] = {}
         for edge in self.edges:
@@ -192,15 +199,11 @@ class Graph:
             **{t: VectorStoreNode for t in vectorstore_creator.to_list()},
             **{t: DocumentLoaderNode for t in documentloader_creator.to_list()},
             **{t: TextSplitterNode for t in textsplitter_creator.to_list()},
+            **{t: ConnectorNode for t in connector_creator.to_list()},
         }
-
         if node_type in FILE_TOOLS:
             return FileToolNode
-        if node_type in node_type_map:
-            return node_type_map[node_type]
-        if node_lc_type in node_type_map:
-            return node_type_map[node_lc_type]
-        return Node
+        return node_type_map.get(node_type, node_type_map.get(node_lc_type, Node))
 
     def _build_nodes(self) -> List[Node]:
         nodes: List[Node] = []
@@ -211,7 +214,7 @@ class Graph:
 
             NodeClass = self._get_node_class(node_type, node_lc_type)
             nodes.append(NodeClass(node))
-            if NodeClass == "ConnectorNode":
+            if NodeClass == ConnectorNode:
                 self.has_connectors = True
 
         return nodes
