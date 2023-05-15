@@ -20,6 +20,9 @@ CUSTOM_NODES = {
         "TimeTravelGuideChain": nodes.TimeTravelGuideChainNode(),
         "MidJourneyPromptChain": nodes.MidJourneyPromptChainNode(),
     },
+    "connectors": {
+        "ConnectorFunction": nodes.ConnectorFunctionFrontendNode(),
+    },
 }
 
 

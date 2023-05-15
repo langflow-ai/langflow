@@ -137,6 +137,21 @@ def create_function(code, function_name):
                     raise ModuleNotFoundError(
                         f"Module {alias.name} not found. Please install it and try again."
                     ) from e
+        elif isinstance(node, ast.ImportFrom):
+            try:
+                imported_module = importlib.import_module(node.module)
+                for alias in node.names:
+                    exec_globals[alias.asname or alias.name] = getattr(
+                        imported_module, alias.name
+                    )
+            except ModuleNotFoundError as e:
+                raise ModuleNotFoundError(
+                    f"Module {node.module} not found. Please install it and try again."
+                ) from e
+            except AttributeError as e:
+                raise ImportError(
+                    f"Cannot import name {alias.name} from {node.module} (unknown location)"
+                ) from e
 
     function_code = next(
         node

@@ -3,6 +3,7 @@ from typing import Optional
 from langchain.agents import loading
 from langchain.agents.mrkl import prompt
 
+from langflow.interface.connectors.custom import DEFAULT_CONNECTOR_FUNCTION
 from langflow.template.base import FrontendNode, Template, TemplateField
 from langflow.template.constants import DEFAULT_PROMPT, HUMAN_PROMPT, SYSTEM_PROMPT
 from langflow.utils.constants import DEFAULT_PYTHON_FUNCTION
@@ -546,6 +547,21 @@ class MemoryFrontendNode(FrontendNode):
 
 
 class ChainFrontendNode(FrontendNode):
+    add_input: bool = True
+
+    def to_dict(self):
+        input_field = TemplateField(
+            field_type="Text",
+            required=False,
+            show=True,
+            advanced=False,
+            name="input_connection",
+            display_name="Input",
+        )
+        self.add_field(input_field)
+        self.add_text_output_to_base_classes()
+        return super().to_dict()
+
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         FrontendNode.format_field(field, name)
@@ -575,6 +591,10 @@ class ChainFrontendNode(FrontendNode):
             field.advanced = True
         if field.name == "llm":
             field.required = True
+            field.show = True
+            field.advanced = False
+        if field.name == "input_connection":
+            field.required = False
             field.show = True
             field.advanced = False
 
@@ -614,3 +634,37 @@ class LLMFrontendNode(FrontendNode):
         elif field.name in ["model_name", "temperature"]:
             field.advanced = False
             field.show = True
+
+
+class ConnectorFunctionFrontendNode(FrontendNode):
+    name: str = "ConnectorFunction"
+    # Template consists of an input of field_type "Output", name "input_connection"
+    # and an output of field_type "Input", name "output_connection"
+    template: Template = Template(
+        type_name="ConnectorFunction",
+        fields=[
+            TemplateField(
+                field_type="Text",
+                required=False,
+                show=True,
+                advanced=False,
+                name="input_connection",
+                display_name="Input",
+            ),
+            TemplateField(
+                field_type="code",
+                required=True,
+                is_list=False,
+                show=True,
+                value=DEFAULT_CONNECTOR_FUNCTION,
+                name="code",
+                advanced=False,
+            ),
+        ],
+    )
+    description: str = """Connect two nodes together."""
+    base_classes: list[str] = ["Text"]
+
+    @staticmethod
+    def format_field(field: TemplateField, name: Optional[str] = None) -> None:
+        pass

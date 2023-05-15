@@ -141,6 +141,13 @@ class FrontendNode(BaseModel):
     description: str
     base_classes: list
     name: str = ""
+    add_input: bool = False
+
+    def add_field(self, field: TemplateField):
+        self.template.fields.append(field)
+
+    def add_text_output_to_base_classes(self):
+        self.base_classes.append("Text")
 
     def to_dict(self):
         return {
@@ -148,6 +155,7 @@ class FrontendNode(BaseModel):
                 "template": self.template.to_dict(self.format_field),
                 "description": self.description,
                 "base_classes": self.base_classes,
+                # "add_input": self.add_input,
             }
         }
 

@@ -1,5 +1,6 @@
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
+from langflow.interface.connectors.base import connector_creator
 from langflow.interface.document_loaders.base import documentloader_creator
 from langflow.interface.embeddings.base import embedding_creator
 from langflow.interface.llms.base import llm_creator
@@ -28,6 +29,7 @@ def get_type_dict():
         "embeddings": embedding_creator.to_list(),
         "textSplitters": textsplitter_creator.to_list(),
         "utilities": utility_creator.to_list(),
+        "connectors": connector_creator.to_list(),
     }
 
 

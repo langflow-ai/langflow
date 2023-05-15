@@ -10,6 +10,7 @@ import Convert from "ansi-to-html";
 const convert = new Convert({ newline: true });
 
 export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
+	const convert = new Convert({ newline: true });
 	const [hidden, setHidden] = useState(true);
 	return (
 		<div>

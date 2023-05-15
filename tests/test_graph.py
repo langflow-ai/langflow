@@ -4,7 +4,7 @@ import pytest
 from langchain.chains.base import Chain
 from langchain.llms.fake import FakeListLLM
 from langflow.graph import Edge, Graph, Node
-from langflow.graph.nodes import (
+from langflow.graph.langchain_nodes import (
     AgentNode,
     ChainNode,
     FileToolNode,

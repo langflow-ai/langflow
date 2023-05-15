@@ -50,11 +50,19 @@ def convert_params_to_sets(params):
     return params
 
 
+def remove_input_connection_from_params(params):
+    """Remove input_connection from params"""
+    if "input_connection" in params:
+        params.pop("input_connection")
+    return params
+
+
 def instantiate_based_on_type(class_object, base_type, node_type, params):
     if base_type == "agents":
+        params = remove_input_connection_from_params(params)
         return instantiate_agent(class_object, params)
     elif base_type == "prompts":
-        return instantiate_prompt(node_type, class_object, params)
+        return instantiate_prompt(class_object, node_type, params)
     elif base_type == "tools":
         return instantiate_tool(node_type, class_object, params)
     elif base_type == "toolkits":
@@ -70,6 +78,7 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
     elif base_type == "utilities":
         return instantiate_utility(node_type, class_object, params)
     else:
+        params = remove_input_connection_from_params(params)
         return class_object(**params)
 
 
@@ -77,7 +86,7 @@ def instantiate_agent(class_object, params):
     return load_agent_executor(class_object, params)
 
 
-def instantiate_prompt(node_type, class_object, params):
+def instantiate_prompt(class_object, node_type, params):
     if node_type == "ZeroShotPrompt":
         if "tools" not in params:
             params["tools"] = []

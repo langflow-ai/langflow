@@ -33,7 +33,8 @@ def memoize_dict(maxsize=128):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            hashed = compute_dict_hash(args[0])
+            dict_arg = [arg for arg in args if isinstance(arg, dict)]
+            hashed = compute_dict_hash(dict_arg)
             key = (func.__name__, hashed, frozenset(kwargs.items()))
             if key not in cache:
                 result = func(*args, **kwargs)
