@@ -119,6 +119,7 @@ class TemplateField(TemplateFieldCreator):
 class Template(BaseModel):
     type_name: str
     fields: list[TemplateField]
+    can_be_root: bool = False
 
     def process_fields(
         self,
