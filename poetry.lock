@@ -1734,13 +1734,13 @@ qdrant = ["qdrant-client (>=1.1.2,<2.0.0)"]
 
 [[package]]
 name = "llama-cpp-python"
-version = "0.1.23"
+version = "0.1.50"
 description = "A Python wrapper for llama.cpp"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "llama_cpp_python-0.1.23.tar.gz", hash = "sha256:323a937e68e04251b5ad1804922e05d15c8b6bfbcf7c3e683a7b39a20e165ebf"},
+    {file = "llama_cpp_python-0.1.50.tar.gz", hash = "sha256:e305ae1b9f135f94afd8dd227701e6a1cd36db9c28f736b830ec364127c00bb9"},
 ]
 
 [package.dependencies]
@@ -4839,4 +4839,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "d914f734f4ff1bcbe8e678d46b20b73c3565b3af6f5dd0ac0359fae800c6bf2e"
+content-hash = "be5c3e25247d4a0c313de54d07f4a027253877a5b8fbbf7830030a43a02c2911"
