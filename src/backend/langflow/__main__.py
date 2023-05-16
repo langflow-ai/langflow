@@ -75,10 +75,18 @@ def jcloud():
     Deploy Langflow server on Jina AI Cloud
     """
     import asyncio
+    from importlib.metadata import version as mod_version
 
     import click
-    from lcserve.__main__ import serve_on_jcloud
-    from importlib.metadata import version as mod_version
+
+    try:
+        from lcserve.__main__ import serve_on_jcloud
+    except ImportError:
+        click.secho(
+            "🚨 Please install langchain-serve to deploy Langflow server on Jina AI Cloud using `pip install langchain-serve`",
+            fg="red",
+        )
+        return
 
     app_name = "langflow.lcserve:app"
     app_dir = str(Path(__file__).parent)
