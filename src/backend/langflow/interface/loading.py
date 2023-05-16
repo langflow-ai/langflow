@@ -69,8 +69,16 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
         return instantiate_textsplitter(class_object, params)
     elif base_type == "utilities":
         return instantiate_utility(node_type, class_object, params)
+    elif base_type == "llms":
+        return instantiate_llms(node_type, class_object, params)
     else:
         return class_object(**params)
+
+
+def instantiate_llms(node_type, class_object, params):
+    if node_type == "HuggingFacePipeline":
+        return class_object.from_model_id(**params)
+    return class_object(**params)
 
 
 def instantiate_agent(class_object, params):

@@ -34,6 +34,7 @@ llms:
   - LlamaCpp
   - HuggingFaceTextGenInference
   - SelfHostedHuggingFaceLLM
+  - HuggingFacePipeline
 
 tools:
   - Search

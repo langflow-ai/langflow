@@ -588,6 +588,7 @@ class LLMFrontendNode(FrontendNode):
         FrontendNode.format_field(field, name)
 
         SHOW_FIELDS = [
+            "model_id",
             "repo_id",
             "inference_server_url",
             "max_new_tokens",
