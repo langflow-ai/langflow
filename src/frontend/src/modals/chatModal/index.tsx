@@ -30,10 +30,16 @@ export default function ChatModal({
   const ws = useRef<WebSocket | null>(null);
   const [lockChat, setLockChat] = useState(false);
   const isOpen = useRef(open);
+  const id = useRef(flow.id);
 
   useEffect(() => {
     isOpen.current = open;
   }, [open]);
+  useEffect(() => {
+    id.current = flow.id;
+  },[flow.id])
+
+
   var isStream = false;
 
   const addChatHistory = (
@@ -164,10 +170,9 @@ export default function ChatModal({
     try {
       const urlWs =
         process.env.NODE_ENV === "development"
-          ? `ws://localhost:7860/chat/${flow.id}`
+          ? `ws://localhost:7860/chat/${id.current}`
           : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host
-          }/chat/${flow.id}`;
-
+          }/chat/${id.current}`;
       const newWs = new WebSocket(urlWs);
       newWs.onopen = () => {
         console.log("WebSocket connection established!");
@@ -184,6 +189,26 @@ export default function ChatModal({
       };
       newWs.onerror = (ev) => {
         console.log(ev, "error");
+        if(flow.id===""){
+          connectWS();
+        }
+        else{
+          setErrorData({
+            title: "There was an error on web connection, please: ",
+            list: [
+              "Refresh the page",
+              "Use a new flow tab",
+              "Check if the backend is up",
+            ],
+          });
+        }
+      };
+      ws.current = newWs;
+    } catch {
+      if(flow.id===""){
+        connectWS();
+      }
+      else{
         setErrorData({
           title: "There was an error on web connection, please: ",
           list: [
@@ -192,17 +217,7 @@ export default function ChatModal({
             "Check if the backend is up",
           ],
         });
-      };
-      ws.current = newWs;
-    } catch {
-      setErrorData({
-        title: "There was an error on web connection, please: ",
-        list: [
-          "Refresh the page",
-          "Use a new flow tab",
-          "Check if the backend is up",
-        ],
-      });
+      }
     }
   }
 

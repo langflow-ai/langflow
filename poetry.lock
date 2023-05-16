@@ -511,14 +511,14 @@ files = [
 
 [[package]]
 name = "chromadb"
-version = "0.3.22"
+version = "0.3.23"
 description = "Chroma."
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "chromadb-0.3.22-py3-none-any.whl", hash = "sha256:54b58e562ab8a63194ce3b453633ce351475193de2184845f0577db969f1cf49"},
-    {file = "chromadb-0.3.22.tar.gz", hash = "sha256:41acb262c2c7bb41afecd50737f440dce3fdaa3d3fe1749d0e4be1ffc8699e63"},
+    {file = "chromadb-0.3.23-py3-none-any.whl", hash = "sha256:c1e04fddff0916243895bedeffc1977745328f62404d70981eb1a0cb9dcdfaf3"},
+    {file = "chromadb-0.3.23.tar.gz", hash = "sha256:87fa922c92e2e90fb48234b435e9d4f0c61646fbd1526062f53f63326fc21228"},
 ]
 
 [package.dependencies]
@@ -1180,20 +1180,19 @@ grpc = ["grpcio (>=1.44.0,<2.0.0dev)"]
 
 [[package]]
 name = "gptcache"
-version = "0.1.23"
+version = "0.1.24"
 description = "GPTCache, a powerful caching library that can be used to speed up and lower the cost of chat applications that rely on the LLM service. GPTCache works as a memcache for AIGC applications, similar to how Redis works for traditional applications."
 category = "main"
 optional = false
 python-versions = ">=3.8.1"
 files = [
-    {file = "gptcache-0.1.23-py3-none-any.whl", hash = "sha256:8bcd366e1dd5de432e113831afdea97493f090372a752a42b9ff16cb8c818635"},
-    {file = "gptcache-0.1.23.tar.gz", hash = "sha256:5b5e3ef6f5df35f948bd203d1e33f3985459e60be436547529ff8b31f245238d"},
+    {file = "gptcache-0.1.24-py3-none-any.whl", hash = "sha256:070aad4867ab915a7b5db3a886e9f0289e52d1cb92a407c984b0241298079750"},
+    {file = "gptcache-0.1.24.tar.gz", hash = "sha256:aa591cb00898d457a50a5e0cd137d0119e86819c110ce6c7bce2adafeae0a467"},
 ]
 
 [package.dependencies]
 cachetools = "*"
 numpy = "*"
-openai = "*"
 requests = "*"
 
 [[package]]
@@ -1528,14 +1527,14 @@ files = [
 
 [[package]]
 name = "ipykernel"
-version = "6.23.0"
+version = "6.23.1"
 description = "IPython Kernel for Jupyter"
 category = "dev"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "ipykernel-6.23.0-py3-none-any.whl", hash = "sha256:fc886f1dcdc0ec17f277e4d21fd071c857d381adcb04f3f3735d25325ca323c6"},
-    {file = "ipykernel-6.23.0.tar.gz", hash = "sha256:bd6f487d9e2744c84f6e667d46462d7647a4c862e70e08282f05a52b9d4b705f"},
+    {file = "ipykernel-6.23.1-py3-none-any.whl", hash = "sha256:77aeffab056c21d16f1edccdc9e5ccbf7d96eb401bd6703610a21be8b068aadc"},
+    {file = "ipykernel-6.23.1.tar.gz", hash = "sha256:1aba0ae8453e15e9bc6b24e497ef6840114afcdb832ae597f32137fa19d42a6f"},
 ]
 
 [package.dependencies]
@@ -1735,13 +1734,13 @@ qdrant = ["qdrant-client (>=1.1.2,<2.0.0)"]
 
 [[package]]
 name = "llama-cpp-python"
-version = "0.1.23"
+version = "0.1.50"
 description = "A Python wrapper for llama.cpp"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "llama_cpp_python-0.1.23.tar.gz", hash = "sha256:323a937e68e04251b5ad1804922e05d15c8b6bfbcf7c3e683a7b39a20e165ebf"},
+    {file = "llama_cpp_python-0.1.50.tar.gz", hash = "sha256:e305ae1b9f135f94afd8dd227701e6a1cd36db9c28f736b830ec364127c00bb9"},
 ]
 
 [package.dependencies]
@@ -4143,23 +4142,23 @@ scipy = ["scipy"]
 
 [[package]]
 name = "tornado"
-version = "6.3.1"
+version = "6.3.2"
 description = "Tornado is a Python web framework and asynchronous networking library, originally developed at FriendFeed."
 category = "dev"
 optional = false
 python-versions = ">= 3.8"
 files = [
-    {file = "tornado-6.3.1-cp38-abi3-macosx_10_9_universal2.whl", hash = "sha256:db181eb3df8738613ff0a26f49e1b394aade05034b01200a63e9662f347d4415"},
-    {file = "tornado-6.3.1-cp38-abi3-macosx_10_9_x86_64.whl", hash = "sha256:b4e7b956f9b5e6f9feb643ea04f07e7c6b49301e03e0023eedb01fa8cf52f579"},
-    {file = "tornado-6.3.1-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:9661aa8bc0e9d83d757cd95b6f6d1ece8ca9fd1ccdd34db2de381e25bf818233"},
-    {file = "tornado-6.3.1-cp38-abi3-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:81c17e0cc396908a5e25dc8e9c5e4936e6dfd544c9290be48bd054c79bcad51e"},
-    {file = "tornado-6.3.1-cp38-abi3-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a27a1cfa9997923f80bdd962b3aab048ac486ad8cfb2f237964f8ab7f7eb824b"},
-    {file = "tornado-6.3.1-cp38-abi3-musllinux_1_1_aarch64.whl", hash = "sha256:d7117f3c7ba5d05813b17a1f04efc8e108a1b811ccfddd9134cc68553c414864"},
-    {file = "tornado-6.3.1-cp38-abi3-musllinux_1_1_i686.whl", hash = "sha256:ffdce65a281fd708da5a9def3bfb8f364766847fa7ed806821a69094c9629e8a"},
-    {file = "tornado-6.3.1-cp38-abi3-musllinux_1_1_x86_64.whl", hash = "sha256:90f569a35a8ec19bde53aa596952071f445da678ec8596af763b9b9ce07605e6"},
-    {file = "tornado-6.3.1-cp38-abi3-win32.whl", hash = "sha256:3455133b9ff262fd0a75630af0a8ee13564f25fb4fd3d9ce239b8a7d3d027bf8"},
-    {file = "tornado-6.3.1-cp38-abi3-win_amd64.whl", hash = "sha256:1285f0691143f7ab97150831455d4db17a267b59649f7bd9700282cba3d5e771"},
-    {file = "tornado-6.3.1.tar.gz", hash = "sha256:5e2f49ad371595957c50e42dd7e5c14d64a6843a3cf27352b69c706d1b5918af"},
+    {file = "tornado-6.3.2-cp38-abi3-macosx_10_9_universal2.whl", hash = "sha256:c367ab6c0393d71171123ca5515c61ff62fe09024fa6bf299cd1339dc9456829"},
+    {file = "tornado-6.3.2-cp38-abi3-macosx_10_9_x86_64.whl", hash = "sha256:b46a6ab20f5c7c1cb949c72c1994a4585d2eaa0be4853f50a03b5031e964fc7c"},
+    {file = "tornado-6.3.2-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c2de14066c4a38b4ecbbcd55c5cc4b5340eb04f1c5e81da7451ef555859c833f"},
+    {file = "tornado-6.3.2-cp38-abi3-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:05615096845cf50a895026f749195bf0b10b8909f9be672f50b0fe69cba368e4"},
+    {file = "tornado-6.3.2-cp38-abi3-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5b17b1cf5f8354efa3d37c6e28fdfd9c1c1e5122f2cb56dac121ac61baa47cbe"},
+    {file = "tornado-6.3.2-cp38-abi3-musllinux_1_1_aarch64.whl", hash = "sha256:29e71c847a35f6e10ca3b5c2990a52ce38b233019d8e858b755ea6ce4dcdd19d"},
+    {file = "tornado-6.3.2-cp38-abi3-musllinux_1_1_i686.whl", hash = "sha256:834ae7540ad3a83199a8da8f9f2d383e3c3d5130a328889e4cc991acc81e87a0"},
+    {file = "tornado-6.3.2-cp38-abi3-musllinux_1_1_x86_64.whl", hash = "sha256:6a0848f1aea0d196a7c4f6772197cbe2abc4266f836b0aac76947872cd29b411"},
+    {file = "tornado-6.3.2-cp38-abi3-win32.whl", hash = "sha256:7efcbcc30b7c654eb6a8c9c9da787a851c18f8ccd4a5a3a95b05c7accfa068d2"},
+    {file = "tornado-6.3.2-cp38-abi3-win_amd64.whl", hash = "sha256:0c325e66c8123c606eea33084976c832aa4e766b7dff8aedd7587ea44a604cdf"},
+    {file = "tornado-6.3.2.tar.gz", hash = "sha256:4b927c4f19b71e627b13f3db2324e4ae660527143f9e1f2e2fb404f3a187e2ba"},
 ]
 
 [[package]]
@@ -4840,4 +4839,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "d914f734f4ff1bcbe8e678d46b20b73c3565b3af6f5dd0ac0359fae800c6bf2e"
+content-hash = "be5c3e25247d4a0c313de54d07f4a027253877a5b8fbbf7830030a43a02c2911"

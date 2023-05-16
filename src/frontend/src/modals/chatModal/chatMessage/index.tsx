@@ -14,6 +14,7 @@ import { CodeBlock } from "./codeBlock";
 import Convert from "ansi-to-html";
 
 export default function ChatMessage({ chat, lockChat }: { chat: ChatMessageType, lockChat: boolean }) {
+	const convert = new Convert({ newline: true });
 	const [message, setMessage] = useState("");
 	const imgRef = useRef(null);
 	useEffect(() => {
@@ -35,9 +36,9 @@ export default function ChatMessage({ chat, lockChat }: { chat: ChatMessageType,
 				)}
 			>
 				{!chat.isSend && <div className="relative w-8 h-8">
-				<img className={"absolute transition-opacity duration-500 scale-150 " + (lockChat ? "opacity-100" : "opacity-0")} src={AiIcon} />
-				<img className={"absolute transition-opacity duration-500 scale-150 " + (lockChat ? "opacity-0" : "opacity-100")} src={AiIconStill} />
-					</div>}
+					<img className={"absolute transition-opacity duration-500 scale-150 " + (lockChat ? "opacity-100" : "opacity-0")} src={AiIcon} />
+					<img className={"absolute transition-opacity duration-500 scale-150 " + (lockChat ? "opacity-0" : "opacity-100")} src={AiIconStill} />
+				</div>}
 				{chat.isSend && <UserIcon className="w-6 h-6 -mb-1 text-gray-800 dark:text-gray-200" />}
 			</div>
 			{!chat.isSend ? (
