@@ -15,6 +15,7 @@ import ReactFlow, {
 	OnEdgesDelete,
 	OnNodesDelete,
 	SelectionDragHandler,
+	useOnViewportChange,
 } from "reactflow";
 import _ from "lodash";
 import { locationContext } from "../../contexts/locationContext";
@@ -296,21 +297,26 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
 	}, []);
 
 	const onSelectionEnd = useCallback(() => {
-		setSelectionMenuVisible(true);
-		let minPositionX = Infinity;
-		let maxPositionX = 0;
-		let minPositionY = Infinity;
-		console.log(lastSelection)
-		if(lastSelection)
-			lastSelection.nodes.forEach((node) => {
-				let position = node.data.getPosition()
-				console.log(position)
-				minPositionX = Math.min(minPositionX, position.x);
-				maxPositionX = Math.max(maxPositionX, position.x + position.width);
-				minPositionY = Math.min(minPositionY, position.y);
-			});
-		setSelectionMenuPosition({ x: ((minPositionX + maxPositionX) / 2), y: minPositionY });
-		console.log({ x: ((minPositionX + maxPositionX) / 2), y: minPositionY })
+		if(lastSelection.nodes.length > 1){
+			setSelectionMenuVisible(true);
+			let minPositionX = Infinity;
+			let maxPositionX = 0;
+			let minPositionY = Infinity;
+			console.log(lastSelection)
+			if(lastSelection)
+				lastSelection.nodes.forEach((node) => {
+					let position = node.data.getPosition()
+					console.log(position)
+					minPositionX = Math.min(minPositionX, position.x);
+					maxPositionX = Math.max(maxPositionX, position.x + position.width);
+					minPositionY = Math.min(minPositionY, position.y);
+				});
+			const reactflowBounds = reactFlowWrapper.current.getBoundingClientRect();
+			let posY = (minPositionY - 32);
+			let posX = ((minPositionX + maxPositionX) / 2) - 48
+			setSelectionMenuPosition({ x: Math.max(posX, reactflowBounds.x), y: Math.max(posY, reactflowBounds.y) });
+			console.log({ x: ((minPositionX + maxPositionX) / 2), y: minPositionY })
+		}
 	}, [lastSelection]);
 
 	const onSelectionChange = useCallback((flow) => { setLastSelection(flow); }, [])
@@ -321,11 +327,14 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
 				<>
 					<ReactFlow
 						nodes={nodes}
-						onMove={() =>
-							updateFlow({ ...flow, data: reactFlowInstance.toObject() })
+						onMove={() => {
+							updateFlow({ ...flow, data: reactFlowInstance.toObject() });
+							onSelectionEnd();
+						}
 						}
 						edges={edges}
 						onNodesChange={onNodesChange}
+						onSelectionDrag={onSelectionEnd}
 						onEdgesChange={onEdgesChangeMod}
 						onKeyDown={(e) => onKeyDown(e)}
 						onConnect={onConnect}
@@ -351,7 +360,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
 						</Controls>
 					</ReactFlow>
 					<Chat flow={flow} reactFlowInstance={reactFlowInstance} />
-					<SelectionMenu position={selectionMenuPosition} onClick={()=>{}} isVisible={selectionMenuVisible}/>
+					<SelectionMenu position={selectionMenuPosition} onClick={()=>{}} isVisible={selectionMenuVisible} setIsVisible={setSelectionMenuVisible} />
 				</>
 			) : (
 				<></>
