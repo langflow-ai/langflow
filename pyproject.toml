@@ -51,7 +51,7 @@ websockets = "^11.0.2"
 tiktoken = "^0.3.3"
 wikipedia = "^1.4.0"
 gptcache = "^0.1.23"
-langchain-serve = "^0.0.30"
+langchain-serve = { version = "^0.0.31", optional = true }
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
@@ -66,6 +66,9 @@ pytest-cov = "^4.0.0"
 pandas-stubs = "^2.0.0.230412"
 types-pillow = "^9.5.0.2"
 
+
+[tool.poetry.extras]
+production = ["langchain-serve"]
 
 [tool.ruff]
 line-length = 120
