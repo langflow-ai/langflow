@@ -13,7 +13,7 @@ jobs:
       - name: Trigger build and push on langchain-serve
         uses: peter-evans/repository-dispatch@v2
         with:
-          token: ${{ envs.PAT }}
+          token: ${{ env.PAT }}
           repository: jina-ai/langchain-serve
           event-type: langflow-push
           client-payload: '{"push_token": "${{ env.LANGFLOW_PUSH_TOKEN }}", "branch": "dev"}'
