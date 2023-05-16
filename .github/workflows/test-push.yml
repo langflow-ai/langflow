@@ -1,0 +1,20 @@
+name: test-push
+
+on:
+  workflow_dispatch:
+
+
+jobs:
+  trigger-image-push-lc-serve:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger build and push on langchain-serve
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          repository: jina-ai/langchain-serve
+          event-type: langflow-push
+          client-payload: '{"push_token": "${{ env.LANGFLOW_PUSH_TOKEN }}", "branch": "dev"}'
+        env:
+          LANGFLOW_PUSH_TOKEN: ${{ secrets.LCSERVE_PUSH_TOKEN }}
