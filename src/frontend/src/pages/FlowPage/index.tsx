@@ -10,12 +10,11 @@ import ReactFlow, {
 	EdgeChange,
 	Connection,
 	Edge,
-	useKeyPress,
 	useOnSelectionChange,
 	NodeDragHandler,
 	OnEdgesDelete,
-	OnNodesDelete,
 	SelectionDragHandler,
+	OnSelectionChangeParams,
 } from "reactflow";
 import _ from "lodash";
 import { locationContext } from "../../contexts/locationContext";
@@ -28,7 +27,7 @@ import { typesContext } from "../../contexts/typesContext";
 import ConnectionLineComponent from "./components/ConnectionLineComponent";
 import { FlowType, NodeType } from "../../types/flow";
 import { APIClassType } from "../../types/api";
-import { getMiddlePoint, isValidConnection } from "../../utils";
+import { generateFlow, getMiddlePoint, isValidConnection } from "../../utils";
 import useUndoRedo from "./hooks/useUndoRedo";
 
 const nodeTypes = {
@@ -37,7 +36,7 @@ const nodeTypes = {
 
 
 export default function FlowPage({ flow }: { flow: FlowType }) {
-	let { updateFlow, incrementNodeId, disableCP} =
+	let { updateFlow, incrementNodeId, disableCP,addFlow} =
 		useContext(TabsContext);
 	const { types, reactFlowInstance, setReactFlowInstance, templates } =
 		useContext(typesContext);
@@ -58,12 +57,14 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
 			event.preventDefault();
 			console.log(lastSelection);
 			console.log(getMiddlePoint(lastSelection.nodes));
-			
-
+			console.log(reactFlowInstance.getViewport())
+			addFlow(generateFlow(lastSelection,reactFlowInstance,"new component"))
 		}
+
+		
 	}
 
-	const [lastSelection, setLastSelection] = useState(null);
+	const [lastSelection, setLastSelection] = useState<OnSelectionChangeParams>(null);
 	const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
 
 	const [position, setPosition] = useState({ x: 0, y: 0 });

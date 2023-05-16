@@ -18,10 +18,11 @@ import {
 	PencilSquareIcon,
   Square3Stack3DIcon,
 } from "@heroicons/react/24/outline";
-import { Connection, Edge, Node, ReactFlowInstance } from "reactflow";
+import { Connection, Edge, Node, OnSelectionChangeParams, ReactFlowInstance } from "reactflow";
 import { FlowType } from "./types/flow";
-import { APITemplateType, TemplateVariableType } from "./types/api";
+import { APITemplateType} from "./types/api";
 import _ from "lodash";
+import { v4 as uuidv4 } from "uuid";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -521,4 +522,19 @@ export function getMiddlePoint(nodes: Node[]) {
 	const averageY = middlePointY / totalNodes;
   
 	return { x: averageX, y: averageY };
+  }
+
+  export function generateFlow(selection: OnSelectionChangeParams, reactFlowInstance: ReactFlowInstance, name: string):FlowType {
+    const newFlowData = reactFlowInstance.toObject();
+    const { nodes, edges } = newFlowData;
+  
+    const newNodes = nodes.filter((node) => selection.nodes.some((n) => n.id === node.id));
+    const newEdges = edges.filter((edge) => selection.edges.some((e) => e.id === edge.id));
+  
+    newFlowData.edges = newEdges;
+    newFlowData.nodes = newNodes;
+  
+    console.log(newFlowData);
+    const newFlow: FlowType = { data: newFlowData, name: name ,description:"",id:uuidv4()}
+    return newFlow;
   }
