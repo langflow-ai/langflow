@@ -22,7 +22,7 @@ const TabsContextInitialValue: TabsContextType = {
 	removeFlow: (id: string) => {},
 	addFlow: (flowData?: any) => {},
 	updateFlow: (newFlow: FlowType) => {},
-	incrementNodeId: () => 0,
+	incrementNodeId: () => uuidv4(),
 	downloadFlow: (flow: FlowType) => {},
 	uploadFlow: () => {},
 	hardReset: () => {},
@@ -41,16 +41,16 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	const [id, setId] = useState(uuidv4());
 	const { templates } = useContext(typesContext);
 
-	const newNodeId = useRef(0);
+	const newNodeId = useRef(uuidv4());
 	function incrementNodeId() {
-		newNodeId.current = newNodeId.current + 1;
+		newNodeId.current = uuidv4();
 		return newNodeId.current;
 	}
 	function save() {
 		if (flows.length !== 0)
 			window.localStorage.setItem(
 				"tabsData",
-				JSON.stringify({ tabIndex, flows, id, nodeId: newNodeId.current })
+				JSON.stringify({ tabIndex, flows, id})
 			);
 	}
 	useEffect(() => {
@@ -79,12 +79,11 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 			setTabIndex(cookieObject.tabIndex);
 			setFlows(cookieObject.flows);
 			setId(cookieObject.id);
-			newNodeId.current = cookieObject.nodeId;
 		}
 	}, [templates]);
 
 	function hardReset() {
-		newNodeId.current = 0;
+		newNodeId.current = uuidv4();
 		setTabIndex(0);
 		setFlows([]);
 		setId(uuidv4());
