@@ -381,6 +381,11 @@ export function isValidConnection(
   { source, target, sourceHandle, targetHandle }: Connection,
   reactFlowInstance: ReactFlowInstance
 ) {
+  // target is target id
+  console.log(target)
+  
+  console.log(sourceHandle)
+  console.log(targetHandle)
   if (
     sourceHandle.split("|")[0] === targetHandle.split("|")[0] ||
     sourceHandle

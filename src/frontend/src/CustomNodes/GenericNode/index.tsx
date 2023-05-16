@@ -1,4 +1,11 @@
-import { BugAntIcon, Cog6ToothIcon, ExclamationCircleIcon, CheckCircleIcon, EllipsisHorizontalCircleIcon, TrashIcon } from "@heroicons/react/24/outline";
+import {
+	BugAntIcon,
+	Cog6ToothIcon,
+	ExclamationCircleIcon,
+	CheckCircleIcon,
+	EllipsisHorizontalCircleIcon,
+	TrashIcon,
+} from "@heroicons/react/24/outline";
 import { classNames, nodeColors, nodeIcons, toNormalCase } from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
 import { typesContext } from "../../contexts/typesContext";
@@ -90,7 +97,6 @@ export default function GenericNode({
 		deleteNode(data.id);
 		return;
 	}
-	console.log(data)
 	return (
 		<div
 			className={classNames(
@@ -109,15 +115,17 @@ export default function GenericNode({
 					<div className="ml-2 truncate">{data.type}</div>
 
 					{validationStatus && validationStatus !== "error" ? (
-						<Tooltip title={
-							<div className="max-h-96 overflow-auto">
-								{validationStatus}
-							</div>}>
+						<Tooltip
+							title={
+								<div className="max-h-96 overflow-auto">{validationStatus}</div>
+							}
+						>
 							<CheckCircleIcon
 								className={classNames(
 									isValid ? "text-green-500" : "text-red-500",
 									"w-5",
-									"hover:text-gray-500 hover:dark:text-gray-300")}
+									"hover:text-gray-500 hover:dark:text-gray-300"
+								)}
 							/>
 						</Tooltip>
 					) : validationStatus === "error" ? (
@@ -125,14 +133,16 @@ export default function GenericNode({
 							className={classNames(
 								isValid ? "text-green-500" : "text-red-500",
 								"w-5",
-								"hover:text-gray-500 hover:dark:text-gray-600")}
+								"hover:text-gray-500 hover:dark:text-gray-600"
+							)}
 						/>
 					) : (
 						<EllipsisHorizontalCircleIcon
 							className={classNames(
 								isValid ? "text-yellow-500" : "text-red-500",
 								"w-5",
-								"hover:text-gray-500 hover:dark:text-gray-600")}
+								"hover:text-gray-500 hover:dark:text-gray-600"
+							)}
 						/>
 					)}
 				</div>
@@ -205,7 +215,7 @@ export default function GenericNode({
 									<></>
 								)} */}
 								{data.node.template[t].show &&
-									!data.node.template[t].advanced ? (
+								!data.node.template[t].advanced ? (
 									<ParameterComponent
 										data={data}
 										color={
@@ -216,8 +226,8 @@ export default function GenericNode({
 											data.node.template[t].display_name
 												? data.node.template[t].display_name
 												: data.node.template[t].name
-													? toNormalCase(data.node.template[t].name)
-													: toNormalCase(t)
+												? toNormalCase(data.node.template[t].name)
+												: toNormalCase(t)
 										}
 										name={t}
 										tooltipTitle={
@@ -246,6 +256,16 @@ export default function GenericNode({
 					{/* <div className="px-5 py-2 mt-2 dark:text-white text-center">
 						Output
 					</div> */}
+					{data.node.template.can_be_root && <ParameterComponent
+					    tooltipTitle="flow input"
+						data={data}
+						color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+						title="Input"
+						name="input"
+						id={data.id}
+						left={true}
+						type="input"
+					/>}
 					<ParameterComponent
 						data={data}
 						color={nodeColors[types[data.type]] ?? nodeColors.unknown}
