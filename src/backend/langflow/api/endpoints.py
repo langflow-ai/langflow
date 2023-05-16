@@ -1,3 +1,4 @@
+from importlib.metadata import version
 import logging
 
 from fastapi import APIRouter, HTTPException
@@ -33,3 +34,9 @@ async def get_load(predict_request: PredictRequest):
         # Log stack trace
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# get endpoint to return version of langflow
+@router.get("/version")
+def get_version():
+    return {"version": version("langflow")}
