@@ -1,7 +1,14 @@
-FROM python:3.11-slim
+FROM python:3.10-slim
 
-RUN apt-get update && apt-get install gcc -y
-RUN pip install langflow>=0.0.33
+RUN apt-get update && apt-get install gcc g++ git make -y
+RUN useradd -m -u 1000 user
+USER user
+ENV HOME=/home/user \
+    PATH=/home/user/.local/bin:$PATH
 
-EXPOSE 7860
-CMD ["langflow", "--host", "0.0.0.0"]
+WORKDIR $HOME/app
+
+COPY --chown=user . $HOME/app
+
+RUN pip install langflow>==0.0.71 -U --user
+CMD ["langflow", "--host", "0.0.0.0", "--port", "7860"]
