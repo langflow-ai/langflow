@@ -26,16 +26,16 @@ if [[ -z "$subnet_exists" ]]; then
   gcloud compute networks subnets create $SUBNET_NAME --network=$VPC_NAME --region=$REGION --range=$SUBNET_RANGE
 fi
 
-# Create a firewall rule to allow TCP port 8080 for all instances in the VPC
-firewall_8080_exists=$(gcloud compute firewall-rules list --filter="name=allow-tcp-8080" --format="value(name)")
-if [[ -z "$firewall_8080_exists" ]]; then
-  gcloud compute firewall-rules create allow-tcp-8080 --network $VPC_NAME --allow tcp:8080 --source-ranges 0.0.0.0/0 --direction INGRESS
+# Create a firewall rule to allow TCP port 7860 for all instances in the VPC
+firewall_7860_exists=$(gcloud compute firewall-rules list --filter="name=allow-tcp-7860" --format="value(name)")
+if [[ -z "$firewall_7860_exists" ]]; then
+  gcloud compute firewall-rules create allow-tcp-7860 --network $VPC_NAME --allow tcp:7860 --source-ranges 0.0.0.0/0 --direction INGRESS
 fi
 
 # Create a firewall rule to allow IAP traffic
 firewall_iap_exists=$(gcloud compute firewall-rules list --filter="name=allow-iap" --format="value(name)")
 if [[ -z "$firewall_iap_exists" ]]; then
-    gcloud compute firewall-rules create allow-iap --network $VPC_NAME --allow tcp:80,tcp:443 --source-ranges 35.235.240.0/20 --direction INGRESS
+    gcloud compute firewall-rules create allow-iap --network $VPC_NAME --allow tcp:80,tcp:443,tcp:22,:tcp:3389 --source-ranges 35.235.240.0/20 --direction INGRESS
 fi
 
 # Define the startup script as a multiline Bash here-doc
@@ -49,24 +49,7 @@ apt -y upgrade
 # Install Python 3 pip, Langflow, and Nginx
 apt -y install python3-pip
 pip install langflow
-apt-get -y install nginx
-
-# Configure Nginx for Langflow
-touch /etc/nginx/sites-available/langflow-app
-echo "server {
-    listen 0.0.0.0:8080;
-
-    location / {
-        proxy_pass http://127.0.0.1:7860;
-        proxy_set_header Host "\$host";
-        proxy_set_header X-Real-IP "\$remote_addr";
-        proxy_set_header X-Forwarded-For "\$proxy_add_x_forwarded_for";
-    }
-}" >> /etc/nginx/sites-available/langflow-app
-ln -s /etc/nginx/sites-available/langflow-app /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl restart nginx
-langflow
+langflow --host 0.0.0.0 --port 7860
 EOF
 )
 

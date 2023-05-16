@@ -45,6 +45,7 @@ export default function ApiModal({ flowName }) {
 	}
 
 	const pythonApiCode = `import requests
+import json
 
 API_URL = "${window.location.protocol}//${window.location.host}/predict"
 
@@ -57,7 +58,7 @@ def predict(message):
 
 print(predict("Your message"))`;
 
-const pythonCode = `from langflow import load_flow_from_json
+	const pythonCode = `from langflow import load_flow_from_json
 
 flow = load_flow_from_json("${flowName}.json")
 # Now you can use it like any chain
@@ -165,7 +166,7 @@ flow("Hey, have you heard of LangFlow?")`;
 													</button>
 												</div>
 												<SyntaxHighlighter
-												className="h-[370px]"
+													className="h-[370px]"
 													language={tabs[activeTab].mode}
 													style={oneDark}
 													customStyle={{ margin: 0 }}
