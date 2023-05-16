@@ -526,15 +526,17 @@ export function getMiddlePoint(nodes: Node[]) {
 
   export function generateFlow(selection: OnSelectionChangeParams, reactFlowInstance: ReactFlowInstance, name: string):FlowType {
     const newFlowData = reactFlowInstance.toObject();
-    const { nodes, edges } = newFlowData;
   
-    const newNodes = nodes.filter((node) => selection.nodes.some((n) => n.id === node.id));
-    const newEdges = edges.filter((edge) => selection.edges.some((e) => e.id === edge.id));
-  
-    newFlowData.edges = newEdges;
-    newFlowData.nodes = newNodes;
+    newFlowData.edges = selection.edges;
+    newFlowData.nodes = selection.nodes;
   
     console.log(newFlowData);
     const newFlow: FlowType = { data: newFlowData, name: name ,description:"",id:uuidv4()}
     return newFlow;
+  }
+
+  export function filterFlow(selection: OnSelectionChangeParams, reactFlowInstance: ReactFlowInstance){
+    reactFlowInstance.setNodes((nodes)=>nodes.filter((node)=>!selection.nodes.includes(node)))
+    reactFlowInstance.setEdges((edges) => edges.filter((edge) => !selection.edges.includes(edge)))
+    console.log(selection)
   }

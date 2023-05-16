@@ -163,7 +163,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	 * Add a new flow to the list of flows.
 	 * @param flow Optional flow to add.
 	 */
-	function addFlow(flow?: FlowType) {
+	function addFlow(flow?: FlowType,blank:boolean=true) {
 		// Get data from the flow or set it to null if there's no flow provided.
 		const data = flow?.data ? flow.data : null;
 		const description = flow?.description ? flow.description : "";
@@ -196,7 +196,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		});
 
 		// Set the tab index to the new flow.
-		setTabIndex(flows.length);
+		if(blank) setTabIndex(flows.length);
 	}
 	/**
 	 * Updates an existing flow with new data

@@ -27,7 +27,7 @@ import { typesContext } from "../../contexts/typesContext";
 import ConnectionLineComponent from "./components/ConnectionLineComponent";
 import { FlowType, NodeType } from "../../types/flow";
 import { APIClassType } from "../../types/api";
-import { generateFlow, getMiddlePoint, isValidConnection } from "../../utils";
+import { filterFlow, generateFlow, getMiddlePoint, isValidConnection } from "../../utils";
 import useUndoRedo from "./hooks/useUndoRedo";
 
 const nodeTypes = {
@@ -38,7 +38,7 @@ const nodeTypes = {
 export default function FlowPage({ flow }: { flow: FlowType }) {
 	let { updateFlow, incrementNodeId, disableCP,addFlow} =
 		useContext(TabsContext);
-	const { types, reactFlowInstance, setReactFlowInstance, templates } =
+	const { types, reactFlowInstance, setReactFlowInstance, templates,deleteNode } =
 		useContext(typesContext);
 	const reactFlowWrapper = useRef(null);
 
@@ -57,8 +57,11 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
 			event.preventDefault();
 			console.log(lastSelection);
 			console.log(getMiddlePoint(lastSelection.nodes));
-			console.log(reactFlowInstance.getViewport())
-			addFlow(generateFlow(lastSelection,reactFlowInstance,"new component"))
+			console.log(reactFlowInstance.getViewport());
+			const newFlow = generateFlow(lastSelection,reactFlowInstance,"new component");
+			setNodes(oldNodes=>oldNodes.filter((oldNode)=>!lastSelection.nodes.some(selectionNode=>selectionNode.id===oldNode.id)))
+			setEdges(oldEdges=>oldEdges.filter((oldEdge)=>!lastSelection.edges.some(selectionEdge=>selectionEdge.id===oldEdge.id)))
+			addFlow(newFlow,false);
 		}
 
 		

@@ -57,7 +57,6 @@ export default function GenericNode({
 				if (response.status === 200) {
 					let jsonResponse = await response.json();
 					let jsonResponseParsed = await JSON.parse(jsonResponse);
-					console.log(jsonResponseParsed);
 					if (jsonResponseParsed.valid) {
 						setValidationStatus(jsonResponseParsed.params);
 					} else {
