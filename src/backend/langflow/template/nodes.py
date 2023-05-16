@@ -586,9 +586,29 @@ class LLMFrontendNode(FrontendNode):
             "huggingfacehub_api_token": "HuggingFace Hub API Token",
         }
         FrontendNode.format_field(field, name)
-        SHOW_FIELDS = ["repo_id"]
+
+        SHOW_FIELDS = [
+            "repo_id",
+            "inference_server_url",
+            "max_new_tokens",
+            "top_k",
+            "top_p",
+            "typical_p",
+            "temperature",
+            "repetition_penalty",
+        ]
+        ADVANCED_FIELDS = [
+            "max_new_tokens",
+            "top_k",
+            "top_p",
+            "typical_p",
+            "repetition_penalty",
+        ]
         if field.name in SHOW_FIELDS:
             field.show = True
+
+        if field.name in ADVANCED_FIELDS:
+            field.advanced = True
 
         if "api" in field.name and ("key" in field.name or "token" in field.name):
             field.password = True

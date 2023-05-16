@@ -32,6 +32,8 @@ llms:
   - ChatOpenAI
   - HuggingFaceHub
   - LlamaCpp
+  - HuggingFaceTextGenInference
+  - SelfHostedHuggingFaceLLM
 
 tools:
   - Search
