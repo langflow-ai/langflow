@@ -25,7 +25,6 @@ def create_app():
     app.include_router(endpoints_router)
     app.include_router(validate_router)
     app.include_router(chat_router)
-    app.get("/health")(lambda: {"status": "OK"})
     return app
 
 
