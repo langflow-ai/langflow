@@ -5773,5 +5773,4 @@ production = ["langchain-serve"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-
-content-hash = "0524829f482c4eab8c25205d68dcec64084a28823de82cd3c3737e6bb74439c7"
+content-hash = "a6fa5f8b36994c9b7dfa3de4979099f2e76cb534697823b49a949c661efa3fba"
