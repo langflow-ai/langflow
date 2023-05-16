@@ -5769,7 +5769,7 @@ cffi = {version = ">=1.11", markers = "platform_python_implementation == \"PyPy\
 cffi = ["cffi (>=1.11)"]
 
 [extras]
-production = []
+production = ["langchain-serve"]
 
 [metadata]
 lock-version = "2.0"
