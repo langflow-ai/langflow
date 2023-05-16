@@ -40,3 +40,8 @@ async def get_load(predict_request: PredictRequest):
 @router.get("/version")
 def get_version():
     return {"version": version("langflow")}
+
+
+@router.get("/health")
+def get_health():
+    return {"status": "OK"}
