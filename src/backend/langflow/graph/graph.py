@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from langflow.graph.base import Edge, Node
 from langflow.graph.langchain_nodes import (
@@ -143,7 +143,7 @@ class Graph:
         ]
         return connected_nodes
 
-    def build(self) -> List[Node]:
+    def build(self) -> Any:
         # Get root node
         root_node = payload.get_root_node(self)
         if root_node is None:
