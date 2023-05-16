@@ -207,7 +207,7 @@ def format_dict(d, name: Optional[str] = None):
 
     # Process remaining keys
     for key, value in d.items():
-        if key == "_type":
+        if key in ["_type", "can_be_root"]:
             continue
 
         _type = value["type"]
