@@ -46,13 +46,56 @@ Alternatively, click the **"Open in Cloud Shell"** button below to launch Google
 [![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/open?git_repo=https://github.com/logspace-ai/langflow&working_dir=scripts&shellonly=true&tutorial=walkthroughtutorial_spot.md)
 
 
-### Deploy Langflow on Google Cloud Platform
+### Deploy Langflow on [Jina AI Cloud](https://github.com/jina-ai/langchain-serve)
 
-Follow our step-by-step guide to deploy Langflow on Google Cloud Platform (GCP) using Google Cloud Shell. The guide is available in the [**Langflow in Google Cloud Platform**](GCP_DEPLOYMENT.md) document.
+Langflow integrates with langchain-serve to provide a one-command deployment to Jina AI Cloud.
 
-Alternatively, click the **"Open in Cloud Shell"** button below to launch Google Cloud Shell, clone the Langflow repository, and start an **interactive tutorial** that will guide you through the process of setting up the necessary resources and deploying Langflow on your GCP project.
+Start by installing `langchain-serve` with `pip install -U langchain-serve`. Then, run:
 
-[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/open?git_repo=https://github.com/genome21/langflow&working_dir=scripts&shellonly=true&tutorial=walkthroughtutorial_spot.md)
+```bash
+langflow jcloud
+```
+
+```text
+🎉 Langflow server successfully deployed on Jina AI Cloud 🎉
+🔗 Click on the link to open the server (please allow ~1-2 minutes for the server to startup): https://<your-app>.wolf.jina.ai/
+📖 Read more about managing the server: https://github.com/jina-ai/langchain-serve
+```
+
+  <details>
+  <summary>Show complete (example) output</summary>
+
+  ```text
+    🚀 Deploying Langflow server on Jina AI Cloud
+    ╭───────────────────────── 🎉 Flow is available! ──────────────────────────╮
+    │                                                                          │
+    │   ID                    langflow-e3dd8820ec                              │
+    │   Gateway (Websocket)   wss://langflow-e3dd8820ec.wolf.jina.ai           │
+    │   Dashboard             https://dashboard.wolf.jina.ai/flow/e3dd8820ec   │
+    │                                                                          │
+    ╰──────────────────────────────────────────────────────────────────────────╯
+    ╭──────────────┬──────────────────────────────────────────────────────────────────────────────╮
+    │ App ID       │                     langflow-e3dd8820ec                                      │
+    ├──────────────┼──────────────────────────────────────────────────────────────────────────────┤
+    │ Phase        │                            Serving                                           │
+    ├──────────────┼──────────────────────────────────────────────────────────────────────────────┤
+    │ Endpoint     │          wss://langflow-e3dd8820ec.wolf.jina.ai                              │
+    ├──────────────┼──────────────────────────────────────────────────────────────────────────────┤
+    │ App logs     │                  dashboards.wolf.jina.ai                                     │
+    ├──────────────┼──────────────────────────────────────────────────────────────────────────────┤
+    │ Swagger UI   │          https://langflow-e3dd8820ec.wolf.jina.ai/docs                       │
+    ├──────────────┼──────────────────────────────────────────────────────────────────────────────┤
+    │ OpenAPI JSON │        https://langflow-e3dd8820ec.wolf.jina.ai/openapi.json                 │
+    ╰──────────────┴──────────────────────────────────────────────────────────────────────────────╯
+
+    🎉 Langflow server successfully deployed on Jina AI Cloud 🎉
+    🔗 Click on the link to open the server (please allow ~1-2 minutes for the server to startup): https://langflow-e3dd8820ec.wolf.jina.ai/
+    📖 Read more about managing the server: https://github.com/jina-ai/langchain-serve
+  ```
+
+  </details>
+
+> Read more about customization, cost, and management of Langflow on Jina AI Cloud in the **[langchain-serve](https://github.com/jina-ai/langchain-serve)** repository.
 
 
 ## 🎨 Creating Flows
