@@ -277,7 +277,6 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
           position,
           data: {
             ...data,
-            getPosition: () => {},
             id: newId,
             value: null,
           },

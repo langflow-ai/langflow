@@ -74,14 +74,6 @@ export default function GenericNode({
     }
   }, [params, validateNode]);
 
-  const nodeRef = useRef(null);
-
-  useEffect(() => {
-	if(nodeRef){
-		data.getPosition = () => {return nodeRef.current.getBoundingClientRect();}
-	}
-  }, [nodeRef]);
-
   if (!Icon) {
     if (showError.current) {
       setErrorData({
@@ -102,7 +94,6 @@ export default function GenericNode({
         selected ? "border border-blue-500" : "border dark:border-gray-700",
         "prompt-node relative bg-white dark:bg-gray-900 w-96 rounded-lg flex flex-col justify-center"
       )}
-	  ref={nodeRef}
     >
       <div className="w-full dark:text-white flex items-center justify-between p-4 gap-8 bg-gray-50 rounded-t-lg dark:bg-gray-800 border-b dark:border-b-gray-700 ">
         <div className="w-full flex items-center truncate gap-2 text-lg">

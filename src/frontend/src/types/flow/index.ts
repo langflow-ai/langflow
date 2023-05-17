@@ -19,5 +19,4 @@ export type NodeDataType = {
 	node?: APIClassType;
 	id: string;
 	value: any;
-	getPosition: () => any;
 };
