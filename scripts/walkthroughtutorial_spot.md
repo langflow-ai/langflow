@@ -29,7 +29,7 @@ Run the deploy_langflow_gcp_spot.sh script to configure the GCP environment and 
 
 ```sh  
 gcloud config set project <walkthrough-project-id/>  
-bash ./deploy_langflow_gcp.sh
+bash ./deploy_langflow_gcp_spot.sh
 ```
 
 The script will:
@@ -37,7 +37,7 @@ The script will:
 1. Check if the required resources (VPC, subnet, firewall rules, and Cloud Router) exist and create them if needed
 2. Create a startup script to install Python, Langflow, and Nginx
 3. Create a Compute Engine VM instance with the specified configuration and startup script
-4. Configure Nginx to serve Langflow on TCP port 8080
+4. Run Langflow to serve content on TCP port 7860
 
 > <walkthrough-pin-section-icon></walkthrough-pin-section-icon> The process may take approximately 30 minutes to complete. Rest assured that progress is being made, and you'll be able to proceed once the process is finished.
 
@@ -46,13 +46,13 @@ In the next step, you'll learn how to connect to the Langflow VM.
 ## Connect to the Langflow VM
 To connect to your new Langflow VM, follow these steps:
 
-1. Navigate to the [VM instances](https://console.cloud.google.com/compute/instances) page and click on the external IP for your VM.  Make sure to use HTTP and set the port to 8080
+1. Navigate to the [VM instances](https://console.cloud.google.com/compute/instances) page and click on the external IP for your VM.  Make sure to use HTTP and set the port to 7860
 <br>**or**
 3. Run the following command to display the URL for your Langflow environment:
 ```bash
 export LANGFLOW_IP=$(gcloud compute instances list --filter="NAME=langflow-dev" --format="value(EXTERNAL_IP)")
 
-echo http://$LANGFLOW_IP:8080
+echo http://$LANGFLOW_IP:7860
 ```
 
 4. Click on the Langflow URL in cloudshell to be greeted by the Langflow Dev environment
@@ -73,7 +73,7 @@ However, if you decide to remove them after completing the walkthrough, you can 
 > <walkthrough-pin-section-icon></walkthrough-pin-section-icon> These commands will delete the firewall rules and network configurations created during the walkthrough. Make sure to run them only if you no longer need these settings.
 
 ```
-gcloud compute firewall-rules delete allow-tcp-8080 --quiet
+gcloud compute firewall-rules delete allow-tcp-7860 --quiet
 
 gcloud compute firewall-rules delete allow-iap --quiet
 

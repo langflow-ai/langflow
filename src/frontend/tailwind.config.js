@@ -1,7 +1,7 @@
 /** @type {import('tailwindcss').Config} */
-const plugin = require("tailwindcss/plugin");
+import plugin from "tailwindcss/plugin";
 module.exports = {
-  content: ["./src/**/*.{js,ts,tsx,jsx}"],
+  content: ["./index.html", "./src/**/*.{js,ts,tsx,jsx}"],
   darkMode: "class",
   important: true,
   theme: {
@@ -52,32 +52,39 @@ module.exports = {
             margin: 0,
           },
         },
-        '.password':{
-          "-webkit-text-security":"disc",
-          "font-family": "text-security-disc"
-
+        ".password": {
+          "-webkit-text-security": "disc",
+          "font-family": "text-security-disc",
         },
-        '.stop': {
-          '-webkit-animation-play-state': 'paused',
-          '-moz-animation-play-state': 'paused',
-          'animation-play-state': 'paused',
+        ".stop": {
+          "-webkit-animation-play-state": "paused",
+          "-moz-animation-play-state": "paused",
+          "animation-play-state": "paused",
         },
-        '.custom-scroll':{
-          '&::-webkit-scrollbar': {
-            'width': '8px',
+        ".custom-scroll": {
+          "&::-webkit-scrollbar": {
+            width: "8px",
           },
-          '&::-webkit-scrollbar-track': {
-            'backgroundColor': '#f1f1f1',
+          "&::-webkit-scrollbar-track": {
+            backgroundColor: "#f1f1f1",
           },
-          '&::-webkit-scrollbar-thumb': {
-            'backgroundColor': '#ccc',
-            'borderRadius': '999px',
+          "&::-webkit-scrollbar-thumb": {
+            backgroundColor: "#ccc",
+            borderRadius: "999px",
           },
-          '&::-webkit-scrollbar-thumb:hover': {
-            'backgroundColor': '#bbb'
-        }
-      }
-    })
-    }),require('@tailwindcss/line-clamp'),require('@tailwindcss/typography'),
+          "&::-webkit-scrollbar-thumb:hover": {
+            backgroundColor: "#bbb",
+          },
+        },
+        ".dark .theme-attribution .react-flow__attribution": {
+          backgroundColor: "rgba(255, 255, 255, 0.2)",
+        },
+        ".dark .theme-attribution .react-flow__attribution a": {
+          color: "black",
+        },
+      });
+    }),
+    require("@tailwindcss/line-clamp"),
+    require("@tailwindcss/typography"),
   ],
 };
