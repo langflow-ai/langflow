@@ -178,7 +178,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
 		(params: Connection) => {
 			takeSnapshot();
 			setEdges((eds) =>
-				addEdge({ ...params, className: "animate-pulse", animated:(params.sourceHandle.split('|')[1] === "output" || params.targetHandle.split('|')[1] === "input") }, eds)
+				addEdge({ ...params, animated:(params.sourceHandle.split('|')[0] === "flow") }, eds)
 			);
 			setNodes((x) => {
 				let newX = _.cloneDeep(x);
