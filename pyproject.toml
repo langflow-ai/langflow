@@ -68,7 +68,7 @@ types-pillow = "^9.5.0.2"
 
 
 [tool.poetry.extras]
-production = ["langchain-serve"]
+deploy = ["langchain-serve"]
 
 [tool.ruff]
 line-length = 120

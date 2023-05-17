@@ -33,10 +33,14 @@ def serve(
     config: str = typer.Option("config.yaml", help="Path to the configuration file."),
     log_level: str = typer.Option("info", help="Logging level."),
     log_file: Path = typer.Option("logs/langflow.log", help="Path to the log file."),
+    jcloud: bool = typer.Option(False, help="Deploy on Jina AI Cloud"),
 ):
     """
     Run the Langflow server.
     """
+
+    if jcloud:
+        return serve_on_jcloud()
 
     configure(log_level=log_level, log_file=log_file)
     update_settings(config)
@@ -69,8 +73,7 @@ def serve(
         LangflowApplication(app, options).run()
 
 
-@app.command()
-def jcloud():
+def serve_on_jcloud():
     """
     Deploy Langflow server on Jina AI Cloud
     """
