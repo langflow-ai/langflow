@@ -1,7 +1,7 @@
 import { createContext, ReactNode, useState } from "react";
 import { AlertItemType } from "../types/alerts";
 
-import _ from "lodash";
+var _ = require("lodash");
 
 //types for alertContextType
 type alertContextType = {

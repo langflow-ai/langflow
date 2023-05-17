@@ -17,7 +17,6 @@ import ReactFlow, {
 	OnNodesDelete,
 	SelectionDragHandler,
 } from "reactflow";
-import _ from "lodash";
 import { locationContext } from "../../contexts/locationContext";
 import ExtraSidebar from "./components/extraSidebarComponent";
 import Chat from "../../components/chatComponent";
@@ -35,6 +34,7 @@ const nodeTypes = {
 	genericNode: GenericNode,
 };
 
+var _ = require("lodash");
 
 export default function FlowPage({ flow }: { flow: FlowType }) {
 	let { updateFlow, incrementNodeId, disableCP} =
@@ -323,7 +323,6 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
 						onDrop={onDrop}
 						onNodesDelete={onDelete}
 						selectNodesOnDrag={false}
-						className="theme-attribution"
 					>
 						<Background className="dark:bg-gray-900" />
 						<Controls className="[&>button]:text-black  [&>button]:dark:bg-gray-800 hover:[&>button]:dark:bg-gray-700 [&>button]:dark:text-gray-400 [&>button]:dark:fill-gray-400 [&>button]:dark:border-gray-600">

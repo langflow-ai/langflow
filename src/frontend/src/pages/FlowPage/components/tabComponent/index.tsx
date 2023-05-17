@@ -3,7 +3,7 @@ import { useContext, useState } from "react";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { FlowType } from "../../../../types/flow";
 
-import _ from "lodash";
+var _ = require("lodash");
 
 export default function TabComponent({
 	selected,

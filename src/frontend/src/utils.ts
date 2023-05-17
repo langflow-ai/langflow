@@ -19,7 +19,7 @@ import {
 import { Connection, Edge, Node, ReactFlowInstance } from "reactflow";
 import { FlowType } from "./types/flow";
 import { APITemplateType, TemplateVariableType } from "./types/api";
-import _ from "lodash";
+var _ = require("lodash");
 
 export function classNames(...classes: Array<string>) {
 	return classes.filter(Boolean).join(" ");

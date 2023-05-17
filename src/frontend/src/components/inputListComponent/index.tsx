@@ -3,7 +3,7 @@ import { useContext, useEffect, useState } from "react";
 import { InputListComponentType } from "../../types/components";
 import { TabsContext } from "../../contexts/tabsContext";
 
-import _ from "lodash";
+var _ = require("lodash");
 
 export default function InputListComponent({
 	value,

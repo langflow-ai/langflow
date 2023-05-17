@@ -2,8 +2,6 @@ import "reactflow/dist/style.css";
 import { useState, useEffect, useContext } from "react";
 import "./App.css";
 import { useLocation } from "react-router-dom";
-import _ from "lodash";
-
 import ErrorAlert from "./alerts/error";
 import NoticeAlert from "./alerts/notice";
 import SuccessAlert from "./alerts/success";
@@ -16,6 +14,7 @@ import CrashErrorComponent from "./components/CrashErrorComponent";
 import { TabsContext } from "./contexts/tabsContext";
 
 export default function App() {
+	var _ = require("lodash");
 
 	let { setCurrent, setShowSideBar, setIsStackedOpen } =
 		useContext(locationContext);

@@ -4,7 +4,7 @@ import { ChatMessageType, ChatType } from "../../types/chat";
 import ChatTrigger from "./chatTrigger";
 import ChatModal from "../../modals/chatModal";
 
-import _ from "lodash";
+const _ = require("lodash");
 
 export default function Chat({ flow }: ChatType) {
 	const [open, setOpen] = useState(false);
