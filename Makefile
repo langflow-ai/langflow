@@ -33,8 +33,8 @@ frontend:
 install_backend:
 	poetry install
 
-backend:
-	poetry run uvicorn langflow.main:app --port 7860 --reload --log-level debug
+run_backend:
+	poetry run uvicorn langflow.main:app --host 0.0.0.0 --port 7860 --reload --log-level debug
 
 build_frontend:
 	cd src/frontend && CI='' npm run build
