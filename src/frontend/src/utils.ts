@@ -1,3 +1,4 @@
+import { NodeType } from './types/flow/index';
 import {
   RocketLaunchIcon,
   LinkIcon,
@@ -21,7 +22,7 @@ import {
 import { Connection, Edge, Node, OnSelectionChangeParams, ReactFlowInstance } from "reactflow";
 import { FlowType } from "./types/flow";
 import { APITemplateType} from "./types/api";
-import _ from "lodash";
+import _, { forEach } from "lodash";
 import { v4 as uuidv4 } from "uuid";
 
 export function classNames(...classes: Array<string>) {
@@ -539,4 +540,14 @@ export function getMiddlePoint(nodes: Node[]) {
     reactFlowInstance.setNodes((nodes)=>nodes.filter((node)=>!selection.nodes.includes(node)))
     reactFlowInstance.setEdges((edges) => edges.filter((edge) => !selection.edges.includes(edge)))
     console.log(selection)
+  }
+
+  export function generateNodeFromFlow(flow:FlowType,id:string):NodeType{
+    const {nodes} = flow.data;
+    const position= getMiddlePoint(nodes);
+    let data = flow;
+    const newGroupNode:NodeType = {data,id,position,type:"groupNode"}
+    return newGroupNode;
+
+
   }

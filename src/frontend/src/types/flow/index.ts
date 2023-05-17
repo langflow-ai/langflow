@@ -1,4 +1,3 @@
-import { ChatMessageType } from "./../chat/index";
 import { APIClassType } from "../api/index";
 import { ReactFlowJsonObject, XYPosition } from "reactflow";
 
@@ -12,7 +11,7 @@ export type NodeType = {
 	id: string;
 	type?: string;
 	position: XYPosition;
-	data: NodeDataType;
+	data: NodeDataType | FlowType;
 };
 export type NodeDataType = {
 	type: string;

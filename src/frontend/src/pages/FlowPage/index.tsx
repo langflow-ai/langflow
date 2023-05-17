@@ -30,12 +30,14 @@ import { typesContext } from "../../contexts/typesContext";
 import ConnectionLineComponent from "./components/ConnectionLineComponent";
 import { FlowType, NodeType } from "../../types/flow";
 import { APIClassType } from "../../types/api";
-import { filterFlow, generateFlow, getMiddlePoint, isValidConnection } from "../../utils";
+import { filterFlow, generateFlow, generateNodeFromFlow, getMiddlePoint, isValidConnection } from "../../utils";
 import useUndoRedo from "./hooks/useUndoRedo";
 import SelectionMenu from "./components/SelectionMenuComponent";
+import GroupNode from "../../CustomNodes/GroupNode";
 
 const nodeTypes = {
   genericNode: GenericNode,
+  groupNode:GroupNode
 };
 
 export default function FlowPage({ flow }: { flow: FlowType }) {
@@ -62,7 +64,8 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
 			console.log(getMiddlePoint(lastSelection.nodes));
 			console.log(reactFlowInstance.getViewport());
 			const newFlow = generateFlow(lastSelection,reactFlowInstance,"new component");
-			setNodes(oldNodes=>oldNodes.filter((oldNode)=>!lastSelection.nodes.some(selectionNode=>selectionNode.id===oldNode.id)))
+      const newGroupNode = generateNodeFromFlow(newFlow,getId())
+			setNodes(oldNodes=>[...oldNodes.filter((oldNode)=>!lastSelection.nodes.some(selectionNode=>selectionNode.id===oldNode.id)),newGroupNode])
 			setEdges(oldEdges=>oldEdges.filter((oldEdge)=>!lastSelection.nodes.some(selectionNode=>selectionNode.id===oldEdge.target || selectionNode.id===oldEdge.source)))
 			addFlow(newFlow,false);
 		}

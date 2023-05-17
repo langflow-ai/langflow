@@ -1,10 +1,8 @@
 import {
-  BugAntIcon,
   CheckCircleIcon,
   Cog6ToothIcon,
   EllipsisHorizontalCircleIcon,
   ExclamationCircleIcon,
-  InformationCircleIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import { classNames, nodeColors, nodeIcons, toNormalCase } from "../../utils";
