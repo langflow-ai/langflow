@@ -23,4 +23,4 @@ RUN chmod +x set_proxy.sh && \
 USER node
 
 RUN npm install --loglevel warn
-CMD ["npm", "start"]
+CMD ["npm", "run", "dev:docker"]

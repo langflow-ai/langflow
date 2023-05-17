@@ -25,7 +25,7 @@ export default function TextAreaComponent({ value, onChange, disabled }:TextArea
             {myValue !== "" ? myValue : 'Text empty'}
         </span>
         <button onClick={()=>{openPopUp(<TextAreaModal value={myValue} setValue={(t:string) => {setMyValue(t); onChange(t);}}/>)}}>
-            <ArrowTopRightOnSquareIcon className="w-6 h-6 hover:text-blue-600" />
+            <ArrowTopRightOnSquareIcon className="w-6 h-6 hover:text-blue-600 dark:text-gray-300" />
         </button>
       </div>
     </div>
