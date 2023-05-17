@@ -37,44 +37,44 @@ import GroupNode from "../../CustomNodes/GroupNode";
 
 const nodeTypes = {
   genericNode: GenericNode,
-  groupNode:GroupNode
+  groupNode: GroupNode
 };
 
 export default function FlowPage({ flow }: { flow: FlowType }) {
-	let { updateFlow, incrementNodeId, disableCP,addFlow} =
-		useContext(TabsContext);
-	const { types, reactFlowInstance, setReactFlowInstance, templates } =
-		useContext(typesContext);
-	const reactFlowWrapper = useRef(null);
+  let { updateFlow, incrementNodeId, disableCP, addFlow } =
+    useContext(TabsContext);
+  const { types, reactFlowInstance, setReactFlowInstance, templates } =
+    useContext(typesContext);
+  const reactFlowWrapper = useRef(null);
 
   const { undo, redo, canUndo, canRedo, takeSnapshot } = useUndoRedo();
 
-	const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-		if ((event.ctrlKey || event.metaKey) && (event.key === 'c') && lastSelection && !disableCP) {
-			event.preventDefault();
-			setLastCopiedSelection(lastSelection);
-		}
-		if ((event.ctrlKey || event.metaKey) && (event.key === 'v') && lastCopiedSelection && !disableCP) {
-			event.preventDefault();
-			paste();
-		}
-		if ((event.ctrlKey || event.metaKey) && (event.key === 'g') && lastSelection) {
-			event.preventDefault();
-			console.log(lastSelection);
-			console.log(getMiddlePoint(lastSelection.nodes));
-			console.log(reactFlowInstance.getViewport());
-			const newFlow = generateFlow(lastSelection,reactFlowInstance,"new component");
-      const newGroupNode = generateNodeFromFlow(newFlow,getId())
-			setNodes(oldNodes=>[...oldNodes.filter((oldNode)=>!lastSelection.nodes.some(selectionNode=>selectionNode.id===oldNode.id)),newGroupNode])
-			setEdges(oldEdges=>oldEdges.filter((oldEdge)=>!lastSelection.nodes.some(selectionNode=>selectionNode.id===oldEdge.target || selectionNode.id===oldEdge.source)))
-			addFlow(newFlow,false);
-		}
+  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if ((event.ctrlKey || event.metaKey) && (event.key === 'c') && lastSelection && !disableCP) {
+      event.preventDefault();
+      setLastCopiedSelection(lastSelection);
+    }
+    if ((event.ctrlKey || event.metaKey) && (event.key === 'v') && lastCopiedSelection && !disableCP) {
+      event.preventDefault();
+      paste();
+    }
+    if ((event.ctrlKey || event.metaKey) && (event.key === 'g') && lastSelection) {
+      event.preventDefault();
+      console.log(lastSelection);
+      console.log(getMiddlePoint(lastSelection.nodes));
+      console.log(reactFlowInstance.getViewport());
+      const newFlow = generateFlow(lastSelection, reactFlowInstance, "new component");
+      const newGroupNode = generateNodeFromFlow(newFlow, getId())
+      setNodes(oldNodes => [...oldNodes.filter((oldNode) => !lastSelection.nodes.some(selectionNode => selectionNode.id === oldNode.id)), newGroupNode])
+      setEdges(oldEdges => oldEdges.filter((oldEdge) => !lastSelection.nodes.some(selectionNode => selectionNode.id === oldEdge.target || selectionNode.id === oldEdge.source)))
+      addFlow(newFlow, false);
+    }
 
-		
-	}
 
-	const [lastSelection, setLastSelection] = useState<OnSelectionChangeParams>(null);
-	const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
+  }
+
+  const [lastSelection, setLastSelection] = useState<OnSelectionChangeParams>(null);
+  const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
 
   const [position, setPosition] = useState({ x: 0, y: 0 });
 
@@ -267,22 +267,33 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
       );
 
       // If data type is not "chatInput" or if there are no "chatInputNode" nodes present in the ReactFlow instance, create a new node
-      if (
-        data.type !== "chatInput" ||
-        (data.type === "chatInput" &&
-          !reactFlowInstance.getNodes().some((n) => n.type === "chatInputNode"))
-      ) {
-        // Calculate the position where the node should be created
-        const position = reactFlowInstance.project({
-          x: event.clientX - reactflowBounds.left,
-          y: event.clientY - reactflowBounds.top,
-        });
+      // Calculate the position where the node should be created
+      const position = reactFlowInstance.project({
+        x: event.clientX - reactflowBounds.left,
+        y: event.clientY - reactflowBounds.top,
+      });
 
-        // Generate a unique node ID
-        let newId = getId();
+      // Generate a unique node ID
+      let newId = getId();
+      let newNode: NodeType;
+
+      if (data.type !== "groupNode") {
+
 
         // Create a new node object
-        const newNode: NodeType = {
+        newNode = {
+          id: newId,
+          type: "genericNode",
+          position,
+          data: {
+            ...data,
+            id: newId,
+            value: null,
+          },
+        };
+      } else {
+        // Create a new node object
+        newNode = {
           id: newId,
           type: "genericNode",
           position,
@@ -294,14 +305,9 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
         };
 
         // Add the new node to the list of nodes in state
-        setNodes((nds) => nds.concat(newNode));
-      } else {
-        // If a chat input node already exists, set an error message
-        setErrorData({
-          title: "Error creating node",
-          list: ["There can't be more than one chat input."],
-        });
+
       }
+      setNodes((nds) => nds.concat(newNode));
     },
     // Specify dependencies for useCallback
     [incrementNodeId, reactFlowInstance, setErrorData, setNodes, takeSnapshot]
@@ -344,19 +350,19 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
   const [selectionEnded, setSelectionEnded] = useState(false);
 
   const onSelectionEnd = useCallback(() => {
-	setSelectionEnded(true);
+    setSelectionEnded(true);
   }, [])
   const onSelectionStart = useCallback(() => {
-	setSelectionEnded(false);
+    setSelectionEnded(false);
   }, [])
 
   // Workaround to show the menu only after the selection has ended.
   useEffect(() => {
-	if (selectionEnded && lastSelection && lastSelection.nodes.length > 1) {
-		setSelectionMenuVisible(true);
-	  } else {
-		setSelectionMenuVisible(false);
-	  }
+    if (selectionEnded && lastSelection && lastSelection.nodes.length > 1) {
+      setSelectionMenuVisible(true);
+    } else {
+      setSelectionMenuVisible(false);
+    }
   }, [selectionEnded, lastSelection])
 
 
@@ -390,8 +396,8 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
             onEdgeUpdateEnd={onEdgeUpdateEnd}
             onNodeDragStart={onNodeDragStart}
             onSelectionDragStart={onSelectionDragStart}
-			onSelectionEnd={onSelectionEnd}
-			onSelectionStart={onSelectionStart}
+            onSelectionEnd={onSelectionEnd}
+            onSelectionStart={onSelectionStart}
             onEdgesDelete={onEdgesDelete}
             connectionLineComponent={ConnectionLineComponent}
             onDragOver={onDragOver}
@@ -405,7 +411,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
           </ReactFlow>
           <Chat flow={flow} reactFlowInstance={reactFlowInstance} />
           <SelectionMenu
-            onClick={() => {}}
+            onClick={() => { }}
             isVisible={selectionMenuVisible}
             nodes={
               lastSelection?.nodes

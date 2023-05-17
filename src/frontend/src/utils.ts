@@ -547,6 +547,7 @@ export function getMiddlePoint(nodes: Node[]) {
     const position= getMiddlePoint(nodes);
     let data = flow;
     const newGroupNode:NodeType = {data,id,position,type:"groupNode"}
+    nodes.forEach(node=>console.log(node.data))
     return newGroupNode;
 
 
