@@ -210,7 +210,7 @@ export default function GenericNode({
         </div>
 		{data.node.template.can_be_root && (
 			<div className="w-full text-center dark:text-gray-200 mb-3">
-				Parameters
+				Composition
 				</div>
 		)}
 
