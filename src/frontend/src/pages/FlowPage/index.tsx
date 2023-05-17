@@ -17,6 +17,7 @@ import ReactFlow, {
   SelectionDragHandler,
   useOnViewportChange,
   OnSelectionChangeParams,
+  OnNodesChange,
 } from "reactflow";
 import _ from "lodash";
 import { locationContext } from "../../contexts/locationContext";
@@ -40,7 +41,7 @@ const nodeTypes = {
 export default function FlowPage({ flow }: { flow: FlowType }) {
 	let { updateFlow, incrementNodeId, disableCP,addFlow} =
 		useContext(TabsContext);
-	const { types, reactFlowInstance, setReactFlowInstance, templates,deleteNode } =
+	const { types, reactFlowInstance, setReactFlowInstance, templates } =
 		useContext(typesContext);
 	const reactFlowWrapper = useRef(null);
 
@@ -62,7 +63,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
 			console.log(reactFlowInstance.getViewport());
 			const newFlow = generateFlow(lastSelection,reactFlowInstance,"new component");
 			setNodes(oldNodes=>oldNodes.filter((oldNode)=>!lastSelection.nodes.some(selectionNode=>selectionNode.id===oldNode.id)))
-			setEdges(oldEdges=>oldEdges.filter((oldEdge)=>!lastSelection.edges.some(selectionEdge=>selectionEdge.id===oldEdge.id)))
+			setEdges(oldEdges=>oldEdges.filter((oldEdge)=>!lastSelection.nodes.some(selectionNode=>selectionNode.id===oldEdge.target || selectionNode.id===oldEdge.source)))
 			addFlow(newFlow,false);
 		}
 
