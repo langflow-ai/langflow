@@ -323,7 +323,6 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
 						onDrop={onDrop}
 						onNodesDelete={onDelete}
 						selectNodesOnDrag={false}
-						attributionPosition="top-right"
 						className="theme-attribution"
 					>
 						<Background className="dark:bg-gray-900" />
