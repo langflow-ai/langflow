@@ -110,7 +110,9 @@ export default function GenericNode({
                   "Validating..."
                 ) : (
                   <div className="max-h-96 overflow-auto">
-                    {validationStatus.params}
+                    {validationStatus.params.split("\n").map((line, index) => (
+                      <div key={index}>{line}</div>
+                    ))}
                   </div>
                 )
               }

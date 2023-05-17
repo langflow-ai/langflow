@@ -143,7 +143,8 @@ class DocumentLoaderNode(Node):
         # This built_object is a list of documents. Maybe we should
         # show how many documents are in the list?
         if self._built_object:
-            return f"""{self.node_type}({len(self._built_object)} documents)\nDocuments: {self._built_object[:3]}..."""
+            return f"""{self.node_type}({len(self._built_object)} documents)
+            Documents: {self._built_object[:3]}..."""
         return f"{self.node_type}()"
 
 
