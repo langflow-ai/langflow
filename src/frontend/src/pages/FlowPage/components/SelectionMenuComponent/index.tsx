@@ -28,9 +28,9 @@ export default function SelectionMenu({onClick, nodes, isVisible}){
     return (
         <NodeToolbar isVisible={isOpen} offset={5} nodeId={lastNodes && lastNodes.length > 0 ? lastNodes.map((n) => n.id): [] }>
             <div className="overflow-hidden w-28 h-10">
-            <div className={"transition-all ease-in-out duration-500 px-2.5 w-24 h-10 bg-white dark:bg-gray-800 shadow-inner rounded-md border border-indigo-300 text-gray-700 dark:text-gray-300" + (isTransitioning ? " translate-y-0" : " translate-y-10")}>
+                <div className={"transition-all ease-in-out duration-500 px-2.5 w-24 h-10 bg-white dark:bg-gray-800 shadow-inner rounded-md border border-indigo-300 text-gray-700 dark:text-gray-300" + (isTransitioning ? " translate-y-0" : " translate-y-10")}>
                     <button className="w-full h-full flex justify-between items-center text-sm hover:text-indigo-500" onClick={onClick}><RectangleGroupIcon className="w-6"/>Group</button>
-                    </div>
+                </div>
             </div>
             </NodeToolbar>
     )
