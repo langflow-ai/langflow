@@ -304,7 +304,7 @@ export default function GenericNode({
                 title="Input"
                 name="input"
 				fill={true}
-                id={data.id}
+                id={'flow|Output|'+data.id}
                 left={true}
                 type="input"
               />
@@ -316,7 +316,7 @@ export default function GenericNode({
 				fill={true}
                 title="Output"
                 name="output"
-                id={data.id}
+                id={'flow|Output|'+data.id}
                 left={false}
                 type="output"
               />
