@@ -108,6 +108,7 @@ def instantiate_toolkit(node_type, class_object, params):
 
 def instantiate_embedding(class_object, params):
     params.pop("model", None)
+    params.pop("headers", None)
     try:
         return class_object(**params)
     except ValidationError:
