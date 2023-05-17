@@ -47,44 +47,42 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		return newNodeId.current;
 	}
 	function save() {
-				//disabled until flows can be saved on local storage again without bugs
-		// if (flows.length !== 0)
-		// 	window.localStorage.setItem(
-		// 		"tabsData",
-		// 		JSON.stringify({ tabIndex, flows, id, nodeId: newNodeId.current })
-		// 	);
+		if (flows.length !== 0)
+			window.localStorage.setItem(
+				"tabsData",
+				JSON.stringify({ tabIndex, flows, id, nodeId: newNodeId.current })
+			);
 	}
 	useEffect(() => {
-		//disabled until flows can be saved on local storage again without bugs
 		//save tabs locally
-		// save();
+		save();
 
 	}, [flows, id, tabIndex, newNodeId]);
 
-	// useEffect(() => {
-	// 	//get tabs locally saved
-	// 	let cookie = window.localStorage.getItem("tabsData");
-	// 	if (cookie && Object.keys(templates).length > 0) {
-	// 		let cookieObject: LangFlowState = JSON.parse(cookie);
-	// 		cookieObject.flows.forEach((flow) => {
-	// 			flow.data.nodes.forEach((node) => {
-	// 				if (Object.keys(templates[node.data.type]["template"]).length > 0) {
-	// 					node.data.node.template = updateTemplate(
-	// 						templates[node.data.type][
-	// 							"template"
-	// 						] as unknown as APITemplateType,
+	useEffect(() => {
+		//get tabs locally saved
+		let cookie = window.localStorage.getItem("tabsData");
+		if (cookie && Object.keys(templates).length > 0) {
+			let cookieObject: LangFlowState = JSON.parse(cookie);
+			cookieObject.flows.forEach((flow) => {
+				flow.data.nodes.forEach((node) => {
+					if (Object.keys(templates[node.data.type]["template"]).length > 0) {
+						node.data.node.template = updateTemplate(
+							templates[node.data.type][
+								"template"
+							] as unknown as APITemplateType,
 
-	// 						node.data.node.template as APITemplateType
-	// 					);
-	// 				}
-	// 			});
-	// 		});
-	// 		setTabIndex(cookieObject.tabIndex);
-	// 		setFlows(cookieObject.flows);
-	// 		setId(cookieObject.id);
-	// 		newNodeId.current = cookieObject.nodeId;
-	// 	}
-	// }, [templates]);
+							node.data.node.template as APITemplateType
+						);
+					}
+				});
+			});
+			setTabIndex(cookieObject.tabIndex);
+			setFlows(cookieObject.flows);
+			setId(cookieObject.id);
+			newNodeId.current = cookieObject.nodeId;
+		}
+	}, [templates]);
 
 	function hardReset() {
 		newNodeId.current = 0;
