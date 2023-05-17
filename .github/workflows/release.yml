@@ -51,7 +51,7 @@ jobs:
       - name: Trigger build and push on langchain-serve
         uses: peter-evans/repository-dispatch@v2
         with:
-          token: ${{ secrets.DEEPANKAR_GITHUB_TOKEN }} # TODO: repo authors need to create a PAT and add it to secrets
+          token: ${{ secrets.SERVE_GITHUB_TOKEN }}
           repository: jina-ai/langchain-serve
           event-type: langflow-push
-          client-payload: '{"push_token": "${{ secrets.LCSERVE_PUSH_TOKEN }}", "branch": "dev"}' # TODO: repo authors need to store `LCSERVE_PUSH_TOKEN` in secrets
+          client-payload: '{"push_token": "${{ secrets.LCSERVE_PUSH_TOKEN }}", "branch": "dev"}'

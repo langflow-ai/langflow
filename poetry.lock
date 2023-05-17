@@ -5768,9 +5768,9 @@ cffi = {version = ">=1.11", markers = "platform_python_implementation == \"PyPy\
 cffi = ["cffi (>=1.11)"]
 
 [extras]
-production = ["langchain-serve"]
+deploy = ["langchain-serve"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "a6fa5f8b36994c9b7dfa3de4979099f2e76cb534697823b49a949c661efa3fba"
+content-hash = "bca5ed5cd32c5ad8d80faf99e9d988703202dd52001d2cbadaf61968a7cdebcc"
