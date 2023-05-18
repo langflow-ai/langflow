@@ -43,11 +43,6 @@ export default function GenericNode({
       setParams(Object.values(reactFlowInstance.toObject()));
     }
   }, [save]);
-  useEffect(() => {
-    if (reactFlowInstance) {
-      setParams(Object.values(reactFlowInstance.toObject()));
-    }
-  }, [save]);
 
   const validateNode = useCallback(
     debounce(async () => {
