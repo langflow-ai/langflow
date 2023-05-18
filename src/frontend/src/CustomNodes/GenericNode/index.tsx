@@ -286,7 +286,7 @@ export default function GenericNode({
                   position={flowHandlePosition}
                   tooltipTitle="Type: Text"
                   data={data}
-                  color={"rgb(130 132 140)"}
+                  color={"#333333"}
                   title="Input"
                   name="Input"
                   fill={true}
@@ -298,7 +298,7 @@ export default function GenericNode({
                   data={data}
                   position={flowHandlePosition}
                   fill={true}
-                  color={"rgb(130 132 140)"}
+                  color={"#333333"}
                   title={"Output"}
                   tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
                   id={[data.type, data.id, ...data.node.base_classes].join("|")}
