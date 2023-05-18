@@ -1,7 +1,7 @@
 import { Dialog, Transition } from "@headlessui/react";
 import { ChatBubbleOvalLeftEllipsisIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useEffect, useRef, useState } from "react";
-import { FlowType, NodeType } from "../../types/flow";
+import { FlowType, NodeDataType, NodeType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
 import { toNormalCase } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
@@ -37,7 +37,7 @@ export default function ChatModal({
   }, [open]);
   useEffect(() => {
     id.current = flow.id;
-  },[flow.id])
+  }, [flow.id])
 
 
   var isStream = false;
@@ -144,6 +144,9 @@ export default function ChatModal({
       isStream = true;
     }
     if (data.type === "end") {
+      if (data.message) {
+        updateLastMessage({ str: data.message, end: true });
+      }
       if (data.intermediate_steps) {
         updateLastMessage({
           str: data.message,
@@ -189,10 +192,10 @@ export default function ChatModal({
       };
       newWs.onerror = (ev) => {
         console.log(ev, "error");
-        if(flow.id===""){
+        if (flow.id === "") {
           connectWS();
         }
-        else{
+        else {
           setErrorData({
             title: "There was an error on web connection, please: ",
             list: [
@@ -205,10 +208,10 @@ export default function ChatModal({
       };
       ws.current = newWs;
     } catch {
-      if(flow.id===""){
+      if (flow.id === "") {
         connectWS();
       }
-      else{
+      else {
         setErrorData({
           title: "There was an error on web connection, please: ",
           list: [
@@ -252,7 +255,7 @@ export default function ChatModal({
   }, [chatHistory]);
 
   function validateNode(n: NodeType): Array<string> {
-    if (!n.data?.node?.template || !Object.keys(n.data.node.template)) {
+    if (!(n.data as NodeDataType)?.node?.template || !Object.keys((n.data as NodeDataType).node.template)) {
       setNoticeData({
         title:
           "We've noticed a potential issue with a node in the flow. Please review it and, if necessary, submit a bug report with your exported flow file. Thank you for your help!",
@@ -263,7 +266,7 @@ export default function ChatModal({
     const {
       type,
       node: { template },
-    } = n.data;
+    } = (n.data as NodeDataType);
 
     return Object.keys(template).reduce(
       (errors: Array<string>, t) =>

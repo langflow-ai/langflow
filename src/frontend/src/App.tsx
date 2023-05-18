@@ -43,7 +43,7 @@ export default function App() {
 		fetch('/version')
 			.then((res) => res.json())
 			.then((data) => {setVersion(data.version)});
-	})
+	},[])
 
 	// Initialize state variable for the list of alerts
 	const [alertsList, setAlertsList] = useState<

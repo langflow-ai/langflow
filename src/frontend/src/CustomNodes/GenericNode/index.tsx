@@ -110,7 +110,7 @@ export default function GenericNode({
       );
       updateNodeInternals(data.id);
     }
-  }, [data.id, ref, updateNodeInternals, params]);
+  }, [data.id, ref, updateNodeInternals, ref.current]);
 
   useEffect(() => {
     updateNodeInternals(data.id);

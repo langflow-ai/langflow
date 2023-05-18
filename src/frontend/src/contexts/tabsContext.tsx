@@ -55,6 +55,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	}
 	useEffect(() => {
 		//save tabs locally
+		// console.log(id)
 		save();
 	}, [flows, id, tabIndex, newNodeId]);
 
