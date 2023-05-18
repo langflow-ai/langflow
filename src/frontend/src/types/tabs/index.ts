@@ -16,6 +16,7 @@ export type TabsContextType = {
 	disableCP: boolean;
 	setDisableCP: (value: boolean) => void;
 	getNodeId: () => string;
+	paste: (selection: {nodes: any, edges: any}, position: {x: number, y: number}) => void;
 };
 
 export type LangFlowState = {

@@ -6,13 +6,14 @@ import {
 	ReactNode,
 	useContext,
 } from "react";
-import { FlowType } from "../types/flow";
+import { FlowType, NodeType } from "../types/flow";
 import { LangFlowState, TabsContextType } from "../types/tabs";
 import { concatFlows, normalCaseToSnakeCase, updateIds, updateObject, updateTemplate } from "../utils";
 import { alertContext } from "./alertContext";
 import { typesContext } from "./typesContext";
 import { APITemplateType, TemplateVariableType } from "../types/api";
 import { v4 as uuidv4 } from "uuid";
+import { addEdge } from "reactflow";
 
 const TabsContextInitialValue: TabsContextType = {
 	save: () => {},
@@ -29,6 +30,7 @@ const TabsContextInitialValue: TabsContextType = {
 	disableCP:false,
 	setDisableCP:(state:boolean)=>{},
 	getNodeId: () => "",
+	paste: (selection: {nodes: any, edges: any}, position: {x: number, y: number}) => {},
 };
 
 export const TabsContext = createContext<TabsContextType>(
@@ -169,8 +171,95 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	 * Add a new flow to the list of flows.
 	 * @param flow Optional flow to add.
 	 */
+
+	function paste(selectionInstance, position){
+		console.log(position);
+		console.log(selectionInstance)
+		let minimumX = Infinity;
+		let minimumY = Infinity;
+		let idsMap = {};
+		let nodes = reactFlowInstance.getNodes();
+		let edges = reactFlowInstance.getEdges();
+		selectionInstance.nodes.forEach((n) => {
+		  if (n.position.y < minimumY) {
+			minimumY = n.position.y;
+		  }
+		  if (n.position.x < minimumX) {
+			minimumX = n.position.x;
+		  }
+		});
+
+		const insidePosition = reactFlowInstance.project(position);
+	
+		selectionInstance.nodes.forEach((n) => {
+		  // Generate a unique node ID
+		  let newId = getNodeId();
+		  idsMap[n.id] = newId;
+	
+		  // Create a new node object
+		  const newNode: NodeType = {
+			id: newId,
+			type: "genericNode",
+			position: {
+			  x: insidePosition.x + n.position.x - minimumX,
+			  y: insidePosition.y + n.position.y - minimumY,
+			},
+			data: {
+			  ...n.data,
+			  id: newId,
+			},
+		  };
+	
+		  // Add the new node to the list of nodes in state
+			nodes = nodes
+			  .map((e) => ({ ...e, selected: false }))
+			  .concat({ ...newNode, selected: false })
+		  console.log(nodes);
+		});
+		reactFlowInstance.setNodes(nodes);
+	
+		selectionInstance.edges.forEach((e) => {
+		  let source = idsMap[e.source];
+		  let target = idsMap[e.target];
+		  let sourceHandleSplitted = e.sourceHandle.split("|");
+		  let sourceHandle =
+			sourceHandleSplitted[0] +
+			"|" +
+			source +
+			"|" +
+			sourceHandleSplitted.slice(2).join("|");
+		  let targetHandleSplitted = e.targetHandle.split("|");
+		  let targetHandle =
+			targetHandleSplitted.slice(0, -1).join("|") + "|" + target;
+		  let id =
+			"reactflow__edge-" +
+			source +
+			sourceHandle +
+			"-" +
+			target +
+			targetHandle;
+		  edges = addEdge(
+			  {
+				source,
+				target,
+				sourceHandle,
+				targetHandle,
+				id,
+				className: "animate-pulse",
+				selected: false,
+			  },
+			  edges.map((e) => ({ ...e, selected: false }))
+			);
+			console.log(edges);
+		});
+		reactFlowInstance.setEdges(edges);
+	  };
+	
 	function addFlow(flow?: FlowType,newTab:boolean=true) {
 		// Get data from the flow or set it to null if there's no flow provided.
+		if(!newTab){
+			paste({nodes: flow.data.nodes, edges: flow.data.edges}, {x:10, y:10})
+		} else {
 		const data = flow?.data ? flow.data : null;
 		const description = flow?.description ? flow.description : "";
 
@@ -196,18 +285,15 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		setId(uuidv4());
 
 		// Add the new flow to the list of flows.
-		if(!newTab){
-			updateIds(newFlow, flows[tabIndex], getNodeId);
-			concatFlows(newFlow, reactFlowInstance);
-		} else {
-			setFlows((prevState) => {
-				const newFlows = [...prevState, newFlow];
-				return newFlows;
-			});
-		}
+		
+		setFlows((prevState) => {
+			const newFlows = [...prevState, newFlow];
+			return newFlows;
+		});
 
 		// Set the tab index to the new flow.
 		if(newTab) setTabIndex(flows.length);
+	}
 	}
 	/**
 	 * Updates an existing flow with new data
@@ -244,6 +330,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 				downloadFlow,
 				uploadFlow,
 				getNodeId,
+				paste,
 			}}
 		>
 			{children}

@@ -73,7 +73,6 @@ export default function GenericNode({
     [reactFlowInstance, data.id]
   );
   useEffect(() => {
-    console.log(params);
     if (params.length > 0) {
       validateNode();
     }
