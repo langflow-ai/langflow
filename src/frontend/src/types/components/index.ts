@@ -24,6 +24,7 @@ export type ParameterComponentType = {
 	left: boolean;
 	type: string;
 	required?: boolean;
+	handleDisabled?: boolean;
 	name?: string;
 	tooltipTitle: string;
 };
@@ -35,6 +36,7 @@ export type HandleComponentType = {
 	left: boolean;
 	type: string;
 	required?: boolean;
+	handleDisabled?: boolean;
 	name?: string;
 	tooltipTitle: string;
 	position: number;

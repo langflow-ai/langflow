@@ -74,6 +74,7 @@ export default function GenericNode({
     [reactFlowInstance, data.id]
   );
   useEffect(() => {
+    console.log(params);
     if (params.length > 0) {
       validateNode();
     }
@@ -110,13 +111,14 @@ export default function GenericNode({
       );
       updateNodeInternals(data.id);
     }
-  }, [data.id, ref, updateNodeInternals]);
+  }, [data.id, ref, updateNodeInternals, params]);
 
   useEffect(() => {
     updateNodeInternals(data.id);
   }, [data.id, flowHandlePosition, updateNodeInternals]);
 
   return (
+    params.length != 0 &&
     <div
       className={classNames(
         selected ? "border border-blue-500" : "border dark:border-gray-700",
@@ -288,6 +290,7 @@ export default function GenericNode({
             id={[data.type, data.id, ...data.node.base_classes].join("|")}
             type={data.node.base_classes.join("|")}
             left={false}
+            handleDisabled={params[1].some((e) => e.source === data.id && e.sourceHandle.split('|')[0] == 'flow')}
           />
           {data.node.template.can_be_root && (
 			<div className="flex flex-col items-center justify-center">
@@ -319,6 +322,7 @@ export default function GenericNode({
                 id={'flow|Output|'+data.id}
                 left={false}
                 type="output"
+                handleDisabled={params[1].some((e) => e.source === data.id && e.sourceHandle.split('|')[0] == data.type)}
               />
             </div>
 			</div>

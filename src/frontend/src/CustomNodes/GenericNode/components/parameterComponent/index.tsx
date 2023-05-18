@@ -27,6 +27,7 @@ export default function ParameterComponent({
 	type,
 	name = "",
 	required = false,
+	handleDisabled,
 }: ParameterComponentType) {
 	const ref = useRef(null);
 	const updateNodeInternals = useUpdateNodeInternals();
@@ -47,7 +48,7 @@ export default function ParameterComponent({
 			ref={ref}
 			className={"w-full flex flex-wrap items-center bg-gray-50 dark:bg-gray-800 dark:text-white mt-1 px-5 py-2" + (left ? " justify-between" : " justify-end")}
 		>
-			<HandleComponent position={position} left={left} id={id} data={data} tooltipTitle={tooltipTitle} title={title} color={color} type={type} name={name} required={required} />
+			<HandleComponent handleDisabled={handleDisabled} position={position} left={left} id={id} data={data} tooltipTitle={tooltipTitle} title={title} color={color} type={type} name={name} required={required} />
 		</div>
 	);
 }

@@ -24,6 +24,7 @@ export default function HandleComponent({
   title,
   color,
   type,
+  handleDisabled,
   name = "",
   required = false,
   fill = false,
@@ -40,7 +41,7 @@ export default function HandleComponent({
 
   return (
     <>
-      <div className="text-sm truncate ">
+      <div className={"text-sm truncate " + (handleDisabled ? "text-gray-500" : "")}>
         {title}
         <span className="text-red-600">{required ? " *" : ""}</span>
       </div>
@@ -60,16 +61,16 @@ export default function HandleComponent({
             position={left ? Position.Left : Position.Right}
             id={id}
             isValidConnection={(connection) =>
-              isValidConnection(connection, reactFlowInstance)
+              handleDisabled ? false : isValidConnection(connection, reactFlowInstance)
             }
             className={classNames(
               left ? "-ml-0.5 " : "-mr-0.5 ",
-              "w-3 h-3 rounded-full border-2 dark:bg-gray-800"
+              "w-3 h-3 rounded-full border-2 dark:bg-gray-800", handleDisabled && "pointer-events-none"
             )}
             style={{
-              borderColor: color,
+              borderColor: handleDisabled ? "lightGray" : color,
               top: position,
-              backgroundColor: fill ? color : "white",
+              backgroundColor: fill ? (handleDisabled ? "lightGray" : color) : "white",
             }}
           ></Handle>
         </Tooltip>
