@@ -17,25 +17,36 @@ import { useCallback } from "react";
 import { TabsContext } from "../../contexts/tabsContext";
 import { debounce } from "../../utils";
 import Tooltip from "../../components/TooltipComponent";
+import { useUpdateNodeInternals } from "reactflow";
+import HandleComponent from "./components/parameterComponent/components/handleComponent";
 export default function GenericNode({
+  data,
+  selected,
   data,
   selected,
 }: {
   data: NodeDataType;
   selected: boolean;
+  data: NodeDataType;
+  selected: boolean;
 }) {
-	const { setErrorData } = useContext(alertContext);
-	const showError = useRef(true);
-	const { types, deleteNode } = useContext(typesContext);
-	const { openPopUp } = useContext(PopUpContext);
-	const Icon = nodeIcons[types[data.type]];
-	const [validationStatus, setValidationStatus] = useState(null);
-	// State for outline color
-	const [isValid, setIsValid] = useState(false);
-	const { save } = useContext(TabsContext);
-	const { reactFlowInstance } = useContext(typesContext);
-	const [params, setParams] = useState([]);
+  const { setErrorData } = useContext(alertContext);
+  const showError = useRef(true);
+  const { types, deleteNode } = useContext(typesContext);
+  const { openPopUp } = useContext(PopUpContext);
+  const Icon = nodeIcons[types[data.type]];
+  const [validationStatus, setValidationStatus] = useState(null);
+  // State for outline color
+  const [isValid, setIsValid] = useState(false);
+  const { save } = useContext(TabsContext);
+  const { reactFlowInstance } = useContext(typesContext);
+  const [params, setParams] = useState([]);
 
+  useEffect(() => {
+    if (reactFlowInstance) {
+      setParams(Object.values(reactFlowInstance.toObject()));
+    }
+  }, [save]);
   useEffect(() => {
     if (reactFlowInstance) {
       setParams(Object.values(reactFlowInstance.toObject()));
@@ -52,12 +63,26 @@ export default function GenericNode({
           },
           body: JSON.stringify(reactFlowInstance.toObject()),
         });
+  const validateNode = useCallback(
+    debounce(async () => {
+      try {
+        const response = await fetch(`/validate/node/${data.id}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(reactFlowInstance.toObject()),
+        });
 
         if (response.status === 200) {
           let jsonResponse = await response.json();
           let jsonResponseParsed = await JSON.parse(jsonResponse);
-          // console.log(jsonResponseParsed);
-          setValidationStatus(jsonResponseParsed);
+          console.log(jsonResponseParsed);
+          if (jsonResponseParsed.valid) {
+            setValidationStatus(jsonResponseParsed.params);
+          } else {
+            setValidationStatus("error");
+          }
         }
       } catch (error) {
         // console.error("Error validating node:", error);
@@ -67,10 +92,19 @@ export default function GenericNode({
     [reactFlowInstance, data.id]
   );
   useEffect(() => {
+    console.log(params);
     if (params.length > 0) {
       validateNode();
     }
   }, [params, validateNode]);
+
+  useEffect(() => {
+    if (validationStatus !== "error") {
+      setIsValid(true);
+    } else {
+      setIsValid(false);
+    }
+  }, [validationStatus]);
 
   if (!Icon) {
     if (showError.current) {
@@ -85,10 +119,26 @@ export default function GenericNode({
     return;
   }
 
+  const ref = useRef(null);
+  const updateNodeInternals = useUpdateNodeInternals();
+  const [flowHandlePosition, setFlowHandlePosition] = useState(0);
+  useEffect(() => {
+    if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
+      setFlowHandlePosition(
+        ref.current.offsetTop + ref.current.clientHeight / 2
+      );
+      updateNodeInternals(data.id);
+    }
+  }, [data.id, ref, updateNodeInternals, params]);
+
+  useEffect(() => {
+    updateNodeInternals(data.id);
+  }, [data.id, flowHandlePosition, updateNodeInternals]);
+
   return (
+    params.length != 0 &&
     <div
       className={classNames(
-        isValid ? "animate-pulse-green" : "border-red-outline",
         selected ? "border border-blue-500" : "border dark:border-gray-700",
         "prompt-node relative bg-white dark:bg-gray-900 w-96 rounded-lg flex flex-col justify-center"
       )}
@@ -102,37 +152,38 @@ export default function GenericNode({
             }}
           />
           <div className="ml-2 truncate">{data.type}</div>
-          <div>
+
+          {validationStatus && validationStatus !== "error" ? (
             <Tooltip
               title={
-				!validationStatus ? "Validating..." :
-                <div className="max-h-96 overflow-auto">
-                  {validationStatus.params}
-                </div>
+                <div className="max-h-96 overflow-auto">{validationStatus}</div>
               }
             >
-              <div className="relative w-5 h-5">
-                <CheckCircleIcon
-                  className={classNames(
-                    validationStatus && validationStatus.valid ? "text-green-500 opacity-100" : "text-red-500 opacity-0",
-                    "absolute w-5 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-300"
-                  )}
-                />
-                <ExclamationCircleIcon
-                  className={classNames(
-                    validationStatus && !validationStatus.valid ? "text-red-500 opacity-100" : "text-red-500 opacity-0",
-                    "w-5 absolute hover:text-gray-500 hover:dark:text-gray-600 transition-all ease-in-out duration-300"
-                  )}
-                />
-				<EllipsisHorizontalCircleIcon
-                  className={classNames(
-                    !validationStatus ? "text-yellow-500 opacity-100" : "text-red-500 opacity-0",
-                    "w-5 absolute hover:text-gray-500 hover:dark:text-gray-600 transition-all ease-in-out duration-300"
-                  )}
-                />
-              </div>
+              <CheckCircleIcon
+                className={classNames(
+                  isValid ? "text-green-500" : "text-red-500",
+                  "w-5",
+                  "hover:text-gray-500 hover:dark:text-gray-300"
+                )}
+              />
             </Tooltip>
-          </div>
+          ) : validationStatus === "error" ? (
+            <ExclamationCircleIcon
+              className={classNames(
+                isValid ? "text-green-500" : "text-red-500",
+                "w-5",
+                "hover:text-gray-500 hover:dark:text-gray-600"
+              )}
+            />
+          ) : (
+            <EllipsisHorizontalCircleIcon
+              className={classNames(
+                isValid ? "text-yellow-500" : "text-red-500",
+                "w-5",
+                "hover:text-gray-500 hover:dark:text-gray-600"
+              )}
+            />
+          )}
         </div>
         <div className="flex gap-3">
           <button
@@ -173,10 +224,15 @@ export default function GenericNode({
         </div>
       </div>
 
-			<div className="w-full h-full py-5">
-				<div className="w-full text-gray-500 dark:text-gray-300 px-5 pb-3 text-sm">
-					{data.node.description}
+      <div className="w-full h-full py-5">
+        <div className="w-full text-gray-500 dark:text-gray-300 px-5 pb-3 text-sm">
+          {data.node.description}
+        </div>
+		{data.node.template.can_be_root && (
+			<div className="w-full text-center dark:text-gray-200 mb-3">
+				Composition
 				</div>
+		)}
 
         <>
           {Object.keys(data.node.template)
@@ -244,27 +300,53 @@ export default function GenericNode({
           {/* <div className="px-5 py-2 mt-2 dark:text-white text-center">
 						Output
 					</div> */}
-					{data.node.template.can_be_root && <ParameterComponent
-					    tooltipTitle="flow input"
-						data={data}
-						color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-						title="Input"
-						name="input"
-						id={data.id}
-						left={true}
-						type="input"
-					/>}
-					<ParameterComponent
-						data={data}
-						color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-						title={data.type}
-						tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
-						id={[data.type, data.id, ...data.node.base_classes].join("|")}
-						type={data.node.base_classes.join("|")}
-						left={false}
-					/>
-				</>
+          <ParameterComponent
+            data={data}
+            color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+            title={data.type}
+            tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
+            id={[data.type, data.id, ...data.node.base_classes].join("|")}
+            type={data.node.base_classes.join("|")}
+            left={false}
+            handleDisabled={params[1].some((e) => e.source === data.id && e.sourceHandle.split('|')[0] == 'flow')}
+          />
+          {data.node.template.can_be_root && (
+			<div className="flex flex-col items-center justify-center">
+				<span className="mt-3 mb-1 dark:text-gray-200">Flow</span>
+            <div
+              ref={ref}
+              className="w-full flex flex-wrap justify-between items-center bg-gray-50 dark:bg-gray-800 dark:text-white mt-1 px-5 py-2"
+            >
+              <HandleComponent
+                position={flowHandlePosition}
+                tooltipTitle="Flow input"
+                data={data}
+                color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+                title="Input"
+                name="input"
+				fill={true}
+                id={'flow|Output|'+data.id}
+                left={true}
+                type="input"
+              />
+			  <HandleComponent
+                position={flowHandlePosition}
+                tooltipTitle="Flow output"
+                data={data}
+                color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+				fill={true}
+                title="Output"
+                name="output"
+                id={'flow|Output|'+data.id}
+                left={false}
+                type="output"
+                handleDisabled={params[1].some((e) => e.source === data.id && e.sourceHandle.split('|')[0] == data.type)}
+              />
+            </div>
 			</div>
-		</div>
-	);
+          )}
+        </>
+      </div>
+    </div>
+  );
 }

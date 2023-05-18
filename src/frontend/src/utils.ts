@@ -383,6 +383,7 @@ export function isValidConnection(
   { source, target, sourceHandle, targetHandle }: Connection,
   reactFlowInstance: ReactFlowInstance
 ) {
+  console.log(source, target)
   // target is target id
   console.log(target)
   
@@ -394,7 +395,7 @@ export function isValidConnection(
       .split("|")
       .slice(2)
       .some((t) => t === targetHandle.split("|")[0]) ||
-    targetHandle.split("|")[0] === "str"
+    (targetHandle.split("|")[0] === "str"  )
   ) {
     let targetNode = reactFlowInstance.getNode(target).data.node;
     if (!targetNode) {
@@ -405,12 +406,18 @@ export function isValidConnection(
       ) {
         return true;
       }
-    } else if (
-      (!targetNode.template[targetHandle.split("|")[1]].list &&
+    } 
+    else if(
+      targetHandle.split("|")[0] === "flow" && target !== source && !reactFlowInstance.getEdges().find((e) => e.targetHandle === targetHandle)
+    ){
+      return true
+    }
+    else if (
+      targetNode.template[targetHandle.split("|")[1]] && ((!targetNode.template[targetHandle.split("|")[1]].list &&
         !reactFlowInstance
           .getEdges()
           .find((e) => e.targetHandle === targetHandle)) ||
-      targetNode.template[targetHandle.split("|")[1]].list
+      targetNode.template[targetHandle.split("|")[1]].list)
     ) {
       return true;
     }
@@ -508,7 +515,6 @@ export const programmingLanguages: languageMap = {
   // add more file extensions here, make sure the key is same as language prop in CodeBlock.tsx component
 };
 
-
 export function getMiddlePoint(nodes: Node[]) {
 	let middlePointX = 0;
 	let middlePointY = 0;
@@ -599,5 +605,3 @@ export function getMiddlePoint(nodes: Node[]) {
       node.position.y += deltaPosition.y
     })
   }
-
-  

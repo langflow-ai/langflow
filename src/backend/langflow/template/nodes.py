@@ -559,15 +559,6 @@ class ChainFrontendNode(FrontendNode):
     add_input: bool = True
 
     def to_dict(self):
-        input_field = TemplateField(
-            field_type="Text",
-            required=False,
-            show=True,
-            advanced=False,
-            name="input_connection",
-            display_name="Input",
-        )
-        self.add_field(input_field)
         self.add_text_output_to_base_classes()
         self.template.can_be_root = True
         return super().to_dict()
@@ -591,22 +582,18 @@ class ChainFrontendNode(FrontendNode):
             field.required = False
             field.show = True
             field.advanced = False
-        if field.name == "memory":
-            field.required = False
-            field.show = True
-            field.advanced = False
-        if field.name == "verbose":
-            field.required = False
-            field.show = True
-            field.advanced = True
         if field.name == "llm":
             field.required = True
             field.show = True
             field.advanced = False
-        if field.name == "input_connection":
+        elif field.name in ["memory", "input_connection"]:
             field.required = False
             field.show = True
             field.advanced = False
+        elif field.name == "verbose":
+            field.required = False
+            field.show = True
+            field.advanced = True
 
 
 class LLMFrontendNode(FrontendNode):
@@ -650,18 +637,11 @@ class ConnectorFunctionFrontendNode(FrontendNode):
     name: str = "ConnectorFunction"
     # Template consists of an input of field_type "Output", name "input_connection"
     # and an output of field_type "Input", name "output_connection"
+
     template: Template = Template(
         type_name="ConnectorFunction",
         can_be_root=True,
         fields=[
-            TemplateField(
-                field_type="Text",
-                required=False,
-                show=True,
-                advanced=False,
-                name="input_connection",
-                display_name="Input",
-            ),
             TemplateField(
                 field_type="code",
                 required=True,

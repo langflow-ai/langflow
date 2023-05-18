@@ -24,8 +24,23 @@ export type ParameterComponentType = {
 	left: boolean;
 	type: string;
 	required?: boolean;
+	handleDisabled?: boolean;
 	name?: string;
 	tooltipTitle: string;
+};
+export type HandleComponentType = {
+	data: NodeDataType;
+	title: string;
+	id: string;
+	color: string;
+	left: boolean;
+	type: string;
+	required?: boolean;
+	handleDisabled?: boolean;
+	name?: string;
+	tooltipTitle: string;
+	position: number;
+	fill?: boolean;
 };
 export type InputListComponentType = {
 	value: string[];

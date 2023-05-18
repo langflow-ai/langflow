@@ -38,6 +38,13 @@ export default function App() {
 		setSuccessOpen,
 	} = useContext(alertContext);
 
+	const [version, setVersion] = useState("");
+	useEffect(() => {
+		fetch('/version')
+			.then((res) => res.json())
+			.then((data) => {setVersion(data.version)});
+	})
+
 	// Initialize state variable for the list of alerts
 	const [alertsList, setAlertsList] = useState<
 		Array<{
@@ -159,9 +166,9 @@ export default function App() {
 			<a
 				target={"_blank"}
 				href="https://logspace.ai/"
-				className="absolute bottom-2 left-6 text-gray-300 px-2 rounded-lg text-xs cursor-pointer font-sans tracking-wide bg-gray-800 dark:bg-gray-300 dark:text-gray-800	"
+				className="absolute overflow-hidden flex flex-col justify-start items-center text-center bottom-2 left-6 text-gray-300 px-2 rounded-lg text-xs cursor-pointer font-sans tracking-wide bg-gray-800 dark:bg-gray-300 dark:text-gray-800 transition-all ease-in-out duration-500 h-4 hover:h-10"
 			>
-				Created by Logspace
+				<div>LangFlow v{version}</div><div className="mt-1.5">Created by Logspace</div>
 			</a>
 		</div>
 	);
