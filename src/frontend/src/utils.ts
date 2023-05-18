@@ -1,4 +1,4 @@
-import { NodeType } from './types/flow/index';
+import { NodeDataType, NodeType } from './types/flow/index';
 import {
   RocketLaunchIcon,
   LinkIcon,
@@ -23,7 +23,7 @@ import { Connection, Edge, Node, OnSelectionChangeParams, Position, ReactFlowIns
 import { FlowType } from "./types/flow";
 import { APITemplateType} from "./types/api";
 import _, { forEach, get } from "lodash";
-import { v4 as uuidv4 } from "uuid";
+import { v4 as uuidv4, validate } from "uuid";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -605,3 +605,56 @@ export function getMiddlePoint(nodes: Node[]) {
       node.position.y += deltaPosition.y
     })
   }
+
+  export function validateNode(n:NodeType,selection:OnSelectionChangeParams){
+    if (!(n.data as NodeDataType)?.node?.template || !Object.keys((n.data as NodeDataType).node.template)) {
+      return ['There is a inconsistente flow in the node, please check your flow']
+    }
+
+    const {
+      type,
+      node: { template },
+    } = (n.data as NodeDataType);
+
+    return Object.keys(template).reduce(
+      (errors: Array<string>, t) =>
+        errors.concat(
+          template[t].required &&
+            template[t].show &&
+            (!template[t].value || template[t].value === "") &&
+            !selection.edges
+              .some(
+                (e) =>
+                  e.targetHandle.split("|")[1] === t &&
+                  e.targetHandle.split("|")[2] === n.id
+              )
+            ? [
+              `${type} is missing ${template.display_name
+                ? template.display_name
+                : toNormalCase(template[t].name)
+              }.`,
+            ]
+            : []
+        ),
+      [] as string[]
+    );
+  }
+
+
+
+
+
+export function validateSelection(selection: OnSelectionChangeParams){
+  // can be root verification
+  if(!selection.nodes.some((n)=>n.data.can_be_root || n.type==="groupNode")){
+    return false
+  }
+  // connection verification
+  let validationErrors = selection.nodes.flatMap(n=>validateNode(n,selection))
+  if(validationErrors.length>0){
+    return false
+  }
+  else{
+    return true;
+  }
+}
