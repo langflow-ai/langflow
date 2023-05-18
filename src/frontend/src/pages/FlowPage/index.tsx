@@ -60,14 +60,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
     }
     if ((event.ctrlKey || event.metaKey) && (event.key === 'g') && lastSelection) {
       event.preventDefault();
-      console.log(lastSelection);
-      console.log(getMiddlePoint(lastSelection.nodes));
-      console.log(reactFlowInstance.getViewport());
-      const newFlow = generateFlow(lastSelection, reactFlowInstance, "new component");
-      const newGroupNode = generateNodeFromFlow(newFlow, getId())
-      setNodes(oldNodes => [...oldNodes.filter((oldNode) => !lastSelection.nodes.some(selectionNode => selectionNode.id === oldNode.id)), newGroupNode])
-      setEdges(oldEdges => oldEdges.filter((oldEdge) => !lastSelection.nodes.some(selectionNode => selectionNode.id === oldEdge.target || selectionNode.id === oldEdge.source)))
-      addFlow(newFlow, false);
+      // addFlow(newFlow, false);
     }
 
 
@@ -411,7 +404,15 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
           </ReactFlow>
           <Chat flow={flow} reactFlowInstance={reactFlowInstance} />
           <SelectionMenu
-            onClick={() => { }}
+            onClick={() => {
+              console.log(lastSelection);
+              console.log(getMiddlePoint(lastSelection.nodes));
+              console.log(reactFlowInstance.getViewport());
+              const newFlow = generateFlow(lastSelection, reactFlowInstance, "new component");
+              const newGroupNode = generateNodeFromFlow(newFlow)
+              setNodes(oldNodes => [...oldNodes.filter((oldNode) => !lastSelection.nodes.some(selectionNode => selectionNode.id === oldNode.id)), newGroupNode])
+              setEdges(oldEdges => oldEdges.filter((oldEdge) => !lastSelection.nodes.some(selectionNode => selectionNode.id === oldEdge.target || selectionNode.id === oldEdge.source)))
+            }}
             isVisible={selectionMenuVisible}
             nodes={
               lastSelection?.nodes

@@ -19,7 +19,7 @@ import {
 	PencilSquareIcon,
   Square3Stack3DIcon,
 } from "@heroicons/react/24/outline";
-import { Connection, Edge, Node, OnSelectionChangeParams, ReactFlowInstance } from "reactflow";
+import { Connection, Edge, Node, OnSelectionChangeParams, ReactFlowInstance, ReactFlowJsonObject } from "reactflow";
 import { FlowType } from "./types/flow";
 import { APITemplateType} from "./types/api";
 import _, { forEach } from "lodash";
@@ -542,13 +542,29 @@ export function getMiddlePoint(nodes: Node[]) {
     console.log(selection)
   }
 
-  export function generateNodeFromFlow(flow:FlowType,id:string):NodeType{
+  export function generateNodeFromFlow(flow:FlowType):NodeType{
     const {nodes} = flow.data;
     const position= getMiddlePoint(nodes);
     let data = flow;
-    const newGroupNode:NodeType = {data,id,position,type:"groupNode"}
-    nodes.forEach(node=>console.log(node.data))
+    const newGroupNode:NodeType = {data,id:data.id,position,type:"groupNode"}
     return newGroupNode;
 
+
+  }
+
+  export function concatFlows(flow:FlowType,ReactFlowInstance:ReactFlowInstance){
+    const {nodes,edges} = flow.data;
+    ReactFlowInstance.addNodes(nodes);
+    ReactFlowInstance.addEdges(edges);
+  
+  }
+  
+  export function expandGroupNode(flow:FlowType,ReactFlowInstance:ReactFlowInstance){
+    const gNodes = flow.data.nodes;
+    const gEdges = flow.data.edges;
+    const nodes = [...ReactFlowInstance.getNodes().filter((n)=>n.id!==flow.id),...gNodes]
+    const edges = [...ReactFlowInstance.getEdges().filter((e)=>e.target!==flow.id|| e.source!==flow.id),...gEdges]
+    ReactFlowInstance.setNodes(nodes);
+    ReactFlowInstance.setEdges(edges);
 
   }

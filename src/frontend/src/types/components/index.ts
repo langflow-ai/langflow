@@ -1,5 +1,5 @@
 import { ForwardRefExoticComponent, ReactElement, ReactFragment, ReactNode } from "react";
-import { NodeDataType } from "../flow/index";
+import { FlowType, NodeDataType } from "../flow/index";
 export type InputComponentType = {
 	value: string;
 	disabled?: boolean;
@@ -82,4 +82,14 @@ export type TooltipComponentType = {
     | "top-end"
     | "top-start"
     | "top";
+};
+
+export type FlowHandleType = {
+	data: FlowType;
+	title: string;
+	id: string;
+	color: string;
+	left: boolean;
+	required?: boolean;
+	tooltipTitle: string;
 };
