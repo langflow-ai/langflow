@@ -19,10 +19,10 @@ import {
 	PencilSquareIcon,
   Square3Stack3DIcon,
 } from "@heroicons/react/24/outline";
-import { Connection, Edge, Node, OnSelectionChangeParams, ReactFlowInstance, ReactFlowJsonObject } from "reactflow";
+import { Connection, Edge, Node, OnSelectionChangeParams, Position, ReactFlowInstance, ReactFlowJsonObject, XYPosition } from "reactflow";
 import { FlowType } from "./types/flow";
 import { APITemplateType} from "./types/api";
-import _, { forEach } from "lodash";
+import _, { forEach, get } from "lodash";
 import { v4 as uuidv4 } from "uuid";
 
 export function classNames(...classes: Array<string>) {
@@ -590,3 +590,14 @@ export function getMiddlePoint(nodes: Node[]) {
     })
     return newFLow;
   }
+
+  export function updateFlowPosition(NewPosition:XYPosition,flow:FlowType){
+    const middlePoint = getMiddlePoint(flow.data.nodes)
+    let deltaPosition = {x:NewPosition.x-middlePoint.x,y:NewPosition.y-middlePoint.y}
+    flow.data.nodes.forEach((node)=>{
+      node.position.x += deltaPosition.x
+      node.position.y += deltaPosition.y
+    })
+  }
+
+  

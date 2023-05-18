@@ -1,13 +1,14 @@
 import { useContext, useState } from "react";
 import { FlowType } from "../../types/flow";
-import { classNames, concatFlows, expandGroupNode, isValidConnection, nodeColors, nodeIcons } from "../../utils";
+import { classNames, concatFlows, expandGroupNode, isValidConnection, nodeColors, nodeIcons, updateFlowPosition } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import { Handle, Position } from "reactflow";
 import Tooltip from "../../components/TooltipComponent";
 import FlowHandle from "./components/flowHandle";
+import {XYPosition} from "reactflow"
 import { ArrowsPointingOutIcon, TrashIcon } from "@heroicons/react/24/outline";
 
-export default function GroupNode({ data, selected }: { data: FlowType, selected: boolean }) {
+export default function GroupNode({ data, selected,xPos,yPos  }: { data: FlowType, selected: boolean,xPos:number,yPos:number  }) {
     const [isValid, setIsValid] = useState(true);
     const { reactFlowInstance, deleteNode } = useContext(typesContext);
     const Icon = nodeIcons['custom'];
@@ -54,6 +55,7 @@ export default function GroupNode({ data, selected }: { data: FlowType, selected
                 <div className="flex gap-3">
                     <button
                         onClick={() => { 
+                            updateFlowPosition({x:xPos,y:yPos},data)
                             expandGroupNode(data,reactFlowInstance)
                         }}>
                         <ArrowsPointingOutIcon className="w-6 h-6 hover:text-blue-500 dark:text-gray-300 dark:hover:text-blue-500" />
