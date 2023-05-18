@@ -556,7 +556,6 @@ export function getMiddlePoint(nodes: Node[]) {
     const {nodes,edges} = flow.data;
     ReactFlowInstance.addNodes(nodes);
     ReactFlowInstance.addEdges(edges);
-  
   }
   
   export function expandGroupNode(flow:FlowType,ReactFlowInstance:ReactFlowInstance){
@@ -566,5 +565,28 @@ export function getMiddlePoint(nodes: Node[]) {
     const edges = [...ReactFlowInstance.getEdges().filter((e)=>e.target!==flow.id|| e.source!==flow.id),...gEdges]
     ReactFlowInstance.setNodes(nodes);
     ReactFlowInstance.setEdges(edges);
+  }
 
+  export function updateIds(newFLow:FlowType,baseFlow:FlowType){
+    newFLow.data.nodes.forEach((node)=>{
+      while(baseFlow.data.nodes.some((n)=>n.id===node.id)){
+        const newId = uuidv4();
+        newFLow.data.edges.forEach((edge)=>{
+          if(edge.source===node.id){
+            edge.source = newId
+          }
+          if(edge.target===node.id){
+            edge.target = newId
+          }
+           const index = edge.id.split('|').findIndex(e=>e===node.id)
+           if(index!=-1){
+            let tempList = edge.id.split('|')
+            tempList[index] = newId 
+            edge.id = tempList.concat(newId).join('|')
+           }
+           node.id = newId
+        })
+      }
+    })
+    return newFLow;
   }
