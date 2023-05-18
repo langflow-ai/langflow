@@ -86,7 +86,8 @@ def serve_on_jcloud():
         from lcserve.__main__ import serve_on_jcloud  # type: ignore
     except ImportError:
         click.secho(
-            "🚨 Please install langchain-serve to deploy Langflow server on Jina AI Cloud using `pip install langchain-serve`",
+            "🚨 Please install langchain-serve to deploy Langflow server on Jina AI Cloud "
+            "using `pip install langchain-serve`",
             fg="red",
         )
         return
