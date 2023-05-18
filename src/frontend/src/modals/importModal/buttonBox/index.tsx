@@ -59,7 +59,7 @@ export default function ButtonBox({
 			padding = "p-8 py-10";
 			marginTop = "mt-6";
 			height = "h-56";
-			width = "w-44";
+			width = "w-52";
 			break;
 		default:
 			bigCircle = "h-20 w-20";

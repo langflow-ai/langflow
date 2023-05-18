@@ -14,7 +14,7 @@ export default function ToggleComponent({
 		}
 	}, [disabled, setEnabled]);
 	return (
-		<div className={disabled ? "pointer-events-none cursor-not-allowed" : ""}>
+		<div className={disabled ? "pointer-events-none cursor-not-allowed" : "flex"}>
 			<Switch
 				checked={enabled}
 				onChange={(x: boolean) => {

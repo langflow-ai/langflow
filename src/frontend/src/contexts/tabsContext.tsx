@@ -8,7 +8,7 @@ import {
 } from "react";
 import { FlowType } from "../types/flow";
 import { LangFlowState, TabsContextType } from "../types/tabs";
-import { normalCaseToSnakeCase, updateObject, updateTemplate } from "../utils";
+import { concatFlows, normalCaseToSnakeCase, updateIds, updateObject, updateTemplate } from "../utils";
 import { alertContext } from "./alertContext";
 import { typesContext } from "./typesContext";
 import { APITemplateType, TemplateVariableType } from "../types/api";
@@ -28,6 +28,7 @@ const TabsContextInitialValue: TabsContextType = {
 	hardReset: () => {},
 	disableCP:false,
 	setDisableCP:(state:boolean)=>{},
+	getNodeId: () => "",
 };
 
 export const TabsContext = createContext<TabsContextType>(
@@ -39,7 +40,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	const [tabIndex, setTabIndex] = useState(0);
 	const [flows, setFlows] = useState<Array<FlowType>>([]);
 	const [id, setId] = useState(uuidv4());
-	const { templates } = useContext(typesContext);
+	const { templates, reactFlowInstance } = useContext(typesContext);
 
 	const newNodeId = useRef(uuidv4());
 	function incrementNodeId() {
@@ -111,12 +112,16 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		});
 	}
 
+	function getNodeId() {
+		return `dndnode_` + incrementNodeId();
+	  }
+
 	/**
 	 * Creates a file input and listens to a change event to upload a JSON flow file.
 	 * If the file type is application/json, the file is read and parsed into a JSON object.
 	 * The resulting JSON object is passed to the addFlow function.
 	 */
-	function uploadFlow() {
+	function uploadFlow(newTab:boolean=true) {
 		// create a file input
 		const input = document.createElement("input");
 		input.type = "file";
@@ -131,7 +136,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 					// parse the text into a JSON object
 					let flow: FlowType = JSON.parse(text);
 
-					addFlow(flow);
+					addFlow(flow, newTab);
 				});
 			}
 		};
@@ -164,7 +169,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	 * Add a new flow to the list of flows.
 	 * @param flow Optional flow to add.
 	 */
-	function addFlow(flow?: FlowType,blank:boolean=true) {
+	function addFlow(flow?: FlowType,newTab:boolean=true) {
 		// Get data from the flow or set it to null if there's no flow provided.
 		const data = flow?.data ? flow.data : null;
 		const description = flow?.description ? flow.description : "";
@@ -191,13 +196,18 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		setId(uuidv4());
 
 		// Add the new flow to the list of flows.
-		setFlows((prevState) => {
-			const newFlows = [...prevState, newFlow];
-			return newFlows;
-		});
+		if(!newTab){
+			updateIds(newFlow, flows[tabIndex], getNodeId);
+			concatFlows(newFlow, reactFlowInstance);
+		} else {
+			setFlows((prevState) => {
+				const newFlows = [...prevState, newFlow];
+				return newFlows;
+			});
+		}
 
 		// Set the tab index to the new flow.
-		if(blank) setTabIndex(flows.length);
+		if(newTab) setTabIndex(flows.length);
 	}
 	/**
 	 * Updates an existing flow with new data
@@ -233,6 +243,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 				updateFlow,
 				downloadFlow,
 				uploadFlow,
+				getNodeId,
 			}}
 		>
 			{children}

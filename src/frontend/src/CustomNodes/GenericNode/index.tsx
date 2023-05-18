@@ -117,7 +117,6 @@ export default function GenericNode({
   }, [data.id, flowHandlePosition, updateNodeInternals]);
 
   return (
-    params.length != 0 &&
     <div
       className={classNames(
         selected ? "border border-blue-500" : "border dark:border-gray-700",
@@ -209,11 +208,6 @@ export default function GenericNode({
         <div className="w-full text-gray-500 dark:text-gray-300 px-5 pb-3 text-sm">
           {data.node.description}
         </div>
-        {data.node.template.can_be_root && (
-          <div className="w-full text-center dark:text-gray-200 mb-3">
-            Composition
-          </div>
-        )}
 
         <>
           {Object.keys(data.node.template)
@@ -281,6 +275,39 @@ export default function GenericNode({
           {/* <div className="px-5 py-2 mt-2 dark:text-white text-center">
 						Output
 					</div> */}
+          
+          {data.node.template.can_be_root ? (
+            <div className="flex flex-col items-center justify-center">
+              <div
+                ref={ref}
+                className="mt-5 w-full flex flex-wrap justify-between items-center bg-gray-50 dark:bg-gray-800 dark:text-white px-5 py-2"
+              >
+                <HandleComponent
+                  position={flowHandlePosition}
+                  tooltipTitle="Type: Text"
+                  data={data}
+                  color={"rgb(130 132 140)"}
+                  title="Input"
+                  name="Input"
+                  fill={true}
+                  id={"Text|Input|" + data.id}
+                  left={true}
+                  type="Text"
+                />
+                <HandleComponent
+                  data={data}
+                  position={flowHandlePosition}
+                  fill={true}
+                  color={"rgb(130 132 140)"}
+                  title={"Output"}
+                  tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
+                  id={[data.type, data.id, ...data.node.base_classes].join("|")}
+                  type={data.node.base_classes.join("|")}
+                  left={false}
+                />
+              </div>
+            </div>
+          ) : 
           <ParameterComponent
             data={data}
             color={nodeColors[types[data.type]] ?? nodeColors.unknown}
@@ -289,43 +316,7 @@ export default function GenericNode({
             id={[data.type, data.id, ...data.node.base_classes].join("|")}
             type={data.node.base_classes.join("|")}
             left={false}
-            handleDisabled={params[1].some((e) => e.source === data.id && e.sourceHandle.split('|')[0] == 'flow')}
-          />
-          {data.node.template.can_be_root && (
-            <div className="flex flex-col items-center justify-center">
-              <span className="mt-3 mb-1 dark:text-gray-200">Flow</span>
-              <div
-                ref={ref}
-                className="w-full flex flex-wrap justify-between items-center bg-gray-50 dark:bg-gray-800 dark:text-white mt-1 px-5 py-2"
-              >
-                <HandleComponent
-                  position={flowHandlePosition}
-                  tooltipTitle="Flow input"
-                  data={data}
-                  color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-                  title="Input"
-                  name="input"
-                  fill={true}
-                  id={'flow|Output|' + data.id}
-                  left={true}
-                  type="input"
-                />
-                <HandleComponent
-                  position={flowHandlePosition}
-                  tooltipTitle="Flow output"
-                  data={data}
-                  color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-                  fill={true}
-                  title="Output"
-                  name="output"
-                  id={'flow|Output|' + data.id}
-                  left={false}
-                  type="output"
-                  handleDisabled={params[1].some((e) => e.source === data.id && e.sourceHandle.split('|')[0] == data.type)}
-                />
-              </div>
-            </div>
-          )}
+          />}
         </>
       </div>
     </div>

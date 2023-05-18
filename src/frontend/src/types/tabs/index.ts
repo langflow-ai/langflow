@@ -6,15 +6,16 @@ export type TabsContextType = {
 	setTabIndex: (index: number) => void;
 	flows: Array<FlowType>;
 	removeFlow: (id: string) => void;
-	addFlow: (flowData?: FlowType,blank?:boolean) => void;
+	addFlow: (flowData?: FlowType,newFlow?:boolean) => void;
 	updateFlow: (newFlow: FlowType) => void;
 	incrementNodeId: () => string;
 	downloadFlow: (flow: FlowType) => void;
-	uploadFlow: () => void;
+	uploadFlow: (newFlow?:boolean) => void;
 	hardReset: () => void;
 	//disable CopyPaste
 	disableCP: boolean;
 	setDisableCP: (value: boolean) => void;
+	getNodeId: () => string;
 };
 
 export type LangFlowState = {

@@ -76,7 +76,7 @@ export default function HandleComponent({
         </Tooltip>
       )}
 
-      {left === true && type === "str" && !data.node.template[name].options ? (
+      {data && (left === true && type === "str" && !data.node.template[name].options ? (
         <div className="mt-2 w-full">
           {data.node.template[name].list ? (
             <InputListComponent
@@ -185,7 +185,7 @@ export default function HandleComponent({
         />
       ) : (
         <></>
-      )}
+      ))}
     </>
   );
 }

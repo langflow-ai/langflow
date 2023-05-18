@@ -17,6 +17,7 @@ import { alertContext } from "../../contexts/alertContext";
 import LoadingComponent from "../../components/loadingComponent";
 import { FlowType } from "../../types/flow";
 import { classNames, snakeToSpaces, toNormalCase } from "../../utils";
+import ToggleComponent from "../../components/toggleComponent";
 
 export default function ImportModal() {
 	const [open, setOpen] = useState(true);
@@ -27,6 +28,7 @@ export default function ImportModal() {
 	const [loadingExamples, setLoadingExamples] = useState(false);
 	const [examples, setExamples] = useState<FlowType[]>([]);
 	const { uploadFlow, addFlow } = useContext(TabsContext);
+	const [newTab, setNewTab] = useState(false);
 	function setModalOpen(x: boolean) {
 		setOpen(x);
 		if (x === false) {
@@ -124,7 +126,7 @@ export default function ImportModal() {
 												as="h3"
 												className="text-lg font-medium dark:text-white leading-10 text-gray-900"
 											>
-												{showExamples ? "Select an example" : "Import from"}
+												{showExamples ? "Select an Example" : "Import Flow"}
 											</Dialog.Title>
 										</div>
 									</div>
@@ -160,7 +162,7 @@ export default function ImportModal() {
 														<ComputerDesktopIcon className="h-10 w-10 flex-shrink-0" />
 													}
 													onClick={() => {
-														uploadFlow();
+														uploadFlow(newTab);
 														setModalOpen(false);
 													}}
 													textColor="text-blue-500 dark:text-blue-500/75"
@@ -189,7 +191,7 @@ export default function ImportModal() {
 																<DocumentDuplicateIcon className="h-6 w-6 flex-shrink-0" />
 															}
 															onClick={() => {
-																addFlow(example);
+																addFlow(example, newTab);
 																setModalOpen(false);
 															}}
 															textColor="text-emerald-500 dark:text-emerald-500/75"
@@ -199,7 +201,11 @@ export default function ImportModal() {
 												);
 											})}
 									</div>
-									<div className="bg-white dark:bg-gray-800 w-full h-20 flex items-center justify-center">
+									<div className="bg-white dark:bg-gray-800 w-full h-20 flex items-center justify-between px-8">
+										<div className="flex gap-4 items-center justify-center">
+											<ToggleComponent enabled={newTab} setEnabled={setNewTab} disabled={false}/>
+											Open in a new tab
+										</div>
 											<a
 												href="https://github.com/logspace-ai/langflow_examples"
 												target="_blank"

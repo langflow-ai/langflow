@@ -41,7 +41,7 @@ const nodeTypes = {
 };
 
 export default function FlowPage({ flow }: { flow: FlowType }) {
-  let { updateFlow, incrementNodeId, disableCP, addFlow } =
+  let { updateFlow, disableCP, addFlow, getNodeId} =
     useContext(TabsContext);
   const { types, reactFlowInstance, setReactFlowInstance, templates } =
     useContext(typesContext);
@@ -102,7 +102,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
 
     lastCopiedSelection.nodes.forEach((n) => {
       // Generate a unique node ID
-      let newId = getId();
+      let newId = getNodeId();
       idsMap[n.id] = newId;
 
       // Create a new node object
@@ -174,11 +174,6 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
   );
   const { setViewport } = useReactFlow();
   const edgeUpdateSuccessful = useRef(true);
-
-  function getId() {
-    return `dndnode_` + incrementNodeId();
-  }
-
   useEffect(() => {
     if (reactFlowInstance && flow) {
       flow.data = reactFlowInstance.toObject();
@@ -215,7 +210,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
 		(params: Connection) => {
 			takeSnapshot();
 			setEdges((eds) =>
-				addEdge({ ...params, style:params.sourceHandle.split('|')[0] === "flow" ? {stroke: "#333333", strokeWidth: 2} : {stroke: "#222222"}, className:(params.sourceHandle.split('|')[0] === "flow" ? "" : "animate-pulse"), animated:(params.sourceHandle.split('|')[0] === "flow") }, eds)
+				addEdge({ ...params, style:params.targetHandle.split('|')[0] === "Text" ? {stroke: "#333333", strokeWidth: 2} : {stroke: "#222222"}, className:(params.targetHandle.split('|')[0] === "Text" ? "" : "animate-pulse"), animated:(params.targetHandle.split('|')[0] === "Text") }, eds)
 			);
 			setNodes((x) => {
 				let newX = _.cloneDeep(x);
@@ -267,7 +262,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
       });
 
       // Generate a unique node ID
-      let newId = getId();
+      let newId = getNodeId();
       let newNode: NodeType;
 
       if (data.type !== "groupNode") {
@@ -303,7 +298,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
       setNodes((nds) => nds.concat(newNode));
     },
     // Specify dependencies for useCallback
-    [incrementNodeId, reactFlowInstance, setErrorData, setNodes, takeSnapshot]
+    [getNodeId, reactFlowInstance, setErrorData, setNodes, takeSnapshot]
   );
 
   const onDelete = useCallback(

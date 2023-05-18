@@ -29,7 +29,7 @@ export type ParameterComponentType = {
 	tooltipTitle: string;
 };
 export type HandleComponentType = {
-	data: NodeDataType;
+	data?: NodeDataType;
 	title: string;
 	id: string;
 	color: string;
