@@ -50,59 +50,71 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
   let { updateFlow, disableCP, addFlow, getNodeId, paste } =
     useContext(TabsContext);
   const { types, reactFlowInstance, setReactFlowInstance, templates } =
-    useContext(typesContext);
+  useContext(typesContext);
   const reactFlowWrapper = useRef(null);
-
+  
   const { undo, redo, canUndo, canRedo, takeSnapshot } = useUndoRedo();
-
-  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (
-      (event.ctrlKey || event.metaKey) &&
-      event.key === "c" &&
-      lastSelection &&
-      !disableCP
-    ) {
-      event.preventDefault();
-      setLastCopiedSelection(lastSelection);
-    }
-    if (
-      (event.ctrlKey || event.metaKey) &&
-      event.key === "v" &&
-      lastCopiedSelection &&
-      !disableCP
-    ) {
-      event.preventDefault();
-      let bounds = reactFlowWrapper.current.getBoundingClientRect();
-      paste(lastCopiedSelection, {
-        x: position.x - bounds.left,
-        y: position.y - bounds.top,
-      });
-    }
-    if (
-      (event.ctrlKey || event.metaKey) &&
-      event.key === "g" &&
-      lastSelection
-    ) {
-      event.preventDefault();
-      // addFlow(newFlow, false);
-    }
-  };
-
-  const [lastSelection, setLastSelection] =
-    useState<OnSelectionChangeParams>(null);
-  const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
-
+  
+  
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [lastSelection, setLastSelection] =
+  useState<OnSelectionChangeParams>(null);
+  
+  const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
+  
+  useEffect(() => {
+    // this effect is used to attach the global event handlers
+    
+    const onKeyDown = (event: KeyboardEvent) => {
+      console.log("keydownou", lastCopiedSelection, position)
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.key === "c" &&
+        lastSelection &&
+        !disableCP
+        ) {
+          event.preventDefault();
+          setLastCopiedSelection(_.cloneDeep(lastSelection));
+        }
+        if (
+          (event.ctrlKey || event.metaKey) &&
+          event.key === "v" &&
+          lastCopiedSelection &&
+          !disableCP
+          ) {
+            event.preventDefault();
+            let bounds = reactFlowWrapper.current.getBoundingClientRect();
+            paste(lastCopiedSelection, {
+              x: position.x - bounds.left,
+              y: position.y - bounds.top,
+            });
+          }
+          if (
+            (event.ctrlKey || event.metaKey) &&
+            event.key === "g" &&
+            lastSelection
+      ) {
+        event.preventDefault();
+        // addFlow(newFlow, false);
+      }
+    };
+    const handleMouseMove = (event) => {
+      setPosition({ x: event.clientX, y: event.clientY });
+    };
+    
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('mousemove', handleMouseMove);
+    
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [position, lastCopiedSelection, lastSelection]);
 
-  const [selectionMenuPosition, setSelectionMenuPosition] = useState({
-    x: 0,
-    y: 0,
-  });
+
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
 
-  const handleMouseMove = (event) => {
-    setPosition({ x: event.clientX, y: event.clientY });
-  };
+  
 
   const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
   const { setErrorData } = useContext(alertContext);
@@ -311,7 +323,6 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
   return (
     <div
       className="w-full h-full"
-      onMouseMove={handleMouseMove}
       ref={reactFlowWrapper}
     >
       {Object.keys(templates).length > 0 && Object.keys(types).length > 0 ? (
@@ -324,7 +335,6 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChangeMod}
-            onKeyDown={(e) => onKeyDown(e)}
             onConnect={onConnect}
             onLoad={setReactFlowInstance}
             onInit={setReactFlowInstance}
