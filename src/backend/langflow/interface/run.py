@@ -3,12 +3,12 @@ import io
 from typing import Any, Dict, List, Tuple
 
 from chromadb.errors import NotEnoughElementsException  # type: ignore
+from langchain.schema import AgentAction
 
 from langflow.api.callback import AsyncStreamingLLMCallbackHandler, StreamingLLMCallbackHandler  # type: ignore
 from langflow.cache.base import compute_dict_hash, load_cache, memoize_dict
 from langflow.graph.graph import Graph
 from langflow.utils.logger import logger
-from langchain.schema import AgentAction
 
 
 def load_langchain_object(data_graph, is_first_message=False):

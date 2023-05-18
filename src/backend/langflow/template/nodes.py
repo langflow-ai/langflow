@@ -614,3 +614,11 @@ class LLMFrontendNode(FrontendNode):
         elif field.name in ["model_name", "temperature"]:
             field.advanced = False
             field.show = True
+
+
+class EmbeddingFrontendNode(FrontendNode):
+    @staticmethod
+    def format_field(field: TemplateField, name: Optional[str] = None) -> None:
+        FrontendNode.format_field(field, name)
+        if field.name == "headers":
+            field.show = False
