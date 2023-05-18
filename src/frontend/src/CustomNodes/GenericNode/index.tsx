@@ -22,11 +22,7 @@ import HandleComponent from "./components/parameterComponent/components/handleCo
 export default function GenericNode({
   data,
   selected,
-  data,
-  selected,
 }: {
-  data: NodeDataType;
-  selected: boolean;
   data: NodeDataType;
   selected: boolean;
 }) {
@@ -53,16 +49,6 @@ export default function GenericNode({
     }
   }, [save]);
 
-  const validateNode = useCallback(
-    debounce(async () => {
-      try {
-        const response = await fetch(`/validate/node/${data.id}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(reactFlowInstance.toObject()),
-        });
   const validateNode = useCallback(
     debounce(async () => {
       try {
@@ -228,11 +214,11 @@ export default function GenericNode({
         <div className="w-full text-gray-500 dark:text-gray-300 px-5 pb-3 text-sm">
           {data.node.description}
         </div>
-		{data.node.template.can_be_root && (
-			<div className="w-full text-center dark:text-gray-200 mb-3">
-				Composition
-				</div>
-		)}
+        {data.node.template.can_be_root && (
+          <div className="w-full text-center dark:text-gray-200 mb-3">
+            Composition
+          </div>
+        )}
 
         <>
           {Object.keys(data.node.template)
@@ -259,7 +245,7 @@ export default function GenericNode({
 									<></>
 								)} */}
                 {data.node.template[t].show &&
-                !data.node.template[t].advanced ? (
+                  !data.node.template[t].advanced ? (
                   <ParameterComponent
                     data={data}
                     color={
@@ -270,8 +256,8 @@ export default function GenericNode({
                       data.node.template[t].display_name
                         ? data.node.template[t].display_name
                         : data.node.template[t].name
-                        ? toNormalCase(data.node.template[t].name)
-                        : toNormalCase(t)
+                          ? toNormalCase(data.node.template[t].name)
+                          : toNormalCase(t)
                     }
                     name={t}
                     tooltipTitle={
@@ -311,39 +297,39 @@ export default function GenericNode({
             handleDisabled={params[1].some((e) => e.source === data.id && e.sourceHandle.split('|')[0] == 'flow')}
           />
           {data.node.template.can_be_root && (
-			<div className="flex flex-col items-center justify-center">
-				<span className="mt-3 mb-1 dark:text-gray-200">Flow</span>
-            <div
-              ref={ref}
-              className="w-full flex flex-wrap justify-between items-center bg-gray-50 dark:bg-gray-800 dark:text-white mt-1 px-5 py-2"
-            >
-              <HandleComponent
-                position={flowHandlePosition}
-                tooltipTitle="Flow input"
-                data={data}
-                color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-                title="Input"
-                name="input"
-				fill={true}
-                id={'flow|Output|'+data.id}
-                left={true}
-                type="input"
-              />
-			  <HandleComponent
-                position={flowHandlePosition}
-                tooltipTitle="Flow output"
-                data={data}
-                color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-				fill={true}
-                title="Output"
-                name="output"
-                id={'flow|Output|'+data.id}
-                left={false}
-                type="output"
-                handleDisabled={params[1].some((e) => e.source === data.id && e.sourceHandle.split('|')[0] == data.type)}
-              />
+            <div className="flex flex-col items-center justify-center">
+              <span className="mt-3 mb-1 dark:text-gray-200">Flow</span>
+              <div
+                ref={ref}
+                className="w-full flex flex-wrap justify-between items-center bg-gray-50 dark:bg-gray-800 dark:text-white mt-1 px-5 py-2"
+              >
+                <HandleComponent
+                  position={flowHandlePosition}
+                  tooltipTitle="Flow input"
+                  data={data}
+                  color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+                  title="Input"
+                  name="input"
+                  fill={true}
+                  id={'flow|Output|' + data.id}
+                  left={true}
+                  type="input"
+                />
+                <HandleComponent
+                  position={flowHandlePosition}
+                  tooltipTitle="Flow output"
+                  data={data}
+                  color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+                  fill={true}
+                  title="Output"
+                  name="output"
+                  id={'flow|Output|' + data.id}
+                  left={false}
+                  type="output"
+                  handleDisabled={params[1].some((e) => e.source === data.id && e.sourceHandle.split('|')[0] == data.type)}
+                />
+              </div>
             </div>
-			</div>
           )}
         </>
       </div>
