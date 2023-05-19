@@ -83,7 +83,7 @@ class LangChainTypeCreator(Creator):
         return self.type_dict
 
 
-class BaseFunction(BaseModel):
+class BaseStrCode(BaseModel):
     code: Optional[str] = None
     func: Optional[Callable] = None
     imports: Optional[str] = None

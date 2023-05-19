@@ -1,4 +1,4 @@
-from langflow.interface.base import BaseFunction
+from langflow.interface.base import BaseStrCode
 
 DEFAULT_CONNECTOR_FUNCTION = """
 def connector(text: str) -> str:
@@ -30,13 +30,13 @@ def create_image(prompt: str) -> str:
 """
 
 
-class ConnectorFunction(BaseFunction):
+class ConnectorFunction(BaseStrCode):
     """Chain connector"""
 
     code: str = DEFAULT_CONNECTOR_FUNCTION
 
 
-class DallE2Generator(BaseFunction):
+class DallE2Generator(BaseStrCode):
     """DALL-E 2 Generator"""
 
     code: str = DALL_E2_FUNCTION
