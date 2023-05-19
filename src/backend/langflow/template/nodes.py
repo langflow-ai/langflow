@@ -143,6 +143,11 @@ class MidJourneyPromptChainNode(FrontendNode):
         "MidJourneyPromptChain",
     ]
 
+    def to_dict(self):
+        self.add_text_output_to_base_classes()
+        self.template.can_be_root = True
+        return super().to_dict()
+
 
 class TimeTravelGuideChainNode(FrontendNode):
     name: str = "TimeTravelGuideChain"
@@ -177,6 +182,11 @@ class TimeTravelGuideChainNode(FrontendNode):
         "Chain",
         "ConversationChain",
     ]
+
+    def to_dict(self):
+        self.add_text_output_to_base_classes()
+        self.template.can_be_root = True
+        return super().to_dict()
 
 
 class SeriesCharacterChainNode(FrontendNode):
