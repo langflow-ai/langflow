@@ -607,6 +607,19 @@ export function getMiddlePoint(nodes: Node[]) {
   }
 
   export function validateNode(n:NodeType,selection:OnSelectionChangeParams){
+    // case group node
+    if(n.type==="groupNode"){
+      if(selection.edges.some(edge=>edge.target===n.id))
+      {
+        return []
+      }
+      else{
+        return ['Error on group node']     
+      }
+    }
+
+
+    // case custom node
     if (!(n.data as NodeDataType)?.node?.template || !Object.keys((n.data as NodeDataType).node.template)) {
       return ['There is a inconsistente flow in the node, please check your flow']
     }
