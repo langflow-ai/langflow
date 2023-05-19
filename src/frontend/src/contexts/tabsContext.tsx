@@ -66,10 +66,16 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		//get tabs locally saved
 		let cookie = window.localStorage.getItem("tabsData");
 		if (cookie && Object.keys(templates).length > 0) {
+			console.log(templates)
 			let cookieObject: LangFlowState = JSON.parse(cookie);
+			console.log(cookieObject.flows)
 			cookieObject.flows.forEach((flow) => {
 				flow.data.nodes.forEach((node) => {
 					if (Object.keys(templates[node.data.type]["template"]).length > 0) {
+						node.data.node.base_classes = templates[node.data.type][
+							"base_classes"
+						];
+						node.data.node.description = templates[node.data.type]['description'];
 						node.data.node.template = updateTemplate(
 							templates[node.data.type][
 								"template"
@@ -266,6 +272,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		if (data) {
 			data.nodes.forEach((node) => {
 				if (Object.keys(templates[node.data.type]["template"]).length > 0) {
+					node.data.node.base_classes = templates[node.data.type][
+						"base_classes"
+					];
+					node.data.node.description = templates[node.data.type]['description'];
 					node.data.node.template = updateTemplate(
 						templates[node.data.type]["template"] as unknown as APITemplateType,
 						node.data.node.template as APITemplateType
