@@ -7,6 +7,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { classNames, nodeColors, nodeIcons, toNormalCase } from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
+import InputParameterComponent from "./components/inputParameterComponent";
 import { typesContext } from "../../contexts/typesContext";
 import { useContext, useState, useEffect, useRef, Fragment } from "react";
 import { NodeDataType } from "../../types/flow";
@@ -98,22 +99,6 @@ export default function GenericNode({
     deleteNode(data.id);
     return;
   }
-
-  const ref = useRef(null);
-  const updateNodeInternals = useUpdateNodeInternals();
-  const [flowHandlePosition, setFlowHandlePosition] = useState(0);
-  useEffect(() => {
-    if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
-      setFlowHandlePosition(
-        ref.current.offsetTop + ref.current.clientHeight / 2
-      );
-      updateNodeInternals(data.id);
-    }
-  }, [data.id, ref, updateNodeInternals, ref.current]);
-
-  useEffect(() => {
-    updateNodeInternals(data.id);
-  }, [data.id, flowHandlePosition, updateNodeInternals]);
 
   return (
     <div
@@ -210,8 +195,8 @@ export default function GenericNode({
 
         <>
           {Object.keys(data.node.template)
-            .filter((t) => t.charAt(0) !== "_")
-            .map((t: string, idx) => (
+            .filter((field) => field.charAt(0) !== "_")
+            .map((fieldName: string, idx) => (
               <div key={idx}>
                 {/* {idx === 0 ? (
 									<div
@@ -232,31 +217,38 @@ export default function GenericNode({
 								) : (
 									<></>
 								)} */}
-                {data.node.template[t].show &&
-                  !data.node.template[t].advanced ? (
+                {data.node.template[fieldName].show &&
+                !data.node.template[fieldName].advanced &&
+                fieldName != "root_field" ? (
                   <ParameterComponent
                     data={data}
                     color={
-                      nodeColors[types[data.node.template[t].type]] ??
+                      nodeColors[types[data.node.template[fieldName].type]] ??
                       nodeColors.unknown
                     }
                     title={
-                      data.node.template[t].display_name
-                        ? data.node.template[t].display_name
-                        : data.node.template[t].name
-                          ? toNormalCase(data.node.template[t].name)
-                          : toNormalCase(t)
+                      data.node.template[fieldName].display_name
+                        ? data.node.template[fieldName].display_name
+                        : data.node.template[fieldName].name
+                        ? toNormalCase(data.node.template[fieldName].name)
+                        : toNormalCase(fieldName)
                     }
-                    name={t}
+                    name={fieldName}
                     tooltipTitle={
                       "Type: " +
-                      data.node.template[t].type +
-                      (data.node.template[t].list ? " list" : "")
+                      data.node.template[fieldName].type +
+                      (data.node.template[fieldName].list ? " list" : "")
                     }
-                    required={data.node.template[t].required}
-                    id={data.node.template[t].type + "|" + t + "|" + data.id}
+                    required={data.node.template[fieldName].required}
+                    id={
+                      data.node.template[fieldName].type +
+                      "|" +
+                      fieldName +
+                      "|" +
+                      data.id
+                    }
                     left={true}
-                    type={data.node.template[t].type}
+                    type={data.node.template[fieldName].type}
                   />
                 ) : (
                   <></>
@@ -274,48 +266,28 @@ export default function GenericNode({
           {/* <div className="px-5 py-2 mt-2 dark:text-white text-center">
 						Output
 					</div> */}
-          
-          {data.node.template.can_be_root ? (
-            <div className="flex flex-col items-center justify-center">
-              <div
-                ref={ref}
-                className="mt-5 w-full flex flex-wrap justify-between items-center bg-gray-50 dark:bg-gray-800 dark:text-white px-5 py-2"
-              >
-                <HandleComponent
-                  position={flowHandlePosition}
-                  tooltipTitle="Type: Text"
-                  data={data}
-                  color={"#333333"}
-                  title="Input"
-                  name="Input"
-                  fill={true}
-                  id={"Text|Input|" + data.id}
-                  left={true}
-                  type="Text"
-                />
-                <HandleComponent
-                  data={data}
-                  position={flowHandlePosition}
-                  fill={true}
-                  color={"#333333"}
-                  title={"Output"}
-                  tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
-                  id={[data.type, data.id, ...data.node.base_classes].join("|")}
-                  type={data.node.base_classes.join("|")}
-                  left={false}
-                />
-              </div>
-            </div>
-          ) : 
-          <ParameterComponent
-            data={data}
-            color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-            title={data.type}
-            tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
-            id={[data.type, data.id, ...data.node.base_classes].join("|")}
-            type={data.node.base_classes.join("|")}
-            left={false}
-          />}
+
+          {data.node.template.root_field ? (
+            <InputParameterComponent
+              data={data}
+              color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+              title={data.node.template.root_field.display_name}
+              tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
+              id={[data.type, data.id, ...data.node.base_classes].join("|")}
+              type={data.node.base_classes.join("|")}
+              left={false}
+            />
+          ) : (
+            <ParameterComponent
+              data={data}
+              color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+              title={data.type}
+              tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
+              id={[data.type, data.id, ...data.node.base_classes].join("|")}
+              type={data.node.base_classes.join("|")}
+              left={false}
+            />
+          )}
         </>
       </div>
     </div>
