@@ -161,15 +161,7 @@ def load_flow_from_json(path: str, build=True):
     with open(path, "r", encoding="utf-8") as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]
-    nodes = data_graph["nodes"]
-    # Substitute ZeroShotPrompt with PromptTemplate
-    # nodes = replace_zero_shot_prompt_with_prompt_template(nodes)
-    # Add input variables
-    # nodes = payload.extract_input_variables(nodes)
-
-    # Nodes, edges and root node
-    edges = data_graph["edges"]
-    graph = Graph(nodes, edges)
+    graph = Graph(graph_data=data_graph)
     if build:
         langchain_object = graph.build()
         if hasattr(langchain_object, "verbose"):

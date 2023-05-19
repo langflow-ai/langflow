@@ -37,6 +37,7 @@ from langflow.utils import payload
 class Graph:
     def __init__(
         self,
+        *,
         graph_data: Optional[Dict] = None,
         nodes: Optional[List[Node]] = None,
         edges: Optional[List[Edge]] = None,

@@ -18,9 +18,7 @@ def test_get_root_node():
     with open(pytest.BASIC_EXAMPLE_PATH, "r") as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]
-    nodes = data_graph["nodes"]
-    edges = data_graph["edges"]
-    graph = Graph(nodes, edges)
+    graph = Graph(graph_data=data_graph)
     root = get_root_node(graph)
     assert root is not None
     assert hasattr(root, "id")
