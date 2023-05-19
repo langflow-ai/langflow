@@ -1,16 +1,22 @@
 from typing import Optional
 
-from langchain.agents import loading
+from langchain.agents.types import AGENT_TO_CLASS
 from langchain.agents.mrkl import prompt
 
 from langflow.interface.connectors.custom import DEFAULT_CONNECTOR_FUNCTION
-from langflow.template.base import FrontendNode, Template, TemplateField
-from langflow.template.constants import DEFAULT_PROMPT, HUMAN_PROMPT, SYSTEM_PROMPT
+from langflow.template.field.base import TemplateField
+from langflow.template.frontend_node.prompts import (
+    DEFAULT_PROMPT,
+    HUMAN_PROMPT,
+    SYSTEM_PROMPT,
+)
+from langflow.template.frontend_node.base import FrontendNode
+from langflow.template.template.base import Template
 from langflow.utils.constants import DEFAULT_PYTHON_FUNCTION
 
 NON_CHAT_AGENTS = {
     agent_type: agent_class
-    for agent_type, agent_class in loading.AGENT_TO_CLASS.items()
+    for agent_type, agent_class in AGENT_TO_CLASS.items()
     if "chat" not in agent_type.value
 }
 
