@@ -1,84 +1,101 @@
-import { ForwardRefExoticComponent, ReactElement, ReactFragment, ReactNode } from "react";
+import {
+  ForwardRefExoticComponent,
+  ReactElement,
+  ReactFragment,
+  ReactNode,
+} from "react";
 import { FlowType, NodeDataType } from "../flow/index";
 export type InputComponentType = {
-	value: string;
-	disabled?: boolean;
-	onChange: (value: string) => void;
-	password: boolean;
+  value: string;
+  disabled?: boolean;
+  onChange: (value: string) => void;
+  password: boolean;
 };
 export type ToggleComponentType = {
-	enabled: boolean;
-	setEnabled: (state: boolean) => void;
-	disabled: boolean;
+  enabled: boolean;
+  setEnabled: (state: boolean) => void;
+  disabled: boolean;
 };
 export type DropDownComponentType = {
-	value: string;
-	options: string[];
-	onSelect: (value: string) => void;
+  value: string;
+  options: string[];
+  onSelect: (value: string) => void;
 };
 export type ParameterComponentType = {
-	data: NodeDataType;
-	title: string;
-	id: string;
-	color: string;
-	left: boolean;
-	type: string;
-	required?: boolean;
-	handleDisabled?: boolean;
-	name?: string;
-	tooltipTitle: string;
+  data: NodeDataType;
+  title: string;
+  id: string;
+  color: string;
+  left: boolean;
+  type: string;
+  required?: boolean;
+  handleDisabled?: boolean;
+  name?: string;
+  tooltipTitle: string;
+};
+export type InputParameterComponentType = {
+  data: NodeDataType;
+  title: string;
+  id: string;
+  color: string;
+  left: boolean;
+  type: string;
+  required?: boolean;
+  handleDisabled?: boolean;
+  name?: string;
+  tooltipTitle: string;
 };
 export type HandleComponentType = {
-	data?: NodeDataType;
-	title: string;
-	id: string;
-	color: string;
-	left: boolean;
-	type: string;
-	required?: boolean;
-	handleDisabled?: boolean;
-	name?: string;
-	tooltipTitle: string;
-	position: number;
-	fill?: boolean;
+  data?: NodeDataType;
+  title: string;
+  id: string;
+  color: string;
+  left: boolean;
+  type: string;
+  required?: boolean;
+  handleDisabled?: boolean;
+  name?: string;
+  tooltipTitle: string;
+  position: number;
+  fill?: boolean;
 };
 export type InputListComponentType = {
-	value: string[];
-	onChange: (value: string[]) => void;
-	disabled: boolean;
+  value: string[];
+  onChange: (value: string[]) => void;
+  disabled: boolean;
 };
 
 export type TextAreaComponentType = {
-	disabled: boolean;
-	onChange: (value: string[] | string) => void;
-	value: string;
+  disabled: boolean;
+  onChange: (value: string[] | string) => void;
+  value: string;
 };
 
 export type FileComponentType = {
-	disabled: boolean;
-	onChange: (value: string[] | string) => void;
-	value: string;
-	suffixes: Array<string>;
-	fileTypes: Array<string>;
-	onFileChange: (value: string) => void;
+  disabled: boolean;
+  onChange: (value: string[] | string) => void;
+  value: string;
+  suffixes: Array<string>;
+  fileTypes: Array<string>;
+  onFileChange: (value: string) => void;
 };
 
 export type DisclosureComponentType = {
-	children: ReactNode;
-	button: {
-		title: string;
-		Icon: ForwardRefExoticComponent<React.SVGProps<SVGSVGElement>>;
-		buttons?: {
-			Icon: ReactElement;
-			title: string;
-			onClick: (event?: React.MouseEvent) => void;
-		}[];
-	};
+  children: ReactNode;
+  button: {
+    title: string;
+    Icon: ForwardRefExoticComponent<React.SVGProps<SVGSVGElement>>;
+    buttons?: {
+      Icon: ReactElement;
+      title: string;
+      onClick: (event?: React.MouseEvent) => void;
+    }[];
+  };
 };
 export type FloatComponentType = {
-	value: string;
-	disabled?: boolean;
-	onChange: (value: string) => void;
+  value: string;
+  disabled?: boolean;
+  onChange: (value: string) => void;
 };
 
 export type TooltipComponentType = {
@@ -100,11 +117,11 @@ export type TooltipComponentType = {
 };
 
 export type FlowHandleType = {
-	data: FlowType;
-	title: string;
-	id: string;
-	color: string;
-	left: boolean;
-	required?: boolean;
-	tooltipTitle: string;
+  data: FlowType;
+  title: string;
+  id: string;
+  color: string;
+  left: boolean;
+  required?: boolean;
+  tooltipTitle: string;
 };
