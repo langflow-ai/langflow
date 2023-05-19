@@ -22,6 +22,7 @@ CUSTOM_NODES = {
     },
     "connectors": {
         "ConnectorFunction": nodes.ConnectorFunctionFrontendNode(),
+        "DallE2Generator": nodes.DallE2GeneratorFrontendNode(),
     },
 }
 

@@ -83,9 +83,9 @@ class LangChainTypeCreator(Creator):
         return self.type_dict
 
 
-class Function(BaseModel):
-    code: str
-    function: Optional[Callable] = None
+class BaseFunction(BaseModel):
+    code: Optional[str] = None
+    func: Optional[Callable] = None
     imports: Optional[str] = None
 
     # Eval code and store the function
@@ -104,6 +104,8 @@ class Function(BaseModel):
 
     def get_function(self):
         """Get the function"""
-        function_name = validate.extract_function_name(self.code)
+        if self.code:
+            function_name = validate.extract_function_name(self.code)
 
-        return validate.create_function(self.code, function_name)
+            return validate.create_function(self.code, function_name)
+        return self.func

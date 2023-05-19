@@ -1,7 +1,7 @@
-from langflow.interface.base import Function
+from langflow.interface.base import BaseFunction
 
 
-class PythonFunction(Function):
+class PythonFunction(BaseFunction):
     """Python function"""
 
     code: str
