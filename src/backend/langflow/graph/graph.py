@@ -35,6 +35,22 @@ from langflow.utils import payload
 
 
 class Graph:
+    node_type_map: Dict[str, Type[Node]] = {
+        **{t: PromptNode for t in prompt_creator.to_list()},
+        **{t: AgentNode for t in agent_creator.to_list()},
+        **{t: ChainNode for t in chain_creator.to_list()},
+        **{t: ToolNode for t in tool_creator.to_list()},
+        **{t: ToolkitNode for t in toolkits_creator.to_list()},
+        **{t: WrapperNode for t in wrapper_creator.to_list()},
+        **{t: LLMNode for t in llm_creator.to_list()},
+        **{t: MemoryNode for t in memory_creator.to_list()},
+        **{t: EmbeddingNode for t in embedding_creator.to_list()},
+        **{t: VectorStoreNode for t in vectorstore_creator.to_list()},
+        **{t: DocumentLoaderNode for t in documentloader_creator.to_list()},
+        **{t: TextSplitterNode for t in textsplitter_creator.to_list()},
+        **{t: ConnectorNode for t in connector_creator.to_list()},
+    }
+
     def __init__(
         self,
         *,
@@ -187,24 +203,11 @@ class Graph:
         return edges
 
     def _get_node_class(self, node_type: str, node_lc_type: str) -> Type[Node]:
-        node_type_map: Dict[str, Type[Node]] = {
-            **{t: PromptNode for t in prompt_creator.to_list()},
-            **{t: AgentNode for t in agent_creator.to_list()},
-            **{t: ChainNode for t in chain_creator.to_list()},
-            **{t: ToolNode for t in tool_creator.to_list()},
-            **{t: ToolkitNode for t in toolkits_creator.to_list()},
-            **{t: WrapperNode for t in wrapper_creator.to_list()},
-            **{t: LLMNode for t in llm_creator.to_list()},
-            **{t: MemoryNode for t in memory_creator.to_list()},
-            **{t: EmbeddingNode for t in embedding_creator.to_list()},
-            **{t: VectorStoreNode for t in vectorstore_creator.to_list()},
-            **{t: DocumentLoaderNode for t in documentloader_creator.to_list()},
-            **{t: TextSplitterNode for t in textsplitter_creator.to_list()},
-            **{t: ConnectorNode for t in connector_creator.to_list()},
-        }
         if node_type in FILE_TOOLS:
             return FileToolNode
-        return node_type_map.get(node_type, node_type_map.get(node_lc_type, Node))
+        return self.node_type_map.get(
+            node_type, self.node_type_map.get(node_lc_type, Node)
+        )
 
     def _build_nodes(self) -> List[Node]:
         nodes: List[Node] = []
