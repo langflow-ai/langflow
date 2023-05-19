@@ -84,7 +84,7 @@ class LangChainTypeCreator(Creator):
 
 
 class BaseStrCode(BaseModel):
-    code: Optional[str] = None
+    code: str
     func: Optional[Callable] = None
     imports: Optional[str] = None
 
