@@ -5,6 +5,7 @@ from langchain.agents.mrkl import prompt
 
 from langflow.interface.connectors.custom import DEFAULT_CONNECTOR_FUNCTION
 from langflow.template.field.base import TemplateField
+from langflow.template.field.fields import RootField
 from langflow.template.frontend_node.prompts import (
     DEFAULT_PROMPT,
     HUMAN_PROMPT,
@@ -119,7 +120,7 @@ class MidJourneyPromptChainNode(FrontendNode):
     name: str = "MidJourneyPromptChain"
     template: Template = Template(
         type_name="MidJourneyPromptChain",
-        can_be_root=True,
+        root_field=RootField(field_type="Text"),
         fields=[
             TemplateField(
                 field_type="BaseLanguageModel",
@@ -151,7 +152,6 @@ class MidJourneyPromptChainNode(FrontendNode):
 
     def to_dict(self):
         self.add_text_output_to_base_classes()
-        self.template.can_be_root = True
         return super().to_dict()
 
 
@@ -159,7 +159,7 @@ class TimeTravelGuideChainNode(FrontendNode):
     name: str = "TimeTravelGuideChain"
     template: Template = Template(
         type_name="TimeTravelGuideChain",
-        can_be_root=True,
+        root_field=RootField(field_type="Text"),
         fields=[
             TemplateField(
                 field_type="BaseLanguageModel",
@@ -191,7 +191,6 @@ class TimeTravelGuideChainNode(FrontendNode):
 
     def to_dict(self):
         self.add_text_output_to_base_classes()
-        self.template.can_be_root = True
         return super().to_dict()
 
 
@@ -199,7 +198,7 @@ class SeriesCharacterChainNode(FrontendNode):
     name: str = "SeriesCharacterChain"
     template: Template = Template(
         type_name="SeriesCharacterChain",
-        can_be_root=True,
+        root_field=RootField(field_type="Text"),
         fields=[
             TemplateField(
                 field_type="str",
@@ -303,7 +302,7 @@ class JsonAgentNode(FrontendNode):
     name: str = "JsonAgent"
     template: Template = Template(
         type_name="json_agent",
-        can_be_root=True,
+        root_field=RootField(field_type="Text"),
         fields=[
             TemplateField(
                 field_type="BaseToolkit",
@@ -330,7 +329,7 @@ class InitializeAgentNode(FrontendNode):
     name: str = "initialize_agent"
     template: Template = Template(
         type_name="initailize_agent",
-        can_be_root=True,
+        root_field=RootField(field_type="Text"),
         fields=[
             TemplateField(
                 field_type="str",
@@ -382,7 +381,7 @@ class InitializeAgentNode(FrontendNode):
 class CSVAgentNode(FrontendNode):
     name: str = "CSVAgent"
     template: Template = Template(
-        can_be_root=True,
+        root_field=RootField(field_type="Text"),
         type_name="csv_agent",
         fields=[
             TemplateField(
@@ -435,7 +434,7 @@ class SQLDatabaseNode(FrontendNode):
 class VectorStoreAgentNode(FrontendNode):
     name: str = "VectorStoreAgent"
     template: Template = Template(
-        can_be_root=True,
+        root_field=RootField(field_type="Text"),
         type_name="vectorstore_agent",
         fields=[
             TemplateField(
@@ -464,7 +463,7 @@ class VectorStoreAgentNode(FrontendNode):
 class VectorStoreRouterAgentNode(FrontendNode):
     name: str = "VectorStoreRouterAgent"
     template: Template = Template(
-        can_be_root=True,
+        root_field=RootField(field_type="Text"),
         type_name="vectorstorerouter_agent",
         fields=[
             TemplateField(
@@ -494,7 +493,7 @@ class SQLAgentNode(FrontendNode):
     name: str = "SQLAgent"
     template: Template = Template(
         type_name="sql_agent",
-        can_be_root=True,
+        root_field=RootField(field_type="Text"),
         fields=[
             TemplateField(
                 field_type="str",
@@ -576,7 +575,7 @@ class ChainFrontendNode(FrontendNode):
 
     def to_dict(self):
         self.add_text_output_to_base_classes()
-        self.template.can_be_root = True
+        self.template.root_field = RootField(field_type="Text")
         return super().to_dict()
 
     @staticmethod
@@ -656,7 +655,7 @@ class ConnectorFunctionFrontendNode(FrontendNode):
 
     template: Template = Template(
         type_name="ConnectorFunction",
-        can_be_root=True,
+        root_field=RootField(field_type="Text"),
         fields=[
             TemplateField(
                 field_type="code",

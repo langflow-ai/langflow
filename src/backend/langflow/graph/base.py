@@ -61,8 +61,8 @@ class Node:
 
         # Node is root if it is base_type
         # chains, connectors or agents
-
-        self.can_be_root = self.base_type in ["chains", "connectors", "agents"]
+        # check if root_field is in template_dict
+        self.can_be_root = "root_field" in template_dict
 
     def _build_params(self):
         # Some params are required, some are optional

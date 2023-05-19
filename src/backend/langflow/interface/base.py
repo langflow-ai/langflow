@@ -63,7 +63,7 @@ class Creator(BaseModel, ABC):
                 content=value.get("content", None),
             )
             for key, value in signature["template"].items()
-            if key not in ["_type", "can_be_root"]
+            if key not in ["_type", "root_field"]
         ]
         template = Template(type_name=name, fields=fields)
         return self.frontend_node_class(
