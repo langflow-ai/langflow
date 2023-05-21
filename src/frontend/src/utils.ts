@@ -1,4 +1,4 @@
-import { NodeDataType, NodeType } from './types/flow/index';
+import { NodeDataType, NodeType } from "./types/flow/index";
 import {
   RocketLaunchIcon,
   LinkIcon,
@@ -16,12 +16,21 @@ import {
   ScissorsIcon,
   CircleStackIcon,
   Squares2X2Icon,
-	PencilSquareIcon,
+  PencilSquareIcon,
   Square3Stack3DIcon,
 } from "@heroicons/react/24/outline";
-import { Connection, Edge, Node, OnSelectionChangeParams, Position, ReactFlowInstance, ReactFlowJsonObject, XYPosition } from "reactflow";
+import {
+  Connection,
+  Edge,
+  Node,
+  OnSelectionChangeParams,
+  Position,
+  ReactFlowInstance,
+  ReactFlowJsonObject,
+  XYPosition,
+} from "reactflow";
 import { FlowType } from "./types/flow";
-import { APITemplateType} from "./types/api";
+import { APITemplateType } from "./types/api";
 import _, { forEach, get } from "lodash";
 import { v4 as uuidv4, validate } from "uuid";
 
@@ -94,7 +103,7 @@ export const nodeColors: { [char: string]: string } = {
   utilities: "#31A3CC",
   connectors: "#E6A627",
   unknown: "#9CA3AF",
-	custom: "#9CA3AF",
+  custom: "#9CA3AF",
 };
 
 export const nodeNames: { [char: string]: string } = {
@@ -115,7 +124,7 @@ export const nodeNames: { [char: string]: string } = {
   utilities: "Utilities",
   connectors: "Connectors",
   unknown: "Unknown",
-	custom: "Custom",
+  custom: "Custom",
 };
 
 export const nodeIcons: {
@@ -140,7 +149,7 @@ export const nodeIcons: {
   utilities: Squares2X2Icon,
   connectors: Square3Stack3DIcon,
   unknown: QuestionMarkCircleIcon,
-	custom: PencilSquareIcon
+  custom: PencilSquareIcon,
 };
 
 export const bgColors = {
@@ -227,10 +236,6 @@ export const bgColorsHex = {
   fuchsia: "rgb(250 232 255)",
   pink: "rgb(252 231 243)",
   rose: "rgb(255 228 230)",
-};
-
-export const taskTypeMap: { [key: string]: string } = {
-  MULTICLASS_CLASSIFICATION: "Multiclass Classification",
 };
 
 const charWidths: { [char: string]: number } = {
@@ -383,19 +388,19 @@ export function isValidConnection(
   { source, target, sourceHandle, targetHandle }: Connection,
   reactFlowInstance: ReactFlowInstance
 ) {
-  console.log(source, target)
+  console.log(source, target);
   // target is target id
-  console.log(target)
-  
-  console.log(sourceHandle)
-  console.log(targetHandle)
+  console.log(target);
+
+  console.log(sourceHandle);
+  console.log(targetHandle);
   if (
     sourceHandle.split("|")[0] === targetHandle.split("|")[0] ||
     sourceHandle
       .split("|")
       .slice(2)
       .some((t) => t === targetHandle.split("|")[0]) ||
-    (targetHandle.split("|")[0] === "str"  )
+    targetHandle.split("|")[0] === "str"
   ) {
     let targetNode = reactFlowInstance.getNode(target).data.node;
     if (!targetNode) {
@@ -406,18 +411,19 @@ export function isValidConnection(
       ) {
         return true;
       }
-    } 
-    else if(
-      targetHandle.split("|")[0] === "flow" && target !== source && !reactFlowInstance.getEdges().find((e) => e.targetHandle === targetHandle)
-    ){
-      return true
-    }
-    else if (
-      targetNode.template[targetHandle.split("|")[1]] && ((!targetNode.template[targetHandle.split("|")[1]].list &&
+    } else if (
+      targetHandle.split("|")[0] === "flow" &&
+      target !== source &&
+      !reactFlowInstance.getEdges().find((e) => e.targetHandle === targetHandle)
+    ) {
+      return true;
+    } else if (
+      targetNode.template[targetHandle.split("|")[1]] &&
+      ((!targetNode.template[targetHandle.split("|")[1]].list &&
         !reactFlowInstance
           .getEdges()
           .find((e) => e.targetHandle === targetHandle)) ||
-      targetNode.template[targetHandle.split("|")[1]].list)
+        targetNode.template[targetHandle.split("|")[1]].list)
     ) {
       return true;
     }
@@ -516,145 +522,185 @@ export const programmingLanguages: languageMap = {
 };
 
 export function getMiddlePoint(nodes: Node[]) {
-	let middlePointX = 0;
-	let middlePointY = 0;
-  
-	nodes.forEach(node => {
-	  middlePointX += node.position.x;
-	  middlePointY += node.position.y;
-	});
-  
-	const totalNodes = nodes.length;
-	const averageX = middlePointX / totalNodes;
-	const averageY = middlePointY / totalNodes;
-  
-	return { x: averageX, y: averageY };
-  }
+  let middlePointX = 0;
+  let middlePointY = 0;
 
-  export function generateFlow(selection: OnSelectionChangeParams, reactFlowInstance: ReactFlowInstance, name: string):FlowType {
-    const newFlowData = reactFlowInstance.toObject();
-  
-    newFlowData.edges = selection.edges;
-    newFlowData.nodes = selection.nodes;
-  
-    console.log(newFlowData);
-    const newFlow: FlowType = { data: newFlowData, name: name ,description:"",id:uuidv4()}
-    return newFlow;
-  }
+  nodes.forEach((node) => {
+    middlePointX += node.position.x;
+    middlePointY += node.position.y;
+  });
 
-  export function filterFlow(selection: OnSelectionChangeParams, reactFlowInstance: ReactFlowInstance){
-    reactFlowInstance.setNodes((nodes)=>nodes.filter((node)=>!selection.nodes.includes(node)))
-    reactFlowInstance.setEdges((edges) => edges.filter((edge) => !selection.edges.includes(edge)))
-    console.log(selection)
-  }
+  const totalNodes = nodes.length;
+  const averageX = middlePointX / totalNodes;
+  const averageY = middlePointY / totalNodes;
 
-  export function generateNodeFromFlow(flow:FlowType):NodeType{
-    const {nodes} = flow.data;
-    const position= getMiddlePoint(nodes);
-    let data = flow;
-    const newGroupNode:NodeType = {data,id:data.id,position,type:"groupNode"}
-    return newGroupNode;
+  return { x: averageX, y: averageY };
+}
 
+export function generateFlow(
+  selection: OnSelectionChangeParams,
+  reactFlowInstance: ReactFlowInstance,
+  name: string
+): FlowType {
+  const newFlowData = reactFlowInstance.toObject();
 
-  }
+  newFlowData.edges = selection.edges;
+  newFlowData.nodes = selection.nodes;
 
-  export function concatFlows(flow:FlowType,ReactFlowInstance:ReactFlowInstance){
-    const {nodes,edges} = flow.data;
-    ReactFlowInstance.addNodes(nodes);
-    ReactFlowInstance.addEdges(edges);
-  }
-  
-  export function expandGroupNode(flow:FlowType,ReactFlowInstance:ReactFlowInstance){
-    const gNodes = flow.data.nodes;
-    const gEdges = flow.data.edges;
-    const nodes = [...ReactFlowInstance.getNodes().filter((n)=>n.id!==flow.id),...gNodes]
-    const edges = [...ReactFlowInstance.getEdges().filter((e)=>e.target!==flow.id|| e.source!==flow.id),...gEdges]
-    ReactFlowInstance.setNodes(nodes);
-    ReactFlowInstance.setEdges(edges);
-  }
+  console.log(newFlowData);
+  const newFlow: FlowType = {
+    data: newFlowData,
+    name: name,
+    description: "",
+    id: uuidv4(),
+  };
+  return newFlow;
+}
 
-  export function updateIds(newFLow:FlowType,baseFlow:FlowType){
-    newFLow.data.nodes.forEach((node)=>{
-      while(baseFlow.data.nodes.some((n)=>n.id===node.id)){
-        const newId = uuidv4();
-        newFLow.data.edges.forEach((edge)=>{
-          if(edge.source===node.id){
-            edge.source = newId
-          }
-          if(edge.target===node.id){
-            edge.target = newId
-          }
-           const index = edge.id.split('|').findIndex(e=>e===node.id)
-           if(index!=-1){
-            let tempList = edge.id.split('|')
-            tempList[index] = newId 
-            edge.id = tempList.concat(newId).join('|')
-           }
-           node.id = newId
-        })
-      }
-    })
-    return newFLow;
-  }
+export function filterFlow(
+  selection: OnSelectionChangeParams,
+  reactFlowInstance: ReactFlowInstance
+) {
+  reactFlowInstance.setNodes((nodes) =>
+    nodes.filter((node) => !selection.nodes.includes(node))
+  );
+  reactFlowInstance.setEdges((edges) =>
+    edges.filter((edge) => !selection.edges.includes(edge))
+  );
+  console.log(selection);
+}
 
-  export function updateFlowPosition(NewPosition:XYPosition,flow:FlowType){
-    const middlePoint = getMiddlePoint(flow.data.nodes)
-    let deltaPosition = {x:NewPosition.x-middlePoint.x,y:NewPosition.y-middlePoint.y}
-    flow.data.nodes.forEach((node)=>{
-      node.position.x += deltaPosition.x
-      node.position.y += deltaPosition.y
-    })
-  }
+export function generateNodeFromFlow(flow: FlowType): NodeType {
+  const { nodes } = flow.data;
+  const position = getMiddlePoint(nodes);
+  let data = flow;
+  const newGroupNode: NodeType = {
+    data,
+    id: data.id,
+    position,
+    type: "groupNode",
+  };
+  return newGroupNode;
+}
 
-  export function validateNode(n:NodeType,selection:OnSelectionChangeParams){
-    if (!(n.data as NodeDataType)?.node?.template || !Object.keys((n.data as NodeDataType).node.template)) {
-      return ['There is a inconsistente flow in the node, please check your flow']
+export function concatFlows(
+  flow: FlowType,
+  ReactFlowInstance: ReactFlowInstance
+) {
+  const { nodes, edges } = flow.data;
+  ReactFlowInstance.addNodes(nodes);
+  ReactFlowInstance.addEdges(edges);
+}
+
+export function expandGroupNode(
+  flow: FlowType,
+  ReactFlowInstance: ReactFlowInstance
+) {
+  const gNodes = flow.data.nodes;
+  const gEdges = flow.data.edges;
+  const nodes = [
+    ...ReactFlowInstance.getNodes().filter((n) => n.id !== flow.id),
+    ...gNodes,
+  ];
+  const edges = [
+    ...ReactFlowInstance.getEdges().filter(
+      (e) => e.target !== flow.id || e.source !== flow.id
+    ),
+    ...gEdges,
+  ];
+  ReactFlowInstance.setNodes(nodes);
+  ReactFlowInstance.setEdges(edges);
+}
+
+export function updateIds(newFLow: FlowType, baseFlow: FlowType) {
+  newFLow.data.nodes.forEach((node) => {
+    while (baseFlow.data.nodes.some((n) => n.id === node.id)) {
+      const newId = uuidv4();
+      newFLow.data.edges.forEach((edge) => {
+        if (edge.source === node.id) {
+          edge.source = newId;
+        }
+        if (edge.target === node.id) {
+          edge.target = newId;
+        }
+        const index = edge.id.split("|").findIndex((e) => e === node.id);
+        if (index != -1) {
+          let tempList = edge.id.split("|");
+          tempList[index] = newId;
+          edge.id = tempList.concat(newId).join("|");
+        }
+        node.id = newId;
+      });
     }
+  });
+  return newFLow;
+}
 
-    const {
-      type,
-      node: { template },
-    } = (n.data as NodeDataType);
+export function updateFlowPosition(NewPosition: XYPosition, flow: FlowType) {
+  const middlePoint = getMiddlePoint(flow.data.nodes);
+  let deltaPosition = {
+    x: NewPosition.x - middlePoint.x,
+    y: NewPosition.y - middlePoint.y,
+  };
+  flow.data.nodes.forEach((node) => {
+    node.position.x += deltaPosition.x;
+    node.position.y += deltaPosition.y;
+  });
+}
 
-    return Object.keys(template).reduce(
-      (errors: Array<string>, t) =>
-        errors.concat(
-          template[t].required &&
-            template[t].show &&
-            (!template[t].value || template[t].value === "") &&
-            !selection.edges
-              .some(
-                (e) =>
-                  e.targetHandle.split("|")[1] === t &&
-                  e.targetHandle.split("|")[2] === n.id
-              )
-            ? [
-              `${type} is missing ${template.display_name
-                ? template.display_name
-                : toNormalCase(template[t].name)
+export function validateNode(n: NodeType, selection: OnSelectionChangeParams) {
+  if (
+    !(n.data as NodeDataType)?.node?.template ||
+    !Object.keys((n.data as NodeDataType).node.template)
+  ) {
+    return [
+      "There is a inconsistente flow in the node, please check your flow",
+    ];
+  }
+
+  const {
+    type,
+    node: { template },
+  } = n.data as NodeDataType;
+
+  return Object.keys(template).reduce(
+    (errors: Array<string>, t) =>
+      errors.concat(
+        template[t].required &&
+          template[t].show &&
+          (!template[t].value || template[t].value === "") &&
+          !selection.edges.some(
+            (e) =>
+              e.targetHandle.split("|")[1] === t &&
+              e.targetHandle.split("|")[2] === n.id
+          )
+          ? [
+              `${type} is missing ${
+                template.display_name
+                  ? template.display_name
+                  : toNormalCase(template[t].name)
               }.`,
             ]
-            : []
-        ),
-      [] as string[]
-    );
-  }
+          : []
+      ),
+    [] as string[]
+  );
+}
 
-
-
-
-
-export function validateSelection(selection: OnSelectionChangeParams){
+export function validateSelection(selection: OnSelectionChangeParams) {
   // can be root verification
-  if(!selection.nodes.some((n)=>n.data.can_be_root || n.type==="groupNode")){
-    return false
+  if (
+    !selection.nodes.some((n) => n.data.can_be_root || n.type === "groupNode")
+  ) {
+    return false;
   }
   // connection verification
-  let validationErrors = selection.nodes.flatMap(n=>validateNode(n,selection))
-  if(validationErrors.length>0){
-    return false
-  }
-  else{
+  let validationErrors = selection.nodes.flatMap((n) =>
+    validateNode(n, selection)
+  );
+  if (validationErrors.length > 0) {
+    return false;
+  } else {
     return true;
   }
 }
