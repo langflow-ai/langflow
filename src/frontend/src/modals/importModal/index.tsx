@@ -28,7 +28,7 @@ export default function ImportModal() {
   const [loadingExamples, setLoadingExamples] = useState(false);
   const [examples, setExamples] = useState<FlowType[]>([]);
   const { uploadFlow, addFlow } = useContext(TabsContext);
-  const [newTab, setNewTab] = useState(false);
+  const [newTab, setNewTab] = useState(true);
   function setModalOpen(x: boolean) {
     setOpen(x);
     if (x === false) {
