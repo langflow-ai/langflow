@@ -49,8 +49,7 @@ export default function InputParameterComponent({
     <div
       ref={ref}
       className={
-        "mt-5 w-full flex flex-wrap justify-between items-center bg-gray-50 dark:bg-gray-800 dark:text-white px-5 py-2" +
-        (left ? " justify-between" : " justify-end")
+        "mt-5 w-full flex flex-wrap justify-between items-center bg-gray-50 dark:bg-gray-800 dark:text-white px-5 py-2 "
       }
     >
       <HandleComponent
@@ -72,7 +71,7 @@ export default function InputParameterComponent({
         data={data}
         position={flowHandlePosition}
         fill={true}
-        color={"#333333"}
+        color={color}
         title={"Output"}
         tooltipTitle={tooltipTitle}
         id={[data.type, data.id, ...data.node.base_classes].join("|")}
