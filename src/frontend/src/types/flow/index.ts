@@ -2,20 +2,20 @@ import { APIClassType } from "../api/index";
 import { ReactFlowJsonObject, XYPosition } from "reactflow";
 
 export type FlowType = {
-	name: string;
-	id: string;
-	data: ReactFlowJsonObject;
-	description: string;
+  name: string;
+  id: string;
+  data: ReactFlowJsonObject;
+  description: string;
 };
 export type NodeType = {
-	id: string;
-	type?: string;
-	position: XYPosition;
-	data: NodeDataType | FlowType;
+  id: string;
+  type?: string;
+  position: XYPosition;
+  data: NodeDataType | FlowType;
 };
 export type NodeDataType = {
-	type: string;
-	node?: APIClassType;
-	id: string;
-	value: any;
+  type: string;
+  node?: APIClassType;
+  id: string;
+  value: any;
 };

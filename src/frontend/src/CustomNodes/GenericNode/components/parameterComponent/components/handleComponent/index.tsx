@@ -13,7 +13,10 @@ import TextAreaComponent from "../../../../../../components/textAreaComponent";
 import ToggleComponent from "../../../../../../components/toggleComponent";
 import { TabsContext } from "../../../../../../contexts/tabsContext";
 import { typesContext } from "../../../../../../contexts/typesContext";
-import { HandleComponentType, ParameterComponentType } from "../../../../../../types/components";
+import {
+  HandleComponentType,
+  ParameterComponentType,
+} from "../../../../../../types/components";
 import { isValidConnection, classNames } from "../../../../../../utils";
 
 export default function HandleComponent({
@@ -30,7 +33,6 @@ export default function HandleComponent({
   fill = false,
   position,
 }: HandleComponentType) {
-
   const [enabled, setEnabled] = useState(
     data.node.template[name]?.value ?? false
   );
@@ -41,7 +43,11 @@ export default function HandleComponent({
 
   return (
     <>
-      <div className={"text-sm truncate " + (handleDisabled ? "text-gray-500" : "")}>
+      <div
+        className={
+          "text-sm truncate " + (handleDisabled ? "text-gray-500" : "")
+        }
+      >
         {title}
         <span className="text-red-600">{required ? " *" : ""}</span>
       </div>
@@ -61,131 +67,141 @@ export default function HandleComponent({
             position={left ? Position.Left : Position.Right}
             id={id}
             isValidConnection={(connection) =>
-              handleDisabled ? false : isValidConnection(connection, reactFlowInstance)
+              handleDisabled
+                ? false
+                : isValidConnection(connection, reactFlowInstance)
             }
             className={classNames(
               left ? "-ml-0.5 " : "-mr-0.5 ",
-              "w-3 h-3 rounded-full border-2 dark:bg-gray-800", handleDisabled && "pointer-events-none"
+              "w-3 h-3 rounded-full border-2 dark:bg-gray-800",
+              handleDisabled && "pointer-events-none"
             )}
             style={{
               borderColor: handleDisabled ? "lightGray" : color,
               top: position,
-              backgroundColor: fill ? (handleDisabled ? "lightGray" : color) : "white",
+              backgroundColor: fill
+                ? handleDisabled
+                  ? "lightGray"
+                  : color
+                : "white",
             }}
           ></Handle>
         </Tooltip>
       )}
 
-      {data && (left === true && type === "str" && !data.node.template[name].options ? (
-        <div className="mt-2 w-full">
-          {data.node.template[name].list ? (
-            <InputListComponent
+      {data &&
+        (left === true &&
+        type === "str" &&
+        !data.node.template[name].options ? (
+          <div className="mt-2 w-full">
+            {data.node.template[name].list ? (
+              <InputListComponent
+                disabled={disabled}
+                value={
+                  !data.node.template[name].value ||
+                  data.node.template[name].value === ""
+                    ? [""]
+                    : data.node.template[name].value
+                }
+                onChange={(t: string[]) => {
+                  data.node.template[name].value = t;
+                  save();
+                }}
+              />
+            ) : data.node.template[name].multiline ? (
+              <TextAreaComponent
+                disabled={disabled}
+                value={data.node.template[name].value ?? ""}
+                onChange={(t: string) => {
+                  data.node.template[name].value = t;
+                  save();
+                }}
+              />
+            ) : (
+              <InputComponent
+                disabled={disabled}
+                password={data.node.template[name].password ?? false}
+                value={data.node.template[name].value ?? ""}
+                onChange={(t) => {
+                  data.node.template[name].value = t;
+                  save();
+                }}
+              />
+            )}
+          </div>
+        ) : left === true && type === "bool" ? (
+          <div className="mt-2">
+            <ToggleComponent
               disabled={disabled}
-              value={
-                !data.node.template[name].value ||
-                data.node.template[name].value === ""
-                  ? [""]
-                  : data.node.template[name].value
-              }
-              onChange={(t: string[]) => {
+              enabled={enabled}
+              setEnabled={(t) => {
                 data.node.template[name].value = t;
+                setEnabled(t);
                 save();
               }}
             />
-          ) : data.node.template[name].multiline ? (
-            <TextAreaComponent
-              disabled={disabled}
-              value={data.node.template[name].value ?? ""}
-              onChange={(t: string) => {
-                data.node.template[name].value = t;
-                save();
-              }}
-            />
-          ) : (
-            <InputComponent
-              disabled={disabled}
-              password={data.node.template[name].password ?? false}
-              value={data.node.template[name].value ?? ""}
-              onChange={(t) => {
-                data.node.template[name].value = t;
-                save();
-              }}
-            />
-          )}
-        </div>
-      ) : left === true && type === "bool" ? (
-        <div className="mt-2">
-          <ToggleComponent
+          </div>
+        ) : left === true && type === "float" ? (
+          <FloatComponent
             disabled={disabled}
-            enabled={enabled}
-            setEnabled={(t) => {
+            value={data.node.template[name].value ?? ""}
+            onChange={(t) => {
               data.node.template[name].value = t;
-              setEnabled(t);
               save();
             }}
           />
-        </div>
-      ) : left === true && type === "float" ? (
-        <FloatComponent
-          disabled={disabled}
-          value={data.node.template[name].value ?? ""}
-          onChange={(t) => {
-            data.node.template[name].value = t;
-            save();
-          }}
-        />
-      ) : left === true &&
-        type === "str" &&
-        data.node.template[name].options ? (
-        <Dropdown
-          options={data.node.template[name].options}
-          onSelect={(newValue) => (data.node.template[name].value = newValue)}
-          value={data.node.template[name].value ?? "Choose an option"}
-        ></Dropdown>
-      ) : left === true && type === "code" ? (
-        <CodeAreaComponent
-          disabled={disabled}
-          value={data.node.template[name].value ?? ""}
-          onChange={(t: string) => {
-            data.node.template[name].value = t;
-            save();
-          }}
-        />
-      ) : left === true && type === "file" ? (
-        <InputFileComponent
-          disabled={disabled}
-          value={data.node.template[name].value ?? ""}
-          onChange={(t: string) => {
-            data.node.template[name].value = t;
-          }}
-          fileTypes={data.node.template[name].fileTypes}
-          suffixes={data.node.template[name].suffixes}
-          onFileChange={(t: string) => {
-            data.node.template[name].content = t;
-            save();
-          }}
-        ></InputFileComponent>
-      ) : left === true && type === "int" ? (
-        <IntComponent
-          disabled={disabled}
-          value={data.node.template[name].value ?? ""}
-          onChange={(t) => {
-            data.node.template[name].value = t;
-            save();
-          }}
-        />
-      ) : left === true && type === "prompt" ? (
-        <PromptAreaComponent
-          disabled={disabled}
-          value={data.node.template[name].value ?? ""}
-          onChange={(t: string) => {
-            data.node.template[name].value = t;
-            save();
-          }}
-        />
-      ) : (
-        <></>
-      ))}
+        ) : left === true &&
+          type === "str" &&
+          data.node.template[name].options ? (
+          <Dropdown
+            options={data.node.template[name].options}
+            onSelect={(newValue) => (data.node.template[name].value = newValue)}
+            value={data.node.template[name].value ?? "Choose an option"}
+          ></Dropdown>
+        ) : left === true && type === "code" ? (
+          <CodeAreaComponent
+            disabled={disabled}
+            value={data.node.template[name].value ?? ""}
+            onChange={(t: string) => {
+              data.node.template[name].value = t;
+              save();
+            }}
+          />
+        ) : left === true && type === "file" ? (
+          <InputFileComponent
+            disabled={disabled}
+            value={data.node.template[name].value ?? ""}
+            onChange={(t: string) => {
+              data.node.template[name].value = t;
+            }}
+            fileTypes={data.node.template[name].fileTypes}
+            suffixes={data.node.template[name].suffixes}
+            onFileChange={(t: string) => {
+              data.node.template[name].content = t;
+              save();
+            }}
+          ></InputFileComponent>
+        ) : left === true && type === "int" ? (
+          <IntComponent
+            disabled={disabled}
+            value={data.node.template[name].value ?? ""}
+            onChange={(t) => {
+              data.node.template[name].value = t;
+              save();
+            }}
+          />
+        ) : left === true && type === "prompt" ? (
+          <PromptAreaComponent
+            disabled={disabled}
+            value={data.node.template[name].value ?? ""}
+            onChange={(t: string) => {
+              data.node.template[name].value = t;
+              save();
+            }}
+          />
+        ) : (
+          <></>
+        ))}
     </>
   );
 }

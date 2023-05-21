@@ -1,5 +1,8 @@
 import { Dialog, Transition } from "@headlessui/react";
-import { ChatBubbleOvalLeftEllipsisIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import {
+  ChatBubbleOvalLeftEllipsisIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
 import { Fragment, useContext, useEffect, useRef, useState } from "react";
 import { FlowType, NodeDataType, NodeType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
@@ -37,8 +40,7 @@ export default function ChatModal({
   }, [open]);
   useEffect(() => {
     id.current = flow.id;
-  }, [flow.id])
-
+  }, [flow.id]);
 
   var isStream = false;
 
@@ -122,16 +124,16 @@ export default function ChatModal({
               newChatHistory.push(
                 chatItem.files
                   ? {
-                    isSend: !chatItem.is_bot,
-                    message: chatItem.message,
-                    thought: chatItem.intermediate_steps,
-                    files: chatItem.files,
-                  }
+                      isSend: !chatItem.is_bot,
+                      message: chatItem.message,
+                      thought: chatItem.intermediate_steps,
+                      files: chatItem.files,
+                    }
                   : {
-                    isSend: !chatItem.is_bot,
-                    message: chatItem.message,
-                    thought: chatItem.intermediate_steps,
-                  }
+                      isSend: !chatItem.is_bot,
+                      message: chatItem.message,
+                      thought: chatItem.intermediate_steps,
+                    }
               );
             }
           }
@@ -174,8 +176,9 @@ export default function ChatModal({
       const urlWs =
         process.env.NODE_ENV === "development"
           ? `ws://localhost:7860/chat/${id.current}`
-          : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host
-          }/chat/${id.current}`;
+          : `${window.location.protocol === "https:" ? "wss" : "ws"}://${
+              window.location.host
+            }/chat/${id.current}`;
       const newWs = new WebSocket(urlWs);
       newWs.onopen = () => {
         console.log("WebSocket connection established!");
@@ -194,8 +197,7 @@ export default function ChatModal({
         console.log(ev, "error");
         if (flow.id === "") {
           connectWS();
-        }
-        else {
+        } else {
           setErrorData({
             title: "There was an error on web connection, please: ",
             list: [
@@ -210,8 +212,7 @@ export default function ChatModal({
     } catch {
       if (flow.id === "") {
         connectWS();
-      }
-      else {
+      } else {
         setErrorData({
           title: "There was an error on web connection, please: ",
           list: [
@@ -255,7 +256,10 @@ export default function ChatModal({
   }, [chatHistory]);
 
   function validateNode(n: NodeType): Array<string> {
-    if (!(n.data as NodeDataType)?.node?.template || !Object.keys((n.data as NodeDataType).node.template)) {
+    if (
+      !(n.data as NodeDataType)?.node?.template ||
+      !Object.keys((n.data as NodeDataType).node.template)
+    ) {
       setNoticeData({
         title:
           "We've noticed a potential issue with a node in the flow. Please review it and, if necessary, submit a bug report with your exported flow file. Thank you for your help!",
@@ -266,7 +270,7 @@ export default function ChatModal({
     const {
       type,
       node: { template },
-    } = (n.data as NodeDataType);
+    } = n.data as NodeDataType;
 
     return Object.keys(template).reduce(
       (errors: Array<string>, t) =>
@@ -282,11 +286,12 @@ export default function ChatModal({
                   e.targetHandle.split("|")[2] === n.id
               )
             ? [
-              `${type} is missing ${template.display_name
-                ? template.display_name
-                : toNormalCase(template[t].name)
-              }.`,
-            ]
+                `${type} is missing ${
+                  template.display_name
+                    ? template.display_name
+                    : toNormalCase(template[t].name)
+                }.`,
+              ]
             : []
         ),
       [] as string[]
@@ -385,7 +390,9 @@ export default function ChatModal({
                 </div>
                 <div className="w-full h-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center overflow-scroll scrollbar-hide">
                   {chatHistory.length > 0 ? (
-                    chatHistory.map((c, i) => <ChatMessage lockChat={lockChat} chat={c} key={i} />)
+                    chatHistory.map((c, i) => (
+                      <ChatMessage lockChat={lockChat} chat={c} key={i} />
+                    ))
                   ) : (
                     <div className="flex flex-col h-full text-center justify-center w-full items-center align-middle">
                       <span>

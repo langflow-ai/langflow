@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Edge, Node, useReactFlow } from 'reactflow';
+import { useCallback, useEffect, useState } from "react";
+import { Edge, Node, useReactFlow } from "reactflow";
 
 type UseUndoRedoOptions = {
   maxHistorySize: number;
@@ -54,7 +54,10 @@ export const useUndoRedo: UseUndoRedo = ({
       // first we remove the state from the history
       setPast((past) => past.slice(0, past.length - 1));
       // we store the current graph for the redo operation
-      setFuture((future) => [...future, { nodes: getNodes(), edges: getEdges() }]);
+      setFuture((future) => [
+        ...future,
+        { nodes: getNodes(), edges: getEdges() },
+      ]);
       // now we can set the graph to the past state
       setNodes(pastState.nodes);
       setEdges(pastState.edges);
@@ -79,21 +82,24 @@ export const useUndoRedo: UseUndoRedo = ({
     }
 
     const keyDownHandler = (event: KeyboardEvent) => {
-      if (event.key === 'z' && (event.ctrlKey || event.metaKey) && event.shiftKey) {
+      if (
+        event.key === "z" &&
+        (event.ctrlKey || event.metaKey) &&
+        event.shiftKey
+      ) {
         redo();
-      } 
-      else if (event.key === 'y' && (event.ctrlKey || event.metaKey)) {
+      } else if (event.key === "y" && (event.ctrlKey || event.metaKey)) {
         event.preventDefault(); // prevent the default action
         redo();
-      } else if (event.key === 'z' && (event.ctrlKey || event.metaKey)) {
+      } else if (event.key === "z" && (event.ctrlKey || event.metaKey)) {
         undo();
       }
     };
 
-    document.addEventListener('keydown', keyDownHandler);
+    document.addEventListener("keydown", keyDownHandler);
 
     return () => {
-      document.removeEventListener('keydown', keyDownHandler);
+      document.removeEventListener("keydown", keyDownHandler);
     };
   }, [undo, redo, enableShortcuts]);
 
