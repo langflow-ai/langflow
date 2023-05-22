@@ -11,7 +11,7 @@ export type NodeType = {
 	id: string;
 	type?: string;
 	position: XYPosition;
-	data: NodeDataType | FlowType;
+	data: NodeDataType;
 };
 export type NodeDataType = {
 	type: string;
