@@ -17,7 +17,7 @@ export default function ChatInput({
     }
   }, [chatValue]);
 
-  const { setDisableCP } = useContext(TabsContext);
+  const { setDisableCopyPaste } = useContext(TabsContext);
 
   return (
     <div className="relative">
@@ -28,10 +28,10 @@ export default function ChatInput({
           }
         }}
         onBlur={() => {
-          setDisableCP(false)
+          setDisableCopyPaste(false)
         }}
         onFocus={() => {
-          setDisableCP(true)
+          setDisableCopyPaste(true)
         }}
         rows={1}
         ref={inputRef}

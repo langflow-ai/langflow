@@ -14,7 +14,7 @@ export default function FloatComponent({
 			onChange("");
 		}
 	}, [disabled, onChange]);
-	const {setDisableCP} =  useContext(TabsContext)
+	const {setDisableCopyPaste} =  useContext(TabsContext)
 	return (
 		<div className={disabled ? "pointer-events-none cursor-not-allowed" : ""}>
 			<input
@@ -30,10 +30,10 @@ export default function FloatComponent({
 					onChange(e.target.value);
 				}}
 				onBlur={() => {
-					setDisableCP(false)
+					setDisableCopyPaste(false)
 				}}
 				onFocus={() => {
-					setDisableCP(true)
+					setDisableCopyPaste(true)
 				}}
 			/>
 		</div>

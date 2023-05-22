@@ -17,7 +17,7 @@ export default function InputListComponent({
 			onChange([""]);
 		}
 	}, [disabled, onChange]);
-	const {setDisableCP} = useContext(TabsContext)
+	const {setDisableCopyPaste} = useContext(TabsContext)
 	return (
 		<div
 			className={
@@ -44,10 +44,10 @@ export default function InputListComponent({
 							onChange(inputList);
 						}}
 						onBlur={() => {
-							setDisableCP(false)
+							setDisableCopyPaste(false)
 						}}
 						onFocus={() => {
-							setDisableCP(true)
+							setDisableCopyPaste(true)
 						}}
 					/>
 					{idx === inputList.length - 1 ? (

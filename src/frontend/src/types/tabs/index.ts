@@ -13,8 +13,8 @@ export type TabsContextType = {
 	uploadFlow: (newFlow?:boolean) => void;
 	hardReset: () => void;
 	//disable CopyPaste
-	disableCP: boolean;
-	setDisableCP: (value: boolean) => void;
+	disableCopyPaste: boolean;
+	setDisableCopyPaste: (value: boolean) => void;
 	getNodeId: () => string;
 	paste: (selection: {nodes: any, edges: any}, position: {x: number, y: number}) => void;
 };
