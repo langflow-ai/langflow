@@ -303,6 +303,12 @@ export default function ChatModal({
 
   const ref = useRef(null);
 
+  useEffect(() => {
+    if (open && ref.current) {
+      ref.current.focus();
+    }
+  }, [open]);
+
   function sendMessage() {
     if (chatValue !== "") {
       let nodeValidationErrors = validateNodes();
@@ -413,12 +419,13 @@ export default function ChatModal({
                   <div ref={ref}></div>
                 </div>
                 <div className="w-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center justify-between p-3">
-                  <div className="relative w-full mt-1 rounded-md shadow-sm">
+                  <div className="relative w-full  mt-1 rounded-md shadow-sm">
                     <ChatInput
                       chatValue={chatValue}
                       lockChat={lockChat}
                       sendMessage={sendMessage}
                       setChatValue={setChatValue}
+                      inputRef={ref}
                     />
                   </div>
                 </div>

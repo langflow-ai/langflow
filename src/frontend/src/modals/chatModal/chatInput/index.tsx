@@ -1,43 +1,55 @@
 import { LockClosedIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
 import { classNames } from "../../../utils";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function ChatInput({
   lockChat,
   chatValue,
   sendMessage,
   setChatValue,
-}: {
-  lockChat: boolean;
-  chatValue: string;
-  sendMessage: Function;
-  setChatValue: Function;
+  inputRef,
 }) {
-  const inputRef = useRef(null);
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.style.height = "inherit"; // Reset the height
+      inputRef.current.style.height = `${inputRef.current.scrollHeight}px`; // Set it to the scrollHeight
+    }
+  }, [chatValue]);
+
   return (
-    <>
+    <div className="relative">
       <textarea
         onKeyDown={(event) => {
           if (event.key === "Enter" && !lockChat && !event.shiftKey) {
             sendMessage();
           }
         }}
+        rows={1}
         ref={inputRef}
         disabled={lockChat}
-        style={{ resize: "none" }}
+        style={{
+          resize: "none",
+          bottom: `${inputRef?.current?.scrollHeight}px`,
+          maxHeight: "150px",
+          overflow: `${
+            inputRef.current && inputRef.current.scrollHeight > 150
+              ? "auto"
+              : "hidden"
+          }`,
+        }}
         value={lockChat ? "Thinking..." : chatValue}
         onChange={(e) => {
           setChatValue(e.target.value);
         }}
         className={classNames(
           lockChat
-            ? "bg-gray-300 text-black dark:bg-gray-700 dark:text-gray-300"
-            : "bg-gray-200 text-black dark:bg-gray-900 dark:text-gray-300",
-          "form-input block w-full  custom-scroll h-10 rounded-md border-gray-300 dark:border-gray-600  pr-10 sm:text-sm"
+            ? " bg-gray-300 text-black dark:bg-gray-700 dark:text-gray-300"
+            : "  bg-white-200 text-black dark:bg-gray-900 dark:text-gray-300",
+          "form-input block w-full custom-scroll rounded-md border-gray-300 dark:border-gray-600 pr-10 sm:text-sm"
         )}
         placeholder={"Send a message..."}
       />
-      <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+      <div className="absolute bottom-1 right-3">
         <button disabled={lockChat} onClick={() => sendMessage()}>
           {lockChat ? (
             <LockClosedIcon
@@ -52,6 +64,6 @@ export default function ChatInput({
           )}
         </button>
       </div>
-    </>
+    </div>
   );
 }
