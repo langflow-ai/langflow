@@ -64,29 +64,36 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     if (cookie && Object.keys(templates).length > 0) {
       let cookieObject: LangFlowState = JSON.parse(cookie);
       cookieObject.flows.forEach((flow) => {
-        flow.data.nodes.forEach((node) => {
-          if (Object.keys(templates[node.data.type]["template"]).length > 0) {
-            node.data.node.base_classes =
-              templates[node.data.type]["base_classes"];
-            flow.data.edges.forEach((edge) => {
-              if (edge.source === node.id) {
-                edge.sourceHandle = edge.sourceHandle
-                  .split("|")
-                  .slice(0, 2)
-                  .concat(templates[node.data.type]["base_classes"])
-                  .join("|");
-              }
-            });
-            node.data.node.description =
-              templates[node.data.type]["description"];
-            node.data.node.template = updateTemplate(
-              templates[node.data.type][
-                "template"
-              ] as unknown as APITemplateType,
-              node.data.node.template as APITemplateType
-            );
-          }
-        });
+        // check if flow.data is null
+        if (flow.data) {
+          flow.data.nodes.forEach((node) => {
+            // check if node.data.type is in templates
+            if (
+              Object.keys(templates).includes(node.data.type) &&
+              Object.keys(templates[node.data.type]["template"]).length > 0
+            ) {
+              node.data.node.base_classes =
+                templates[node.data.type]["base_classes"];
+              flow.data.edges.forEach((edge) => {
+                if (edge.source === node.id) {
+                  edge.sourceHandle = edge.sourceHandle
+                    .split("|")
+                    .slice(0, 2)
+                    .concat(templates[node.data.type]["base_classes"])
+                    .join("|");
+                }
+              });
+              node.data.node.description =
+                templates[node.data.type]["description"];
+              node.data.node.template = updateTemplate(
+                templates[node.data.type][
+                  "template"
+                ] as unknown as APITemplateType,
+                node.data.node.template as APITemplateType
+              );
+            }
+          });
+        }
       });
       setTabIndex(cookieObject.tabIndex);
       setFlows(cookieObject.flows);
