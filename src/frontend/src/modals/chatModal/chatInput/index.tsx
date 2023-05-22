@@ -1,6 +1,7 @@
 import { LockClosedIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
 import { classNames } from "../../../utils";
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
+import { TabsContext } from "../../../contexts/tabsContext";
 
 export default function ChatInput({
   lockChat,
@@ -16,6 +17,8 @@ export default function ChatInput({
     }
   }, [chatValue]);
 
+  const { setDisableCP } = useContext(TabsContext);
+
   return (
     <div className="relative">
       <textarea
@@ -23,6 +26,12 @@ export default function ChatInput({
           if (event.key === "Enter" && !lockChat && !event.shiftKey) {
             sendMessage();
           }
+        }}
+        onBlur={() => {
+          setDisableCP(false)
+        }}
+        onFocus={() => {
+          setDisableCP(true)
         }}
         rows={1}
         ref={inputRef}
@@ -49,7 +58,7 @@ export default function ChatInput({
         )}
         placeholder={"Send a message..."}
       />
-      <div className="absolute bottom-1 right-3">
+      <div className="absolute bottom-0.5 right-3">
         <button disabled={lockChat} onClick={() => sendMessage()}>
           {lockChat ? (
             <LockClosedIcon
