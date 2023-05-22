@@ -7,6 +7,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { classNames, nodeColors, nodeIcons, toNormalCase } from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
+import InputParameterComponent from "./components/inputParameterComponent";
 import { typesContext } from "../../contexts/typesContext";
 import { useContext, useState, useEffect, useRef, Fragment } from "react";
 import { NodeDataType } from "../../types/flow";
@@ -73,7 +74,6 @@ export default function GenericNode({
     [reactFlowInstance, data.id]
   );
   useEffect(() => {
-    console.log(params);
     if (params.length > 0) {
       validateNode();
     }
@@ -100,24 +100,7 @@ export default function GenericNode({
     return;
   }
 
-  const ref = useRef(null);
-  const updateNodeInternals = useUpdateNodeInternals();
-  const [flowHandlePosition, setFlowHandlePosition] = useState(0);
-  useEffect(() => {
-    if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
-      setFlowHandlePosition(
-        ref.current.offsetTop + ref.current.clientHeight / 2
-      );
-      updateNodeInternals(data.id);
-    }
-  }, [data.id, ref, updateNodeInternals, ref.current]);
-
-  useEffect(() => {
-    updateNodeInternals(data.id);
-  }, [data.id, flowHandlePosition, updateNodeInternals]);
-
   return (
-    params.length != 0 &&
     <div
       className={classNames(
         selected ? "border border-blue-500" : "border dark:border-gray-700",
@@ -209,16 +192,11 @@ export default function GenericNode({
         <div className="w-full text-gray-500 dark:text-gray-300 px-5 pb-3 text-sm">
           {data.node.description}
         </div>
-        {data.node.template.can_be_root && (
-          <div className="w-full text-center dark:text-gray-200 mb-3">
-            Composition
-          </div>
-        )}
 
         <>
           {Object.keys(data.node.template)
-            .filter((t) => t.charAt(0) !== "_")
-            .map((t: string, idx) => (
+            .filter((field) => field.charAt(0) !== "_")
+            .map((fieldName: string, idx) => (
               <div key={idx}>
                 {/* {idx === 0 ? (
 									<div
@@ -239,31 +217,38 @@ export default function GenericNode({
 								) : (
 									<></>
 								)} */}
-                {data.node.template[t].show &&
-                  !data.node.template[t].advanced ? (
+                {data.node.template[fieldName].show &&
+                !data.node.template[fieldName].advanced &&
+                fieldName != "root_field" ? (
                   <ParameterComponent
                     data={data}
                     color={
-                      nodeColors[types[data.node.template[t].type]] ??
+                      nodeColors[types[data.node.template[fieldName].type]] ??
                       nodeColors.unknown
                     }
                     title={
-                      data.node.template[t].display_name
-                        ? data.node.template[t].display_name
-                        : data.node.template[t].name
-                          ? toNormalCase(data.node.template[t].name)
-                          : toNormalCase(t)
+                      data.node.template[fieldName].display_name
+                        ? data.node.template[fieldName].display_name
+                        : data.node.template[fieldName].name
+                        ? toNormalCase(data.node.template[fieldName].name)
+                        : toNormalCase(fieldName)
                     }
-                    name={t}
+                    name={fieldName}
                     tooltipTitle={
                       "Type: " +
-                      data.node.template[t].type +
-                      (data.node.template[t].list ? " list" : "")
+                      data.node.template[fieldName].type +
+                      (data.node.template[fieldName].list ? " list" : "")
                     }
-                    required={data.node.template[t].required}
-                    id={data.node.template[t].type + "|" + t + "|" + data.id}
+                    required={data.node.template[fieldName].required}
+                    id={
+                      data.node.template[fieldName].type +
+                      "|" +
+                      fieldName +
+                      "|" +
+                      data.id
+                    }
                     left={true}
-                    type={data.node.template[t].type}
+                    type={data.node.template[fieldName].type}
                   />
                 ) : (
                   <></>
@@ -281,50 +266,27 @@ export default function GenericNode({
           {/* <div className="px-5 py-2 mt-2 dark:text-white text-center">
 						Output
 					</div> */}
-          <ParameterComponent
-            data={data}
-            color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-            title={data.type}
-            tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
-            id={[data.type, data.id, ...data.node.base_classes].join("|")}
-            type={data.node.base_classes.join("|")}
-            left={false}
-            handleDisabled={params[1].some((e) => e.source === data.id && e.sourceHandle.split('|')[0] == 'flow')}
-          />
-          {data.node.template.can_be_root && (
-            <div className="flex flex-col items-center justify-center">
-              <span className="mt-3 mb-1 dark:text-gray-200">Flow</span>
-              <div
-                ref={ref}
-                className="w-full flex flex-wrap justify-between items-center bg-gray-50 dark:bg-gray-800 dark:text-white mt-1 px-5 py-2"
-              >
-                <HandleComponent
-                  position={flowHandlePosition}
-                  tooltipTitle="Flow input"
-                  data={data}
-                  color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-                  title="Input"
-                  name="input"
-                  fill={true}
-                  id={'flow|Output|' + data.id}
-                  left={true}
-                  type="input"
-                />
-                <HandleComponent
-                  position={flowHandlePosition}
-                  tooltipTitle="Flow output"
-                  data={data}
-                  color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-                  fill={true}
-                  title="Output"
-                  name="output"
-                  id={'flow|Output|' + data.id}
-                  left={false}
-                  type="output"
-                  handleDisabled={params[1].some((e) => e.source === data.id && e.sourceHandle.split('|')[0] == data.type)}
-                />
-              </div>
-            </div>
+
+          {data.node.template.root_field ? (
+            <InputParameterComponent
+              data={data}
+              color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+              title={data.node.template.root_field.display_name}
+              tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
+              id={[data.type, data.id, ...data.node.base_classes].join("|")}
+              type={data.node.base_classes.join("|")}
+              left={false}
+            />
+          ) : (
+            <ParameterComponent
+              data={data}
+              color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+              title={data.type}
+              tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
+              id={[data.type, data.id, ...data.node.base_classes].join("|")}
+              type={data.node.base_classes.join("|")}
+              left={false}
+            />
           )}
         </>
       </div>

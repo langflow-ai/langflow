@@ -6,13 +6,14 @@ import {
 	ReactNode,
 	useContext,
 } from "react";
-import { FlowType } from "../types/flow";
+import { FlowType, NodeType } from "../types/flow";
 import { LangFlowState, TabsContextType } from "../types/tabs";
-import { normalCaseToSnakeCase, updateObject, updateTemplate } from "../utils";
+import { concatFlows, normalCaseToSnakeCase, updateIds, updateObject, updateTemplate } from "../utils";
 import { alertContext } from "./alertContext";
 import { typesContext } from "./typesContext";
 import { APITemplateType, TemplateVariableType } from "../types/api";
 import { v4 as uuidv4 } from "uuid";
+import { addEdge } from "reactflow";
 
 const TabsContextInitialValue: TabsContextType = {
 	save: () => {},
@@ -28,6 +29,8 @@ const TabsContextInitialValue: TabsContextType = {
 	hardReset: () => {},
 	disableCP:false,
 	setDisableCP:(state:boolean)=>{},
+	getNodeId: () => "",
+	paste: (selection: {nodes: any, edges: any}, position: {x: number, y: number}) => {},
 };
 
 export const TabsContext = createContext<TabsContextType>(
@@ -39,7 +42,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	const [tabIndex, setTabIndex] = useState(0);
 	const [flows, setFlows] = useState<Array<FlowType>>([]);
 	const [id, setId] = useState(uuidv4());
-	const { templates } = useContext(typesContext);
+	const { templates, reactFlowInstance } = useContext(typesContext);
 
 	const newNodeId = useRef(uuidv4());
 	function incrementNodeId() {
@@ -63,10 +66,16 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		//get tabs locally saved
 		let cookie = window.localStorage.getItem("tabsData");
 		if (cookie && Object.keys(templates).length > 0) {
+			console.log(templates)
 			let cookieObject: LangFlowState = JSON.parse(cookie);
+			console.log(cookieObject.flows)
 			cookieObject.flows.forEach((flow) => {
 				flow.data.nodes.forEach((node) => {
 					if (Object.keys(templates[node.data.type]["template"]).length > 0) {
+						// node.data.node.base_classes = templates[node.data.type][
+						// 	"base_classes"
+						// ];
+						// node.data.node.description = templates[node.data.type]['description'];
 						node.data.node.template = updateTemplate(
 							templates[node.data.type][
 								"template"
@@ -111,12 +120,16 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		});
 	}
 
+	function getNodeId() {
+		return `dndnode_` + incrementNodeId();
+	  }
+
 	/**
 	 * Creates a file input and listens to a change event to upload a JSON flow file.
 	 * If the file type is application/json, the file is read and parsed into a JSON object.
 	 * The resulting JSON object is passed to the addFlow function.
 	 */
-	function uploadFlow() {
+	function uploadFlow(newTab:boolean=true) {
 		// create a file input
 		const input = document.createElement("input");
 		input.type = "file";
@@ -131,7 +144,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 					// parse the text into a JSON object
 					let flow: FlowType = JSON.parse(text);
 
-					addFlow(flow);
+					addFlow(flow, newTab);
 				});
 			}
 		};
@@ -164,14 +177,102 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	 * Add a new flow to the list of flows.
 	 * @param flow Optional flow to add.
 	 */
-	function addFlow(flow?: FlowType,blank:boolean=true) {
+
+	function paste(selectionInstance, position){
+		console.log(position);
+		console.log(selectionInstance)
+		let minimumX = Infinity;
+		let minimumY = Infinity;
+		let idsMap = {};
+		let nodes = reactFlowInstance.getNodes();
+		let edges = reactFlowInstance.getEdges();
+		selectionInstance.nodes.forEach((n) => {
+		  if (n.position.y < minimumY) {
+			minimumY = n.position.y;
+		  }
+		  if (n.position.x < minimumX) {
+			minimumX = n.position.x;
+		  }
+		});
+
+		const insidePosition = reactFlowInstance.project(position);
+	
+		selectionInstance.nodes.forEach((n) => {
+		  // Generate a unique node ID
+		  let newId = getNodeId();
+		  idsMap[n.id] = newId;
+	
+		  // Create a new node object
+		  const newNode: NodeType = {
+			id: newId,
+			type: "genericNode",
+			position: {
+			  x: insidePosition.x + n.position.x - minimumX,
+			  y: insidePosition.y + n.position.y - minimumY,
+			},
+			data: {
+			  ...n.data,
+			  id: newId,
+			},
+		  };
+	
+		  // Add the new node to the list of nodes in state
+			nodes = nodes
+			  .map((e) => ({ ...e, selected: false }))
+			  .concat({ ...newNode, selected: false })
+		  console.log(nodes);
+		});
+		reactFlowInstance.setNodes(nodes);
+	
+		selectionInstance.edges.forEach((e) => {
+		  let source = idsMap[e.source];
+		  let target = idsMap[e.target];
+		  let sourceHandleSplitted = e.sourceHandle.split("|");
+		  let sourceHandle =
+			sourceHandleSplitted[0] +
+			"|" +
+			source +
+			"|" +
+			sourceHandleSplitted.slice(2).join("|");
+		  let targetHandleSplitted = e.targetHandle.split("|");
+		  let targetHandle =
+			targetHandleSplitted.slice(0, -1).join("|") + "|" + target;
+		  let id =
+			"reactflow__edge-" +
+			source +
+			sourceHandle +
+			"-" +
+			target +
+			targetHandle;
+		  edges = addEdge(
+			  {
+				source,
+				target,
+				sourceHandle,
+				targetHandle,
+				id,
+				className: "animate-pulse",
+				selected: false,
+			  },
+			  edges.map((e) => ({ ...e, selected: false }))
+			);
+			console.log(edges);
+		});
+		reactFlowInstance.setEdges(edges);
+	  };
+	
+	function addFlow(flow?: FlowType,newTab:boolean=true) {
 		// Get data from the flow or set it to null if there's no flow provided.
+		if(!newTab){
+			paste({nodes: flow.data.nodes, edges: flow.data.edges}, {x:10, y:10})
+		} else {
 		const data = flow?.data ? flow.data : null;
 		const description = flow?.description ? flow.description : "";
 
 		if (data) {
 			data.nodes.forEach((node) => {
 				if (Object.keys(templates[node.data.type]["template"]).length > 0) {
+					// node.data.node.description = templates[node.data.type]['description'];
 					node.data.node.template = updateTemplate(
 						templates[node.data.type]["template"] as unknown as APITemplateType,
 						node.data.node.template as APITemplateType
@@ -191,13 +292,15 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		setId(uuidv4());
 
 		// Add the new flow to the list of flows.
+		
 		setFlows((prevState) => {
 			const newFlows = [...prevState, newFlow];
 			return newFlows;
 		});
 
 		// Set the tab index to the new flow.
-		if(blank) setTabIndex(flows.length);
+		if(newTab) setTabIndex(flows.length);
+	}
 	}
 	/**
 	 * Updates an existing flow with new data
@@ -233,6 +336,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 				updateFlow,
 				downloadFlow,
 				uploadFlow,
+				getNodeId,
+				paste,
 			}}
 		>
 			{children}

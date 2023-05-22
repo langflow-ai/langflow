@@ -1,4 +1,4 @@
-from langflow.template import nodes
+from langflow.template.frontend_node import nodes
 
 # These should always be instantiated
 CUSTOM_NODES = {
@@ -22,6 +22,7 @@ CUSTOM_NODES = {
     },
     "connectors": {
         "ConnectorFunction": nodes.ConnectorFunctionFrontendNode(),
+        "DallE2Generator": nodes.DallE2GeneratorFrontendNode(),
     },
 }
 

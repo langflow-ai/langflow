@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Type, Union
+from langflow.template.frontend_node.base import FrontendNode
+from langflow.template.template.base import Template
 
 from pydantic import BaseModel, validator
 
-from langflow.template.base import FrontendNode, Template, TemplateField
+from langflow.template.field.base import TemplateField
 from langflow.utils import validate
 from langflow.utils.logger import logger
 
@@ -61,7 +63,7 @@ class Creator(BaseModel, ABC):
                 content=value.get("content", None),
             )
             for key, value in signature["template"].items()
-            if key not in ["_type", "can_be_root"]
+            if key not in ["_type", "root_field"]
         ]
         template = Template(type_name=name, fields=fields)
         return self.frontend_node_class(
@@ -81,9 +83,9 @@ class LangChainTypeCreator(Creator):
         return self.type_dict
 
 
-class Function(BaseModel):
+class BaseStrCode(BaseModel):
     code: str
-    function: Optional[Callable] = None
+    func: Optional[Callable] = None
     imports: Optional[str] = None
 
     # Eval code and store the function
@@ -102,6 +104,8 @@ class Function(BaseModel):
 
     def get_function(self):
         """Get the function"""
-        function_name = validate.extract_function_name(self.code)
+        if self.code:
+            function_name = validate.extract_function_name(self.code)
 
-        return validate.create_function(self.code, function_name)
+            return validate.create_function(self.code, function_name)
+        return self.func

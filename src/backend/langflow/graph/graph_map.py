@@ -73,7 +73,7 @@ class GraphMap:
                         for edge in node.edges
                         if edge.source != current_root and edge.target != current_root
                     ]
-                elements.append(current_root)
+                elements.insert(0, current_root)
                 current_root = graph.root_node
             else:
                 current_root = next(

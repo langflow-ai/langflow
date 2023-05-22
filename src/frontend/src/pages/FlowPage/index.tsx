@@ -30,139 +30,91 @@ import { typesContext } from "../../contexts/typesContext";
 import ConnectionLineComponent from "./components/ConnectionLineComponent";
 import { FlowType, NodeType } from "../../types/flow";
 import { APIClassType } from "../../types/api";
-import { filterFlow, generateFlow, generateNodeFromFlow, getMiddlePoint, isValidConnection } from "../../utils";
+import {
+  filterFlow,
+  generateFlow,
+  generateNodeFromFlow,
+  getMiddlePoint,
+  isValidConnection,
+} from "../../utils";
 import useUndoRedo from "./hooks/useUndoRedo";
 import SelectionMenu from "./components/SelectionMenuComponent";
 import GroupNode from "../../CustomNodes/GroupNode";
 
 const nodeTypes = {
   genericNode: GenericNode,
-  groupNode: GroupNode
+  groupNode: GroupNode,
 };
 
 export default function FlowPage({ flow }: { flow: FlowType }) {
-  let { updateFlow, incrementNodeId, disableCP, addFlow } =
+  let { updateFlow, disableCP, addFlow, getNodeId, paste } =
     useContext(TabsContext);
   const { types, reactFlowInstance, setReactFlowInstance, templates } =
-    useContext(typesContext);
+  useContext(typesContext);
   const reactFlowWrapper = useRef(null);
-
+  
   const { undo, redo, canUndo, canRedo, takeSnapshot } = useUndoRedo();
-
-  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if ((event.ctrlKey || event.metaKey) && (event.key === 'c') && lastSelection && !disableCP) {
-      event.preventDefault();
-      setLastCopiedSelection(lastSelection);
-    }
-    if ((event.ctrlKey || event.metaKey) && (event.key === 'v') && lastCopiedSelection && !disableCP) {
-      event.preventDefault();
-      paste();
-    }
-    if ((event.ctrlKey || event.metaKey) && (event.key === 'g') && lastSelection) {
-      event.preventDefault();
-      // addFlow(newFlow, false);
-    }
-
-
-  }
-
-  const [lastSelection, setLastSelection] = useState<OnSelectionChangeParams>(null);
-  const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
-
+  
+  
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [lastSelection, setLastSelection] =
+  useState<OnSelectionChangeParams>(null);
+  
+  const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
+  
+  useEffect(() => {
+    // this effect is used to attach the global event handlers
+    
+    const onKeyDown = (event: KeyboardEvent) => {
+      console.log("keydownou", lastCopiedSelection, position)
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.key === "c" &&
+        lastSelection &&
+        !disableCP
+        ) {
+          event.preventDefault();
+          setLastCopiedSelection(_.cloneDeep(lastSelection));
+        }
+        if (
+          (event.ctrlKey || event.metaKey) &&
+          event.key === "v" &&
+          lastCopiedSelection &&
+          !disableCP
+          ) {
+            event.preventDefault();
+            let bounds = reactFlowWrapper.current.getBoundingClientRect();
+            paste(lastCopiedSelection, {
+              x: position.x - bounds.left,
+              y: position.y - bounds.top,
+            });
+          }
+          if (
+            (event.ctrlKey || event.metaKey) &&
+            event.key === "g" &&
+            lastSelection
+      ) {
+        event.preventDefault();
+        // addFlow(newFlow, false);
+      }
+    };
+    const handleMouseMove = (event) => {
+      setPosition({ x: event.clientX, y: event.clientY });
+    };
+    
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('mousemove', handleMouseMove);
+    
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [position, lastCopiedSelection, lastSelection]);
 
-  const [selectionMenuPosition, setSelectionMenuPosition] = useState({
-    x: 0,
-    y: 0,
-  });
+
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
 
-  const handleMouseMove = (event) => {
-    setPosition({ x: event.clientX, y: event.clientY });
-  };
-
-  let paste = () => {
-    let minimumX = Infinity;
-    let minimumY = Infinity;
-    let idsMap = {};
-    lastCopiedSelection.nodes.forEach((n) => {
-      if (n.position.y < minimumY) {
-        minimumY = n.position.y;
-      }
-      if (n.position.x < minimumX) {
-        minimumX = n.position.x;
-      }
-    });
-
-    const bounds = reactFlowWrapper.current.getBoundingClientRect();
-    const insidePosition = reactFlowInstance.project({
-      x: position.x - bounds.left,
-      y: position.y - bounds.top,
-    });
-
-    lastCopiedSelection.nodes.forEach((n) => {
-      // Generate a unique node ID
-      let newId = getId();
-      idsMap[n.id] = newId;
-
-      // Create a new node object
-      const newNode: NodeType = {
-        id: newId,
-        type: "genericNode",
-        position: {
-          x: insidePosition.x + n.position.x - minimumX,
-          y: insidePosition.y + n.position.y - minimumY,
-        },
-        data: {
-          ...n.data,
-          id: newId,
-        },
-      };
-
-      // Add the new node to the list of nodes in state
-      setNodes((nds) =>
-        nds
-          .map((e) => ({ ...e, selected: false }))
-          .concat({ ...newNode, selected: false })
-      );
-    });
-
-    lastCopiedSelection.edges.forEach((e) => {
-      let source = idsMap[e.source];
-      let target = idsMap[e.target];
-      let sourceHandleSplitted = e.sourceHandle.split("|");
-      let sourceHandle =
-        sourceHandleSplitted[0] +
-        "|" +
-        source +
-        "|" +
-        sourceHandleSplitted.slice(2).join("|");
-      let targetHandleSplitted = e.targetHandle.split("|");
-      let targetHandle =
-        targetHandleSplitted.slice(0, -1).join("|") + "|" + target;
-      let id =
-        "reactflow__edge-" +
-        source +
-        sourceHandle +
-        "-" +
-        target +
-        targetHandle;
-      setEdges((eds) =>
-        addEdge(
-          {
-            source,
-            target,
-            sourceHandle,
-            targetHandle,
-            id,
-            className: "animate-pulse",
-            selected: false,
-          },
-          eds.map((e) => ({ ...e, selected: false }))
-        )
-      );
-    });
-  };
+  
 
   const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
   const { setErrorData } = useContext(alertContext);
@@ -174,11 +126,6 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
   );
   const { setViewport } = useReactFlow();
   const edgeUpdateSuccessful = useRef(true);
-
-  function getId() {
-    return `dndnode_` + incrementNodeId();
-  }
-
   useEffect(() => {
     if (reactFlowInstance && flow) {
       flow.data = reactFlowInstance.toObject();
@@ -211,19 +158,33 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
     [onEdgesChange, setNodes]
   );
 
-	const onConnect = useCallback(
-		(params: Connection) => {
-			takeSnapshot();
-			setEdges((eds) =>
-				addEdge({ ...params, style:params.sourceHandle.split('|')[0] === "flow" ? {stroke: "#333333", strokeWidth: 2} : {stroke: "#222222"}, className:(params.sourceHandle.split('|')[0] === "flow" ? "" : "animate-pulse"), animated:(params.sourceHandle.split('|')[0] === "flow") }, eds)
-			);
-			setNodes((x) => {
-				let newX = _.cloneDeep(x);
-				return newX;
-			});
-		},
-		[setEdges, setNodes, takeSnapshot]
-	);
+  const onConnect = useCallback(
+    (params: Connection) => {
+      takeSnapshot();
+      setEdges((eds) =>
+        addEdge(
+          {
+            ...params,
+            style:
+              params.targetHandle.split("|")[0] === "Text"
+                ? { stroke: "#333333", strokeWidth: 2 }
+                : { stroke: "#222222" },
+            className:
+              params.targetHandle.split("|")[0] === "Text"
+                ? ""
+                : "animate-pulse",
+            animated: params.targetHandle.split("|")[0] === "Text",
+          },
+          eds
+        )
+      );
+      setNodes((x) => {
+        let newX = _.cloneDeep(x);
+        return newX;
+      });
+    },
+    [setEdges, setNodes, takeSnapshot]
+  );
 
   const onNodeDragStart: NodeDragHandler = useCallback(() => {
     // 👇 make dragging a node undoable
@@ -267,12 +228,10 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
       });
 
       // Generate a unique node ID
-      let newId = getId();
+      let newId = getNodeId();
       let newNode: NodeType;
 
       if (data.type !== "groupNode") {
-
-
         // Create a new node object
         newNode = {
           id: newId,
@@ -298,12 +257,11 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
         };
 
         // Add the new node to the list of nodes in state
-
       }
       setNodes((nds) => nds.concat(newNode));
     },
     // Specify dependencies for useCallback
-    [incrementNodeId, reactFlowInstance, setErrorData, setNodes, takeSnapshot]
+    [getNodeId, reactFlowInstance, setErrorData, setNodes, takeSnapshot]
   );
 
   const onDelete = useCallback(
@@ -344,10 +302,10 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
 
   const onSelectionEnd = useCallback(() => {
     setSelectionEnded(true);
-  }, [])
+  }, []);
   const onSelectionStart = useCallback(() => {
     setSelectionEnded(false);
-  }, [])
+  }, []);
 
   // Workaround to show the menu only after the selection has ended.
   useEffect(() => {
@@ -356,8 +314,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
     } else {
       setSelectionMenuVisible(false);
     }
-  }, [selectionEnded, lastSelection])
-
+  }, [selectionEnded, lastSelection]);
 
   const onSelectionChange = useCallback((flow) => {
     setLastSelection(flow);
@@ -366,7 +323,6 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
   return (
     <div
       className="w-full h-full"
-      onMouseMove={handleMouseMove}
       ref={reactFlowWrapper}
     >
       {Object.keys(templates).length > 0 && Object.keys(types).length > 0 ? (
@@ -379,7 +335,6 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChangeMod}
-            onKeyDown={(e) => onKeyDown(e)}
             onConnect={onConnect}
             onLoad={setReactFlowInstance}
             onInit={setReactFlowInstance}
@@ -408,15 +363,34 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
               console.log(lastSelection);
               console.log(getMiddlePoint(lastSelection.nodes));
               console.log(reactFlowInstance.getViewport());
-              const newFlow = generateFlow(lastSelection, reactFlowInstance, "new component");
-              const newGroupNode = generateNodeFromFlow(newFlow)
-              setNodes(oldNodes => [...oldNodes.filter((oldNode) => !lastSelection.nodes.some(selectionNode => selectionNode.id === oldNode.id)), newGroupNode])
-              setEdges(oldEdges => oldEdges.filter((oldEdge) => !lastSelection.nodes.some(selectionNode => selectionNode.id === oldEdge.target || selectionNode.id === oldEdge.source)))
+              const newFlow = generateFlow(
+                lastSelection,
+                reactFlowInstance,
+                "new component"
+              );
+              const newGroupNode = generateNodeFromFlow(newFlow);
+              setNodes((oldNodes) => [
+                ...oldNodes.filter(
+                  (oldNode) =>
+                    !lastSelection.nodes.some(
+                      (selectionNode) => selectionNode.id === oldNode.id
+                    )
+                ),
+                newGroupNode,
+              ]);
+              setEdges((oldEdges) =>
+                oldEdges.filter(
+                  (oldEdge) =>
+                    !lastSelection.nodes.some(
+                      (selectionNode) =>
+                        selectionNode.id === oldEdge.target ||
+                        selectionNode.id === oldEdge.source
+                    )
+                )
+              );
             }}
             isVisible={selectionMenuVisible}
-            nodes={
-              lastSelection?.nodes
-            }
+            nodes={lastSelection?.nodes}
           />
         </>
       ) : (

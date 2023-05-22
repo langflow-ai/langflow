@@ -47,8 +47,8 @@ export default function TabComponent({
 								className="bg-transparent focus:border-none active:outline hover:outline focus:outline outline-gray-300 rounded-md  w-28"
 								onBlur={() => {
 									setIsRename(false);
+									setDisableCP(false);
 									if (value !== "") {
-										setDisableCP(false);
 										let newFlow = _.cloneDeep(flow);
 										newFlow.name = value;
 										updateFlow(newFlow);

@@ -7,7 +7,7 @@ import ToggleComponent from "../../../../components/toggleComponent";
 import InputListComponent from "../../../../components/inputListComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import { typesContext } from "../../../../contexts/typesContext";
-import { ParameterComponentType } from "../../../../types/components";
+import { InputParameterComponentType } from "../../../../types/components";
 import FloatComponent from "../../../../components/floatComponent";
 import Dropdown from "../../../../components/dropdownComponent";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
@@ -15,9 +15,9 @@ import InputFileComponent from "../../../../components/inputFileComponent";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import IntComponent from "../../../../components/intComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
-import HandleComponent from "./components/handleComponent";
+import HandleComponent from "../parameterComponent/components/handleComponent";
 
-export default function ParameterComponent({
+export default function InputParameterComponent({
   left,
   id,
   data,
@@ -28,40 +28,56 @@ export default function ParameterComponent({
   name = "",
   required = false,
   handleDisabled,
-}: ParameterComponentType) {
+}: InputParameterComponentType) {
   const ref = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
-  const [position, setPosition] = useState(0);
+  const [flowHandlePosition, setFlowHandlePosition] = useState(0);
   useEffect(() => {
     if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
-      setPosition(ref.current.offsetTop + ref.current.clientHeight / 2);
+      setFlowHandlePosition(
+        ref.current.offsetTop + ref.current.clientHeight / 2
+      );
       updateNodeInternals(data.id);
     }
-  }, [data.id, ref, updateNodeInternals]);
+  }, [data.id, ref, updateNodeInternals, ref.current]);
 
   useEffect(() => {
     updateNodeInternals(data.id);
-  }, [data.id, position, updateNodeInternals]);
+  }, [data.id, flowHandlePosition, updateNodeInternals]);
 
   return (
     <div
       ref={ref}
       className={
-        "w-full flex flex-wrap items-center bg-gray-50 dark:bg-gray-800 dark:text-white mt-1 px-5 py-2" +
+        "mt-5 w-full flex flex-wrap justify-between items-center bg-gray-50 dark:bg-gray-800 dark:text-white px-5 py-2" +
         (left ? " justify-between" : " justify-end")
       }
     >
       <HandleComponent
         handleDisabled={handleDisabled}
-        position={position}
-        left={left}
-        id={id}
+        position={flowHandlePosition}
+        tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
         data={data}
-        tooltipTitle={tooltipTitle}
-        title={title}
         color={color}
+        title={title}
+        name="Input"
+        fill={true}
+        id={"Text|Input|" + data.id}
+        left={true}
         type={type}
-        name={name}
+        required={required}
+      />
+      <HandleComponent
+        handleDisabled={handleDisabled}
+        data={data}
+        position={flowHandlePosition}
+        fill={true}
+        color={"#333333"}
+        title={"Output"}
+        tooltipTitle={tooltipTitle}
+        id={[data.type, data.id, ...data.node.base_classes].join("|")}
+        type={data.node.base_classes.join("|")}
+        left={false}
         required={required}
       />
     </div>
