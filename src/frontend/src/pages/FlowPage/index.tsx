@@ -89,14 +89,6 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
               y: position.y - bounds.top,
             });
           }
-          if (
-            (event.ctrlKey || event.metaKey) &&
-            event.key === "g" &&
-            lastSelection
-      ) {
-        event.preventDefault();
-        // addFlow(newFlow, false);
-      }
     };
     const handleMouseMove = (event) => {
       setPosition({ x: event.clientX, y: event.clientY });
