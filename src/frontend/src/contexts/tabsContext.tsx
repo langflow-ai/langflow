@@ -72,10 +72,17 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 			cookieObject.flows.forEach((flow) => {
 				flow.data.nodes.forEach((node) => {
 					if (Object.keys(templates[node.data.type]["template"]).length > 0) {
-						// node.data.node.base_classes = templates[node.data.type][
-						// 	"base_classes"
-						// ];
-						// node.data.node.description = templates[node.data.type]['description'];
+						node.data.node.base_classes = templates[node.data.type][
+							"base_classes"
+						];
+						flow.data.edges.forEach((edge) => {
+							if (edge.source === node.id) {
+								edge.sourceHandle = edge.sourceHandle.split("|").slice(0, 2).concat(templates[node.data.type][
+									"base_classes"
+								]).join("|");
+							}
+						})
+						node.data.node.description = templates[node.data.type]['description'];
 						node.data.node.template = updateTemplate(
 							templates[node.data.type][
 								"template"
@@ -263,16 +270,22 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	
 	function addFlow(flow?: FlowType,newTab:boolean=true) {
 		// Get data from the flow or set it to null if there's no flow provided.
-		if(!newTab){
-			paste({nodes: flow.data.nodes, edges: flow.data.edges}, {x:10, y:10})
-		} else {
-		const data = flow?.data ? flow.data : null;
-		const description = flow?.description ? flow.description : "";
-
+		let data = flow?.data ? flow.data : null;
 		if (data) {
 			data.nodes.forEach((node) => {
 				if (Object.keys(templates[node.data.type]["template"]).length > 0) {
-					// node.data.node.description = templates[node.data.type]['description'];
+					node.data.node.base_classes = templates[node.data.type][
+						"base_classes"
+					];
+					flow.data.edges.forEach((edge) => {
+						if (edge.source === node.id) {
+							edge.sourceHandle = edge.sourceHandle.split("|").slice(0, 2).concat(templates[node.data.type][
+								"base_classes"
+							]).join("|");
+						}
+					})
+					node.data.node.description = templates[node.data.type]['description'];
+					console.log(node.data.node.template)
 					node.data.node.template = updateTemplate(
 						templates[node.data.type]["template"] as unknown as APITemplateType,
 						node.data.node.template as APITemplateType
@@ -280,6 +293,14 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 				}
 			});
 		}
+
+
+		if(!newTab){
+			paste({nodes: flow.data.nodes, edges: flow.data.edges}, {x:10, y:10})
+		} else {
+		const description = flow?.description ? flow.description : "";
+
+
 		// Create a new flow with a default name if no flow is provided.
 		let newFlow: FlowType = {
 			description,
