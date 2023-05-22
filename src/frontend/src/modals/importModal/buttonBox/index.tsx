@@ -92,10 +92,10 @@ export default function ButtonBox({
 								<div className={textColor}>{icon}</div>
 							</div>
 						</div>
-						<div className="mt-auto mb-auto">
+						<div className="w-full mt-auto mb-auto">
 						<h3
 							className={classNames(
-								"font-semibold text-white dark:text-white/80",
+								"w-full font-semibold break-words text-white dark:text-white/80",
 								titleFontSize,
 								marginTop
 							)}

@@ -30,9 +30,7 @@ import { typesContext } from "../../contexts/typesContext";
 import ConnectionLineComponent from "./components/ConnectionLineComponent";
 import { FlowType, NodeType } from "../../types/flow";
 import { APIClassType } from "../../types/api";
-import {
-  isValidConnection,
-} from "../../utils";
+import { isValidConnection } from "../../utils";
 import useUndoRedo from "./hooks/useUndoRedo";
 
 const nodeTypes = {
@@ -43,49 +41,48 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
   let { updateFlow, disableCopyPaste, addFlow, getNodeId, paste } =
     useContext(TabsContext);
   const { types, reactFlowInstance, setReactFlowInstance, templates } =
-  useContext(typesContext);
+    useContext(typesContext);
   const reactFlowWrapper = useRef(null);
-  
+
   const { undo, redo, canUndo, canRedo, takeSnapshot } = useUndoRedo();
-  
-  
+
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
-  useState<OnSelectionChangeParams>(null);
-  
+    useState<OnSelectionChangeParams>(null);
+
   const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
-  
+
   useEffect(() => {
     // this effect is used to attach the global event handlers
-    
+
     const onKeyDown = (event: KeyboardEvent) => {
-      console.log("keydownou", lastCopiedSelection, position)
+      console.log("keydownou", lastCopiedSelection, position);
       if (
         (event.ctrlKey || event.metaKey) &&
         event.key === "c" &&
         lastSelection &&
         !disableCopyPaste
-        ) {
-          event.preventDefault();
-          setLastCopiedSelection(_.cloneDeep(lastSelection));
-        }
-        if (
-          (event.ctrlKey || event.metaKey) &&
-          event.key === "v" &&
-          lastCopiedSelection &&
-          !disableCopyPaste
-          ) {
-            event.preventDefault();
-            let bounds = reactFlowWrapper.current.getBoundingClientRect();
-            paste(lastCopiedSelection, {
-              x: position.x - bounds.left,
-              y: position.y - bounds.top,
-            });
-          }
-          if (
-            (event.ctrlKey || event.metaKey) &&
-            event.key === "g" &&
-            lastSelection
+      ) {
+        event.preventDefault();
+        setLastCopiedSelection(_.cloneDeep(lastSelection));
+      }
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.key === "v" &&
+        lastCopiedSelection &&
+        !disableCopyPaste
+      ) {
+        event.preventDefault();
+        let bounds = reactFlowWrapper.current.getBoundingClientRect();
+        paste(lastCopiedSelection, {
+          x: position.x - bounds.left,
+          y: position.y - bounds.top,
+        });
+      }
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.key === "g" &&
+        lastSelection
       ) {
         event.preventDefault();
         // addFlow(newFlow, false);
@@ -94,20 +91,17 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
     const handleMouseMove = (event) => {
       setPosition({ x: event.clientX, y: event.clientY });
     };
-    
-    document.addEventListener('keydown', onKeyDown);
-    document.addEventListener('mousemove', handleMouseMove);
-    
+
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("mousemove", handleMouseMove);
+
     return () => {
-      document.removeEventListener('keydown', onKeyDown);
-      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("mousemove", handleMouseMove);
     };
   }, [position, lastCopiedSelection, lastSelection]);
 
-
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
-
-  
 
   const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
   const { setErrorData } = useContext(alertContext);
@@ -314,10 +308,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
   }, []);
 
   return (
-    <div
-      className="w-full h-full"
-      ref={reactFlowWrapper}
-    >
+    <div className="w-full h-full" ref={reactFlowWrapper}>
       {Object.keys(templates).length > 0 && Object.keys(types).length > 0 ? (
         <>
           <ReactFlow
