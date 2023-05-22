@@ -101,7 +101,7 @@ export const nodeNames: { [char: string]: string } = {
 	advanced: "Advanced",
 	chat: "Chat",
 	embeddings: "Embeddings",
-	documentloaders: "Document Loaders",
+	documentloaders: "Loaders",
 	vectorstores: "Vector Stores",
 	toolkits: "Toolkits",
 	wrappers: "Wrappers",
