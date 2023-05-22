@@ -23,7 +23,7 @@ export default function CodeAreaModal({
 	const [code, setCode] = useState(value);
 	const { dark } = useContext(darkContext);
 	const { setErrorData, setSuccessData } = useContext(alertContext);
-	const { setDisableCP } = useContext(TabsContext);
+	const { setDisableCopyPaste } = useContext(TabsContext);
 	const { closePopUp } = useContext(PopUpContext);
 	const ref = useRef();
 	function setModalOpen(x: boolean) {
@@ -112,10 +112,10 @@ export default function CodeAreaModal({
 														setCode(value);
 													}}
 													onBlur={() => {
-														setDisableCP(false)
+														setDisableCopyPaste(false)
 													}}
 													onFocus={() => {
-														setDisableCP(true)
+														setDisableCopyPaste(true)
 													}}
 													className="h-full w-full rounded-lg"
 												/>

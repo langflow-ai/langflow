@@ -27,8 +27,8 @@ const TabsContextInitialValue: TabsContextType = {
 	downloadFlow: (flow: FlowType) => {},
 	uploadFlow: () => {},
 	hardReset: () => {},
-	disableCP:false,
-	setDisableCP:(state:boolean)=>{},
+	disableCopyPaste:false,
+	setDisableCopyPaste:(state:boolean)=>{},
 	getNodeId: () => "",
 	paste: (selection: {nodes: any, edges: any}, position: {x: number, y: number}) => {},
 };
@@ -307,13 +307,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 			return newFlows;
 		});
 	}
-	const [disableCP, setDisableCP] = useState(false);
+	const [disableCopyPaste, setDisableCopyPaste] = useState(false);
 
 	return (
 		<TabsContext.Provider
 			value={{
-				disableCP,
-				setDisableCP,
+				disableCopyPaste,
+				setDisableCopyPaste,
 				save,
 				hardReset,
 				tabIndex,

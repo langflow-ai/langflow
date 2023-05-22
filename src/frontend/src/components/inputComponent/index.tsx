@@ -11,7 +11,7 @@ export default function InputComponent({
 }: InputComponentType) {
 	const [myValue, setMyValue] = useState(value ?? "");
 	const [pwdVisible, setPwdVisible] = useState(false);
-	const {setDisableCP} =  useContext(TabsContext)
+	const {setDisableCopyPaste} =  useContext(TabsContext)
 	useEffect(() => {
 		if (disabled) {
 			setMyValue("");
@@ -29,10 +29,10 @@ export default function InputComponent({
 			<input
 				value={myValue}
 				onBlur={() => {
-					setDisableCP(false)
+					setDisableCopyPaste(false)
 				}}
 				onFocus={() => {
-					setDisableCP(true)
+					setDisableCopyPaste(true)
 				}}
 				className={classNames(
 					"block w-full pr-12 form-input dark:bg-gray-900 dark:border-gray-600 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",

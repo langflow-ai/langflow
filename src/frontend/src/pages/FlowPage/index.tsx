@@ -40,7 +40,7 @@ const nodeTypes = {
 };
 
 export default function FlowPage({ flow }: { flow: FlowType }) {
-  let { updateFlow, disableCP, addFlow, getNodeId, paste } =
+  let { updateFlow, disableCopyPaste, addFlow, getNodeId, paste } =
     useContext(TabsContext);
   const { types, reactFlowInstance, setReactFlowInstance, templates } =
   useContext(typesContext);
@@ -64,7 +64,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
         (event.ctrlKey || event.metaKey) &&
         event.key === "c" &&
         lastSelection &&
-        !disableCP
+        !disableCopyPaste
         ) {
           event.preventDefault();
           setLastCopiedSelection(_.cloneDeep(lastSelection));
@@ -73,7 +73,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
           (event.ctrlKey || event.metaKey) &&
           event.key === "v" &&
           lastCopiedSelection &&
-          !disableCP
+          !disableCopyPaste
           ) {
             event.preventDefault();
             let bounds = reactFlowWrapper.current.getBoundingClientRect();

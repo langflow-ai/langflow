@@ -14,7 +14,7 @@ export default function TabComponent({
 	selected: boolean;
 	onClick: () => void;
 }) {
-	const { removeFlow, updateFlow, flows, setDisableCP } = useContext(TabsContext);
+	const { removeFlow, updateFlow, flows, setDisableCopyPaste } = useContext(TabsContext);
 	const [isRename, setIsRename] = useState(false);
 	const [value, setValue] = useState("");
 	return (
@@ -41,13 +41,13 @@ export default function TabComponent({
 						{isRename ? (
 							<input
 								onFocus={() => {
-									setDisableCP(true);
+									setDisableCopyPaste(true);
 								}}
 								autoFocus
 								className="bg-transparent focus:border-none active:outline hover:outline focus:outline outline-gray-300 rounded-md  w-28"
 								onBlur={() => {
 									setIsRename(false);
-									setDisableCP(false);
+									setDisableCopyPaste(false);
 									if (value !== "") {
 										let newFlow = _.cloneDeep(flow);
 										newFlow.name = value;
