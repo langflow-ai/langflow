@@ -1,5 +1,4 @@
 import { NodeDataType, NodeType } from './types/flow/index';
-import { NodeDataType, NodeType } from './types/flow/index';
 import {
   RocketLaunchIcon,
   LinkIcon,
