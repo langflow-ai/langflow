@@ -412,7 +412,9 @@ export function isValidConnection(
         return true;
       }
     } else if (
-      targetHandle.split("|")[0] === "flow" &&
+      //! === "Text" is not a good solution
+      //TODO: fix this with a parameter
+      targetHandle.split("|")[0] === "Text" &&
       target !== source &&
       !reactFlowInstance.getEdges().find((e) => e.targetHandle === targetHandle)
     ) {

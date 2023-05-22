@@ -30,7 +30,7 @@ export default function ChatMessage({
   return (
     <div
       className={classNames(
-        "w-full py-2 pl-2 flex",
+        "flex w-full py-2 pl-2",
         chat.isSend
           ? "bg-white dark:bg-gray-900 "
           : "bg-gray-200  dark:bg-gray-800"
@@ -38,21 +38,21 @@ export default function ChatMessage({
     >
       <div
         className={classNames(
-          "rounded-full overflow-hidden w-8 h-8 flex items-center my-3 justify-center"
+          "my-3 flex h-8 w-8 items-center justify-center overflow-hidden rounded-full"
         )}
       >
         {!chat.isSend && (
-          <div className="relative w-8 h-8">
+          <div className="relative h-8 w-8">
             <img
               className={
-                "absolute transition-opacity duration-500 scale-150 " +
+                "absolute scale-150 transition-opacity duration-500 " +
                 (lockChat ? "opacity-100" : "opacity-0")
               }
               src={AiIcon}
             />
             <img
               className={
-                "absolute transition-opacity duration-500 scale-150 " +
+                "absolute scale-150 transition-opacity duration-500 " +
                 (lockChat ? "opacity-0" : "opacity-100")
               }
               src={AiIconStill}
@@ -60,44 +60,44 @@ export default function ChatMessage({
           </div>
         )}
         {chat.isSend && (
-          <UserIcon className="w-6 h-6 -mb-1 text-gray-800 dark:text-gray-200" />
+          <UserIcon className="-mb-1 h-6 w-6 text-gray-800 dark:text-gray-200" />
         )}
       </div>
       {!chat.isSend ? (
-        <div className="w-full text-start flex items-center">
-          <div className="w-full relative text-start inline-block text-gray-600 dark:text-gray-300 text-sm font-normal">
+        <div className="flex w-full items-center text-start">
+          <div className="relative inline-block w-full text-start text-sm font-normal text-gray-600 dark:text-gray-300">
             {hidden && chat.thought && chat.thought !== "" && (
               <div
                 onClick={() => setHidden((prev) => !prev)}
-                className="absolute -top-1 -left-2 cursor-pointer"
+                className="absolute -left-2 -top-1 cursor-pointer"
               >
-                <ChatBubbleOvalLeftEllipsisIcon className="w-5 h-5 animate-bounce dark:text-white" />
+                <ChatBubbleOvalLeftEllipsisIcon className="h-5 w-5 animate-bounce dark:text-white" />
               </div>
             )}
             {chat.thought && chat.thought !== "" && !hidden && (
               <div
                 onClick={() => setHidden((prev) => !prev)}
-                className=" text-start inline-block rounded-md text-gray-600 dark:text-gray-200 h-full border border-gray-300 dark:border-gray-500
-								bg-gray-100 dark:bg-gray-800 w-[95%] pb-3 pt-3 px-2 ml-3 cursor-pointer scrollbar-hide overflow-scroll"
+                className=" ml-3 inline-block h-full w-[95%] cursor-pointer overflow-scroll rounded-md border border-gray-300
+								bg-gray-100 px-2 pb-3 pt-3 text-start text-gray-600 scrollbar-hide dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200"
                 dangerouslySetInnerHTML={{
                   __html: convert.toHtml(chat.thought),
                 }}
               ></div>
             )}
             {chat.thought && chat.thought !== "" && !hidden && <br></br>}
-            <div className="w-full px-4 pb-3 pt-3 pr-8">
-              <div className="dark:text-white w-full">
+            <div className="w-full px-4 pb-3 pr-8 pt-3">
+              <div className="w-full dark:text-white">
                 <div className="w-full">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm, remarkMath]}
                     rehypePlugins={[rehypeMathjax]}
-                    className="markdown prose dark:prose-invert text-gray-600 dark:text-gray-200"
+                    className="markdown prose text-gray-600 dark:prose-invert dark:text-gray-200"
                     components={{
                       code({ node, inline, className, children, ...props }) {
                         if (children.length) {
                           if (children[0] == "▍") {
                             return (
-                              <span className="animate-pulse cursor-default mt-1">
+                              <span className="mt-1 animate-pulse cursor-default">
                                 ▍
                               </span>
                             );
@@ -149,12 +149,12 @@ export default function ChatMessage({
           </div>
         </div>
       ) : (
-        <div className="w-full flex items-center">
-          <div className="text-start inline-block px-3 text-sm text-gray-600 dark:text-white">
+        <div className="flex w-full items-center">
+          <div className="inline-block px-3 text-start text-sm text-gray-600 dark:text-white">
             <ReactMarkdown
               remarkPlugins={[remarkGfm, remarkMath]}
               rehypePlugins={[rehypeMathjax]}
-              className="markdown prose dark:prose-invert text-gray-600 dark:text-gray-200"
+              className="markdown prose text-gray-600 dark:prose-invert dark:text-gray-200"
             >
               {message}
             </ReactMarkdown>

@@ -45,7 +45,7 @@ export default function HandleComponent({
     <>
       <div
         className={
-          "text-sm truncate " + (handleDisabled ? "text-gray-500" : "")
+          "truncate text-sm " + (handleDisabled ? "text-gray-500" : "")
         }
       >
         {title}
@@ -73,7 +73,7 @@ export default function HandleComponent({
             }
             className={classNames(
               left ? "-ml-0.5 " : "-mr-0.5 ",
-              "w-3 h-3 rounded-full border-2 dark:bg-gray-800",
+              "h-3 w-3 rounded-full border-2 dark:bg-gray-800",
               handleDisabled && "pointer-events-none"
             )}
             style={{

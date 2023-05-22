@@ -29,7 +29,7 @@ export default function ModalField({ data, title, required, id, name, type }) {
   return (
     <div
       className={classNames(
-        "flex flex-row w-full items-center justify-between",
+        "flex w-full flex-row items-center justify-between",
         display ? "" : "hidden"
       )}
     >

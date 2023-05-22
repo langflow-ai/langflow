@@ -34,7 +34,7 @@ export default function SuccessAlert({
           setShow(false);
           removeAlert(id);
         }}
-        className="rounded-md w-96 mt-6 shadow-xl bg-green-50 dark:bg-green-900 p-4"
+        className="mt-6 w-96 rounded-md bg-green-50 p-4 shadow-xl dark:bg-green-900"
       >
         <div className="flex">
           <div className="flex-shrink-0">

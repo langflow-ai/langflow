@@ -18,7 +18,7 @@ export default function IntComponent({
   return (
     <div
       className={
-        disabled ? "pointer-events-none cursor-not-allowed w-full" : "w-full"
+        disabled ? "pointer-events-none w-full cursor-not-allowed" : "w-full"
       }
     >
       <input
@@ -37,7 +37,7 @@ export default function IntComponent({
         type="number"
         value={myValue}
         className={
-          "block w-full form-input dark:bg-gray-900 arrow-hide dark:border-gray-600 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" +
+          "form-input block w-full rounded-md border-gray-300 shadow-sm arrow-hide focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 sm:text-sm" +
           (disabled ? " bg-gray-200 dark:bg-gray-700" : "")
         }
         placeholder="Type a integer number"

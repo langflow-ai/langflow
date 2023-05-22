@@ -24,16 +24,16 @@ export default function ChatTrigger({ open, setOpen }) {
       <div className="absolute bottom-4 right-3">
         <div
           style={{ backgroundColor: nodeColors["chat"] }}
-          className="border flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+          className="align-center flex h-12 w-12 justify-center rounded-full border px-3 py-1 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
         >
           <button
             onClick={() => {
               setOpen(true);
             }}
           >
-            <div className="flex gap-3  items-center">
+            <div className="flex items-center  gap-3">
               <ChatBubbleBottomCenterTextIcon
-                className="h-6 w-6 mt-1"
+                className="mt-1 h-6 w-6"
                 style={{ color: "white" }}
               />
             </div>

@@ -22,7 +22,7 @@ export default function InputComponent({
     <div
       className={
         disabled
-          ? "relative pointer-events-none cursor-not-allowed"
+          ? "pointer-events-none relative cursor-not-allowed"
           : "relative"
       }
     >
@@ -35,7 +35,7 @@ export default function InputComponent({
           setDisableCP(true);
         }}
         className={classNames(
-          "block w-full pr-12 form-input dark:bg-gray-900 dark:border-gray-600 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+          "form-input block w-full rounded-md border-gray-300 pr-12 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 sm:text-sm",
           disabled ? " bg-gray-200 dark:bg-gray-700" : "",
           password && !pwdVisible && myValue !== "" ? "password" : ""
         )}
@@ -59,7 +59,7 @@ export default function InputComponent({
               viewBox="0 0 24 24"
               strokeWidth={1.5}
               stroke="currentColor"
-              className="w-5 h-5"
+              className="h-5 w-5"
             >
               <path
                 strokeLinecap="round"
@@ -74,7 +74,7 @@ export default function InputComponent({
               viewBox="0 0 24 24"
               strokeWidth={1.5}
               stroke="currentColor"
-              className="w-5 h-5"
+              className="h-5 w-5"
             >
               <path
                 strokeLinecap="round"

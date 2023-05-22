@@ -47,7 +47,7 @@ export default function ParameterComponent({
     <div
       ref={ref}
       className={
-        "w-full flex flex-wrap items-center bg-gray-50 dark:bg-gray-800 dark:text-white mt-1 px-5 py-2" +
+        "mt-1 flex w-full flex-wrap items-center bg-gray-50 px-5 py-2 dark:bg-gray-800 dark:text-white" +
         (left ? " justify-between" : " justify-end")
       }
     >

@@ -36,7 +36,7 @@ export default function NoticeAlert({
           setShow(false);
           removeAlert(id);
         }}
-        className="rounded-md w-96 mt-6 shadow-xl bg-blue-50 dark:bg-blue-900 p-4"
+        className="mt-6 w-96 rounded-md bg-blue-50 p-4 shadow-xl dark:bg-blue-900"
       >
         <div className="flex">
           <div className="flex-shrink-0">
@@ -47,11 +47,11 @@ export default function NoticeAlert({
           </div>
           <div className="ml-3 flex-1 md:flex md:justify-between">
             <p className="text-sm text-blue-700 dark:text-white/80">{title}</p>
-            <p className="mt-3 text-sm md:mt-0 md:ml-6">
+            <p className="mt-3 text-sm md:ml-6 md:mt-0">
               {link !== "" ? (
                 <Link
                   to={link}
-                  className="whitespace-nowrap font-medium text-blue-700 dark:text-blue-50 hover:dark:text-blue-10 hover:text-blue-600"
+                  className="hover:dark:text-blue-10 whitespace-nowrap font-medium text-blue-700 hover:text-blue-600 dark:text-blue-50"
                 >
                   Details
                 </Link>

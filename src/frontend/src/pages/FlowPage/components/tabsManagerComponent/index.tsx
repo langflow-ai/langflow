@@ -37,8 +37,8 @@ export default function TabsManagerComponent() {
   }, [addFlow, flows.length, templates]);
 
   return (
-    <div className="h-full w-full flex flex-col">
-      <div className="w-full flex pr-2 flex-row text-center items-center bg-gray-100 dark:bg-gray-800 px-2">
+    <div className="flex h-full w-full flex-col">
+      <div className="flex w-full flex-row items-center bg-gray-100 px-2 pr-2 text-center dark:bg-gray-800">
         {flows.map((flow, index) => {
           return (
             <TabComponent
@@ -61,19 +61,19 @@ export default function TabsManagerComponent() {
             onClick={() =>
               openPopUp(<ApiModal flowName={flows[tabIndex].name} />)
             }
-            className="flex items-center gap-1 pr-2 border-gray-400 border-r text-sm text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
+            className="flex items-center gap-1 border-r border-gray-400 pr-2 text-sm text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
           >
-            Code <CodeBracketSquareIcon className="w-5 h-5" />
+            Code <CodeBracketSquareIcon className="h-5 w-5" />
           </button>
           <button
             onClick={() => openPopUp(<ImportModal />)}
-            className="flex items-center gap-1 pr-2 border-gray-400 border-r text-sm text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
+            className="flex items-center gap-1 border-r border-gray-400 pr-2 text-sm text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
           >
-            Import <ArrowUpTrayIcon className="w-5 h-5" />
+            Import <ArrowUpTrayIcon className="h-5 w-5" />
           </button>
           <button
             onClick={() => openPopUp(<ExportModal />)}
-            className="flex items-center gap-1 pr-2 text-sm text-gray-600  border-gray-400 border-r hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
+            className="flex items-center gap-1 border-r border-gray-400 pr-2  text-sm text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
           >
             Export <ArrowDownTrayIcon className="h-5 w-5" />
           </button>
@@ -90,7 +90,7 @@ export default function TabsManagerComponent() {
             )}
           </button>
           <button
-            className="text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200 relative"
+            className="relative text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
             onClick={(event: React.MouseEvent<HTMLElement>) => {
               setNotificationCenter(false);
               const top = (event.target as Element).getBoundingClientRect().top;
@@ -99,24 +99,24 @@ export default function TabsManagerComponent() {
               openPopUp(
                 <>
                   <div
-                    className="z-10 absolute"
+                    className="absolute z-10"
                     style={{ top: top + 34, left: left - AlertWidth }}
                   >
                     <AlertDropdown />
                   </div>
-                  <div className="h-screen w-screen fixed top-0 left-0"></div>
+                  <div className="fixed left-0 top-0 h-screen w-screen"></div>
                 </>
               );
             }}
           >
             {notificationCenter && (
-              <div className="absolute w-1.5 h-1.5 rounded-full bg-red-600 right-[3px]"></div>
+              <div className="absolute right-[3px] h-1.5 w-1.5 rounded-full bg-red-600"></div>
             )}
             <BellIcon className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
       </div>
-      <div className="w-full h-full">
+      <div className="h-full w-full">
         <ReactFlowProvider>
           {flows[tabIndex] ? (
             <FlowPage flow={flows[tabIndex]}></FlowPage>

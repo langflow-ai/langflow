@@ -98,7 +98,7 @@ flow("Hey, have you heard of LangFlow?")`;
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-gray-500 dark:bg-gray-600 dark:bg-opacity-75 bg-opacity-75 transition-opacity" />
+          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity dark:bg-gray-600 dark:bg-opacity-75" />
         </Transition.Child>
 
         <div className="fixed inset-0 z-10 overflow-y-auto">
@@ -112,8 +112,8 @@ flow("Hey, have you heard of LangFlow?")`;
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className="relative flex flex-col justify-between transform h-[600px] overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all sm:my-8 w-[700px]">
-                <div className=" z-50 absolute top-0 right-0 hidden pt-4 pr-4 sm:block">
+              <Dialog.Panel className="relative flex h-[600px] w-[700px] transform flex-col justify-between overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all dark:bg-gray-800 sm:my-8">
+                <div className=" absolute right-0 top-0 z-50 hidden pr-4 pt-4 sm:block">
                   <button
                     type="button"
                     className="rounded-md text-gray-400 hover:text-gray-500"
@@ -125,8 +125,8 @@ flow("Hey, have you heard of LangFlow?")`;
                     <XMarkIcon className="h-6 w-6" aria-hidden="true" />
                   </button>
                 </div>
-                <div className="h-full w-full flex flex-col justify-center items-center">
-                  <div className="flex w-full pb-4 z-10 justify-center shadow-sm">
+                <div className="flex h-full w-full flex-col items-center justify-center">
+                  <div className="z-10 flex w-full justify-center pb-4 shadow-sm">
                     <div className="mx-auto mt-4 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-gray-900 sm:mx-0 sm:h-10 sm:w-10">
                       <CodeBracketSquareIcon
                         className="h-6 w-6 text-blue-600"
@@ -136,22 +136,22 @@ flow("Hey, have you heard of LangFlow?")`;
                     <div className="mt-4 text-center sm:ml-4 sm:text-left">
                       <Dialog.Title
                         as="h3"
-                        className="text-lg font-medium dark:text-white leading-10 text-gray-900"
+                        className="text-lg font-medium leading-10 text-gray-900 dark:text-white"
                       >
                         Code
                       </Dialog.Title>
                     </div>
                   </div>
-                  <div className="h-full w-full bg-gray-200 overflow-auto dark:bg-gray-900 p-4 gap-4 flex flex-row justify-center items-center">
-                    <div className="flex flex-col h-full w-full ">
-                      <div className="flex px-5 z-10">
+                  <div className="flex h-full w-full flex-row items-center justify-center gap-4 overflow-auto bg-gray-200 p-4 dark:bg-gray-900">
+                    <div className="flex h-full w-full flex-col ">
+                      <div className="z-10 flex px-5">
                         {tabs.map((tab, index) => (
                           <button
                             onClick={() => {
                               setActiveTab(index);
                             }}
                             className={
-                              "p-2 rounded-t-lg w-44 border border-b-0 border-gray-300 dark:border-gray-700 dark:text-gray-300 -mr-px flex justify-center items-center gap-4 " +
+                              "-mr-px flex w-44 items-center justify-center gap-4 rounded-t-lg border border-b-0 border-gray-300 p-2 dark:border-gray-700 dark:text-gray-300 " +
                               (activeTab === index
                                 ? " bg-white dark:bg-gray-800"
                                 : "bg-gray-100 dark:bg-gray-900")
@@ -162,13 +162,13 @@ flow("Hey, have you heard of LangFlow?")`;
                           </button>
                         ))}
                       </div>
-                      <div className="overflow-hidden px-4 py-5 sm:p-6 w-full h-full rounded-lg shadow bg-white dark:bg-gray-800">
-                        <div className="w-full flex items-center justify-between mb-2">
+                      <div className="h-full w-full overflow-hidden rounded-lg bg-white px-4 py-5 shadow dark:bg-gray-800 sm:p-6">
+                        <div className="mb-2 flex w-full items-center justify-between">
                           <span className="text-sm text-gray-500 dark:text-gray-300">
                             Export your flow to use it with this code.
                           </span>
                           <button
-                            className="flex gap-1.5 items-center rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
+                            className="flex items-center gap-1.5 rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
                             onClick={copyToClipboard}
                           >
                             {isCopied ? (

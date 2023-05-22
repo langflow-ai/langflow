@@ -26,12 +26,12 @@ export default function InputListComponent({
       }
     >
       {inputList.map((i, idx) => (
-        <div key={idx} className="w-full flex gap-3">
+        <div key={idx} className="flex w-full gap-3">
           <input
             type="text"
             value={i}
             className={
-              "block w-full form-input rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" +
+              "form-input block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" +
               (disabled ? " bg-gray-200" : "")
             }
             placeholder="Type a text"
@@ -61,7 +61,7 @@ export default function InputListComponent({
                 onChange(inputList);
               }}
             >
-              <PlusIcon className="w-4 h-4 hover:text-blue-600" />
+              <PlusIcon className="h-4 w-4 hover:text-blue-600" />
             </button>
           ) : (
             <button
@@ -74,7 +74,7 @@ export default function InputListComponent({
                 onChange(inputList);
               }}
             >
-              <XMarkIcon className="w-4 h-4 hover:text-red-600" />
+              <XMarkIcon className="h-4 w-4 hover:text-red-600" />
             </button>
           )}
         </div>

@@ -36,10 +36,10 @@ export default function FlowHandle({
   return (
     <div
       ref={ref}
-      className="w-full flex flex-wrap justify-between items-center bg-gray-50 dark:bg-gray-800 dark:text-white mt-1 px-5 py-2"
+      className="mt-1 flex w-full flex-wrap items-center justify-between bg-gray-50 px-5 py-2 dark:bg-gray-800 dark:text-white"
     >
       <>
-        <div className={"text-sm truncate w-full " + (left ? "" : "text-end")}>
+        <div className={"w-full truncate text-sm " + (left ? "" : "text-end")}>
           {title}
           <span className="text-red-600">{required ? " *" : ""}</span>
         </div>
@@ -53,7 +53,7 @@ export default function FlowHandle({
             }
             className={classNames(
               left ? "-ml-0.5 " : "-mr-0.5 ",
-              "w-3 h-3 rounded-full border-2 bg-white dark:bg-gray-800"
+              "h-3 w-3 rounded-full border-2 bg-white dark:bg-gray-800"
             )}
             style={{
               borderColor: color,

@@ -29,14 +29,14 @@ export default function ExtraSidebar() {
               Icon: nodeIcons[d] ?? nodeIcons.unknown,
             }}
           >
-            <div className="p-2 flex flex-col gap-2 ">
+            <div className="flex flex-col gap-2 p-2 ">
               {Object.keys(data[d])
                 .sort()
                 .map((t: string, k) => (
                   <div key={k}>
                     <div
                       draggable
-                      className={"cursor-grab border-l-8 rounded-l-md"}
+                      className={"cursor-grab rounded-l-md border-l-8"}
                       style={{
                         borderLeftColor: nodeColors[d] ?? nodeColors.unknown,
                       }}
@@ -47,17 +47,17 @@ export default function ExtraSidebar() {
                         })
                       }
                     >
-                      <div className="flex w-full justify-between text-sm px-3 py-1 items-center border-dashed border-gray-400 dark:border-gray-600 border-l-0 rounded-md rounded-l-none border">
-                        <span className="text-black dark:text-white w-36 truncate text-xs">
+                      <div className="flex w-full items-center justify-between rounded-md rounded-l-none border border-l-0 border-dashed border-gray-400 px-3 py-1 text-sm dark:border-gray-600">
+                        <span className="w-36 truncate text-xs text-black dark:text-white">
                           {t}
                         </span>
-                        <Bars2Icon className="w-4 h-6  text-gray-400 dark:text-gray-600" />
+                        <Bars2Icon className="h-6 w-4  text-gray-400 dark:text-gray-600" />
                       </div>
                     </div>
                   </div>
                 ))}
               {Object.keys(data[d]).length === 0 && (
-                <div className="text-gray-400 text-center">Coming soon</div>
+                <div className="text-center text-gray-400">Coming soon</div>
               )}
             </div>
           </DisclosureComponent>

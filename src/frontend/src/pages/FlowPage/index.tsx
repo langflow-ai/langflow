@@ -317,7 +317,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
   }, []);
 
   return (
-    <div className="w-full h-full" ref={reactFlowWrapper}>
+    <div className="h-full w-full" ref={reactFlowWrapper}>
       {Object.keys(templates).length > 0 && Object.keys(types).length > 0 ? (
         <>
           <ReactFlow
@@ -348,7 +348,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
             selectNodesOnDrag={false}
           >
             <Background className="dark:bg-gray-900" />
-            <Controls className="[&>button]:text-black  [&>button]:dark:bg-gray-800 hover:[&>button]:dark:bg-gray-700 [&>button]:dark:text-gray-400 [&>button]:dark:fill-gray-400 [&>button]:dark:border-gray-600"></Controls>
+            <Controls className="[&>button]:text-black  [&>button]:dark:border-gray-600 [&>button]:dark:bg-gray-800 [&>button]:dark:fill-gray-400 [&>button]:dark:text-gray-400 hover:[&>button]:dark:bg-gray-700"></Controls>
           </ReactFlow>
           <Chat flow={flow} reactFlowInstance={reactFlowInstance} />
           <SelectionMenu
