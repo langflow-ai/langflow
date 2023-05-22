@@ -15,19 +15,19 @@ import { APITemplateType, TemplateVariableType } from "../types/api";
 import { v4 as uuidv4 } from "uuid";
 
 const TabsContextInitialValue: TabsContextType = {
-	save: () => {},
+	save: () => { },
 	tabIndex: 0,
-	setTabIndex: (index: number) => {},
+	setTabIndex: (index: number) => { },
 	flows: [],
-	removeFlow: (id: string) => {},
-	addFlow: (flowData?: any) => {},
-	updateFlow: (newFlow: FlowType) => {},
+	removeFlow: (id: string) => { },
+	addFlow: (flowData?: any) => { },
+	updateFlow: (newFlow: FlowType) => { },
 	incrementNodeId: () => 0,
-	downloadFlow: (flow: FlowType) => {},
-	uploadFlow: () => {},
-	hardReset: () => {},
-	disableCP:false,
-	setDisableCP:(state:boolean)=>{},
+	downloadFlow: (flow: FlowType) => { },
+	uploadFlow: () => { },
+	hardReset: () => { },
+	disableCP: false,
+	setDisableCP: (state: boolean) => { },
 };
 
 export const TabsContext = createContext<TabsContextType>(
@@ -67,11 +67,19 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 			cookieObject.flows.forEach((flow) => {
 				flow.data.nodes.forEach((node) => {
 					if (Object.keys(templates[node.data.type]["template"]).length > 0) {
+						node.data.node.base_classes = templates[node.data.type][
+							"base_classes"
+						];
+						flow.data.edges.forEach((edge) => {
+							if (edge.source === node.id) {
+								edge.sourceHandle = edge.sourceHandle.split("|").slice(0, 2).concat(templates[node.data.type][
+									"base_classes"
+								]).join("|");
+							}
+						})
+						node.data.node.description = templates[node.data.type]['description'];
 						node.data.node.template = updateTemplate(
-							templates[node.data.type][
-								"template"
-							] as unknown as APITemplateType,
-
+							templates[node.data.type]["template"] as unknown as APITemplateType,
 							node.data.node.template as APITemplateType
 						);
 					}
@@ -173,12 +181,24 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		if (data) {
 			data.nodes.forEach((node) => {
 				if (Object.keys(templates[node.data.type]["template"]).length > 0) {
+					node.data.node.base_classes = templates[node.data.type][
+						"base_classes"
+					];
+					data.edges.forEach((edge) => {
+						if (edge.source === node.id) {
+							edge.sourceHandle = edge.sourceHandle.split("|").slice(0, 2).concat(templates[node.data.type][
+								"base_classes"
+							]).join("|");
+						}
+					})
+					node.data.node.description = templates[node.data.type]['description'];
 					node.data.node.template = updateTemplate(
 						templates[node.data.type]["template"] as unknown as APITemplateType,
 						node.data.node.template as APITemplateType
 					);
 				}
 			});
+			console.log(data);
 		}
 		// Create a new flow with a default name if no flow is provided.
 		let newFlow: FlowType = {
