@@ -48,7 +48,7 @@ export default function ExtraSidebar() {
 											}
 										>
 											<div className="flex w-full justify-between text-sm px-3 py-1 items-center border-dashed border-gray-400 dark:border-gray-600 border-l-0 rounded-md rounded-l-none border">
-												<span className="text-black dark:text-white w-36 truncate text-xs">
+												<span className="text-black dark:text-white w-36 pr-1 truncate text-xs">
 													{t}
 												</span>
 												<Bars2Icon className="w-4 h-6  text-gray-400 dark:text-gray-600" />
