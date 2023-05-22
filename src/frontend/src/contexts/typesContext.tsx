@@ -40,7 +40,6 @@ export function TypesProvider({ children }: { children: ReactNode }) {
         const result = await getAll();
         // Make sure to only update the state if the component is still mounted.
         if (isMounted) {
-          // Continue with your logic...
           setData(result.data);
           setTemplates(
             Object.keys(result.data).reduce((acc, curr) => {
