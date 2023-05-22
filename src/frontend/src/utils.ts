@@ -416,7 +416,7 @@ export function isValidConnection(
 				return true;
 			}
 		} else if (
-			targetHandle.split("|")[0] === "flow" &&
+			targetHandle.split("|")[0] === "Text" &&
 			target !== source &&
 			!reactFlowInstance.getEdges().find((e) => e.targetHandle === targetHandle)
 		) {
@@ -723,7 +723,7 @@ export function validateNode(n: NodeType, selection: OnSelectionChangeParams) {
 export function validateSelection(selection: OnSelectionChangeParams) {
 	// can be root verification
 	if (
-		!selection.nodes.some((n) => n.data.node.template._field || n.type === "groupNode")
+		!selection.nodes.some((n) => n.data.node.template.root_field || n.type === "groupNode")
 	) {
 		return false;
 	}

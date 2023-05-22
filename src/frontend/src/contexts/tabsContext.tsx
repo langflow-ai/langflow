@@ -294,7 +294,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 			});
 		}
 
-
 		if(!newTab){
 			paste({nodes: flow.data.nodes, edges: flow.data.edges}, {x:10, y:10})
 		} else {
