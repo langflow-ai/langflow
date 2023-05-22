@@ -33,10 +33,14 @@ def serve(
     config: str = typer.Option("config.yaml", help="Path to the configuration file."),
     log_level: str = typer.Option("info", help="Logging level."),
     log_file: Path = typer.Option("logs/langflow.log", help="Path to the log file."),
+    jcloud: bool = typer.Option(False, help="Deploy on Jina AI Cloud"),
 ):
     """
     Run the Langflow server.
     """
+
+    if jcloud:
+        return serve_on_jcloud()
 
     configure(log_level=log_level, log_file=log_file)
     update_settings(config)
@@ -67,6 +71,52 @@ def serve(
         from langflow.server import LangflowApplication
 
         LangflowApplication(app, options).run()
+
+
+def serve_on_jcloud():
+    """
+    Deploy Langflow server on Jina AI Cloud
+    """
+    import asyncio
+    from importlib.metadata import version as mod_version
+
+    import click
+
+    try:
+        from lcserve.__main__ import serve_on_jcloud  # type: ignore
+    except ImportError:
+        click.secho(
+            "🚨 Please install langchain-serve to deploy Langflow server on Jina AI Cloud "
+            "using `pip install langchain-serve`",
+            fg="red",
+        )
+        return
+
+    app_name = "langflow.lcserve:app"
+    app_dir = str(Path(__file__).parent)
+    version = mod_version("langflow")
+    base_image = "jinaai+docker://deepankarm/langflow"
+
+    click.echo("🚀 Deploying Langflow server on Jina AI Cloud")
+    app_id = asyncio.run(
+        serve_on_jcloud(
+            fastapi_app_str=app_name,
+            app_dir=app_dir,
+            uses=f"{base_image}:{version}",
+            name="langflow",
+        )
+    )
+    click.secho(
+        "🎉 Langflow server successfully deployed on Jina AI Cloud 🎉", fg="green"
+    )
+    click.secho(
+        "🔗 Click on the link to open the server (please allow ~1-2 minutes for the server to startup): ",
+        nl=False,
+        fg="green",
+    )
+    click.secho(f"https://{app_id}.wolf.jina.ai/", fg="blue")
+    click.secho("📖 Read more about managing the server: ", nl=False, fg="green")
+    click.secho("https://github.com/jina-ai/langchain-serve", fg="blue")
 
 
 def main():

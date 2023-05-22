@@ -29,14 +29,14 @@ export default function ExtraSidebar() {
               Icon: nodeIcons[d] ?? nodeIcons.unknown,
             }}
           >
-            <div className="flex flex-col gap-2 p-2 ">
+            <div className="flex flex-col gap-2 p-2">
               {Object.keys(data[d])
                 .sort()
                 .map((t: string, k) => (
                   <div key={k}>
                     <div
                       draggable
-                      className={"cursor-grab rounded-l-md border-l-8"}
+                      className={" cursor-grab rounded-l-md border-l-8"}
                       style={{
                         borderLeftColor: nodeColors[d] ?? nodeColors.unknown,
                       }}
@@ -48,7 +48,7 @@ export default function ExtraSidebar() {
                       }
                     >
                       <div className="flex w-full items-center justify-between rounded-md rounded-l-none border border-l-0 border-dashed border-gray-400 px-3 py-1 text-sm dark:border-gray-600">
-                        <span className="w-36 truncate text-xs text-black dark:text-white">
+                        <span className="w-36 truncate pr-1 text-xs text-black dark:text-white">
                           {t}
                         </span>
                         <Bars2Icon className="h-6 w-4  text-gray-400 dark:text-gray-600" />

@@ -1,8 +1,10 @@
 import {
+  BugAntIcon,
   CheckCircleIcon,
   Cog6ToothIcon,
   EllipsisHorizontalCircleIcon,
   ExclamationCircleIcon,
+  InformationCircleIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import { classNames, nodeColors, nodeIcons, toNormalCase } from "../../utils";
@@ -60,11 +62,7 @@ export default function GenericNode({
           let jsonResponse = await response.json();
           let jsonResponseParsed = await JSON.parse(jsonResponse);
           console.log(jsonResponseParsed);
-          if (jsonResponseParsed.valid) {
-            setValidationStatus(jsonResponseParsed.params);
-          } else {
-            setValidationStatus("error");
-          }
+          setValidationStatus(jsonResponseParsed);
         }
       } catch (error) {
         // console.error("Error validating node:", error);
@@ -78,14 +76,6 @@ export default function GenericNode({
       validateNode();
     }
   }, [params, validateNode]);
-
-  useEffect(() => {
-    if (validationStatus !== "error") {
-      setIsValid(true);
-    } else {
-      setIsValid(false);
-    }
-  }, [validationStatus]);
 
   if (!Icon) {
     if (showError.current) {
@@ -116,38 +106,48 @@ export default function GenericNode({
             }}
           />
           <div className="ml-2 truncate">{data.type}</div>
-
-          {validationStatus && validationStatus !== "error" ? (
+          <div>
             <Tooltip
               title={
-                <div className="max-h-96 overflow-auto">{validationStatus}</div>
+                !validationStatus ? (
+                  "Validating..."
+                ) : (
+                  <div className="max-h-96 overflow-auto">
+                    {validationStatus.params.split("\n").map((line, index) => (
+                      <div key={index}>{line}</div>
+                    ))}
+                  </div>
+                )
               }
             >
-              <CheckCircleIcon
-                className={classNames(
-                  isValid ? "text-green-500" : "text-red-500",
-                  "w-5",
-                  "hover:text-gray-500 hover:dark:text-gray-300"
-                )}
-              />
+              <div className="relative h-5 w-5">
+                <CheckCircleIcon
+                  className={classNames(
+                    validationStatus && validationStatus.valid
+                      ? "text-green-500 opacity-100"
+                      : "animate-spin text-green-500 opacity-0",
+                    "absolute w-5 transition-all duration-200 ease-in-out hover:text-gray-500 hover:dark:text-gray-300"
+                  )}
+                />
+                <ExclamationCircleIcon
+                  className={classNames(
+                    validationStatus && !validationStatus.valid
+                      ? "text-red-500 opacity-100"
+                      : "animate-spin text-red-500 opacity-0",
+                    "absolute w-5 transition-all duration-200 ease-in-out hover:text-gray-500 hover:dark:text-gray-600"
+                  )}
+                />
+                <EllipsisHorizontalCircleIcon
+                  className={classNames(
+                    !validationStatus
+                      ? "text-yellow-500 opacity-100"
+                      : "animate-spin text-yellow-500 opacity-0",
+                    "absolute w-5 transition-all duration-300 ease-in-out hover:text-gray-500 hover:dark:text-gray-600"
+                  )}
+                />
+              </div>
             </Tooltip>
-          ) : validationStatus === "error" ? (
-            <ExclamationCircleIcon
-              className={classNames(
-                isValid ? "text-green-500" : "text-red-500",
-                "w-5",
-                "hover:text-gray-500 hover:dark:text-gray-600"
-              )}
-            />
-          ) : (
-            <EllipsisHorizontalCircleIcon
-              className={classNames(
-                isValid ? "text-yellow-500" : "text-red-500",
-                "w-5",
-                "hover:text-gray-500 hover:dark:text-gray-600"
-              )}
-            />
-          )}
+          </div>
         </div>
         <div className="flex gap-3">
           <button
@@ -195,8 +195,8 @@ export default function GenericNode({
 
         <>
           {Object.keys(data.node.template)
-            .filter((field) => field.charAt(0) !== "_")
-            .map((fieldName: string, idx) => (
+            .filter((t) => t.charAt(0) !== "_")
+            .map((t: string, idx) => (
               <div key={idx}>
                 {/* {idx === 0 ? (
 									<div
@@ -217,38 +217,31 @@ export default function GenericNode({
 								) : (
 									<></>
 								)} */}
-                {data.node.template[fieldName].show &&
-                !data.node.template[fieldName].advanced &&
-                fieldName != "root_field" ? (
+                {data.node.template[t].show &&
+                !data.node.template[t].advanced ? (
                   <ParameterComponent
                     data={data}
                     color={
-                      nodeColors[types[data.node.template[fieldName].type]] ??
+                      nodeColors[types[data.node.template[t].type]] ??
                       nodeColors.unknown
                     }
                     title={
-                      data.node.template[fieldName].display_name
-                        ? data.node.template[fieldName].display_name
-                        : data.node.template[fieldName].name
-                        ? toNormalCase(data.node.template[fieldName].name)
-                        : toNormalCase(fieldName)
+                      data.node.template[t].display_name
+                        ? data.node.template[t].display_name
+                        : data.node.template[t].name
+                        ? toNormalCase(data.node.template[t].name)
+                        : toNormalCase(t)
                     }
-                    name={fieldName}
+                    name={t}
                     tooltipTitle={
                       "Type: " +
-                      data.node.template[fieldName].type +
-                      (data.node.template[fieldName].list ? " list" : "")
+                      data.node.template[t].type +
+                      (data.node.template[t].list ? " list" : "")
                     }
-                    required={data.node.template[fieldName].required}
-                    id={
-                      data.node.template[fieldName].type +
-                      "|" +
-                      fieldName +
-                      "|" +
-                      data.id
-                    }
+                    required={data.node.template[t].required}
+                    id={data.node.template[t].type + "|" + t + "|" + data.id}
                     left={true}
-                    type={data.node.template[fieldName].type}
+                    type={data.node.template[t].type}
                   />
                 ) : (
                   <></>

@@ -37,15 +37,6 @@ export default function App() {
     setSuccessOpen,
   } = useContext(alertContext);
 
-  const [version, setVersion] = useState("");
-  useEffect(() => {
-    fetch("/version")
-      .then((res) => res.json())
-      .then((data) => {
-        setVersion(data.version);
-      });
-  }, []);
-
   // Initialize state variable for the list of alerts
   const [alertsList, setAlertsList] = useState<
     Array<{
@@ -55,6 +46,15 @@ export default function App() {
     }>
   >([]);
 
+  // Initialize state variable for the version
+  const [version, setVersion] = useState("");
+  useEffect(() => {
+    fetch("/version")
+      .then((res) => res.json())
+      .then((data) => {
+        setVersion(data.version);
+      });
+  }, []);
   // Use effect hook to update alertsList when a new alert is added
   useEffect(() => {
     // If there is an error alert open with data, add it to the alertsList
@@ -167,9 +167,9 @@ export default function App() {
       <a
         target={"_blank"}
         href="https://logspace.ai/"
-        className="absolute bottom-2 left-6 flex h-6 cursor-pointer flex-col items-center justify-start overflow-hidden rounded-lg bg-gray-800 px-2 text-center font-sans text-xs tracking-wide text-gray-300 transition-all duration-500 ease-in-out hover:h-12 dark:bg-gray-300 dark:text-gray-800"
+        className="absolute bottom-2 left-7 flex h-6 cursor-pointer flex-col items-center justify-start overflow-hidden rounded-lg bg-gray-800 px-2 text-center font-sans text-xs tracking-wide text-gray-300 transition-all duration-500 ease-in-out hover:h-12 dark:bg-gray-300 dark:text-gray-800"
       >
-        <div className="mt-1">⛓️ LangFlow v{version}</div>
+        {version && <div className="mt-1">⛓️ LangFlow v{version}</div>}
         <div className="mt-2">Created by Logspace</div>
       </a>
     </div>

@@ -705,3 +705,11 @@ class DallE2GeneratorFrontendNode(ConnectorFunctionFrontendNode):
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         pass
+
+
+class EmbeddingFrontendNode(FrontendNode):
+    @staticmethod
+    def format_field(field: TemplateField, name: Optional[str] = None) -> None:
+        FrontendNode.format_field(field, name)
+        if field.name == "headers":
+            field.show = False

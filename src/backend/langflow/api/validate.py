@@ -54,9 +54,4 @@ def post_validate_node(node_id: str, data: dict):
         return json.dumps({"valid": True, "params": str(node._built_object_repr())})
     except Exception as e:
         logger.exception(e)
-        return json.dumps(
-            {
-                "valid": False,
-                "params": f"Error: {e}",
-            }
-        )
+        return json.dumps({"valid": False, "params": str(e)})

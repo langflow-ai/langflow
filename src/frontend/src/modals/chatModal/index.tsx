@@ -306,6 +306,12 @@ export default function ChatModal({
 
   const ref = useRef(null);
 
+  useEffect(() => {
+    if (open && ref.current) {
+      ref.current.focus();
+    }
+  }, [open]);
+
   function sendMessage() {
     if (chatValue !== "") {
       let nodeValidationErrors = validateNodes();
@@ -388,7 +394,7 @@ export default function ChatModal({
                     <HiX className="h-5 w-5" />
                   </button>
                 </div>
-                <div className="flex h-full w-full flex-col items-center overflow-scroll border-t bg-white scrollbar-hide dark:border-t-gray-600 dark:bg-gray-800">
+                <div className="scrollbar-hide flex h-full w-full flex-col items-center overflow-scroll border-t bg-white dark:border-t-gray-600 dark:bg-gray-800">
                   {chatHistory.length > 0 ? (
                     chatHistory.map((c, i) => (
                       <ChatMessage lockChat={lockChat} chat={c} key={i} />
@@ -416,12 +422,13 @@ export default function ChatModal({
                   <div ref={ref}></div>
                 </div>
                 <div className="flex w-full flex-col items-center justify-between border-t bg-white p-3 dark:border-t-gray-600 dark:bg-gray-800">
-                  <div className="relative mt-1 w-full rounded-md shadow-sm">
+                  <div className="relative mt-1  w-full rounded-md shadow-sm">
                     <ChatInput
                       chatValue={chatValue}
                       lockChat={lockChat}
                       sendMessage={sendMessage}
                       setChatValue={setChatValue}
+                      inputRef={ref}
                     />
                   </div>
                 </div>
