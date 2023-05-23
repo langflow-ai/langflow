@@ -195,8 +195,8 @@ export default function GenericNode({
 
         <>
           {Object.keys(data.node.template)
-            .filter((t) => t.charAt(0) !== "_")
-            .map((t: string, idx) => (
+            .filter((field_name) => field_name.charAt(0) !== "_")
+            .map((field_name: string, idx) => (
               <div key={idx}>
                 {/* {idx === 0 ? (
 									<div
@@ -217,31 +217,38 @@ export default function GenericNode({
 								) : (
 									<></>
 								)} */}
-                {data.node.template[t].show &&
-                !data.node.template[t].advanced ? (
+                {data.node.template[field_name].show &&
+                field_name != "root_field" &&
+                !data.node.template[field_name].advanced ? (
                   <ParameterComponent
                     data={data}
                     color={
-                      nodeColors[types[data.node.template[t].type]] ??
+                      nodeColors[types[data.node.template[field_name].type]] ??
                       nodeColors.unknown
                     }
                     title={
-                      data.node.template[t].display_name
-                        ? data.node.template[t].display_name
-                        : data.node.template[t].name
-                        ? toNormalCase(data.node.template[t].name)
-                        : toNormalCase(t)
+                      data.node.template[field_name].display_name
+                        ? data.node.template[field_name].display_name
+                        : data.node.template[field_name].name
+                        ? toNormalCase(data.node.template[field_name].name)
+                        : toNormalCase(field_name)
                     }
-                    name={t}
+                    name={field_name}
                     tooltipTitle={
                       "Type: " +
-                      data.node.template[t].type +
-                      (data.node.template[t].list ? " list" : "")
+                      data.node.template[field_name].type +
+                      (data.node.template[field_name].list ? " list" : "")
                     }
-                    required={data.node.template[t].required}
-                    id={data.node.template[t].type + "|" + t + "|" + data.id}
+                    required={data.node.template[field_name].required}
+                    id={
+                      data.node.template[field_name].type +
+                      "|" +
+                      field_name +
+                      "|" +
+                      data.id
+                    }
                     left={true}
-                    type={data.node.template[t].type}
+                    type={data.node.template[field_name].type}
                   />
                 ) : (
                   <></>
