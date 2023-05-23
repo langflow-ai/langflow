@@ -46,6 +46,17 @@ build:
 	poetry build --format sdist
 	rm -rf src/backend/langflow/frontend
 
+lcserve_push:
+	make build_frontend
+	@version=$$(poetry version --short); \
+	lc-serve push --app langflow.lcserve:app --app-dir . \
+		--image-name langflow --image-tag $${version} --verbose
+
+lcserve_deploy:
+	@:$(if $(uses),,$(error `uses` is not set. Please run `make uses=... lcserve_deploy`))
+	lc-serve deploy jcloud --app langflow.lcserve:app --app-dir . \
+		--uses $(uses) --config src/backend/langflow/jcloud.yml --verbose
+
 dev:
 	make install_frontend
 ifeq ($(build),1)

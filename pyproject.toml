@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "0.0.74"
+version = "0.0.75"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
@@ -29,7 +29,7 @@ google-search-results = "^2.4.1"
 google-api-python-client = "^2.79.0"
 typer = "^0.7.0"
 gunicorn = "^20.1.0"
-langchain = "^0.0.170"
+langchain = "^0.0.176"
 openai = "^0.27.2"
 types-pyyaml = "^6.0.12.8"
 dill = "^0.3.6"
@@ -51,6 +51,7 @@ websockets = "^11.0.2"
 tiktoken = "^0.3.3"
 wikipedia = "^1.4.0"
 gptcache = "^0.1.23"
+langchain-serve = { version = "^0.0.33", optional = true }
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
@@ -65,6 +66,9 @@ pytest-cov = "^4.0.0"
 pandas-stubs = "^2.0.0.230412"
 types-pillow = "^9.5.0.2"
 
+
+[tool.poetry.extras]
+deploy = ["langchain-serve"]
 
 [tool.ruff]
 line-length = 120
