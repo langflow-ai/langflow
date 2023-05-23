@@ -2,7 +2,6 @@ import contextlib
 import io
 from typing import Any, Dict, List, Tuple
 
-from chromadb.errors import NotEnoughElementsException  # type: ignore
 from langchain.schema import AgentAction
 
 from langflow.api.callback import AsyncStreamingLLMCallbackHandler, StreamingLLMCallbackHandler  # type: ignore
@@ -195,10 +194,6 @@ async def get_result_and_steps(langchain_object, message: str, **kwargs):
             else output
         )
         thought = format_actions(intermediate_steps) if intermediate_steps else ""
-    except NotEnoughElementsException as exc:
-        raise ValueError(
-            "Error: Not enough documents for ChromaDB to index. Try reducing chunk size in TextSplitter."
-        ) from exc
     except Exception as exc:
         raise ValueError(f"Error: {str(exc)}") from exc
     return result, thought
