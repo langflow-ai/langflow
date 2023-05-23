@@ -15,8 +15,10 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
   const ref = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [flowHandlePosition, setFlowHandlePosition] = useState(0);
-  const [isRename, setIsRename] = useState(false);
+  const [inputName, setInputName] = useState(false);
   const [nodeName, setNodeName] = useState(data.node.flow.name);
+  const [inputDescription, setInputDescription] = useState(false);
+  const [nodeDescription, setNodeDescription] = useState(data.node.flow.description);
   useEffect(() => {
     if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
       setFlowHandlePosition(
@@ -45,7 +47,7 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
               color: nodeColors['custom'] ?? nodeColors.unknown,
             }}
           />
-          {isRename ? (
+          {inputName ? (
             <input
               onFocus={() => {
                 setDisableCP(true);
@@ -53,9 +55,9 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
               autoFocus
               className="bg-transparent focus:border-none active:outline hover:outline focus:outline outline-gray-300 rounded-md  w-32"
               onBlur={() => {
-                setIsRename(false);
+                setInputName(false);
                 setDisableCP(false);
-                if (nodeName !== "") {
+                if (nodeName.trim() !== "") {
                   setNodeName(nodeName);
                   data.node.flow.name = nodeName;
                 }
@@ -71,7 +73,7 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
             />
           ) : (
             <div className="ml-2 truncate" onDoubleClick={()=>{
-              setIsRename(true);
+              setInputName(true);
               
             }}>{nodeName}</div>
           )}
@@ -118,7 +120,36 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
       </div>
       <div className="w-full h-full py-5">
         <div className="w-full text-gray-500 dark:text-gray-300 px-5 pb-3 text-sm">
-          {data.node.flow.description?.length > 0 ? data.node.flow.description : "No description"}
+        {inputDescription ? (
+            <textarea
+              onFocus={() => {
+                setDisableCP(true);
+              }}
+              autoFocus
+              className="resize-none bg-transparent focus:border-none active:outline hover:outline focus:outline outline-gray-300 rounded-md  w-full h-max"
+              onBlur={() => {
+                setInputDescription(false);
+                setDisableCP(false);
+                if (nodeDescription.trim() !== "") {
+                  setNodeDescription(nodeDescription);
+                  data.node.flow.description = nodeDescription;
+                }
+                else {
+                  setNodeDescription(data.node.flow.description);
+                }
+
+              }}
+              value={nodeDescription}
+              onChange={(e) => {
+                setNodeDescription(e.target.value);
+              }}
+            />
+          ) : (
+            <div className="ml-2 truncate" onDoubleClick={()=>{
+              setInputDescription(true);
+              
+            }}>{nodeDescription.trim().length>0?nodeDescription:"No description"}</div>
+          )}
         </div>
         <div className="flex flex-col items-center justify-center">
           <div
