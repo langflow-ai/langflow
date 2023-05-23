@@ -6,13 +6,14 @@ import {
 	ReactNode,
 	useContext,
 } from "react";
-import { FlowType } from "../types/flow";
+import { FlowType, NodeType } from "../types/flow";
 import { LangFlowState, TabsContextType } from "../types/tabs";
 import { normalCaseToSnakeCase, updateObject, updateTemplate } from "../utils";
 import { alertContext } from "./alertContext";
 import { typesContext } from "./typesContext";
 import { APITemplateType, TemplateVariableType } from "../types/api";
 import { v4 as uuidv4 } from "uuid";
+import { addEdge } from "reactflow";
 
 const TabsContextInitialValue: TabsContextType = {
 	save: () => {},
@@ -22,12 +23,14 @@ const TabsContextInitialValue: TabsContextType = {
 	removeFlow: (id: string) => {},
 	addFlow: (flowData?: any) => {},
 	updateFlow: (newFlow: FlowType) => {},
-	incrementNodeId: () => 0,
+	incrementNodeId: () => uuidv4(),
 	downloadFlow: (flow: FlowType) => {},
 	uploadFlow: () => {},
 	hardReset: () => {},
-	disableCP:false,
-	setDisableCP:(state:boolean)=>{},
+	disableCopyPaste:false,
+	setDisableCopyPaste:(state:boolean)=>{},
+	getNodeId: () => "",
+	paste: (selection: {nodes: any, edges: any}, position: {x: number, y: number}) => {},
 };
 
 export const TabsContext = createContext<TabsContextType>(
@@ -39,24 +42,24 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	const [tabIndex, setTabIndex] = useState(0);
 	const [flows, setFlows] = useState<Array<FlowType>>([]);
 	const [id, setId] = useState(uuidv4());
-	const { templates } = useContext(typesContext);
+	const { templates, reactFlowInstance } = useContext(typesContext);
 
-	const newNodeId = useRef(0);
+	const newNodeId = useRef(uuidv4());
 	function incrementNodeId() {
-		newNodeId.current = newNodeId.current + 1;
+		newNodeId.current = uuidv4();
 		return newNodeId.current;
 	}
 	function save() {
 		if (flows.length !== 0)
 			window.localStorage.setItem(
 				"tabsData",
-				JSON.stringify({ tabIndex, flows, id, nodeId: newNodeId.current })
+				JSON.stringify({ tabIndex, flows, id})
 			);
 	}
 	useEffect(() => {
 		//save tabs locally
+		// console.log(id)
 		save();
-
 	}, [flows, id, tabIndex, newNodeId]);
 
 	useEffect(() => {
@@ -80,12 +83,11 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 			setTabIndex(cookieObject.tabIndex);
 			setFlows(cookieObject.flows);
 			setId(cookieObject.id);
-			newNodeId.current = cookieObject.nodeId;
 		}
 	}, [templates]);
 
 	function hardReset() {
-		newNodeId.current = 0;
+		newNodeId.current = uuidv4();
 		setTabIndex(0);
 		setFlows([]);
 		setId(uuidv4());
@@ -111,6 +113,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 			title: "Warning: Critical data,JSON file may including API keys.",
 		});
 	}
+
+	function getNodeId() {
+		return `dndnode_` + incrementNodeId();
+	  }
 
 	/**
 	 * Creates a file input and listens to a change event to upload a JSON flow file.
@@ -165,6 +171,90 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	 * Add a new flow to the list of flows.
 	 * @param flow Optional flow to add.
 	 */
+
+	function paste(selectionInstance, position){
+		console.log(position);
+		console.log(selectionInstance)
+		let minimumX = Infinity;
+		let minimumY = Infinity;
+		let idsMap = {};
+		let nodes = reactFlowInstance.getNodes();
+		let edges = reactFlowInstance.getEdges();
+		selectionInstance.nodes.forEach((n) => {
+		  if (n.position.y < minimumY) {
+			minimumY = n.position.y;
+		  }
+		  if (n.position.x < minimumX) {
+			minimumX = n.position.x;
+		  }
+		});
+
+		const insidePosition = reactFlowInstance.project(position);
+	
+		selectionInstance.nodes.forEach((n) => {
+		  // Generate a unique node ID
+		  let newId = getNodeId();
+		  idsMap[n.id] = newId;
+	
+		  // Create a new node object
+		  const newNode: NodeType = {
+			id: newId,
+			type: "genericNode",
+			position: {
+			  x: insidePosition.x + n.position.x - minimumX,
+			  y: insidePosition.y + n.position.y - minimumY,
+			},
+			data: {
+			  ...n.data,
+			  id: newId,
+			},
+		  };
+	
+		  // Add the new node to the list of nodes in state
+			nodes = nodes
+			  .map((e) => ({ ...e, selected: false }))
+			  .concat({ ...newNode, selected: false })
+		  console.log(nodes);
+		});
+		reactFlowInstance.setNodes(nodes);
+	
+		selectionInstance.edges.forEach((e) => {
+		  let source = idsMap[e.source];
+		  let target = idsMap[e.target];
+		  let sourceHandleSplitted = e.sourceHandle.split("|");
+		  let sourceHandle =
+			sourceHandleSplitted[0] +
+			"|" +
+			source +
+			"|" +
+			sourceHandleSplitted.slice(2).join("|");
+		  let targetHandleSplitted = e.targetHandle.split("|");
+		  let targetHandle =
+			targetHandleSplitted.slice(0, -1).join("|") + "|" + target;
+		  let id =
+			"reactflow__edge-" +
+			source +
+			sourceHandle +
+			"-" +
+			target +
+			targetHandle;
+		  edges = addEdge(
+			  {
+				source,
+				target,
+				sourceHandle,
+				targetHandle,
+				id,
+				className: "animate-pulse",
+				selected: false,
+			  },
+			  edges.map((e) => ({ ...e, selected: false }))
+			);
+			console.log(edges);
+		});
+		reactFlowInstance.setEdges(edges);
+	  };
+	
 	function addFlow(flow?: FlowType) {
 		// Get data from the flow or set it to null if there's no flow provided.
 		const data = flow?.data ? flow.data : null;
@@ -192,6 +282,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		setId(uuidv4());
 
 		// Add the new flow to the list of flows.
+		
 		setFlows((prevState) => {
 			const newFlows = [...prevState, newFlow];
 			return newFlows;
@@ -216,13 +307,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 			return newFlows;
 		});
 	}
-	const [disableCP, setDisableCP] = useState(false);
+	const [disableCopyPaste, setDisableCopyPaste] = useState(false);
 
 	return (
 		<TabsContext.Provider
 			value={{
-				disableCP,
-				setDisableCP,
+				disableCopyPaste,
+				setDisableCopyPaste,
 				save,
 				hardReset,
 				tabIndex,
@@ -234,6 +325,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 				updateFlow,
 				downloadFlow,
 				uploadFlow,
+				getNodeId,
+				paste,
 			}}
 		>
 			{children}
