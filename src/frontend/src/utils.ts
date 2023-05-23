@@ -1,5 +1,4 @@
 import { NodeDataType, NodeType } from "./types/flow/index";
-import { NodeDataType, NodeType } from "./types/flow/index";
 import {
   RocketLaunchIcon,
   LinkIcon,
@@ -31,7 +30,6 @@ import {
   XYPosition,
 } from "reactflow";
 import { FlowType } from "./types/flow";
-import { APITemplateType } from "./types/api";
 import { APITemplateType } from "./types/api";
 import _, { forEach, get } from "lodash";
 import { v4 as uuidv4, validate } from "uuid";
