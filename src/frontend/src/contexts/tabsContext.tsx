@@ -81,7 +81,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       cookieObject.flows.forEach((flow) => {
         if (flow.data) {
           flow.data.nodes.forEach((node) => {
-            if (Object.keys(templates[node.data.type]["template"]).length > 0) {
+            if (templates && templates[node.data.type] && Object.keys(templates[node.data.type]["template"]).length > 0) {
               node.data.node.base_classes =
                 templates[node.data.type]["base_classes"];
               flow.data.edges.forEach((edge) => {
