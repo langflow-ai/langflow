@@ -326,6 +326,7 @@ def test_series_character_chain(client: TestClient):
 
     assert template["llm"] == {
         "required": True,
+        "display_name": "LLM",
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -388,6 +389,7 @@ def test_mid_journey_prompt_chain(client: TestClient):
 
     assert template["llm"] == {
         "required": True,
+        "display_name": "LLM",
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -427,6 +429,7 @@ def test_time_travel_guide_chain(client: TestClient):
     assert template["llm"] == {
         "required": True,
         "placeholder": "",
+        "display_name": "LLM",
         "show": True,
         "multiline": False,
         "password": False,
