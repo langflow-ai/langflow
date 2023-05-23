@@ -1,39 +1,24 @@
 import { useContext, useEffect, useRef, useState } from "react";
-import { FlowType } from "../../types/flow";
-import {
-  classNames,
-  concatFlows,
-  expandGroupNode,
-  isValidConnection,
-  nodeColors,
-  nodeIcons,
-  updateFlowPosition,
-} from "../../utils";
+import { FlowType, NodeDataType } from "../../types/flow";
+import { classNames, concatFlows, expandGroupNode, isValidConnection, nodeColors, nodeIcons, updateFlowPosition } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
-import Tooltip from "../../components/TooltipComponent";
-import FlowHandle from "./components/flowHandle";
-import { XYPosition } from "reactflow";
 import { ArrowsPointingOutIcon, TrashIcon } from "@heroicons/react/24/outline";
-import HandleComponent from "../GenericNode/components/parameterComponent/components/handleComponent";
+import InputParameterComponent from "../GenericNode/components/inputParameterComponent";
+import { TabsContext } from "../../contexts/tabsContext";
 
-export default function GroupNode({
-  data,
-  selected,
-  xPos,
-  yPos,
-}: {
-  data: FlowType;
-  selected: boolean;
-  xPos: number;
-  yPos: number;
-}) {
+export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDataType, selected: boolean, xPos: number, yPos: number }) {
   const [isValid, setIsValid] = useState(true);
   const { reactFlowInstance, deleteNode } = useContext(typesContext);
-  const Icon = nodeIcons["custom"];
+  const {setDisableCP} = useContext(TabsContext)
+  const Icon = nodeIcons['custom'];
   const ref = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [flowHandlePosition, setFlowHandlePosition] = useState(0);
+  const [inputName, setInputName] = useState(false);
+  const [nodeName, setNodeName] = useState(data.node.flow.name);
+  const [inputDescription, setInputDescription] = useState(false);
+  const [nodeDescription, setNodeDescription] = useState(data.node.flow.description);
   useEffect(() => {
     if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
       setFlowHandlePosition(
@@ -51,18 +36,47 @@ export default function GroupNode({
       className={classNames(
         isValid ? "animate-pulse-green" : "border-red-outline",
         selected ? "border border-blue-500" : "border dark:border-gray-700",
-        "prompt-node relative flex w-96 flex-col justify-center rounded-lg bg-white dark:bg-gray-900"
+        "prompt-node relative bg-white dark:bg-gray-900 w-96 rounded-lg flex flex-col justify-center"
       )}
     >
-      <div className="flex w-full items-center justify-between gap-8 rounded-t-lg border-b bg-gray-50 p-4 dark:border-b-gray-700 dark:bg-gray-800 dark:text-white ">
-        <div className="flex w-full items-center gap-2 truncate text-lg">
+      <div className="w-full dark:text-white flex items-center justify-between p-4 gap-8 bg-gray-50 rounded-t-lg dark:bg-gray-800 border-b dark:border-b-gray-700 ">
+        <div className="w-full flex items-center truncate gap-2 text-lg">
           <Icon
-            className="h-10 w-10 rounded p-1"
+            className="w-10 h-10 p-1 rounded"
             style={{
-              color: nodeColors["custom"] ?? nodeColors.unknown,
+              color: nodeColors['custom'] ?? nodeColors.unknown,
             }}
           />
-          <div className="ml-2 truncate">{data.name}</div>
+          {inputName ? (
+            <input
+              onFocus={() => {
+                setDisableCP(true);
+              }}
+              autoFocus
+              className="bg-transparent focus:border-none active:outline hover:outline focus:outline outline-gray-300 rounded-md  w-32"
+              onBlur={() => {
+                setInputName(false);
+                setDisableCP(false);
+                if (nodeName.trim() !== "") {
+                  setNodeName(nodeName);
+                  data.node.flow.name = nodeName;
+                }
+                else {
+                  setNodeName(data.node.flow.name);
+                }
+
+              }}
+              value={nodeName}
+              onChange={(e) => {
+                setNodeName(e.target.value);
+              }}
+            />
+          ) : (
+            <div className="ml-2 truncate" onDoubleClick={()=>{
+              setInputName(true);
+              
+            }}>{nodeName}</div>
+          )}
           <div>
             {/* <div className="relative w-5 h-5">
                     <CheckCircleIcon
@@ -89,11 +103,10 @@ export default function GroupNode({
         <div className="flex gap-3">
           <button
             onClick={() => {
-              updateFlowPosition({ x: xPos, y: yPos }, data);
-              expandGroupNode(data, reactFlowInstance);
-            }}
-          >
-            <ArrowsPointingOutIcon className="h-6 w-6 hover:text-blue-500 dark:text-gray-300 dark:hover:text-blue-500" />
+              updateFlowPosition({ x: xPos, y: yPos }, data.node.flow)
+              expandGroupNode(data.node.flow, reactFlowInstance)
+            }}>
+            <ArrowsPointingOutIcon className="w-6 h-6 hover:text-blue-500 dark:text-gray-300 dark:hover:text-blue-500" />
           </button>
           <button
             onClick={() => {
@@ -101,38 +114,55 @@ export default function GroupNode({
               deleteNode(data.id);
             }}
           >
-            <TrashIcon className="h-6 w-6 hover:text-red-500 dark:text-gray-300 dark:hover:text-red-500"></TrashIcon>
+            <TrashIcon className="w-6 h-6 hover:text-red-500 dark:text-gray-300 dark:hover:text-red-500"></TrashIcon>
           </button>
         </div>
       </div>
-      <div className="h-full w-full py-5">
-        <div className="w-full px-5 pb-3 text-sm text-gray-500 dark:text-gray-300">
-          {data.description?.length > 0 ? data.description : "No description"}
+      <div className="w-full h-full py-5">
+        <div className="w-full text-gray-500 dark:text-gray-300 px-5 pb-3 text-sm">
+        {inputDescription ? (
+            <textarea
+              onFocus={() => {
+                setDisableCP(true);
+              }}
+              autoFocus
+              className="resize-none bg-transparent focus:border-none active:outline hover:outline focus:outline outline-gray-300 rounded-md  w-full h-max"
+              onBlur={() => {
+                setInputDescription(false);
+                setDisableCP(false);
+                if (nodeDescription.trim() !== "") {
+                  setNodeDescription(nodeDescription);
+                  data.node.flow.description = nodeDescription;
+                }
+                else {
+                  setNodeDescription(data.node.flow.description);
+                }
+
+              }}
+              value={nodeDescription}
+              onChange={(e) => {
+                setNodeDescription(e.target.value);
+              }}
+            />
+          ) : (
+            <div className="ml-2 truncate" onDoubleClick={()=>{
+              setInputDescription(true);
+              
+            }}>{nodeDescription.trim().length>0?nodeDescription:"No description"}</div>
+          )}
         </div>
         <div className="flex flex-col items-center justify-center">
           <div
             ref={ref}
-            className="mt-1 flex w-full flex-wrap items-center justify-between bg-gray-50 px-5 py-2 dark:bg-gray-800 dark:text-white"
+            className="w-full flex flex-wrap justify-between items-center bg-gray-50 dark:bg-gray-800 dark:text-white mt-1 px-5 py-2"
           >
-            <HandleComponent
-              position={flowHandlePosition}
-              tooltipTitle="Type: Text"
-              color={nodeColors.unknown}
-              title="Input"
-              name="Input"
-              fill={true}
-              id={"Text|Input|" + data.id}
-              left={true}
-              type="Text"
-            />
-            <HandleComponent
-              position={flowHandlePosition}
-              fill={true}
-              color={nodeColors.unknown}
-              title={"Output"}
-              tooltipTitle={`Type: Text`}
-              id={["Output", data.id, "Text"].join("|")}
-              type={"Text"}
+            <InputParameterComponent
+              data={data}
+              color={nodeColors['custom'] ?? nodeColors.unknown}
+              title={data.node.template.root_field.display_name}
+              tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
+              id={[data.type, data.id, ...data.node.base_classes].join("|")}
+              type={data.node.base_classes.join("|")}
               left={false}
             />
           </div>

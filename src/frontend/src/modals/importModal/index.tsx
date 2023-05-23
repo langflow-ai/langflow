@@ -182,6 +182,7 @@ export default function ImportModal() {
                           <div id="index">
                             {" "}
                             <ButtonBox
+                            key={index}
                               size="small"
                               bgColor="bg-emerald-500 dark:bg-emerald-500/75"
                               description={

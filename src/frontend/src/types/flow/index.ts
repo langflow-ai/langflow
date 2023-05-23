@@ -8,10 +8,10 @@ export type FlowType = {
   description: string;
 };
 export type NodeType = {
-  id: string;
-  type?: string;
-  position: XYPosition;
-  data: NodeDataType | FlowType;
+	id: string;
+	type?: string;
+	position: XYPosition;
+	data: NodeDataType;
 };
 export type NodeDataType = {
   type: string;

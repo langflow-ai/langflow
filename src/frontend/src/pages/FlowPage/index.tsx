@@ -36,6 +36,7 @@ import {
   generateNodeFromFlow,
   getMiddlePoint,
   isValidConnection,
+  validateSelection,
 } from "../../utils";
 import useUndoRedo from "./hooks/useUndoRedo";
 import SelectionMenu from "./components/SelectionMenuComponent";
@@ -51,18 +52,26 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
     useContext(TabsContext);
   const { types, reactFlowInstance, setReactFlowInstance, templates } =
     useContext(typesContext);
+    useContext(typesContext);
   const reactFlowWrapper = useRef(null);
 
+
   const { undo, redo, canUndo, canRedo, takeSnapshot } = useUndoRedo();
+
+
 
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
     useState<OnSelectionChangeParams>(null);
 
+    useState<OnSelectionChangeParams>(null);
+
   const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
+
 
   useEffect(() => {
     // this effect is used to attach the global event handlers
+
 
     const onKeyDown = (event: KeyboardEvent) => {
       console.log("keydownou", lastCopiedSelection, position);
@@ -87,14 +96,6 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
           x: position.x - bounds.left,
           y: position.y - bounds.top,
         });
-      }
-      if (
-        (event.ctrlKey || event.metaKey) &&
-        event.key === "g" &&
-        lastSelection
-      ) {
-        event.preventDefault();
-        // addFlow(newFlow, false);
       }
     };
     const handleMouseMove = (event) => {
@@ -353,34 +354,40 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
           <Chat flow={flow} reactFlowInstance={reactFlowInstance} />
           <SelectionMenu
             onClick={() => {
-              console.log(lastSelection);
-              console.log(getMiddlePoint(lastSelection.nodes));
-              console.log(reactFlowInstance.getViewport());
-              const newFlow = generateFlow(
-                lastSelection,
-                reactFlowInstance,
-                "new component"
-              );
-              const newGroupNode = generateNodeFromFlow(newFlow);
-              setNodes((oldNodes) => [
-                ...oldNodes.filter(
-                  (oldNode) =>
-                    !lastSelection.nodes.some(
-                      (selectionNode) => selectionNode.id === oldNode.id
-                    )
-                ),
-                newGroupNode,
-              ]);
-              setEdges((oldEdges) =>
-                oldEdges.filter(
-                  (oldEdge) =>
-                    !lastSelection.nodes.some(
-                      (selectionNode) =>
-                        selectionNode.id === oldEdge.target ||
-                        selectionNode.id === oldEdge.source
-                    )
-                )
-              );
+              if (validateSelection(lastSelection)) {
+                const newFlow = generateFlow(
+                  lastSelection,
+                  reactFlowInstance,
+                  "new component"
+                );
+                const newGroupNode = generateNodeFromFlow(newFlow);
+                setNodes((oldNodes) => [
+                  ...oldNodes.filter(
+                    (oldNode) =>
+                      !lastSelection.nodes.some(
+                        (selectionNode) => selectionNode.id === oldNode.id
+                      )
+                  ),
+                  newGroupNode,
+                ]);
+                setEdges((oldEdges) =>
+                  oldEdges.filter(
+                    (oldEdge) =>
+                      !lastSelection.nodes.some(
+                        (selectionNode) =>
+                          selectionNode.id === oldEdge.target ||
+                          selectionNode.id === oldEdge.source
+                      )
+                  )
+                );
+              }
+              else{
+                setErrorData({
+                  title: "Invalid selection",
+                  list: ["Please select a valid group of nodes"],
+                });
+              }
+
             }}
             isVisible={selectionMenuVisible}
             nodes={lastSelection?.nodes}
