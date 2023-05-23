@@ -24,7 +24,7 @@ export default function ButtonBox({
 }) {
   let bigCircle: string;
   let smallCircle: string;
-  let titleFontSize: number;
+  let minTitleFontSize: number;
   let descriptionFontSize: string;
   let padding: string;
   let marginTop: string;
@@ -32,11 +32,12 @@ export default function ButtonBox({
   let width: string;
   let textHeight: number;
   let textWidth: number;
+  const [truncate, setTruncate] = useState<boolean>(false);
   switch (size) {
     case "small":
       bigCircle = "h-12 w-12";
       smallCircle = "h-8 w-8";
-      titleFontSize = 14;
+      minTitleFontSize =9;
       descriptionFontSize = "text-xs";
       padding = "p-2 py-3";
       marginTop = "mt-2";
@@ -48,7 +49,7 @@ export default function ButtonBox({
     case "medium":
       bigCircle = "h-16 w-16";
       smallCircle = "h-12 w-12";
-      titleFontSize = 16;
+      minTitleFontSize = 11;
       descriptionFontSize = "text-sm";
       padding = "p-4 py-5";
       marginTop = "mt-3";
@@ -60,7 +61,7 @@ export default function ButtonBox({
     case "big":
       bigCircle = "h-20 w-20";
       smallCircle = "h-16 w-16";
-      titleFontSize = 18;
+      minTitleFontSize = 12;
       descriptionFontSize = "text-sm";
       padding = "p-8 py-10";
       marginTop = "mt-6";
@@ -70,7 +71,7 @@ export default function ButtonBox({
     default:
       bigCircle = "h-20 w-20";
       smallCircle = "h-16 w-16";
-      titleFontSize = 18;
+      minTitleFontSize = 12;
       descriptionFontSize = "text-sm";
       padding = "p-8 py-10";
       marginTop = "mt-6";
@@ -95,7 +96,7 @@ export default function ButtonBox({
 	let textElementHeight = textElement.scrollHeight;
 	let textElementWidth = textElement.scrollWidth;
   
-	if (textElementHeight > parentDivHeight || textElementWidth > parentDivWidth) {
+	if (textElementHeight > parentDivHeight || textElementWidth > parentDivWidth && fontSize > minTitleFontSize) {
 	  let newFontSize = fontSize;
   
 	  while (textElementHeight > parentDivHeight || textElementWidth > parentDivWidth) {
@@ -104,8 +105,13 @@ export default function ButtonBox({
 		textElementHeight = textElement.scrollHeight;
 		textElementWidth = textElement.scrollWidth;
 	  }
-  
-	  setFontSize(newFontSize);
+    if(newFontSize <= minTitleFontSize){
+      setTruncate(true);
+      setFontSize(minTitleFontSize);
+    }
+    else{
+      setFontSize(newFontSize);
+    }
 	}
   }, [title, size, fontSize]);
   
@@ -133,10 +139,9 @@ export default function ButtonBox({
 		<div ref={parentDivRef} className="w-full h-1/2 mt-auto">
 		<div
           ref={titleRef}
-          className={classNames(
+          className={classNames(truncate?"truncate":"",
             " font-semibold text-white h-full dark:text-white/80",
-          )}
-        >
+          )}        >
           {title}
         </div>
 		</div>
