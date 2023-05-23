@@ -3,20 +3,20 @@ import { FlowType, NodeDataType } from "../../types/flow";
 import { classNames, concatFlows, expandGroupNode, isValidConnection, nodeColors, nodeIcons, updateFlowPosition } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
-import Tooltip from "../../components/TooltipComponent";
-import FlowHandle from "./components/flowHandle";
-import { XYPosition } from "reactflow"
 import { ArrowsPointingOutIcon, TrashIcon } from "@heroicons/react/24/outline";
-import HandleComponent from "../GenericNode/components/parameterComponent/components/handleComponent";
 import InputParameterComponent from "../GenericNode/components/inputParameterComponent";
+import { TabsContext } from "../../contexts/tabsContext";
 
 export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDataType, selected: boolean, xPos: number, yPos: number }) {
   const [isValid, setIsValid] = useState(true);
   const { reactFlowInstance, deleteNode } = useContext(typesContext);
+  const {setDisableCP} = useContext(TabsContext)
   const Icon = nodeIcons['custom'];
   const ref = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [flowHandlePosition, setFlowHandlePosition] = useState(0);
+  const [isRename, setIsRename] = useState(false);
+  const [nodeName, setNodeName] = useState(data.node.flow.name);
   useEffect(() => {
     if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
       setFlowHandlePosition(
@@ -45,7 +45,36 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
               color: nodeColors['custom'] ?? nodeColors.unknown,
             }}
           />
-          <div className="ml-2 truncate">{data.node.flow.name}</div>
+          {isRename ? (
+            <input
+              onFocus={() => {
+                setDisableCP(true);
+              }}
+              autoFocus
+              className="bg-transparent focus:border-none active:outline hover:outline focus:outline outline-gray-300 rounded-md  w-32"
+              onBlur={() => {
+                setIsRename(false);
+                setDisableCP(false);
+                if (nodeName !== "") {
+                  setNodeName(nodeName);
+                  data.node.flow.name = nodeName;
+                }
+                else {
+                  setNodeName(data.node.flow.name);
+                }
+
+              }}
+              value={nodeName}
+              onChange={(e) => {
+                setNodeName(e.target.value);
+              }}
+            />
+          ) : (
+            <div className="ml-2 truncate" onDoubleClick={()=>{
+              setIsRename(true);
+              
+            }}>{nodeName}</div>
+          )}
           <div>
             {/* <div className="relative w-5 h-5">
                     <CheckCircleIcon
