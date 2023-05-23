@@ -604,7 +604,7 @@ class ChainFrontendNode(FrontendNode):
             field.required = True
             field.show = True
             field.advanced = False
-        elif field.name in ["memory", "input_connection"]:
+        elif field.name in ["memory"]:
             field.required = False
             field.show = True
             field.advanced = False
