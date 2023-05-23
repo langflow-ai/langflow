@@ -122,6 +122,7 @@ class MidJourneyPromptChainNode(FrontendNode):
                 advanced=False,
                 multiline=False,
                 name="llm",
+                display_name="LLM",
             ),
             TemplateField(
                 field_type="BaseChatMemory",
@@ -156,6 +157,7 @@ class TimeTravelGuideChainNode(FrontendNode):
                 advanced=False,
                 multiline=False,
                 name="llm",
+                display_name="LLM",
             ),
             TemplateField(
                 field_type="BaseChatMemory",
@@ -210,6 +212,7 @@ class SeriesCharacterChainNode(FrontendNode):
                 advanced=False,
                 multiline=False,
                 name="llm",
+                display_name="LLM",
             ),
         ],
     )
@@ -295,6 +298,7 @@ class JsonAgentNode(FrontendNode):
                 required=True,
                 show=True,
                 name="llm",
+                display_name="LLM",
             ),
         ],
     )
@@ -341,6 +345,7 @@ class InitializeAgentNode(FrontendNode):
                 required=True,
                 show=True,
                 name="llm",
+                display_name="LLM",
                 advanced=False,
             ),
         ],
@@ -376,6 +381,7 @@ class CSVAgentNode(FrontendNode):
                 required=True,
                 show=True,
                 name="llm",
+                display_name="LLM",
             ),
         ],
     )
