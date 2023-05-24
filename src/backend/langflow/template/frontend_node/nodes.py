@@ -680,7 +680,7 @@ class ConnectorFunctionFrontendNode(FrontendNode):
 
 
 class DallE2GeneratorFrontendNode(ConnectorFunctionFrontendNode):
-    name: str = "Dall-E 2 Generator"
+    name: str = "DallE2Generator"
     # Template consists of an input of field_type "Output", name "input_connection"
     # and an output of field_type "Input", name "output_connection"
 
