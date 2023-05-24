@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from langflow.cache.base import memoize_dict
@@ -53,7 +54,7 @@ class GraphMap:
         graph_data: Dict,
     ) -> Tuple[Graph, List[Union[Node, ConnectorNode]]]:
         graph = Graph(graph_data=graph_data)
-
+        graph_copy = deepcopy(graph)
         elements = []
 
         current_root = graph.root_node
@@ -83,4 +84,4 @@ class GraphMap:
         for element in elements:
             # Build the element but keep the node instead of the object
             element.build()
-        return Graph(graph_data=graph_data), elements
+        return graph_copy, elements

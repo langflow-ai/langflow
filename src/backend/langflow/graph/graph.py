@@ -1,3 +1,4 @@
+from copy import copy
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from langflow.graph.base import Edge, Node
@@ -65,6 +66,8 @@ class Graph:
             _edges = graph_data["edges"]
             self._nodes = _nodes
             self._edges = _edges
+            self.nodes = []
+            self.edges = []
             self._build_nodes_and_edges()
         elif nodes and edges:
             self.nodes = nodes
@@ -121,11 +124,15 @@ class Graph:
         return list(visited_nodes), list(visited_edges)
 
     def _build_nodes_and_edges(self) -> None:
-        self.nodes = self._build_nodes()
-        self.edges = self._build_edges()
+        self.nodes += self._build_nodes()
+        self.edges += self._build_edges()
         for edge in self.edges:
-            edge.source.add_edge(edge)
-            edge.target.add_edge(edge)
+            try:
+                edge.source.add_edge(edge)
+                edge.target.add_edge(edge)
+            except AttributeError as e:
+                print(e)
+                pass
 
         # This is a hack to make sure that the LLM node is sent to
         # the toolkit node
@@ -211,10 +218,18 @@ class Graph:
 
     def _build_nodes(self) -> List[Node]:
         nodes: List[Node] = []
+
+        self.expand_flow_nodes(self._nodes)
         for node in self._nodes:
             node_data = node["data"]
             node_type: str = node_data["type"]  # type: ignore
-            node_lc_type: str = node_data["node"]["template"]["_type"]  # type: ignore
+            if node_type == "flow":
+                continue
+            node_lc_type: str = node_data["node"]["template"].get("_type")  # type: ignore
+
+            # Some nodes are a bit special and need to be handled differently
+            # node_type is "flow" and node_data["node"] contains a "flow" key which
+            # is itself a graph.
 
             NodeClass = self._get_node_class(node_type, node_lc_type)
             nodes.append(NodeClass(node))
@@ -222,6 +237,56 @@ class Graph:
                 self.has_connectors = True
 
         return nodes
+
+    def expand_flow_nodes(self, nodes: list):
+        # Certain nodes are actually graphs themselves, so we need to expand them
+        # and add their nodes and edges to the current graph
+        # The problem is that the node has an id, and the inner nodes also have an id
+        # and the edges also have an id
+        # The id is what is used to connect the nodes and edges together
+        # So the node id needs to replace the inner node id for the node that has
+        # has a root_field in the ["node"]["template"] dict
+        # The edges need to be updated to use the new node id
+        # The inner nodes need to be updated to use the new node id
+        for node in nodes.copy():
+            node_data = node["data"]
+            node_type: str = node_data["type"]  # type: ignore
+            if node_type == "flow":
+                self.expand_flow_node(node)
+                nodes.remove(node)
+
+    def expand_flow_node(self, flow_node):
+        # Get the subgraph data from the flow node
+        subgraph_data = flow_node["data"]["node"]["flow"]["data"]
+
+        # Build the subgraph Graph object
+        subgraph = Graph(graph_data=subgraph_data)
+
+        # Set the ID of the subgraph root node to the flow node ID
+        subgraph_root = subgraph.root_node
+        old_id = subgraph_root.id
+        if subgraph_root is None:
+            raise ValueError("No root node found")
+        subgraph_root.id = flow_node["id"]
+
+        # Get all edges in the subgraph graph that have the subgraph root as the source or target
+        edges_to_update = [
+            edge
+            for edge in subgraph.edges
+            if edge.source == subgraph_root or edge.target == subgraph_root
+        ]
+
+        # Update all such edges to use the flow node ID instead
+        for edge in edges_to_update:
+            # The root node shouldn't be the source of any edges, but just in case
+            if edge.source.id == old_id:
+                edge.source = subgraph_root
+            if edge.target.id == old_id:
+                edge.target = subgraph_root
+
+        # Add subgraph nodes and edges to the main graph
+        self.nodes.extend(subgraph.nodes)
+        self.edges.extend(subgraph.edges)
 
     def get_children_by_node_type(self, node: Node, node_type: str) -> List[Node]:
         children = []

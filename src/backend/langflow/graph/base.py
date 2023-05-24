@@ -86,7 +86,7 @@ class Node:
         }
         params = {}
         for key, value in template_dict.items():
-            if key == "_type":
+            if key in ["_type", "root_field"]:
                 continue
             # If the type is not transformable to a python base class
             # then we need to get the edge that connects to this node
