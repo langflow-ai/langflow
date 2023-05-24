@@ -578,6 +578,7 @@ export function filterFlow(
 
 export function generateNodeFromFlow(flow: FlowType): NodeType {
 	const { nodes } = flow.data;
+	console.log(flow)
 	const position = getMiddlePoint(nodes);
 	let data = flow;
 	const newGroupNode: NodeType = {
@@ -629,7 +630,7 @@ export function expandGroupNode(
 	];
 	const edges = [
 		...ReactFlowInstance.getEdges().filter(
-			(e) => e.target !== flow.id || e.source !== flow.id
+			(e) => e.target !== flow.id && e.source !== flow.id
 		),
 		...gEdges,
 	];
