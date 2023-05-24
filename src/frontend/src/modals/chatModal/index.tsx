@@ -183,7 +183,6 @@ export default function ChatModal({
       newWs.onopen = () => {
         console.log("WebSocket connection established!");
       };
-      console.log(flow.id);
       newWs.onmessage = (event) => {
         const data = JSON.parse(event.data);
         console.log("Received data:", data);

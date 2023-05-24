@@ -58,7 +58,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	}
 	useEffect(() => {
 		//save tabs locally
-		// console.log(id)
 		save();
 	}, [flows, id, tabIndex, newNodeId]);
 
@@ -173,8 +172,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 	 */
 
 	function paste(selectionInstance, position){
-		console.log(position);
-		console.log(selectionInstance)
 		let minimumX = Infinity;
 		let minimumY = Infinity;
 		let idsMap = {};
@@ -214,7 +211,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 			nodes = nodes
 			  .map((e) => ({ ...e, selected: false }))
 			  .concat({ ...newNode, selected: false })
-		  console.log(nodes);
 		});
 		reactFlowInstance.setNodes(nodes);
 	
@@ -250,7 +246,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 			  },
 			  edges.map((e) => ({ ...e, selected: false }))
 			);
-			console.log(edges);
 		});
 		reactFlowInstance.setEdges(edges);
 	  };

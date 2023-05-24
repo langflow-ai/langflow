@@ -56,7 +56,6 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
     // this effect is used to attach the global event handlers
 
     const onKeyDown = (event: KeyboardEvent) => {
-      console.log("keydownou", lastCopiedSelection, position);
       if (
         (event.ctrlKey || event.metaKey) &&
         event.key === "c" &&
