@@ -15,7 +15,7 @@ import { sendAllProps } from "../../types/api";
 import { ChatMessageType, ChatType } from "../../types/chat";
 import ChatInput from "./chatInput";
 
-import _ from "lodash";
+import _, { set } from "lodash";
 
 export default function ChatModal({
   flow,
@@ -100,9 +100,9 @@ export default function ChatModal({
   function handleOnClose(event: CloseEvent) {
     if (isOpen.current) {
       setErrorData({ title: event.reason });
-      setLockChat(false);
       setTimeout(() => {
         connectWS();
+        setLockChat(false);
       }, 1000);
     }
   }
@@ -235,6 +235,13 @@ export default function ChatModal({
     };
   }, []);
 
+  useEffect(() => {
+    if((ws.current.readyState=== ws.current.CLOSED || ws.current.readyState=== ws.current.CLOSING)){
+      connectWS();
+      setLockChat(false);
+    }
+  },[lockChat]);
+
   async function sendAll(data: sendAllProps) {
     try {
       if (ws) {
@@ -339,6 +346,7 @@ export default function ChatModal({
   function clearChat() {
     setChatHistory([]);
     ws.current.send(JSON.stringify({ clear_history: true }));
+    if(lockChat) setLockChat(false);
   }
 
   function setModalOpen(x: boolean) {
