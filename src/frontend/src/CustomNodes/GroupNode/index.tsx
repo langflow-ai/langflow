@@ -11,7 +11,7 @@ import InputComponent from "../../components/inputComponent";
 export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDataType, selected: boolean, xPos: number, yPos: number }) {
   const [isValid, setIsValid] = useState(true);
   const { reactFlowInstance, deleteNode } = useContext(typesContext);
-  const {setDisableCP} = useContext(TabsContext)
+  const {setDisableCopyPaste} = useContext(TabsContext)
   const Icon = nodeIcons['custom'];
   const ref = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
@@ -116,13 +116,13 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
         {inputDescription ? (
             <textarea
               onFocus={() => {
-                setDisableCP(true);
+                setDisableCopyPaste(true);
               }}
               autoFocus
               className="resize-none bg-transparent focus:border-none active:outline hover:outline focus:outline outline-gray-300 rounded-md  w-full h-max"
               onBlur={() => {
                 setInputDescription(false);
-                setDisableCP(false);
+                setDisableCopyPaste(false);
                 if (nodeDescription.trim() !== "") {
                   setNodeDescription(nodeDescription);
                   data.node.flow.description = nodeDescription;

@@ -14,7 +14,7 @@ export default function InputComponent({
 }: InputComponentType) {
   const [myValue, setMyValue] = useState(value ?? "");
   const [pwdVisible, setPwdVisible] = useState(false);
-  const { setDisableCP } = useContext(TabsContext);
+  const { setDisableCopyPaste } = useContext(TabsContext);
   useEffect(() => {
     if (disabled) {
       setMyValue("");
@@ -25,15 +25,15 @@ export default function InputComponent({
     <div
       className={
         disabled
-          ? "pointer-events-none relative cursor-not-allowed"
+          ? "pointer-events-none cursor-not-allowed"
           : "relative"
       }
     >
       <input
 	  autoFocus={autoFocus}
         value={myValue}
-        onBlur={(e)=>{setDisableCP(false);onBlur(e)}}
-        onFocus={(e)=>{setDisableCP(false);onFocus(e)}}
+        onBlur={(e)=>{setDisableCopyPaste(false);onBlur(e)}}
+        onFocus={(e)=>{setDisableCopyPaste(false);onFocus(e)}}
         className={classNames(
           "form-input block w-full rounded-md border-gray-300 pr-12 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 sm:text-sm",
           disabled ? " bg-gray-200 dark:bg-gray-700" : "",
