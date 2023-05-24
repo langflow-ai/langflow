@@ -16,7 +16,7 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
   const ref = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [flowHandlePosition, setFlowHandlePosition] = useState(0);
-  const [inputName, setInputName] = useState(false);
+  const [inputName, setInputName] = useState(true);
   const [nodeName, setNodeName] = useState(data.node.flow.name);
   const [inputDescription, setInputDescription] = useState(false);
   const [nodeDescription, setNodeDescription] = useState(data.node.flow.description);
