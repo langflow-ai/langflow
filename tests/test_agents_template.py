@@ -82,6 +82,7 @@ def test_json_agent(client: TestClient):
         "type": "BaseLanguageModel",
         "list": False,
         "advanced": False,
+        "display_name": "LLM",
     }
 
 
@@ -120,6 +121,7 @@ def test_csv_agent(client: TestClient):
         "type": "BaseLanguageModel",
         "list": False,
         "advanced": False,
+        "display_name": "LLM",
     }
 
 
@@ -183,4 +185,5 @@ def test_initialize_agent(client: TestClient):
         "type": "BaseLanguageModel",
         "list": False,
         "advanced": False,
+        "display_name": "LLM",
     }

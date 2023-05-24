@@ -39,20 +39,8 @@ export default function TextAreaComponent({
         >
           {myValue !== "" ? myValue : "Text empty"}
         </span>
-        <button
-          onClick={() => {
-            openPopUp(
-              <TextAreaModal
-                value={myValue}
-                setValue={(t: string) => {
-                  setMyValue(t);
-                  onChange(t);
-                }}
-              />
-            );
-          }}
-        >
-          <ArrowTopRightOnSquareIcon className="h-6 w-6 hover:text-blue-600" />
+        <button onClick={()=>{openPopUp(<TextAreaModal value={myValue} setValue={(t:string) => {setMyValue(t); onChange(t);}}/>)}}>
+            <ArrowTopRightOnSquareIcon className="w-6 h-6 hover:text-blue-600 dark:text-gray-300" />
         </button>
       </div>
     </div>
