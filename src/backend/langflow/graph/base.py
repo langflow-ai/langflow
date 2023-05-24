@@ -19,6 +19,8 @@ from langflow.utils.util import sync_to_async
 
 
 class Node:
+    _built_objects = {}
+
     def __init__(self, data: Dict, base_type: Optional[str] = None) -> None:
         self.id: str = data["id"]
         self._data = data
@@ -31,26 +33,28 @@ class Node:
     def _parse_data(self) -> None:
         self.data = self._data["data"]
         self.output = self.data["node"]["base_classes"]
-        template_dicts = {
+        self.template_dict = self.data["node"]["template"]
+        self.template_dicts = {
             key: value
-            for key, value in self.data["node"]["template"].items()
+            for key, value in self.template_dict.items()
             if isinstance(value, dict)
         }
 
         self.required_inputs = [
-            template_dicts[key]["type"]
-            for key, value in template_dicts.items()
+            self.template_dicts[key]["type"]
+            for key, value in self.template_dicts.items()
             if value["required"]
         ]
         self.optional_inputs = [
-            template_dicts[key]["type"]
-            for key, value in template_dicts.items()
+            self.template_dicts[key]["type"]
+            for key, value in self.template_dicts.items()
             if not value["required"]
         ]
 
-        template_dict = self.data["node"]["template"]
         self.node_type = (
-            self.data["type"] if "Tool" not in self.output else template_dict["_type"]
+            self.data["type"]
+            if "Tool" not in self.output
+            else self.template_dict["_type"]
         )
         if self.base_type is None:
             for base_type, value in ALL_TYPES_DICT.items():
@@ -73,13 +77,8 @@ class Node:
         # and use that as the value for the param
         # If the type is "str", then we need to get the value of the "value" key
         # and use that as the value for the param
-        template_dict = {
-            key: value
-            for key, value in self.data["node"]["template"].items()
-            if isinstance(value, dict)
-        }
         params = {}
-        for key, value in template_dict.items():
+        for key, value in self.template_dicts.items():
             if key == "_type":
                 continue
             # If the type is not transformable to a python base class
@@ -218,7 +217,7 @@ class Node:
             "SQLDatabase",
         ]:
             return self._built_object
-        return deepcopy(self._built_object)
+        return self._built_object
 
     def add_edge(self, edge: "Edge") -> None:
         self.edges.append(edge)
