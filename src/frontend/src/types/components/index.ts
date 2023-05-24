@@ -1,4 +1,5 @@
 import {
+  FocusEventHandler,
   ForwardRefExoticComponent,
   ReactElement,
   ReactFragment,
@@ -10,6 +11,10 @@ export type InputComponentType = {
   disabled?: boolean;
   onChange: (value: string) => void;
   password: boolean;
+  onFocus?: FocusEventHandler<HTMLInputElement>;
+  onBlur?: FocusEventHandler<HTMLInputElement>;
+  autoFocus?: boolean;
+  
 };
 export type ToggleComponentType = {
   enabled: boolean;

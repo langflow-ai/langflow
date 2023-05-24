@@ -6,6 +6,7 @@ import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import { ArrowsPointingOutIcon, TrashIcon } from "@heroicons/react/24/outline";
 import InputParameterComponent from "../GenericNode/components/inputParameterComponent";
 import { TabsContext } from "../../contexts/tabsContext";
+import InputComponent from "../../components/inputComponent";
 
 export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDataType, selected: boolean, xPos: number, yPos: number }) {
   const [isValid, setIsValid] = useState(true);
@@ -48,15 +49,10 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
             }}
           />
           {inputName ? (
-            <input
-              onFocus={() => {
-                setDisableCP(true);
-              }}
+            <InputComponent
               autoFocus
-              className="bg-transparent focus:border-none active:outline hover:outline focus:outline outline-gray-300 rounded-md  w-32"
               onBlur={() => {
                 setInputName(false);
-                setDisableCP(false);
                 if (nodeName.trim() !== "") {
                   setNodeName(nodeName);
                   data.node.flow.name = nodeName;
@@ -65,12 +61,9 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
                   setNodeName(data.node.flow.name);
                 }
 
-              }}
+              } }
               value={nodeName}
-              onChange={(e) => {
-                setNodeName(e.target.value);
-              }}
-            />
+              onChange={setNodeName} password={false}            />
           ) : (
             <div className="ml-2 truncate" onDoubleClick={()=>{
               setInputName(true);
