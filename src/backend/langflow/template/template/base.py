@@ -1,9 +1,9 @@
-from langflow.template.field.base import TemplateField
-from langflow.template.field.fields import RootField
+from typing import Callable, Optional, Union
+
 from pydantic import BaseModel
 
-
-from typing import Callable, Optional, Union
+from langflow.template.field.base import TemplateField
+from langflow.template.field.fields import RootField
 
 
 class Template(BaseModel):

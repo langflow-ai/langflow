@@ -1,11 +1,11 @@
+from typing import Optional
+
+from pydantic import BaseModel
+
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.prompts import FORCE_SHOW_FIELDS
 from langflow.template.template.base import Template
 from langflow.utils import constants
-from pydantic import BaseModel
-
-
-from typing import Optional
 
 
 class FrontendNode(BaseModel):

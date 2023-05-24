@@ -1,7 +1,7 @@
 from typing import Optional
 
-from langchain.agents.types import AGENT_TO_CLASS
 from langchain.agents.mrkl import prompt
+from langchain.agents.types import AGENT_TO_CLASS
 
 from langflow.interface.connectors.custom import (
     DALL_E2_FUNCTION,
@@ -9,12 +9,12 @@ from langflow.interface.connectors.custom import (
 )
 from langflow.template.field.base import TemplateField
 from langflow.template.field.fields import RootField
+from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.frontend_node.prompts import (
     DEFAULT_PROMPT,
     HUMAN_PROMPT,
     SYSTEM_PROMPT,
 )
-from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.template.base import Template
 from langflow.utils.constants import DEFAULT_PYTHON_FUNCTION
 
