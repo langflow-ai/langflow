@@ -1,3 +1,4 @@
+import { TemplateVariableType } from './types/api/index';
 import { NodeDataType, NodeType } from "./types/flow/index";
 import {
   RocketLaunchIcon,
@@ -741,7 +742,7 @@ export function validateSelection(selection: OnSelectionChangeParams) {
 	}
 }
 
-function mergeNodeTemplates(Flow:FlowType){
+function mergeNodeTemplates(Flow:FlowType):APITemplateType{
 	/* this function receives a flow and iterate trhow each node
 		and merge the templates with only the visible fields
 		if there are two keys with the same name in the flow, we will update the display name of each one
@@ -805,4 +806,13 @@ function isHandleConnected(flow:FlowType, handleId:string){
 		return true
 	}
 
+}
+
+export function generateNodeTemplate(Flow:FlowType){
+	/*
+		this function receives a flow and generate a template for the group node
+	*/
+	let template = mergeNodeTemplates(Flow);
+	filterGroupNodeHandles(template,Flow);
+	return template;
 }
