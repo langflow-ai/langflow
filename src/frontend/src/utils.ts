@@ -758,6 +758,7 @@ function mergeNodeTemplates(Flow:FlowType){
 				}else{
 					template[key] = nodeTemplate[key];
 				}
+				template[key].proxy = node.id;
 			}
 		})
 	})
