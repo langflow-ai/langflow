@@ -740,3 +740,17 @@ export function validateSelection(selection: OnSelectionChangeParams) {
 		return true;
 	}
 }
+
+function groupNodeTemplate(Flow:FlowType){
+	/* this function receives a flow and iterate trhow each node
+		and merge the templates with only the visible fields
+		if there are two keys with the same name in the flow, we will update the display name of each one
+		to show from which node it came from
+	*/
+	let nodes = Flow.data.nodes;
+	let template = {};
+}
+
+function isHandleConnected(flow:FlowType, handleId:string){
+
+}
