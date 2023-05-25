@@ -551,7 +551,12 @@ export function generateFlow(
 ): FlowType {
 	const newFlowData = reactFlowInstance.toObject();
 
-	newFlowData.edges = selection.edges;
+	/*	remove edges that are not connected to selected nodes on both ends
+		in future we can save this edges to when ungrouping recconect to the old nodes 
+	*/
+	newFlowData.edges = selection.edges.filter(
+		(edge) => selection.nodes.some((node) => node.id === edge.target) && selection.nodes.some((node) => node.id === edge.source)
+	  )
 	newFlowData.nodes = selection.nodes;
 
 	console.log(newFlowData);
@@ -789,6 +794,7 @@ function filterGroupNodeHandles(template:APITemplateType,Flow:FlowType){
 			key +
 			"|" +
 			template[key].proxy;
+			// TODO: think about invisible edges inside group nodes
 			if(isHandleConnected(Flow,id) && !template[key].list){
 				delete template[key];
 			}
