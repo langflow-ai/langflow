@@ -149,6 +149,27 @@ files = [
 ]
 
 [[package]]
+name = "anthropic"
+version = "0.2.9"
+description = "Library for accessing the anthropic API"
+category = "main"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "anthropic-0.2.9-py3-none-any.whl", hash = "sha256:e7cce215cf6c446de29280deb31b07b5587993d48e84850eaad3fc69bd1fec0a"},
+    {file = "anthropic-0.2.9.tar.gz", hash = "sha256:2d44564d362cced6e8e662366e4de7f94dcdc6cb61346a5e528359b0afc1f2f3"},
+]
+
+[package.dependencies]
+aiohttp = "*"
+httpx = "*"
+requests = "*"
+tokenizers = "*"
+
+[package.extras]
+dev = ["black (>=22.3.0)", "pytest"]
+
+[[package]]
 name = "anyio"
 version = "3.6.2"
 description = "High level compatibility layer for multiple asynchronous event loop implementations"
@@ -1576,7 +1597,7 @@ numpy = "*"
 name = "httpcore"
 version = "0.16.3"
 description = "A minimal low-level HTTP client."
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -1667,7 +1688,7 @@ test = ["Cython (>=0.29.24,<0.30.0)"]
 name = "httpx"
 version = "0.23.3"
 description = "The next generation HTTP client."
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -4327,7 +4348,7 @@ use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 name = "rfc3986"
 version = "1.5.0"
 description = "Validating URI References per RFC 3986"
-category = "dev"
+category = "main"
 optional = false
 python-versions = "*"
 files = [
@@ -5498,4 +5519,4 @@ deploy = ["langchain-serve"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "ce8b78c1560c2a0b16991dd6ed9ecc1daff071999c6a0c58cede8d3fbfd2df50"
+content-hash = "dbc32e363ff10a3b38b98fdcdc43410ce8b92a13f2479549d6a5ce150e1c30e7"
