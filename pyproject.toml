@@ -53,6 +53,7 @@ wikipedia = "^1.4.0"
 gptcache = "^0.1.23"
 langchain-serve = { version = "^0.0.33", optional = true }
 anthropic = "^0.2.9"
+google-generativeai = "^0.1.0rc3"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"

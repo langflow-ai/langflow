@@ -52,6 +52,7 @@ llms:
   - LlamaCpp
   - Anthropic
   - ChatAnthropic
+  - ChatGooglePalm
 memories:
   - ConversationBufferMemory
   - ConversationSummaryMemory
