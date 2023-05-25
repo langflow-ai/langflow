@@ -596,6 +596,9 @@ class LLMFrontendNode(FrontendNode):
         if field.name in SHOW_FIELDS:
             field.show = True
 
+        field.advanced = True
+        field.show = True
+
         if "api" in field.name and ("key" in field.name or "token" in field.name):
             field.password = True
             field.show = True
@@ -634,6 +637,18 @@ class LLMFrontendNode(FrontendNode):
         if "mosaicml" in field.name:
             field.name = field.name.replace("mosaicml", "MosaicML")
             field.display_name = field.name.replace("_", " ")
+
+        if "streaming" in field.name:
+            field.value = True
+            field.show = False
+
+        if "model_path" in field.name:
+            field.show = True
+            field.advanced = False
+
+        if field.required:
+            field.show = True
+            field.advanced = False
 
 
 class EmbeddingFrontendNode(FrontendNode):
