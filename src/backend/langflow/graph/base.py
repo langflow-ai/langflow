@@ -19,8 +19,6 @@ from langflow.utils.util import sync_to_async
 
 
 class Node:
-    _built_objects = {}
-
     def __init__(self, data: Dict, base_type: Optional[str] = None) -> None:
         self.id: str = data["id"]
         self._data = data
