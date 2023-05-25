@@ -177,7 +177,7 @@ export default function ImportModal() {
 											!loadingExamples &&
 											examples.map((example, index) => {
 												return (
-													<div id="index">
+													<div key={index}>
 														{" "}
 														<ButtonBox
 															size="small"
