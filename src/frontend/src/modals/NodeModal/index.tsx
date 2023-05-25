@@ -20,7 +20,7 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
       }, 300);
     }
   }
-  const Icon = nodeIcons[types[data.type]];
+  const Icon = nodeIcons[types[data.type] ?? "custom"];
   return (
     <Transition.Root show={open} appear={true} as={Fragment}>
       <Dialog
@@ -71,7 +71,7 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
                       className="mt-4 h-10 w-10 rounded p-1"
                       style={{
                         color:
-                          nodeColors[types[data.type]] ?? nodeColors.unknown,
+                          nodeColors[types[data.type]] ?? nodeColors.custom,
                       }}
                     />
                     <div className="mt-4 text-center sm:ml-4 sm:text-left">
@@ -83,10 +83,11 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
                       </Dialog.Title>
                     </div>
                   </div>
-                  <div className="flex h-full w-full flex-row items-center justify-center gap-4 bg-gray-200 p-4 dark:bg-gray-900">
+                  <div className="flex h-full w-full flex-row items-center justify-center overflow-clip gap-4 bg-gray-200 p-4 dark:bg-gray-900">
                     <div className="flex h-full w-full">
-                      <div className="w-full overflow-hidden rounded-lg  bg-white px-4 shadow dark:bg-gray-800 sm:p-4">
+                      <div className="w-full overflow-scroll scrollbar-hide rounded-lg bg-white px-4  shadow dark:bg-gray-800">
                         <div className="flex h-full flex-col gap-5">
+                          <br />
                           {Object.keys(data.node.template)
                             .filter(
                               (t) =>
@@ -103,8 +104,8 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
                                     data.node.template[t].display_name
                                       ? data.node.template[t].display_name
                                       : data.node.template[t].name
-                                      ? toNormalCase(data.node.template[t].name)
-                                      : toNormalCase(t)
+                                        ? toNormalCase(data.node.template[t].name)
+                                        : toNormalCase(t)
                                   }
                                   required={data.node.template[t].required}
                                   id={
@@ -119,6 +120,7 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
                                 />
                               );
                             })}
+                          <br />
                         </div>
                       </div>
                     </div>
