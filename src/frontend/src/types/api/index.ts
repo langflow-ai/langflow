@@ -22,6 +22,7 @@ export type TemplateVariableType = {
   show: boolean;
   multiline?: boolean;
   value?: any;
+  proxy?:string;
   [key: string]: any;
 };
 export type sendAllProps = {
