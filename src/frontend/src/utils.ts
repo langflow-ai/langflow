@@ -741,16 +741,35 @@ export function validateSelection(selection: OnSelectionChangeParams) {
 	}
 }
 
-function groupNodeTemplate(Flow:FlowType){
+function mergeNodeTemplates(Flow:FlowType){
 	/* this function receives a flow and iterate trhow each node
 		and merge the templates with only the visible fields
 		if there are two keys with the same name in the flow, we will update the display name of each one
 		to show from which node it came from
 	*/
-	let nodes = Flow.data.nodes;
+	let nodes:NodeType[] = Flow.data.nodes;
 	let template = {};
+	nodes.forEach((node)=>{
+		let nodeTemplate = node.data.node.template;
+		Object.keys(nodeTemplate).forEach((key)=>{
+			if(nodeTemplate[key].show){
+				if(template[key]){
+					template[key].display_name = template[key].display_name + ", " + node.data.node.type
+				}else{
+					template[key] = nodeTemplate[key];
+				}
+			}
+		})
+	})
 }
 
 function isHandleConnected(flow:FlowType, handleId:string){
+	/*
+		this function receives a flow and a handleId and check if there is a connection with this handle
+	*/ 
+
+	if(flow.data.edges.some((e)=>e.targetHandle === handleId)){
+		return true
+	}
 
 }
