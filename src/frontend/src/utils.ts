@@ -813,18 +813,18 @@ function isHandleConnected(flow:FlowType, handleId:string){
 
 }
 
-export function updateGroupNodeTemplate(template:APITemplateType){
+function updateGroupNodeTemplate(template:APITemplateType){
 	/*this function receives a template, iterates for it's items 
 	updating the visibility of all basic types setting it to advanced true*/
 	Object.keys(template).forEach((key)=>{
 		let type = template[key].type;
-		if(type === "str" ||
+		if((type === "str" ||
         type === "bool" ||
         type === "float" ||
         type === "code" ||
         type === "prompt" ||
         type === "file" ||
-        type === "int"){
+        type === "int") && !template[key].required){
 			template[key].advanced = true;
 		}
 		
@@ -836,7 +836,9 @@ export function generateNodeTemplate(Flow:FlowType){
 	/*
 		this function receives a flow and generate a template for the group node
 	*/
-	let template = mergeNodeTemplates(Flow);
+	let template = _.cloneDeep(mergeNodeTemplates(Flow));
 	filterGroupNodeHandles(template,Flow);
+	updateGroupNodeTemplate(template);
+	console.log(template);
 	return template;
 }
