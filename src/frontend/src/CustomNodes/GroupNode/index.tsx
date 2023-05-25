@@ -1,6 +1,6 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { FlowType, NodeDataType } from "../../types/flow";
-import { classNames, concatFlows, expandGroupNode, isValidConnection, nodeColors, nodeIcons, updateFlowPosition } from "../../utils";
+import { classNames, concatFlows, expandGroupNode, isValidConnection, nodeColors, nodeIcons, toNormalCase, updateFlowPosition } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import { ArrowsPointingOutIcon, Cog6ToothIcon, TrashIcon } from "@heroicons/react/24/outline";
@@ -9,10 +9,11 @@ import { TabsContext } from "../../contexts/tabsContext";
 import InputComponent from "../../components/inputComponent";
 import NodeModal from "../../modals/NodeModal";
 import { PopUpContext } from "../../contexts/popUpContext";
+import ParameterComponent from "../GenericNode/components/parameterComponent";
 
 export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDataType, selected: boolean, xPos: number, yPos: number }) {
   const [isValid, setIsValid] = useState(true);
-  const { reactFlowInstance, deleteNode } = useContext(typesContext);
+  const { reactFlowInstance, deleteNode, types } = useContext(typesContext);
   const { setDisableCopyPaste } = useContext(TabsContext)
   const Icon = nodeIcons['custom'];
   const ref = useRef(null);
@@ -22,7 +23,7 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
   const [nodeName, setNodeName] = useState(data.node.flow.name);
   const [inputDescription, setInputDescription] = useState(false);
   const [nodeDescription, setNodeDescription] = useState(data.node.flow.description);
-  const {openPopUp} = useContext(PopUpContext)
+  const { openPopUp } = useContext(PopUpContext)
 
   useEffect(() => {
     if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
@@ -177,6 +178,49 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
             }}>{nodeDescription.trim().length > 0 ? nodeDescription : "No description"}</div>
           )}
         </div>
+        <>
+          {Object.keys(data.node.template)
+            .filter((field_name) => field_name.charAt(0) !== "_").map((field_name: string, idx) => 
+            <div key={idx}>
+              {data.node.template[field_name].show &&
+                field_name != "root_field" &&
+                !data.node.template[field_name].advanced ? (
+                  <ParameterComponent
+                    data={data}
+                    color={
+                      nodeColors[types[data.node.template[field_name].type]] ??
+                      nodeColors.unknown
+                    }
+                    title={
+                      data.node.template[field_name].display_name
+                        ? data.node.template[field_name].display_name
+                        : data.node.template[field_name].name
+                        ? toNormalCase(data.node.template[field_name].name)
+                        : toNormalCase(field_name)
+                    }
+                    name={field_name}
+                    tooltipTitle={
+                      "Type: " +
+                      data.node.template[field_name].type +
+                      (data.node.template[field_name].list ? " list" : "")
+                    }
+                    required={data.node.template[field_name].required}
+                    id={
+                      data.node.template[field_name].type +
+                      "|" +
+                      field_name +
+                      "|" +
+                      data.id
+                    }
+                    left={true}
+                    type={data.node.template[field_name].type}
+                  />
+                ) : (
+                  <></>
+                )}
+            </div>)
+          }
+        </>
         <div className="flex flex-col items-center justify-center">
           <div
             ref={ref}
