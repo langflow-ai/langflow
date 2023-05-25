@@ -721,7 +721,7 @@ export function validateNode(n: NodeType, selection: OnSelectionChangeParams) {
 
 export function validateSelection(selection: OnSelectionChangeParams) {
 	// check if there is any node that does not have any connection
-	if (selection.nodes.some(node=>!selection.edges.some(edge=>edge.target === node.id)|| !selection.edges.some(edge=>edge.source === node.id))){
+	if (selection.nodes.some(node=>!selection.edges.some(edge=>edge.target === node.id)&& !selection.edges.some(edge=>edge.source === node.id))){
 		return false;
 	}
 	
