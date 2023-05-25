@@ -621,6 +621,20 @@ class LLMFrontendNode(FrontendNode):
             field.advanced = False
             field.show = True
 
+        if "api" in field.name:
+            field.name = field.name.replace("api", "API")
+            field.display_name = (
+                field.display_name.replace("api", "API") if field.display_name else None
+            )
+
+        if "openai" in field.name:
+            field.name = field.name.replace("openai", "OpenAI")
+            field.display_name = field.name.replace("_", " ")
+
+        if "mosaicml" in field.name:
+            field.name = field.name.replace("mosaicml", "MosaicML")
+            field.display_name = field.name.replace("_", " ")
+
 
 class EmbeddingFrontendNode(FrontendNode):
     @staticmethod
