@@ -3,15 +3,17 @@ import { FlowType, NodeDataType } from "../../types/flow";
 import { classNames, concatFlows, expandGroupNode, isValidConnection, nodeColors, nodeIcons, updateFlowPosition } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
-import { ArrowsPointingOutIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { ArrowsPointingOutIcon, Cog6ToothIcon, TrashIcon } from "@heroicons/react/24/outline";
 import InputParameterComponent from "../GenericNode/components/inputParameterComponent";
 import { TabsContext } from "../../contexts/tabsContext";
 import InputComponent from "../../components/inputComponent";
+import NodeModal from "../../modals/NodeModal";
+import { PopUpContext } from "../../contexts/popUpContext";
 
 export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDataType, selected: boolean, xPos: number, yPos: number }) {
   const [isValid, setIsValid] = useState(true);
   const { reactFlowInstance, deleteNode } = useContext(typesContext);
-  const {setDisableCopyPaste} = useContext(TabsContext)
+  const { setDisableCopyPaste } = useContext(TabsContext)
   const Icon = nodeIcons['custom'];
   const ref = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
@@ -20,6 +22,8 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
   const [nodeName, setNodeName] = useState(data.node.flow.name);
   const [inputDescription, setInputDescription] = useState(false);
   const [nodeDescription, setNodeDescription] = useState(data.node.flow.description);
+  const {openPopUp} = useContext(PopUpContext)
+
   useEffect(() => {
     if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
       setFlowHandlePosition(
@@ -32,6 +36,7 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
   useEffect(() => {
     updateNodeInternals(data.id);
   }, [data.id, flowHandlePosition, updateNodeInternals]);
+  // console.log(Object.keys(data.node.template).length,data.node.template)
   return (
     <div
       className={classNames(
@@ -61,13 +66,13 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
                   setNodeName(data.node.flow.name);
                 }
 
-              } }
+              }}
               value={nodeName}
-              onChange={setNodeName} password={false}            />
+              onChange={setNodeName} password={false} />
           ) : (
-            <div className="ml-2 truncate" onDoubleClick={()=>{
+            <div className="ml-2 truncate" onDoubleClick={() => {
               setInputName(true);
-              
+
             }}>{nodeName}</div>
           )}
           <div>
@@ -102,6 +107,34 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
             <ArrowsPointingOutIcon className="w-6 h-6 hover:text-blue-500 dark:text-gray-300 dark:hover:text-blue-500" />
           </button>
           <button
+            className="relative"
+            onClick={(event) => {
+              event.preventDefault();
+              openPopUp(<NodeModal data={data} />);
+            }}
+          >
+            <div className=" absolute -right-1 -top-2 text-red-600">
+              {Object.keys(data.node.template).some(
+                (t) =>
+                  data.node.template[t].advanced &&
+                  data.node.template[t].required
+              )
+                ? " *"
+                : ""}
+            </div>
+            <Cog6ToothIcon
+              className={classNames(
+                Object.keys(data.node.template).some(
+                  (t) =>
+                    data.node.template[t].advanced && data.node.template[t].show
+                )
+                  ? ""
+                  : "hidden",
+                "h-6 w-6  hover:animate-spin  dark:text-gray-300"
+              )}
+            ></Cog6ToothIcon>
+          </button>
+          <button
             onClick={() => {
               console.log(data.id);
               deleteNode(data.id);
@@ -113,7 +146,7 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
       </div>
       <div className="w-full h-full py-5">
         <div className="w-full text-gray-500 dark:text-gray-300 px-5 pb-3 text-sm">
-        {inputDescription ? (
+          {inputDescription ? (
             <textarea
               onFocus={() => {
                 setDisableCopyPaste(true);
@@ -138,10 +171,10 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
               }}
             />
           ) : (
-            <div className="ml-2 truncate" onDoubleClick={()=>{
+            <div className="ml-2 truncate" onDoubleClick={() => {
               setInputDescription(true);
-              
-            }}>{nodeDescription.trim().length>0?nodeDescription:"No description"}</div>
+
+            }}>{nodeDescription.trim().length > 0 ? nodeDescription : "No description"}</div>
           )}
         </div>
         <div className="flex flex-col items-center justify-center">

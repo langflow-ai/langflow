@@ -595,17 +595,7 @@ export function generateNodeFromFlow(flow: FlowType): NodeType {
 			node: {
 				base_classes: ["Text"],
 				description: "group Node",
-				template: {
-					root_field: {
-            			display_name: "input",
-						list: false,
-						required: false,
-						show: true,
-						type: "Text",
-						multiline: false,
-						placeholder: "",
-					},
-				},
+				template: generateNodeTemplate(data),
 				flow: data,
 			},
 		},
