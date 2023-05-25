@@ -306,8 +306,10 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
     setLastSelection(flow);
   }, []);
 
+  const {setDisableCopyPaste} =  useContext(TabsContext)
+
   return (
-    <div className="w-full h-full" ref={reactFlowWrapper}>
+    <div className="w-full h-full" ref={reactFlowWrapper} >
       {Object.keys(templates).length > 0 && Object.keys(types).length > 0 ? (
         <>
           <ReactFlow
@@ -316,6 +318,9 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
               updateFlow({ ...flow, data: reactFlowInstance.toObject() });
             }}
             edges={edges}
+            onPaneClick={() => {setDisableCopyPaste(false);}}
+            onNodeClick={() => {setDisableCopyPaste(true);}}
+            onPaneMouseLeave={() => {setDisableCopyPaste(true);}}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChangeMod}
             onConnect={onConnect}
