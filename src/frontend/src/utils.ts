@@ -31,7 +31,7 @@ import {
 } from "reactflow";
 import { FlowType } from "./types/flow";
 import { APITemplateType } from "./types/api";
-import _, { forEach, get } from "lodash";
+import _, { forEach, get, template } from "lodash";
 import { v4 as uuidv4, validate } from "uuid";
 
 export function classNames(...classes: Array<string>) {
@@ -591,7 +591,7 @@ export function generateNodeFromFlow(flow: FlowType): NodeType {
 				description: "group Node",
 				template: {
 					root_field: {
-            display_name: "input",
+            			display_name: "input",
 						list: false,
 						required: false,
 						show: true,
@@ -751,7 +751,7 @@ function mergeNodeTemplates(Flow:FlowType){
 	let template = {};
 	nodes.forEach((node)=>{
 		let nodeTemplate = node.data.node.template;
-		Object.keys(nodeTemplate).forEach((key)=>{
+		Object.keys(nodeTemplate).filter((field_name) => field_name.charAt(0) !== "_").forEach((key)=>{
 			if(nodeTemplate[key].show){
 				if(template[key]){
 					template[key].display_name = template[key].display_name + ", " + node.data.node.type
@@ -762,7 +762,39 @@ function mergeNodeTemplates(Flow:FlowType){
 			}
 		})
 	})
+	return template;
 }
+
+function filterGroupNodeHandles(template:APITemplateType,Flow:FlowType){
+	/*
+		this function receives a template and a flow and iterate trhow each field
+		and check if the field is a primitive type, if it is not, we will check if there is a connection with this handle
+		if there is a connection we will remove the handle from the template
+	*/
+	Object.keys(template).forEach((key)=>{
+		let type = template[key].type;
+		if(!(type === "str" ||
+        type === "bool" ||
+        type === "float" ||
+        type === "code" ||
+        type === "prompt" ||
+        type === "file" ||
+        type === "int"))
+		{
+			// if the type is not a primitive type, we will check if there is a connection with this handle
+			// if there is a connection we will remove the handle from the template
+			let id = type +
+			"|" +
+			key +
+			"|" +
+			template[key].proxy;
+			if(isHandleConnected(Flow,id) && !template[key].list){
+				delete template[key];
+			}
+		}
+	})
+}
+
 
 function isHandleConnected(flow:FlowType, handleId:string){
 	/*
