@@ -586,6 +586,13 @@ class ChainFrontendNode(FrontendNode):
 
 
 class LLMFrontendNode(FrontendNode):
+    names_dict = {
+        "openai": "OpenAI",
+        "google": "Google",
+        "anthropic": "Anthropic",
+        "mosaicml": "MosaicML",
+    }
+
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         display_names_dict = {
@@ -626,16 +633,10 @@ class LLMFrontendNode(FrontendNode):
 
         if "api" in field.name:
             field.name = field.name.replace("api", "API")
-            field.display_name = (
-                field.display_name.replace("api", "API") if field.display_name else None
-            )
+            field.display_name = field.name.replace("api", "API")
 
-        if "openai" in field.name:
-            field.name = field.name.replace("openai", "OpenAI")
-            field.display_name = field.name.replace("_", " ")
-
-        if "mosaicml" in field.name:
-            field.name = field.name.replace("mosaicml", "MosaicML")
+        for name, replacement in LLMFrontendNode.names_dict.items():
+            field.name = field.name.replace(name, replacement)
             field.display_name = field.name.replace("_", " ")
 
         if "streaming" in field.name:
