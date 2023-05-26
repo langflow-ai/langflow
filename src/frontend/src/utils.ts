@@ -617,21 +617,25 @@ export function expandGroupNode(
 	const gNodes = flow.data.nodes;
 	const gEdges = flow.data.edges;
 	//redirect edges to correct proxy node
+	let updatedEdges:Edge[] = [];
 	ReactFlowInstance.getEdges().forEach((edge) => {
-		if (edge.target === flow.id) {
-			if(edge.targetHandle.split("|").length === 4){
-			let type = edge.targetHandle.split("|")[0];
-			let field = edge.targetHandle.split("|")[1];
-			let proxy = edge.targetHandle.split("|")[3];
+		let newEdge = _.cloneDeep(edge);
+		if (newEdge.target === flow.id) {
+			if(newEdge.targetHandle.split("|").length === 4){
+			let type = newEdge.targetHandle.split("|")[0];
+			let field = newEdge.targetHandle.split("|")[1];
+			let proxy = newEdge.targetHandle.split("|")[3];
 			let node = gNodes.find((n) => n.id === proxy);
+			console.log(node);
 			if(node){
-				edge.target = proxy;
+				newEdge.target = proxy;
 				if(node.type==="groupNode"){
-					edge.targetHandle = type + "|" + field + "|" + proxy+ "|" + node.data.node.template[field].proxy;
+					newEdge.targetHandle = type + "|" + field + "|" + proxy+ "|" + node.data.node.template[field].proxy;
 				}
 				else{
-					edge.targetHandle = type + "|" + field + "|" + proxy;
-				}				
+					newEdge.targetHandle = type + "|" + field + "|" + proxy;
+				}
+				updatedEdges.push(newEdge);				
 			}
 
 		}
@@ -645,7 +649,7 @@ export function expandGroupNode(
 		...ReactFlowInstance.getEdges().filter(
 			(e) => e.target !== flow.id && e.source !== flow.id
 		),
-		...gEdges,
+		...gEdges,...updatedEdges
 	];
 	ReactFlowInstance.setNodes(nodes);
 	ReactFlowInstance.setEdges(edges);
