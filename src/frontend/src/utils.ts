@@ -761,7 +761,7 @@ function mergeNodeTemplates(Flow:FlowType):APITemplateType{
 	let nodes:NodeType[] = Flow.data.nodes;
 	let template = {};
 	nodes.forEach((node)=>{
-		let nodeTemplate = node.data.node.template;
+		let nodeTemplate = _.cloneDeep(node.data.node.template);
 		Object.keys(nodeTemplate).filter((field_name) => field_name.charAt(0) !== "_").forEach((key)=>{
 			if(nodeTemplate[key].show){
 				if(template[key]){
@@ -841,7 +841,7 @@ export function generateNodeTemplate(Flow:FlowType){
 	/*
 		this function receives a flow and generate a template for the group node
 	*/
-	let template = _.cloneDeep(mergeNodeTemplates(Flow));
+	let template = mergeNodeTemplates(Flow);
 	filterGroupNodeHandles(template,Flow);
 	updateGroupNodeTemplate(template);
 	return template;
