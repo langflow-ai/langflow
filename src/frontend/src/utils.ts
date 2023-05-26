@@ -766,7 +766,7 @@ export function validateSelection(selection: OnSelectionChangeParams) {
 		return true;
 	}
 }
-
+//TODO: fix this function for nested group nodes
 function mergeNodeTemplates(Flow:FlowType):APITemplateType{
 	/* this function receives a flow and iterate trhow each node
 		and merge the templates with only the visible fields
@@ -780,7 +780,15 @@ function mergeNodeTemplates(Flow:FlowType):APITemplateType{
 		Object.keys(nodeTemplate).filter((field_name) => field_name.charAt(0) !== "_").forEach((key)=>{
 			if(nodeTemplate[key].show){
 				if(template[key]){
-					template[key].display_name = template[key].display_name + ", " + node.data.node.type
+					if(template[key].display_name)
+					{
+						template[key].display_name = template[key].display_name + ", " + node.data.type
+
+					}
+					else{
+						template[key].name = template[key].name + ", " + node.data.type
+						
+					}
 				}else{
 					template[key] = nodeTemplate[key];
 				}
