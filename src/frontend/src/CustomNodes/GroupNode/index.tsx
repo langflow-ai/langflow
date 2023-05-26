@@ -180,11 +180,11 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
         </div>
         <>
           {Object.keys(data.node.template)
-            .filter((field_name) => field_name.charAt(0) !== "_").map((field_name: string, idx) => 
-            <div key={idx}>
-              {data.node.template[field_name].show &&
-                field_name != "root_field" &&
-                !data.node.template[field_name].advanced ? (
+            .filter((field_name) => field_name.charAt(0) !== "_").map((field_name: string, idx) =>
+              <div key={idx}>
+                {data.node.template[field_name].show &&
+                  field_name != "root_field" &&
+                  !data.node.template[field_name].advanced ? (
                   <ParameterComponent
                     data={data}
                     color={
@@ -195,8 +195,8 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
                       data.node.template[field_name].display_name
                         ? data.node.template[field_name].display_name
                         : data.node.template[field_name].name
-                        ? toNormalCase(data.node.template[field_name].name)
-                        : toNormalCase(field_name)
+                          ? toNormalCase(data.node.template[field_name].name)
+                          : toNormalCase(field_name)
                     }
                     name={field_name}
                     tooltipTitle={
@@ -218,25 +218,30 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
                 ) : (
                   <></>
                 )}
-            </div>)
+              </div>)
           }
         </>
-        <div className="flex flex-col items-center justify-center">
-          <div
-            ref={ref}
-            className="w-full flex flex-wrap justify-between items-center bg-gray-50 dark:bg-gray-800 dark:text-white mt-1 px-5 py-2"
-          >
-            <InputParameterComponent
-              data={data}
-              color={nodeColors['custom'] ?? nodeColors.unknown}
-              title={data.node.template.root_field.display_name}
-              tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
-              id={[data.type, data.id, ...data.node.base_classes].join("|")}
-              type={data.node.base_classes.join("|")}
-              left={false}
-            />
-          </div>
-        </div>
+        {data.node.template.root_field ? (
+          <InputParameterComponent
+            data={data}
+            color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+            title={data.node.template.root_field.display_name}
+            tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
+            id={[data.type, data.id, ...data.node.base_classes].join("|")}
+            type={data.node.base_classes.join("|")}
+            left={false}
+          />
+        ) : (
+          <ParameterComponent
+            data={data}
+            color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+            title={data.type}
+            tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
+            id={[data.type, data.id, ...data.node.base_classes].join("|")}
+            type={data.node.base_classes.join("|")}
+            left={false}
+          />
+        )}
       </div>
     </div>
   );

@@ -624,6 +624,12 @@ export function expandGroupNode(
 		...ReactFlowInstance.getNodes().filter((n) => n.id !== flow.id),
 		...gNodes,
 	];
+	const newEdges = gEdges.map((edge) => {
+		if (edge.target === flow.id) {
+			edge.targetHandle
+		}
+
+	})
 	const edges = [
 		...ReactFlowInstance.getEdges().filter(
 			(e) => e.target !== flow.id && e.source !== flow.id
@@ -793,7 +799,6 @@ function filterGroupNodeHandles(template:APITemplateType,Flow:FlowType){
 			key +
 			"|" +
 			template[key].proxy;
-			// TODO: think about invisible edges inside group nodes
 			if(isHandleConnected(Flow,id) && !template[key].list){
 				delete template[key];
 			}
@@ -839,6 +844,5 @@ export function generateNodeTemplate(Flow:FlowType){
 	let template = _.cloneDeep(mergeNodeTemplates(Flow));
 	filterGroupNodeHandles(template,Flow);
 	updateGroupNodeTemplate(template);
-	console.log(template);
 	return template;
 }
