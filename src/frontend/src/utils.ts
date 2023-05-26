@@ -616,18 +616,31 @@ export function expandGroupNode(
 ) {
 	const gNodes = flow.data.nodes;
 	const gEdges = flow.data.edges;
+	//redirect edges to correct proxy node
+	ReactFlowInstance.getEdges().forEach((edge) => {
+		if (edge.target === flow.id) {
+			if(edge.targetHandle.split("|").length === 4){
+			let type = edge.targetHandle.split("|")[0];
+			let field = edge.targetHandle.split("|")[1];
+			let proxy = edge.targetHandle.split("|")[3];
+			let node = gNodes.find((n) => n.id === proxy);
+			if(node){
+				edge.target = proxy;
+				if(node.type==="groupNode"){
+					edge.targetHandle = type + "|" + field + "|" + proxy+ "|" + node.data.node.template[field].proxy;
+				}
+				else{
+					edge.targetHandle = type + "|" + field + "|" + proxy;
+				}				
+			}
+
+		}
+	}
+	})
 	const nodes = [
 		...ReactFlowInstance.getNodes().filter((n) => n.id !== flow.id),
 		...gNodes,
 	];
-	ReactFlowInstance.getEdges().forEach((edge) => {
-		console.log(edge)
-		if (edge.target === flow.id) {
-			if(edge.targetHandle.split("|").length === 4){
-				console.log(edge)
-		}
-	}
-	})
 	const edges = [
 		...ReactFlowInstance.getEdges().filter(
 			(e) => e.target !== flow.id && e.source !== flow.id
