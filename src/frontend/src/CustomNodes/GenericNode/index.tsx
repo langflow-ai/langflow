@@ -245,7 +245,7 @@ export default function GenericNode({
                       "|" +
                       field_name +
                       "|" +
-                      data.id+(data.node.template[field_name].proxy?("|"+data.node.template[field_name].proxy):"")
+                      data.id
                     }
                     left={true}
                     type={data.node.template[field_name].type}

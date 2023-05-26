@@ -395,10 +395,6 @@ export function isValidConnection(
 ) {
   console.log(source, target);
   // target is target id
-  console.log(target);
-
-  console.log(sourceHandle);
-  console.log(targetHandle);
   if (
     sourceHandle.split("|")[0] === targetHandle.split("|")[0] ||
     sourceHandle
@@ -624,11 +620,13 @@ export function expandGroupNode(
 		...ReactFlowInstance.getNodes().filter((n) => n.id !== flow.id),
 		...gNodes,
 	];
-	const newEdges = gEdges.map((edge) => {
+	ReactFlowInstance.getEdges().forEach((edge) => {
+		console.log(edge)
 		if (edge.target === flow.id) {
-			edge.targetHandle
+			if(edge.targetHandle.split("|").length === 4){
+				console.log(edge)
 		}
-
+	}
 	})
 	const edges = [
 		...ReactFlowInstance.getEdges().filter(

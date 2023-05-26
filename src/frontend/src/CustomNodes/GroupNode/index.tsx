@@ -210,7 +210,7 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
                       "|" +
                       field_name +
                       "|" +
-                      data.id
+                      data.id+(data.node.template[field_name].proxy?("|"+data.node.template[field_name].proxy):"")
                     }
                     left={true}
                     type={data.node.template[field_name].type}
