@@ -109,7 +109,6 @@ export default function PromptAreaModal({
 											onClick={() => {
 												checkPrompt(myValue)
 													.then((apiReturn) => {
-														console.log(apiReturn);
 														if (apiReturn.data) {
 															let inputVariables =
 																apiReturn.data.input_variables;

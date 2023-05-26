@@ -129,9 +129,7 @@ export default function CodeAreaModal({
 											onClick={() => {
 												checkCode(code)
 													.then((apiReturn) => {
-														console.log(apiReturn);
 														if (apiReturn.data) {
-															console.log(apiReturn.data);
 															let importsErrors = apiReturn.data.imports.errors;
 															let funcErrors = apiReturn.data.function.errors;
 															if (
