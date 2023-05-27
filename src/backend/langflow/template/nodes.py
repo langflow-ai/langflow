@@ -495,7 +495,7 @@ class SQLAgentNode(FrontendNode):
             ),
         ],
     )
-    description: str = """Construct an agent from a Vector Store Router."""
+    description: str = """Construct a sql agent from an LLM and tools."""
     base_classes: list[str] = ["AgentExecutor"]
 
     def to_dict(self):
