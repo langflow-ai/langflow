@@ -9,7 +9,7 @@ env:
   POETRY_VERSION: "1.4.0"
 
 jobs:
-  build:
+  lint:
     runs-on: ubuntu-latest
     strategy:
       matrix:
