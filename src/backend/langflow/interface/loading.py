@@ -134,7 +134,13 @@ def instantiate_documentloader(class_object, params):
 
 
 def instantiate_textsplitter(class_object, params):
-    documents = params.pop("documents")
+    try:
+        documents = params.pop("documents")
+    except KeyError as e:
+        raise ValueError(
+            "The source you provided did not load correctly or was empty."
+            "Try changing the chunk_size of the Text Splitter."
+        ) from e
     text_splitter = class_object(**params)
     return text_splitter.split_documents(documents)
 

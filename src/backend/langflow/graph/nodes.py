@@ -36,7 +36,7 @@ class AgentNode(Node):
         #! Cannot deepcopy VectorStore, VectorStoreRouter, or SQL agents
         if self.node_type in ["VectorStoreAgent", "VectorStoreRouterAgent", "SQLAgent"]:
             return self._built_object
-        return deepcopy(self._built_object)
+        return self._built_object
 
 
 class ToolNode(Node):
@@ -81,7 +81,7 @@ class PromptNode(Node):
             self.params["input_variables"] = list(set(self.params["input_variables"]))
 
             self._build()
-        return deepcopy(self._built_object)
+        return self._built_object
 
 
 class ChainNode(Node):
@@ -105,12 +105,28 @@ class ChainNode(Node):
         #! Cannot deepcopy SQLDatabaseChain
         if self.node_type in ["SQLDatabaseChain"]:
             return self._built_object
-        return deepcopy(self._built_object)
+        return self._built_object
 
 
 class LLMNode(Node):
+    built_node_type = None
+    class_built_object = None
+
     def __init__(self, data: Dict):
         super().__init__(data, base_type="llms")
+
+    def build(self, force: bool = False) -> Any:
+        # LLM is different because some models might take up too much memory
+        # or time to load. So we only load them when we need them.ß
+        if self.node_type == self.built_node_type:
+            return self.class_built_object
+        if not self._built or force:
+            self._build()
+            self.built_node_type = self.node_type
+            self.class_built_object = self._built_object
+        # Avoid deepcopying the LLM
+        # that are loaded from a file
+        return self._built_object
 
 
 class ToolkitNode(Node):
@@ -132,7 +148,7 @@ class WrapperNode(Node):
             if "headers" in self.params:
                 self.params["headers"] = eval(self.params["headers"])
             self._build()
-        return deepcopy(self._built_object)
+        return self._built_object
 
 
 class DocumentLoaderNode(Node):
