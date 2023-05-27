@@ -1,24 +1,27 @@
-from langflow.template import nodes
+from langflow.template import frontend_node
 
 # These should always be instantiated
 CUSTOM_NODES = {
-    "prompts": {"ZeroShotPrompt": nodes.ZeroShotPromptNode()},
-    "tools": {"PythonFunction": nodes.PythonFunctionNode(), "Tool": nodes.ToolNode()},
+    "prompts": {"ZeroShotPrompt": frontend_node.prompts.ZeroShotPromptNode()},
+    "tools": {
+        "PythonFunction": frontend_node.tools.PythonFunctionNode(),
+        "Tool": frontend_node.tools.ToolNode(),
+    },
     "agents": {
-        "JsonAgent": nodes.JsonAgentNode(),
-        "CSVAgent": nodes.CSVAgentNode(),
-        "initialize_agent": nodes.InitializeAgentNode(),
-        "VectorStoreAgent": nodes.VectorStoreAgentNode(),
-        "VectorStoreRouterAgent": nodes.VectorStoreRouterAgentNode(),
-        "SQLAgent": nodes.SQLAgentNode(),
+        "JsonAgent": frontend_node.agents.JsonAgentNode(),
+        "CSVAgent": frontend_node.agents.CSVAgentNode(),
+        "initialize_agent": frontend_node.agents.InitializeAgentNode(),
+        "VectorStoreAgent": frontend_node.agents.VectorStoreAgentNode(),
+        "VectorStoreRouterAgent": frontend_node.agents.VectorStoreRouterAgentNode(),
+        "SQLAgent": frontend_node.agents.SQLAgentNode(),
     },
     "utilities": {
-        "SQLDatabase": nodes.SQLDatabaseNode(),
+        "SQLDatabase": frontend_node.agents.SQLDatabaseNode(),
     },
     "chains": {
-        "SeriesCharacterChain": nodes.SeriesCharacterChainNode(),
-        "TimeTravelGuideChain": nodes.TimeTravelGuideChainNode(),
-        "MidJourneyPromptChain": nodes.MidJourneyPromptChainNode(),
+        "SeriesCharacterChain": frontend_node.chains.SeriesCharacterChainNode(),
+        "TimeTravelGuideChain": frontend_node.chains.TimeTravelGuideChainNode(),
+        "MidJourneyPromptChain": frontend_node.chains.MidJourneyPromptChainNode(),
     },
 }
 
