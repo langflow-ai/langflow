@@ -21,7 +21,7 @@ include = ["src/backend/langflow/*", "src/backend/langflow/**/*"]
 langflow = "langflow.__main__:main"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = ">=3.9,<3.12"
 fastapi = "^0.92.0"
 uvicorn = "^0.20.0"
 beautifulsoup4 = "^4.11.2"
@@ -47,10 +47,11 @@ fake-useragent = "^1.1.3"
 docstring-parser = "^0.15"
 psycopg2-binary = "^2.9.6"
 pyarrow = "^11.0.0"
-websockets = "^11.0.2"
 tiktoken = "^0.3.3"
 wikipedia = "^1.4.0"
 langchain-serve = { version = "^0.0.33", optional = true }
+qdrant-client = "^1.2.0"
+websockets = "^11.0.3"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
