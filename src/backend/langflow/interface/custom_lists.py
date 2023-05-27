@@ -9,11 +9,9 @@ from langchain import (
     memory,
     requests,
     text_splitter,
-    utilities,
 )
 from langchain.agents import agent_toolkits
 from langchain.chat_models import ChatOpenAI
-from langchain.sql_database import SQLDatabase
 
 from langflow.interface.importing.utils import import_class
 
@@ -72,9 +70,3 @@ documentloaders_type_to_cls_dict: dict[str, Any] = {
 textsplitter_type_to_cls_dict: dict[str, Any] = dict(
     inspect.getmembers(text_splitter, inspect.isclass)
 )
-
-## Utilities
-utility_type_to_cls_dict: dict[str, Any] = dict(
-    inspect.getmembers(utilities, inspect.isclass)
-)
-utility_type_to_cls_dict["SQLDatabase"] = SQLDatabase

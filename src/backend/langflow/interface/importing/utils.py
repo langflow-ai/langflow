@@ -71,9 +71,9 @@ def import_class(class_path: str) -> Any:
 
 
 def import_prompt(prompt: str) -> Type[PromptTemplate]:
+    """Import prompt from prompt name"""
     from langflow.interface.prompts.custom import CUSTOM_PROMPTS
 
-    """Import prompt from prompt name"""
     if prompt == "ZeroShotPrompt":
         return import_class("langchain.prompts.PromptTemplate")
     elif prompt in CUSTOM_PROMPTS:

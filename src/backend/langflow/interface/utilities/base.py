@@ -4,7 +4,6 @@ from langchain import SQLDatabase, utilities
 
 from langflow.custom.customs import get_custom_nodes
 from langflow.interface.base import LangChainTypeCreator
-from langflow.interface.custom_lists import utility_type_to_cls_dict
 from langflow.interface.importing.utils import import_class
 from langflow.settings import settings
 from langflow.template.frontend_node.utilities import UtilitiesFrontendNode
