@@ -18,59 +18,10 @@ def get_number_of_workers(workers=None):
     return workers
 
 
-def update_settings(config: str):
+def update_settings(config: str, dev: bool = False):
     """Update the settings from a config file."""
     if config:
-        settings.update_from_yaml(config)
-
-
-@app.command()
-def serve(
-    host: str = typer.Option("127.0.0.1", help="Host to bind the server to."),
-    workers: int = typer.Option(1, help="Number of worker processes."),
-    timeout: int = typer.Option(60, help="Worker timeout in seconds."),
-    port: int = typer.Option(7860, help="Port to listen on."),
-    config: str = typer.Option("config.yaml", help="Path to the configuration file."),
-    log_level: str = typer.Option("info", help="Logging level."),
-    log_file: Path = typer.Option("logs/langflow.log", help="Path to the log file."),
-    jcloud: bool = typer.Option(False, help="Deploy on Jina AI Cloud"),
-):
-    """
-    Run the Langflow server.
-    """
-
-    if jcloud:
-        return serve_on_jcloud()
-
-    configure(log_level=log_level, log_file=log_file)
-    update_settings(config)
-    app = create_app()
-    # get the directory of the current file
-    path = Path(__file__).parent
-    static_files_dir = path / "frontend"
-    app.mount(
-        "/",
-        StaticFiles(directory=static_files_dir, html=True),
-        name="static",
-    )
-    options = {
-        "bind": f"{host}:{port}",
-        "workers": get_number_of_workers(workers),
-        "worker_class": "uvicorn.workers.UvicornWorker",
-        "timeout": timeout,
-    }
-
-    if platform.system() in ["Darwin", "Windows"]:
-        # Run using uvicorn on MacOS and Windows
-        # Windows doesn't support gunicorn
-        # MacOS requires an env variable to be set to use gunicorn
-        import uvicorn
-
-        uvicorn.run(app, host=host, port=port, log_level=log_level)
-    else:
-        from langflow.server import LangflowApplication
-
-        LangflowApplication(app, options).run()
+        settings.update_from_yaml(config, dev=dev)
 
 
 def serve_on_jcloud():
@@ -117,6 +68,56 @@ def serve_on_jcloud():
     click.secho(f"https://{app_id}.wolf.jina.ai/", fg="blue")
     click.secho("📖 Read more about managing the server: ", nl=False, fg="green")
     click.secho("https://github.com/jina-ai/langchain-serve", fg="blue")
+
+
+@app.command()
+def serve(
+    host: str = typer.Option("127.0.0.1", help="Host to bind the server to."),
+    workers: int = typer.Option(1, help="Number of worker processes."),
+    timeout: int = typer.Option(60, help="Worker timeout in seconds."),
+    port: int = typer.Option(7860, help="Port to listen on."),
+    config: str = typer.Option("config.yaml", help="Path to the configuration file."),
+    log_level: str = typer.Option("info", help="Logging level."),
+    log_file: Path = typer.Option("logs/langflow.log", help="Path to the log file."),
+    jcloud: bool = typer.Option(False, help="Deploy on Jina AI Cloud"),
+    dev: bool = typer.Option(False, help="Run in development mode (may contain bugs)"),
+):
+    """
+    Run the Langflow server.
+    """
+
+    if jcloud:
+        return serve_on_jcloud()
+
+    configure(log_level=log_level, log_file=log_file)
+    update_settings(config, dev=dev)
+    app = create_app()
+    # get the directory of the current file
+    path = Path(__file__).parent
+    static_files_dir = path / "frontend"
+    app.mount(
+        "/",
+        StaticFiles(directory=static_files_dir, html=True),
+        name="static",
+    )
+    options = {
+        "bind": f"{host}:{port}",
+        "workers": get_number_of_workers(workers),
+        "worker_class": "uvicorn.workers.UvicornWorker",
+        "timeout": timeout,
+    }
+
+    if platform.system() in ["Darwin", "Windows"]:
+        # Run using uvicorn on MacOS and Windows
+        # Windows doesn't support gunicorn
+        # MacOS requires an env variable to be set to use gunicorn
+        import uvicorn
+
+        uvicorn.run(app, host=host, port=port, log_level=log_level)
+    else:
+        from langflow.server import LangflowApplication
+
+        LangflowApplication(app, options).run()
 
 
 def main():

@@ -42,6 +42,14 @@ module.exports = {
             display: "none",
           },
         },
+        ".truncate-multiline": {
+          "display": "-webkit-box",
+          "-webkit-line-clamp": "3", /* Change this number to the number of lines you want to show */
+          "-webkit-box-orient": "vertical",
+          "overflow": "hidden",
+          "text-overflow": "ellipsis",
+        },
+
         ".arrow-hide": {
           "&::-webkit-inner-spin-button": {
             "-webkit-appearance": "none",

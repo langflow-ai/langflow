@@ -16,7 +16,7 @@ export default function ExportModal() {
 	const { closePopUp } = useContext(PopUpContext);
 	const ref = useRef();
 	const { setErrorData } = useContext(alertContext);
-	const { flows, tabIndex, updateFlow, downloadFlow,setDisableCopyPaste } = useContext(TabsContext);
+	const { flows, tabIndex, updateFlow, downloadFlow } = useContext(TabsContext);
 	function setModalOpen(x: boolean) {
 		setOpen(x);
 		if (x === false) {
@@ -113,12 +113,6 @@ export default function ExportModal() {
 												placeholder="File name"
 												id="name"
 												className="focus:border focus:border-blue block w-full px-3 py-2 border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:focus:border-blue-500 dark:focus:ring-blue-500 text-gray-900 dark:text-gray-100"
-												onBlur={() => {
-													setDisableCopyPaste(false);
-												}}
-												onFocus={() => {
-													setDisableCopyPaste(true);
-												}}
 											/>
 										</div>
 										<div className="w-full">
@@ -133,12 +127,6 @@ export default function ExportModal() {
 												</span>
 											</label>
 											<textarea
-												onBlur={() => {
-													setDisableCopyPaste(false);
-												}}
-												onFocus={() => {
-													setDisableCopyPaste(true);
-												}}
 												name="description"
 												id="description"
 												onChange={(event) => {
@@ -163,12 +151,7 @@ export default function ExportModal() {
 													id="checkbox"
 													type="checkbox"
 													className="h-4 w-4 text-blue-600 border-gray-300 rounded dark:bg-gray-800 dark:border-gray-600 dark:focus:border-blue-500 dark:focus:ring-blue-500"
-													onBlur={() => {
-														setDisableCopyPaste(false);
-													}}
-													onFocus={() => {
-														setDisableCopyPaste(true);
-													}}
+
 												/>
 												<span className="ml-2 font-medium text-gray-700 dark:text-white">
 													Save with my API keys
