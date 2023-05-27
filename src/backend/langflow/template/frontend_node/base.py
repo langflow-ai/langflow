@@ -143,6 +143,9 @@ class FrontendNode(BaseModel):
             field.required = False
             field.advanced = False
 
+            field.display_name = key.replace("_", " ").title()
+            field.display_name = field.display_name.replace("Api", "API")
+
     @staticmethod
     def should_show_field(key: str, required: bool) -> bool:
         """Determines whether the field should be shown."""
