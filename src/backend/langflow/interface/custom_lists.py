@@ -10,7 +10,6 @@ from langchain import (
     requests,
     text_splitter,
     utilities,
-    vectorstores,
 )
 from langchain.agents import agent_toolkits
 from langchain.chat_models import ChatOpenAI
