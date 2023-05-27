@@ -110,7 +110,7 @@ class ChatManager:
         start_resp = ChatResponse(message=None, type="start", intermediate_steps="")
         await self.send_json(client_id, start_resp)
 
-        is_first_message = len(self.chat_history.get_history(client_id=client_id)) == 0
+        is_first_message = len(self.chat_history.get_history(client_id=client_id)) <= 1
         # Generate result and thought
         try:
             logger.debug("Generating result and thought")
