@@ -39,7 +39,8 @@
         "dev:docker": "vite --host 0.0.0.0",
         "start": "vite",
         "build": "vite build",
-        "serve": "vite preview"
+        "serve": "vite preview",
+        "format": "npx prettier --write \"src/**/*.{js,jsx,ts,tsx,json,md}\""
     },
     "eslintConfig": {
         "extends": [
