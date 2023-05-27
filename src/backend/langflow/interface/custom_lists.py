@@ -60,11 +60,6 @@ embedding_type_to_cls_dict: dict[str, Any] = {
     for embedding_name in embeddings.__all__
 }
 
-## Vector Stores
-vectorstores_type_to_cls_dict: dict[str, Any] = {
-    vectorstore_name: import_class(f"langchain.vectorstores.{vectorstore_name}")
-    for vectorstore_name in vectorstores.__all__
-}
 
 ## Document Loaders
 documentloaders_type_to_cls_dict: dict[str, Any] = {
