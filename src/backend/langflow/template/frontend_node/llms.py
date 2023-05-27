@@ -6,6 +6,13 @@ from langflow.template.frontend_node.base import FrontendNode
 
 class LLMFrontendNode(FrontendNode):
     @staticmethod
+    def format_openai_field(field: TemplateField):
+        if "openai" in field.name.lower():
+            field.display_name = (
+                field.name.title().replace("Openai", "OpenAI").replace("_", " ")
+            ).replace("Api", "API")
+
+    @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         display_names_dict = {
             "huggingfacehub_api_token": "HuggingFace Hub API Token",
@@ -39,3 +46,5 @@ class LLMFrontendNode(FrontendNode):
         elif field.name in ["model_name", "temperature"]:
             field.advanced = False
             field.show = True
+
+        LLMFrontendNode.format_openai_field(field)
