@@ -5,7 +5,7 @@ from langchain import vectorstores
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class
 from langflow.settings import settings
-from langflow.template.nodes import VectorStoreFrontendNode
+from langflow.template.frontend_node.vectorstores import VectorStoreFrontendNode
 from langflow.utils.logger import logger
 from langflow.utils.util import build_template_from_method
 

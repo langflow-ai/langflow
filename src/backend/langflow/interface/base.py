@@ -3,7 +3,9 @@ from typing import Any, Dict, List, Optional, Type, Union
 
 from pydantic import BaseModel
 
-from langflow.template.base import FrontendNode, Template, TemplateField
+from langflow.template.field.base import TemplateField
+from langflow.template.frontend_node.base import FrontendNode
+from langflow.template.template.base import Template
 from langflow.utils.logger import logger
 
 # Assuming necessary imports for Field, Template, and FrontendNode classes
