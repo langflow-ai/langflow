@@ -29,10 +29,10 @@ class ChatHistory(Subject):
         if not isinstance(message, FileResponse):
             self.notify()
 
-    def get_history(self, client_id: str, filter=True) -> List[ChatMessage]:
+    def get_history(self, client_id: str, filter_messages=True) -> List[ChatMessage]:
         """Get the chat history for a client."""
         if history := self.history.get(client_id, []):
-            if filter:
+            if filter_messages:
                 return [msg for msg in history if msg.type not in ["start", "stream"]]
             return history
         else:
