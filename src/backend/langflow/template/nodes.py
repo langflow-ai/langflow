@@ -634,6 +634,26 @@ class VectorStoreFrontendNode(FrontendNode):
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         FrontendNode.format_field(field, name)
+        # Define common field attributes
+        basic_fields = ["work_dir", "collection_name", "api_key", "location"]
+        advanced_fields = [
+            "n_dim",
+            "key",
+            "prefix",
+            "distance_func",
+            "content_payload_key",
+            "metadata_payload_key",
+            "timeout",
+            "host",
+            "path",
+            "url",
+            "port",
+            "https",
+            "prefer_grpc",
+            "grpc_port",
+        ]
+
+        # Check and set field attributes
         if field.name == "texts":
             field.name = "documents"
             field.field_type = "TextSplitter"
@@ -642,7 +662,7 @@ class VectorStoreFrontendNode(FrontendNode):
             field.show = True
             field.advanced = False
 
-        if "embedding" in field.name:
+        elif "embedding" in field.name:
             # for backwards compatibility
             field.name = "embedding"
             field.required = True
@@ -651,9 +671,18 @@ class VectorStoreFrontendNode(FrontendNode):
             field.display_name = "Embedding"
             field.field_type = "Embeddings"
 
-        elif field.name == "n_dim":
-            field.show = True
-            field.advanced = True
-        elif field.name == "work_dir":
+        elif field.name in basic_fields:
             field.show = True
             field.advanced = False
+            if field.name == "api_key":
+                field.display_name = "API Key"
+                field.password = True
+            elif field.name == "location":
+                field.value = ":memory:"
+                field.placeholder = ":memory:"
+
+        elif field.name in advanced_fields:
+            field.show = True
+            field.advanced = True
+            if "key" in field.name:
+                field.password = False

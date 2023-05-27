@@ -108,6 +108,7 @@ utilities:
   - SQLDatabase
 vectorstores:
   - Chroma
+  - Qdrant
 wrappers:
   - RequestsWrapper # Wait more tests
   # - ChatPromptTemplate
