@@ -1,5 +1,7 @@
 from typing import Dict, List, Optional, Type
 
+from langchain import SQLDatabase, utilities
+
 from langflow.custom.customs import get_custom_nodes
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import utility_type_to_cls_dict
@@ -8,8 +10,6 @@ from langflow.settings import settings
 from langflow.template.frontend_node.utilities import UtilitiesFrontendNode
 from langflow.utils.logger import logger
 from langflow.utils.util import build_template_from_class
-
-from langchain import utilities, SQLDatabase
 
 
 class UtilityCreator(LangChainTypeCreator):
