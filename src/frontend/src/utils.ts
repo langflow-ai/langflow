@@ -555,7 +555,7 @@ export function generateFlow(
 	  )
 	newFlowData.nodes = selection.nodes;
 
-	console.log(newFlowData);
+	// console.log(newFlowData);
 	const newFlow: FlowType = {
 		data: newFlowData,
 		name: name,
@@ -580,7 +580,7 @@ export function filterFlow(
 
 export function generateNodeFromFlow(flow: FlowType): NodeType {
 	const { nodes } = flow.data;
-	console.log(flow)
+	// console.log(flow)
 	const position = getMiddlePoint(nodes);
 	let data = flow;
 	const newGroupNode: NodeType = {
@@ -741,6 +741,10 @@ export function validateNode(n: NodeType, selection: OnSelectionChangeParams) {
 }
 
 export function validateSelection(selection: OnSelectionChangeParams) {
+	//two keys with the same name exposed
+	if(!mergeNodeTemplates(selection)){
+		return false;
+	}
 	// check if there is any node that does not have any connection
 	if (selection.nodes.some(node=>!selection.edges.some(edge=>edge.target === node.id)&& !selection.edges.some(edge=>edge.source === node.id))){
 		return false;
@@ -766,29 +770,24 @@ export function validateSelection(selection: OnSelectionChangeParams) {
 		return true;
 	}
 }
-//TODO: fix this function for nested group nodes
-function mergeNodeTemplates(Flow:FlowType):APITemplateType{
+export function mergeNodeTemplates({nodes,edges}:{nodes:NodeType[],edges:Edge[]}):APITemplateType | undefined{
 	/* this function receives a flow and iterate trhow each node
 		and merge the templates with only the visible fields
 		if there are two keys with the same name in the flow, we will update the display name of each one
 		to show from which node it came from
 	*/
-	let nodes:NodeType[] = Flow.data.nodes;
 	let template = {};
 	nodes.forEach((node)=>{
+		console.log(node.data.type)
 		let nodeTemplate = _.cloneDeep(node.data.node.template);
 		Object.keys(nodeTemplate).filter((field_name) => field_name.charAt(0) !== "_").forEach((key)=>{
-			if(nodeTemplate[key].show){
+			console.log(isHandleConnected(edges,nodeTemplate[key].type + "|" + key + "|" + node.id))
+			if(nodeTemplate[key].show && !isHandleConnected(edges,nodeTemplate[key].type + "|" + key + "|" + node.id)){
+				console.log(nodeTemplate[key])
+				console.log(JSON.parse(JSON.stringify(template)))
 				if(template[key]){
-					if(template[key].display_name)
-					{
-						template[key].display_name = template[key].display_name + ", " + node.data.type
-
-					}
-					else{
-						template[key].name = template[key].name + ", " + node.data.type
-						
-					}
+					//return does not break the loop
+					return undefined;
 				}else{
 					template[key] = nodeTemplate[key];
 				}
@@ -799,45 +798,15 @@ function mergeNodeTemplates(Flow:FlowType):APITemplateType{
 	return template;
 }
 
-function filterGroupNodeHandles(template:APITemplateType,Flow:FlowType){
-	/*
-		this function receives a template and a flow and iterate trhow each field
-		and check if the field is a primitive type, if it is not, we will check if there is a connection with this handle
-		if there is a connection we will remove the handle from the template
-	*/
-	Object.keys(template).forEach((key)=>{
-		let type = template[key].type;
-		if(!(type === "str" ||
-        type === "bool" ||
-        type === "float" ||
-        type === "code" ||
-        type === "prompt" ||
-        type === "file" ||
-        type === "int"))
-		{
-			// if the type is not a primitive type, we will check if there is a connection with this handle
-			// if there is a connection we will remove the handle from the template
-			let id = type +
-			"|" +
-			key +
-			"|" +
-			template[key].proxy;
-			if(isHandleConnected(Flow,id) && !template[key].list){
-				delete template[key];
-			}
-		}
-	})
-}
-
-
-function isHandleConnected(flow:FlowType, handleId:string){
+function isHandleConnected(edges:Edge[], handleId:string){
 	/*
 		this function receives a flow and a handleId and check if there is a connection with this handle
 	*/ 
 
-	if(flow.data.edges.some((e)=>e.targetHandle === handleId)){
+	if(edges.some((e)=>e.targetHandle === handleId)){
 		return true
 	}
+	return false;
 
 }
 
@@ -864,8 +833,7 @@ export function generateNodeTemplate(Flow:FlowType){
 	/*
 		this function receives a flow and generate a template for the group node
 	*/
-	let template = mergeNodeTemplates(Flow);
-	filterGroupNodeHandles(template,Flow);
+	let template = mergeNodeTemplates({nodes:Flow.data.nodes,edges:Flow.data.edges});
 	updateGroupNodeTemplate(template);
 	return template;
 }

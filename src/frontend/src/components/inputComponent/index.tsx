@@ -32,8 +32,8 @@ export default function InputComponent({
       <input
 	  autoFocus={autoFocus}
         value={myValue}
-        onBlur={(e)=>{setDisableCopyPaste(false);onBlur(e)}}
-        onFocus={(e)=>{setDisableCopyPaste(false);onFocus(e)}}
+        onBlur={(e)=>{setDisableCopyPaste(false);if(onBlur)onBlur(e)}}
+        onFocus={(e)=>{setDisableCopyPaste(true);if(onFocus)onFocus(e)}}
         className={classNames(
           "form-input block w-full rounded-md border-gray-300 pr-12 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 sm:text-sm",
           disabled ? " bg-gray-200 dark:bg-gray-700" : "",

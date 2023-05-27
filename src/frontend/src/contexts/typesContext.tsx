@@ -38,6 +38,11 @@ export function TypesProvider({ children }: { children: ReactNode }) {
     async function getTypes(): Promise<void> {
       try {
         const result = await getAll();
+        Object.keys(result.data).forEach((k) => {
+          Object.keys(result.data[k]).forEach((c) => {
+            // result.data[k][c].template
+          });
+        })
         // Make sure to only update the state if the component is still mounted.
         if (isMounted) {
           setData(result.data);
