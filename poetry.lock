@@ -1338,23 +1338,6 @@ protobuf = ">=3.19.5,<3.20.0 || >3.20.0,<3.20.1 || >3.20.1,<4.21.1 || >4.21.1,<4
 grpc = ["grpcio (>=1.44.0,<2.0.0dev)"]
 
 [[package]]
-name = "gptcache"
-version = "0.1.26"
-description = "GPTCache, a powerful caching library that can be used to speed up and lower the cost of chat applications that rely on the LLM service. GPTCache works as a memcache for AIGC applications, similar to how Redis works for traditional applications."
-category = "main"
-optional = false
-python-versions = ">=3.8.1"
-files = [
-    {file = "gptcache-0.1.26-py3-none-any.whl", hash = "sha256:878c7741ffadbb9766211768936880bd9a660cefa1ed5f3d3746eaf9db9e014c"},
-    {file = "gptcache-0.1.26.tar.gz", hash = "sha256:f960a56fa6e6b0cf7c2151892714e6089ca206b067bee821ead4c1661e478f7c"},
-]
-
-[package.dependencies]
-cachetools = "*"
-numpy = "*"
-requests = "*"
-
-[[package]]
 name = "greenlet"
 version = "2.0.2"
 description = "Lightweight in-process concurrent programming"
@@ -5503,4 +5486,4 @@ deploy = ["langchain-serve"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "0ab60d05d829739ee29dd813743d302353765846cefa71b64ade9778039f0c7c"
+content-hash = "71a272bd7d914de11a801ecdfeaffe7d7ea63340852341c84eb1889e3e19f987"

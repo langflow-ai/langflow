@@ -628,3 +628,32 @@ class EmbeddingFrontendNode(FrontendNode):
         FrontendNode.format_field(field, name)
         if field.name == "headers":
             field.show = False
+
+
+class VectorStoreFrontendNode(FrontendNode):
+    @staticmethod
+    def format_field(field: TemplateField, name: Optional[str] = None) -> None:
+        FrontendNode.format_field(field, name)
+        if field.name == "texts":
+            field.name = "documents"
+            field.field_type = "TextSplitter"
+            field.display_name = "Text Splitter"
+            field.required = True
+            field.show = True
+            field.advanced = False
+
+        if "embedding" in field.name:
+            # for backwards compatibility
+            field.name = "embedding"
+            field.required = True
+            field.show = True
+            field.advanced = False
+            field.display_name = "Embedding"
+            field.field_type = "Embeddings"
+
+        elif field.name == "n_dim":
+            field.show = True
+            field.advanced = True
+        elif field.name == "work_dir":
+            field.show = True
+            field.advanced = False

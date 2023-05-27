@@ -50,7 +50,6 @@ pyarrow = "^11.0.0"
 websockets = "^11.0.2"
 tiktoken = "^0.3.3"
 wikipedia = "^1.4.0"
-gptcache = "^0.1.23"
 langchain-serve = { version = "^0.0.33", optional = true }
 
 [tool.poetry.group.dev.dependencies]
