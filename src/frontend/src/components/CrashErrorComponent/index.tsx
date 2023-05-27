@@ -1,4 +1,6 @@
 export default function CrashErrorComponent({ error, resetErrorBoundary }) {
+	window.localStorage.removeItem("tabsData");
+
 	return (
 		<div className="fixed top-0 left-0 w-full h-full flex items-center justify-center bg-gray-800 bg-opacity-50 z-50">
 			<div className="bg-white max-w-4xl h-1/3 min-h-fit rounded-lg shadow-lg p-8 text-start flex flex-col justify-evenly">
