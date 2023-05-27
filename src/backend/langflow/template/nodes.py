@@ -686,3 +686,6 @@ class VectorStoreFrontendNode(FrontendNode):
             field.advanced = True
             if "key" in field.name:
                 field.password = False
+
+        # TODO: Weaviate requires weaviate_url to be passed as it is not part of
+        # the class or from_texts method. We need the add_extra_fields to fix this
