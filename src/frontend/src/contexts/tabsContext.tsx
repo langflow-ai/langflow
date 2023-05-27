@@ -50,23 +50,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		return newNodeId.current;
 	}
 	function save() {
-		let Saveflows = [...flows];
-		if (Saveflows.length !== 0)
-		Saveflows.forEach((flow) => {
-			if(flow.data && flow.data?.nodes) flow.data?.nodes.forEach((node) => {
-				console.log(node.data.type)
-				Object.keys(node.data.node.template).forEach((key) => {
-					console.log(node.data.node.template[key].type)
-					if(node.data.node.template[key].type==="file"){
-						console.log(node.data.node.template[key])
-						node.data.node.template[key].content = "";
-					}
-				})
-			})
-		})
+		if (flows.length !== 0)
 			window.localStorage.setItem(
 				"tabsData",
-				JSON.stringify({ tabIndex, flows:Saveflows, id})
+				JSON.stringify({ tabIndex, flows, id})
 			);
 	}
 	useEffect(() => {
