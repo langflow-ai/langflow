@@ -17,7 +17,7 @@ tests:
 
 format:
 	poetry run black .
-	poetry run ruff --select I --fix .
+	poetry run ruff . --fix
 	cd src/frontend && npm run format
 
 lint:
