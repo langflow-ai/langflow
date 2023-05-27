@@ -17,8 +17,6 @@ export default function ChatInput({
     }
   }, [chatValue]);
 
-  const { setDisableCopyPaste } = useContext(TabsContext);
-
   return (
     <div className="relative">
       <textarea
@@ -26,12 +24,6 @@ export default function ChatInput({
           if (event.key === "Enter" && !lockChat && !event.shiftKey) {
             sendMessage();
           }
-        }}
-        onBlur={() => {
-          setDisableCopyPaste(false)
-        }}
-        onFocus={() => {
-          setDisableCopyPaste(true)
         }}
         rows={1}
         ref={inputRef}

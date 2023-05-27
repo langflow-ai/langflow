@@ -24,7 +24,7 @@ export default function ButtonBox({
 }) {
   let bigCircle: string;
   let smallCircle: string;
-  let minTitleFontSize: number;
+  let titleFontSize: string;
   let descriptionFontSize: string;
   let padding: string;
   let marginTop: string;
@@ -32,88 +32,48 @@ export default function ButtonBox({
   let width: string;
   let textHeight: number;
   let textWidth: number;
-  const [truncate, setTruncate] = useState<boolean>(false);
   switch (size) {
-    case "small":
-      bigCircle = "h-12 w-12";
-      smallCircle = "h-8 w-8";
-      minTitleFontSize =9;
-      descriptionFontSize = "text-xs";
-      padding = "p-2 py-3";
-      marginTop = "mt-2";
-      height = "h-36";
-      textHeight = 70;
-      textWidth = 40;
-      width = "w-32";
-      break;
-    case "medium":
-      bigCircle = "h-16 w-16";
-      smallCircle = "h-12 w-12";
-      minTitleFontSize = 11;
-      descriptionFontSize = "text-sm";
-      padding = "p-4 py-5";
-      marginTop = "mt-3";
-      textHeight = 112;
-      textWidth = 162;
-      height = "h-44";
-      width = "w-36";
-      break;
-    case "big":
-      bigCircle = "h-20 w-20";
-      smallCircle = "h-16 w-16";
-      minTitleFontSize = 12;
-      descriptionFontSize = "text-sm";
-      padding = "p-8 py-10";
-      marginTop = "mt-6";
-      height = "h-56";
-      width = "w-44";
-      break;
-    default:
-      bigCircle = "h-20 w-20";
-      smallCircle = "h-16 w-16";
-      minTitleFontSize = 12;
-      descriptionFontSize = "text-sm";
-      padding = "p-8 py-10";
-      marginTop = "mt-6";
-      height = "h-56";
-      width = "w-44";
-      break;
-  }
-
-  const [fontSize, setFontSize] = useState<number>(16); // Initial font size value
-
-  const titleRef = useRef<HTMLHeadingElement>(null);
-  const parentDivRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-	const textElement = titleRef.current;
-	const parentDivElement = parentDivRef.current;
-  
-	if (!textElement || !parentDivElement) return;
-  
-	const parentDivHeight = parentDivElement.offsetHeight;
-	const parentDivWidth = parentDivElement.offsetWidth;
-	let textElementHeight = textElement.scrollHeight;
-	let textElementWidth = textElement.scrollWidth;
-  
-	if (textElementHeight > parentDivHeight || textElementWidth > parentDivWidth && fontSize > minTitleFontSize) {
-	  let newFontSize = fontSize;
-  
-	  while (textElementHeight > parentDivHeight || textElementWidth > parentDivWidth) {
-		newFontSize -= 1;
-		textElement.style.fontSize = `${newFontSize}px`;
-		textElementHeight = textElement.scrollHeight;
-		textElementWidth = textElement.scrollWidth;
-	  }
-    if(newFontSize <= minTitleFontSize){
-      setTruncate(true);
-      setFontSize(minTitleFontSize);
-    }
-    else{
-      setFontSize(newFontSize);
-    }
+		case "small":
+			bigCircle = "h-12 w-12";
+			smallCircle = "h-8 w-8";
+			titleFontSize = "text-sm";
+			descriptionFontSize = "text-xs";
+			padding = "p-2 py-3";
+			marginTop = "mt-2";
+			height = "h-36";
+			width = "w-32";
+			break;
+		case "medium":
+			bigCircle = "h-16 w-16";
+			smallCircle = "h-12 w-12";
+			titleFontSize = "text-base";
+			descriptionFontSize = "text-sm";
+			padding = "p-4 py-5";
+			marginTop = "mt-3";
+			height = "h-44";
+			width = "w-36";
+			break;
+		case "big":
+			bigCircle = "h-20 w-20";
+			smallCircle = "h-16 w-16";
+			titleFontSize = "text-lg";
+			descriptionFontSize = "text-sm";
+			padding = "p-8 py-10";
+			marginTop = "mt-6";
+			height = "h-56";
+			width = "w-44";
+			break;
+		default:
+			bigCircle = "h-20 w-20";
+			smallCircle = "h-16 w-16";
+			titleFontSize = "text-lg";
+			descriptionFontSize = "text-sm";
+			padding = "p-8 py-10";
+			marginTop = "mt-6";
+			height = "h-56";
+			width = "w-44";
+			break;
 	}
-  }, [title, size, fontSize]);
   
 
   return (
@@ -136,15 +96,17 @@ export default function ButtonBox({
             <div className={textColor}>{icon}</div>
           </div>
         </div>
-		<div ref={parentDivRef} className="w-full h-1/2 mt-auto">
-		<div
-          ref={titleRef}
-          className={classNames(truncate?"truncate":"",
-            " font-semibold text-white h-full dark:text-white/80",
-          )}        >
-          {title}
-        </div>
-		</div>
+        <div className="w-full mt-auto mb-auto">
+						<h3
+							className={classNames(
+								"w-full font-semibold break-words text-white dark:text-white/80 truncate-multiline",
+								titleFontSize,
+								marginTop
+							)}
+						>
+							{title}
+						</h3>
+						</div>
       </div>
     </button>
   );

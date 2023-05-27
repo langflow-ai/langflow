@@ -177,10 +177,10 @@ export default function ImportModal() {
 											!loadingExamples &&
 											examples.map((example, index) => {
 												return (
-													<div id="index">
+													<div key={index}>
 														{" "}
 														<ButtonBox
-															size="big"
+															size="small"
 															bgColor="bg-emerald-500 dark:bg-emerald-500/75"
 															description={
 																example.description ?? "Prebuilt Examples"

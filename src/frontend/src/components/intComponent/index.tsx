@@ -14,7 +14,6 @@ export default function IntComponent({
 			onChange("");
 		}
 	}, [disabled, onChange]);
-	const {setDisableCopyPaste} =useContext(TabsContext)
 	return (
 		<div
 			className={
@@ -45,12 +44,7 @@ export default function IntComponent({
 					setMyValue(e.target.value);
 					onChange(e.target.value);
 				}}
-				onBlur={() => {
-					setDisableCopyPaste(false)
-				}}
-				onFocus={() => {
-					setDisableCopyPaste(true)
-				}}
+				
 			/>
 			
 		</div>

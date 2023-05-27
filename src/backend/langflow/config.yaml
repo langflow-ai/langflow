@@ -16,7 +16,6 @@ chains:
   - MidJourneyPromptChain
   - TimeTravelGuideChain
   - SQLDatabaseChain
-dev: false
 documentloaders:
   - AirbyteJSONLoader
   - CoNLLULoader
@@ -109,9 +108,6 @@ utilities:
   - SQLDatabase
 vectorstores:
   - Chroma
-  - DocArrayHnswSearch
-  - DocArrayInMemorySearch
-  - Qdrant
 wrappers:
   - RequestsWrapper # Wait more tests
   # - ChatPromptTemplate
