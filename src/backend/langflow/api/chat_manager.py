@@ -54,7 +54,9 @@ class ChatManager:
         """Send the last chat message to the client."""
         client_id = self.cache_manager.current_client_id
         if client_id in self.active_connections:
-            chat_response = self.chat_history.get_history(client_id, filter=False)[-1]
+            chat_response = self.chat_history.get_history(
+                client_id, filter_messages=False
+            )[-1]
             if chat_response.is_bot:
                 # Process FileResponse
                 if isinstance(chat_response, FileResponse):
@@ -128,7 +130,7 @@ class ChatManager:
             raise e
         # Send a response back to the frontend, if needed
         intermediate_steps = intermediate_steps or ""
-        history = self.chat_history.get_history(client_id, filter=False)
+        history = self.chat_history.get_history(client_id, filter_messages=False)
         file_responses = []
         if history:
             # Iterate backwards through the history
