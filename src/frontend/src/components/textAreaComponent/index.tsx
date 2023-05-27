@@ -24,7 +24,7 @@ export default function TextAreaComponent({
           onClick={() => {
             openPopUp(
               <GenericModal
-                buttonText="Finishing Editing" 
+                buttonText="Finishing Editing"
                 modalTitle="Edit Text"
                 value={myValue}
                 setValue={(t: string) => {
@@ -45,7 +45,7 @@ export default function TextAreaComponent({
           onClick={() => {
             openPopUp(
               <GenericModal
-                buttonText="Finishing Editing" 
+                buttonText="Finishing Editing"
                 modalTitle="Edit Text"
                 value={myValue}
                 setValue={(t: string) => {

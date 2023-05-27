@@ -32,7 +32,7 @@ export default function PromptAreaComponent({
               <GenericModal
                 value={myValue}
                 buttonText="Check & Save"
-								modalTitle="Edit Prompt"
+                modalTitle="Edit Prompt"
                 setValue={(t: string) => {
                   setMyValue(t);
                   onChange(t);
@@ -53,7 +53,7 @@ export default function PromptAreaComponent({
               <GenericModal
                 value={myValue}
                 buttonText="Check & Save"
-								modalTitle="Edit Prompt"
+                modalTitle="Edit Prompt"
                 setValue={(t: string) => {
                   setMyValue(t);
                   onChange(t);
