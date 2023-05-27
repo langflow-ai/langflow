@@ -5,8 +5,6 @@ all: help
 init:
 	@echo 'Installing pre-commit hooks'
 	git config core.hooksPath .githooks
-	pre-commit install
-	pre-commit install --hook-type pre-push
 
 coverage:
 	poetry run pytest --cov \
