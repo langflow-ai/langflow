@@ -1,6 +1,10 @@
-.PHONY: all format lint build build_frontend install_frontend run_frontend run_backend dev help tests coverage
+.PHONY: all init format lint build build_frontend install_frontend run_frontend run_backend dev help tests coverage
 
 all: help
+
+init:
+	@echo 'Installing pre-commit hooks'
+	git config core.hooksPath .githooks
 
 coverage:
 	poetry run pytest --cov \
@@ -14,6 +18,7 @@ tests:
 format:
 	poetry run black .
 	poetry run ruff --select I --fix .
+	cd src/frontend && npm run format
 
 lint:
 	poetry run mypy .
