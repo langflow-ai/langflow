@@ -44,6 +44,8 @@ documentloaders:
   - ReadTheDocsLoader
 embeddings:
   - OpenAIEmbeddings
+  - HuggingFaceEmbeddings
+
 llms:
   - OpenAI
   # - AzureOpenAI
