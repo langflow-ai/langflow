@@ -33,48 +33,47 @@ export default function ButtonBox({
   let textHeight: number;
   let textWidth: number;
   switch (size) {
-		case "small":
-			bigCircle = "h-12 w-12";
-			smallCircle = "h-8 w-8";
-			titleFontSize = "text-sm";
-			descriptionFontSize = "text-xs";
-			padding = "p-2 py-3";
-			marginTop = "mt-2";
-			height = "h-36";
-			width = "w-32";
-			break;
-		case "medium":
-			bigCircle = "h-16 w-16";
-			smallCircle = "h-12 w-12";
-			titleFontSize = "text-base";
-			descriptionFontSize = "text-sm";
-			padding = "p-4 py-5";
-			marginTop = "mt-3";
-			height = "h-44";
-			width = "w-36";
-			break;
-		case "big":
-			bigCircle = "h-20 w-20";
-			smallCircle = "h-16 w-16";
-			titleFontSize = "text-lg";
-			descriptionFontSize = "text-sm";
-			padding = "p-8 py-10";
-			marginTop = "mt-6";
-			height = "h-56";
-			width = "w-44";
-			break;
-		default:
-			bigCircle = "h-20 w-20";
-			smallCircle = "h-16 w-16";
-			titleFontSize = "text-lg";
-			descriptionFontSize = "text-sm";
-			padding = "p-8 py-10";
-			marginTop = "mt-6";
-			height = "h-56";
-			width = "w-44";
-			break;
-	}
-  
+    case "small":
+      bigCircle = "h-12 w-12";
+      smallCircle = "h-8 w-8";
+      titleFontSize = "text-sm";
+      descriptionFontSize = "text-xs";
+      padding = "p-2 py-3";
+      marginTop = "mt-2";
+      height = "h-36";
+      width = "w-32";
+      break;
+    case "medium":
+      bigCircle = "h-16 w-16";
+      smallCircle = "h-12 w-12";
+      titleFontSize = "text-base";
+      descriptionFontSize = "text-sm";
+      padding = "p-4 py-5";
+      marginTop = "mt-3";
+      height = "h-44";
+      width = "w-36";
+      break;
+    case "big":
+      bigCircle = "h-20 w-20";
+      smallCircle = "h-16 w-16";
+      titleFontSize = "text-lg";
+      descriptionFontSize = "text-sm";
+      padding = "p-8 py-10";
+      marginTop = "mt-6";
+      height = "h-56";
+      width = "w-44";
+      break;
+    default:
+      bigCircle = "h-20 w-20";
+      smallCircle = "h-16 w-16";
+      titleFontSize = "text-lg";
+      descriptionFontSize = "text-sm";
+      padding = "p-8 py-10";
+      marginTop = "mt-6";
+      height = "h-56";
+      width = "w-44";
+      break;
+  }
 
   return (
     <button disabled={deactivate} onClick={onClick}>
@@ -97,16 +96,16 @@ export default function ButtonBox({
           </div>
         </div>
         <div className="w-full mt-auto mb-auto">
-						<h3
-							className={classNames(
-								"w-full font-semibold break-words text-white dark:text-white/80 truncate-multiline",
-								titleFontSize,
-								marginTop
-							)}
-						>
-							{title}
-						</h3>
-						</div>
+          <h3
+            className={classNames(
+              "w-full font-semibold break-words text-white dark:text-white/80 truncate-multiline",
+              titleFontSize,
+              marginTop
+            )}
+          >
+            {title}
+          </h3>
+        </div>
       </div>
     </button>
   );

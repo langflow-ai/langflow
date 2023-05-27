@@ -236,11 +236,14 @@ export default function ChatModal({
   }, []);
 
   useEffect(() => {
-    if((ws.current.readyState=== ws.current.CLOSED || ws.current.readyState=== ws.current.CLOSING)){
+    if (
+      ws.current.readyState === ws.current.CLOSED ||
+      ws.current.readyState === ws.current.CLOSING
+    ) {
       connectWS();
       setLockChat(false);
     }
-  },[lockChat]);
+  }, [lockChat]);
 
   async function sendAll(data: sendAllProps) {
     try {
@@ -346,7 +349,7 @@ export default function ChatModal({
   function clearChat() {
     setChatHistory([]);
     ws.current.send(JSON.stringify({ clear_history: true }));
-    if(lockChat) setLockChat(false);
+    if (lockChat) setLockChat(false);
   }
 
   function setModalOpen(x: boolean) {
