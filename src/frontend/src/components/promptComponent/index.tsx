@@ -4,7 +4,7 @@ import { PopUpContext } from "../../contexts/popUpContext";
 import CodeAreaModal from "../../modals/codeAreaModal";
 import TextAreaModal from "../../modals/textAreaModal";
 import { TextAreaComponentType } from "../../types/components";
-import PromptAreaModal from "../../modals/promptModal";
+import GenericModal from "../../modals/genericModal";
 
 export default function PromptAreaComponent({
   value,
@@ -29,8 +29,10 @@ export default function PromptAreaComponent({
         <span
           onClick={() => {
             openPopUp(
-              <PromptAreaModal
+              <GenericModal
                 value={myValue}
+                buttonText="Check & Save"
+								modalTitle="Edit Prompt"
                 setValue={(t: string) => {
                   setMyValue(t);
                   onChange(t);
@@ -48,8 +50,10 @@ export default function PromptAreaComponent({
         <button
           onClick={() => {
             openPopUp(
-              <PromptAreaModal
+              <GenericModal
                 value={myValue}
+                buttonText="Check & Save"
+								modalTitle="Edit Prompt"
                 setValue={(t: string) => {
                   setMyValue(t);
                   onChange(t);
