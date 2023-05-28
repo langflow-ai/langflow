@@ -62,7 +62,7 @@ class AsyncStreamingLLMCallbackHandler(AsyncCallbackHandler):
         resp = ChatResponse(
             message="",
             type="stream",
-            intermediate_steps=output,
+            intermediate_steps=f"Tool output: {output}",
         )
         await self.websocket.send_json(resp.dict())
 
@@ -78,12 +78,17 @@ class AsyncStreamingLLMCallbackHandler(AsyncCallbackHandler):
         # to the frontend
 
     async def on_agent_action(self, action: AgentAction, **kwargs: Any):
-        resp = ChatResponse(
-            message="",
-            type="stream",
-            intermediate_steps=f"Thought: {action.log}",
-        )
-        await self.websocket.send_json(resp.dict())
+        log = f"Thought: {action.log}"
+        # if there are line breaks, split them and send them
+        # as separate messages
+        if "\n" in log:
+            logs = log.split("\n")
+            for log in logs:
+                resp = ChatResponse(message="", type="stream", intermediate_steps=log)
+                await self.websocket.send_json(resp.dict())
+        else:
+            resp = ChatResponse(message="", type="stream", intermediate_steps=log)
+            await self.websocket.send_json(resp.dict())
 
     async def on_agent_finish(self, finish: AgentFinish, **kwargs: Any) -> Any:
         """Run on agent end."""

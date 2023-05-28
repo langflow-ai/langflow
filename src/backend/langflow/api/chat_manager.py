@@ -145,7 +145,7 @@ class ChatManager:
 
         response = ChatResponse(
             message=result,
-            intermediate_steps=intermediate_steps.strip(),
+            intermediate_steps="",
             type="end",
             files=file_responses,
         )

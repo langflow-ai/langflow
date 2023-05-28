@@ -3,6 +3,7 @@ import io
 from typing import Any, Dict, List, Tuple
 
 from langchain.schema import AgentAction
+from langchain.chains.base import Chain
 
 from langflow.interface.callback import AsyncStreamingLLMCallbackHandler, StreamingLLMCallbackHandler  # type: ignore
 from langflow.cache.base import compute_dict_hash, load_cache, memoize_dict
@@ -150,7 +151,7 @@ def fix_memory_inputs(langchain_object):
             update_memory_keys(langchain_object, possible_new_mem_key)
 
 
-async def get_result_and_steps(langchain_object, message: str, **kwargs):
+async def get_result_and_steps(langchain_object: Chain, message: str, **kwargs):
     """Get result and thought from extracted json"""
 
     try:
@@ -169,20 +170,17 @@ async def get_result_and_steps(langchain_object, message: str, **kwargs):
             chat_input = message  # type: ignore
 
         if hasattr(langchain_object, "return_intermediate_steps"):
-            # https://github.com/hwchase17/langchain/issues/2068
-            # Deactivating until we have a frontend solution
-            # to display intermediate steps
             langchain_object.return_intermediate_steps = True
 
         fix_memory_inputs(langchain_object)
         try:
-            async_callbacks = [AsyncStreamingLLMCallbackHandler(**kwargs)]
-            output = await langchain_object.acall(chat_input, callbacks=async_callbacks)
+            callbacks = [AsyncStreamingLLMCallbackHandler(**kwargs)]
+            output = await langchain_object.acall(chat_input, callbacks=callbacks)
         except Exception as exc:
             # make the error message more informative
             logger.debug(f"Error: {str(exc)}")
-            sync_callbacks = [StreamingLLMCallbackHandler(**kwargs)]
-            output = langchain_object(chat_input, callbacks=sync_callbacks)
+            callbacks = [AsyncStreamingLLMCallbackHandler(**kwargs)]
+            output = langchain_object(chat_input, callbacks=callbacks)
 
         intermediate_steps = (
             output.get("intermediate_steps", []) if isinstance(output, dict) else []
