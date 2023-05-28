@@ -40,16 +40,6 @@ class AsyncStreamingLLMCallbackHandler(AsyncCallbackHandler):
 
     async def on_chain_end(self, outputs: Dict[str, Any], **kwargs: Any) -> Any:
         """Run when chain ends running."""
-        # outputs should have one key
-        keys = list(outputs.keys())
-        text = outputs[keys[0]]
-        # if there's more than one
-        resp = ChatResponse(
-            message="",
-            type="stream",
-            intermediate_steps=f"Thought: {text}",
-        )
-        await self.websocket.send_json(resp.dict())
 
     async def on_chain_error(
         self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
