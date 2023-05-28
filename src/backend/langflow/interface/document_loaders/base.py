@@ -89,6 +89,9 @@ class DocumentLoaderCreator(LangChainTypeCreator):
                 "UnstructuredWordDocumentLoader": build_file_path_template(
                     suffixes=[".docx", ".doc"], fileTypes=["docx", "doc"]
                 ),
+                "SlackDirectoryLoader": build_file_path_template(
+                    suffixes=[".zip"], fileTypes=["zip"]
+                ),
             }
 
             if name in file_path_templates:
