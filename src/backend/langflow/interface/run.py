@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Tuple
 from langchain.schema import AgentAction
 from langchain.chains.base import Chain
 
-from langflow.interface.callback import AsyncStreamingLLMCallbackHandler, StreamingLLMCallbackHandler  # type: ignore
+from langflow.interface.callback import AsyncStreamingLLMCallbackHandler  # type: ignore
 from langflow.cache.base import compute_dict_hash, load_cache, memoize_dict
 from langflow.graph.graph import Graph
 from langflow.utils.logger import logger
