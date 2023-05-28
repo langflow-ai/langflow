@@ -84,7 +84,7 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
                     </div>
                   </div>
                   <div className="h-full w-full bg-gray-200 dark:bg-gray-900 p-4 gap-4 flex flex-row justify-center items-center">
-                  <div className="flex h-full w-full h-[445px]">
+                  <div className="flex w-full h-[445px]">
                       <div className={
                         classNames('px-4 sm:p-4 w-full rounded-lg bg-white dark:bg-gray-800 shadow',
                           Object.keys(data.node.template).filter(
@@ -92,7 +92,7 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
                               t.charAt(0) !== "_" &&
                               data.node.template[t].advanced &&
                               data.node.template[t].show
-                          ).length > limitScrollFieldsModal ? 'overflow-scroll scrollbar-hide' : 'overflow-hidden')}>
+                          ).length > limitScrollFieldsModal ? 'overflow-scroll overflow-x-hidden' : 'overflow-hidden')}>
                         <div className="flex flex-col h-full gap-5">
                           {Object.keys(data.node.template)
                             .filter(
