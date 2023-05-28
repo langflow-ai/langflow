@@ -118,7 +118,7 @@ class DocumentLoaderCreator(LangChainTypeCreator):
                     "value": "",
                     "display_name": "Web Page",
                 }
-            elif name in {"ReadTheDocsLoader"}:
+            elif name in {"ReadTheDocsLoader", "NotionDirectoryLoader"}:
                 signature["template"]["path"] = {
                     "type": "str",
                     "required": True,
