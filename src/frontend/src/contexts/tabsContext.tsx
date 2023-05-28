@@ -14,6 +14,7 @@ import { typesContext } from "./typesContext";
 import { APITemplateType, TemplateVariableType } from "../types/api";
 import { v4 as uuidv4 } from "uuid";
 import { addEdge } from "reactflow";
+import _ from "lodash";
 
 const TabsContextInitialValue: TabsContextType = {
 	save: () => {},
@@ -50,7 +51,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 		return newNodeId.current;
 	}
 	function save() {
-		let Saveflows = [...flows];
+		let Saveflows = _.cloneDeep(flows);
 		if (Saveflows.length !== 0)
 		Saveflows.forEach((flow) => {
 			if(flow.data && flow.data?.nodes) flow.data?.nodes.forEach((node) => {
@@ -69,15 +70,11 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 				JSON.stringify({ tabIndex, flows:Saveflows, id})
 			);
 	}
-	useEffect(() => {
-		//save tabs locally
-		// console.log(id)
-		save();
-	}, [flows, id, tabIndex, newNodeId]);
 
 	useEffect(() => {
 		//get tabs locally saved
 		let cookie = window.localStorage.getItem("tabsData");
+		console.log(cookie)
 		if (cookie && Object.keys(templates).length > 0) {
 			let cookieObject: LangFlowState = JSON.parse(cookie);
 			cookieObject.flows.forEach((flow) => {
@@ -98,6 +95,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 			setId(cookieObject.id);
 		}
 	}, [templates]);
+
+	useEffect(() => {
+		//save tabs locally
+		console.log(id)
+		save();
+	}, [flows, id, tabIndex, newNodeId]);
 
 	function hardReset() {
 		newNodeId.current = uuidv4();
