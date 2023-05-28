@@ -28,7 +28,6 @@ from langchain.agents.agent_toolkits.vectorstore.prompt import (
     ROUTER_PREFIX as VECTORSTORE_ROUTER_PREFIX,
 )
 from langchain.agents.mrkl.prompt import FORMAT_INSTRUCTIONS
-from langchain.agents.mrkl.prompt import FORMAT_INSTRUCTIONS as SQL_FORMAT_INSTRUCTIONS
 from langchain.base_language import BaseLanguageModel
 from langchain.memory.chat_memory import BaseChatMemory
 from langchain.sql_database import SQLDatabase
@@ -220,7 +219,7 @@ class SQLAgent(CustomAgentExecutor):
             QuerySQLDataBaseTool(db=db),  # type: ignore
             InfoSQLDatabaseTool(db=db),  # type: ignore
             ListSQLDatabaseTool(db=db),  # type: ignore
-            QueryCheckerTool(db=db, llm_chain=llmchain),  # type: ignore
+            QueryCheckerTool(db=db, llm_chain=llmchain, llm=llm),  # type: ignore
         ]
 
         prefix = SQL_PREFIX.format(dialect=toolkit.dialect, top_k=10)
@@ -228,7 +227,7 @@ class SQLAgent(CustomAgentExecutor):
             tools=tools,  # type: ignore
             prefix=prefix,
             suffix=SQL_SUFFIX,
-            format_instructions=SQL_FORMAT_INSTRUCTIONS,
+            format_instructions=FORMAT_INSTRUCTIONS,
         )
         llm_chain = LLMChain(
             llm=llm,

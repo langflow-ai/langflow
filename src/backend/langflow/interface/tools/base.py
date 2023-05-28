@@ -16,7 +16,8 @@ from langflow.interface.tools.constants import (
 )
 from langflow.interface.tools.util import get_tool_params
 from langflow.settings import settings
-from langflow.template.base import Template, TemplateField
+from langflow.template.field.base import TemplateField
+from langflow.template.template.base import Template
 from langflow.utils import util
 from langflow.utils.util import build_template_from_class
 

@@ -1,43 +1,41 @@
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Type
+
+from langchain import vectorstores
 
 from langflow.interface.base import LangChainTypeCreator
-from langflow.interface.custom_lists import vectorstores_type_to_cls_dict
+from langflow.interface.importing.utils import import_class
 from langflow.settings import settings
+from langflow.template.frontend_node.vectorstores import VectorStoreFrontendNode
 from langflow.utils.logger import logger
-from langflow.utils.util import build_template_from_class
+from langflow.utils.util import build_template_from_method
 
 
 class VectorstoreCreator(LangChainTypeCreator):
     type_name: str = "vectorstores"
 
     @property
+    def frontend_node_class(self) -> Type[VectorStoreFrontendNode]:
+        return VectorStoreFrontendNode
+
+    @property
     def type_to_loader_dict(self) -> Dict:
-        return vectorstores_type_to_cls_dict
+        if self.type_dict is None:
+            self.type_dict: dict[str, Any] = {
+                vectorstore_name: import_class(
+                    f"langchain.vectorstores.{vectorstore_name}"
+                )
+                for vectorstore_name in vectorstores.__all__
+            }
+        return self.type_dict
 
     def get_signature(self, name: str) -> Optional[Dict]:
         """Get the signature of an embedding."""
         try:
-            signature = build_template_from_class(name, vectorstores_type_to_cls_dict)
-
-            # TODO: Use FrontendendNode class to build the signature
-            signature["template"] = {
-                "documents": {
-                    "type": "TextSplitter",
-                    "required": True,
-                    "show": True,
-                    "name": "documents",
-                    "display_name": "Text Splitter",
-                },
-                "embedding": {
-                    "type": "Embeddings",
-                    "required": True,
-                    "show": True,
-                    "name": "embedding",
-                    "display_name": "Embedding",
-                },
-            }
-            return signature
-
+            return build_template_from_method(
+                name,
+                type_to_cls_dict=self.type_to_loader_dict,
+                method_name="from_texts",
+            )
         except ValueError as exc:
             raise ValueError(f"Vector Store {name} not found") from exc
         except AttributeError as exc:

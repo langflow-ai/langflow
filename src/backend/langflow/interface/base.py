@@ -3,7 +3,9 @@ from typing import Any, Dict, List, Optional, Type, Union
 
 from pydantic import BaseModel
 
-from langflow.template.base import FrontendNode, Template, TemplateField
+from langflow.template.field.base import TemplateField
+from langflow.template.frontend_node.base import FrontendNode
+from langflow.template.template.base import Template
 from langflow.utils.logger import logger
 
 # Assuming necessary imports for Field, Template, and FrontendNode classes
@@ -42,7 +44,7 @@ class LangChainTypeCreator(BaseModel, ABC):
             # so we should update the result dict
             node = self.frontend_node(name)
             if node is not None:
-                node = node.to_dict()
+                node = node.to_dict()  # type: ignore
                 result[self.type_name].update(node)
 
         return result

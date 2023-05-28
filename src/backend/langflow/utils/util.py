@@ -10,49 +10,6 @@ from langflow.template.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants
 
 
-def build_template_from_parameters(
-    name: str, type_to_loader_dict: Dict, add_function: bool = False
-):
-    # Retrieve the function that matches the provided name
-    func = None
-    for _, v in type_to_loader_dict.items():
-        if v.__name__ == name:
-            func = v
-            break
-
-    if func is None:
-        raise ValueError(f"{name} not found")
-
-    # Process parameters
-    parameters = func.__annotations__
-    variables = {}
-    for param_name, param_type in parameters.items():
-        if param_name in ["return", "kwargs"]:
-            continue
-
-        variables[param_name] = {
-            "type": param_type.__name__,
-            "default": parameters[param_name].__repr_args__()[0][1],
-            # Op
-            "placeholder": "",
-        }
-
-    # Get the base classes of the return type
-    return_type = parameters.get("return")
-    base_classes = get_base_classes(return_type) if return_type else []
-    if add_function:
-        base_classes.append("function")
-
-    # Get the function's docstring
-    docs = inspect.getdoc(func) or ""
-
-    return {
-        "template": format_dict(variables, name),
-        "description": docs["Description"],  # type: ignore
-        "base_classes": base_classes,
-    }
-
-
 def build_template_from_function(
     name: str, type_to_loader_dict: Dict, add_function: bool = False
 ):
@@ -155,6 +112,70 @@ def build_template_from_class(
                 base_classes.append("function")
             return {
                 "template": format_dict(variables, name),
+                "description": docs.short_description or "",
+                "base_classes": base_classes,
+            }
+
+
+def build_template_from_method(
+    class_name: str,
+    method_name: str,
+    type_to_cls_dict: Dict,
+    add_function: bool = False,
+):
+    classes = [item.__name__ for item in type_to_cls_dict.values()]
+
+    # Raise error if class_name is not in classes
+    if class_name not in classes:
+        raise ValueError(f"{class_name} not found.")
+
+    for _type, v in type_to_cls_dict.items():
+        if v.__name__ == class_name:
+            _class = v
+
+            # Check if the method exists in this class
+            if not hasattr(_class, method_name):
+                raise ValueError(
+                    f"Method {method_name} not found in class {class_name}"
+                )
+
+            # Get the method
+            method = getattr(_class, method_name)
+
+            # Get the docstring
+            docs = parse(method.__doc__)
+
+            # Get the signature of the method
+            sig = inspect.signature(method)
+
+            # Get the parameters of the method
+            params = sig.parameters
+
+            # Initialize the variables dictionary with method parameters
+            variables = {
+                "_type": _type,
+                **{
+                    name: {
+                        "default": param.default
+                        if param.default != param.empty
+                        else None,
+                        "type": param.annotation
+                        if param.annotation != param.empty
+                        else None,
+                        "required": param.default == param.empty,
+                    }
+                    for name, param in params.items()
+                },
+            }
+
+            base_classes = get_base_classes(_class)
+
+            # Adding function to base classes to allow the output to be a function
+            if add_function:
+                base_classes.append("function")
+
+            return {
+                "template": format_dict(variables, class_name),
                 "description": docs.short_description or "",
                 "base_classes": base_classes,
             }
