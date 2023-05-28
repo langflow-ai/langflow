@@ -184,8 +184,7 @@ class ChatManager:
             self.disconnect(client_id)
         finally:
             try:
-                connection = self.active_connections.get(client_id)
-                if connection:
+                if connection := self.active_connections.get(client_id):
                     await connection.close(code=1000, reason="Client disconnected")
                     self.disconnect(client_id)
             except Exception as e:
