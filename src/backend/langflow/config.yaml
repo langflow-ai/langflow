@@ -42,6 +42,7 @@ documentloaders:
   - IMSDbLoader
   - GitbookLoader
   - ReadTheDocsLoader
+  - SlackDirectoryLoader
 embeddings:
   - OpenAIEmbeddings
   - HuggingFaceEmbeddings
