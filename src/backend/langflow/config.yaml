@@ -45,6 +45,7 @@ documentloaders:
 embeddings:
   - OpenAIEmbeddings
   - HuggingFaceEmbeddings
+  - CohereEmbeddings
 
 llms:
   - OpenAI
