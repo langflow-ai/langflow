@@ -160,7 +160,7 @@ async def get_result_and_steps(langchain_object: Chain, message: str, **kwargs):
         chat_input = None
         memory_key = ""
         if hasattr(langchain_object, "memory") and langchain_object.memory is not None:
-            memory_key = langchain_object.memory.memory_key
+            memory_key = langchain_object.memory.memory_variables[0]
 
         if hasattr(langchain_object, "input_keys"):
             for key in langchain_object.input_keys:
@@ -175,12 +175,12 @@ async def get_result_and_steps(langchain_object: Chain, message: str, **kwargs):
         fix_memory_inputs(langchain_object)
         try:
             callbacks = [AsyncStreamingLLMCallbackHandler(**kwargs)]
-            output = await langchain_object.acall(chat_input, callbacks=callbacks)
+            output = await langchain_object.acall(chat_input, callbacks=callbacks)  # type: ignore
         except Exception as exc:
             # make the error message more informative
             logger.debug(f"Error: {str(exc)}")
             callbacks = [AsyncStreamingLLMCallbackHandler(**kwargs)]
-            output = langchain_object(chat_input, callbacks=callbacks)
+            output = langchain_object(chat_input, callbacks=callbacks)  # type: ignore
 
         intermediate_steps = (
             output.get("intermediate_steps", []) if isinstance(output, dict) else []
