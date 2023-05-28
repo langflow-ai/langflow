@@ -85,7 +85,7 @@ export default function GenericNode({
     deleteNode(data.id);
     return;
   }
-  console.log(data)
+  console.log(data);
 
   return (
     <div
