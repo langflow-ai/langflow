@@ -88,7 +88,7 @@ export default function ChatModal({
       }
       if (thought) {
         // if .thought is undefined, set it to thought
-        if (!newChat[newChat.length - 1].thought) {
+        if (!newChat[newChat.length - 1].thought || end) {
           newChat[newChat.length - 1].thought = thought;
         } else {
           // add a line break and then add thought
