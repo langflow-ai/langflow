@@ -265,6 +265,8 @@ for (let i = 97; i <= 122; i++) {
   charWidths[String.fromCharCode(i)] = 0.5;
 }
 
+export const limitScrollFieldsModal = 7;
+
 export function measureTextWidth(text: string, fontSize: number) {
   let wordWidth = 0;
   for (let j = 0; j < text.length; j++) {
