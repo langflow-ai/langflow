@@ -25,6 +25,11 @@ export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
 }
 
+export enum TypeModal {
+  TEXT = 1,
+  PROMPT = 2 
+}
+
 export const textColors = {
   white: "text-white",
   red: "text-red-700",
