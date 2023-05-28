@@ -26,7 +26,7 @@ export default function ChatMessage({
   useEffect(() => {
     setMessage(chat.message);
   }, [chat.message]);
-  const [hidden, setHidden] = useState(true);
+  const [hidden, setHidden] = useState(false);
   return (
     <div
       className={classNames(

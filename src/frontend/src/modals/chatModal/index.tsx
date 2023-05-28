@@ -83,12 +83,17 @@ export default function ChatModal({
         if (end) {
           newChat[newChat.length - 1].message = str;
         } else {
-          newChat[newChat.length - 1].message =
-            newChat[newChat.length - 1].message + str;
+          newChat[newChat.length - 1].message += str;
         }
       }
       if (thought) {
-        newChat[newChat.length - 1].thought = thought;
+        // if .thought is undefined, set it to thought
+        if (!newChat[newChat.length - 1].thought) {
+          newChat[newChat.length - 1].thought = thought;
+        } else {
+          // add a line break and then add thought
+          newChat[newChat.length - 1].thought += "\n" + thought;
+        }
       }
       if (files) {
         newChat[newChat.length - 1].files = files;
@@ -167,7 +172,10 @@ export default function ChatModal({
       isStream = false;
     }
     if (data.type === "stream" && isStream) {
-      updateLastMessage({ str: data.message });
+      updateLastMessage({
+        str: data.message,
+        thought: data.intermediate_steps,
+      });
     }
   }
 
