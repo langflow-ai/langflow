@@ -7,20 +7,20 @@ import { TabsProvider } from "./tabsContext";
 import { TypesProvider } from "./typesContext";
 
 export default function ContextWrapper({ children }: { children: ReactNode }) {
-	//element to wrap all context
-	return (
-		<>
-			<DarkProvider>
-				<TypesProvider>
-					<LocationProvider>
-						<AlertProvider>
-							<TabsProvider>
-								<PopUpProvider>{children}</PopUpProvider>
-							</TabsProvider>
-						</AlertProvider>
-					</LocationProvider>
-				</TypesProvider>
-			</DarkProvider>
-		</>
-	);
+  //element to wrap all context
+  return (
+    <>
+      <DarkProvider>
+        <TypesProvider>
+          <LocationProvider>
+            <AlertProvider>
+              <TabsProvider>
+                <PopUpProvider>{children}</PopUpProvider>
+              </TabsProvider>
+            </AlertProvider>
+          </LocationProvider>
+        </TypesProvider>
+      </DarkProvider>
+    </>
+  );
 }

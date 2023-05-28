@@ -1,3 +1,12 @@
+---
+agents:
+  - ZeroShotAgent
+  - JsonAgent
+  - CSVAgent
+  - initialize_agent
+  - VectorStoreAgent
+  - VectorStoreRouterAgent
+  - SQLAgent
 chains:
   - LLMChain
   - LLMMathChain
@@ -7,24 +16,35 @@ chains:
   - MidJourneyPromptChain
   - TimeTravelGuideChain
   - SQLDatabaseChain
-
-agents:
-  - ZeroShotAgent
-  - JsonAgent
-  - CSVAgent
-  - initialize_agent
-  - VectorStoreAgent
-  - VectorStoreRouterAgent
-  - SQLAgent
-
-prompts:
-  - PromptTemplate
-  - FewShotPromptTemplate
-  - ZeroShotPrompt
-  # Wait more tests
-  # - ChatPromptTemplate
-  # - SystemMessagePromptTemplate
-  # - HumanMessagePromptTemplate
+documentloaders:
+  - AirbyteJSONLoader
+  - CoNLLULoader
+  - CSVLoader
+  - UnstructuredEmailLoader
+  - EverNoteLoader
+  - FacebookChatLoader
+  - GutenbergLoader
+  - BSHTMLLoader
+  - UnstructuredHTMLLoader
+  # - UnstructuredImageLoader # Issue with Python 3.11 (https://github.com/Unstructured-IO/unstructured-inference/issues/83)
+  - UnstructuredMarkdownLoader
+  - PyPDFLoader
+  - UnstructuredPowerPointLoader
+  - SRTLoader
+  - TelegramChatLoader
+  - TextLoader
+  - UnstructuredWordDocumentLoader
+  - WebBaseLoader
+  - AZLyricsLoader
+  - CollegeConfidentialLoader
+  - HNLoader
+  - IFixitLoader
+  - IMSDbLoader
+  - GitbookLoader
+  - ReadTheDocsLoader
+embeddings:
+  - OpenAIEmbeddings
+  - HuggingFaceEmbeddings
 
 llms:
   - OpenAI
@@ -32,7 +52,21 @@ llms:
   - ChatOpenAI
   - HuggingFaceHub
   - LlamaCpp
-
+memories:
+  - ConversationBufferMemory
+  - ConversationSummaryMemory
+  - ConversationKGMemory
+prompts:
+  - PromptTemplate
+  - FewShotPromptTemplate
+  - ZeroShotPrompt
+textsplitters:
+  - CharacterTextSplitter
+toolkits:
+  - OpenAPIToolkit
+  - JsonToolkit
+  - VectorStoreInfo
+  - VectorStoreRouterToolkit
 tools:
   - Search
   - PAL-MATH
@@ -63,57 +97,6 @@ tools:
   - RequestsDeleteTool
   - WikipediaQueryRun
   - WolframAlphaQueryRun
-
-wrappers:
-  - RequestsWrapper
-
-toolkits:
-  - OpenAPIToolkit
-  - JsonToolkit
-  - VectorStoreInfo
-  - VectorStoreRouterToolkit
-
-memories:
-  - ConversationBufferMemory
-  - ConversationSummaryMemory
-  - ConversationKGMemory
-
-embeddings:
-  - OpenAIEmbeddings
-
-vectorstores:
-  - Chroma
-
-documentloaders:
-  - AirbyteJSONLoader
-  - CoNLLULoader
-  - CSVLoader
-  - UnstructuredEmailLoader
-  - EverNoteLoader
-  - FacebookChatLoader
-  - GutenbergLoader
-  - BSHTMLLoader
-  - UnstructuredHTMLLoader
-  # - UnstructuredImageLoader # Issue with Python 3.11 (https://github.com/Unstructured-IO/unstructured-inference/issues/83)
-  - UnstructuredMarkdownLoader
-  - PyPDFLoader
-  - UnstructuredPowerPointLoader
-  - SRTLoader
-  - TelegramChatLoader
-  - TextLoader
-  - UnstructuredWordDocumentLoader
-  - WebBaseLoader
-  - AZLyricsLoader
-  - CollegeConfidentialLoader
-  - HNLoader
-  - IFixitLoader
-  - IMSDbLoader
-  - GitbookLoader
-  - ReadTheDocsLoader
-
-textsplitters:
-  - CharacterTextSplitter
-
 utilities:
   - BingSearchAPIWrapper
   - GoogleSearchAPIWrapper
@@ -125,5 +108,12 @@ utilities:
   - WolframAlphaAPIWrapper
   # - ZapierNLAWrapper
   - SQLDatabase
-
-dev: false
+vectorstores:
+  - Chroma
+  - Qdrant
+  - Weaviate
+wrappers:
+  - RequestsWrapper # Wait more tests
+  # - ChatPromptTemplate
+  # - SystemMessagePromptTemplate
+  # - HumanMessagePromptTemplate

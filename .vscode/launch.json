@@ -1,0 +1,35 @@
+{
+  "configurations": [
+    {
+      "name": "Python: FastAPI",
+      "type": "python",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "langflow.main:app",
+        "--port",
+        "7860",
+        "--reload",
+        "--log-level",
+        "debug"
+      ],
+      "jinja": true,
+      "justMyCode": false
+    },
+    {
+      "name": "Python: Remote Attach",
+      "type": "python",
+      "request": "attach",
+      "justMyCode": true,
+      "connect": {
+        "port": 5678
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}",
+          "remoteRoot": "."
+        }
+      ]
+    }
+  ]
+}

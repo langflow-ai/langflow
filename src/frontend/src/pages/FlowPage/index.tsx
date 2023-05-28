@@ -56,7 +56,6 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
     // this effect is used to attach the global event handlers
 
     const onKeyDown = (event: KeyboardEvent) => {
-      console.log("keydownou", lastCopiedSelection, position);
       if (
         (event.ctrlKey || event.metaKey) &&
         event.key === "c" &&
@@ -156,10 +155,6 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
               params.targetHandle.split("|")[0] === "Text"
                 ? { stroke: "#333333", strokeWidth: 2 }
                 : { stroke: "#222222" },
-            className:
-              params.targetHandle.split("|")[0] === "Text"
-                ? ""
-                : "animate-pulse",
             animated: params.targetHandle.split("|")[0] === "Text",
           },
           eds
@@ -307,6 +302,8 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
     setLastSelection(flow);
   }, []);
 
+  const { setDisableCopyPaste } = useContext(TabsContext);
+
   return (
     <div className="w-full h-full" ref={reactFlowWrapper}>
       {Object.keys(templates).length > 0 && Object.keys(types).length > 0 ? (
@@ -317,6 +314,15 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
               updateFlow({ ...flow, data: reactFlowInstance.toObject() });
             }}
             edges={edges}
+            onPaneClick={() => {
+              setDisableCopyPaste(false);
+            }}
+            onNodeClick={() => {
+              setDisableCopyPaste(true);
+            }}
+            onPaneMouseLeave={() => {
+              setDisableCopyPaste(true);
+            }}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChangeMod}
             onConnect={onConnect}
