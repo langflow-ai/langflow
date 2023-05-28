@@ -180,7 +180,13 @@ class Node:
             elif isinstance(value, list) and all(
                 isinstance(node, Node) for node in value
             ):
-                self.params[key] = [node.build() for node in value]  # type: ignore
+                self.params[key] = []
+                for node in value:
+                    built = node.build()
+                    if isinstance(built, list):
+                        self.params[key].extend(built)
+                    else:
+                        self.params[key].append(built)
 
         # Get the class from LANGCHAIN_TYPES_DICT
         # and instantiate it with the params

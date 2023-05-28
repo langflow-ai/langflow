@@ -3,13 +3,13 @@ import { LightTooltip } from "../LightTooltipComponent";
 import { TooltipComponentType } from "../../types/components";
 
 export default function Tooltip({
-	children,
-	title,
-	placement,
+  children,
+  title,
+  placement,
 }: TooltipComponentType) {
-	return (
-		<LightTooltip placement={placement} title={title} arrow>
-			{children}
-		</LightTooltip>
-	);
+  return (
+    <LightTooltip placement={placement} title={title} arrow>
+      {children}
+    </LightTooltip>
+  );
 }
