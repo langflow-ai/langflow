@@ -8,7 +8,7 @@ import {
 } from "react";
 import { FlowType, NodeType } from "../types/flow";
 import { LangFlowState, TabsContextType } from "../types/tabs";
-import { normalCaseToSnakeCase, updateObject, updateTemplate } from "../utils";
+import { normalCaseToSnakeCase, updateIds, updateObject, updateTemplate } from "../utils";
 import { alertContext } from "./alertContext";
 import { typesContext } from "./typesContext";
 import { APITemplateType, TemplateVariableType } from "../types/api";
@@ -58,11 +58,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       Saveflows.forEach((flow) => {
         if (flow.data && flow.data?.nodes)
           flow.data?.nodes.forEach((node) => {
-            console.log(node.data.type);
             Object.keys(node.data.node.template).forEach((key) => {
-              console.log(node.data.node.template[key].type);
               if (node.data.node.template[key].type === "file") {
-                console.log(node.data.node.template[key]);
                 // ! Commenting this out for now, as it is causing issues with the file upload
                 // node.data.node.template[key].content = "";
               }
@@ -286,7 +283,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
   function addFlow(flow?: FlowType) {
     // Get data from the flow or set it to null if there's no flow provided.
-    const data = flow?.data ? flow.data : null;
+
+    let data = flow?.data ? flow.data : null;
     const description = flow?.description ? flow.description : "";
     if (data) {
       data.edges.forEach((edge) => {
@@ -312,6 +310,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           );
         }
       });
+      updateIds(data, getNodeId);
     }
     // Create a new flow with a default name if no flow is provided.
     let newFlow: FlowType = {

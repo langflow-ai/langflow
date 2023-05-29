@@ -16,8 +16,8 @@ import {
   CircleStackIcon,
   Squares2X2Icon,
 } from "@heroicons/react/24/outline";
-import { Connection, Edge, Node, ReactFlowInstance } from "reactflow";
-import { FlowType } from "./types/flow";
+import { Connection, Edge, Node, ReactFlowInstance, addEdge } from "reactflow";
+import { FlowType, NodeType } from "./types/flow";
 import { APITemplateType, TemplateVariableType } from "./types/api";
 import _ from "lodash";
 import { ChromaIcon } from "./icons";
@@ -540,26 +540,37 @@ export function checkUpperWords(str: string) {
   return words.join(" ");
 }
 
-export function updateIds(newFLow: FlowType, baseFlow: FlowType) {
-  newFLow.data.nodes.forEach((node) => {
-    while (baseFlow.data.nodes.some((n) => n.id === node.id)) {
-      const newId = uuidv4();
-      newFLow.data.edges.forEach((edge) => {
-        if (edge.source === node.id) {
-          edge.source = newId;
-        }
-        if (edge.target === node.id) {
-          edge.target = newId;
-        }
-        const index = edge.id.split("|").findIndex((e) => e === node.id);
-        if (index != -1) {
-          let tempList = edge.id.split("|");
-          tempList[index] = newId;
-          edge.id = tempList.concat(newId).join("|");
-        }
-        node.id = newId;
-      });
-    }
+export function updateIds(newFlow, getNodeId) {
+  let idsMap = {};
+
+  newFlow.nodes.forEach((n) => {
+    // Generate a unique node ID
+    let newId = getNodeId();
+    idsMap[n.id] = newId;
+    n.id = newId;
+    n.data.id = newId;
+    // Add the new node to the list of nodes in state
   });
-  return newFLow;
+
+  newFlow.edges.forEach((e) => {
+    e.source = idsMap[e.source];
+    e.target = idsMap[e.target];
+    let sourceHandleSplitted = e.sourceHandle.split("|");
+    e.sourceHandle =
+      sourceHandleSplitted[0] +
+      "|" +
+      e.source +
+      "|" +
+      sourceHandleSplitted.slice(2).join("|");
+    let targetHandleSplitted = e.targetHandle.split("|");
+    e.targetHandle =
+      targetHandleSplitted.slice(0, -1).join("|") + "|" + e.target;
+    e.id =
+      "reactflow__edge-" +
+      e.source +
+      e.sourceHandle +
+      "-" +
+      e.target +
+      e.targetHandle;
+  });
 }
