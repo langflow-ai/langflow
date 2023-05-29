@@ -62,8 +62,9 @@ export function TabsProvider({ children }: { children: ReactNode }) {
             Object.keys(node.data.node.template).forEach((key) => {
               // console.log(node.data.node.template[key].type);
               if (node.data.node.template[key].type === "file") {
-                // console.log(node.data.node.template[key]);
-                node.data.node.template[key].content = "";
+                console.log(node.data.node.template[key]);
+                // ! Commenting this out for now, as it is causing issues with the file upload
+                // node.data.node.template[key].content = "";
               }
             });
           });

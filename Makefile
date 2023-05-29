@@ -5,6 +5,10 @@ all: help
 init:
 	@echo 'Installing pre-commit hooks'
 	git config core.hooksPath .githooks
+	@echo 'Installing backend dependencies'
+	make install_backend
+	@echo 'Installing frontend dependencies'
+	make install_frontend
 
 coverage:
 	poetry run pytest --cov \
