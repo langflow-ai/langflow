@@ -36,7 +36,7 @@ export default function IntComponent({
         type="number"
         value={myValue}
         className={
-          "block w-full form-input dark:bg-gray-900 arrow-hide dark:border-gray-600 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" +
+          "block w-full form-input dark:bg-gray-900 arrow-hide dark:border-gray-600 dark:text-gray-300 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" +
           (disabled ? " bg-gray-200 dark:bg-gray-700" : "")
         }
         placeholder="Type a integer number"
