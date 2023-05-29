@@ -85,7 +85,9 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     if (cookie && Object.keys(templates).length > 0) {
       let cookieObject: LangFlowState = JSON.parse(cookie);
       cookieObject.flows.forEach((flow) => {
-        flow.data.edges.forEach((edge) => {edge.className = "";})
+        flow.data.edges.forEach((edge) => {
+          edge.className = "";
+        });
         flow.data.nodes.forEach((node) => {
           if (Object.keys(templates[node.data.type]["template"]).length > 0) {
             node.data.node.base_classes =
@@ -287,7 +289,9 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     const data = flow?.data ? flow.data : null;
     const description = flow?.description ? flow.description : "";
     if (data) {
-      data.edges.forEach((edge) => {edge.className = "";})
+      data.edges.forEach((edge) => {
+        edge.className = "";
+      });
       data.nodes.forEach((node) => {
         if (Object.keys(templates[node.data.type]["template"]).length > 0) {
           node.data.node.base_classes =
