@@ -32,7 +32,7 @@ export default function InputComponent({
           disabled ? " bg-gray-200 dark:bg-gray-700" : "",
           password && !pwdVisible && myValue !== "" ? "password" : ""
         )}
-        placeholder="Type a text"
+        placeholder="Type something..."
         onChange={(e) => {
           setMyValue(e.target.value);
           onChange(e.target.value);

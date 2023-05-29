@@ -1,8 +1,9 @@
 import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
 import { useContext, useEffect, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
-import TextAreaModal from "../../modals/textAreaModal";
 import { TextAreaComponentType } from "../../types/components";
+import GenericModal from "../../modals/genericModal";
+import { TypeModal } from "../../utils";
 
 export default function TextAreaComponent({
   value,
@@ -23,7 +24,10 @@ export default function TextAreaComponent({
         <span
           onClick={() => {
             openPopUp(
-              <TextAreaModal
+              <GenericModal
+                type={TypeModal.TEXT}
+                buttonText="Finishing Editing"
+                modalTitle="Edit Text"
                 value={myValue}
                 setValue={(t: string) => {
                   setMyValue(t);
@@ -42,7 +46,10 @@ export default function TextAreaComponent({
         <button
           onClick={() => {
             openPopUp(
-              <TextAreaModal
+              <GenericModal
+                type={TypeModal.TEXT}
+                buttonText="Finishing Editing"
+                modalTitle="Edit Text"
                 value={myValue}
                 setValue={(t: string) => {
                   setMyValue(t);
