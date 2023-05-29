@@ -46,6 +46,7 @@ documentloaders:
 embeddings:
   - OpenAIEmbeddings
   - HuggingFaceEmbeddings
+  - CohereEmbeddings
 
 llms:
   - OpenAI
@@ -53,6 +54,7 @@ llms:
   - ChatOpenAI
   - HuggingFaceHub
   - LlamaCpp
+  - Cohere
 memories:
   - ConversationBufferMemory
   - ConversationSummaryMemory
