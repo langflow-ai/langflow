@@ -20,11 +20,14 @@ import { Connection, Edge, Node, ReactFlowInstance, addEdge } from "reactflow";
 import { FlowType, NodeType } from "./types/flow";
 import { APITemplateType, TemplateVariableType } from "./types/api";
 import _ from "lodash";
+import { ChromaIcon } from "./icons";
 import { v4 as uuidv4 } from "uuid";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
 }
+
+export const limitScrollFieldsModal = 7;
 
 export enum TypeModal {
   TEXT = 1,
@@ -121,22 +124,23 @@ export const nodeIcons: {
     React.SVGProps<SVGSVGElement>
   >;
 } = {
-  agents: RocketLaunchIcon,
-  chains: LinkIcon,
-  memories: CpuChipIcon,
-  llms: LightBulbIcon,
-  prompts: CommandLineIcon,
-  tools: WrenchIcon,
-  advanced: ComputerDesktopIcon,
-  chat: Bars3CenterLeftIcon,
-  embeddings: FingerPrintIcon,
-  documentloaders: PaperClipIcon,
-  vectorstores: CircleStackIcon,
-  toolkits: WrenchScrewdriverIcon,
-  textsplitters: ScissorsIcon,
-  wrappers: GiftIcon,
-  utilities: Squares2X2Icon,
-  unknown: QuestionMarkCircleIcon,
+	Chroma: ChromaIcon,
+	agents: RocketLaunchIcon,
+	chains: LinkIcon,
+	memories: CpuChipIcon,
+	llms: LightBulbIcon,
+	prompts: CommandLineIcon,
+	tools: WrenchIcon,
+	advanced: ComputerDesktopIcon,
+	chat: Bars3CenterLeftIcon,
+	embeddings: FingerPrintIcon,
+	documentloaders: PaperClipIcon,
+	vectorstores: CircleStackIcon,
+	toolkits: WrenchScrewdriverIcon,
+	textsplitters: ScissorsIcon,
+	wrappers: GiftIcon,
+	utilities: Squares2X2Icon,
+	unknown: QuestionMarkCircleIcon,
 };
 
 export const bgColors = {
