@@ -23,3 +23,6 @@ class Template(BaseModel):
         result = {field.name: field.to_dict() for field in self.fields}
         result["_type"] = self.type_name  # type: ignore
         return result
+
+    def add_field(self, field: TemplateField) -> None:
+        self.fields.append(field)
