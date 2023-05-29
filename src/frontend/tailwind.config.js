@@ -17,6 +17,7 @@ module.exports = {
 
       animation: {
         "pulse-green": "pulseGreen 1s linear",
+        'spin-once': 'spin 1s linear 0.7'
       },
       keyframes: {
         pulseGreen: {
