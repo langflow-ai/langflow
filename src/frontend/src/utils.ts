@@ -497,3 +497,35 @@ export const programmingLanguages: languageMap = {
   css: ".css",
   // add more file extensions here, make sure the key is same as language prop in CodeBlock.tsx component
 };
+
+export function toTitleCase(str: string) {
+	let result = str
+		.split("_")
+		.map((word, index) => {
+			if (index === 0) {
+
+				return checkUpperWords(word[0].toUpperCase() + word.slice(1).toLowerCase());
+			}
+			return checkUpperWords(word.toLowerCase());
+		})
+		.join(" ");
+
+	return result
+		.split("-")
+		.map((word, index) => {
+			if (index === 0) {
+				return checkUpperWords(word[0].toUpperCase() + word.slice(1).toLowerCase());
+			}
+			return checkUpperWords(word.toLowerCase());
+		})
+		.join(" ");
+}
+
+export const upperCaseWords: string[] = ["llm", "uri"];
+export function checkUpperWords(str: string) {
+  const words = str.split(' ').map((word) => {
+    return upperCaseWords.includes(word.toLowerCase()) ? word.toUpperCase() : word[0].toUpperCase() + word.slice(1).toLowerCase();
+  });
+
+  return words.join(' ');
+}
