@@ -89,18 +89,18 @@ class ZeroShotPromptNode(BasePromptFrontendNode):
                 is_list=False,
                 show=True,
                 multiline=True,
-                value=prompt.SUFFIX,
-                name="suffix",
+                value=prompt.FORMAT_INSTRUCTIONS,
+                name="format_instructions",
             ),
             TemplateField(
                 field_type="str",
-                required=False,
+                required=True,
                 placeholder="",
                 is_list=False,
                 show=True,
                 multiline=True,
-                value=prompt.FORMAT_INSTRUCTIONS,
-                name="format_instructions",
+                value=prompt.SUFFIX,
+                name="suffix",
             ),
         ],
     )
@@ -109,3 +109,7 @@ class ZeroShotPromptNode(BasePromptFrontendNode):
 
     def to_dict(self):
         return super().to_dict()
+
+    @staticmethod
+    def format_field(field: TemplateField, name: Optional[str] = None) -> None:
+        PromptFrontendNode.format_field(field, name)
