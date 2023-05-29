@@ -11,7 +11,13 @@ import {
   ExclamationCircleIcon,
 } from "@heroicons/react/24/solid";
 
-import { classNames, nodeColors, nodeIcons, toNormalCase, toTitleCase } from "../../utils";
+import {
+  classNames,
+  nodeColors,
+  nodeIcons,
+  toNormalCase,
+  toTitleCase,
+} from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
 import { typesContext } from "../../contexts/typesContext";
 import { useContext, useState, useEffect, useRef, Fragment } from "react";
@@ -106,7 +112,7 @@ export default function GenericNode({
             }}
           />
           <Tooltip title={data.type} placement="top">
-              <div className="ml-2 truncate">{data.type}</div>
+            <div className="ml-2 truncate">{data.type}</div>
           </Tooltip>
           <div>
             <Tooltip
