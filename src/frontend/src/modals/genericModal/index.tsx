@@ -5,19 +5,23 @@ import { PopUpContext } from "../../contexts/popUpContext";
 import { darkContext } from "../../contexts/darkContext";
 import { checkPrompt } from "../../controllers/API";
 import { alertContext } from "../../contexts/alertContext";
+import { TypeModal } from "../../utils";
 export default function PromptAreaModal({
   value,
   setValue,
   buttonText,
   modalTitle,
+  type
 }: {
   setValue: (value: string) => void;
   value: string;
   buttonText: string;
   modalTitle: string;
+  type: number;
 }) {
-  const [myButtonText, setmyButtonText] = useState(buttonText);
-  const [myModalTitle, setMyModalTitle] = useState(modalTitle);
+  const [myButtonText] = useState(buttonText);
+  const [myModalTitle] = useState(modalTitle);
+  const [myModalType] = useState(type);
   const [open, setOpen] = useState(true);
   const [myValue, setMyValue] = useState(value);
   const { dark } = useContext(darkContext);
@@ -114,36 +118,46 @@ export default function PromptAreaModal({
                       type="button"
                       className="inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm"
                       onClick={() => {
-                        checkPrompt(myValue)
-                          .then((apiReturn) => {
-                            if (apiReturn.data) {
-                              let inputVariables =
-                                apiReturn.data.input_variables;
-                              if (inputVariables.length === 0) {
-                                setErrorData({
-                                  title:
-                                    "The template you are attempting to use does not contain any variables for data entry.",
-                                });
+                        switch (myModalType) {
+                          case 1:
+                            setModalOpen(false);
+                          break;
+                          case 2:
+                            checkPrompt(myValue)
+                            .then((apiReturn) => {
+                              if (apiReturn.data) {
+                                let inputVariables =
+                                  apiReturn.data.input_variables;
+                                if (inputVariables.length === 0) {
+                                  setErrorData({
+                                    title:
+                                      "The template you are attempting to use does not contain any variables for data entry.",
+                                  });
+                                } else {
+                                  setSuccessData({
+                                    title: "Prompt is ready",
+                                  });
+                                  setModalOpen(false);
+                                  setValue(myValue);
+                                }
                               } else {
-                                setSuccessData({
-                                  title: "Prompt is ready",
+                                setErrorData({
+                                  title: "Something went wrong, please try again",
                                 });
-                                setModalOpen(false);
-                                setValue(myValue);
                               }
-                            } else {
-                              setErrorData({
-                                title: "Something went wrong, please try again",
+                            })
+                            .catch((error) => {
+                              return setErrorData({
+                                title:
+                                  "There is something wrong with this prompt, please review it",
+                                list: [error.response.data.detail],
                               });
-                            }
-                          })
-                          .catch((error) => {
-                            return setErrorData({
-                              title:
-                                "There is something wrong with this prompt, please review it",
-                              list: [error.response.data.detail],
                             });
-                          });
+                          break;
+                        
+                          default:
+                            break;
+                        }
                       }}
                     >
                       {myButtonText}

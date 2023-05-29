@@ -3,6 +3,7 @@ import { useContext, useEffect, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TextAreaComponentType } from "../../types/components";
 import GenericModal from "../../modals/genericModal";
+import { TypeModal } from "../../utils";
 
 export default function TextAreaComponent({
   value,
@@ -24,6 +25,7 @@ export default function TextAreaComponent({
           onClick={() => {
             openPopUp(
               <GenericModal
+                type={TypeModal.TEXT}
                 buttonText="Finishing Editing"
                 modalTitle="Edit Text"
                 value={myValue}
@@ -45,6 +47,7 @@ export default function TextAreaComponent({
           onClick={() => {
             openPopUp(
               <GenericModal
+                type={TypeModal.TEXT}
                 buttonText="Finishing Editing"
                 modalTitle="Edit Text"
                 value={myValue}
