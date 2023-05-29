@@ -8,7 +8,12 @@ import {
 } from "react";
 import { FlowType, NodeType } from "../types/flow";
 import { LangFlowState, TabsContextType } from "../types/tabs";
-import { normalCaseToSnakeCase, updateIds, updateObject, updateTemplate } from "../utils";
+import {
+  normalCaseToSnakeCase,
+  updateIds,
+  updateObject,
+  updateTemplate,
+} from "../utils";
 import { alertContext } from "./alertContext";
 import { typesContext } from "./typesContext";
 import { APITemplateType, TemplateVariableType } from "../types/api";
@@ -84,8 +89,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       cookieObject.flows.forEach((flow) => {
         flow.data.edges.forEach((edge) => {
           edge.className = "";
-          edge.style={stroke: "#222222" }
-
+          edge.style = { stroke: "#222222" };
         });
         flow.data.nodes.forEach((node) => {
           if (Object.keys(templates[node.data.type]["template"]).length > 0) {
@@ -291,7 +295,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     if (data) {
       data.edges.forEach((edge) => {
         edge.className = "";
-        edge.style={stroke: "#222222" }
+        edge.style = { stroke: "#222222" };
       });
       data.nodes.forEach((node) => {
         if (Object.keys(templates[node.data.type]["template"]).length > 0) {
