@@ -42,8 +42,11 @@ documentloaders:
   - IMSDbLoader
   - GitbookLoader
   - ReadTheDocsLoader
+  - NotionDirectoryLoader
 embeddings:
   - OpenAIEmbeddings
+  - HuggingFaceEmbeddings
+
 llms:
   - OpenAI
   # - AzureOpenAI
@@ -60,6 +63,9 @@ prompts:
   - ZeroShotPrompt
 textsplitters:
   - CharacterTextSplitter
+  - RecursiveCharacterTextSplitter
+  - LatexTextSplitter
+  - PythonCodeTextSplitter
 toolkits:
   - OpenAPIToolkit
   - JsonToolkit

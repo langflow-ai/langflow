@@ -120,7 +120,7 @@ def save_binary_file(content: str, file_name: str, accepted_types: list[str]) ->
 
     # Get the destination folder
     cache_path = Path(tempfile.gettempdir()) / PREFIX
-    if content is None:
+    if not content:
         raise ValueError("Please, reload the file in the loader.")
     data = content.split(",")[1]
     decoded_bytes = base64.b64decode(data)

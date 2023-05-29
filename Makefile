@@ -5,6 +5,10 @@ all: help
 init:
 	@echo 'Installing pre-commit hooks'
 	git config core.hooksPath .githooks
+	@echo 'Installing backend dependencies'
+	make install_backend
+	@echo 'Installing frontend dependencies'
+	make install_frontend
 
 coverage:
 	poetry run pytest --cov \
@@ -17,7 +21,7 @@ tests:
 
 format:
 	poetry run black .
-	poetry run ruff --select I --fix .
+	poetry run ruff . --fix
 	cd src/frontend && npm run format
 
 lint:
