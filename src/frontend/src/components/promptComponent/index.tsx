@@ -5,6 +5,7 @@ import CodeAreaModal from "../../modals/codeAreaModal";
 import TextAreaModal from "../../modals/textAreaModal";
 import { TextAreaComponentType } from "../../types/components";
 import GenericModal from "../../modals/genericModal";
+import { TypeModal } from "../../utils";
 
 export default function PromptAreaComponent({
   value,
@@ -30,6 +31,7 @@ export default function PromptAreaComponent({
           onClick={() => {
             openPopUp(
               <GenericModal
+                type={TypeModal.PROMPT}
                 value={myValue}
                 buttonText="Check & Save"
                 modalTitle="Edit Prompt"
@@ -51,6 +53,7 @@ export default function PromptAreaComponent({
           onClick={() => {
             openPopUp(
               <GenericModal
+                type={TypeModal.PROMPT}
                 value={myValue}
                 buttonText="Check & Save"
                 modalTitle="Edit Prompt"

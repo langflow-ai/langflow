@@ -43,16 +43,19 @@ documentloaders:
   - GitbookLoader
   - ReadTheDocsLoader
   - SlackDirectoryLoader
+  - NotionDirectoryLoader
 embeddings:
   - OpenAIEmbeddings
   - HuggingFaceEmbeddings
-
+  - CohereEmbeddings
 llms:
   - OpenAI
   # - AzureOpenAI
   - ChatOpenAI
   - HuggingFaceHub
   - LlamaCpp
+  - CTransformers
+  - Cohere
 memories:
   - ConversationBufferMemory
   - ConversationSummaryMemory
@@ -63,6 +66,9 @@ prompts:
   - ZeroShotPrompt
 textsplitters:
   - CharacterTextSplitter
+  - RecursiveCharacterTextSplitter
+  - LatexTextSplitter
+  - PythonCodeTextSplitter
 toolkits:
   - OpenAPIToolkit
   - JsonToolkit
@@ -114,7 +120,7 @@ vectorstores:
   - Qdrant
   - Weaviate
 wrappers:
-  - RequestsWrapper # Wait more tests
+  - RequestsWrapper
   # - ChatPromptTemplate
   # - SystemMessagePromptTemplate
   # - HumanMessagePromptTemplate
