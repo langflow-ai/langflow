@@ -318,7 +318,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
               setDisableCopyPaste(false);
             }}
             onPaneMouseLeave={() => {
-              console.log("saiu o mouse")
+              console.log("saiu o mouse");
               setDisableCopyPaste(true);
             }}
             onNodesChange={onNodesChange}
