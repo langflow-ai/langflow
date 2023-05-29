@@ -11,7 +11,7 @@ export default function PromptAreaModal({
   setValue,
   buttonText,
   modalTitle,
-  type
+  type,
 }: {
   setValue: (value: string) => void;
   value: string;
@@ -121,40 +121,41 @@ export default function PromptAreaModal({
                         switch (myModalType) {
                           case 1:
                             setModalOpen(false);
-                          break;
+                            break;
                           case 2:
                             checkPrompt(myValue)
-                            .then((apiReturn) => {
-                              if (apiReturn.data) {
-                                let inputVariables =
-                                  apiReturn.data.input_variables;
-                                if (inputVariables.length === 0) {
+                              .then((apiReturn) => {
+                                if (apiReturn.data) {
+                                  let inputVariables =
+                                    apiReturn.data.input_variables;
+                                  if (inputVariables.length === 0) {
+                                    setErrorData({
+                                      title:
+                                        "The template you are attempting to use does not contain any variables for data entry.",
+                                    });
+                                  } else {
+                                    setSuccessData({
+                                      title: "Prompt is ready",
+                                    });
+                                    setModalOpen(false);
+                                    setValue(myValue);
+                                  }
+                                } else {
                                   setErrorData({
                                     title:
-                                      "The template you are attempting to use does not contain any variables for data entry.",
+                                      "Something went wrong, please try again",
                                   });
-                                } else {
-                                  setSuccessData({
-                                    title: "Prompt is ready",
-                                  });
-                                  setModalOpen(false);
-                                  setValue(myValue);
                                 }
-                              } else {
-                                setErrorData({
-                                  title: "Something went wrong, please try again",
+                              })
+                              .catch((error) => {
+                                return setErrorData({
+                                  title:
+                                    "There is something wrong with this prompt, please review it",
+                                  list: [error.response.data.detail],
                                 });
-                              }
-                            })
-                            .catch((error) => {
-                              return setErrorData({
-                                title:
-                                  "There is something wrong with this prompt, please review it",
-                                list: [error.response.data.detail],
                               });
-                            });
-                          break;
-                        
+                            break;
+
                           default:
                             break;
                         }

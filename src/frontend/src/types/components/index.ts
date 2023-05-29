@@ -10,6 +10,7 @@ export type InputComponentType = {
   disabled?: boolean;
   onChange: (value: string) => void;
   password: boolean;
+  disableCopyPaste?: boolean;
 };
 export type ToggleComponentType = {
   enabled: boolean;

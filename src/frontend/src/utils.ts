@@ -21,14 +21,17 @@ import { FlowType } from "./types/flow";
 import { APITemplateType, TemplateVariableType } from "./types/api";
 import _ from "lodash";
 import { ChromaIcon } from "./icons";
+import { v4 as uuidv4 } from "uuid";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
 }
 
+export const limitScrollFieldsModal = 7;
+
 export enum TypeModal {
   TEXT = 1,
-  PROMPT = 2 
+  PROMPT = 2,
 }
 
 export const textColors = {
@@ -501,33 +504,62 @@ export const programmingLanguages: languageMap = {
 };
 
 export function toTitleCase(str: string) {
-	let result = str
-		.split("_")
-		.map((word, index) => {
-			if (index === 0) {
+  let result = str
+    .split("_")
+    .map((word, index) => {
+      if (index === 0) {
+        return checkUpperWords(
+          word[0].toUpperCase() + word.slice(1).toLowerCase()
+        );
+      }
+      return checkUpperWords(word.toLowerCase());
+    })
+    .join(" ");
 
-				return checkUpperWords(word[0].toUpperCase() + word.slice(1).toLowerCase());
-			}
-			return checkUpperWords(word.toLowerCase());
-		})
-		.join(" ");
-
-	return result
-		.split("-")
-		.map((word, index) => {
-			if (index === 0) {
-				return checkUpperWords(word[0].toUpperCase() + word.slice(1).toLowerCase());
-			}
-			return checkUpperWords(word.toLowerCase());
-		})
-		.join(" ");
+  return result
+    .split("-")
+    .map((word, index) => {
+      if (index === 0) {
+        return checkUpperWords(
+          word[0].toUpperCase() + word.slice(1).toLowerCase()
+        );
+      }
+      return checkUpperWords(word.toLowerCase());
+    })
+    .join(" ");
 }
 
 export const upperCaseWords: string[] = ["llm", "uri"];
 export function checkUpperWords(str: string) {
-  const words = str.split(' ').map((word) => {
-    return upperCaseWords.includes(word.toLowerCase()) ? word.toUpperCase() : word[0].toUpperCase() + word.slice(1).toLowerCase();
+  const words = str.split(" ").map((word) => {
+    return upperCaseWords.includes(word.toLowerCase())
+      ? word.toUpperCase()
+      : word[0].toUpperCase() + word.slice(1).toLowerCase();
   });
 
-  return words.join(' ');
+  return words.join(" ");
+}
+
+export function updateIds(newFLow: FlowType, baseFlow: FlowType) {
+  newFLow.data.nodes.forEach((node) => {
+    while (baseFlow.data.nodes.some((n) => n.id === node.id)) {
+      const newId = uuidv4();
+      newFLow.data.edges.forEach((edge) => {
+        if (edge.source === node.id) {
+          edge.source = newId;
+        }
+        if (edge.target === node.id) {
+          edge.target = newId;
+        }
+        const index = edge.id.split("|").findIndex((e) => e === node.id);
+        if (index != -1) {
+          let tempList = edge.id.split("|");
+          tempList[index] = newId;
+          edge.id = tempList.concat(newId).join("|");
+        }
+        node.id = newId;
+      });
+    }
+  });
+  return newFLow;
 }
