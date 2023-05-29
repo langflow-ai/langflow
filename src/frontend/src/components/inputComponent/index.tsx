@@ -6,11 +6,13 @@ import { TabsContext } from "../../contexts/tabsContext";
 export default function InputComponent({
   value,
   onChange,
+  disableCopyPaste = false,
   disabled,
   password,
 }: InputComponentType) {
   const [myValue, setMyValue] = useState(value ?? "");
   const [pwdVisible, setPwdVisible] = useState(false);
+  const {setDisableCopyPaste} = useContext(TabsContext);
   useEffect(() => {
     if (disabled) {
       setMyValue("");
@@ -27,6 +29,8 @@ export default function InputComponent({
     >
       <input
         value={myValue}
+        onFocus={() => {if(disableCopyPaste) setDisableCopyPaste(true)}}
+        onBlur={() => {if(disableCopyPaste) setDisableCopyPaste(false)}}
         className={classNames(
           "block w-full pr-12 form-input dark:bg-gray-900 dark:border-gray-600 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
           disabled ? " bg-gray-200 dark:bg-gray-700" : "",
