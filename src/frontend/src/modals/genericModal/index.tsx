@@ -37,6 +37,44 @@ export default function PromptAreaModal({
     }
   }
 
+  const handleModalTypeText = () => {
+    setModalOpen(false);
+  };
+
+  const handleModalTypePrompt = () => {
+    checkPrompt(myValue)
+    .then((apiReturn) => {
+      if (apiReturn.data) {
+        let inputVariables =
+          apiReturn.data.input_variables;
+        if (inputVariables.length === 0) {
+          setErrorData({
+            title:
+              "The template you are attempting to use does not contain any variables for data entry.",
+          });
+        } else {
+          setSuccessData({
+            title: "Prompt is ready",
+          });
+          setModalOpen(false);
+          setValue(myValue);
+        }
+      } else {
+        setErrorData({
+          title: "Something went wrong, please try again",
+        });
+      }
+    })
+    .catch((error) => {
+      return setErrorData({
+        title:
+          "There is something wrong with this prompt, please review it",
+        list: [error.response.data.detail],
+      });
+    });
+  };
+
+
   return (
     <Transition.Root show={open} appear={true} as={Fragment}>
       <Dialog
@@ -119,40 +157,11 @@ export default function PromptAreaModal({
                       className="inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm"
                       onClick={() => {
                         switch (myModalType) {
-                          case 1:
-                            setModalOpen(false);
+                          case TypeModal.TEXT:
+                            handleModalTypeText();
                           break;
-                          case 2:
-                            checkPrompt(myValue)
-                            .then((apiReturn) => {
-                              if (apiReturn.data) {
-                                let inputVariables =
-                                  apiReturn.data.input_variables;
-                                if (inputVariables.length === 0) {
-                                  setErrorData({
-                                    title:
-                                      "The template you are attempting to use does not contain any variables for data entry.",
-                                  });
-                                } else {
-                                  setSuccessData({
-                                    title: "Prompt is ready",
-                                  });
-                                  setModalOpen(false);
-                                  setValue(myValue);
-                                }
-                              } else {
-                                setErrorData({
-                                  title: "Something went wrong, please try again",
-                                });
-                              }
-                            })
-                            .catch((error) => {
-                              return setErrorData({
-                                title:
-                                  "There is something wrong with this prompt, please review it",
-                                list: [error.response.data.detail],
-                              });
-                            });
+                          case TypeModal.PROMPT:
+                            handleModalTypePrompt();
                           break;
                         
                           default:
