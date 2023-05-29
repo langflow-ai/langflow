@@ -16,9 +16,9 @@ export default function IntComponent({
   }, [disabled, onChange]);
   return (
     <div
-      className={
+      className={"w-full " + (
         disabled ? "pointer-events-none cursor-not-allowed w-full" : "w-full"
-      }
+  )}
     >
       <input
         onKeyDown={(event) => {
