@@ -34,7 +34,7 @@ export default function ExtraSidebar() {
               {Object.keys(data[d])
                 .sort()
                 .map((t: string, k) => (
-                  <Tooltip title={t.length > 21 ? t : ''} placement="right">
+                  <Tooltip title={t.length > 21 ? t : ""} placement="right">
                     <div key={k}>
                       <div
                         draggable
