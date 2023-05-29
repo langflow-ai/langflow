@@ -119,6 +119,7 @@ export default function ParameterComponent({
             ) : (
               <InputComponent
                 disabled={disabled}
+                disableCopyPaste={true}
                 password={data.node.template[name].password ?? false}
                 value={data.node.template[name].value ?? ""}
                 onChange={(t) => {
