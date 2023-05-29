@@ -20,6 +20,7 @@ import { Connection, Edge, Node, ReactFlowInstance } from "reactflow";
 import { FlowType } from "./types/flow";
 import { APITemplateType, TemplateVariableType } from "./types/api";
 import _ from "lodash";
+import { v4 as uuidv4 } from "uuid";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -533,4 +534,28 @@ export function checkUpperWords(str: string) {
   });
 
   return words.join(" ");
+}
+
+export function updateIds(newFLow: FlowType, baseFlow: FlowType) {
+  newFLow.data.nodes.forEach((node) => {
+    while (baseFlow.data.nodes.some((n) => n.id === node.id)) {
+      const newId = uuidv4();
+      newFLow.data.edges.forEach((edge) => {
+        if (edge.source === node.id) {
+          edge.source = newId;
+        }
+        if (edge.target === node.id) {
+          edge.target = newId;
+        }
+        const index = edge.id.split("|").findIndex((e) => e === node.id);
+        if (index != -1) {
+          let tempList = edge.id.split("|");
+          tempList[index] = newId;
+          edge.id = tempList.concat(newId).join("|");
+        }
+        node.id = newId;
+      });
+    }
+  });
+  return newFLow;
 }
