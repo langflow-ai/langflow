@@ -718,6 +718,23 @@ sqlalchemy = ["sqlalchemy (>1.3.21,<1.4)"]
 superset = ["apache-superset (>=1.4.1)"]
 
 [[package]]
+name = "cohere"
+version = "4.6.0"
+description = ""
+category = "main"
+optional = false
+python-versions = ">=3.7,<4.0"
+files = [
+    {file = "cohere-4.6.0-py3-none-any.whl", hash = "sha256:fc60fa73a2d96bdb9f70da4a290d3ede320b74ac01a24c229011049d7cb3511f"},
+    {file = "cohere-4.6.0.tar.gz", hash = "sha256:43218a0a40f6fc023e068732994fb631ce5d160a0bc9f9a3a22524b5932f34ea"},
+]
+
+[package.dependencies]
+aiohttp = ">=3.0,<4.0"
+backoff = ">=2.0,<3.0"
+requests = ">=2.0,<3.0"
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 description = "Cross-platform colored terminal text."
@@ -875,24 +892,6 @@ ssh = ["bcrypt (>=3.1.5)"]
 test = ["iso8601", "pretend", "pytest (>=6.2.0)", "pytest-benchmark", "pytest-cov", "pytest-shard (>=0.1.2)", "pytest-subtests", "pytest-xdist"]
 test-randomorder = ["pytest-randomly"]
 tox = ["tox"]
-
-[[package]]
-name = "ctransformers"
-version = "0.2.2"
-description = "Python bindings for the Transformer models implemented in C/C++ using GGML library."
-category = "main"
-optional = false
-python-versions = "*"
-files = [
-    {file = "ctransformers-0.2.2-py3-none-any.whl", hash = "sha256:bf682dd0293dd87911c9a9a1169a4873ff55baebc16d465c6029c77f11b18cf6"},
-    {file = "ctransformers-0.2.2.tar.gz", hash = "sha256:1fc36b3fde36d9fd3cb69e48993315bb1f5f54ae552720eb909dc4b3a131c743"},
-]
-
-[package.dependencies]
-huggingface-hub = "*"
-
-[package.extras]
-tests = ["pytest"]
 
 [[package]]
 name = "dataclasses-json"
@@ -2311,14 +2310,14 @@ test = ["ipykernel", "pre-commit", "pytest", "pytest-cov", "pytest-timeout"]
 
 [[package]]
 name = "langchain"
-version = "0.0.184"
+version = "0.0.183"
 description = "Building applications with LLMs through composability"
 category = "main"
 optional = false
 python-versions = ">=3.8.1,<4.0"
 files = [
-    {file = "langchain-0.0.184-py3-none-any.whl", hash = "sha256:819513b3acbd32ad24a55e48e0cabc8f60e09bb4293ca5b655d18e6d24353940"},
-    {file = "langchain-0.0.184.tar.gz", hash = "sha256:e02a73b5cac889e761fc11c12297d4479a9727287c51a251ca2669a8a79ae348"},
+    {file = "langchain-0.0.183-py3-none-any.whl", hash = "sha256:d98e56bf5189599f6500d59908f85b5a6cdf65545e34b41165c7c98beb1ccd0e"},
+    {file = "langchain-0.0.183.tar.gz", hash = "sha256:ec9712ae9d11b14f02e703f123d9493f82d49fd80e86df4ff4014df2af06aeca"},
 ]
 
 [package.dependencies]
@@ -2348,13 +2347,13 @@ text-helpers = ["chardet (>=5.1.0,<6.0.0)"]
 
 [[package]]
 name = "langchain-serve"
-version = "0.0.38"
+version = "0.0.33"
 description = "Langchain Serve - serve your langchain apps on Jina AI Cloud."
 category = "main"
 optional = true
 python-versions = "*"
 files = [
-    {file = "langchain-serve-0.0.38.tar.gz", hash = "sha256:649b8e26eebe6b33960c081b388fb7118acbfdc00f97dd935a580ab88aca53d6"},
+    {file = "langchain-serve-0.0.33.tar.gz", hash = "sha256:89396d932c75230ddd7c802824fc766df1ac95872c1a8f2da68d0ec8a54f761a"},
 ]
 
 [package.dependencies]
@@ -2367,8 +2366,6 @@ nest-asyncio = "*"
 requests = "*"
 textual = "*"
 toml = "*"
-typing_extensions = "4.5.0"
-typing-inspect = "0.8.0"
 
 [package.extras]
 test = ["psutil", "pytest", "pytest-asyncio"]
@@ -5492,14 +5489,14 @@ files = [
 
 [[package]]
 name = "types-requests"
-version = "2.31.0.1"
+version = "2.31.0.0"
 description = "Typing stubs for requests"
 category = "dev"
 optional = false
 python-versions = "*"
 files = [
-    {file = "types-requests-2.31.0.1.tar.gz", hash = "sha256:3de667cffa123ce698591de0ad7db034a5317457a596eb0b4944e5a9d9e8d1ac"},
-    {file = "types_requests-2.31.0.1-py3-none-any.whl", hash = "sha256:afb06ef8f25ba83d59a1d424bd7a5a939082f94b94e90ab5e6116bd2559deaa3"},
+    {file = "types-requests-2.31.0.0.tar.gz", hash = "sha256:c1c29d20ab8d84dff468d7febfe8e0cb0b4664543221b386605e14672b44ea25"},
+    {file = "types_requests-2.31.0.0-py3-none-any.whl", hash = "sha256:7c5cea7940f8e92ec560bbc468f65bf684aa3dcf0554a6f8c4710f5f708dc598"},
 ]
 
 [package.dependencies]
@@ -5531,14 +5528,14 @@ files = [
 
 [[package]]
 name = "typing-inspect"
-version = "0.8.0"
+version = "0.9.0"
 description = "Runtime inspection utilities for typing module."
 category = "main"
 optional = false
 python-versions = "*"
 files = [
-    {file = "typing_inspect-0.8.0-py3-none-any.whl", hash = "sha256:5fbf9c1e65d4fa01e701fe12a5bca6c6e08a4ffd5bc60bfac028253a447c5188"},
-    {file = "typing_inspect-0.8.0.tar.gz", hash = "sha256:8b1ff0c400943b6145df8119c41c244ca8207f1f10c9c057aeed1560e4806e3d"},
+    {file = "typing_inspect-0.9.0-py3-none-any.whl", hash = "sha256:9ee6fc59062311ef8547596ab6b955e1b8aa46242d854bfc78f4f6b0eff35f9f"},
+    {file = "typing_inspect-0.9.0.tar.gz", hash = "sha256:b23fc42ff6f6ef6954e4852c1fb512cdd18dbea03134f91f856a95ccc9461f78"},
 ]
 
 [package.dependencies]
@@ -6152,4 +6149,4 @@ deploy = ["langchain-serve"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "c51c9c7aa21fbe949ea9218412f9979064c4dd8a7fa23da76347a35333306a6e"
+content-hash = "ae4852378416319ee45512e200759438615dc8a4e840369176234dd04ec2a3ec"
