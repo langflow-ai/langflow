@@ -43,7 +43,7 @@ class LLMFrontendNode(FrontendNode):
             field.field_type = "code"
             field.advanced = True
             field.show = True
-        elif field.name in ["model_name", "temperature"]:
+        elif field.name in ["model_name", "temperature", "model_file", "model_type"]:
             field.advanced = False
             field.show = True
 

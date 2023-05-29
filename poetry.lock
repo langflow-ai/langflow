@@ -877,6 +877,24 @@ test-randomorder = ["pytest-randomly"]
 tox = ["tox"]
 
 [[package]]
+name = "ctransformers"
+version = "0.2.2"
+description = "Python bindings for the Transformer models implemented in C/C++ using GGML library."
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "ctransformers-0.2.2-py3-none-any.whl", hash = "sha256:bf682dd0293dd87911c9a9a1169a4873ff55baebc16d465c6029c77f11b18cf6"},
+    {file = "ctransformers-0.2.2.tar.gz", hash = "sha256:1fc36b3fde36d9fd3cb69e48993315bb1f5f54ae552720eb909dc4b3a131c743"},
+]
+
+[package.dependencies]
+huggingface-hub = "*"
+
+[package.extras]
+tests = ["pytest"]
+
+[[package]]
 name = "dataclasses-json"
 version = "0.5.7"
 description = "Easily serialize dataclasses to and from JSON"
