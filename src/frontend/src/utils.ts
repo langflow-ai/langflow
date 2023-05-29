@@ -27,7 +27,7 @@ export function classNames(...classes: Array<string>) {
 
 export enum TypeModal {
   TEXT = 1,
-  PROMPT = 2 
+  PROMPT = 2,
 }
 
 export const textColors = {
@@ -499,33 +499,38 @@ export const programmingLanguages: languageMap = {
 };
 
 export function toTitleCase(str: string) {
-	let result = str
-		.split("_")
-		.map((word, index) => {
-			if (index === 0) {
+  let result = str
+    .split("_")
+    .map((word, index) => {
+      if (index === 0) {
+        return checkUpperWords(
+          word[0].toUpperCase() + word.slice(1).toLowerCase()
+        );
+      }
+      return checkUpperWords(word.toLowerCase());
+    })
+    .join(" ");
 
-				return checkUpperWords(word[0].toUpperCase() + word.slice(1).toLowerCase());
-			}
-			return checkUpperWords(word.toLowerCase());
-		})
-		.join(" ");
-
-	return result
-		.split("-")
-		.map((word, index) => {
-			if (index === 0) {
-				return checkUpperWords(word[0].toUpperCase() + word.slice(1).toLowerCase());
-			}
-			return checkUpperWords(word.toLowerCase());
-		})
-		.join(" ");
+  return result
+    .split("-")
+    .map((word, index) => {
+      if (index === 0) {
+        return checkUpperWords(
+          word[0].toUpperCase() + word.slice(1).toLowerCase()
+        );
+      }
+      return checkUpperWords(word.toLowerCase());
+    })
+    .join(" ");
 }
 
 export const upperCaseWords: string[] = ["llm", "uri"];
 export function checkUpperWords(str: string) {
-  const words = str.split(' ').map((word) => {
-    return upperCaseWords.includes(word.toLowerCase()) ? word.toUpperCase() : word[0].toUpperCase() + word.slice(1).toLowerCase();
+  const words = str.split(" ").map((word) => {
+    return upperCaseWords.includes(word.toLowerCase())
+      ? word.toUpperCase()
+      : word[0].toUpperCase() + word.slice(1).toLowerCase();
   });
 
-  return words.join(' ');
+  return words.join(" ");
 }
