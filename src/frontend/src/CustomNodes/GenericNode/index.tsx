@@ -1,13 +1,17 @@
 import {
   BugAntIcon,
-  CheckCircleIcon,
   Cog6ToothIcon,
-  EllipsisHorizontalCircleIcon,
-  ExclamationCircleIcon,
   InformationCircleIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
-import { classNames, nodeColors, nodeIcons, toNormalCase } from "../../utils";
+
+import {
+  CheckCircleIcon,
+  EllipsisHorizontalCircleIcon,
+  ExclamationCircleIcon,
+} from "@heroicons/react/24/solid";
+
+import { classNames, nodeColors, nodeIcons, toNormalCase, toTitleCase } from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
 import { typesContext } from "../../contexts/typesContext";
 import { useContext, useState, useEffect, useRef, Fragment } from "react";
@@ -101,7 +105,9 @@ export default function GenericNode({
               color: nodeColors[types[data.type]] ?? nodeColors.unknown,
             }}
           />
-          <div className="ml-2 truncate">{data.type}</div>
+          <Tooltip title={data.type} placement="top">
+              <div className="ml-2 truncate">{data.type}</div>
+          </Tooltip>
           <div>
             <Tooltip
               title={
@@ -170,7 +176,7 @@ export default function GenericNode({
                 )
                   ? ""
                   : "hidden",
-                "w-6 h-6  dark:text-gray-300  hover:animate-spin"
+                "w-6 h-6  dark:text-gray-300  hover:animate-spin-once"
               )}
             ></Cog6ToothIcon>
           </button>
@@ -225,8 +231,8 @@ export default function GenericNode({
                       data.node.template[t].display_name
                         ? data.node.template[t].display_name
                         : data.node.template[t].name
-                        ? toNormalCase(data.node.template[t].name)
-                        : toNormalCase(t)
+                        ? toTitleCase(data.node.template[t].name)
+                        : toTitleCase(t)
                     }
                     name={t}
                     tooltipTitle={
