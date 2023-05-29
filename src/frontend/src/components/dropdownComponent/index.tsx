@@ -23,9 +23,9 @@ export default function Dropdown({
       >
         {({ open }) => (
           <>
-            <div className="relative mt-1">
+            <div className="relative mt-1 w-full">
               <Listbox.Button className="relative w-full cursor-default rounded-md border border-gray-300 bg-white dark:bg-gray-900 py-2 pl-3 pr-10 text-left shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm">
-                <span className="block w-max truncate">{internalValue}</span>
+                <span className="block truncate w-full">{internalValue}</span>
                 <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
                   <ChevronUpDownIcon
                     className="h-5 w-5 text-gray-400"
