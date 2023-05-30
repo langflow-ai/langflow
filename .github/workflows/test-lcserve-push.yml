@@ -1,0 +1,17 @@
+name: Trigger build and push on langchain-serve
+
+on:
+  workflow_dispatch:
+
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger build and push on langchain-serve
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.SERVE_GITHUB_TOKEN }}
+          repository: jina-ai/langchain-serve
+          event-type: langflow-push
+          client-payload: '{"push_token": "${{ secrets.LCSERVE_PUSH_TOKEN }}", "branch": "dev"}'

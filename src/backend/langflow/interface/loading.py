@@ -134,7 +134,13 @@ def instantiate_documentloader(class_object, params):
 
 
 def instantiate_textsplitter(class_object, params):
-    documents = params.pop("documents")
+    try:
+        documents = params.pop("documents")
+    except KeyError as e:
+        raise ValueError(
+            "The source you provided did not load correctly or was empty."
+            "Try changing the chunk_size of the Text Splitter."
+        ) from e
     text_splitter = class_object(**params)
     return text_splitter.split_documents(documents)
 
@@ -146,10 +152,10 @@ def instantiate_utility(node_type, class_object, params):
 
 
 def load_flow_from_json(path: str, build=True):
+    """Load flow from json file"""
     # This is done to avoid circular imports
     from langflow.graph import Graph
 
-    """Load flow from json file"""
     with open(path, "r", encoding="utf-8") as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]
