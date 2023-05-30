@@ -15,6 +15,7 @@ export type APIClassType = {
 	[key: string]: Array<string> | string | APITemplateType | FlowType;
 };
 export type TemplateVariableType = {
+  root:boolean;
   type: string;
   required: boolean;
   placeholder?: string;

@@ -183,7 +183,7 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
             .filter((field_name) => field_name.charAt(0) !== "_").map((field_name: string, idx) =>
               <div key={idx}>
                 {data.node.template[field_name].show &&
-                  field_name != "root_field" &&
+                  !data.node.template[field_name].root &&
                   !data.node.template[field_name].advanced ? (
                   <ParameterComponent
                     data={data}
@@ -210,7 +210,7 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
                       "|" +
                       field_name +
                       "|" +
-                      data.id+(data.node.template[field_name].proxy?("|"+data.node.template[field_name].proxy.id+"|"+data.node.template[field_name].proxy.field):"")
+                      data.id + (data.node.template[field_name].proxy ? ("|" + data.node.template[field_name].proxy.id + "|" + data.node.template[field_name].proxy.field) : "")
                     }
                     left={true}
                     type={data.node.template[field_name].type}
@@ -221,16 +221,23 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
               </div>)
           }
         </>
-        {data.node.template.root_field ? (
-          <InputParameterComponent
-            data={data}
-            color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-            title={data.node.template.root_field.display_name}
-            tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
-            id={[data.type, data.id, ...data.node.base_classes].join("|")}
-            type={data.node.base_classes.join("|")}
-            left={false}
-          />
+        {Object.keys(data.node.template).some(key => data.node.template[key].root === true) ? (
+          Object.keys(data.node.template).map((field_name: string, idx) => {
+            if(data.node.template[field_name].root === true) return <InputParameterComponent
+              key={idx}
+              data={data}
+              color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+              title={"Input"}
+              tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
+              id={data.node.template[field_name].type +
+                "|" +
+                field_name +
+                "|" +
+                data.id + (data.node.template[field_name].proxy ? ("|" + data.node.template[field_name].proxy.id + "|" + data.node.template[field_name].proxy.field) : "")}
+              type={data.node.base_classes.join("|")}
+              left={false}
+            />
+          })
         ) : (
           <ParameterComponent
             data={data}

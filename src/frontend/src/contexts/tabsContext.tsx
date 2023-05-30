@@ -278,7 +278,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     let data = flow?.data ? flow.data : null;
     if (data) {
       data.nodes.forEach((node) => {
-        if (Object.keys(templates[node.data.type]["template"]).length > 0) {
+        if (templates[node.data.type] &&  Object.keys(templates[node.data.type]["template"]).length > 0) {
           node.data.node.base_classes =
             templates[node.data.type]["base_classes"];
           flow.data.edges.forEach((edge) => {
