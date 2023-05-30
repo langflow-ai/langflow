@@ -8,20 +8,6 @@ from langflow.settings import settings
 from langflow.utils.logger import logger
 from langflow.utils.util import build_template_from_class
 
-def build_file_path_template(
-        suffixes: list, fileTypes: list, name: str = "file_path"
-    ) -> Dict:
-        """Build a file path template for a document loader."""
-        return TemplateField(
-                field_type="file",
-                required=True,
-                show=True,
-                name=name,
-                value="",
-                suffixes=suffixes,
-                fileTypes=fileTypes,
-                )
-
 class DocumentLoaderCreator(LangChainTypeCreator):
     type_name: str = "documentloaders"
 
