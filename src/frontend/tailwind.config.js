@@ -17,6 +17,7 @@ module.exports = {
 
       animation: {
         "pulse-green": "pulseGreen 1s linear",
+        'spin-once': 'spin 1s linear 0.7'
       },
       keyframes: {
         pulseGreen: {
@@ -86,6 +87,7 @@ module.exports = {
         },
         ".dark .theme-attribution .react-flow__attribution": {
           backgroundColor: "rgba(255, 255, 255, 0.2)",
+          padding: "0px 5px",
         },
         ".dark .theme-attribution .react-flow__attribution a": {
           color: "black",

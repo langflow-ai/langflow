@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional
 
-from langchain.agents import loading
+from langchain.agents import types
 
 from langflow.custom.customs import get_custom_nodes
 from langflow.interface.agents.custom import CUSTOM_AGENTS
@@ -16,7 +16,7 @@ class AgentCreator(LangChainTypeCreator):
     @property
     def type_to_loader_dict(self) -> Dict:
         if self.type_dict is None:
-            self.type_dict = loading.AGENT_TO_CLASS
+            self.type_dict = types.AGENT_TO_CLASS
             # Add JsonAgent to the list of agents
             for name, agent in CUSTOM_AGENTS.items():
                 # TODO: validate AgentType

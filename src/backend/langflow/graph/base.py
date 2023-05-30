@@ -7,7 +7,6 @@ import contextlib
 import inspect
 import types
 import warnings
-from copy import deepcopy
 from typing import Any, Dict, List, Optional
 
 from langflow.cache import base as cache_utils
@@ -212,19 +211,7 @@ class Node:
         if not self._built or force:
             self._build()
 
-        #! Deepcopy is breaking for vectorstores
-        if self.base_type in [
-            "vectorstores",
-            "VectorStoreRouterAgent",
-            "VectorStoreAgent",
-            "VectorStoreInfo",
-        ] or self.node_type in [
-            "VectorStoreInfo",
-            "VectorStoreRouterToolkit",
-            "SQLDatabase",
-        ]:
-            return self._built_object
-        return deepcopy(self._built_object)
+        return self._built_object
 
     def add_edge(self, edge: "Edge") -> None:
         self.edges.append(edge)
