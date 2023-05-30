@@ -32,7 +32,7 @@ import {
 } from "reactflow";
 import { FlowType } from "./types/flow";
 import { APITemplateType } from "./types/api";
-import _, { forEach, get, template } from "lodash";
+import _, { forEach, functionsIn, get, template } from "lodash";
 import { v4 as uuidv4, validate } from "uuid";
 
 export function classNames(...classes: Array<string>) {
@@ -741,6 +741,11 @@ export function validateNode(n: NodeType, selection: OnSelectionChangeParams) {
 }
 
 export function validateSelection(selection: OnSelectionChangeParams) {
+
+	//check if there are two or more nodes with free outputs
+	if(selection.nodes.filter((n)=>!selection.edges.some((e)=>e.source === n.id)).length > 1){
+		return false;
+	}
 	
 	// check if there is any node that does not have any connection
 	if (selection.nodes.some(node=>!selection.edges.some(edge=>edge.target === node.id)&& !selection.edges.some(edge=>edge.source === node.id))){
@@ -829,7 +834,7 @@ export function generateNodeTemplate(Flow:FlowType){
 		this function receives a flow and generate a template for the group node
 	*/
 	let template = mergeNodeTemplates({nodes:Flow.data.nodes,edges:Flow.data.edges});
-	console.log(template);
 	updateGroupNodeTemplate(template);
 	return template;
 }
+
