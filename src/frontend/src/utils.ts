@@ -173,16 +173,16 @@ export const nodeIcons: {
   ChatOpenAI: OpenAiIcon,
   OpenAI: OpenAiIcon,
   OpenAIEmbeddings: OpenAiIcon,
-  PowerPoint: PowerPointIcon,
+  // UnstructuredPowerPointLoader: PowerPointIcon, // word and powerpoint have differente styles
   Qdrant: QDrantIcon,
-  ReadTheDocs: ReadTheDocsIcon,
+  // ReadTheDocsLoader: ReadTheDocsIcon, // does not work
   Searx: SearxIcon,
   SlackDirectoryLoader: SlackIcon,
   // Weaviate: WeaviateIcon,
   // WikipediaAPIWrapper: WikipediaIcon,
   // WolframAlphaQueryRun: WolframIcon,
   // WolframAlphaAPIWrapper: WolframIcon,
-  Word: WordIcon,
+  // UnstructuredWordDocumentLoader: WordIcon, // word and powerpoint have differente styles
   agents: RocketLaunchIcon,
   chains: LinkIcon,
   memories: CpuChipIcon,
