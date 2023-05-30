@@ -151,7 +151,12 @@ export default function ChatMessage({
       ) : (
         <div className="w-full flex items-center">
           <div className="text-start inline-block px-3 text-sm text-gray-600 dark:text-white">
-            <div className="text-gray-600 dark:text-gray-200">{message}</div>
+            <span
+              className="text-gray-600 dark:text-gray-200"
+              dangerouslySetInnerHTML={{
+                __html: message.replace(/\n/g, "<br>"),
+              }}
+            ></span>
           </div>
         </div>
       )}
