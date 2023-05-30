@@ -21,24 +21,24 @@ import { v4 as uuidv4 } from "uuid";
 import { addEdge } from "reactflow";
 
 const TabsContextInitialValue: TabsContextType = {
-  save: () => { },
+  save: () => {},
   tabIndex: 0,
-  setTabIndex: (index: number) => { },
+  setTabIndex: (index: number) => {},
   flows: [],
-  removeFlow: (id: string) => { },
-  addFlow: (flowData?: any) => { },
-  updateFlow: (newFlow: FlowType) => { },
+  removeFlow: (id: string) => {},
+  addFlow: (flowData?: any) => {},
+  updateFlow: (newFlow: FlowType) => {},
   incrementNodeId: () => uuidv4(),
-  downloadFlow: (flow: FlowType) => { },
-  uploadFlow: () => { },
-  hardReset: () => { },
+  downloadFlow: (flow: FlowType) => {},
+  uploadFlow: () => {},
+  hardReset: () => {},
   disableCopyPaste: false,
-  setDisableCopyPaste: (state: boolean) => { },
+  setDisableCopyPaste: (state: boolean) => {},
   getNodeId: () => "",
   paste: (
     selection: { nodes: any; edges: any },
     position: { x: number; y: number }
-  ) => { },
+  ) => {},
 };
 
 export const TabsContext = createContext<TabsContextType>(
@@ -109,7 +109,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
               templates[node.data.type]["description"];
             node.data.node.template = updateTemplate(
               templates[node.data.type][
-              "template"
+                "template"
               ] as unknown as APITemplateType,
 
               node.data.node.template as APITemplateType

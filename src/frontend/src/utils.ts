@@ -180,7 +180,7 @@ export const nodeIcons: {
   // Weaviate: WeaviateIcon,
   // WikipediaAPIWrapper: WikipediaIcon,
   // WolframAlphaQueryRun: WolframIcon,
-  // WolframAlphaAPIWrapper: WolframIcon,  
+  // WolframAlphaAPIWrapper: WolframIcon,
   Word: WordIcon,
   agents: RocketLaunchIcon,
   chains: LinkIcon,
