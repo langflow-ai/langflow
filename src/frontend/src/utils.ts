@@ -794,7 +794,13 @@ export function mergeNodeTemplates({nodes,edges}:{nodes:NodeType[],edges:Edge[]}
 			if(nodeTemplate[key].show && !isHandleConnected(edges,key,nodeTemplate[key],node.id)){
 				template[key+"_"+node.id] = nodeTemplate[key];
 				template[key+"_"+node.id].proxy = {id:node.id,field:key};
-				template[key+"_"+node.id].display_name = nodeTemplate[key].name	+", "+ node.data.type;
+				if(node.type==="groupNode")
+				{
+					template[key+"_"+node.id].display_name = nodeTemplate[key].name +", "+ node.data.node.flow.name;		
+				}
+				else{
+					template[key+"_"+node.id].display_name = nodeTemplate[key].name	+", "+ node.data.type;
+				}
 			}
 		})
 	})
