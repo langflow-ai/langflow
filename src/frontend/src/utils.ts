@@ -620,7 +620,7 @@ export function expandGroupNode(
 	ReactFlowInstance.getEdges().forEach((edge) => {
 		let newEdge = _.cloneDeep(edge);
 		if (newEdge.target === flow.id) {
-			if(newEdge.targetHandle.split("|").length === 5){
+			if(newEdge.targetHandle.split("|").length >3){
 			let type = newEdge.targetHandle.split("|")[0];
 			let field = newEdge.targetHandle.split("|")[4];
 			let proxy = newEdge.targetHandle.split("|")[3];
