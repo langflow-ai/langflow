@@ -273,6 +273,7 @@ def format_dict(d, name: Optional[str] = None):
             "examples",
             "code",
             "headers",
+            "format_instructions",
         ]
 
         # Replace dict type with str
