@@ -84,7 +84,7 @@ export default function ExportModal() {
                         as="h3"
                         className="text-lg font-medium dark:text-white leading-10 text-gray-900"
                       >
-                        Export as
+                        Export
                       </Dialog.Title>
                     </div>
                   </div>
