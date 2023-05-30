@@ -151,10 +151,11 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
         addEdge(
           {
             ...params,
-            style:
+            style: { stroke: "inherit" },
+            className:
               params.targetHandle.split("|")[0] === "Text"
-                ? { stroke: "#333333", strokeWidth: 2 }
-                : { stroke: "#555555" },
+                ? "stroke-gray-800 dark:stroke-gray-300"
+                : "stroke-gray-900 dark:stroke-gray-200",
             animated: params.targetHandle.split("|")[0] === "Text",
           },
           eds
