@@ -838,3 +838,10 @@ export function generateNodeTemplate(Flow:FlowType){
 	return template;
 }
 
+export function findLastNode({nodes,edges}:{nodes:Node[],edges:Edge[]}){
+	/*
+		this function receives a flow and return the last node
+	*/
+	let lastNode = nodes.find((n)=>!edges.some((e)=>e.source === n.id));
+	return lastNode;
+}
