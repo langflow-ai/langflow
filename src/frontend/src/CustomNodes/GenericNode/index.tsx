@@ -28,6 +28,7 @@ import NodeModal from "../../modals/NodeModal";
 import { useCallback } from "react";
 import { TabsContext } from "../../contexts/tabsContext";
 import { debounce } from "../../utils";
+import TooltipReact from "../../components/ReactTooltipComponent";
 import Tooltip from "../../components/TooltipComponent";
 export default function GenericNode({
   data,
@@ -111,9 +112,17 @@ export default function GenericNode({
               color: nodeColors[types[data.type]] ?? nodeColors.unknown,
             }}
           />
-          <Tooltip title={data.type} placement="top">
-            <div className="ml-2 truncate">{data.type}</div>
-          </Tooltip>
+          <div className="ml-2 truncate">
+            <TooltipReact
+              delayShow={1000}
+              selector={`node-selector-${data.type}`}
+              htmlContent={data.type}
+              position="top"
+            >
+              <div className="ml-2 truncate">{data.type}</div>
+            </TooltipReact>
+          </div>
+
           <div>
             <Tooltip
               title={
@@ -128,31 +137,28 @@ export default function GenericNode({
                 )
               }
             >
-              <div className="relative w-5 h-5">
-                <CheckCircleIcon
+              <div className="relative w-5 h-5 top-1 left-1">
+                <div
                   className={classNames(
                     validationStatus && validationStatus.valid
-                      ? "text-green-500 opacity-100"
-                      : "text-green-500 opacity-0 animate-spin",
-                    "absolute w-5 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
+                      ? "w-4 h-4 rounded-full bg-green-500 opacity-100"
+                      : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden"
                   )}
-                />
-                <ExclamationCircleIcon
+                ></div>
+                <div
                   className={classNames(
                     validationStatus && !validationStatus.valid
-                      ? "text-red-500 opacity-100"
-                      : "text-red-500 opacity-0 animate-spin",
-                    "w-5 absolute hover:text-gray-500 hover:dark:text-gray-600 transition-all ease-in-out duration-200"
+                      ? "w-4 h-4 rounded-full bg-yellow-500 opacity-100"
+                      : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden"
                   )}
-                />
-                <EllipsisHorizontalCircleIcon
+                ></div>
+                <div
                   className={classNames(
                     !validationStatus
-                      ? "text-yellow-500 opacity-100"
-                      : "text-yellow-500 opacity-0 animate-spin",
-                    "w-5 absolute hover:text-gray-500 hover:dark:text-gray-600 transition-all ease-in-out duration-300"
+                      ? "w-4 h-4 rounded-full bg-red-500 opacity-100"
+                      : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden"
                   )}
-                />
+                ></div>
               </div>
             </Tooltip>
           </div>
@@ -182,7 +188,7 @@ export default function GenericNode({
                 )
                   ? ""
                   : "hidden",
-                "w-6 h-6  dark:text-gray-300  hover:animate-spin-once"
+                "w-6 h-6  dark:text-gray-300"
               )}
             ></Cog6ToothIcon>
           </button>
@@ -191,7 +197,7 @@ export default function GenericNode({
               deleteNode(data.id);
             }}
           >
-            <TrashIcon className="w-6 h-6 hover:text-red-500 dark:text-gray-300 dark:hover:text-red-500"></TrashIcon>
+            <TrashIcon className="w-6 h-6 dark:text-gray-300"></TrashIcon>
           </button>
         </div>
       </div>
