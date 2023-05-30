@@ -777,7 +777,7 @@ export function mergeNodeTemplates({nodes,edges}:{nodes:NodeType[],edges:Edge[]}
 	nodes.forEach((node)=>{
 		let nodeTemplate = _.cloneDeep(node.data.node.template);
 		Object.keys(nodeTemplate).filter((field_name) => field_name.charAt(0) !== "_").forEach((key)=>{
-			if(nodeTemplate[key].show && !isHandleConnected(edges,nodeTemplate[key].type + "|" + key + "|" + node.id)){
+			if(nodeTemplate[key].show && !isHandleConnected(edges,key,nodeTemplate[key],node.id)){
 				template[key+"_"+node.id] = nodeTemplate[key];
 				template[key+"_"+node.id].proxy = {id:node.id,field:key};
 				template[key+"_"+node.id].display_name = nodeTemplate[key].name	+", "+ node.data.type;
@@ -787,15 +787,21 @@ export function mergeNodeTemplates({nodes,edges}:{nodes:NodeType[],edges:Edge[]}
 	return template;
 }
 
-function isHandleConnected(edges:Edge[], handleId:string){
+function isHandleConnected(edges:Edge[],key:string, field:TemplateVariableType,nodeId:string){
 	/*
 		this function receives a flow and a handleId and check if there is a connection with this handle
 	*/ 
-
-	if(edges.some((e)=>e.targetHandle === handleId)){
-		return true
+	if(field.proxy){
+		if(edges.some((e)=>e.targetHandle === field.type+"|"+key+"|"+nodeId+"|"+field.proxy.id+"|"+field.proxy.field)){
+			return true
+		}
 	}
-	return false;
+	else{
+		if(edges.some((e)=>e.targetHandle === field.type+"|"+key+"|"+nodeId)){
+			return true
+	}
+	}
+		return false;
 
 }
 
@@ -823,6 +829,7 @@ export function generateNodeTemplate(Flow:FlowType){
 		this function receives a flow and generate a template for the group node
 	*/
 	let template = mergeNodeTemplates({nodes:Flow.data.nodes,edges:Flow.data.edges});
+	console.log(template);
 	updateGroupNodeTemplate(template);
 	return template;
 }
