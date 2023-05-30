@@ -149,9 +149,17 @@ export default function GenericNode({
                 )
                   ? ""
                   : "hidden",
-                "w-6 h-6  dark:text-gray-300"
+                "w-5 h-5  dark:text-gray-300"
               )}
             ></Cog6ToothIcon>
+          </button>
+
+          <button
+            onClick={() => {
+              deleteNode(data.id);
+            }}
+          >
+            <TrashIcon className="w-5 h-5 dark:text-gray-300"></TrashIcon>
           </button>
 
           <div>
@@ -168,7 +176,7 @@ export default function GenericNode({
                 )
               }
             >
-              <div className="w-5 h-5 relative top-1">
+              <div className="w-5 h-5 relative top-[3px]">
                 <div
                   className={classNames(
                     validationStatus && validationStatus.valid
