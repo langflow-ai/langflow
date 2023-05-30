@@ -27,6 +27,7 @@
         "react-router-dom": "^6.8.1",
         "react-syntax-highlighter": "^15.5.0",
         "react-tabs": "^6.0.0",
+        "react-tooltip": "^5.13.1",
         "reactflow": "^11.5.5",
         "rehype-mathjax": "^4.0.2",
         "remark-gfm": "^3.0.1",

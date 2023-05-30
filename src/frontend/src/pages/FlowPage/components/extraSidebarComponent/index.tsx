@@ -4,7 +4,7 @@ import { nodeColors, nodeIcons, nodeNames } from "../../../../utils";
 import { useContext, useEffect, useState } from "react";
 import { typesContext } from "../../../../contexts/typesContext";
 import { APIClassType, APIObjectType } from "../../../../types/api";
-import Tooltip from "../../../../components/TooltipComponent";
+import TooltipReact from "../../../../components/ReactTooltipComponent";
 
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);
@@ -34,8 +34,14 @@ export default function ExtraSidebar() {
               {Object.keys(data[d])
                 .sort()
                 .map((t: string, k) => (
-                  <Tooltip title={t.length > 21 ? t : ""} placement="right">
-                    <div key={k}>
+                  <TooltipReact
+                    selector={t}
+                    htmlContent={t}
+                    position="right"
+                    delayShow={1500}
+                    key={k}
+                  >
+                    <div key={k} data-tooltip-id={t}>
                       <div
                         draggable
                         className={" cursor-grab border-l-8 rounded-l-md"}
@@ -57,7 +63,7 @@ export default function ExtraSidebar() {
                         </div>
                       </div>
                     </div>
-                  </Tooltip>
+                  </TooltipReact>
                 ))}
               {Object.keys(data[d]).length === 0 && (
                 <div className="text-gray-400 text-center">Coming soon</div>
