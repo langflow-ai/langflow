@@ -324,6 +324,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChangeMod}
             onConnect={onConnect}
+            disableKeyboardA11y={true}
             onLoad={setReactFlowInstance}
             onInit={setReactFlowInstance}
             nodeTypes={nodeTypes}
