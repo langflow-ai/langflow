@@ -62,6 +62,11 @@ class PromptNode(Node):
                     if tools is not None
                     else []
                 )
+                # flatten the list of tools if it is a list of lists
+                # first check if it is a list
+                if isinstance(tools, list) and isinstance(tools[0], list):
+                    tools = [tool for sublist in tools for tool in sublist]
+
                 self.params["tools"] = tools
                 prompt_params = [
                     key

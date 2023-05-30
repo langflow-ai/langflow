@@ -146,7 +146,7 @@ class CSVAgentNode(FrontendNode):
             ),
         ],
     )
-    description: str = """Construct a json agent from a CSV and tools."""
+    description: str = """Construct a CSV agent from a CSV and tools."""
     base_classes: list[str] = ["AgentExecutor"]
 
     def to_dict(self):
@@ -194,7 +194,7 @@ class InitializeAgentNode(FrontendNode):
             ),
         ],
     )
-    description: str = """Construct a json agent from an LLM and tools."""
+    description: str = """Construct a zero shot agent from an LLM and tools."""
     base_classes: list[str] = ["AgentExecutor", "function"]
 
     def to_dict(self):
