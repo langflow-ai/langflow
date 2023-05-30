@@ -15,7 +15,9 @@ export default function ExtraSidebar() {
   ) {
     //start drag event
     var crt = event.currentTarget.cloneNode(true);
-    crt.style.position = "absolute"; crt.style.top = "-500px"; crt.style.right = "-500px";
+    crt.style.position = "absolute";
+    crt.style.top = "-500px";
+    crt.style.right = "-500px";
     crt.classList.add("cursor-grabbing");
     document.body.appendChild(crt);
     event.dataTransfer.setDragImage(crt, 0, 0);
@@ -60,7 +62,9 @@ export default function ExtraSidebar() {
                         }
                         onDragEnd={() => {
                           document.body.removeChild(
-                            document.getElementsByClassName("cursor-grabbing")[0]
+                            document.getElementsByClassName(
+                              "cursor-grabbing"
+                            )[0]
                           );
                         }}
                       >

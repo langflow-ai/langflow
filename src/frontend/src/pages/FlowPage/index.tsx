@@ -154,7 +154,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
             style:
               params.targetHandle.split("|")[0] === "Text"
                 ? { stroke: "#333333", strokeWidth: 2 }
-                : { stroke: "#222222" },
+                : { stroke: "#555555" },
             animated: params.targetHandle.split("|")[0] === "Text",
           },
           eds
