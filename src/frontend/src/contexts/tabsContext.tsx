@@ -96,7 +96,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       cookieObject.flows.forEach((flow) => {
         flow.data.edges.forEach((edge) => {
           edge.className = "";
-          edge.style = { stroke: "#222222" };
+          edge.style = { stroke: "#555555" };
         });
         flow.data.nodes.forEach((node) => {
           if (Object.keys(templates[node.data.type]["template"]).length > 0) {
@@ -285,7 +285,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           sourceHandle,
           targetHandle,
           id,
-          className: "animate-pulse",
+          style: { stroke: "inherit" },
+          className:
+            targetHandle.split("|")[0] === "Text"
+              ? "stroke-gray-800 dark:stroke-gray-300"
+              : "stroke-gray-900 dark:stroke-gray-200",
+          animated: targetHandle.split("|")[0] === "Text",
           selected: false,
         },
         edges.map((e) => ({ ...e, selected: false }))
@@ -301,8 +306,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     const description = flow?.description ? flow.description : "";
     if (data) {
       data.edges.forEach((edge) => {
-        edge.className = "";
-        edge.style = { stroke: "#222222" };
+        edge.style = { stroke: "inherit" };
+        edge.className =
+          edge.targetHandle.split("|")[0] === "Text"
+            ? "stroke-gray-800 dark:stroke-gray-300"
+            : "stroke-gray-900 dark:stroke-gray-200";
+        edge.animated = edge.targetHandle.split("|")[0] === "Text";
       });
       data.nodes.forEach((node) => {
         if (Object.keys(templates[node.data.type]["template"]).length > 0) {

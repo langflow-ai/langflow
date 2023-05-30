@@ -4,7 +4,7 @@ import { nodeColors, nodeIcons, nodeNames } from "../../../../utils";
 import { useContext, useEffect, useState } from "react";
 import { typesContext } from "../../../../contexts/typesContext";
 import { APIClassType, APIObjectType } from "../../../../types/api";
-import Tooltip from "../../../../components/TooltipComponent";
+import TooltipReact from "../../../../components/ReactTooltipComponent";
 
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);
@@ -15,7 +15,9 @@ export default function ExtraSidebar() {
   ) {
     //start drag event
     var crt = event.currentTarget.cloneNode(true);
-    crt.style.position = "absolute"; crt.style.top = "-500px"; crt.style.right = "-500px";
+    crt.style.position = "absolute";
+    crt.style.top = "-500px";
+    crt.style.right = "-500px";
     crt.classList.add("cursor-grabbing");
     document.body.appendChild(crt);
     event.dataTransfer.setDragImage(crt, 0, 0);
@@ -38,8 +40,14 @@ export default function ExtraSidebar() {
               {Object.keys(data[d])
                 .sort()
                 .map((t: string, k) => (
-                  <Tooltip title={t.length > 21 ? t : ""} placement="right">
-                    <div key={k}>
+                  <TooltipReact
+                    selector={t}
+                    htmlContent={t}
+                    position="right"
+                    delayShow={1500}
+                    key={k}
+                  >
+                    <div key={k} data-tooltip-id={t}>
                       <div
                         draggable
                         className={" cursor-grab border-l-8 rounded-l-md"}
@@ -54,7 +62,9 @@ export default function ExtraSidebar() {
                         }
                         onDragEnd={() => {
                           document.body.removeChild(
-                            document.getElementsByClassName("cursor-grabbing")[0]
+                            document.getElementsByClassName(
+                              "cursor-grabbing"
+                            )[0]
                           );
                         }}
                       >
@@ -66,7 +76,7 @@ export default function ExtraSidebar() {
                         </div>
                       </div>
                     </div>
-                  </Tooltip>
+                  </TooltipReact>
                 ))}
               {Object.keys(data[d]).length === 0 && (
                 <div className="text-gray-400 text-center">Coming soon</div>
