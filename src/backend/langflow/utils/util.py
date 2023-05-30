@@ -6,7 +6,7 @@ from typing import Dict, Optional
 
 from docstring_parser import parse  # type: ignore
 
-from langflow.template.constants import FORCE_SHOW_FIELDS
+from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants
 
 
