@@ -45,6 +45,7 @@ import { WeaviateIcon } from "./icons/Weaviate";
 import { WikipediaIcon } from "./icons/Wikipedia";
 import { WolframIcon } from "./icons/Wolfram";
 import { WordIcon } from "./icons/Word";
+import { SerperIcon } from "./icons/Serper";
 import { v4 as uuidv4 } from "uuid";
 
 export function classNames(...classes: Array<string>) {
@@ -150,6 +151,7 @@ export const nodeIcons: {
 } = {
   Chroma: ChromaIcon,
   AirbyteJSONLoader: AirbyteIcon,
+  // SerpAPIWrapper: SerperIcon,
   // AZLyricsLoader: AzIcon,
   BingSearchAPIWrapper: BingIcon,
   Cohere: CohereIcon,
@@ -158,6 +160,8 @@ export const nodeIcons: {
   FacebookChatLoader: FBIcon,
   GitbookLoader: GitBookIcon,
   GoogleSearchAPIWrapper: GoogleIcon,
+  GoogleSearchResults: GoogleIcon,
+  GoogleSearchRun: GoogleIcon,
   HNLoader: HackerNewsIcon,
   HuggingFaceHub: HugginFaceIcon,
   HuggingFaceEmbeddings: HugginFaceIcon,
@@ -175,7 +179,8 @@ export const nodeIcons: {
   SlackDirectoryLoader: SlackIcon,
   // Weaviate: WeaviateIcon,
   // WikipediaAPIWrapper: WikipediaIcon,
-  WolframAlphaQueryRun: WolframIcon,
+  // WolframAlphaQueryRun: WolframIcon,
+  // WolframAlphaAPIWrapper: WolframIcon,  
   Word: WordIcon,
   agents: RocketLaunchIcon,
   chains: LinkIcon,
