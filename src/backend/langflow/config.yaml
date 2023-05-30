@@ -52,7 +52,6 @@ llms:
   - OpenAI
   # - AzureOpenAI
   - ChatOpenAI
-  - HuggingFaceHub
   - LlamaCpp
   - CTransformers
   - Cohere
