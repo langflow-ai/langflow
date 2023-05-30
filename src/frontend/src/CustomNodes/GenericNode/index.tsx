@@ -41,7 +41,8 @@ export default function GenericNode({
   const showError = useRef(true);
   const { types, deleteNode } = useContext(typesContext);
   const { openPopUp } = useContext(PopUpContext);
-  const Icon = nodeIcons[types[data.type]];
+
+  const Icon = nodeIcons[data.type] || nodeIcons[types[data.type]];
   const [validationStatus, setValidationStatus] = useState(null);
   // State for outline color
   const [isValid, setIsValid] = useState(false);
@@ -101,13 +102,13 @@ export default function GenericNode({
     <div
       className={classNames(
         selected ? "border border-blue-500" : "border dark:border-gray-700",
-        "prompt-node relative bg-white dark:bg-gray-900 w-96 rounded-lg flex flex-col justify-center"
+        "prompt-node relative flex w-96 flex-col justify-center rounded-lg bg-white dark:bg-gray-900"
       )}
     >
-      <div className="w-full dark:text-white flex items-center justify-between p-4 gap-8 bg-gray-50 rounded-t-lg dark:bg-gray-800 border-b dark:border-b-gray-700 ">
-        <div className="w-full flex items-center truncate gap-2 text-lg">
+      <div className="flex w-full items-center justify-between gap-8 rounded-t-lg border-b bg-gray-50 p-4 dark:border-b-gray-700 dark:bg-gray-800 dark:text-white ">
+        <div className="flex w-full items-center gap-2 truncate text-lg">
           <Icon
-            className="w-10 h-10 p-1 rounded"
+            className="h-10 w-10 rounded p-1"
             style={{
               color: nodeColors[types[data.type]] ?? nodeColors.unknown,
             }}
@@ -137,7 +138,7 @@ export default function GenericNode({
                 )
               }
             >
-              <div className="relative w-5 h-5 top-1 left-1">
+              <div className="relative w-5 h-5 left-1">
                 <div
                   className={classNames(
                     validationStatus && validationStatus.valid
@@ -171,7 +172,7 @@ export default function GenericNode({
               openPopUp(<NodeModal data={data} />);
             }}
           >
-            <div className=" absolute text-red-600 -top-2 -right-1">
+            <div className=" absolute -right-1 -top-2 text-red-600">
               {Object.keys(data.node.template).some(
                 (t) =>
                   data.node.template[t].advanced &&
@@ -202,8 +203,8 @@ export default function GenericNode({
         </div>
       </div>
 
-      <div className="w-full h-full py-5">
-        <div className="w-full text-gray-500 dark:text-gray-300 px-5 pb-3 text-sm">
+      <div className="h-full w-full py-5">
+        <div className="w-full px-5 pb-3 text-sm text-gray-500 dark:text-gray-300">
           {data.node.description}
         </div>
 
@@ -265,7 +266,7 @@ export default function GenericNode({
           <div
             className={classNames(
               Object.keys(data.node.template).length < 1 ? "hidden" : "",
-              "w-full flex justify-center"
+              "flex w-full justify-center"
             )}
           >
             {" "}
