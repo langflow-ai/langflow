@@ -3,7 +3,6 @@ from typing import Optional
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
 
-
 class VectorStoreFrontendNode(FrontendNode):
     def add_extra_fields(self) -> None:
         if self.template.type_name == "Weaviate":
