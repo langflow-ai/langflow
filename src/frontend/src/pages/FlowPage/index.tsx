@@ -343,6 +343,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
             onSelectionChange={onSelectionChange}
             nodesDraggable={!disableCopyPaste}
             panOnDrag={!disableCopyPaste}
+            zoomOnDoubleClick={!disableCopyPaste}
             selectNodesOnDrag={false}
           >
             <Background className="dark:bg-gray-900" />
