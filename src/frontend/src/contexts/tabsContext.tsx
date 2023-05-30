@@ -83,10 +83,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       );
     }
   }
-  useEffect(() => {
-    //save tabs locally
-    save();
-  }, [flows, id, tabIndex, newNodeId]);
 
   useEffect(() => {
     //get tabs locally saved
@@ -128,6 +124,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       setId(cookieObject.id);
     }
   }, [templates]);
+
+  useEffect(() => {
+    //save tabs locally
+    console.log(id);
+    save();
+  }, [flows, id, tabIndex, newNodeId]);
 
   function hardReset() {
     newNodeId.current = uuidv4();
