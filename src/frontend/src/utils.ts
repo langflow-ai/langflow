@@ -575,7 +575,6 @@ export function filterFlow(
 	reactFlowInstance.setEdges((edges) =>
 		edges.filter((edge) => !selection.edges.includes(edge))
 	);
-	console.log(selection);
 }
 
 export function generateNodeFromFlow(flow: FlowType): NodeType {
@@ -586,7 +585,7 @@ export function generateNodeFromFlow(flow: FlowType): NodeType {
 	const newGroupNode: NodeType = {
 		data: {
 			id: data.id,
-			type: "flow",
+			type: "groupNode",
 			value: null,
 			node: {
 				base_classes: ["Text"],
@@ -621,16 +620,17 @@ export function expandGroupNode(
 	ReactFlowInstance.getEdges().forEach((edge) => {
 		let newEdge = _.cloneDeep(edge);
 		if (newEdge.target === flow.id) {
-			if(newEdge.targetHandle.split("|").length === 4){
+			if(newEdge.targetHandle.split("|").length === 5){
 			let type = newEdge.targetHandle.split("|")[0];
-			let field = newEdge.targetHandle.split("|")[1];
+			let field = newEdge.targetHandle.split("|")[4];
 			let proxy = newEdge.targetHandle.split("|")[3];
 			let node = gNodes.find((n) => n.id === proxy);
 			console.log(node);
 			if(node){
 				newEdge.target = proxy;
 				if(node.type==="groupNode"){
-					newEdge.targetHandle = type + "|" + field + "|" + proxy+ "|" + node.data.node.template[field].proxy;
+					newEdge.targetHandle = type + "|" + field + "|" + proxy+ "|" +
+					 node.data.node.template[field].proxy.id+"|"+node.data.node.template[field].proxy.field;
 				}
 				else{
 					newEdge.targetHandle = type + "|" + field + "|" + proxy;
@@ -741,10 +741,7 @@ export function validateNode(n: NodeType, selection: OnSelectionChangeParams) {
 }
 
 export function validateSelection(selection: OnSelectionChangeParams) {
-	//two keys with the same name exposed
-	if(!mergeNodeTemplates(selection)){
-		return false;
-	}
+	
 	// check if there is any node that does not have any connection
 	if (selection.nodes.some(node=>!selection.edges.some(edge=>edge.target === node.id)&& !selection.edges.some(edge=>edge.source === node.id))){
 		return false;
@@ -776,22 +773,14 @@ export function mergeNodeTemplates({nodes,edges}:{nodes:NodeType[],edges:Edge[]}
 		if there are two keys with the same name in the flow, we will update the display name of each one
 		to show from which node it came from
 	*/
-	let template = {};
+	let template:APITemplateType = {};
 	nodes.forEach((node)=>{
-		console.log(node.data.type)
 		let nodeTemplate = _.cloneDeep(node.data.node.template);
 		Object.keys(nodeTemplate).filter((field_name) => field_name.charAt(0) !== "_").forEach((key)=>{
-			console.log(isHandleConnected(edges,nodeTemplate[key].type + "|" + key + "|" + node.id))
 			if(nodeTemplate[key].show && !isHandleConnected(edges,nodeTemplate[key].type + "|" + key + "|" + node.id)){
-				console.log(nodeTemplate[key])
-				console.log(JSON.parse(JSON.stringify(template)))
-				if(template[key]){
-					//return does not break the loop
-					return undefined;
-				}else{
-					template[key] = nodeTemplate[key];
-				}
-				template[key].proxy = node.id;
+				template[key+"_"+node.id] = nodeTemplate[key];
+				template[key+"_"+node.id].proxy = {id:node.id,field:key};
+				template[key+"_"+node.id].display_name = nodeTemplate[key].name	+", "+ node.data.type;
 			}
 		})
 	})

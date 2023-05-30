@@ -37,6 +37,7 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
   useEffect(() => {
     updateNodeInternals(data.id);
   }, [data.id, flowHandlePosition, updateNodeInternals]);
+  console.log(data)
   // console.log(Object.keys(data.node.template).length,data.node.template)
   return (
     <div
@@ -137,7 +138,6 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
           </button>
           <button
             onClick={() => {
-              console.log(data.id);
               deleteNode(data.id);
             }}
           >
@@ -210,7 +210,7 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
                       "|" +
                       field_name +
                       "|" +
-                      data.id+(data.node.template[field_name].proxy?("|"+data.node.template[field_name].proxy):"")
+                      data.id+(data.node.template[field_name].proxy?("|"+data.node.template[field_name].proxy.id+"|"+data.node.template[field_name].proxy.field):"")
                     }
                     left={true}
                     type={data.node.template[field_name].type}
