@@ -341,6 +341,8 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
             onDrop={onDrop}
             onNodesDelete={onDelete}
             onSelectionChange={onSelectionChange}
+            nodesDraggable={!disableCopyPaste}
+            panOnDrag={!disableCopyPaste}
             selectNodesOnDrag={false}
           >
             <Background className="dark:bg-gray-900" />
