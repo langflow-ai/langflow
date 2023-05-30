@@ -20,7 +20,7 @@ import { Connection, Edge, Node, ReactFlowInstance, addEdge } from "reactflow";
 import { FlowType, NodeType } from "./types/flow";
 import { APITemplateType, TemplateVariableType } from "./types/api";
 import _ from "lodash";
-import { ChromaIcon} from "./icons/ChromaIcon";
+import { ChromaIcon } from "./icons/ChromaIcon";
 import { AirbyteIcon } from "./icons/Airbyte";
 import { AzIcon } from "./icons/AzLogo";
 import { BingIcon } from "./icons/Bing";
