@@ -101,8 +101,11 @@ def instantiate_tool(node_type, class_object, params):
 
 def instantiate_toolkit(node_type, class_object, params):
     loaded_toolkit = class_object(**params)
-    if toolkits_creator.has_create_function(node_type):
-        return load_toolkits_executor(node_type, loaded_toolkit, params)
+    # Commenting this out for now to use toolkits as normal tools
+    # if toolkits_creator.has_create_function(node_type):
+    #     return load_toolkits_executor(node_type, loaded_toolkit, params)
+    if isinstance(loaded_toolkit, BaseToolkit):
+        return loaded_toolkit.get_tools()
     return loaded_toolkit
 
 
