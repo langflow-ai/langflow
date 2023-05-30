@@ -14,7 +14,7 @@ class AgentNode(Node):
     def _set_tools_and_chains(self) -> None:
         for edge in self.edges:
             source_node = edge.source
-            if isinstance(source_node, ToolNode):
+            if isinstance(source_node, (ToolNode, ToolkitNode)):
                 self.tools.append(source_node)
             elif isinstance(source_node, ChainNode):
                 self.chains.append(source_node)
@@ -32,9 +32,6 @@ class AgentNode(Node):
 
             self._build()
 
-        #! Cannot deepcopy VectorStore, VectorStoreRouter, or SQL agents
-        if self.node_type in ["VectorStoreAgent", "VectorStoreRouterAgent", "SQLAgent"]:
-            return self._built_object
         return self._built_object
 
 
