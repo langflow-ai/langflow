@@ -7,3 +7,4 @@ class RootField(TemplateField):
     display_name: str = "Input"
     required: bool = False
     show: bool = True
+    root: bool = True

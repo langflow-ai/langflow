@@ -24,6 +24,7 @@ class TemplateFieldCreator(BaseModel, ABC):
     name: str = ""
     display_name: Optional[str] = None
     advanced: bool = False
+    root: bool = False
 
     def to_dict(self):
         result = self.dict()
