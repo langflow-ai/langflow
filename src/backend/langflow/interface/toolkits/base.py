@@ -44,7 +44,7 @@ class ToolkitCreator(LangChainTypeCreator):
         try:
             template = build_template_from_class(name, self.type_to_loader_dict)
             # add Tool to base_classes
-            if template:
+            if "toolkit" in name.lower() and template:
                 template["base_classes"].append("Tool")
             return template
         except ValueError as exc:
