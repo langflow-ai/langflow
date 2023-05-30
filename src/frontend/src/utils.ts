@@ -20,7 +20,32 @@ import { Connection, Edge, Node, ReactFlowInstance, addEdge } from "reactflow";
 import { FlowType, NodeType } from "./types/flow";
 import { APITemplateType, TemplateVariableType } from "./types/api";
 import _ from "lodash";
-import { ChromaIcon } from "./icons";
+import { ChromaIcon } from "./icons/ChromaIcon";
+import { AirbyteIcon } from "./icons/Airbyte";
+import { AzIcon } from "./icons/AzLogo";
+import { BingIcon } from "./icons/Bing";
+import { CohereIcon } from "./icons/Cohere";
+import { EvernoteIcon } from "./icons/Evernote";
+import { FBIcon } from "./icons/FacebookMessenger";
+import { GitBookIcon } from "./icons/GitBook";
+import { GoogleIcon } from "./icons/Google";
+import { HackerNewsIcon } from "./icons/hackerNews";
+import { HugginFaceIcon } from "./icons/HuggingFace";
+import { IFixIcon } from "./icons/IFixIt";
+import { MetaIcon } from "./icons/Meta";
+import { MidjorneyIcon } from "./icons/Midjorney";
+import { NotionIcon } from "./icons/Notion";
+import { OpenAiIcon } from "./icons/OpenAi";
+import { PowerPointIcon } from "./icons/PowerPoint";
+import { QDrantIcon } from "./icons/QDrant";
+import { ReadTheDocsIcon } from "./icons/ReadTheDocs";
+import { SearxIcon } from "./icons/Searx";
+import { SlackIcon } from "./icons/Slack";
+import { WeaviateIcon } from "./icons/Weaviate";
+import { WikipediaIcon } from "./icons/Wikipedia";
+import { WolframIcon } from "./icons/Wolfram";
+import { WordIcon } from "./icons/Word";
+import { SerperIcon } from "./icons/Serper";
 import { v4 as uuidv4 } from "uuid";
 
 export function classNames(...classes: Array<string>) {
@@ -125,6 +150,38 @@ export const nodeIcons: {
   >;
 } = {
   Chroma: ChromaIcon,
+  AirbyteJSONLoader: AirbyteIcon,
+  // SerpAPIWrapper: SerperIcon,
+  // AZLyricsLoader: AzIcon,
+  BingSearchAPIWrapper: BingIcon,
+  Cohere: CohereIcon,
+  CohereEmbeddings: CohereIcon,
+  EverNoteLoader: EvernoteIcon,
+  FacebookChatLoader: FBIcon,
+  GitbookLoader: GitBookIcon,
+  GoogleSearchAPIWrapper: GoogleIcon,
+  GoogleSearchResults: GoogleIcon,
+  GoogleSearchRun: GoogleIcon,
+  HNLoader: HackerNewsIcon,
+  HuggingFaceHub: HugginFaceIcon,
+  HuggingFaceEmbeddings: HugginFaceIcon,
+  IFixitLoader: IFixIcon,
+  Meta: MetaIcon,
+  Midjorney: MidjorneyIcon,
+  NotionDirectoryLoader: NotionIcon,
+  ChatOpenAI: OpenAiIcon,
+  OpenAI: OpenAiIcon,
+  OpenAIEmbeddings: OpenAiIcon,
+  PowerPoint: PowerPointIcon,
+  Qdrant: QDrantIcon,
+  ReadTheDocs: ReadTheDocsIcon,
+  Searx: SearxIcon,
+  SlackDirectoryLoader: SlackIcon,
+  // Weaviate: WeaviateIcon,
+  // WikipediaAPIWrapper: WikipediaIcon,
+  // WolframAlphaQueryRun: WolframIcon,
+  // WolframAlphaAPIWrapper: WolframIcon,
+  Word: WordIcon,
   agents: RocketLaunchIcon,
   chains: LinkIcon,
   memories: CpuChipIcon,
