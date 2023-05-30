@@ -60,29 +60,29 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
   function save() {
     // added clone deep to avoid mutating the original object
-		let Saveflows = _.cloneDeep(flows);
-		if (Saveflows.length !== 0){
+    let Saveflows = _.cloneDeep(flows);
+    if (Saveflows.length !== 0) {
       Saveflows.forEach((flow) => {
-        if(flow.data && flow.data?.nodes) flow.data?.nodes.forEach((node) => {
-          console.log(node.data.type)
-          //looking for file fields to prevent saving the content and breaking the flow for exceeding the the data limite for local storage
-          Object.keys(node.data.node.template).forEach((key) => {
-            console.log(node.data.node.template[key].type)
-            if(node.data.node.template[key].type==="file"){
-              console.log(node.data.node.template[key])
-              node.data.node.template[key].content = null;
-              node.data.node.template[key].value = "";
-
-            }
-          })
-        })
-      })
+        if (flow.data && flow.data?.nodes)
+          flow.data?.nodes.forEach((node) => {
+            console.log(node.data.type);
+            //looking for file fields to prevent saving the content and breaking the flow for exceeding the the data limite for local storage
+            Object.keys(node.data.node.template).forEach((key) => {
+              console.log(node.data.node.template[key].type);
+              if (node.data.node.template[key].type === "file") {
+                console.log(node.data.node.template[key]);
+                node.data.node.template[key].content = null;
+                node.data.node.template[key].value = "";
+              }
+            });
+          });
+      });
       window.localStorage.setItem(
-				"tabsData",
-				JSON.stringify({ tabIndex, flows:Saveflows, id})
-			);
+        "tabsData",
+        JSON.stringify({ tabIndex, flows: Saveflows, id })
+      );
     }
-	}
+  }
   useEffect(() => {
     //save tabs locally
     save();
