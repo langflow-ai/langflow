@@ -33,7 +33,14 @@ export default function ChatModal({
   const ws = useRef<WebSocket | null>(null);
   const [lockChat, setLockChat] = useState(false);
   const isOpen = useRef(open);
+  const messagesRef = useRef(null);
   const id = useRef(flow.id);
+
+  useEffect(() => {
+    if (messagesRef.current) {
+      messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+    }
+  }, [chatHistory]);
 
   useEffect(() => {
     isOpen.current = open;
@@ -401,7 +408,10 @@ export default function ChatModal({
                     <HiX className="w-5 h-5" />
                   </button>
                 </div>
-                <div className="w-full h-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center overflow-scroll scrollbar-hide">
+                <div
+                  ref={messagesRef}
+                  className="w-full h-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center overflow-scroll scrollbar-hide"
+                >
                   {chatHistory.length > 0 ? (
                     chatHistory.map((c, i) => (
                       <ChatMessage lockChat={lockChat} chat={c} key={i} />
