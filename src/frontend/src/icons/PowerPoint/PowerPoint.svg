@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 23.0.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd" [
+	<!ENTITY ns_extend "http://ns.adobe.com/Extensibility/1.0/">
+	<!ENTITY ns_ai "http://ns.adobe.com/AdobeIllustrator/10.0/">
+	<!ENTITY ns_graphs "http://ns.adobe.com/Graphs/1.0/">
+	<!ENTITY ns_vars "http://ns.adobe.com/Variables/1.0/">
+	<!ENTITY ns_imrep "http://ns.adobe.com/ImageReplacement/1.0/">
+	<!ENTITY ns_sfw "http://ns.adobe.com/SaveForWeb/1.0/">
+	<!ENTITY ns_custom "http://ns.adobe.com/GenericCustomNamespace/1.0/">
+	<!ENTITY ns_adobe_xpath "http://ns.adobe.com/XPath/1.0/">
+]>
+<svg version="1.1" id="Livello_1" xmlns:x="&ns_extend;" xmlns:i="&ns_ai;" xmlns:graph="&ns_graphs;"
+	 xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 1919.95 1786"
+	 enable-background="new 0 0 1919.95 1786" xml:space="preserve">
+<metadata>
+	<sfw  xmlns="&ns_sfw;">
+		<slices></slices>
+		<sliceSourceBounds  bottomLeftOrigin="true" height="1786" width="1919.95" x="-936.475" y="-869"></sliceSourceBounds>
+	</sfw>
+</metadata>
+<path fill="#ED6C47" d="M1160.9,982.3L1026.95,0h-10.002C529.872,1.422,135.372,395.922,133.95,882.998V893L1160.9,982.3z"/>
+<path fill="#FF8F6B" d="M1036.952,0h-10.002v893l446.5,178.6l446.5-178.6v-10.002C1918.528,395.922,1524.028,1.422,1036.952,0z"/>
+<path fill="#D35230" d="M1919.95,893v9.823c-1.398,487.185-395.992,881.779-883.177,883.177h-19.646
+	c-487.185-1.398-881.779-395.992-883.177-883.177V893H1919.95z"/>
+<path opacity="0.1" enable-background="new    " d="M1071.6,438.909v952.831c-0.222,33.109-20.286,62.852-50.901,75.458
+	c-9.748,4.123-20.224,6.249-30.809,6.251H344.698c-12.502-14.288-24.557-29.469-35.72-44.65
+	c-113.755-151.749-175.176-336.324-175.028-525.977v-19.646c-0.261-171.062,49.733-338.433,143.773-481.327
+	c9.823-15.181,20.092-30.362,31.255-44.65h680.912C1034.876,357.54,1071.26,393.924,1071.6,438.909z"/>
+<path opacity="0.2" enable-background="new    " d="M1026.95,483.56v952.831c-0.002,10.584-2.128,21.061-6.251,30.808
+	c-12.606,30.615-42.35,50.679-75.459,50.901H385.329c-14.127-14.342-27.682-29.237-40.632-44.65
+	c-12.502-14.288-24.557-29.469-35.72-44.65c-113.755-151.749-175.176-336.325-175.028-525.977v-19.646
+	c-0.261-171.062,49.733-338.433,143.773-481.327H945.24C990.226,402.19,1026.61,438.574,1026.95,483.56z"/>
+<path opacity="0.2" enable-background="new    " d="M1026.95,483.56v863.531c-0.34,44.985-36.724,81.369-81.709,81.71H308.978
+	c-113.755-151.749-175.176-336.325-175.028-525.977v-19.646c-0.261-171.062,49.733-338.433,143.773-481.327H945.24
+	C990.226,402.19,1026.61,438.574,1026.95,483.56z"/>
+<path opacity="0.2" enable-background="new    " d="M982.3,483.56v863.531c-0.34,44.985-36.724,81.369-81.709,81.71H308.978
+	c-113.755-151.749-175.176-336.325-175.028-525.977v-19.646c-0.261-171.062,49.733-338.433,143.773-481.327h622.867
+	C945.576,402.19,981.96,438.574,982.3,483.56z"/>
+<linearGradient id="SVGID_1_" gradientUnits="userSpaceOnUse" x1="170.6454" y1="1450.1008" x2="811.6547" y2="339.8992" gradientTransform="matrix(1 0 0 -1 0 1788)">
+	<stop  offset="0" style="stop-color:#CA4C28"/>
+	<stop  offset="0.5" style="stop-color:#C5401E"/>
+	<stop  offset="1" style="stop-color:#B62F14"/>
+</linearGradient>
+<path fill="url(#SVGID_1_)" d="M81.843,401.85h818.613c45.201,0,81.843,36.643,81.843,81.843v818.613
+	c0,45.201-36.643,81.844-81.843,81.844H81.843C36.643,1384.15,0,1347.507,0,1302.307V483.693C0,438.493,36.643,401.85,81.843,401.85
+	z"/>
+<path fill="#FFFFFF" d="M500.08,620.144c53.289-3.596,106.119,11.883,149.042,43.668c35.8,31.961,54.929,78.599,51.883,126.493
+	c0.585,33.294-8.287,66.071-25.584,94.524c-17.512,27.964-42.742,50.263-72.646,64.207c-34.187,15.9-71.564,23.751-109.259,22.95
+	H389.973v192.441H283.929V620.144H500.08z M389.884,888.848h91.265c28.933,2.125,57.641-6.438,80.683-24.066
+	c19.058-18.282,29.047-44.063,27.281-70.413c0-59.98-34.857-89.97-104.57-89.97h-94.658V888.848z"/>
+</svg>

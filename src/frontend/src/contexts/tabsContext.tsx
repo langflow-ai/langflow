@@ -8,7 +8,12 @@ import {
 } from "react";
 import { FlowType, NodeType } from "../types/flow";
 import { LangFlowState, TabsContextType } from "../types/tabs";
-import { normalCaseToSnakeCase, updateObject, updateTemplate } from "../utils";
+import {
+  normalCaseToSnakeCase,
+  updateIds,
+  updateObject,
+  updateTemplate,
+} from "../utils";
 import { alertContext } from "./alertContext";
 import { typesContext } from "./typesContext";
 import { APITemplateType, TemplateVariableType } from "../types/api";
@@ -85,8 +90,25 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     if (cookie && Object.keys(templates).length > 0) {
       let cookieObject: LangFlowState = JSON.parse(cookie);
       cookieObject.flows.forEach((flow) => {
+        flow.data.edges.forEach((edge) => {
+          edge.className = "";
+          edge.style = { stroke: "#555555" };
+        });
         flow.data.nodes.forEach((node) => {
           if (Object.keys(templates[node.data.type]["template"]).length > 0) {
+            node.data.node.base_classes =
+              templates[node.data.type]["base_classes"];
+            flow.data.edges.forEach((edge) => {
+              if (edge.source === node.id) {
+                edge.sourceHandle = edge.sourceHandle
+                  .split("|")
+                  .slice(0, 2)
+                  .concat(templates[node.data.type]["base_classes"])
+                  .join("|");
+              }
+            });
+            node.data.node.description =
+              templates[node.data.type]["description"];
             node.data.node.template = updateTemplate(
               templates[node.data.type][
                 "template"
@@ -265,7 +287,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           sourceHandle,
           targetHandle,
           id,
-          className: "animate-pulse",
+          style: { stroke: "inherit" },
+          className:
+            targetHandle.split("|")[0] === "Text"
+              ? "stroke-gray-800 dark:stroke-gray-300"
+              : "stroke-gray-900 dark:stroke-gray-200",
+          animated: targetHandle.split("|")[0] === "Text",
           selected: false,
         },
         edges.map((e) => ({ ...e, selected: false }))
@@ -276,18 +303,39 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
   function addFlow(flow?: FlowType) {
     // Get data from the flow or set it to null if there's no flow provided.
-    const data = flow?.data ? flow.data : null;
-    const description = flow?.description ? flow.description : "";
 
+    let data = flow?.data ? flow.data : null;
+    const description = flow?.description ? flow.description : "";
     if (data) {
+      data.edges.forEach((edge) => {
+        edge.style = { stroke: "inherit" };
+        edge.className =
+          edge.targetHandle.split("|")[0] === "Text"
+            ? "stroke-gray-800 dark:stroke-gray-300"
+            : "stroke-gray-900 dark:stroke-gray-200";
+        edge.animated = edge.targetHandle.split("|")[0] === "Text";
+      });
       data.nodes.forEach((node) => {
         if (Object.keys(templates[node.data.type]["template"]).length > 0) {
+          node.data.node.base_classes =
+            templates[node.data.type]["base_classes"];
+          flow.data.edges.forEach((edge) => {
+            if (edge.source === node.id) {
+              edge.sourceHandle = edge.sourceHandle
+                .split("|")
+                .slice(0, 2)
+                .concat(templates[node.data.type]["base_classes"])
+                .join("|");
+            }
+          });
+          node.data.node.description = templates[node.data.type]["description"];
           node.data.node.template = updateTemplate(
             templates[node.data.type]["template"] as unknown as APITemplateType,
             node.data.node.template as APITemplateType
           );
         }
       });
+      updateIds(data, getNodeId);
     }
     // Create a new flow with a default name if no flow is provided.
     let newFlow: FlowType = {

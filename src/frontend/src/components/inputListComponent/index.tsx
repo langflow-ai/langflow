@@ -33,7 +33,7 @@ export default function InputListComponent({
               "block w-full form-input rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" +
               (disabled ? " bg-gray-200" : "")
             }
-            placeholder="Type a text"
+            placeholder="Type something..."
             onChange={(e) => {
               setInputList((old) => {
                 let newInputList = _.cloneDeep(old);

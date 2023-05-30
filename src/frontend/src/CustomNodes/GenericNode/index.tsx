@@ -1,13 +1,23 @@
 import {
   BugAntIcon,
-  CheckCircleIcon,
   Cog6ToothIcon,
-  EllipsisHorizontalCircleIcon,
-  ExclamationCircleIcon,
   InformationCircleIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
-import { classNames, nodeColors, nodeIcons, toNormalCase } from "../../utils";
+
+import {
+  CheckCircleIcon,
+  EllipsisHorizontalCircleIcon,
+  ExclamationCircleIcon,
+} from "@heroicons/react/24/solid";
+
+import {
+  classNames,
+  nodeColors,
+  nodeIcons,
+  toNormalCase,
+  toTitleCase,
+} from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
 import { typesContext } from "../../contexts/typesContext";
 import { useContext, useState, useEffect, useRef, Fragment } from "react";
@@ -18,6 +28,7 @@ import NodeModal from "../../modals/NodeModal";
 import { useCallback } from "react";
 import { TabsContext } from "../../contexts/tabsContext";
 import { debounce } from "../../utils";
+import TooltipReact from "../../components/ReactTooltipComponent";
 import Tooltip from "../../components/TooltipComponent";
 export default function GenericNode({
   data,
@@ -30,7 +41,8 @@ export default function GenericNode({
   const showError = useRef(true);
   const { types, deleteNode } = useContext(typesContext);
   const { openPopUp } = useContext(PopUpContext);
-  const Icon = nodeIcons[types[data.type]];
+
+  const Icon = nodeIcons[data.type] || nodeIcons[types[data.type]];
   const [validationStatus, setValidationStatus] = useState(null);
   // State for outline color
   const [isValid, setIsValid] = useState(false);
@@ -91,59 +103,26 @@ export default function GenericNode({
     <div
       className={classNames(
         selected ? "border border-blue-500" : "border dark:border-gray-700",
-        "prompt-node relative bg-white dark:bg-gray-900 w-96 rounded-lg flex flex-col justify-center"
+        "prompt-node relative flex w-96 flex-col justify-center rounded-lg bg-white dark:bg-gray-900"
       )}
     >
-      <div className="w-full dark:text-white flex items-center justify-between p-4 gap-8 bg-gray-50 rounded-t-lg dark:bg-gray-800 border-b dark:border-b-gray-700 ">
-        <div className="w-full flex items-center truncate gap-2 text-lg">
+      <div className="flex w-full items-center justify-between gap-8 rounded-t-lg border-b bg-gray-50 p-4 dark:border-b-gray-700 dark:bg-gray-800 dark:text-white ">
+        <div className="flex w-full items-center gap-2 truncate text-lg">
           <Icon
-            className="w-10 h-10 p-1 rounded"
+            className="h-10 w-10 rounded p-1"
             style={{
               color: nodeColors[types[data.type]] ?? nodeColors.unknown,
             }}
           />
-          <div className="ml-2 truncate">{data.type}</div>
-          <div>
-            <Tooltip
-              title={
-                !validationStatus ? (
-                  "Validating..."
-                ) : (
-                  <div className="max-h-96 overflow-auto">
-                    {validationStatus.params.split("\n").map((line, index) => (
-                      <div key={index}>{line}</div>
-                    ))}
-                  </div>
-                )
-              }
+          <div className="ml-2 truncate">
+            <TooltipReact
+              delayShow={1000}
+              selector={`node-selector-${data.type}`}
+              htmlContent={data.type}
+              position="top"
             >
-              <div className="relative w-5 h-5">
-                <CheckCircleIcon
-                  className={classNames(
-                    validationStatus && validationStatus.valid
-                      ? "text-green-500 opacity-100"
-                      : "text-green-500 opacity-0 animate-spin",
-                    "absolute w-5 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
-                  )}
-                />
-                <ExclamationCircleIcon
-                  className={classNames(
-                    validationStatus && !validationStatus.valid
-                      ? "text-red-500 opacity-100"
-                      : "text-red-500 opacity-0 animate-spin",
-                    "w-5 absolute hover:text-gray-500 hover:dark:text-gray-600 transition-all ease-in-out duration-200"
-                  )}
-                />
-                <EllipsisHorizontalCircleIcon
-                  className={classNames(
-                    !validationStatus
-                      ? "text-yellow-500 opacity-100"
-                      : "text-yellow-500 opacity-0 animate-spin",
-                    "w-5 absolute hover:text-gray-500 hover:dark:text-gray-600 transition-all ease-in-out duration-300"
-                  )}
-                />
-              </div>
-            </Tooltip>
+              <div className="ml-2 truncate">{data.type}</div>
+            </TooltipReact>
           </div>
         </div>
         <div className="flex gap-3">
@@ -154,7 +133,7 @@ export default function GenericNode({
               openPopUp(<NodeModal data={data} />);
             }}
           >
-            <div className=" absolute text-red-600 -top-2 -right-1">
+            <div className=" absolute -right-1 -top-2 text-red-600">
               {Object.keys(data.node.template).some(
                 (t) =>
                   data.node.template[t].advanced &&
@@ -171,22 +150,66 @@ export default function GenericNode({
                 )
                   ? ""
                   : "hidden",
-                "w-6 h-6  dark:text-gray-300  hover:animate-spin"
+                "w-5 h-5  dark:text-gray-300"
               )}
             ></Cog6ToothIcon>
           </button>
+
           <button
             onClick={() => {
               deleteNode(data.id);
             }}
           >
-            <TrashIcon className="w-6 h-6 hover:text-red-500 dark:text-gray-300 dark:hover:text-red-500"></TrashIcon>
+            <TrashIcon className="w-5 h-5 dark:text-gray-300"></TrashIcon>
           </button>
+
+          <div>
+            <Tooltip
+              title={
+                !validationStatus ? (
+                  "Validating..."
+                ) : (
+                  <div className="max-h-96 overflow-auto">
+                    {validationStatus.params.split("\n").map((line, index) => (
+                      <div key={index}>{line}</div>
+                    ))}
+                  </div>
+                )
+              }
+            >
+              <div className="w-5 h-5 relative top-[3px]">
+                <div
+                  className={classNames(
+                    validationStatus && validationStatus.valid
+                      ? "w-4 h-4 rounded-full bg-green-500 opacity-100"
+                      : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
+                    "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
+                  )}
+                ></div>
+                <div
+                  className={classNames(
+                    validationStatus && !validationStatus.valid
+                      ? "w-4 h-4 rounded-full  bg-red-500 opacity-100"
+                      : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
+                    "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
+                  )}
+                ></div>
+                <div
+                  className={classNames(
+                    !validationStatus
+                      ? "w-4 h-4 rounded-full  bg-yellow-500 opacity-100"
+                      : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
+                    "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
+                  )}
+                ></div>
+              </div>
+            </Tooltip>
+          </div>
         </div>
       </div>
 
-      <div className="w-full h-full py-5">
-        <div className="w-full text-gray-500 dark:text-gray-300 px-5 pb-3 text-sm">
+      <div className="h-full w-full py-5">
+        <div className="w-full px-5 pb-3 text-sm text-gray-500 dark:text-gray-300">
           {data.node.description}
         </div>
 
@@ -226,8 +249,8 @@ export default function GenericNode({
                       data.node.template[t].display_name
                         ? data.node.template[t].display_name
                         : data.node.template[t].name
-                        ? toNormalCase(data.node.template[t].name)
-                        : toNormalCase(t)
+                        ? toTitleCase(data.node.template[t].name)
+                        : toTitleCase(t)
                     }
                     name={t}
                     tooltipTitle={
@@ -248,7 +271,7 @@ export default function GenericNode({
           <div
             className={classNames(
               Object.keys(data.node.template).length < 1 ? "hidden" : "",
-              "w-full flex justify-center"
+              "flex w-full justify-center"
             )}
           >
             {" "}
