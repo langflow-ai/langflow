@@ -39,7 +39,7 @@ class TextSplitterCreator(LangChainTypeCreator):
                 "type": "int",
                 "required": True,
                 "show": True,
-                "value": 4000,
+                "value": 1000,
                 "name": "chunk_size",
                 "display_name": "Chunk Size",
             }
