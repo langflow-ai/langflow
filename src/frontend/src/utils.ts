@@ -579,16 +579,17 @@ export function filterFlow(
 
 export function generateNodeFromFlow(flow: FlowType): NodeType {
 	const { nodes } = flow.data;
+	const outputNode =_.cloneDeep(findLastNode(flow.data));
 	// console.log(flow)
 	const position = getMiddlePoint(nodes);
 	let data = flow;
 	const newGroupNode: NodeType = {
 		data: {
 			id: data.id,
-			type: "groupNode",
+			type: outputNode.data.type,
 			value: null,
 			node: {
-				base_classes: ["Text"],
+				base_classes: outputNode.data.node.base_classes,
 				description: "group Node",
 				template: generateNodeTemplate(data),
 				flow: data,
@@ -838,7 +839,7 @@ export function generateNodeTemplate(Flow:FlowType){
 	return template;
 }
 
-export function findLastNode({nodes,edges}:{nodes:Node[],edges:Edge[]}){
+export function findLastNode({nodes,edges}:{nodes:NodeType[],edges:Edge[]}){
 	/*
 		this function receives a flow and return the last node
 	*/
