@@ -345,6 +345,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
             panOnDrag={!disableCopyPaste}
             zoomOnDoubleClick={!disableCopyPaste}
             selectNodesOnDrag={false}
+            className="theme-attribution"
           >
             <Background className="dark:bg-gray-900" />
             <Controls className="[&>button]:text-black  [&>button]:dark:bg-gray-800 hover:[&>button]:dark:bg-gray-700 [&>button]:dark:text-gray-400 [&>button]:dark:fill-gray-400 [&>button]:dark:border-gray-600"></Controls>
