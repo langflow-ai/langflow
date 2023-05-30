@@ -641,6 +641,14 @@ export function expandGroupNode(
 
 		}
 	}
+	if(newEdge.source ===flow.id){
+		const lastNode = _.cloneDeep(findLastNode(flow.data));
+		newEdge.source = lastNode.id;
+		let sourceHandle = newEdge.sourceHandle.split("|");
+		sourceHandle[1] = lastNode.id;
+		newEdge.sourceHandle = sourceHandle.join("|");
+		updatedEdges.push(newEdge);
+	}
 	})
 	const nodes = [
 		...ReactFlowInstance.getNodes().filter((n) => n.id !== flow.id),

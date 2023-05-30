@@ -37,7 +37,7 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
   useEffect(() => {
     updateNodeInternals(data.id);
   }, [data.id, flowHandlePosition, updateNodeInternals]);
-  console.log(data)
+  // console.log(data)
   // console.log(Object.keys(data.node.template).length,data.node.template)
   return (
     <div
