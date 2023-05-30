@@ -123,46 +123,6 @@ export default function GenericNode({
               <div className="ml-2 truncate">{data.type}</div>
             </TooltipReact>
           </div>
-
-          <div>
-            <Tooltip
-              title={
-                !validationStatus ? (
-                  "Validating..."
-                ) : (
-                  <div className="max-h-96 overflow-auto">
-                    {validationStatus.params.split("\n").map((line, index) => (
-                      <div key={index}>{line}</div>
-                    ))}
-                  </div>
-                )
-              }
-            >
-              <div className="relative w-5 h-5 left-1">
-                <div
-                  className={classNames(
-                    validationStatus && validationStatus.valid
-                      ? "w-4 h-4 rounded-full bg-green-500 opacity-100"
-                      : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden"
-                  )}
-                ></div>
-                <div
-                  className={classNames(
-                    validationStatus && !validationStatus.valid
-                      ? "w-4 h-4 rounded-full bg-yellow-500 opacity-100"
-                      : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden"
-                  )}
-                ></div>
-                <div
-                  className={classNames(
-                    !validationStatus
-                      ? "w-4 h-4 rounded-full bg-red-500 opacity-100"
-                      : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden"
-                  )}
-                ></div>
-              </div>
-            </Tooltip>
-          </div>
         </div>
         <div className="flex gap-3">
           <button
@@ -193,13 +153,50 @@ export default function GenericNode({
               )}
             ></Cog6ToothIcon>
           </button>
-          <button
-            onClick={() => {
-              deleteNode(data.id);
-            }}
-          >
-            <TrashIcon className="w-6 h-6 dark:text-gray-300"></TrashIcon>
-          </button>
+
+          <div>
+            <Tooltip
+              title={
+                !validationStatus ? (
+                  "Validating..."
+                ) : (
+                  <div className="max-h-96 overflow-auto">
+                    {validationStatus.params.split("\n").map((line, index) => (
+                      <div key={index}>{line}</div>
+                    ))}
+                  </div>
+                )
+              }
+            >
+              <div className="w-5 h-5 relative top-1">
+                <div
+                  className={classNames(
+                    validationStatus && validationStatus.valid
+                      ? "w-4 h-4 rounded-full bg-green-500 opacity-100"
+                      : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
+                      "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
+                  )}
+                ></div>
+                <div
+                  className={classNames(
+                    validationStatus && !validationStatus.valid
+                      ? "w-4 h-4 rounded-full bg-yellow-500 opacity-100"
+                      : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
+                      "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
+                  )}
+                ></div>
+                <div
+                  className={classNames(
+                    !validationStatus
+                      ? "w-4 h-4 rounded-full bg-red-500 opacity-100"
+                      : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
+                      "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
+                  )}
+                ></div>
+              </div>
+            </Tooltip>
+          </div>
+
         </div>
       </div>
 
