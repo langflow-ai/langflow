@@ -15,7 +15,11 @@ export default function FloatComponent({
     }
   }, [disabled, onChange]);
   return (
-    <div className={"w-full " + (disabled ? "pointer-events-none cursor-not-allowed" : "")}>
+    <div
+      className={
+        "w-full " + (disabled ? "pointer-events-none cursor-not-allowed" : "")
+      }
+    >
       <input
         type="number"
         value={myValue}

@@ -89,7 +89,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       cookieObject.flows.forEach((flow) => {
         flow.data.edges.forEach((edge) => {
           edge.className = "";
-          edge.style = { stroke: "#222222" };
+          edge.style = { stroke: "#555555" };
         });
         flow.data.nodes.forEach((node) => {
           if (Object.keys(templates[node.data.type]["template"]).length > 0) {
@@ -295,7 +295,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     if (data) {
       data.edges.forEach((edge) => {
         edge.className = "";
-        edge.style = { stroke: "#222222" };
+        edge.style = { stroke: "#555555" };
       });
       data.nodes.forEach((node) => {
         if (Object.keys(templates[node.data.type]["template"]).length > 0) {
