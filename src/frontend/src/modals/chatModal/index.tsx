@@ -290,7 +290,9 @@ export default function ChatModal({
         errors.concat(
           template[t].required &&
             template[t].show &&
-            (!template[t].value || template[t].value === "") &&
+            (template[t].value === undefined ||
+              template[t].value === null ||
+              template[t].value === "") &&
             !reactFlowInstance
               .getEdges()
               .some(
