@@ -17,6 +17,7 @@ import {
   toTitleCase,
 } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
+import { useUpdateNodeInternals } from "reactflow";
 const people = [
   {
     name: "Lindsay Walton",
