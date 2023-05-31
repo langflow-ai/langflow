@@ -35,7 +35,7 @@ types-pyyaml = "^6.0.12.8"
 dill = "^0.3.6"
 pandas = "^1.5.3"
 chromadb = "^0.3.21"
-huggingface-hub = "^0.13.3"
+huggingface-hub = "==0.14.1"
 rich = "^13.3.3"
 llama-cpp-python = "^0.1.50"
 networkx = "^3.1"
@@ -58,6 +58,7 @@ sentence-transformers = "^2.2.2"
 ctransformers = "^0.2.2"
 cohere = "^4.6.0"
 faiss-cpu = "^1.7.4"
+transformers = "^4.29"
 
 
 [tool.poetry.group.dev.dependencies]

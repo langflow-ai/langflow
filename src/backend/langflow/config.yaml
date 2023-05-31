@@ -103,6 +103,7 @@ tools:
   - RequestsDeleteTool
   - WikipediaQueryRun
   - WolframAlphaQueryRun
+  - HuggingFaceTool
 utilities:
   - BingSearchAPIWrapper
   - GoogleSearchAPIWrapper
@@ -112,6 +113,7 @@ utilities:
   - SerpAPIWrapper
   - WikipediaAPIWrapper
   - WolframAlphaAPIWrapper
+
   # - ZapierNLAWrapper
   - SQLDatabase
 vectorstores:

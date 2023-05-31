@@ -90,15 +90,45 @@ def get_class_tool_params(cls, **kwargs) -> Union[Dict, None]:
     return tool_params
 
 
-def get_tool_params(tool, **kwargs) -> Dict:
-    # Parse the function code into an abstract syntax tree
+def get_load_tools_params(func, **kwargs) -> Union[Dict, None]:
+    tree = ast.parse(inspect.getsource(func))
+
+    tool_params = {}
+
+    # Iterate over the statements in the abstract syntax tree
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.name == func.__name__:
+            # We are in the function definition of our interest
+            # let's go through each argument
+            for arg in node.args.args:
+                if arg.arg == "self":
+                    continue  # we skip self for methods
+
+                default_value = (
+                    ""  # by default we set the argument value as an empty string
+                )
+
+                # check if arg has default value
+                if arg.arg in kwargs:
+                    default_value = kwargs[arg.arg]
+
+                tool_params[arg.arg] = default_value
+
+    return tool_params
+
+
+def get_tool_params(tool_name, tool, **kwargs) -> Dict:
+    # Define if "load" is in tool.__name__
+    if "load" in tool.__name__ and inspect.isfunction(tool):
+        # Get parameters for the function itself
+        return get_load_tools_params(tool, **kwargs) or {}
+
     # Define if it is a function or a class
     if inspect.isfunction(tool):
         return get_func_tool_params(tool, **kwargs) or {}
     elif inspect.isclass(tool):
         # Get the parameters necessary to
         # instantiate the class
-
         return get_class_tool_params(tool, **kwargs) or {}
 
     else:

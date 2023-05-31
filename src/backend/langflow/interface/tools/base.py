@@ -70,7 +70,7 @@ class ToolCreator(LangChainTypeCreator):
             all_tools = {}
 
             for tool, tool_fcn in ALL_TOOLS_NAMES.items():
-                tool_params = get_tool_params(tool_fcn)
+                tool_params = get_tool_params(tool, tool_fcn)
                 tool_name = tool_params.get("name", tool)
 
                 if tool_name in settings.tools or settings.dev:
@@ -168,3 +168,4 @@ class ToolCreator(LangChainTypeCreator):
 
 
 tool_creator = ToolCreator()
+from transformers import load_tool

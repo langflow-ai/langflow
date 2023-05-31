@@ -165,6 +165,7 @@ export const nodeIcons: {
   GoogleSearchRun: GoogleIcon,
   HNLoader: HackerNewsIcon,
   HuggingFaceHub: HugginFaceIcon,
+  HuggingFaceTool: HugginFaceIcon,
   HuggingFaceEmbeddings: HugginFaceIcon,
   IFixitLoader: IFixIcon,
   Meta: MetaIcon,
