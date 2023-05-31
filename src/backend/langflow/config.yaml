@@ -118,6 +118,7 @@ vectorstores:
   - Chroma
   - Qdrant
   - Weaviate
+  - FAISS
 wrappers:
   - RequestsWrapper
   # - ChatPromptTemplate
