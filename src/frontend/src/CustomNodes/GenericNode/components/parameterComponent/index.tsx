@@ -35,7 +35,7 @@ export default function ParameterComponent({
       setPosition(ref.current.offsetTop + ref.current.clientHeight / 2);
       updateNodeInternals(data.id);
     }
-  }, [data.id, ref, updateNodeInternals]);
+  }, [data.id, ref, ref.current, ref.current?.offsetTop, updateNodeInternals]);
 
   useEffect(() => {
     updateNodeInternals(data.id);
