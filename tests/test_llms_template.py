@@ -10,96 +10,96 @@ def test_llms_settings(client: TestClient):
     assert set(llms.keys()) == set(settings.llms)
 
 
-def test_hugging_face_hub(client: TestClient):
-    response = client.get("/all")
-    assert response.status_code == 200
-    json_response = response.json()
-    language_models = json_response["llms"]
+# def test_hugging_face_hub(client: TestClient):
+#     response = client.get("/all")
+#     assert response.status_code == 200
+#     json_response = response.json()
+#     language_models = json_response["llms"]
 
-    model = language_models["HuggingFaceHub"]
-    template = model["template"]
+#     model = language_models["HuggingFaceHub"]
+#     template = model["template"]
 
-    assert template["cache"] == {
-        "required": False,
-        "placeholder": "",
-        "show": False,
-        "multiline": False,
-        "password": False,
-        "name": "cache",
-        "type": "bool",
-        "list": False,
-        "advanced": False,
-    }
-    assert template["verbose"] == {
-        "required": False,
-        "placeholder": "",
-        "show": False,
-        "multiline": False,
-        "value": False,
-        "password": False,
-        "name": "verbose",
-        "type": "bool",
-        "list": False,
-        "advanced": False,
-    }
-    assert template["client"] == {
-        "required": False,
-        "placeholder": "",
-        "show": False,
-        "multiline": False,
-        "password": False,
-        "name": "client",
-        "type": "Any",
-        "list": False,
-        "advanced": False,
-    }
-    assert template["repo_id"] == {
-        "required": False,
-        "placeholder": "",
-        "show": True,
-        "multiline": False,
-        "value": "gpt2",
-        "password": False,
-        "name": "repo_id",
-        "type": "str",
-        "list": False,
-        "advanced": False,
-    }
-    assert template["task"] == {
-        "required": True,
-        "placeholder": "",
-        "show": True,
-        "multiline": False,
-        "password": False,
-        "options": ["text-generation", "text2text-generation"],
-        "name": "task",
-        "type": "str",
-        "list": True,
-        "advanced": True,
-    }
-    assert template["model_kwargs"] == {
-        "required": False,
-        "placeholder": "",
-        "show": True,
-        "multiline": False,
-        "password": False,
-        "name": "model_kwargs",
-        "type": "code",
-        "list": False,
-        "advanced": True,
-    }
-    assert template["huggingfacehub_api_token"] == {
-        "required": False,
-        "placeholder": "",
-        "show": True,
-        "multiline": False,
-        "password": True,
-        "name": "huggingfacehub_api_token",
-        "display_name": "HuggingFace Hub API Token",
-        "type": "str",
-        "list": False,
-        "advanced": False,
-    }
+#     assert template["cache"] == {
+#         "required": False,
+#         "placeholder": "",
+#         "show": False,
+#         "multiline": False,
+#         "password": False,
+#         "name": "cache",
+#         "type": "bool",
+#         "list": False,
+#         "advanced": False,
+#     }
+#     assert template["verbose"] == {
+#         "required": False,
+#         "placeholder": "",
+#         "show": False,
+#         "multiline": False,
+#         "value": False,
+#         "password": False,
+#         "name": "verbose",
+#         "type": "bool",
+#         "list": False,
+#         "advanced": False,
+#     }
+#     assert template["client"] == {
+#         "required": False,
+#         "placeholder": "",
+#         "show": False,
+#         "multiline": False,
+#         "password": False,
+#         "name": "client",
+#         "type": "Any",
+#         "list": False,
+#         "advanced": False,
+#     }
+#     assert template["repo_id"] == {
+#         "required": False,
+#         "placeholder": "",
+#         "show": True,
+#         "multiline": False,
+#         "value": "gpt2",
+#         "password": False,
+#         "name": "repo_id",
+#         "type": "str",
+#         "list": False,
+#         "advanced": False,
+#     }
+#     assert template["task"] == {
+#         "required": True,
+#         "placeholder": "",
+#         "show": True,
+#         "multiline": False,
+#         "password": False,
+#         "options": ["text-generation", "text2text-generation"],
+#         "name": "task",
+#         "type": "str",
+#         "list": True,
+#         "advanced": True,
+#     }
+#     assert template["model_kwargs"] == {
+#         "required": False,
+#         "placeholder": "",
+#         "show": True,
+#         "multiline": False,
+#         "password": False,
+#         "name": "model_kwargs",
+#         "type": "code",
+#         "list": False,
+#         "advanced": True,
+#     }
+#     assert template["huggingfacehub_api_token"] == {
+#         "required": False,
+#         "placeholder": "",
+#         "show": True,
+#         "multiline": False,
+#         "password": True,
+#         "name": "huggingfacehub_api_token",
+#         "display_name": "HuggingFace Hub API Token",
+#         "type": "str",
+#         "list": False,
+#         "advanced": False,
+#     }
 
 
 def test_openai(client: TestClient):

@@ -144,6 +144,7 @@ export default function ParameterComponent({
         ) : left === true && type === "float" ? (
           <FloatComponent
             disabled={disabled}
+            disableCopyPaste={true}
             value={data.node.template[name].value ?? ""}
             onChange={(t) => {
               data.node.template[name].value = t;
@@ -184,6 +185,7 @@ export default function ParameterComponent({
         ) : left === true && type === "int" ? (
           <IntComponent
             disabled={disabled}
+            disableCopyPaste={true}
             value={data.node.template[name].value ?? ""}
             onChange={(t) => {
               data.node.template[name].value = t;

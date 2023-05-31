@@ -19,6 +19,7 @@ import { typesContext } from "./typesContext";
 import { APITemplateType, TemplateVariableType } from "../types/api";
 import { v4 as uuidv4 } from "uuid";
 import { addEdge } from "reactflow";
+import _ from "lodash";
 
 const TabsContextInitialValue: TabsContextType = {
   save: () => {},
@@ -58,28 +59,30 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     return newNodeId.current;
   }
   function save() {
-    let Saveflows = [...flows];
-    if (Saveflows.length !== 0)
+    // added clone deep to avoid mutating the original object
+    let Saveflows = _.cloneDeep(flows);
+    if (Saveflows.length !== 0) {
       Saveflows.forEach((flow) => {
         if (flow.data && flow.data?.nodes)
           flow.data?.nodes.forEach((node) => {
+            console.log(node.data.type);
+            //looking for file fields to prevent saving the content and breaking the flow for exceeding the the data limite for local storage
             Object.keys(node.data.node.template).forEach((key) => {
+              console.log(node.data.node.template[key].type);
               if (node.data.node.template[key].type === "file") {
-                // ! Commenting this out for now, as it is causing issues with the file upload
-                // node.data.node.template[key].content = "";
+                console.log(node.data.node.template[key]);
+                node.data.node.template[key].content = null;
+                node.data.node.template[key].value = "";
               }
             });
           });
       });
-    window.localStorage.setItem(
-      "tabsData",
-      JSON.stringify({ tabIndex, flows: Saveflows, id })
-    );
+      window.localStorage.setItem(
+        "tabsData",
+        JSON.stringify({ tabIndex, flows: Saveflows, id })
+      );
+    }
   }
-  useEffect(() => {
-    //save tabs locally
-    save();
-  }, [flows, id, tabIndex, newNodeId]);
 
   useEffect(() => {
     //get tabs locally saved
@@ -89,7 +92,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       cookieObject.flows.forEach((flow) => {
         flow.data.edges.forEach((edge) => {
           edge.className = "";
-          edge.style = { stroke: "#222222" };
+          edge.style = { stroke: "#555555" };
         });
         flow.data.nodes.forEach((node) => {
           if (Object.keys(templates[node.data.type]["template"]).length > 0) {
@@ -121,6 +124,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       setId(cookieObject.id);
     }
   }, [templates]);
+
+  useEffect(() => {
+    //save tabs locally
+    console.log(id);
+    save();
+  }, [flows, id, tabIndex, newNodeId]);
 
   function hardReset() {
     newNodeId.current = uuidv4();
@@ -278,7 +287,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           sourceHandle,
           targetHandle,
           id,
-          className: "animate-pulse",
+          style: { stroke: "inherit" },
+          className:
+            targetHandle.split("|")[0] === "Text"
+              ? "stroke-gray-800 dark:stroke-gray-300"
+              : "stroke-gray-900 dark:stroke-gray-200",
+          animated: targetHandle.split("|")[0] === "Text",
           selected: false,
         },
         edges.map((e) => ({ ...e, selected: false }))
@@ -294,8 +308,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     const description = flow?.description ? flow.description : "";
     if (data) {
       data.edges.forEach((edge) => {
-        edge.className = "";
-        edge.style = { stroke: "#222222" };
+        edge.style = { stroke: "inherit" };
+        edge.className =
+          edge.targetHandle.split("|")[0] === "Text"
+            ? "stroke-gray-800 dark:stroke-gray-300"
+            : "stroke-gray-900 dark:stroke-gray-200";
+        edge.animated = edge.targetHandle.split("|")[0] === "Text";
       });
       data.nodes.forEach((node) => {
         if (Object.keys(templates[node.data.type]["template"]).length > 0) {

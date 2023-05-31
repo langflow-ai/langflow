@@ -52,7 +52,6 @@ llms:
   - OpenAI
   # - AzureOpenAI
   - ChatOpenAI
-  - HuggingFaceHub
   - LlamaCpp
   - CTransformers
   - Cohere
@@ -66,9 +65,9 @@ prompts:
   - ZeroShotPrompt
 textsplitters:
   - CharacterTextSplitter
-  - RecursiveCharacterTextSplitter
-  - LatexTextSplitter
-  - PythonCodeTextSplitter
+  # - RecursiveCharacterTextSplitter
+  # - LatexTextSplitter
+  # - PythonCodeTextSplitter
 toolkits:
   - OpenAPIToolkit
   - JsonToolkit
