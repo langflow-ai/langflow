@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional, Type
 
 from langflow.interface.base import LangChainTypeCreator
-from langflow.template.frontend_node.textsplitters import VectorStoreFrontendNode
+from langflow.template.frontend_node.textsplitters import TextSplittersFrontendNode
 from langflow.interface.custom_lists import textsplitter_type_to_cls_dict
 from langflow.settings import settings
 from langflow.utils.logger import logger
@@ -12,8 +12,8 @@ class TextSplitterCreator(LangChainTypeCreator):
     type_name: str = "textsplitters"
 
     @property
-    def frontend_node_class(self) -> Type[VectorStoreFrontendNode]:
-        return VectorStoreFrontendNode
+    def frontend_node_class(self) -> Type[TextSplittersFrontendNode]:
+        return TextSplittersFrontendNode
 
     @property
     def type_to_loader_dict(self) -> Dict:
