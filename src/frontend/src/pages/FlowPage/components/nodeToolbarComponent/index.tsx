@@ -14,6 +14,7 @@ import { Fragment } from "react";
 import NodeModal from "../../../../modals/NodeModal";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { useReactFlow } from "reactflow";
+import EditNodeModal from "../../../../modals/EditNodeModal";
 
 const NodeToolbarComponent = (props) => {
   const { setLastCopiedSelection, paste } = useContext(TabsContext);
@@ -109,6 +110,9 @@ const NodeToolbarComponent = (props) => {
                         <button
                           onClick={(event) => {
                             event.preventDefault();
+                            props.openPopUp(
+                              <EditNodeModal data={props.data} />
+                            );
                           }}
                           className={classNames(
                             active
