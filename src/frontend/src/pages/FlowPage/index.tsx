@@ -344,7 +344,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
           <SelectionMenu
             onClick={() => {
               if (validateSelection(lastSelection)) {
-                const newFlow = generateFlow(
+                const {newFlow} = generateFlow(
                   lastSelection,
                   reactFlowInstance,
                   "new component"

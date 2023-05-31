@@ -544,11 +544,11 @@ export function generateFlow(
 	selection: OnSelectionChangeParams,
 	reactFlowInstance: ReactFlowInstance,
 	name: string
-): FlowType {
+): {newFlow:FlowType,removedEdges:Edge[]} {
 	const newFlowData = reactFlowInstance.toObject();
 
 	/*	remove edges that are not connected to selected nodes on both ends
-		in future we can save this edges to when ungrouping recconect to the old nodes 
+		in future we can save this edges to when ungrouping reconect to the old nodes 
 	*/
 	newFlowData.edges = selection.edges.filter(
 		(edge) => selection.nodes.some((node) => node.id === edge.target) && selection.nodes.some((node) => node.id === edge.source)
@@ -562,7 +562,10 @@ export function generateFlow(
 		description: "",
 		id: uuidv4(),
 	};
-	return newFlow;
+	// filter edges that are not connected to selected nodes on both ends
+	// using O(n²) aproach because the number of edges is small
+	// in the future we can use a better aproach using a set
+	return {newFlow,removedEdges:selection.edges.filter(edge=>!newFlowData.edges.includes(edge))};
 }
 
 export function filterFlow(
