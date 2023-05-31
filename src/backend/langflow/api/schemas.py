@@ -24,13 +24,13 @@ class PredictRequest(BaseModel):
     """Predict request schema."""
 
     message: str
-    exported_flow: ExportedFlow
 
 
 class PredictResponse(BaseModel):
     """Predict response schema."""
 
     result: str
+    intermediate_steps: str = ""
 
 
 class ChatMessage(BaseModel):
