@@ -18,7 +18,7 @@ export type TabsContextType = {
   getNodeId: () => string;
   paste: (
     selection: { nodes: any; edges: any },
-    position: { x: number; y: number }
+    position: { x: number; y: number; paneX?: number; paneY?: number }
   ) => void;
   lastCopiedSelection: { nodes: any; edges: any };
   setLastCopiedSelection: (selection: { nodes: any; edges: any }) => void;
