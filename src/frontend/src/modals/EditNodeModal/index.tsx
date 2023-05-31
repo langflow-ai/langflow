@@ -44,7 +44,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const [advanced, setAdvanced] = useState([]);
   const [parameters, setParameters] = useState([]);
   const updateAdvancedParameters = () => {
-    debugger
+    debugger;
     setAdvanced(
       Object.keys(data.node.template).filter(
         (t) =>
