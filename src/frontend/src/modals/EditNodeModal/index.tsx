@@ -133,7 +133,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                     </div>
                   </div>
                   <div className="h-full w-full bg-gray-200 dark:bg-gray-900 p-4 gap-4 flex flex-row justify-center items-center">
-                    <div className="flex w-full h-[445px]">
+                    <div className="flex w-full h-full max-h-[445px]">
                       <div
                         className={classNames(
                           "w-full rounded-lg bg-white dark:bg-gray-800 shadow",
@@ -149,12 +149,12 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                 !data.node.template[t].advanced &&
                                 data.node.template[t].show
                             ).length > limitScrollFieldsModal
-                            ? "overflow-scroll overflow-x-hidden custom-scroll"
-                            : "overflow-hidden"
+                            ? "overflow-scroll overflow-x-hidden custom-scroll h-fit"
+                            : "overflow-hidden h-fit"
                         )}
                       >
-                        <div className="flex flex-col h-full gap-5">
-                          <table className="table-fixed w-full h-full divide-y divide-gray-300">
+                        <div className="flex flex-col h-full gap-5 h-fit	">
+                          <table className="table-fixed w-full divide-y divide-gray-300 border-b-[1px] rounded-b-lg h-full">
                             <thead>
                               <tr className="divide-x divide-gray-200">
                                 <th
@@ -178,7 +178,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                       key={idx}
                                       className="divide-x divide-gray-200"
                                     >
-                                      <td className="gap-3 py-4 px-4 text-sm font-medium text-gray-900">
+                                      <td className="gap-3 py-4 px-4 text-sm font-medium text-gray-900 truncate h-1">
                                         {data.node.template[parameters[idx]] ? (
                                           <button
                                             className="flex gap-3 w-full items-center"
@@ -209,7 +209,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                           <></>
                                         )}
                                       </td>
-                                      <td className="p-4 text-sm text-right font-medium text-gray-900">
+                                      <td className="p-4 text-sm text-right font-medium text-gray-900 truncate h-1">
                                         <button
                                           className="w-full flex justify-end gap-3 items-center"
                                           onClick={() => {
