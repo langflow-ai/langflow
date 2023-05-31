@@ -6,6 +6,7 @@ import {
   TrashIcon,
   PencilSquareIcon,
   DocumentDuplicateIcon,
+  DocumentPlusIcon,
 } from "@heroicons/react/24/outline";
 import { classNames } from "../../../../utils";
 import { Fragment } from "react";
@@ -32,7 +33,7 @@ const NodeToolbarComponent = (props) => {
                   props.data.node.template[t].advanced &&
                   props.data.node.template[t].show
               )
-                ? "hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
+                ? "hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
                 : "hidden"
             )}
             onClick={(event) => {
@@ -40,7 +41,7 @@ const NodeToolbarComponent = (props) => {
               props.openPopUp(<NodeModal data={props.data} />);
             }}
           >
-            <div className=" absolute -right-1 -top-2 text-red-600">
+            <div className=" absolute right-1 top-0 text-red-600">
               {Object.keys(props.data.node.template).some(
                 (t) =>
                   props.data.node.template[t].advanced &&
@@ -63,8 +64,19 @@ const NodeToolbarComponent = (props) => {
             ></Cog6ToothIcon>
           </button>
 
+          <button
+            className="hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
+            onClick={(event) => {
+              event.preventDefault();
+            }}
+          >
+            <DocumentDuplicateIcon
+              className="w-5 h-5  dark:text-gray-300"
+            ></DocumentDuplicateIcon>
+          </button>
+
           <Menu as="div" className="relative inline-block text-left z-100">
-            <button className="hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10 rounded-r-md">
+            <button className="hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10 rounded-r-md">
               <div>
                 <Menu.Button className="flex items-center">
                   <EllipsisVerticalIcon
@@ -115,7 +127,7 @@ const NodeToolbarComponent = (props) => {
                             "group flex items-center px-4 py-2 text-sm"
                           )}
                         >
-                          <DocumentDuplicateIcon
+                          <DocumentPlusIcon
                             className="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-500"
                             aria-hidden="true"
                           />
