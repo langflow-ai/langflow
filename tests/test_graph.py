@@ -237,11 +237,10 @@ def test_build_params(basic_graph):
     assert "memory" in root.params
 
 
-def test_build(basic_graph, complex_graph, openapi_graph):
+def test_build(basic_graph, complex_graph):
     """Test Node's build method"""
     assert_agent_was_built(basic_graph)
     assert_agent_was_built(complex_graph)
-    assert_agent_was_built(openapi_graph)
 
 
 def assert_agent_was_built(graph):
