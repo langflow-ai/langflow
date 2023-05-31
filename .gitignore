@@ -10,7 +10,7 @@ lerna-debug.log*
 .DS_Store
 
 # VSCode
-.vscode
+.vscode/settings.json
 .chroma
 .ruff_cache
 
