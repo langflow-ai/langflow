@@ -36,6 +36,7 @@ import {
   generateNodeFromFlow,
   getMiddlePoint,
   isValidConnection,
+  updateRemovedEdges,
   validateSelection,
 } from "../../utils";
 import useUndoRedo from "./hooks/useUndoRedo";

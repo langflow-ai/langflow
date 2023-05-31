@@ -768,12 +768,6 @@ export function validateSelection(selection: OnSelectionChangeParams) {
 	if(selection.nodes.length <2){
 		return false;
 	}
-	// can be root verification
-	if (
-		!selection.nodes.some((n) => n.data.node.template.root_field || n.type === "groupNode")
-	) {
-		return false;
-	}
 	// connection verification
 	let validationErrors = selection.nodes.flatMap((n) =>
 		validateNode(n, selection)
@@ -799,10 +793,10 @@ export function mergeNodeTemplates({nodes,edges}:{nodes:NodeType[],edges:Edge[]}
 				template[key+"_"+node.id].proxy = {id:node.id,field:key};
 				if(node.type==="groupNode")
 				{
-					template[key+"_"+node.id].display_name = nodeTemplate[key].name +", "+ node.data.node.flow.name;		
+					template[key+"_"+node.id].display_name = node.data.node.flow.name  +" - "+nodeTemplate[key].name ;		
 				}
 				else{
-					template[key+"_"+node.id].display_name = nodeTemplate[key].name	+", "+ node.data.type;
+					template[key+"_"+node.id].display_name = node.data.type +" - "+ nodeTemplate[key].name;
 				}
 			}
 		})
@@ -862,4 +856,21 @@ export function findLastNode({nodes,edges}:{nodes:NodeType[],edges:Edge[]}){
 	*/
 	let lastNode = nodes.find((n)=>!edges.some((e)=>e.source === n.id));
 	return lastNode;
+}
+// TODO: end this function
+export function updateRemovedEdges(groupNode:NodeType,oldEdges:Edge[]){
+	/* 
+	this function receive a group node and the edges that were 
+	connected to the components that are now grouped and update the edges to the new node
+	*/
+	let FlowNodes = groupNode.data.node.flow.data.nodes
+	let newEdges:Edge[] = [];
+	oldEdges.forEach((edge)=>{
+		let target = edge.target;
+		const refNode = FlowNodes.find(node=>node.id === target);
+		if(refNode){
+			//update edges to target node
+			//consider two cases group node and normal node
+		}
+	})
 }
