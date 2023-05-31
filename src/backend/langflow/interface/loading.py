@@ -11,6 +11,7 @@ from langchain.agents.load_tools import (
     _EXTRA_OPTIONAL_TOOLS,
     _LLM_TOOLS,
 )
+from pathlib import Path
 from langchain.agents.loading import load_agent_from_config
 from langchain.agents.tools import Tool
 from langchain.base_language import BaseLanguageModel
@@ -140,7 +141,13 @@ def instantiate_vectorstore(class_object, params):
 
 
 def instantiate_documentloader(class_object, params):
-    return class_object(**params).load()
+    documents = class_object(**params).load()
+    # now that the file is loaded, we can remove the path
+    for value in params.values():
+        path = Path(value)
+        if path.exists():
+            path.unlink()
+    return documents
 
 
 def instantiate_textsplitter(class_object, params):
