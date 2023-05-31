@@ -1,5 +1,5 @@
 import os
-from typing import List
+from typing import List, Optional
 
 import yaml
 from pydantic import BaseSettings, root_validator
@@ -20,10 +20,12 @@ class Settings(BaseSettings):
     textsplitters: List[str] = []
     utilities: List[str] = []
     dev: bool = False
+    dabatabase_url: str = "sqlite:///./langflow.db"
 
     class Config:
         validate_assignment = True
         extra = "ignore"
+        env_prefix = "LANGFLOW_"
 
     @root_validator(allow_reuse=True)
     def validate_lists(cls, values):
@@ -45,6 +47,10 @@ class Settings(BaseSettings):
         self.textsplitters = new_settings.textsplitters or []
         self.utilities = new_settings.utilities or []
         self.dev = dev
+
+    def update_database_url(self, database_url: Optional[str] = None):
+        if database_url:
+            self.database_url = database_url
 
 
 def save_settings_to_yaml(settings: Settings, file_path: str):
