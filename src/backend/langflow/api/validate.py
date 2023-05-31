@@ -51,7 +51,12 @@ def post_validate_node(node_id: str, data: dict):
             raise ValueError(f"Node {node_id} not found")
         if not isinstance(node, VectorStoreNode):
             node.build()
-        return json.dumps({"valid": True, "params": str(node._built_object_repr())})
+        return json.dumps(
+            {
+                "valid": True,
+                "params": f"{str(node._built_object_repr())[:300]}...",
+            }
+        )
     except Exception as e:
         logger.exception(e)
         return json.dumps({"valid": False, "params": str(e)})
