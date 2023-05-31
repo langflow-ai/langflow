@@ -1,7 +1,7 @@
 import logging
 from importlib.metadata import version
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile
 
 from langflow.api.schemas import (
     ExportedFlow,
@@ -9,6 +9,7 @@ from langflow.api.schemas import (
     PredictRequest,
     PredictResponse,
 )
+from langflow.cache.base import save_uploaded_file
 from langflow.interface.run import process_graph_cached
 from langflow.interface.types import build_langchain_types_dict
 
@@ -34,6 +35,15 @@ async def get_load(predict_request: PredictRequest):
         # Log stack trace
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# Endpoint to upload file
+@router.post("/upload/{client_id}")
+async def create_upload_file(file: UploadFile, client_id: str):
+    # Cache file
+    file_path = save_uploaded_file(file.file, file_name=client_id)
+
+    return {"filename": file_path}
 
 
 # get endpoint to return version of langflow

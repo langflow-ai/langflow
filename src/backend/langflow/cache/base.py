@@ -136,6 +136,19 @@ def save_binary_file(content: str, file_name: str, accepted_types: list[str]) ->
 
 
 @create_cache_folder
+def save_uploaded_file(file, file_name):
+    cache_path = Path(tempfile.gettempdir()) / PREFIX
+    file_path = cache_path / file_name
+
+    with open(file_path, "wb") as new_file:
+        # Iterate over the uploaded file in small chunks to conserve memory
+        while chunk := file.read(8192):  # Read 8KB at a time (adjust as needed)
+            new_file.write(chunk)
+
+    return file_path
+
+
+@create_cache_folder
 def save_cache(hash_val: str, chat_data, clean_old_cache_files: bool):
     cache_path = Path(tempfile.gettempdir()) / PREFIX / f"{hash_val}.dill"
     with cache_path.open("wb") as cache_file:

@@ -87,12 +87,7 @@ class Node:
                 # Load the type in value.get('suffixes') using
                 # what is inside value.get('content')
                 # value.get('value') is the file name
-                file_name = value.get("value")
-                content = value.get("content")
-                type_to_load = value.get("suffixes")
-                file_path = cache_utils.save_binary_file(
-                    content=content, file_name=file_name, accepted_types=type_to_load
-                )
+                file_path = value.get("file_path")
 
                 params[key] = file_path
 
