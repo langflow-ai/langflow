@@ -6,7 +6,7 @@ import {
 import { Fragment, useContext, useEffect, useRef, useState } from "react";
 import { FlowType, NodeDataType, NodeType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
-import { toNormalCase } from "../../utils";
+import { processFLow, toNormalCase } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import ChatMessage from "./chatMessage";
 import { FaEraser } from "react-icons/fa";
@@ -320,8 +320,9 @@ export default function ChatModal({
         let message = chatValue;
         setChatValue("");
         addChatHistory(message, true);
+        
         sendAll({
-          ...reactFlowInstance.toObject(),
+          ...processFLow(reactFlowInstance.toObject()),
           message,
           chatHistory,
           name: flow.name,

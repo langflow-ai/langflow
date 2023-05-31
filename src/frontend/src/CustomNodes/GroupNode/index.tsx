@@ -104,7 +104,7 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
           <button
             onClick={() => {
               updateFlowPosition({ x: xPos, y: yPos }, data.node.flow)
-              expandGroupNode(data.node.flow, reactFlowInstance)
+              expandGroupNode(data.node.flow, reactFlowInstance,data.node.template)
             }}>
             <ArrowsPointingOutIcon className="w-6 h-6 hover:text-blue-500 dark:text-gray-300 dark:hover:text-blue-500" />
           </button>
