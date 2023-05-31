@@ -1,7 +1,12 @@
 from typing import Any, Dict, List, Optional, Union
 
 from langflow.graph.base import Node
-from langflow.graph.utils import extract_input_variables_from_prompt
+from langflow.graph.utils import extract_input_variables_from_prompt, flatten_list
+
+
+class ToolkitNode(Node):
+    def __init__(self, data: Dict):
+        super().__init__(data, base_type="toolkits")
 
 
 class AgentNode(Node):
@@ -47,7 +52,7 @@ class PromptNode(Node):
     def build(
         self,
         force: bool = False,
-        tools: Optional[Union[List[Node], List[ToolNode]]] = None,
+        tools: Optional[List[Union[ToolNode, ToolkitNode]]] = None,
     ) -> Any:
         if not self._built or force:
             if (
@@ -65,8 +70,7 @@ class PromptNode(Node):
                 # flatten the list of tools if it is a list of lists
                 # first check if it is a list
                 if tools and isinstance(tools, list) and isinstance(tools[0], list):
-                    tools = [tool for sublist in tools for tool in sublist]
-
+                    tools = flatten_list(tools)
                 self.params["tools"] = tools
                 prompt_params = [
                     key
@@ -82,30 +86,6 @@ class PromptNode(Node):
             self.params["input_variables"] = list(set(self.params["input_variables"]))
 
             self._build()
-        return self._built_object
-
-
-class ChainNode(Node):
-    def __init__(self, data: Dict):
-        super().__init__(data, base_type="chains")
-
-    def build(
-        self,
-        force: bool = False,
-        tools: Optional[Union[List[Node], List[ToolNode]]] = None,
-    ) -> Any:
-        if not self._built or force:
-            # Check if the chain requires a PromptNode
-            for key, value in self.params.items():
-                if isinstance(value, PromptNode):
-                    # Build the PromptNode, passing the tools if available
-                    self.params[key] = value.build(tools=tools, force=force)
-
-            self._build()
-
-        #! Cannot deepcopy SQLDatabaseChain
-        if self.node_type in ["SQLDatabaseChain"]:
-            return self._built_object
         return self._built_object
 
 
@@ -128,11 +108,6 @@ class LLMNode(Node):
         # Avoid deepcopying the LLM
         # that are loaded from a file
         return self._built_object
-
-
-class ToolkitNode(Node):
-    def __init__(self, data: Dict):
-        super().__init__(data, base_type="toolkits")
 
 
 class FileToolNode(ToolNode):
@@ -193,3 +168,24 @@ class TextSplitterNode(Node):
         if self._built_object:
             return f"""{self.node_type}({len(self._built_object)} documents)\nDocuments: {self._built_object[:3]}..."""
         return f"{self.node_type}()"
+
+
+class ChainNode(Node):
+    def __init__(self, data: Dict):
+        super().__init__(data, base_type="chains")
+
+    def build(
+        self,
+        force: bool = False,
+        tools: Optional[List[Union[ToolNode, ToolkitNode]]] = None,
+    ) -> Any:
+        if not self._built or force:
+            # Check if the chain requires a PromptNode
+            for key, value in self.params.items():
+                if isinstance(value, PromptNode):
+                    # Build the PromptNode, passing the tools if available
+                    self.params[key] = value.build(tools=tools, force=force)
+
+            self._build()
+
+        return self._built_object
