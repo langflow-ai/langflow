@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "0.0.79"
+version = "0.0.80"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
@@ -57,6 +57,7 @@ jina = "3.15.2"
 sentence-transformers = "^2.2.2"
 ctransformers = "^0.2.2"
 cohere = "^4.6.0"
+faiss-cpu = "^1.7.4"
 
 
 [tool.poetry.group.dev.dependencies]
