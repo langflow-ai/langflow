@@ -1,4 +1,3 @@
-from copy import copy
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from langflow.graph.base import Edge, Node

@@ -240,3 +240,6 @@ dmypy.json
 
 # Poetry
 .testenv/*
+
+# cache
+qdrant*
