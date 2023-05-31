@@ -168,4 +168,3 @@ class ToolCreator(LangChainTypeCreator):
 
 
 tool_creator = ToolCreator()
-from transformers import load_tool
