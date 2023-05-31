@@ -618,7 +618,7 @@ export function expandGroupNode(
 	ReactFlowInstance: ReactFlowInstance,
 	template: APITemplateType
 ) {
-	const gNodes = flow.data.nodes;
+	const gNodes = _.cloneDeep(flow.data.nodes);
 	const gEdges = flow.data.edges;
 	//redirect edges to correct proxy node
 	let updatedEdges:Edge[] = [];
@@ -654,6 +654,28 @@ export function expandGroupNode(
 		updatedEdges.push(newEdge);
 	}
 	})
+
+	Object.keys(template).forEach((key)=>{
+		let {field,id} = template[key].proxy
+		let nodeIndex =gNodes.findIndex((n)=>n.id === id);
+		if(nodeIndex!==-1){
+			let display_name:string;
+			let show = gNodes[nodeIndex].data.node.template[field].show;
+			let advanced = gNodes[nodeIndex].data.node.template[field].advanced;
+			if(gNodes[nodeIndex].data.node.template[field].display_name){
+				display_name = gNodes[nodeIndex].data.node.template[field].display_name;
+				
+			}
+			else{
+				display_name = gNodes[nodeIndex].data.node.template[field].name;
+			}
+			gNodes[nodeIndex].data.node.template[field] = template[key];
+			gNodes[nodeIndex].data.node.template[field].show = show;
+			gNodes[nodeIndex].data.node.template[field].advanced = advanced;
+			gNodes[nodeIndex].data.node.template[field].display_name = display_name;
+		}
+	})
+
 	const nodes = [
 		...ReactFlowInstance.getNodes().filter((n) => n.id !== flow.id),
 		...gNodes,
@@ -910,16 +932,23 @@ export function ungroupNode(
 		updatedEdges.push(newEdge);
 	}
 	})
-	console.log(gNodes)
 	Object.keys(template).forEach((key)=>{
 		let {field,id} = template[key].proxy
 		let nodeIndex =gNodes.findIndex((n)=>n.id === id);
 		if(nodeIndex!==-1){
+			let display_name:string;
 			let show = gNodes[nodeIndex].data.node.template[field].show;
 			let advanced = gNodes[nodeIndex].data.node.template[field].advanced;
+			if(gNodes[nodeIndex].data.node.template[field].display_name){
+				display_name = gNodes[nodeIndex].data.node.template[field].display_name;
+			}
+			else{
+				display_name = gNodes[nodeIndex].data.node.template[field].name;
+			}
 			gNodes[nodeIndex].data.node.template[field] = template[key];
 			gNodes[nodeIndex].data.node.template[field].show = show;
 			gNodes[nodeIndex].data.node.template[field].advanced = advanced;
+			gNodes[nodeIndex].data.node.template[field].display_name = display_name;
 		}
 	})
 	
