@@ -752,31 +752,23 @@ export function validateNode(n: NodeType, selection: OnSelectionChangeParams) {
 	);
 }
 
-export function validateSelection(selection: OnSelectionChangeParams) {
+export function validateSelection(selection: OnSelectionChangeParams):Array<string> {
+	let errorsArray:Array<string> = [];
+	// check if there is more than one node
+	if(selection.nodes.length <2){
+		errorsArray.push("Please select more than one node");
+	}
 
 	//check if there are two or more nodes with free outputs
 	if(selection.nodes.filter((n)=>!selection.edges.some((e)=>e.source === n.id)).length > 1){
-		return false;
+		errorsArray.push("Please select only one node with free outputs");
 	}
 	
 	// check if there is any node that does not have any connection
 	if (selection.nodes.some(node=>!selection.edges.some(edge=>edge.target === node.id)&& !selection.edges.some(edge=>edge.source === node.id))){
-		return false;
+		errorsArray.push("Please select only nodes that are connected");
 	}
-	
-	// check if there is more than one node
-	if(selection.nodes.length <2){
-		return false;
-	}
-	// connection verification
-	let validationErrors = selection.nodes.flatMap((n) =>
-		validateNode(n, selection)
-	);
-	if (validationErrors.length > 0) {
-		return false;
-	} else {
-		return true;
-	}
+	return errorsArray;
 }
 export function mergeNodeTemplates({nodes,edges}:{nodes:NodeType[],edges:Edge[]}):APITemplateType | undefined{
 	/* this function receives a flow and iterate trhow each node

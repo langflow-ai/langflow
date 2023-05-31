@@ -344,7 +344,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
           <Chat flow={flow} reactFlowInstance={reactFlowInstance} />
           <SelectionMenu
             onClick={() => {
-              if (validateSelection(lastSelection)) {
+              if (validateSelection(lastSelection).length === 0) {
                 const {newFlow} = generateFlow(
                   lastSelection,
                   reactFlowInstance,
@@ -374,7 +374,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
               else{
                 setErrorData({
                   title: "Invalid selection",
-                  list: ["Please select a valid group of nodes"],
+                  list: validateSelection(lastSelection),
                 });
               }
 
