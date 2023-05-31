@@ -59,15 +59,15 @@ export default function InputFileComponent({
           .then((data) => {
             console.log("File uploaded successfully");
             // Get the file name from the response
-            const { filename } = data;
-            console.log("File name:", filename);
+            const { file_path } = data;
+            console.log("File name:", file_path);
 
             // Update the state and callback with the name of the file
             // sets the value to the user
             setMyValue(file.name);
             onChange(file.name);
             // sets the value that goes to the backend
-            onFileChange(filename);
+            onFileChange(file_path);
           })
           .catch(() => {
             console.error("Error occurred while uploading file");
