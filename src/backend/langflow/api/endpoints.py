@@ -43,7 +43,7 @@ async def create_upload_file(file: UploadFile, client_id: str):
     # Cache file
     file_path = save_uploaded_file(file.file, file_name=client_id)
 
-    return {"filename": file_path}
+    return {"file_path": file_path}
 
 
 # get endpoint to return version of langflow
