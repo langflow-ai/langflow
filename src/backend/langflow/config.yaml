@@ -65,7 +65,7 @@ prompts:
   - ZeroShotPrompt
 textsplitters:
   - CharacterTextSplitter
-  # - RecursiveCharacterTextSplitter
+  - RecursiveCharacterTextSplitter
   # - LatexTextSplitter
   # - PythonCodeTextSplitter
 toolkits:

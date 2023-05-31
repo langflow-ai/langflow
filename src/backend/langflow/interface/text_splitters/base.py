@@ -25,14 +25,18 @@ class TextSplitterCreator(LangChainTypeCreator):
                 "show": True,
                 "name": "documents",
             }
+            if name == "RecursiveCharacterTextSplitter":
+                separator_name = "separators"
+            else:
+                separator_name = "separator"
 
-            signature["template"]["separator"] = {
+            signature["template"][separator_name] = {
                 "type": "str",
                 "required": True,
                 "show": True,
                 "value": ".",
-                "name": "separator",
-                "display_name": "Separator",
+                "name": separator_name,
+                "display_name": separator_name.title(),
             }
 
             signature["template"]["chunk_size"] = {
