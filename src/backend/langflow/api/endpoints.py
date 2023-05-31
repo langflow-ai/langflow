@@ -3,7 +3,7 @@ from langflow.database.models.flow import Flow
 from langflow.utils.logger import logger
 from importlib.metadata import version
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, HTTPException
 
 from langflow.api.schemas import (
     GraphData,
@@ -12,10 +12,9 @@ from langflow.api.schemas import (
 )
 from langflow.interface.run import process_graph_cached
 from langflow.interface.types import build_langchain_types_dict
-from langflow.cache import cache_manager
 from langflow.database.base import get_session
 from sqlmodel import Session
-from sqlmodel import select
+
 # build router
 router = APIRouter(tags=["Base"])
 
@@ -26,8 +25,11 @@ def get_all():
 
 
 @router.post("/predict/{flow_id}", status_code=200, response_model=PredictResponse)
-async def get_load(predict_request: PredictRequest, flow_id: str, session: Session= Depends(get_session)):
-
+async def get_load(
+    predict_request: PredictRequest,
+    flow_id: str,
+    session: Session = Depends(get_session),
+):
     try:
         flow_obj = session.get(Flow, flow_id)
         if flow_obj is None:
@@ -35,7 +37,10 @@ async def get_load(predict_request: PredictRequest, flow_id: str, session: Sessi
         graph_data: GraphData = json.loads(flow_obj.flow)
         data = graph_data.dict()
         response = process_graph_cached(data, predict_request.message)
-        return PredictResponse(result=response.get("result", ""), intermediate_steps=response.get("thought", ""))
+        return PredictResponse(
+            result=response.get("result", ""),
+            intermediate_steps=response.get("thought", ""),
+        )
     except Exception as e:
         # Log stack trace
         logger.exception(e)
@@ -51,11 +56,3 @@ def get_version():
 @router.get("/health")
 def get_health():
     return {"status": "OK"}
-
-
-# Make an endpoint to upload  a file using the client_id and
-# cache the file in the backend
-@router.post("/uploadfile/{client_id}")
-async def create_upload_file(client_id: str, file: UploadFile = File(...)):
-
-    # TODO: Implement this endpoint

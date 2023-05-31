@@ -5,9 +5,8 @@ from langflow.api.chat import router as chat_router
 from langflow.api.endpoints import router as endpoints_router
 from langflow.api.validate import router as validate_router
 from langflow.api.database import router as database_router
-from langflow.utils.logger import logger
 from langflow.database.base import create_db_and_tables
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 
 # build router

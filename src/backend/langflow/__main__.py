@@ -18,10 +18,12 @@ def get_number_of_workers(workers=None):
     return workers
 
 
-def update_settings(config: str, dev: bool = False):
+def update_settings(config: str, dev: bool = False, database_url: str = None):
     """Update the settings from a config file."""
     if config:
         settings.update_from_yaml(config, dev=dev)
+    if database_url:
+        settings.update_database_url(database_url)
 
 
 def serve_on_jcloud():
@@ -81,6 +83,10 @@ def serve(
     log_file: Path = typer.Option("logs/langflow.log", help="Path to the log file."),
     jcloud: bool = typer.Option(False, help="Deploy on Jina AI Cloud"),
     dev: bool = typer.Option(False, help="Run in development mode (may contain bugs)"),
+    database_url: str = typer.Option(
+        None,
+        help="Database URL to connect to. If not provided, a local SQLite database will be used.",
+    ),
 ):
     """
     Run the Langflow server.
@@ -90,7 +96,7 @@ def serve(
         return serve_on_jcloud()
 
     configure(log_level=log_level, log_file=log_file)
-    update_settings(config, dev=dev)
+    update_settings(config, dev=dev, database_url=database_url)
     app = create_app()
     # get the directory of the current file
     path = Path(__file__).parent
