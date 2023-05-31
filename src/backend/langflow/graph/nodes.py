@@ -8,7 +8,7 @@ class AgentNode(Node):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="agents")
 
-        self.tools: List[ToolNode] = []
+        self.tools: List[Union[ToolNode, ToolkitNode]] = []
         self.chains: List[ChainNode] = []
 
     def _set_tools_and_chains(self) -> None:
