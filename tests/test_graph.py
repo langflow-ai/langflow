@@ -156,7 +156,9 @@ def test_get_node_neighbors_complex(complex_graph):
     tool_neighbors = complex_graph.get_nodes_with_target(tool)
     assert tool_neighbors is not None
     # Check if there is a PythonFunction in the tool's neighbors
-    assert any("PythonFunction" in neighbor.data["type"] for neighbor in tool_neighbors)
+    assert any(
+        "PythonFunctionTool" in neighbor.data["type"] for neighbor in tool_neighbors
+    )
 
 
 def test_get_node(basic_graph):
