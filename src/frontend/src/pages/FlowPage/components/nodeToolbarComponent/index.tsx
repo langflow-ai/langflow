@@ -15,6 +15,7 @@ import NodeModal from "../../../../modals/NodeModal";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { useReactFlow } from "reactflow";
 import EditNodeModal from "../../../../modals/EditNodeModal";
+import TooltipReact from "../../../../components/ReactTooltipComponent";
 
 const NodeToolbarComponent = (props) => {
   const { setLastCopiedSelection, paste } = useContext(TabsContext);
@@ -23,53 +24,114 @@ const NodeToolbarComponent = (props) => {
     <>
       <div className="h-10 w-26">
         <span className="isolate inline-flex rounded-md shadow-sm">
-          <button
-            className="hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative inline-flex items-center rounded-l-md bg-white px-2 py-2 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
-            onClick={() => {
-              props.deleteNode(props.data.id);
-            }}
+          <TooltipReact
+            delayShow={1000}
+            selector="Delete"
+            htmlContent="Delete"
+            position="top"
           >
-            <TrashIcon className="w-5 h-5 dark:text-gray-300"></TrashIcon>
-          </button>
+            <button
+              className="hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative inline-flex items-center rounded-l-md bg-white px-2 py-2 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
+              onClick={() => {
+                props.deleteNode(props.data.id);
+              }}
+            >
+              <TrashIcon className="w-5 h-5 dark:text-gray-300"></TrashIcon>
+            </button>
+          </TooltipReact>
 
-          <button
-            className={classNames(
-              Object.keys(props.data.node.template).some(
-                (t) =>
-                  props.data.node.template[t].advanced &&
-                  props.data.node.template[t].show
-              )
-                ? "hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
-                : "hidden"
-            )}
-            onClick={(event) => {
-              event.preventDefault();
-              props.openPopUp(<NodeModal data={props.data} />);
-            }}
+          <TooltipReact
+            delayShow={1000}
+            selector="Settings"
+            htmlContent="Settings"
+            position="top"
           >
-            <div className=" absolute right-1 top-0 text-red-600">
-              {Object.keys(props.data.node.template).some(
-                (t) =>
-                  props.data.node.template[t].advanced &&
-                  props.data.node.template[t].required
-              )
-                ? " *"
-                : ""}
-            </div>
-            <Cog6ToothIcon
+            <button
               className={classNames(
                 Object.keys(props.data.node.template).some(
                   (t) =>
                     props.data.node.template[t].advanced &&
                     props.data.node.template[t].show
                 )
-                  ? ""
-                  : "hidden",
-                "w-5 h-5  dark:text-gray-300"
+                  ? "hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
+                  : "hidden"
               )}
-            ></Cog6ToothIcon>
-          </button>
+              onClick={(event) => {
+                event.preventDefault();
+                props.openPopUp(<NodeModal data={props.data} />);
+              }}
+            >
+              <div className=" absolute right-1 top-0 text-red-600">
+                {Object.keys(props.data.node.template).some(
+                  (t) =>
+                    props.data.node.template[t].advanced &&
+                    props.data.node.template[t].required
+                )
+                  ? " *"
+                  : ""}
+              </div>
+              <Cog6ToothIcon
+                className={classNames(
+                  Object.keys(props.data.node.template).some(
+                    (t) =>
+                      props.data.node.template[t].advanced &&
+                      props.data.node.template[t].show
+                  )
+                    ? ""
+                    : "hidden",
+                  "w-5 h-5  dark:text-gray-300"
+                )}
+              ></Cog6ToothIcon>
+            </button>
+          </TooltipReact>
 
+          <TooltipReact
+            delayShow={1000}
+            selector="Duplicate"
+            htmlContent="Duplicate"
+            position="top"
+          >
+            <button
+              className="hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
+              onClick={(event) => {
+                event.preventDefault();
+                console.log(reactFlowInstance.getNode(props.data.id));
+                paste(
+                  {
+                    nodes: [reactFlowInstance.getNode(props.data.id)],
+                    edges: [],
+                  },
+                  {
+                    x: 50,
+                    y: 10,
+                    paneX: reactFlowInstance.getNode(props.data.id).position.x,
+                    paneY: reactFlowInstance.getNode(props.data.id).position.y,
+                  }
+                );
+              }}
+            >
+              <Square2StackIcon className="w-5 h-5  dark:text-gray-300"></Square2StackIcon>
+            </button>
+          </TooltipReact>
+
+          <TooltipReact
+            delayShow={1000}
+            selector="Edit"
+            htmlContent="Edit"
+            position="top"
+          >
+            <button
+              className="hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
+              onClick={(event) => {
+                event.preventDefault();
+                props.openPopUp(<EditNodeModal data={props.data} />);
+              }}
+            >
+              <PencilSquareIcon className="w-5 h-5  dark:text-gray-300"></PencilSquareIcon>
+            </button>
+          </TooltipReact>
+
+          {/* 
           <Menu as="div" className="relative inline-block text-left z-100">
             <button className="hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10 rounded-r-md">
               <div>
@@ -160,7 +222,7 @@ const NodeToolbarComponent = (props) => {
                 </Menu.Items>
               </Transition>
             </button>
-          </Menu>
+          </Menu> */}
         </span>
       </div>
     </>
