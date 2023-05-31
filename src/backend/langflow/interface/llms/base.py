@@ -3,7 +3,7 @@ from typing import Dict, List, Optional, Type
 from langchain import llms, chat_models
 from langflow.interface.base import LangChainTypeCreator
 from langflow.settings import settings
-from langflow.template.nodes import LLMFrontendNode
+from langflow.template.frontend_node.llms import LLMFrontendNode
 from langflow.utils.logger import logger
 from langflow.utils.util import build_template_from_class
 from langflow.interface.importing.utils import import_class

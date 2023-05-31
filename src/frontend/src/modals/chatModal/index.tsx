@@ -1,5 +1,8 @@
 import { Dialog, Transition } from "@headlessui/react";
-import { ChatBubbleOvalLeftEllipsisIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import {
+  ChatBubbleOvalLeftEllipsisIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
 import { Fragment, useContext, useEffect, useRef, useState } from "react";
 import { FlowType, NodeType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
@@ -12,7 +15,7 @@ import { sendAllProps } from "../../types/api";
 import { ChatMessageType, ChatType } from "../../types/chat";
 import ChatInput from "./chatInput";
 
-import _ from "lodash";
+import _, { set } from "lodash";
 
 export default function ChatModal({
   flow,
@@ -30,15 +33,21 @@ export default function ChatModal({
   const ws = useRef<WebSocket | null>(null);
   const [lockChat, setLockChat] = useState(false);
   const isOpen = useRef(open);
+  const messagesRef = useRef(null);
   const id = useRef(flow.id);
+
+  useEffect(() => {
+    if (messagesRef.current) {
+      messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+    }
+  }, [chatHistory]);
 
   useEffect(() => {
     isOpen.current = open;
   }, [open]);
   useEffect(() => {
     id.current = flow.id;
-  },[flow.id])
-
+  }, [flow.id]);
 
   var isStream = false;
 
@@ -98,9 +107,9 @@ export default function ChatModal({
   function handleOnClose(event: CloseEvent) {
     if (isOpen.current) {
       setErrorData({ title: event.reason });
-      setLockChat(false);
       setTimeout(() => {
         connectWS();
+        setLockChat(false);
       }, 1000);
     }
   }
@@ -122,16 +131,16 @@ export default function ChatModal({
               newChatHistory.push(
                 chatItem.files
                   ? {
-                    isSend: !chatItem.is_bot,
-                    message: chatItem.message,
-                    thought: chatItem.intermediate_steps,
-                    files: chatItem.files,
-                  }
+                      isSend: !chatItem.is_bot,
+                      message: chatItem.message,
+                      thought: chatItem.intermediate_steps,
+                      files: chatItem.files,
+                    }
                   : {
-                    isSend: !chatItem.is_bot,
-                    message: chatItem.message,
-                    thought: chatItem.intermediate_steps,
-                  }
+                      isSend: !chatItem.is_bot,
+                      message: chatItem.message,
+                      thought: chatItem.intermediate_steps,
+                    }
               );
             }
           }
@@ -144,6 +153,9 @@ export default function ChatModal({
       isStream = true;
     }
     if (data.type === "end") {
+      if (data.message) {
+        updateLastMessage({ str: data.message, end: true });
+      }
       if (data.intermediate_steps) {
         updateLastMessage({
           str: data.message,
@@ -171,13 +183,13 @@ export default function ChatModal({
       const urlWs =
         process.env.NODE_ENV === "development"
           ? `ws://localhost:7860/chat/${id.current}`
-          : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host
-          }/chat/${id.current}`;
+          : `${window.location.protocol === "https:" ? "wss" : "ws"}://${
+              window.location.host
+            }/chat/${id.current}`;
       const newWs = new WebSocket(urlWs);
       newWs.onopen = () => {
         console.log("WebSocket connection established!");
       };
-      console.log(flow.id);
       newWs.onmessage = (event) => {
         const data = JSON.parse(event.data);
         console.log("Received data:", data);
@@ -189,10 +201,9 @@ export default function ChatModal({
       };
       newWs.onerror = (ev) => {
         console.log(ev, "error");
-        if(flow.id===""){
+        if (flow.id === "") {
           connectWS();
-        }
-        else{
+        } else {
           setErrorData({
             title: "There was an error on web connection, please: ",
             list: [
@@ -205,10 +216,9 @@ export default function ChatModal({
       };
       ws.current = newWs;
     } catch {
-      if(flow.id===""){
+      if (flow.id === "") {
         connectWS();
-      }
-      else{
+      } else {
         setErrorData({
           title: "There was an error on web connection, please: ",
           list: [
@@ -231,6 +241,16 @@ export default function ChatModal({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (
+      ws.current.readyState === ws.current.CLOSED ||
+      ws.current.readyState === ws.current.CLOSING
+    ) {
+      connectWS();
+      setLockChat(false);
+    }
+  }, [lockChat]);
 
   async function sendAll(data: sendAllProps) {
     try {
@@ -279,11 +299,12 @@ export default function ChatModal({
                   e.targetHandle.split("|")[2] === n.id
               )
             ? [
-              `${type} is missing ${template.display_name
-                ? template.display_name
-                : toNormalCase(template[t].name)
-              }.`,
-            ]
+                `${type} is missing ${
+                  template.display_name
+                    ? template.display_name
+                    : toNormalCase(template[t].name)
+                }.`,
+              ]
             : []
         ),
       [] as string[]
@@ -297,6 +318,12 @@ export default function ChatModal({
   }
 
   const ref = useRef(null);
+
+  useEffect(() => {
+    if (open && ref.current) {
+      ref.current.focus();
+    }
+  }, [open]);
 
   function sendMessage() {
     if (chatValue !== "") {
@@ -329,6 +356,7 @@ export default function ChatModal({
   function clearChat() {
     setChatHistory([]);
     ws.current.send(JSON.stringify({ clear_history: true }));
+    if (lockChat) setLockChat(false);
   }
 
   function setModalOpen(x: boolean) {
@@ -380,9 +408,14 @@ export default function ChatModal({
                     <HiX className="w-5 h-5" />
                   </button>
                 </div>
-                <div className="w-full h-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center overflow-scroll scrollbar-hide">
+                <div
+                  ref={messagesRef}
+                  className="w-full h-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center overflow-scroll scrollbar-hide"
+                >
                   {chatHistory.length > 0 ? (
-                    chatHistory.map((c, i) => <ChatMessage lockChat={lockChat} chat={c} key={i} />)
+                    chatHistory.map((c, i) => (
+                      <ChatMessage lockChat={lockChat} chat={c} key={i} />
+                    ))
                   ) : (
                     <div className="flex flex-col h-full text-center justify-center w-full items-center align-middle">
                       <span>
@@ -406,12 +439,13 @@ export default function ChatModal({
                   <div ref={ref}></div>
                 </div>
                 <div className="w-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center justify-between p-3">
-                  <div className="relative w-full mt-1 rounded-md shadow-sm">
+                  <div className="relative w-full  mt-1 rounded-md shadow-sm">
                     <ChatInput
                       chatValue={chatValue}
                       lockChat={lockChat}
                       sendMessage={sendMessage}
                       setChatValue={setChatValue}
+                      inputRef={ref}
                     />
                   </div>
                 </div>

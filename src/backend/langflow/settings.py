@@ -32,7 +32,7 @@ class Settings(BaseSettings):
                 values[key] = []
         return values
 
-    def update_from_yaml(self, file_path: str):
+    def update_from_yaml(self, file_path: str, dev: bool = False):
         new_settings = load_settings_from_yaml(file_path)
         self.chains = new_settings.chains or []
         self.agents = new_settings.agents or []
@@ -44,7 +44,7 @@ class Settings(BaseSettings):
         self.toolkits = new_settings.toolkits or []
         self.textsplitters = new_settings.textsplitters or []
         self.utilities = new_settings.utilities or []
-        self.dev = new_settings.dev or False
+        self.dev = dev
 
 
 def save_settings_to_yaml(settings: Settings, file_path: str):

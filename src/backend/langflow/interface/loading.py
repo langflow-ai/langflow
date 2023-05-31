@@ -31,7 +31,7 @@ from langflow.utils import util, validate
 def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
     """Instantiate class from module type and key, and params"""
     params = convert_params_to_sets(params)
-
+    params = convert_kwargs(params)
     if node_type in CUSTOM_AGENTS:
         custom_agent = CUSTOM_AGENTS.get(node_type)
         if custom_agent:
@@ -47,6 +47,16 @@ def convert_params_to_sets(params):
         params["allowed_special"] = set(params["allowed_special"])
     if "disallowed_special" in params:
         params["disallowed_special"] = set(params["disallowed_special"])
+    return params
+
+
+def convert_kwargs(params):
+    # if *kwargs are passed as a string, convert to dict
+    # first find any key that has kwargs in it
+    kwargs_keys = [key for key in params.keys() if "kwargs" in key]
+    for key in kwargs_keys:
+        if isinstance(params[key], str):
+            params[key] = json.loads(params[key])
     return params
 
 
@@ -116,6 +126,7 @@ def instantiate_toolkit(node_type, class_object, params):
 
 def instantiate_embedding(class_object, params):
     params.pop("model", None)
+    params.pop("headers", None)
     try:
         return class_object(**params)
     except ValidationError:
@@ -141,7 +152,13 @@ def instantiate_documentloader(class_object, params):
 
 
 def instantiate_textsplitter(class_object, params):
-    documents = params.pop("documents")
+    try:
+        documents = params.pop("documents")
+    except KeyError as e:
+        raise ValueError(
+            "The source you provided did not load correctly or was empty."
+            "Try changing the chunk_size of the Text Splitter."
+        ) from e
     text_splitter = class_object(**params)
     return text_splitter.split_documents(documents)
 
@@ -153,10 +170,10 @@ def instantiate_utility(node_type, class_object, params):
 
 
 def load_flow_from_json(path: str, build=True):
+    """Load flow from json file"""
     # This is done to avoid circular imports
     from langflow.graph import Graph
 
-    """Load flow from json file"""
     with open(path, "r", encoding="utf-8") as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]

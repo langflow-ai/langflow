@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Edge, Node, useReactFlow } from 'reactflow';
+import { useCallback, useContext, useEffect, useState } from "react";
+import { Edge, Node, useReactFlow } from "reactflow";
+import { TabsContext } from "../../../contexts/tabsContext";
+import { cloneDeep } from "lodash";
 
 type UseUndoRedoOptions = {
   maxHistorySize: number;
@@ -30,47 +32,112 @@ export const useUndoRedo: UseUndoRedo = ({
   enableShortcuts = defaultOptions.enableShortcuts,
 } = defaultOptions) => {
   // the past and future arrays store the states that we can jump to
-  const [past, setPast] = useState<HistoryItem[]>([]);
-  const [future, setFuture] = useState<HistoryItem[]>([]);
+  const { tabIndex, flows } = useContext(TabsContext);
+
+  const [past, setPast] = useState<HistoryItem[][]>(flows.map(() => []));
+  const [future, setFuture] = useState<HistoryItem[][]>(flows.map(() => []));
+
+  useEffect(() => {
+    // whenever the flows variable changes, we need to add one array to the past and future states
+    setPast((old) => flows.map((f, i) => (old[i] ? old[i] : [])));
+    setFuture((old) => flows.map((f, i) => (old[i] ? old[i] : [])));
+  }, [flows]);
 
   const { setNodes, setEdges, getNodes, getEdges } = useReactFlow();
 
   const takeSnapshot = useCallback(() => {
     // push the current graph to the past state
-    setPast((past) => [
-      ...past.slice(past.length - maxHistorySize + 1, past.length),
-      { nodes: getNodes(), edges: getEdges() },
-    ]);
+    setPast((old) => {
+      let newPast = cloneDeep(old);
+      newPast[tabIndex] = old[tabIndex].slice(
+        old[tabIndex].length - maxHistorySize + 1,
+        old[tabIndex].length
+      );
+      newPast[tabIndex].push({ nodes: getNodes(), edges: getEdges() });
+      return newPast;
+    });
 
     // whenever we take a new snapshot, the redo operations need to be cleared to avoid state mismatches
-    setFuture([]);
-  }, [getNodes, getEdges, maxHistorySize]);
+    setFuture((old) => {
+      let newFuture = cloneDeep(old);
+      newFuture[tabIndex] = [];
+      return newFuture;
+    });
+  }, [
+    getNodes,
+    getEdges,
+    past,
+    future,
+    tabIndex,
+    setPast,
+    setFuture,
+    maxHistorySize,
+  ]);
 
   const undo = useCallback(() => {
     // get the last state that we want to go back to
-    const pastState = past[past.length - 1];
+    const pastState = past[tabIndex][past[tabIndex].length - 1];
 
     if (pastState) {
       // first we remove the state from the history
-      setPast((past) => past.slice(0, past.length - 1));
+      setPast((old) => {
+        let newPast = cloneDeep(old);
+        newPast[tabIndex] = old[tabIndex].slice(0, old[tabIndex].length - 1);
+        return newPast;
+      });
       // we store the current graph for the redo operation
-      setFuture((future) => [...future, { nodes: getNodes(), edges: getEdges() }]);
+      setFuture((old) => {
+        let newFuture = cloneDeep(old);
+        newFuture[tabIndex] = old[tabIndex];
+        newFuture[tabIndex].push({ nodes: getNodes(), edges: getEdges() });
+        return newFuture;
+      });
       // now we can set the graph to the past state
       setNodes(pastState.nodes);
       setEdges(pastState.edges);
     }
-  }, [setNodes, setEdges, getNodes, getEdges, past]);
+  }, [
+    setNodes,
+    setEdges,
+    getNodes,
+    getEdges,
+    future,
+    past,
+    setFuture,
+    setPast,
+    tabIndex,
+  ]);
 
   const redo = useCallback(() => {
-    const futureState = future[future.length - 1];
+    const futureState = future[tabIndex][future[tabIndex].length - 1];
 
     if (futureState) {
-      setFuture((future) => future.slice(0, future.length - 1));
-      setPast((past) => [...past, { nodes: getNodes(), edges: getEdges() }]);
+      setFuture((old) => {
+        let newFuture = cloneDeep(old);
+        newFuture[tabIndex] = old[tabIndex].slice(0, old[tabIndex].length - 1);
+        return newFuture;
+      });
+      setPast((old) => {
+        let newPast = cloneDeep(old);
+        newPast[tabIndex] = old[tabIndex];
+        newPast[tabIndex].push({ nodes: getNodes(), edges: getEdges() });
+        return newPast;
+      });
       setNodes(futureState.nodes);
       setEdges(futureState.edges);
     }
-  }, [setNodes, setEdges, getNodes, getEdges, future]);
+  }, [
+    future,
+    past,
+    setFuture,
+    setPast,
+    setNodes,
+    setEdges,
+    getNodes,
+    getEdges,
+    future,
+    tabIndex,
+  ]);
 
   useEffect(() => {
     // this effect is used to attach the global event handlers
@@ -79,21 +146,24 @@ export const useUndoRedo: UseUndoRedo = ({
     }
 
     const keyDownHandler = (event: KeyboardEvent) => {
-      if (event.key === 'z' && (event.ctrlKey || event.metaKey) && event.shiftKey) {
+      if (
+        event.key === "z" &&
+        (event.ctrlKey || event.metaKey) &&
+        event.shiftKey
+      ) {
         redo();
-      } 
-      else if (event.key === 'y' && (event.ctrlKey || event.metaKey)) {
+      } else if (event.key === "y" && (event.ctrlKey || event.metaKey)) {
         event.preventDefault(); // prevent the default action
         redo();
-      } else if (event.key === 'z' && (event.ctrlKey || event.metaKey)) {
+      } else if (event.key === "z" && (event.ctrlKey || event.metaKey)) {
         undo();
       }
     };
 
-    document.addEventListener('keydown', keyDownHandler);
+    document.addEventListener("keydown", keyDownHandler);
 
     return () => {
-      document.removeEventListener('keydown', keyDownHandler);
+      document.removeEventListener("keydown", keyDownHandler);
     };
   }, [undo, redo, enableShortcuts]);
 

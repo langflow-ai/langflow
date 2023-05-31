@@ -1,6 +1,14 @@
-.PHONY: all format lint build build_frontend install_frontend run_frontend run_backend dev help tests coverage
+.PHONY: all init format lint build build_frontend install_frontend run_frontend run_backend dev help tests coverage
 
 all: help
+
+init:
+	@echo 'Installing pre-commit hooks'
+	git config core.hooksPath .githooks
+	@echo 'Installing backend dependencies'
+	make install_backend
+	@echo 'Installing frontend dependencies'
+	make install_frontend
 
 coverage:
 	poetry run pytest --cov \
@@ -13,7 +21,8 @@ tests:
 
 format:
 	poetry run black .
-	poetry run ruff --select I --fix .
+	poetry run ruff . --fix
+	cd src/frontend && npm run format
 
 lint:
 	poetry run mypy .
@@ -45,6 +54,17 @@ build:
 	make build_frontend
 	poetry build --format sdist
 	rm -rf src/backend/langflow/frontend
+
+lcserve_push:
+	make build_frontend
+	@version=$$(poetry version --short); \
+	lc-serve push --app langflow.lcserve:app --app-dir . \
+		--image-name langflow --image-tag $${version} --verbose
+
+lcserve_deploy:
+	@:$(if $(uses),,$(error `uses` is not set. Please run `make uses=... lcserve_deploy`))
+	lc-serve deploy jcloud --app langflow.lcserve:app --app-dir . \
+		--uses $(uses) --config src/backend/langflow/jcloud.yml --verbose
 
 dev:
 	make install_frontend

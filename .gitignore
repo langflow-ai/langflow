@@ -5,12 +5,13 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
+qdrant_storage
 
 # Mac
 .DS_Store
 
 # VSCode
-.vscode
+.vscode/settings.json
 .chroma
 .ruff_cache
 

@@ -1,10 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 import plugin from "tailwindcss/plugin";
 module.exports = {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,tsx,jsx}",
-  ],
+  content: ["./index.html", "./src/**/*.{js,ts,tsx,jsx}"],
   darkMode: "class",
   important: true,
   theme: {
@@ -20,6 +17,7 @@ module.exports = {
 
       animation: {
         "pulse-green": "pulseGreen 1s linear",
+        'spin-once': 'spin 1s linear 0.7'
       },
       keyframes: {
         pulseGreen: {
@@ -45,6 +43,14 @@ module.exports = {
             display: "none",
           },
         },
+        ".truncate-multiline": {
+          "display": "-webkit-box",
+          "-webkit-line-clamp": "3", /* Change this number to the number of lines you want to show */
+          "-webkit-box-orient": "vertical",
+          "overflow": "hidden",
+          "text-overflow": "ellipsis",
+        },
+
         ".arrow-hide": {
           "&::-webkit-inner-spin-button": {
             "-webkit-appearance": "none",
@@ -55,32 +61,39 @@ module.exports = {
             margin: 0,
           },
         },
-        '.password':{
-          "-webkit-text-security":"disc",
-          "font-family": "text-security-disc"
-
+        ".password": {
+          "-webkit-text-security": "disc",
+          "font-family": "text-security-disc",
         },
-        '.stop': {
-          '-webkit-animation-play-state': 'paused',
-          '-moz-animation-play-state': 'paused',
-          'animation-play-state': 'paused',
+        ".stop": {
+          "-webkit-animation-play-state": "paused",
+          "-moz-animation-play-state": "paused",
+          "animation-play-state": "paused",
         },
-        '.custom-scroll':{
-          '&::-webkit-scrollbar': {
-            'width': '8px',
+        ".custom-scroll": {
+          "&::-webkit-scrollbar": {
+            width: "8px",
           },
-          '&::-webkit-scrollbar-track': {
-            'backgroundColor': '#f1f1f1',
+          "&::-webkit-scrollbar-track": {
+            backgroundColor: "#f1f1f1",
           },
-          '&::-webkit-scrollbar-thumb': {
-            'backgroundColor': '#ccc',
-            'borderRadius': '999px',
+          "&::-webkit-scrollbar-thumb": {
+            backgroundColor: "#ccc",
+            borderRadius: "999px",
           },
-          '&::-webkit-scrollbar-thumb:hover': {
-            'backgroundColor': '#bbb'
-        }
-      }
-    })
-    }),require('@tailwindcss/line-clamp'),require('@tailwindcss/typography'),
+          "&::-webkit-scrollbar-thumb:hover": {
+            backgroundColor: "#bbb",
+          },
+        },
+        ".dark .theme-attribution .react-flow__attribution": {
+          backgroundColor: "rgba(255, 255, 255, 0.2)",
+          padding: "0px 5px",
+        },
+        ".dark .theme-attribution .react-flow__attribution a": {
+          color: "black",
+        },
+      });
+    }),
+    require("@tailwindcss/typography"),
   ],
 };

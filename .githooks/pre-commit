@@ -1,0 +1,6 @@
+#!/bin/sh
+
+added_files=$(git diff --name-only --cached --diff-filter=d)
+
+make format
+git add ${added_files}
