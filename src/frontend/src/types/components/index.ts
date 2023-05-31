@@ -14,7 +14,6 @@ export type InputComponentType = {
   onFocus?: FocusEventHandler<HTMLInputElement>;
   onBlur?: FocusEventHandler<HTMLInputElement>;
   autoFocus?: boolean;
-  
 };
 export type ToggleComponentType = {
   enabled: boolean;

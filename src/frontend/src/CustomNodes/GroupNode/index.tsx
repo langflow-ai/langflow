@@ -1,25 +1,55 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { FlowType, NodeDataType } from "../../types/flow";
-import { classNames, concatFlows, expandGroupNode, isValidConnection, nodeColors, nodeIcons, updateFlowPosition } from "../../utils";
+import {
+  classNames,
+  concatFlows,
+  expandGroupNode,
+  isValidConnection,
+  nodeColors,
+  nodeIcons,
+  toNormalCase,
+  updateFlowPosition,
+} from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
-import { ArrowsPointingOutIcon, TrashIcon } from "@heroicons/react/24/outline";
+import {
+  ArrowsPointingOutIcon,
+  Cog6ToothIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
 import InputParameterComponent from "../GenericNode/components/inputParameterComponent";
 import { TabsContext } from "../../contexts/tabsContext";
 import InputComponent from "../../components/inputComponent";
+import NodeModal from "../../modals/NodeModal";
+import { PopUpContext } from "../../contexts/popUpContext";
+import ParameterComponent from "../GenericNode/components/parameterComponent";
 
-export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDataType, selected: boolean, xPos: number, yPos: number }) {
+export default function GroupNode({
+  data,
+  selected,
+  xPos,
+  yPos,
+}: {
+  data: NodeDataType;
+  selected: boolean;
+  xPos: number;
+  yPos: number;
+}) {
   const [isValid, setIsValid] = useState(true);
-  const { reactFlowInstance, deleteNode } = useContext(typesContext);
-  const {setDisableCopyPaste} = useContext(TabsContext)
-  const Icon = nodeIcons['custom'];
+  const { reactFlowInstance, deleteNode, types } = useContext(typesContext);
+  const { setDisableCopyPaste } = useContext(TabsContext);
+  const Icon = nodeIcons["custom"];
   const ref = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [flowHandlePosition, setFlowHandlePosition] = useState(0);
   const [inputName, setInputName] = useState(true);
   const [nodeName, setNodeName] = useState(data.node.flow.name);
   const [inputDescription, setInputDescription] = useState(false);
-  const [nodeDescription, setNodeDescription] = useState(data.node.flow.description);
+  const [nodeDescription, setNodeDescription] = useState(
+    data.node.flow.description
+  );
+  const { openPopUp } = useContext(PopUpContext);
+
   useEffect(() => {
     if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
       setFlowHandlePosition(
@@ -32,20 +62,22 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
   useEffect(() => {
     updateNodeInternals(data.id);
   }, [data.id, flowHandlePosition, updateNodeInternals]);
+  // console.log(data)
+  // console.log(Object.keys(data.node.template).length,data.node.template)
   return (
     <div
       className={classNames(
         isValid ? "animate-pulse-green" : "border-red-outline",
         selected ? "border border-blue-500" : "border dark:border-gray-700",
-        "prompt-node relative bg-white dark:bg-gray-900 w-96 rounded-lg flex flex-col justify-center"
+        "prompt-node relative flex w-96 flex-col justify-center rounded-lg bg-white dark:bg-gray-900"
       )}
     >
-      <div className="w-full dark:text-white flex items-center justify-between p-4 gap-8 bg-gray-50 rounded-t-lg dark:bg-gray-800 border-b dark:border-b-gray-700 ">
-        <div className="w-full flex items-center truncate gap-2 text-lg">
+      <div className="flex w-full items-center justify-between gap-8 rounded-t-lg border-b bg-gray-50 p-4 dark:border-b-gray-700 dark:bg-gray-800 dark:text-white ">
+        <div className="flex w-full items-center gap-2 truncate text-lg">
           <Icon
-            className="w-10 h-10 p-1 rounded"
+            className="h-10 w-10 rounded p-1"
             style={{
-              color: nodeColors['custom'] ?? nodeColors.unknown,
+              color: nodeColors["custom"] ?? nodeColors.unknown,
             }}
           />
           {inputName ? (
@@ -56,19 +88,23 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
                 if (nodeName.trim() !== "") {
                   setNodeName(nodeName);
                   data.node.flow.name = nodeName;
-                }
-                else {
+                } else {
                   setNodeName(data.node.flow.name);
                 }
-
-              } }
+              }}
               value={nodeName}
-              onChange={setNodeName} password={false}            />
+              onChange={setNodeName}
+              password={false}
+            />
           ) : (
-            <div className="ml-2 truncate" onDoubleClick={()=>{
-              setInputName(true);
-              
-            }}>{nodeName}</div>
+            <div
+              className="ml-2 truncate"
+              onDoubleClick={() => {
+                setInputName(true);
+              }}
+            >
+              {nodeName}
+            </div>
           )}
           <div>
             {/* <div className="relative w-5 h-5">
@@ -96,41 +132,71 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
         <div className="flex gap-3">
           <button
             onClick={() => {
-              updateFlowPosition({ x: xPos, y: yPos }, data.node.flow)
-              expandGroupNode(data.node.flow, reactFlowInstance)
-            }}>
-            <ArrowsPointingOutIcon className="w-6 h-6 hover:text-blue-500 dark:text-gray-300 dark:hover:text-blue-500" />
+              updateFlowPosition({ x: xPos, y: yPos }, data.node.flow);
+              expandGroupNode(
+                data.node.flow,
+                reactFlowInstance,
+                data.node.template
+              );
+            }}
+          >
+            <ArrowsPointingOutIcon className="h-6 w-6 hover:text-blue-500 dark:text-gray-300 dark:hover:text-blue-500" />
+          </button>
+          <button
+            className="relative"
+            onClick={(event) => {
+              event.preventDefault();
+              openPopUp(<NodeModal data={data} />);
+            }}
+          >
+            <div className=" absolute -right-1 -top-2 text-red-600">
+              {Object.keys(data.node.template).some(
+                (t) =>
+                  data.node.template[t].advanced &&
+                  data.node.template[t].required
+              )
+                ? " *"
+                : ""}
+            </div>
+            <Cog6ToothIcon
+              className={classNames(
+                Object.keys(data.node.template).some(
+                  (t) =>
+                    data.node.template[t].advanced && data.node.template[t].show
+                )
+                  ? ""
+                  : "hidden",
+                "h-6 w-6  hover:animate-spin  dark:text-gray-300"
+              )}
+            ></Cog6ToothIcon>
           </button>
           <button
             onClick={() => {
-              console.log(data.id);
               deleteNode(data.id);
             }}
           >
-            <TrashIcon className="w-6 h-6 hover:text-red-500 dark:text-gray-300 dark:hover:text-red-500"></TrashIcon>
+            <TrashIcon className="h-6 w-6 hover:text-red-500 dark:text-gray-300 dark:hover:text-red-500"></TrashIcon>
           </button>
         </div>
       </div>
-      <div className="w-full h-full py-5">
-        <div className="w-full text-gray-500 dark:text-gray-300 px-5 pb-3 text-sm">
-        {inputDescription ? (
+      <div className="h-full w-full py-5">
+        <div className="w-full px-5 pb-3 text-sm text-gray-500 dark:text-gray-300">
+          {inputDescription ? (
             <textarea
               onFocus={() => {
                 setDisableCopyPaste(true);
               }}
               autoFocus
-              className="resize-none bg-transparent focus:border-none active:outline hover:outline focus:outline outline-gray-300 rounded-md  w-full h-max"
+              className="h-max w-full resize-none rounded-md bg-transparent outline-gray-300 hover:outline focus:border-none  focus:outline active:outline"
               onBlur={() => {
                 setInputDescription(false);
                 setDisableCopyPaste(false);
                 if (nodeDescription.trim() !== "") {
                   setNodeDescription(nodeDescription);
                   data.node.flow.description = nodeDescription;
-                }
-                else {
+                } else {
                   setNodeDescription(data.node.flow.description);
                 }
-
               }}
               value={nodeDescription}
               onChange={(e) => {
@@ -138,28 +204,109 @@ export default function GroupNode({ data, selected, xPos, yPos }: { data: NodeDa
               }}
             />
           ) : (
-            <div className="ml-2 truncate" onDoubleClick={()=>{
-              setInputDescription(true);
-              
-            }}>{nodeDescription.trim().length>0?nodeDescription:"No description"}</div>
+            <div
+              className="ml-2 truncate"
+              onDoubleClick={() => {
+                setInputDescription(true);
+              }}
+            >
+              {nodeDescription.trim().length > 0
+                ? nodeDescription
+                : "No description"}
+            </div>
           )}
         </div>
-        <div className="flex flex-col items-center justify-center">
-          <div
-            ref={ref}
-            className="w-full flex flex-wrap justify-between items-center bg-gray-50 dark:bg-gray-800 dark:text-white mt-1 px-5 py-2"
-          >
-            <InputParameterComponent
-              data={data}
-              color={nodeColors['custom'] ?? nodeColors.unknown}
-              title={data.node.template.root_field.display_name}
-              tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
-              id={[data.type, data.id, ...data.node.base_classes].join("|")}
-              type={data.node.base_classes.join("|")}
-              left={false}
-            />
-          </div>
-        </div>
+        <>
+          {Object.keys(data.node.template)
+            .filter((field_name) => field_name.charAt(0) !== "_")
+            .map((field_name: string, idx) => (
+              <div key={idx}>
+                {data.node.template[field_name].show &&
+                !data.node.template[field_name].root &&
+                !data.node.template[field_name].advanced ? (
+                  <ParameterComponent
+                    data={data}
+                    color={
+                      nodeColors[types[data.node.template[field_name].type]] ??
+                      nodeColors.unknown
+                    }
+                    title={
+                      data.node.template[field_name].display_name
+                        ? data.node.template[field_name].display_name
+                        : data.node.template[field_name].name
+                        ? toNormalCase(data.node.template[field_name].name)
+                        : toNormalCase(field_name)
+                    }
+                    name={field_name}
+                    tooltipTitle={
+                      "Type: " +
+                      data.node.template[field_name].type +
+                      (data.node.template[field_name].list ? " list" : "")
+                    }
+                    required={data.node.template[field_name].required}
+                    id={
+                      data.node.template[field_name].type +
+                      "|" +
+                      field_name +
+                      "|" +
+                      data.id +
+                      (data.node.template[field_name].proxy
+                        ? "|" +
+                          data.node.template[field_name].proxy.id +
+                          "|" +
+                          data.node.template[field_name].proxy.field
+                        : "")
+                    }
+                    left={true}
+                    type={data.node.template[field_name].type}
+                  />
+                ) : (
+                  <></>
+                )}
+              </div>
+            ))}
+        </>
+        {Object.keys(data.node.template).some(
+          (key) => data.node.template[key].root === true
+        ) ? (
+          Object.keys(data.node.template).map((field_name: string, idx) => {
+            if (data.node.template[field_name].root === true)
+              return (
+                <InputParameterComponent
+                  key={idx}
+                  data={data}
+                  color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+                  title={"Input"}
+                  tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
+                  id={
+                    data.node.template[field_name].type +
+                    "|" +
+                    field_name +
+                    "|" +
+                    data.id +
+                    (data.node.template[field_name].proxy
+                      ? "|" +
+                        data.node.template[field_name].proxy.id +
+                        "|" +
+                        data.node.template[field_name].proxy.field
+                      : "")
+                  }
+                  type={data.node.base_classes.join("|")}
+                  left={false}
+                />
+              );
+          })
+        ) : (
+          <ParameterComponent
+            data={data}
+            color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+            title={data.type}
+            tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
+            id={[data.type, data.id, ...data.node.base_classes].join("|")}
+            type={data.node.base_classes.join("|")}
+            left={false}
+          />
+        )}
       </div>
     </div>
   );

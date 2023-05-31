@@ -61,7 +61,7 @@ export default function GenericNode({
         if (response.status === 200) {
           let jsonResponse = await response.json();
           let jsonResponseParsed = await JSON.parse(jsonResponse);
-          console.log(jsonResponseParsed);
+          // console.log(jsonResponseParsed);
           setValidationStatus(jsonResponseParsed);
         }
       } catch (error) {
@@ -273,7 +273,13 @@ export default function GenericNode({
               color={nodeColors[types[data.type]] ?? nodeColors.unknown}
               title={data.node.template.root_field.display_name}
               tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
-              id={[data.type, data.id, ...data.node.base_classes].join("|")}
+              id={
+                data.node.template.root_field.type +
+                "|" +
+                "root_field" +
+                "|" +
+                data.id
+              }
               type={data.node.base_classes.join("|")}
               left={false}
             />

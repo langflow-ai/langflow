@@ -5,16 +5,17 @@ import { FlowType } from "../flow";
 export type APIObjectType = { kind: APIKindType; [key: string]: APIKindType };
 export type APIKindType = { class: APIClassType; [key: string]: APIClassType };
 export type APITemplateType = {
-	[key: string]: TemplateVariableType;
+  [key: string]: TemplateVariableType;
 };
 export type APIClassType = {
-	base_classes: Array<string>;
-	description: string;
-	template: APITemplateType;
-	flow?: FlowType;
-	[key: string]: Array<string> | string | APITemplateType | FlowType;
+  base_classes: Array<string>;
+  description: string;
+  template: APITemplateType;
+  flow?: FlowType;
+  [key: string]: Array<string> | string | APITemplateType | FlowType;
 };
 export type TemplateVariableType = {
+  root: boolean;
   type: string;
   required: boolean;
   placeholder?: string;
@@ -22,6 +23,7 @@ export type TemplateVariableType = {
   show: boolean;
   multiline?: boolean;
   value?: any;
+  proxy?: { id: string; field: string };
   [key: string]: any;
 };
 export type sendAllProps = {

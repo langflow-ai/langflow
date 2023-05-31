@@ -36,6 +36,7 @@ import {
   generateNodeFromFlow,
   getMiddlePoint,
   isValidConnection,
+  updateRemovedEdges,
   validateSelection,
 } from "../../utils";
 import useUndoRedo from "./hooks/useUndoRedo";
@@ -54,7 +55,6 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
     useContext(typesContext);
   const reactFlowWrapper = useRef(null);
 
-
   const { undo, redo, canUndo, canRedo, takeSnapshot } = useUndoRedo();
 
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -67,7 +67,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
     // this effect is used to attach the global event handlers
 
     const onKeyDown = (event: KeyboardEvent) => {
-      console.log("keydownou", lastCopiedSelection, position);
+      // console.log("keydownou", lastCopiedSelection, position);
       if (
         (event.ctrlKey || event.metaKey) &&
         event.key === "c" &&
@@ -159,10 +159,6 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
               params.targetHandle.split("|")[0] === "Text"
                 ? { stroke: "#333333", strokeWidth: 2 }
                 : { stroke: "#222222" },
-            className:
-              params.targetHandle.split("|")[0] === "Text"
-                ? ""
-                : "animate-pulse",
             animated: params.targetHandle.split("|")[0] === "Text",
           },
           eds
@@ -347,8 +343,8 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
           <Chat flow={flow} reactFlowInstance={reactFlowInstance} />
           <SelectionMenu
             onClick={() => {
-              if (validateSelection(lastSelection)) {
-                const newFlow = generateFlow(
+              if (validateSelection(lastSelection).length === 0) {
+                const { newFlow } = generateFlow(
                   lastSelection,
                   reactFlowInstance,
                   "new component"
@@ -373,14 +369,12 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
                       )
                   )
                 );
-              }
-              else{
+              } else {
                 setErrorData({
                   title: "Invalid selection",
-                  list: ["Please select a valid group of nodes"],
+                  list: validateSelection(lastSelection),
                 });
               }
-
             }}
             isVisible={selectionMenuVisible}
             nodes={lastSelection?.nodes}

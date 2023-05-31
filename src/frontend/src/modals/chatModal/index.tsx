@@ -6,7 +6,7 @@ import {
 import { Fragment, useContext, useEffect, useRef, useState } from "react";
 import { FlowType, NodeDataType, NodeType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
-import { toNormalCase } from "../../utils";
+import { processFLow, toNormalCase } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import ChatMessage from "./chatMessage";
 import { FaEraser } from "react-icons/fa";
@@ -320,8 +320,9 @@ export default function ChatModal({
         let message = chatValue;
         setChatValue("");
         addChatHistory(message, true);
+
         sendAll({
-          ...reactFlowInstance.toObject(),
+          ...processFLow(reactFlowInstance.toObject()),
           message,
           chatHistory,
           name: flow.name,
@@ -394,7 +395,7 @@ export default function ChatModal({
                     <HiX className="h-5 w-5" />
                   </button>
                 </div>
-                <div className="scrollbar-hide flex h-full w-full flex-col items-center overflow-scroll border-t bg-white dark:border-t-gray-600 dark:bg-gray-800">
+                <div className="flex h-full w-full flex-col items-center overflow-scroll border-t bg-white scrollbar-hide dark:border-t-gray-600 dark:bg-gray-800">
                   {chatHistory.length > 0 ? (
                     chatHistory.map((c, i) => (
                       <ChatMessage lockChat={lockChat} chat={c} key={i} />

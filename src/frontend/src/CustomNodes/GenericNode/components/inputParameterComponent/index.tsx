@@ -61,7 +61,7 @@ export default function InputParameterComponent({
         title={title}
         name="Input"
         fill={true}
-        id={"Text|Input|" + data.id}
+        id={id}
         left={true}
         type={type}
         required={required}
