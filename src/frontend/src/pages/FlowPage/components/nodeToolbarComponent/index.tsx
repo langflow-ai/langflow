@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useContext } from "react";
 import { Menu, Transition } from "@headlessui/react";
 import { EllipsisVerticalIcon } from "@heroicons/react/20/solid";
 import {
@@ -11,14 +11,18 @@ import {
 import { classNames } from "../../../../utils";
 import { Fragment } from "react";
 import NodeModal from "../../../../modals/NodeModal";
+import { TabsContext } from "../../../../contexts/tabsContext";
+import { useReactFlow } from "reactflow";
 
 const NodeToolbarComponent = (props) => {
+  const { setLastCopiedSelection } = useContext(TabsContext);
+  const reactFlowInstance = useReactFlow();
   return (
     <>
       <div className="h-10 w-26">
         <span className="isolate inline-flex rounded-md shadow-sm">
           <button
-            className="hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative inline-flex items-center rounded-l-md bg-white px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
+            className="hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative inline-flex items-center rounded-l-md bg-white px-2 py-2 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
             onClick={() => {
               props.deleteNode(props.data.id);
             }}
@@ -68,11 +72,13 @@ const NodeToolbarComponent = (props) => {
             className="hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
             onClick={(event) => {
               event.preventDefault();
+              setLastCopiedSelection({
+                nodes: [reactFlowInstance.getNode(props.data.id)],
+                edges: [],
+              });
             }}
           >
-            <DocumentDuplicateIcon
-              className="w-5 h-5  dark:text-gray-300"
-            ></DocumentDuplicateIcon>
+            <DocumentDuplicateIcon className="w-5 h-5  dark:text-gray-300"></DocumentDuplicateIcon>
           </button>
 
           <Menu as="div" className="relative inline-block text-left z-100">

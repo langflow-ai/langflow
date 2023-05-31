@@ -38,19 +38,24 @@ const nodeTypes = {
 };
 
 export default function FlowPage({ flow }: { flow: FlowType }) {
-  let { updateFlow, disableCopyPaste, addFlow, getNodeId, paste } =
-    useContext(TabsContext);
+  let {
+    updateFlow,
+    disableCopyPaste,
+    addFlow,
+    getNodeId,
+    paste,
+    lastCopiedSelection,
+    setLastCopiedSelection,
+  } = useContext(TabsContext);
   const { types, reactFlowInstance, setReactFlowInstance, templates } =
     useContext(typesContext);
   const reactFlowWrapper = useRef(null);
 
-  const { undo, redo, canUndo, canRedo, takeSnapshot } = useUndoRedo();
+  const { takeSnapshot } = useUndoRedo();
 
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
     useState<OnSelectionChangeParams>(null);
-
-  const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
 
   useEffect(() => {
     // this effect is used to attach the global event handlers
@@ -63,6 +68,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
         !disableCopyPaste
       ) {
         event.preventDefault();
+        console.log(_.cloneDeep(lastSelection));
         setLastCopiedSelection(_.cloneDeep(lastSelection));
       }
       if (
