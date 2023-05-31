@@ -5,9 +5,12 @@ import { TabsContext } from "../../contexts/tabsContext";
 export default function IntComponent({
   value,
   onChange,
+  disableCopyPaste = false,
   disabled,
 }: FloatComponentType) {
   const [myValue, setMyValue] = useState(value ?? "");
+  const { setDisableCopyPaste } = useContext(TabsContext);
+
   useEffect(() => {
     if (disabled) {
       setMyValue("");
@@ -16,18 +19,32 @@ export default function IntComponent({
   }, [disabled, onChange]);
   return (
     <div
-      className={"w-full " + (
-        disabled ? "pointer-events-none cursor-not-allowed w-full" : "w-full"
-  )}
+      className={
+        "w-full " +
+        (disabled ? "pointer-events-none cursor-not-allowed w-full" : "w-full")
+      }
     >
       <input
+        onFocus={() => {
+          if (disableCopyPaste) setDisableCopyPaste(true);
+        }}
+        onBlur={() => {
+          if (disableCopyPaste) setDisableCopyPaste(false);
+        }}
         onKeyDown={(event) => {
+          console.log(event);
           if (
             event.key !== "Backspace" &&
             event.key !== "Enter" &&
             event.key !== "Delete" &&
             event.key !== "ArrowLeft" &&
             event.key !== "ArrowRight" &&
+            event.key !== "Control" &&
+            event.key !== "Meta" &&
+            event.key !== "Shift" &&
+            event.key !== "c" &&
+            event.key !== "v" &&
+            event.key !== "a" &&
             !/^[-]?\d*$/.test(event.key)
           ) {
             event.preventDefault();
