@@ -1,4 +1,5 @@
 from typing import Any, Dict, List, Union
+from langflow.database.models.flow import FlowCreate
 
 from pydantic import BaseModel, validator
 
@@ -68,3 +69,7 @@ class FileResponse(ChatMessage):
         if v not in ["image", "csv"]:
             raise ValueError("data_type must be image or csv")
         return v
+
+
+class FlowListCreate(BaseModel):
+    flows: List[FlowCreate]

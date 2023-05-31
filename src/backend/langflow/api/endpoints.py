@@ -1,7 +1,7 @@
-import logging
+from langflow.utils.logger import logger
 from importlib.metadata import version
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from langflow.api.schemas import (
     ExportedFlow,
@@ -11,10 +11,10 @@ from langflow.api.schemas import (
 )
 from langflow.interface.run import process_graph_cached
 from langflow.interface.types import build_langchain_types_dict
+from langflow.cache import cache_manager
 
 # build router
-router = APIRouter()
-logger = logging.getLogger(__name__)
+router = APIRouter(tags=["Base"])
 
 
 @router.get("/all")
@@ -45,3 +45,11 @@ def get_version():
 @router.get("/health")
 def get_health():
     return {"status": "OK"}
+
+
+# Make an endpoint to upload  a file using the client_id and
+# cache the file in the backend
+@router.post("/uploadfile/{client_id}")
+async def create_upload_file(client_id: str, file: UploadFile = File(...)):
+
+    # TODO: Implement this endpoint
