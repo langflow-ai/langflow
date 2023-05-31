@@ -108,7 +108,7 @@ def test_csv_agent(client: TestClient):
         "name": "path",
         "type": "file",
         "list": False,
-        "content": None,
+        "file_path": None,
         "advanced": False,
     }
     assert template["llm"] == {

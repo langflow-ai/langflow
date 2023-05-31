@@ -34,7 +34,7 @@ def test_template_field_defaults(sample_template_field: TemplateField):
     assert sample_template_field.value is None
     assert sample_template_field.suffixes == []
     assert sample_template_field.file_types == []
-    assert sample_template_field.content is None
+    assert sample_template_field.file_path is None
     assert sample_template_field.password is False
     assert sample_template_field.name == "test_field"
 
