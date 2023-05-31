@@ -320,7 +320,7 @@ export default function ChatModal({
         let message = chatValue;
         setChatValue("");
         addChatHistory(message, true);
-        
+
         sendAll({
           ...processFLow(reactFlowInstance.toObject()),
           message,
@@ -395,7 +395,7 @@ export default function ChatModal({
                     <HiX className="h-5 w-5" />
                   </button>
                 </div>
-                <div className="scrollbar-hide flex h-full w-full flex-col items-center overflow-scroll border-t bg-white dark:border-t-gray-600 dark:bg-gray-800">
+                <div className="flex h-full w-full flex-col items-center overflow-scroll border-t bg-white scrollbar-hide dark:border-t-gray-600 dark:bg-gray-800">
                   {chatHistory.length > 0 ? (
                     chatHistory.map((c, i) => (
                       <ChatMessage lockChat={lockChat} chat={c} key={i} />

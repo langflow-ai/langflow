@@ -83,9 +83,9 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
                       </Dialog.Title>
                     </div>
                   </div>
-                  <div className="flex h-full w-full flex-row items-center justify-center overflow-clip gap-4 bg-gray-200 p-4 dark:bg-gray-900">
+                  <div className="flex h-full w-full flex-row items-center justify-center gap-4 overflow-clip bg-gray-200 p-4 dark:bg-gray-900">
                     <div className="flex h-full w-full">
-                      <div className="w-full overflow-scroll scrollbar-hide rounded-lg bg-white px-4  shadow dark:bg-gray-800">
+                      <div className="w-full overflow-scroll rounded-lg bg-white px-4 shadow  scrollbar-hide dark:bg-gray-800">
                         <div className="flex h-full flex-col gap-5">
                           <br />
                           {Object.keys(data.node.template)
@@ -104,8 +104,8 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
                                     data.node.template[t].display_name
                                       ? data.node.template[t].display_name
                                       : data.node.template[t].name
-                                        ? toNormalCase(data.node.template[t].name)
-                                        : toNormalCase(t)
+                                      ? toNormalCase(data.node.template[t].name)
+                                      : toNormalCase(t)
                                   }
                                   required={data.node.template[t].required}
                                   id={

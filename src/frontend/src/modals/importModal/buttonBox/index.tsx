@@ -37,7 +37,7 @@ export default function ButtonBox({
     case "small":
       bigCircle = "h-12 w-12";
       smallCircle = "h-8 w-8";
-      minTitleFontSize =9;
+      minTitleFontSize = 9;
       descriptionFontSize = "text-xs";
       padding = "p-2 py-3";
       marginTop = "mt-2";
@@ -86,41 +86,45 @@ export default function ButtonBox({
   const parentDivRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-	const textElement = titleRef.current;
-	const parentDivElement = parentDivRef.current;
-  
-	if (!textElement || !parentDivElement) return;
-  
-	const parentDivHeight = parentDivElement.offsetHeight;
-	const parentDivWidth = parentDivElement.offsetWidth;
-	let textElementHeight = textElement.scrollHeight;
-	let textElementWidth = textElement.scrollWidth;
-  
-	if (textElementHeight > parentDivHeight || textElementWidth > parentDivWidth && fontSize > minTitleFontSize) {
-	  let newFontSize = fontSize;
-  
-	  while (textElementHeight > parentDivHeight || textElementWidth > parentDivWidth) {
-		newFontSize -= 1;
-		textElement.style.fontSize = `${newFontSize}px`;
-		textElementHeight = textElement.scrollHeight;
-		textElementWidth = textElement.scrollWidth;
-	  }
-    if(newFontSize <= minTitleFontSize){
-      setTruncate(true);
-      setFontSize(minTitleFontSize);
+    const textElement = titleRef.current;
+    const parentDivElement = parentDivRef.current;
+
+    if (!textElement || !parentDivElement) return;
+
+    const parentDivHeight = parentDivElement.offsetHeight;
+    const parentDivWidth = parentDivElement.offsetWidth;
+    let textElementHeight = textElement.scrollHeight;
+    let textElementWidth = textElement.scrollWidth;
+
+    if (
+      textElementHeight > parentDivHeight ||
+      (textElementWidth > parentDivWidth && fontSize > minTitleFontSize)
+    ) {
+      let newFontSize = fontSize;
+
+      while (
+        textElementHeight > parentDivHeight ||
+        textElementWidth > parentDivWidth
+      ) {
+        newFontSize -= 1;
+        textElement.style.fontSize = `${newFontSize}px`;
+        textElementHeight = textElement.scrollHeight;
+        textElementWidth = textElement.scrollWidth;
+      }
+      if (newFontSize <= minTitleFontSize) {
+        setTruncate(true);
+        setFontSize(minTitleFontSize);
+      } else {
+        setFontSize(newFontSize);
+      }
     }
-    else{
-      setFontSize(newFontSize);
-    }
-	}
   }, [title, size, fontSize]);
-  
 
   return (
     <button disabled={deactivate} onClick={onClick}>
       <div
         className={classNames(
-          "flex flex-col justify-center items-center rounded-lg text-center shadow border border-gray-300 dark:border-gray-800 hover:shadow-lg transform hover:scale-105",
+          "flex transform flex-col items-center justify-center rounded-lg border border-gray-300 text-center shadow hover:scale-105 hover:shadow-lg dark:border-gray-800",
           bgColor,
           height,
           width,
@@ -128,23 +132,25 @@ export default function ButtonBox({
         )}
       >
         <div
-          className={`flex items-center justify-center ${bigCircle} bg-white/30 dark:bg-white/30 rounded-full mb-1`}
+          className={`flex items-center justify-center ${bigCircle} mb-1 rounded-full bg-white/30 dark:bg-white/30`}
         >
           <div
-            className={`flex items-center justify-center ${smallCircle} bg-white dark:bg-white/80 rounded-full`}
+            className={`flex items-center justify-center ${smallCircle} rounded-full bg-white dark:bg-white/80`}
           >
             <div className={textColor}>{icon}</div>
           </div>
         </div>
-		<div ref={parentDivRef} className="w-full h-1/2 mt-auto">
-		<div
-          ref={titleRef}
-          className={classNames(truncate?"truncate":"",
-            " font-semibold text-white h-full dark:text-white/80",
-          )}        >
-          {title}
+        <div ref={parentDivRef} className="mt-auto h-1/2 w-full">
+          <div
+            ref={titleRef}
+            className={classNames(
+              truncate ? "truncate" : "",
+              " h-full font-semibold text-white dark:text-white/80"
+            )}
+          >
+            {title}
+          </div>
         </div>
-		</div>
       </div>
     </button>
   );

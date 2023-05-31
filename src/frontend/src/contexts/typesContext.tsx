@@ -42,7 +42,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
           Object.keys(result.data[k]).forEach((c) => {
             // result.data[k][c].template
           });
-        })
+        });
         // Make sure to only update the state if the component is still mounted.
         if (isMounted) {
           setData(result.data);

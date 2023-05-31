@@ -55,7 +55,6 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
     useContext(typesContext);
   const reactFlowWrapper = useRef(null);
 
-
   const { undo, redo, canUndo, canRedo, takeSnapshot } = useUndoRedo();
 
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -345,7 +344,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
           <SelectionMenu
             onClick={() => {
               if (validateSelection(lastSelection).length === 0) {
-                const {newFlow} = generateFlow(
+                const { newFlow } = generateFlow(
                   lastSelection,
                   reactFlowInstance,
                   "new component"
@@ -370,14 +369,12 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
                       )
                   )
                 );
-              }
-              else{
+              } else {
                 setErrorData({
                   title: "Invalid selection",
                   list: validateSelection(lastSelection),
                 });
               }
-
             }}
             isVisible={selectionMenuVisible}
             nodes={lastSelection?.nodes}

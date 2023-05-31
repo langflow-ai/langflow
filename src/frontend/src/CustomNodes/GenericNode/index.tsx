@@ -218,8 +218,8 @@ export default function GenericNode({
 									<></>
 								)} */}
                 {data.node.template[field_name].show &&
-                  field_name != "root_field" &&
-                  !data.node.template[field_name].advanced ? (
+                field_name != "root_field" &&
+                !data.node.template[field_name].advanced ? (
                   <ParameterComponent
                     data={data}
                     color={
@@ -230,8 +230,8 @@ export default function GenericNode({
                       data.node.template[field_name].display_name
                         ? data.node.template[field_name].display_name
                         : data.node.template[field_name].name
-                          ? toNormalCase(data.node.template[field_name].name)
-                          : toNormalCase(field_name)
+                        ? toNormalCase(data.node.template[field_name].name)
+                        : toNormalCase(field_name)
                     }
                     name={field_name}
                     tooltipTitle={
@@ -276,7 +276,7 @@ export default function GenericNode({
               id={
                 data.node.template.root_field.type +
                 "|" +
-                'root_field' +
+                "root_field" +
                 "|" +
                 data.id
               }
