@@ -57,6 +57,7 @@ jina = "3.15.2"
 sentence-transformers = "^2.2.2"
 ctransformers = "^0.2.2"
 cohere = "^4.6.0"
+sqlmodel = "^0.0.8"
 
 
 [tool.poetry.group.dev.dependencies]
