@@ -70,19 +70,6 @@ const NodeToolbarComponent = (props) => {
             ></Cog6ToothIcon>
           </button>
 
-          <button
-            className="hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
-            onClick={(event) => {
-              event.preventDefault();
-              setLastCopiedSelection({
-                nodes: [reactFlowInstance.getNode(props.data.id)],
-                edges: [],
-              });
-            }}
-          >
-            <Square2StackIcon className="w-5 h-5  dark:text-gray-300"></Square2StackIcon>
-          </button>
-
           <Menu as="div" className="relative inline-block text-left z-100">
             <button className="hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10 rounded-r-md">
               <div>
