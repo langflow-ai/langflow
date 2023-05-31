@@ -35,6 +35,9 @@ const TabsContextInitialValue: TabsContextType = {
   hardReset: () => {},
   disableCopyPaste: false,
   setDisableCopyPaste: (state: boolean) => {},
+  lastCopiedSelection: null,
+  setLastCopiedSelection: (selection: any) => {},
+
   getNodeId: () => "",
   paste: (
     selection: { nodes: any; edges: any },
@@ -52,6 +55,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   const [flows, setFlows] = useState<Array<FlowType>>([]);
   const [id, setId] = useState(uuidv4());
   const { templates, reactFlowInstance } = useContext(typesContext);
+  const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
 
   const newNodeId = useRef(uuidv4());
   function incrementNodeId() {
@@ -379,6 +383,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   return (
     <TabsContext.Provider
       value={{
+        lastCopiedSelection,
+        setLastCopiedSelection,
         disableCopyPaste,
         setDisableCopyPaste,
         save,
