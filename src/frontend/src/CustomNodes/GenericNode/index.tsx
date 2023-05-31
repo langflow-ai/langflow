@@ -49,6 +49,7 @@ export default function GenericNode({
   const { save } = useContext(TabsContext);
   const { reactFlowInstance } = useContext(typesContext);
   const [params, setParams] = useState([]);
+  const [isRequestOngoing, setIsRequestOngoing] = useState(false);
 
   useEffect(() => {
     if (reactFlowInstance) {
@@ -58,6 +59,7 @@ export default function GenericNode({
 
   const validateNode = useCallback(
     debounce(async () => {
+      setIsRequestOngoing(true);
       try {
         const response = await fetch(`/validate/node/${data.id}`, {
           method: "POST",
@@ -73,17 +75,19 @@ export default function GenericNode({
           setValidationStatus(jsonResponseParsed);
         }
       } catch (error) {
-        // console.error("Error validating node:", error);
         setValidationStatus("error");
+      } finally {
+        setIsRequestOngoing(false);
       }
-    }, 1000), // Adjust the debounce delay (500ms) as needed
+    }, 1000), // Adjust the debounce delay as needed
     [reactFlowInstance, data.id]
   );
+
   useEffect(() => {
     if (params.length > 0) {
       validateNode();
     }
-  }, [params, validateNode]);
+  }, [data.node.template, validateNode]);
 
   if (!Icon) {
     if (showError.current) {
@@ -196,7 +200,7 @@ export default function GenericNode({
                 ></div>
                 <div
                   className={classNames(
-                    !validationStatus
+                    isRequestOngoing || !validationStatus
                       ? "w-4 h-4 rounded-full  bg-yellow-500 opacity-100"
                       : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
                     "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
