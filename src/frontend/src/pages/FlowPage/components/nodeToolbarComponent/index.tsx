@@ -7,6 +7,7 @@ import {
   PencilSquareIcon,
   DocumentDuplicateIcon,
   DocumentPlusIcon,
+  Square2StackIcon,
 } from "@heroicons/react/24/outline";
 import { classNames } from "../../../../utils";
 import { Fragment } from "react";
@@ -15,7 +16,7 @@ import { TabsContext } from "../../../../contexts/tabsContext";
 import { useReactFlow } from "reactflow";
 
 const NodeToolbarComponent = (props) => {
-  const { setLastCopiedSelection } = useContext(TabsContext);
+  const { setLastCopiedSelection, paste } = useContext(TabsContext);
   const reactFlowInstance = useReactFlow();
   return (
     <>
@@ -78,7 +79,7 @@ const NodeToolbarComponent = (props) => {
               });
             }}
           >
-            <DocumentDuplicateIcon className="w-5 h-5  dark:text-gray-300"></DocumentDuplicateIcon>
+            <Square2StackIcon className="w-5 h-5  dark:text-gray-300"></Square2StackIcon>
           </button>
 
           <Menu as="div" className="relative inline-block text-left z-100">
@@ -105,13 +106,15 @@ const NodeToolbarComponent = (props) => {
                   <div className="py-1">
                     <Menu.Item>
                       {({ active }) => (
-                        <a
-                          href="#"
+                        <button
+                          onClick={(event) => {
+                            event.preventDefault();
+                          }}
                           className={classNames(
                             active
                               ? "bg-gray-100 text-gray-900"
                               : "text-gray-700",
-                            "group flex items-center px-4 py-2 text-sm"
+                            "w-full group flex items-center px-4 py-2 text-sm"
                           )}
                         >
                           <PencilSquareIcon
@@ -119,26 +122,47 @@ const NodeToolbarComponent = (props) => {
                             aria-hidden="true"
                           />
                           Edit
-                        </a>
+                        </button>
                       )}
                     </Menu.Item>
                     <Menu.Item>
                       {({ active }) => (
-                        <a
-                          href="#"
+                        <button
+                          onClick={(event) => {
+                            event.preventDefault();
+                            console.log(
+                              reactFlowInstance.getNode(props.data.id)
+                            );
+                            paste(
+                              {
+                                nodes: [
+                                  reactFlowInstance.getNode(props.data.id),
+                                ],
+                                edges: [],
+                              },
+                              {
+                                x: 50,
+                                y: 10,
+                                paneX: reactFlowInstance.getNode(props.data.id)
+                                  .position.x,
+                                paneY: reactFlowInstance.getNode(props.data.id)
+                                  .position.y,
+                              }
+                            );
+                          }}
                           className={classNames(
                             active
                               ? "bg-gray-100 text-gray-900"
                               : "text-gray-700",
-                            "group flex items-center px-4 py-2 text-sm"
+                            "w-full group flex items-center px-4 py-2 text-sm"
                           )}
                         >
-                          <DocumentPlusIcon
+                          <DocumentDuplicateIcon
                             className="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-500"
                             aria-hidden="true"
                           />
                           Duplicate
-                        </a>
+                        </button>
                       )}
                     </Menu.Item>
                   </div>

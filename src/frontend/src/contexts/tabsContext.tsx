@@ -41,7 +41,7 @@ const TabsContextInitialValue: TabsContextType = {
   getNodeId: () => "",
   paste: (
     selection: { nodes: any; edges: any },
-    position: { x: number; y: number }
+    position: { x: number; y: number; paneX?: number; paneY?: number }
   ) => {},
 };
 
@@ -221,7 +221,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
    * @param flow Optional flow to add.
    */
 
-  function paste(selectionInstance, position) {
+  function paste(
+    selectionInstance,
+    position: { x: number; y: number; paneX?: number; paneY?: number }
+  ) {
     let minimumX = Infinity;
     let minimumY = Infinity;
     let idsMap = {};
@@ -236,7 +239,9 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    const insidePosition = reactFlowInstance.project(position);
+    const insidePosition = position.paneX
+      ? { x: position.paneX + position.x, y: position.paneY + position.y }
+      : reactFlowInstance.project({ x: position.x, y: position.y });
 
     selectionInstance.nodes.forEach((n) => {
       // Generate a unique node ID
