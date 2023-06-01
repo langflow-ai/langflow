@@ -6,7 +6,7 @@ from typing import Dict, Optional
 
 from docstring_parser import parse  # type: ignore
 
-from langflow.template.constants import FORCE_SHOW_FIELDS
+from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants
 
 
@@ -273,6 +273,7 @@ def format_dict(d, name: Optional[str] = None):
             "examples",
             "code",
             "headers",
+            "format_instructions",
         ]
 
         # Replace dict type with str

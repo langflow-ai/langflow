@@ -12,6 +12,7 @@ from langchain.agents.load_tools import (
     _LLM_TOOLS,
 )
 from langchain.agents.loading import load_agent_from_config
+from langflow.graph import Graph
 from langchain.agents.tools import Tool
 from langchain.base_language import BaseLanguageModel
 from langchain.callbacks.base import BaseCallbackManager
@@ -31,7 +32,7 @@ from langflow.utils import util, validate
 def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
     """Instantiate class from module type and key, and params"""
     params = convert_params_to_sets(params)
-
+    params = convert_kwargs(params)
     if node_type in CUSTOM_AGENTS:
         custom_agent = CUSTOM_AGENTS.get(node_type)
         if custom_agent:
@@ -47,6 +48,16 @@ def convert_params_to_sets(params):
         params["allowed_special"] = set(params["allowed_special"])
     if "disallowed_special" in params:
         params["disallowed_special"] = set(params["disallowed_special"])
+    return params
+
+
+def convert_kwargs(params):
+    # if *kwargs are passed as a string, convert to dict
+    # first find any key that has kwargs in it
+    kwargs_keys = [key for key in params.keys() if "kwargs" in key]
+    for key in kwargs_keys:
+        if isinstance(params[key], str):
+            params[key] = json.loads(params[key])
     return params
 
 
@@ -154,7 +165,6 @@ def instantiate_utility(node_type, class_object, params):
 def load_flow_from_json(path: str, build=True):
     """Load flow from json file"""
     # This is done to avoid circular imports
-    from langflow.graph import Graph
 
     with open(path, "r", encoding="utf-8") as f:
         flow_graph = json.load(f)

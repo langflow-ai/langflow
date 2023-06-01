@@ -1,3 +1,4 @@
+import ast
 import json
 from typing import Optional
 
@@ -12,7 +13,7 @@ class UtilitiesFrontendNode(FrontendNode):
         # field.field_type could be "Literal['news', 'search', 'places', 'images']
         # we need to convert it to a list
         if "Literal" in field.field_type:
-            field.options = eval(field.field_type.replace("Literal", ""))
+            field.options = ast.literal_eval(field.field_type.replace("Literal", ""))
             field.is_list = True
             field.field_type = "str"
 
