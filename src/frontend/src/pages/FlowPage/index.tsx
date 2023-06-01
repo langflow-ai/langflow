@@ -151,10 +151,11 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
         addEdge(
           {
             ...params,
-            style:
+            style: { stroke: "inherit" },
+            className:
               params.targetHandle.split("|")[0] === "Text"
-                ? { stroke: "#333333", strokeWidth: 2 }
-                : { stroke: "#222222" },
+                ? "stroke-gray-800 dark:stroke-gray-300"
+                : "stroke-gray-900 dark:stroke-gray-200",
             animated: params.targetHandle.split("|")[0] === "Text",
           },
           eds
@@ -317,15 +318,13 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
             onPaneClick={() => {
               setDisableCopyPaste(false);
             }}
-            onNodeClick={() => {
-              setDisableCopyPaste(true);
-            }}
             onPaneMouseLeave={() => {
               setDisableCopyPaste(true);
             }}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChangeMod}
             onConnect={onConnect}
+            disableKeyboardA11y={true}
             onLoad={setReactFlowInstance}
             onInit={setReactFlowInstance}
             nodeTypes={nodeTypes}
@@ -342,7 +341,11 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
             onDrop={onDrop}
             onNodesDelete={onDelete}
             onSelectionChange={onSelectionChange}
+            nodesDraggable={!disableCopyPaste}
+            panOnDrag={!disableCopyPaste}
+            zoomOnDoubleClick={!disableCopyPaste}
             selectNodesOnDrag={false}
+            className="theme-attribution"
           >
             <Background className="dark:bg-gray-900" />
             <Controls className="[&>button]:text-black  [&>button]:dark:bg-gray-800 hover:[&>button]:dark:bg-gray-700 [&>button]:dark:text-gray-400 [&>button]:dark:fill-gray-400 [&>button]:dark:border-gray-600"></Controls>

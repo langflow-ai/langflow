@@ -16,9 +16,11 @@ import Convert from "ansi-to-html";
 export default function ChatMessage({
   chat,
   lockChat,
+  lastMessage,
 }: {
   chat: ChatMessageType;
   lockChat: boolean;
+  lastMessage: boolean;
 }) {
   const convert = new Convert({ newline: true });
   const [message, setMessage] = useState("");
@@ -48,7 +50,7 @@ export default function ChatMessage({
                 "absolute transition-opacity duration-500 scale-150 " +
                 (lockChat ? "opacity-100" : "opacity-0")
               }
-              src={AiIcon}
+              src={lastMessage ? AiIcon : AiIconStill}
             />
             <img
               className={
@@ -151,13 +153,12 @@ export default function ChatMessage({
       ) : (
         <div className="w-full flex items-center">
           <div className="text-start inline-block px-3 text-sm text-gray-600 dark:text-white">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm, remarkMath]}
-              rehypePlugins={[rehypeMathjax]}
-              className="markdown prose dark:prose-invert text-gray-600 dark:text-gray-200"
-            >
-              {message}
-            </ReactMarkdown>
+            <span
+              className="text-gray-600 dark:text-gray-200"
+              dangerouslySetInnerHTML={{
+                __html: message.replace(/\n/g, "<br>"),
+              }}
+            ></span>
           </div>
         </div>
       )}
