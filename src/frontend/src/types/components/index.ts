@@ -12,6 +12,9 @@ export type InputComponentType = {
   onChange: (value: string) => void;
   password: boolean;
   disableCopyPaste?: boolean;
+  onFocus?: FocusEventHandler<HTMLInputElement>;
+  onBlur?: FocusEventHandler<HTMLInputElement>;
+  autoFocus?: boolean;
 };
 export type ToggleComponentType = {
   enabled: boolean;

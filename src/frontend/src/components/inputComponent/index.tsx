@@ -9,6 +9,9 @@ export default function InputComponent({
   disableCopyPaste = false,
   disabled,
   password,
+  autoFocus=false,
+  onBlur,
+  onFocus
 }: InputComponentType) {
   const [myValue, setMyValue] = useState(value ?? "");
   const [pwdVisible, setPwdVisible] = useState(false);
@@ -28,12 +31,15 @@ export default function InputComponent({
       }
     >
       <input
+        autoFocus={autoFocus}
         value={myValue}
-        onFocus={() => {
+        onFocus={(e) => {
           if (disableCopyPaste) setDisableCopyPaste(true);
+          if(onFocus) onFocus(e)
         }}
-        onBlur={() => {
+        onBlur={(e) => {
           if (disableCopyPaste) setDisableCopyPaste(false);
+          if(onBlur) onBlur(e)
         }}
         className={classNames(
           "block w-full pr-12 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
