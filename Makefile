@@ -59,7 +59,7 @@ lcserve_push:
 	make build_frontend
 	@version=$$(poetry version --short); \
 	lc-serve push --app langflow.lcserve:app --app-dir . \
-		--image-name langflow --image-tag $${version} --verbose
+		--image-name langflow --image-tag $${version} --verbose --public
 
 lcserve_deploy:
 	@:$(if $(uses),,$(error `uses` is not set. Please run `make uses=... lcserve_deploy`))
