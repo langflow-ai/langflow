@@ -3,6 +3,7 @@ import {
   ReactElement,
   ReactFragment,
   ReactNode,
+  SVGProps,
 } from "react";
 import { NodeDataType } from "../flow/index";
 export type InputComponentType = {
