@@ -4,6 +4,7 @@ from collections import defaultdict
 from typing import Dict, List
 
 from fastapi import WebSocket, status
+from langflow.api.callback import AsyncStreamingLLMCallbackHandler
 
 from langflow.api.schemas import ChatMessage, ChatResponse, FileResponse
 from langflow.cache import cache_manager
@@ -168,7 +169,6 @@ class ChatManager:
 
                 with self.cache_manager.set_client_id(client_id):
                     await self.process_message(client_id, payload)
-
         except Exception as e:
             # Handle any exceptions that might occur
             logger.exception(e)
@@ -200,8 +200,9 @@ async def process_graph(
         if not chat_message.message:
             raise
 
+        callbacks = [AsyncStreamingLLMCallbackHandler(websocket=websocket)]
         result, intermediate_steps = await gmap.process(
-            chat_message.message, callbacks_kwargs=dict(websocket=websocket)
+            chat_message.message, callbacks=callbacks
         )
         # result, intermediate_steps = await get_result_and_steps(
         #     langchain_object,

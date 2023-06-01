@@ -1,3 +1,4 @@
+from collections import defaultdict
 import re
 
 
@@ -17,3 +18,20 @@ def fix_prompt(prompt: str):
 def extract_input_variables_from_prompt(prompt: str) -> list[str]:
     """Extract input variables from prompt."""
     return re.findall(r"{(.*?)}", prompt)
+
+
+def get_proxy_values(template):
+    proxy_cache = defaultdict(dict)
+    for value_dict in template.values():
+        if proxy := value_dict.get("proxy"):
+            proxy_cache[proxy["id"]][proxy["field"]] = value_dict.get("value")
+    return proxy_cache
+
+
+# Now I need to iterate over the nodes and replace the proxy values with the values from the cache
+def set_proxy_values(group_node, proxy_cache):
+    inner_nodes = group_node["flow"]["data"]["nodes"]
+    for node in inner_nodes:
+        if proxy_values := proxy_cache.get(node["id"]):
+            for key, value in proxy_values.items():
+                node["data"]["node"]["template"][key]["value"] = value

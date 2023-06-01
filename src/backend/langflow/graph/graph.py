@@ -248,9 +248,8 @@ class Graph:
         # The edges need to be updated to use the new node id
         # The inner nodes need to be updated to use the new node id
         for node in nodes.copy():
-            node_data = node["data"]
-            node_type: str = node_data["type"]  # type: ignore
-            if node_type == "flow":
+            node_data = node["data"]["node"]
+            if "flow" in node_data:
                 self.expand_flow_node(node)
                 nodes.remove(node)
 

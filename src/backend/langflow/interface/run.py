@@ -4,7 +4,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from langchain.schema import AgentAction
 
-from langflow.api.callback import AsyncStreamingLLMCallbackHandler, StreamingLLMCallbackHandler  # type: ignore
 from langflow.cache.base import compute_dict_hash, load_cache, memoize_dict
 from langflow.graph.graph import Graph
 from langflow.utils.logger import logger
@@ -150,7 +149,7 @@ def fix_memory_inputs(langchain_object):
 
 
 async def get_result_and_steps(
-    langchain_object, message: str, callbacks_kwargs: Optional[dict[str, Any]] = None
+    langchain_object, message: str, callbacks: Optional[List] = None
 ):
     """Get result and thought from extracted json"""
 
@@ -178,19 +177,11 @@ async def get_result_and_steps(
         fix_memory_inputs(langchain_object)
 
         try:
-            if callbacks_kwargs:
-                async_callbacks = [AsyncStreamingLLMCallbackHandler(**callbacks_kwargs)]
-            else:
-                async_callbacks = None
-            output = await langchain_object.acall(chat_input, callbacks=async_callbacks)
+            output = await langchain_object.acall(chat_input, callbacks=callbacks)
         except Exception as exc:
             # make the error message more informative
             logger.debug(f"Error: {str(exc)}")
-            if callbacks_kwargs:
-                sync_callbacks = [StreamingLLMCallbackHandler(**callbacks_kwargs)]
-            else:
-                sync_callbacks = None
-            output = langchain_object(chat_input, callbacks=sync_callbacks)
+            output = langchain_object(chat_input, callbacks=callbacks)
 
         intermediate_steps = (
             output.get("intermediate_steps", []) if isinstance(output, dict) else []
