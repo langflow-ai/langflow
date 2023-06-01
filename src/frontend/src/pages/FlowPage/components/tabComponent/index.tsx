@@ -13,9 +13,6 @@ export default function TabComponent({
   flow: FlowType;
   selected: boolean;
   onClick: () => void;
-  flow: FlowType;
-  selected: boolean;
-  onClick: () => void;
 }) {
   const { removeFlow, updateFlow, flows } = useContext(TabsContext);
   const [isRename, setIsRename] = useState(false);
