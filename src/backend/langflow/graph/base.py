@@ -23,6 +23,7 @@ class Node:
         self._data = data
         self.edges: List[Edge] = []
         self.base_type: Optional[str] = base_type
+        self.can_be_root = False
         self._parse_data()
         self._built_object = None
         self._built = False
@@ -56,6 +57,11 @@ class Node:
                 if self.node_type in value:
                     self.base_type = base_type
                     break
+
+        # Node is root if it is base_type
+        # chains, connectors or agents
+        # check if root_field is in template_dict
+        self.can_be_root = "root_field" in template_dict
 
     def _build_params(self):
         # Some params are required, some are optional

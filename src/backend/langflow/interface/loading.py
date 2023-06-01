@@ -62,6 +62,7 @@ def convert_kwargs(params):
 
 def instantiate_based_on_type(class_object, base_type, node_type, params):
     if base_type == "agents":
+        params = remove_input_connection_from_params(params)
         return instantiate_agent(class_object, params)
     elif base_type == "prompts":
         return instantiate_prompt(node_type, class_object, params)
@@ -80,6 +81,7 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
     elif base_type == "utilities":
         return instantiate_utility(node_type, class_object, params)
     else:
+        params = remove_input_connection_from_params(params)
         return class_object(**params)
 
 
@@ -169,15 +171,7 @@ def load_flow_from_json(path: str, build=True):
     with open(path, "r", encoding="utf-8") as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]
-    nodes = data_graph["nodes"]
-    # Substitute ZeroShotPrompt with PromptTemplate
-    # nodes = replace_zero_shot_prompt_with_prompt_template(nodes)
-    # Add input variables
-    # nodes = payload.extract_input_variables(nodes)
-
-    # Nodes, edges and root node
-    edges = data_graph["edges"]
-    graph = Graph(nodes, edges)
+    graph = Graph(graph_data=data_graph)
     if build:
         langchain_object = graph.build()
         if hasattr(langchain_object, "verbose"):

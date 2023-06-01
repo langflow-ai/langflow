@@ -111,8 +111,8 @@ export default function App() {
 
   return (
     //need parent component with width and height
-    <div className="h-full flex flex-col">
-      <div className="flex grow-0 shrink basis-auto"></div>
+    <div className="flex h-full flex-col">
+      <div className="flex shrink grow-0 basis-auto"></div>
       <ErrorBoundary
         onReset={() => {
           window.localStorage.removeItem("tabsData");
@@ -122,19 +122,19 @@ export default function App() {
         }}
         FallbackComponent={CrashErrorComponent}
       >
-        <div className="flex grow shrink basis-auto min-h-0 flex-1 overflow-hidden">
+        <div className="flex min-h-0 flex-1 shrink grow basis-auto overflow-hidden">
           <ExtraSidebar />
           {/* Main area */}
-          <main className="min-w-0 flex-1 border-t border-gray-200 dark:border-gray-700 flex">
+          <main className="flex min-w-0 flex-1 border-t border-gray-200 dark:border-gray-700">
             {/* Primary column */}
-            <div className="w-full h-full">
+            <div className="h-full w-full">
               <TabsManagerComponent></TabsManagerComponent>
             </div>
           </main>
         </div>
       </ErrorBoundary>
       <div></div>
-      <div className="flex z-40 flex-col-reverse fixed bottom-5 left-5">
+      <div className="fixed bottom-5 left-5 z-40 flex flex-col-reverse">
         {alertsList.map((alert) => (
           <div key={alert.id}>
             {alert.type === "error" ? (
@@ -167,7 +167,7 @@ export default function App() {
       <a
         target={"_blank"}
         href="https://logspace.ai/"
-        className="absolute left-7 bottom-2 flex h-6 cursor-pointer flex-col items-center justify-start overflow-hidden rounded-lg bg-gray-800 px-2 text-center font-sans text-xs tracking-wide text-gray-300 transition-all duration-500 ease-in-out hover:h-12 dark:bg-gray-100 dark:text-gray-800"
+        className="absolute bottom-2 left-7 flex h-6 cursor-pointer flex-col items-center justify-start overflow-hidden rounded-lg bg-gray-800 px-2 text-center font-sans text-xs tracking-wide text-gray-300 transition-all duration-500 ease-in-out hover:h-12 dark:bg-gray-100 dark:text-gray-800"
       >
         {version && <div className="mt-1">⛓️ LangFlow v{version}</div>}
         <div className="mt-2">Created by Logspace</div>

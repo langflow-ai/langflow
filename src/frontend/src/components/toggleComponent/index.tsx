@@ -4,9 +4,9 @@ import { useEffect } from "react";
 import { ToggleComponentType } from "../../types/components";
 
 export default function ToggleComponent({
-  enabled,
-  setEnabled,
-  disabled,
+	enabled,
+	setEnabled,
+	disabled,
 }: ToggleComponentType) {
   useEffect(() => {
     if (disabled) {

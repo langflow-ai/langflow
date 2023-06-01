@@ -1,10 +1,11 @@
 import {
+  FocusEventHandler,
   ForwardRefExoticComponent,
   ReactElement,
   ReactFragment,
   ReactNode,
 } from "react";
-import { NodeDataType } from "../flow/index";
+import { FlowType, NodeDataType } from "../flow/index";
 export type InputComponentType = {
   value: string;
   disabled?: boolean;
@@ -30,8 +31,35 @@ export type ParameterComponentType = {
   left: boolean;
   type: string;
   required?: boolean;
+  handleDisabled?: boolean;
   name?: string;
   tooltipTitle: string;
+};
+export type InputParameterComponentType = {
+  data: NodeDataType;
+  title: string;
+  id: string;
+  color: string;
+  left: boolean;
+  type: string;
+  required?: boolean;
+  handleDisabled?: boolean;
+  name?: string;
+  tooltipTitle: string;
+};
+export type HandleComponentType = {
+  data?: NodeDataType;
+  title: string;
+  id: string;
+  color: string;
+  left: boolean;
+  type: string;
+  required?: boolean;
+  handleDisabled?: boolean;
+  name?: string;
+  tooltipTitle: string;
+  position: number;
+  fill?: boolean;
 };
 export type InputListComponentType = {
   value: string[];
@@ -89,4 +117,14 @@ export type TooltipComponentType = {
     | "top-end"
     | "top-start"
     | "top";
+};
+
+export type FlowHandleType = {
+  data: FlowType;
+  title: string;
+  id: string;
+  color: string;
+  left: boolean;
+  required?: boolean;
+  tooltipTitle: string;
 };

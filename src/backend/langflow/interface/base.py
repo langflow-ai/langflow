@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Type, Union
+from langflow.template.frontend_node.base import FrontendNode
+from langflow.template.template.base import Template
 
 from pydantic import BaseModel
 
@@ -8,10 +10,8 @@ from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.template.base import Template
 from langflow.utils.logger import logger
 
-# Assuming necessary imports for Field, Template, and FrontendNode classes
 
-
-class LangChainTypeCreator(BaseModel, ABC):
+class Creator(BaseModel, ABC):
     type_name: str
     type_dict: Optional[Dict] = None
 
@@ -19,13 +19,6 @@ class LangChainTypeCreator(BaseModel, ABC):
     def frontend_node_class(self) -> Type[FrontendNode]:
         """The class type of the FrontendNode created in frontend_node."""
         return FrontendNode
-
-    @property
-    @abstractmethod
-    def type_to_loader_dict(self) -> Dict:
-        if self.type_dict is None:
-            raise NotImplementedError
-        return self.type_dict
 
     @abstractmethod
     def get_signature(self, name: str) -> Union[Optional[Dict[Any, Any]], FrontendNode]:

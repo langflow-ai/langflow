@@ -19,6 +19,7 @@ import {
   toTitleCase,
 } from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
+import InputParameterComponent from "./components/inputParameterComponent";
 import { typesContext } from "../../contexts/typesContext";
 import { useContext, useState, useEffect, useRef, Fragment } from "react";
 import { NodeDataType } from "../../types/flow";
@@ -30,6 +31,8 @@ import { TabsContext } from "../../contexts/tabsContext";
 import { debounce } from "../../utils";
 import TooltipReact from "../../components/ReactTooltipComponent";
 import Tooltip from "../../components/TooltipComponent";
+import { useUpdateNodeInternals } from "reactflow";
+import HandleComponent from "./components/parameterComponent/components/handleComponent";
 export default function GenericNode({
   data,
   selected,
@@ -97,8 +100,7 @@ export default function GenericNode({
     deleteNode(data.id);
     return;
   }
-  console.log(data);
-
+  // console.log(data);
   return (
     <div
       className={classNames(
@@ -215,8 +217,8 @@ export default function GenericNode({
 
         <>
           {Object.keys(data.node.template)
-            .filter((t) => t.charAt(0) !== "_")
-            .map((t: string, idx) => (
+            .filter((field_name) => field_name.charAt(0) !== "_")
+            .map((field_name: string, idx) => (
               <div key={idx}>
                 {/* {idx === 0 ? (
 									<div
@@ -237,31 +239,38 @@ export default function GenericNode({
 								) : (
 									<></>
 								)} */}
-                {data.node.template[t].show &&
-                !data.node.template[t].advanced ? (
+                {data.node.template[field_name].show &&
+                field_name != "root_field" &&
+                !data.node.template[field_name].advanced ? (
                   <ParameterComponent
                     data={data}
                     color={
-                      nodeColors[types[data.node.template[t].type]] ??
+                      nodeColors[types[data.node.template[field_name].type]] ??
                       nodeColors.unknown
                     }
                     title={
-                      data.node.template[t].display_name
-                        ? data.node.template[t].display_name
-                        : data.node.template[t].name
-                        ? toTitleCase(data.node.template[t].name)
-                        : toTitleCase(t)
+                      data.node.template[field_name].display_name
+                        ? data.node.template[field_name].display_name
+                        : data.node.template[field_name].name
+                        ? toTitleCase(data.node.template[field_name].name)
+                        : toTitleCase(field_name)
                     }
-                    name={t}
+                    name={field_name}
                     tooltipTitle={
                       "Type: " +
-                      data.node.template[t].type +
-                      (data.node.template[t].list ? " list" : "")
+                      data.node.template[field_name].type +
+                      (data.node.template[field_name].list ? " list" : "")
                     }
-                    required={data.node.template[t].required}
-                    id={data.node.template[t].type + "|" + t + "|" + data.id}
+                    required={data.node.template[field_name].required}
+                    id={
+                      data.node.template[field_name].type +
+                      "|" +
+                      field_name +
+                      "|" +
+                      data.id
+                    }
                     left={true}
-                    type={data.node.template[t].type}
+                    type={data.node.template[field_name].type}
                   />
                 ) : (
                   <></>
@@ -279,15 +288,34 @@ export default function GenericNode({
           {/* <div className="px-5 py-2 mt-2 dark:text-white text-center">
 						Output
 					</div> */}
-          <ParameterComponent
-            data={data}
-            color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-            title={data.type}
-            tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
-            id={[data.type, data.id, ...data.node.base_classes].join("|")}
-            type={data.node.base_classes.join("|")}
-            left={false}
-          />
+
+          {data.node.template.root_field ? (
+            <InputParameterComponent
+              data={data}
+              color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+              title={data.node.template.root_field.display_name}
+              tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
+              id={
+                data.node.template.root_field.type +
+                "|" +
+                "root_field" +
+                "|" +
+                data.id
+              }
+              type={data.node.base_classes.join("|")}
+              left={false}
+            />
+          ) : (
+            <ParameterComponent
+              data={data}
+              color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+              title={data.type}
+              tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
+              id={[data.type, data.id, ...data.node.base_classes].join("|")}
+              type={data.node.base_classes.join("|")}
+              left={false}
+            />
+          )}
         </>
       </div>
     </div>

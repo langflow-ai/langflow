@@ -1,6 +1,6 @@
 import contextlib
 import io
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from langchain.schema import AgentAction
 
@@ -45,9 +45,7 @@ def build_langchain_object_with_caching(data_graph):
 
 
 def build_graph(data_graph):
-    nodes = data_graph["nodes"]
-    edges = data_graph["edges"]
-    return Graph(nodes, edges)
+    return Graph(graph_data=data_graph)
 
 
 def build_langchain_object(data_graph):
@@ -132,25 +130,28 @@ def fix_memory_inputs(langchain_object):
     object's input variables. If so, it does nothing. Otherwise, it gets a possible new memory key using the
     get_memory_key function and updates the memory keys using the update_memory_keys function.
     """
-    if hasattr(langchain_object, "memory") and langchain_object.memory is not None:
-        try:
-            if langchain_object.memory.memory_key in langchain_object.input_variables:
-                return
-        except AttributeError:
-            input_variables = (
-                langchain_object.prompt.input_variables
-                if hasattr(langchain_object, "prompt")
-                else langchain_object.input_keys
-            )
-            if langchain_object.memory.memory_key in input_variables:
-                return
+    if not hasattr(langchain_object, "memory") or langchain_object.memory is None:
+        return
+    try:
+        if langchain_object.memory.memory_key in langchain_object.input_variables:
+            return
+    except AttributeError:
+        input_variables = (
+            langchain_object.prompt.input_variables
+            if hasattr(langchain_object, "prompt")
+            else langchain_object.input_keys
+        )
+        if langchain_object.memory.memory_key in input_variables:
+            return
 
-        possible_new_mem_key = get_memory_key(langchain_object)
-        if possible_new_mem_key is not None:
-            update_memory_keys(langchain_object, possible_new_mem_key)
+    possible_new_mem_key = get_memory_key(langchain_object)
+    if possible_new_mem_key is not None:
+        update_memory_keys(langchain_object, possible_new_mem_key)
 
 
-async def get_result_and_steps(langchain_object, message: str, **kwargs):
+async def get_result_and_steps(
+    langchain_object, message: str, callbacks_kwargs: Optional[dict[str, Any]] = None
+):
     """Get result and thought from extracted json"""
 
     try:
@@ -175,13 +176,20 @@ async def get_result_and_steps(langchain_object, message: str, **kwargs):
             langchain_object.return_intermediate_steps = True
 
         fix_memory_inputs(langchain_object)
+
         try:
-            async_callbacks = [AsyncStreamingLLMCallbackHandler(**kwargs)]
+            if callbacks_kwargs:
+                async_callbacks = [AsyncStreamingLLMCallbackHandler(**callbacks_kwargs)]
+            else:
+                async_callbacks = None
             output = await langchain_object.acall(chat_input, callbacks=async_callbacks)
         except Exception as exc:
             # make the error message more informative
             logger.debug(f"Error: {str(exc)}")
-            sync_callbacks = [StreamingLLMCallbackHandler(**kwargs)]
+            if callbacks_kwargs:
+                sync_callbacks = [StreamingLLMCallbackHandler(**callbacks_kwargs)]
+            else:
+                sync_callbacks = None
             output = langchain_object(chat_input, callbacks=sync_callbacks)
 
         intermediate_steps = (
@@ -259,12 +267,10 @@ def format_actions(actions: List[Tuple[AgentAction, str]]) -> str:
     output = []
     for action, answer in actions:
         log = action.log
-        tool = action.tool
-        tool_input = action.tool_input
         output.append(f"Log: {log}")
         if "Action" not in log and "Action Input" not in log:
-            output.append(f"Tool: {tool}")
-            output.append(f"Tool Input: {tool_input}")
-        output.append(f"Answer: {answer}")
-        output.append("")  # Add a blank line
+            tool = action.tool
+            tool_input = action.tool_input
+            output.extend((f"Tool: {tool}", f"Tool Input: {tool_input}"))
+        output.extend((f"Answer: {answer}", ""))
     return "\n".join(output)

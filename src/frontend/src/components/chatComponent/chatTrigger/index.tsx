@@ -31,7 +31,7 @@ export default function ChatTrigger({ open, setOpen }) {
           <button>
             <div className="flex gap-3  items-center">
               <ChatBubbleBottomCenterTextIcon
-                className="h-6 w-6 mt-1"
+                className="mt-1 h-6 w-6"
                 style={{ color: "white" }}
               />
             </div>

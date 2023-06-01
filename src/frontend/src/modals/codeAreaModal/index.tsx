@@ -13,6 +13,7 @@ import { checkCode } from "../../controllers/API";
 import { alertContext } from "../../contexts/alertContext";
 import { TabsContext } from "../../contexts/tabsContext";
 export default function CodeAreaModal({
+
   value,
   setValue,
 }: {

@@ -1,5 +1,6 @@
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
+from langflow.interface.connectors.base import connector_creator
 from langflow.interface.document_loaders.base import documentloader_creator
 from langflow.interface.embeddings.base import embedding_creator
 from langflow.interface.llms.base import llm_creator
@@ -44,6 +45,7 @@ def build_langchain_types_dict():  # sourcery skip: dict-assign-update-to-union
         documentloader_creator,
         textsplitter_creator,
         utility_creator,
+        connector_creator,
     ]
 
     all_types = {}

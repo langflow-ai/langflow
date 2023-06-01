@@ -1,4 +1,3 @@
-import { ChatMessageType } from "./../chat/index";
 import { APIClassType } from "../api/index";
 import { ReactFlowJsonObject, XYPosition } from "reactflow";
 

@@ -1,3 +1,5 @@
+from langflow.template.frontend_node.base import FrontendNode
+from langflow.template.template.base import Template
 import pytest
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
@@ -44,7 +46,7 @@ def test_template_to_dict(
 ):
     template_dict = sample_template.to_dict()
     assert template_dict["_type"] == "test_template"
-    assert len(template_dict) == 2  # _type and test_field
+    assert len(template_dict) == 3  # _type, test_field, root_field
     assert "test_field" in template_dict
     assert "type" in template_dict["test_field"]
     assert "required" in template_dict["test_field"]

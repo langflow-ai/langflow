@@ -30,11 +30,22 @@ import { typesContext } from "../../contexts/typesContext";
 import ConnectionLineComponent from "./components/ConnectionLineComponent";
 import { FlowType, NodeType } from "../../types/flow";
 import { APIClassType } from "../../types/api";
-import { isValidConnection } from "../../utils";
+import {
+  filterFlow,
+  generateFlow,
+  generateNodeFromFlow,
+  getMiddlePoint,
+  isValidConnection,
+  updateRemovedEdges,
+  validateSelection,
+} from "../../utils";
 import useUndoRedo from "./hooks/useUndoRedo";
+import SelectionMenu from "./components/SelectionMenuComponent";
+import GroupNode from "../../CustomNodes/GroupNode";
 
 const nodeTypes = {
   genericNode: GenericNode,
+  groupNode: GroupNode,
 };
 
 export default function FlowPage({ flow }: { flow: FlowType }) {
@@ -77,14 +88,6 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
           x: position.x - bounds.left,
           y: position.y - bounds.top,
         });
-      }
-      if (
-        (event.ctrlKey || event.metaKey) &&
-        event.key === "g" &&
-        lastSelection
-      ) {
-        event.preventDefault();
-        // addFlow(newFlow, false);
       }
     };
     const handleMouseMove = (event) => {
@@ -306,7 +309,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
   const { setDisableCopyPaste } = useContext(TabsContext);
 
   return (
-    <div className="w-full h-full" ref={reactFlowWrapper}>
+    <div className="h-full w-full" ref={reactFlowWrapper}>
       {Object.keys(templates).length > 0 && Object.keys(types).length > 0 ? (
         <>
           <ReactFlow
@@ -348,9 +351,47 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
             className="theme-attribution"
           >
             <Background className="dark:bg-gray-900" />
-            <Controls className="[&>button]:text-black  [&>button]:dark:bg-gray-800 hover:[&>button]:dark:bg-gray-700 [&>button]:dark:text-gray-400 [&>button]:dark:fill-gray-400 [&>button]:dark:border-gray-600"></Controls>
+            <Controls className="[&>button]:text-black  [&>button]:dark:border-gray-600 [&>button]:dark:bg-gray-800 [&>button]:dark:fill-gray-400 [&>button]:dark:text-gray-400 hover:[&>button]:dark:bg-gray-700"></Controls>
           </ReactFlow>
           <Chat flow={flow} reactFlowInstance={reactFlowInstance} />
+          <SelectionMenu
+            onClick={() => {
+              if (validateSelection(lastSelection).length === 0) {
+                const { newFlow } = generateFlow(
+                  lastSelection,
+                  reactFlowInstance,
+                  "new component"
+                );
+                const newGroupNode = generateNodeFromFlow(newFlow);
+                setNodes((oldNodes) => [
+                  ...oldNodes.filter(
+                    (oldNode) =>
+                      !lastSelection.nodes.some(
+                        (selectionNode) => selectionNode.id === oldNode.id
+                      )
+                  ),
+                  newGroupNode,
+                ]);
+                setEdges((oldEdges) =>
+                  oldEdges.filter(
+                    (oldEdge) =>
+                      !lastSelection.nodes.some(
+                        (selectionNode) =>
+                          selectionNode.id === oldEdge.target ||
+                          selectionNode.id === oldEdge.source
+                      )
+                  )
+                );
+              } else {
+                setErrorData({
+                  title: "Invalid selection",
+                  list: validateSelection(lastSelection),
+                });
+              }
+            }}
+            isVisible={selectionMenuVisible}
+            nodes={lastSelection?.nodes}
+          />
         </>
       ) : (
         <></>

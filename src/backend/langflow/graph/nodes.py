@@ -1,23 +1,21 @@
 from typing import Any, Dict, List, Optional, Union
 
 from langflow.graph.base import Node
-from langflow.graph.utils import extract_input_variables_from_prompt
+from langflow.interface.connectors.custom import ConnectorFunction
 
 
-class AgentNode(Node):
-    def __init__(self, data: Dict):
-        super().__init__(data, base_type="agents")
+class ConnectorNode(Node):
+    _built_object: Any = None
+    _built: bool = False
 
-        self.tools: List[ToolNode] = []
-        self.chains: List[ChainNode] = []
+    def __init__(self, data: Dict) -> None:
+        super().__init__(data, base_type="connectors")
 
-    def _set_tools_and_chains(self) -> None:
-        for edge in self.edges:
-            source_node = edge.source
-            if isinstance(source_node, ToolNode):
-                self.tools.append(source_node)
-            elif isinstance(source_node, ChainNode):
-                self.chains.append(source_node)
+    def _build(self) -> None:
+        for param, value in self.params.items():
+            if param == "code":
+                conn_func = ConnectorFunction(code=value)
+                conn_func.get_function()
 
     def build(self, force: bool = False) -> Any:
         if not self._built or force:

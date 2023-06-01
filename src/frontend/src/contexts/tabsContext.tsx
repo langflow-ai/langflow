@@ -9,6 +9,7 @@ import {
 import { FlowType, NodeType } from "../types/flow";
 import { LangFlowState, TabsContextType } from "../types/tabs";
 import {
+  concatFlows,
   normalCaseToSnakeCase,
   updateIds,
   updateObject,
@@ -95,7 +96,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           edge.style = { stroke: "#555555" };
         });
         flow.data.nodes.forEach((node) => {
-          if (Object.keys(templates[node.data.type]["template"]).length > 0) {
+          if (node.type !== "groupNode" && templates && templates[node.data.type] && Object.keys(templates[node.data.type]["template"]).length > 0) {
             node.data.node.base_classes =
               templates[node.data.type]["base_classes"];
             flow.data.edges.forEach((edge) => {
@@ -316,7 +317,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         edge.animated = edge.targetHandle.split("|")[0] === "Text";
       });
       data.nodes.forEach((node) => {
-        if (Object.keys(templates[node.data.type]["template"]).length > 0) {
+        if (node.type !== "groupNode" && templates && templates[node.data.type] && Object.keys(templates[node.data.type]["template"]).length > 0) {
           node.data.node.base_classes =
             templates[node.data.type]["base_classes"];
           flow.data.edges.forEach((edge) => {
