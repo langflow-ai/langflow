@@ -27,11 +27,13 @@
         "react-router-dom": "^6.8.1",
         "react-syntax-highlighter": "^15.5.0",
         "react-tabs": "^6.0.0",
+        "react-tooltip": "^5.13.1",
         "reactflow": "^11.5.5",
         "rehype-mathjax": "^4.0.2",
         "remark-gfm": "^3.0.1",
         "remark-math": "^5.1.1",
         "uuid": "^9.0.0",
+        "vite-plugin-svgr": "^3.2.0",
         "web-vitals": "^2.1.4"
     },
     "scripts": {
