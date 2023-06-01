@@ -16,13 +16,12 @@ import Convert from "ansi-to-html";
 export default function ChatMessage({
   chat,
   lockChat,
-  lastMessage
+  lastMessage,
 }: {
   chat: ChatMessageType;
   lockChat: boolean;
   lastMessage: boolean;
 }) {
-  
   const convert = new Convert({ newline: true });
   const [message, setMessage] = useState("");
   const imgRef = useRef(null);
