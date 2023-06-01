@@ -31,7 +31,7 @@ from langflow.utils import util, validate
 def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
     """Instantiate class from module type and key, and params"""
     params = convert_params_to_sets(params)
-
+    params = convert_kwargs(params)
     if node_type in CUSTOM_AGENTS:
         custom_agent = CUSTOM_AGENTS.get(node_type)
         if custom_agent:
@@ -47,6 +47,16 @@ def convert_params_to_sets(params):
         params["allowed_special"] = set(params["allowed_special"])
     if "disallowed_special" in params:
         params["disallowed_special"] = set(params["disallowed_special"])
+    return params
+
+
+def convert_kwargs(params):
+    # if *kwargs are passed as a string, convert to dict
+    # first find any key that has kwargs in it
+    kwargs_keys = [key for key in params.keys() if "kwargs" in key]
+    for key in kwargs_keys:
+        if isinstance(params[key], str):
+            params[key] = json.loads(params[key])
     return params
 
 
