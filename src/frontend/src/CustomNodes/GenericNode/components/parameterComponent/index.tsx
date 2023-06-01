@@ -15,6 +15,8 @@ import InputFileComponent from "../../../../components/inputFileComponent";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import IntComponent from "../../../../components/intComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
+import { nodeNames, nodeIcons } from "../../../../utils";
+import React from "react";
 
 export default function ParameterComponent({
   left,
@@ -28,6 +30,8 @@ export default function ParameterComponent({
   required = false,
 }: ParameterComponentType) {
   const ref = useRef(null);
+  const refParent = useRef("");
+  const refParentIcon = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   useEffect(() => {
@@ -48,6 +52,19 @@ export default function ParameterComponent({
   let disabled =
     reactFlowInstance?.getEdges().some((e) => e.targetHandle === id) ?? false;
   const { save } = useContext(TabsContext);
+  const [myData, setMyData] = useState(useContext(typesContext).data);
+
+  useEffect(() => {
+    Object.keys(myData).forEach((d) => {
+      let keys = Object.keys(myData[d]).filter(
+        (nd) => nd.toLowerCase() == data.type.toLowerCase()
+      );
+      if (keys.length > 0) {
+        refParent.current = d;
+        refParentIcon.current = nodeIcons[d];
+      }
+    });
+  }, []);
 
   return (
     <div
@@ -69,7 +86,25 @@ export default function ParameterComponent({
           type === "int") ? (
           <></>
         ) : (
-          <Tooltip title={tooltipTitle + (required ? " (required)" : "")}>
+          <Tooltip
+            title={
+              <>
+                <div className="flex center items-center">
+                  <div
+                    className="h-5 w-5"
+                    style={{
+                      color: color,
+                    }}
+                  >
+                    {React.createElement(refParentIcon.current)}
+                  </div>
+                  <span className="ms-2 items-center">
+                    {nodeNames[refParent?.current] ?? ""}
+                  </span>
+                </div>
+              </>
+            }
+          >
             <Handle
               type={left ? "target" : "source"}
               position={left ? Position.Left : Position.Right}
