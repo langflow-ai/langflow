@@ -2,7 +2,11 @@ from typing import Optional
 
 from langchain.agents.mrkl import prompt
 
-from langflow.template.constants import DEFAULT_PROMPT, HUMAN_PROMPT, SYSTEM_PROMPT
+from langflow.template.frontend_node.constants import (
+    DEFAULT_PROMPT,
+    HUMAN_PROMPT,
+    SYSTEM_PROMPT,
+)
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.template.base import Template
@@ -89,18 +93,18 @@ class ZeroShotPromptNode(BasePromptFrontendNode):
                 is_list=False,
                 show=True,
                 multiline=True,
-                value=prompt.SUFFIX,
-                name="suffix",
+                value=prompt.FORMAT_INSTRUCTIONS,
+                name="format_instructions",
             ),
             TemplateField(
                 field_type="str",
-                required=False,
+                required=True,
                 placeholder="",
                 is_list=False,
                 show=True,
                 multiline=True,
-                value=prompt.FORMAT_INSTRUCTIONS,
-                name="format_instructions",
+                value=prompt.SUFFIX,
+                name="suffix",
             ),
         ],
     )
@@ -109,3 +113,7 @@ class ZeroShotPromptNode(BasePromptFrontendNode):
 
     def to_dict(self):
         return super().to_dict()
+
+    @staticmethod
+    def format_field(field: TemplateField, name: Optional[str] = None) -> None:
+        PromptFrontendNode.format_field(field, name)

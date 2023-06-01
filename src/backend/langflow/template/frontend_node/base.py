@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel
 
-from langflow.template.constants import FORCE_SHOW_FIELDS
+from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.template.field.base import TemplateField
 from langflow.template.template.base import Template
 from langflow.utils import constants

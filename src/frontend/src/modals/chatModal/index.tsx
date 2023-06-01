@@ -33,7 +33,14 @@ export default function ChatModal({
   const ws = useRef<WebSocket | null>(null);
   const [lockChat, setLockChat] = useState(false);
   const isOpen = useRef(open);
+  const messagesRef = useRef(null);
   const id = useRef(flow.id);
+
+  useEffect(() => {
+    if (messagesRef.current) {
+      messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+    }
+  }, [chatHistory]);
 
   useEffect(() => {
     isOpen.current = open;
@@ -283,7 +290,9 @@ export default function ChatModal({
         errors.concat(
           template[t].required &&
             template[t].show &&
-            (!template[t].value || template[t].value === "") &&
+            (template[t].value === undefined ||
+              template[t].value === null ||
+              template[t].value === "") &&
             !reactFlowInstance
               .getEdges()
               .some(
@@ -401,10 +410,18 @@ export default function ChatModal({
                     <HiX className="w-5 h-5" />
                   </button>
                 </div>
-                <div className="w-full h-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center overflow-scroll scrollbar-hide">
+                <div
+                  ref={messagesRef}
+                  className="w-full h-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center overflow-scroll scrollbar-hide"
+                >
                   {chatHistory.length > 0 ? (
                     chatHistory.map((c, i) => (
-                      <ChatMessage lockChat={lockChat} chat={c} key={i} />
+                      <ChatMessage
+                        lockChat={lockChat}
+                        chat={c}
+                        lastMessage={chatHistory.length - 1 == i ? true : false}
+                        key={i}
+                      />
                     ))
                   ) : (
                     <div className="flex flex-col h-full text-center justify-center w-full items-center align-middle">
