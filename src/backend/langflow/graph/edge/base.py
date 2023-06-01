@@ -2,13 +2,13 @@ from langflow.utils.logger import logger
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from langflow.graph.node.base import Node
+    from langflow.graph.vertex.base import Vertex
 
 
 class Edge:
-    def __init__(self, source: "Node", target: "Node"):
-        self.source: "Node" = source
-        self.target: "Node" = target
+    def __init__(self, source: "Vertex", target: "Vertex"):
+        self.source: "Vertex" = source
+        self.target: "Vertex" = target
         self.validate_edge()
 
     def validate_edge(self) -> None:
@@ -41,7 +41,7 @@ class Edge:
             logger.debug(self.target_reqs)
         if no_matched_type:
             raise ValueError(
-                f"Edge between {self.source.node_type} and {self.target.node_type} "
+                f"Edge between {self.source.vertex_type} and {self.target.vertex_type} "
                 f"has no matched type"
             )
 
