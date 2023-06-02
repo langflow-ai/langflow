@@ -1,10 +1,12 @@
 from typing import Type, Union
+from langflow.graph.edge.base import Edge
+from langflow.graph.node.base import Node
 
 import pytest
 from langchain.chains.base import Chain
 from langchain.llms.fake import FakeListLLM
-from langflow.graph import Edge, Graph, Node
-from langflow.graph.nodes import (
+from langflow.graph import Graph
+from langflow.graph.node.types import (
     AgentNode,
     ChainNode,
     FileToolNode,

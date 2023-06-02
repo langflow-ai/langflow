@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional, Union
 
-from langflow.graph.base import Node
+from langflow.graph.node.base import Node
 from langflow.graph.utils import extract_input_variables_from_prompt
 
 
