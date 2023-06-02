@@ -12,6 +12,7 @@ from langchain.agents.load_tools import (
     _LLM_TOOLS,
 )
 from langchain.agents.loading import load_agent_from_config
+from langflow.graph import Graph
 from langchain.agents.tools import Tool
 from langchain.base_language import BaseLanguageModel
 from langchain.callbacks.base import BaseCallbackManager
@@ -162,7 +163,6 @@ def instantiate_utility(node_type, class_object, params):
 def load_flow_from_json(path: str, build=True):
     """Load flow from json file"""
     # This is done to avoid circular imports
-    from langflow.graph import Graph
 
     with open(path, "r", encoding="utf-8") as f:
         flow_graph = json.load(f)

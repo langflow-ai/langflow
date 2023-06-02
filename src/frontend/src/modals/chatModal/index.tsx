@@ -290,7 +290,9 @@ export default function ChatModal({
         errors.concat(
           template[t].required &&
             template[t].show &&
-            (!template[t].value || template[t].value === "") &&
+            (template[t].value === undefined ||
+              template[t].value === null ||
+              template[t].value === "") &&
             !reactFlowInstance
               .getEdges()
               .some(
@@ -414,7 +416,12 @@ export default function ChatModal({
                 >
                   {chatHistory.length > 0 ? (
                     chatHistory.map((c, i) => (
-                      <ChatMessage lockChat={lockChat} chat={c} key={i} />
+                      <ChatMessage
+                        lockChat={lockChat}
+                        chat={c}
+                        lastMessage={chatHistory.length - 1 == i ? true : false}
+                        key={i}
+                      />
                     ))
                   ) : (
                     <div className="flex flex-col h-full text-center justify-center w-full items-center align-middle">
