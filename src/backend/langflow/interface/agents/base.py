@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Type
 
 from langchain.agents import types
 
@@ -6,12 +6,17 @@ from langflow.custom.customs import get_custom_nodes
 from langflow.interface.agents.custom import CUSTOM_AGENTS
 from langflow.interface.base import LangChainTypeCreator
 from langflow.settings import settings
+from langflow.template.frontend_node.agents import AgentFrontendNode
 from langflow.utils.logger import logger
 from langflow.utils.util import build_template_from_class
 
 
 class AgentCreator(LangChainTypeCreator):
     type_name: str = "agents"
+
+    @property
+    def frontend_node_class(self) -> Type[AgentFrontendNode]:
+        return AgentFrontendNode
 
     @property
     def type_to_loader_dict(self) -> Dict:

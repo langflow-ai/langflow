@@ -1,11 +1,17 @@
 from typing import Optional
 
 from langflow.template.field.base import TemplateField
+from langflow.template.field.fields import RootField
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.template.base import Template
 
 
 class ChainFrontendNode(FrontendNode):
+    def add_extra_fields(self) -> None:
+        self.template.add_field(
+            RootField(field_type="Text"),
+        )
+
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         FrontendNode.format_field(field, name)
@@ -38,7 +44,7 @@ class ChainFrontendNode(FrontendNode):
             field.advanced = False
 
 
-class SeriesCharacterChainNode(FrontendNode):
+class SeriesCharacterChainNode(ChainFrontendNode):
     name: str = "SeriesCharacterChain"
     template: Template = Template(
         type_name="SeriesCharacterChain",
@@ -87,7 +93,7 @@ class SeriesCharacterChainNode(FrontendNode):
     ]
 
 
-class TimeTravelGuideChainNode(FrontendNode):
+class TimeTravelGuideChainNode(ChainFrontendNode):
     name: str = "TimeTravelGuideChain"
     template: Template = Template(
         type_name="TimeTravelGuideChain",
@@ -122,7 +128,7 @@ class TimeTravelGuideChainNode(FrontendNode):
     ]
 
 
-class MidJourneyPromptChainNode(FrontendNode):
+class MidJourneyPromptChainNode(ChainFrontendNode):
     name: str = "MidJourneyPromptChain"
     template: Template = Template(
         type_name="MidJourneyPromptChain",

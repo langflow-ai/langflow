@@ -2,30 +2,30 @@ from langflow.template import frontend_node
 
 # These should always be instantiated
 CUSTOM_NODES = {
-    "prompts": {"ZeroShotPrompt": frontend_node.prompts.ZeroShotPromptNode()},
+    "prompts": {"ZeroShotPrompt": frontend_node.ZeroShotPromptNode()},
     "tools": {
-        "PythonFunction": frontend_node.tools.PythonFunctionNode(),
-        "Tool": frontend_node.tools.ToolNode(),
+        "PythonFunction": frontend_node.PythonFunctionNode(),
+        "Tool": frontend_node.ToolNode(),
     },
     "agents": {
-        "JsonAgent": frontend_node.agents.JsonAgentNode(),
-        "CSVAgent": frontend_node.agents.CSVAgentNode(),
-        "initialize_agent": frontend_node.agents.InitializeAgentNode(),
-        "VectorStoreAgent": frontend_node.agents.VectorStoreAgentNode(),
-        "VectorStoreRouterAgent": frontend_node.agents.VectorStoreRouterAgentNode(),
-        "SQLAgent": frontend_node.agents.SQLAgentNode(),
+        "JsonAgent": frontend_node.JsonAgentNode(),
+        "CSVAgent": frontend_node.CSVAgentNode(),
+        "initialize_agent": frontend_node.InitializeAgentNode(),
+        "VectorStoreAgent": frontend_node.VectorStoreAgentNode(),
+        "VectorStoreRouterAgent": frontend_node.VectorStoreRouterAgentNode(),
+        "SQLAgent": frontend_node.SQLAgentNode(),
     },
     "utilities": {
-        "SQLDatabase": frontend_node.agents.SQLDatabaseNode(),
+        "SQLDatabase": frontend_node.SQLDatabaseNode(),
     },
     "chains": {
-        "SeriesCharacterChain": frontend_node.chains.SeriesCharacterChainNode(),
-        "TimeTravelGuideChain": frontend_node.chains.TimeTravelGuideChainNode(),
-        "MidJourneyPromptChain": frontend_node.chains.MidJourneyPromptChainNode(),
+        "SeriesCharacterChain": frontend_node.SeriesCharacterChainNode(),
+        "TimeTravelGuideChain": frontend_node.TimeTravelGuideChainNode(),
+        "MidJourneyPromptChain": frontend_node.MidJourneyPromptChainNode(),
     },
     "connectors": {
-        "ConnectorFunction": frontend_node.connectors.ConnectorFunctionFrontendNode(),
-        "DallE2Generator": frontend_node.connectors.DallE2GeneratorFrontendNode(),
+        "ConnectorFunction": frontend_node.ConnectorFunctionFrontendNode(),
+        "DallE2Generator": frontend_node.DallE2GeneratorFrontendNode(),
     },
 }
 

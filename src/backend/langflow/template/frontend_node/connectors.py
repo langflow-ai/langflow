@@ -17,7 +17,6 @@ class ConnectorFunctionFrontendNode(FrontendNode):
 
     template: Template = Template(
         type_name="ConnectorFunction",
-        root_field=RootField(field_type="Text"),
         fields=[
             TemplateField(
                 field_type="code",
@@ -28,6 +27,7 @@ class ConnectorFunctionFrontendNode(FrontendNode):
                 name="code",
                 advanced=False,
             ),
+            RootField(field_type="Text"),
         ],
     )
     description: str = """Connect two nodes together."""
