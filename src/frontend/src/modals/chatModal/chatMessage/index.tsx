@@ -16,9 +16,11 @@ import Convert from "ansi-to-html";
 export default function ChatMessage({
   chat,
   lockChat,
+  lastMessage,
 }: {
   chat: ChatMessageType;
   lockChat: boolean;
+  lastMessage: boolean;
 }) {
   const convert = new Convert({ newline: true });
   const [message, setMessage] = useState("");
@@ -48,7 +50,7 @@ export default function ChatMessage({
                 "absolute transition-opacity duration-500 scale-150 " +
                 (lockChat ? "opacity-100" : "opacity-0")
               }
-              src={AiIcon}
+              src={lastMessage ? AiIcon : AiIconStill}
             />
             <img
               className={

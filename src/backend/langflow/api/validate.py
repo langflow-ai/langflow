@@ -9,7 +9,7 @@ from langflow.api.base import (
     PromptValidationResponse,
     validate_prompt,
 )
-from langflow.graph.nodes import VectorStoreNode
+from langflow.graph.node.types import VectorStoreNode
 from langflow.interface.run import build_graph
 from langflow.utils.logger import logger
 from langflow.utils.validate import validate_code
