@@ -1,6 +1,6 @@
 import { Disclosure } from "@headlessui/react";
 import { ChevronLeftIcon } from "@heroicons/react/24/outline";
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { Link } from "react-router-dom";
 import { classNames } from "../../utils";
 import { locationContext } from "../../contexts/locationContext";
@@ -13,6 +13,7 @@ export default function ExtraSidebar() {
     extraNavigation,
     extraComponent,
   } = useContext(locationContext);
+
   return (
     <>
       <aside
@@ -21,10 +22,8 @@ export default function ExtraSidebar() {
         } flex-shrink-0 flex overflow-hidden flex-col border-r dark:border-r-gray-700 transition-all duration-500`}
       >
         <div className="w-52 dark:bg-gray-800 border dark:border-gray-700  overflow-y-auto scrollbar-hide h-full flex flex-col items-start">
-          <div className="flex pt-1 px-4 justify-between align-middle w-full">
-            <span className="text-gray-900 dark:text-white py-[2px] font-medium ">
-              {extraNavigation.title}
-            </span>
+          <div className="flex px-4 justify-between align-middle w-full">
+            <span className="text-gray-900 dark:text-white py-[2px] font-medium "></span>
           </div>
           <div className="flex flex-grow flex-col w-full">
             {extraNavigation.options ? (

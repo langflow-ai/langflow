@@ -80,7 +80,7 @@ tools:
   - Calculator
   - Serper Search
   - Tool
-  - PythonFunction
+  - PythonFunctionTool
   - JsonSpec
   - News API
   - TMDB API
@@ -119,6 +119,7 @@ vectorstores:
   - Chroma
   - Qdrant
   - Weaviate
+  - FAISS
 wrappers:
   - RequestsWrapper
   # - ChatPromptTemplate
