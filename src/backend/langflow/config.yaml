@@ -55,6 +55,7 @@ llms:
   - LlamaCpp
   - CTransformers
   - Cohere
+  - Anthropic
 memories:
   - ConversationBufferMemory
   - ConversationSummaryMemory
