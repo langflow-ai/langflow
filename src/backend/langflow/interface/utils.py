@@ -44,7 +44,11 @@ def try_setting_streaming_options(langchain_object, websocket):
         langchain_object.llm_chain, "llm"
     ):
         llm = langchain_object.llm_chain.llm
-    if isinstance(llm, BaseLanguageModel) and hasattr(llm, "streaming"):
-        llm.streaming = True
+
+    if isinstance(llm, BaseLanguageModel):
+        if hasattr(llm, "streaming"):
+            llm.streaming = True
+        if hasattr(llm, "stream"):
+            llm.stream = True
 
     return langchain_object
