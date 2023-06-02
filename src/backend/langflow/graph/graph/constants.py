@@ -1,17 +1,17 @@
-from langflow.graph.node.base import Node
-from langflow.graph.node.types import (
-    AgentNode,
-    ChainNode,
-    DocumentLoaderNode,
-    EmbeddingNode,
-    LLMNode,
-    MemoryNode,
-    PromptNode,
-    TextSplitterNode,
-    ToolNode,
-    ToolkitNode,
-    VectorStoreNode,
-    WrapperNode,
+from langflow.graph.vertex.base import Vertex
+from langflow.graph.vertex.types import (
+    AgentVertex,
+    ChainVertex,
+    DocumentLoaderVertex,
+    EmbeddingVertex,
+    LLMVertex,
+    MemoryVertex,
+    PromptVertex,
+    TextSplitterVertex,
+    ToolVertex,
+    ToolkitVertex,
+    VectorStoreVertex,
+    WrapperVertex,
 )
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
@@ -33,17 +33,17 @@ from typing import Dict, Type
 DIRECT_TYPES = ["str", "bool", "code", "int", "float", "Any", "prompt"]
 
 
-NODE_TYPE_MAP: Dict[str, Type[Node]] = {
-    **{t: PromptNode for t in prompt_creator.to_list()},
-    **{t: AgentNode for t in agent_creator.to_list()},
-    **{t: ChainNode for t in chain_creator.to_list()},
-    **{t: ToolNode for t in tool_creator.to_list()},
-    **{t: ToolkitNode for t in toolkits_creator.to_list()},
-    **{t: WrapperNode for t in wrapper_creator.to_list()},
-    **{t: LLMNode for t in llm_creator.to_list()},
-    **{t: MemoryNode for t in memory_creator.to_list()},
-    **{t: EmbeddingNode for t in embedding_creator.to_list()},
-    **{t: VectorStoreNode for t in vectorstore_creator.to_list()},
-    **{t: DocumentLoaderNode for t in documentloader_creator.to_list()},
-    **{t: TextSplitterNode for t in textsplitter_creator.to_list()},
+VERTEX_TYPE_MAP: Dict[str, Type[Vertex]] = {
+    **{t: PromptVertex for t in prompt_creator.to_list()},
+    **{t: AgentVertex for t in agent_creator.to_list()},
+    **{t: ChainVertex for t in chain_creator.to_list()},
+    **{t: ToolVertex for t in tool_creator.to_list()},
+    **{t: ToolkitVertex for t in toolkits_creator.to_list()},
+    **{t: WrapperVertex for t in wrapper_creator.to_list()},
+    **{t: LLMVertex for t in llm_creator.to_list()},
+    **{t: MemoryVertex for t in memory_creator.to_list()},
+    **{t: EmbeddingVertex for t in embedding_creator.to_list()},
+    **{t: VectorStoreVertex for t in vectorstore_creator.to_list()},
+    **{t: DocumentLoaderVertex for t in documentloader_creator.to_list()},
+    **{t: TextSplitterVertex for t in textsplitter_creator.to_list()},
 }
