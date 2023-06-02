@@ -55,7 +55,7 @@ class GraphMap:
     ) -> Tuple[Graph, List[Union[Node, ConnectorNode]]]:
         graph = Graph(graph_data=graph_data)
         graph_copy = deepcopy(graph)
-        elements = []
+        elements: List[Node] = []
 
         current_root = graph.root_node
         while current_root:

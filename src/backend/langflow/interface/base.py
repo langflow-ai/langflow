@@ -20,7 +20,7 @@ class Creator(BaseModel, ABC):
         return FrontendNode
 
     @abstractmethod
-    def get_signature(self, name: str) -> Union[Optional[Dict[Any, Any]], FrontendNode]:
+    def get_signature(self, name: str) -> Optional[Union[Dict[Any, Any], FrontendNode]]:
         pass
 
     @abstractmethod
@@ -36,17 +36,17 @@ class Creator(BaseModel, ABC):
             # so we should update the result dict
             node = self.frontend_node(name)
             if node is not None:
-                node = node.to_dict()
-                result[self.type_name].update(node)
+                node_dict = node.to_dict()
+                result[self.type_name].update(node_dict)
 
         return result
 
-    def frontend_node(self, name) -> Union[FrontendNode, None]:
+    def frontend_node(self, name) -> Optional[FrontendNode]:
         signature = self.get_signature(name)
         if signature is None:
             logger.error(f"Node {name} not loaded")
             return signature
-        if not isinstance(signature, FrontendNode):
+        if isinstance(signature, dict):
             fields = [
                 TemplateField(
                     name=key,
@@ -65,16 +65,17 @@ class Creator(BaseModel, ABC):
                 if key != "_type" and isinstance(value, dict)
             ]
             template = Template(type_name=name, fields=fields)
-            signature = self.frontend_node_class(
+            frontend_node_instance = self.frontend_node_class(
                 template=template,
                 description=signature.get("description", ""),
                 base_classes=signature["base_classes"],
                 name=name,
             )
+        else:
+            frontend_node_instance = signature
+        frontend_node_instance.add_extra_fields()
 
-        signature.add_extra_fields()
-
-        return signature
+        return frontend_node_instance
 
 
 class LangChainTypeCreator(Creator):
