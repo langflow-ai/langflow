@@ -1,5 +1,14 @@
 {
   "dependencies": {
+    "add": "^2.0.6",
+    "class-variance-authority": "^0.6.0",
+    "clsx": "^1.2.1",
+    "lucide-react": "^0.233.0",
+    "shadcn-ui": "^0.1.3",
+    "switch": "^0.0.0",
+    "table": "^6.8.1",
+    "tailwind-merge": "^1.13.0",
+    "tailwindcss-animate": "^1.0.5",
     "vite-plugin-svgr": "^3.2.0"
   }
 }
