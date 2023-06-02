@@ -1,20 +1,6 @@
-import { Handle, Position, useUpdateNodeInternals } from "reactflow";
-import Tooltip from "../../../../components/TooltipComponent";
-import { classNames, isValidConnection } from "../../../../utils";
-import { useContext, useEffect, useRef, useState } from "react";
-import InputComponent from "../../../../components/inputComponent";
-import ToggleComponent from "../../../../components/toggleComponent";
-import InputListComponent from "../../../../components/inputListComponent";
-import TextAreaComponent from "../../../../components/textAreaComponent";
-import { typesContext } from "../../../../contexts/typesContext";
+import { useUpdateNodeInternals } from "reactflow";
+import { useEffect, useRef, useState } from "react";
 import { ParameterComponentType } from "../../../../types/components";
-import FloatComponent from "../../../../components/floatComponent";
-import Dropdown from "../../../../components/dropdownComponent";
-import CodeAreaComponent from "../../../../components/codeAreaComponent";
-import InputFileComponent from "../../../../components/inputFileComponent";
-import { TabsContext } from "../../../../contexts/tabsContext";
-import IntComponent from "../../../../components/intComponent";
-import PromptAreaComponent from "../../../../components/promptComponent";
 import HandleComponent from "./components/handleComponent";
 
 export default function ParameterComponent({
@@ -29,18 +15,19 @@ export default function ParameterComponent({
   required = false,
   handleDisabled,
 }: ParameterComponentType) {
-  const ref = useRef(null);
+  const ref = useRef<HTMLDivElement | null>(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
+  debugger;
   useEffect(() => {
     if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
       setPosition(ref.current.offsetTop + ref.current.clientHeight / 2);
       updateNodeInternals(data.id);
     }
-  }, [data.id, ref, ref.current, ref.current!.offsetTop, updateNodeInternals]);
+  }, [data.id, ref, ref.current, ref.current?.offsetTop, updateNodeInternals]);
 
   useEffect(() => {
-    updateNodeInternals(data.id);
+    if (ref.current) updateNodeInternals(data.id);
   }, [data.id, position, updateNodeInternals]);
 
   return (
