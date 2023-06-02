@@ -21,8 +21,9 @@ class Template(BaseModel):
 
     def to_dict(self, format_field_func=None):
         self.process_fields(self.type_name, format_field_func)
-        result = {field.name: field.to_dict() for field in self.fields}
+        result: dict = {field.name: field.to_dict() for field in self.fields}
         result["_type"] = self.type_name  # type: ignore
+        result["root_field"] = self.root_field.to_dict() if self.root_field else None
         return result
 
     def add_field(self, field: TemplateField) -> None:
