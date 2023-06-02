@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Optional, Union
 
-from langflow.graph.base import Node
-from langflow.interface.connectors.custom import ConnectorFunction
+from langflow.graph.node.base import Node
+from langflow.graph.utils import extract_input_variables_from_prompt
 
 
 class ConnectorNode(Node):

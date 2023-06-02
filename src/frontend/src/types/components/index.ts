@@ -86,6 +86,7 @@ export type FileComponentType = {
 
 export type DisclosureComponentType = {
   children: ReactNode;
+  openDisc: boolean;
   button: {
     title: string;
     Icon: ForwardRefExoticComponent<React.SVGProps<SVGSVGElement>>;
