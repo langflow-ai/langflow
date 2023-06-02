@@ -12,6 +12,7 @@ from langchain.agents.load_tools import (
     _LLM_TOOLS,
 )
 from langchain.agents.loading import load_agent_from_config
+from langflow.graph import Graph
 from langchain.agents.tools import Tool
 from langchain.base_language import BaseLanguageModel
 from langchain.callbacks.base import BaseCallbackManager
@@ -20,12 +21,12 @@ from langchain.llms.loading import load_llm_from_config
 from pydantic import ValidationError
 
 from langflow.interface.agents.custom import CUSTOM_AGENTS
-from langflow.interface.importing.utils import import_by_type
+from langflow.interface.importing.utils import get_function, import_by_type
 from langflow.interface.run import fix_memory_inputs
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.types import get_type_list
 from langflow.interface.utils import load_file_into_dict
-from langflow.utils import util, validate
+from langflow.utils import util
 
 
 def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
@@ -99,11 +100,9 @@ def instantiate_tool(node_type, class_object, params):
     if node_type == "JsonSpec":
         params["dict_"] = load_file_into_dict(params.pop("path"))
         return class_object(**params)
-    elif node_type == "PythonFunction":
-        function_string = params["code"]
-        if isinstance(function_string, str):
-            return validate.eval_function(function_string)
-        raise ValueError("Function should be a string")
+    elif node_type == "PythonFunctionTool":
+        params["func"] = get_function(params.get("code"))
+        return class_object(**params)
     elif node_type.lower() == "tool":
         return class_object(**params)
     return class_object(**params)
@@ -167,7 +166,6 @@ def instantiate_utility(node_type, class_object, params):
 def load_flow_from_json(path: str, build=True):
     """Load flow from json file"""
     # This is done to avoid circular imports
-    from langflow.graph import Graph
 
     with open(path, "r", encoding="utf-8") as f:
         flow_graph = json.load(f)

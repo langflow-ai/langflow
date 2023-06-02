@@ -9,7 +9,7 @@ from langflow.api.base import (
     PromptValidationResponse,
     validate_prompt,
 )
-from langflow.graph.nodes import VectorStoreNode
+from langflow.graph.vertex.types import VectorStoreVertex
 from langflow.interface.run import build_graph
 from langflow.utils.logger import logger
 from langflow.utils.validate import validate_code
@@ -49,7 +49,7 @@ def post_validate_node(node_id: str, data: dict):
         node = graph.get_node(node_id)
         if node is None:
             raise ValueError(f"Node {node_id} not found")
-        if not isinstance(node, VectorStoreNode):
+        if not isinstance(node, VectorStoreVertex):
             node.build()
         return json.dumps({"valid": True, "params": str(node._built_object_repr())})
     except Exception as e:

@@ -1,27 +1,27 @@
-# Description: Graph class for building a graph of nodes and edges
-# Insights:
-#   - Defer prompts building to the last moment or when they have all the tools
-#   - Build each inner agent first, then build the outer agent
-
-import contextlib
-import inspect
-import types
-import warnings
-from typing import Any, Dict, List, Optional
-
 from langflow.cache import base as cache_utils
-from langflow.graph.constants import DIRECT_TYPES
+from langflow.graph.vertex.constants import DIRECT_TYPES
 from langflow.interface import loading
 from langflow.interface.listing import ALL_TYPES_DICT
 from langflow.utils.logger import logger
 from langflow.utils.util import sync_to_async
 
 
-class Node:
+import contextlib
+import inspect
+import types
+import warnings
+from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from langflow.graph.edge.base import Edge
+
+
+class Vertex:
     def __init__(self, data: Dict, base_type: Optional[str] = None) -> None:
         self.id: str = data["id"]
         self._data = data
-        self.edges: List[Edge] = []
+        self.edges: List["Edge"] = []
         self.base_type: Optional[str] = base_type
         self._parse_data()
         self._built_object = None
@@ -48,12 +48,12 @@ class Node:
         ]
 
         template_dict = self.data["node"]["template"]
-        self.node_type = (
+        self.vertex_type = (
             self.data["type"] if "Tool" not in self.output else template_dict["_type"]
         )
         if self.base_type is None:
             for base_type, value in ALL_TYPES_DICT.items():
-                if self.node_type in value:
+                if self.vertex_type in value:
                     self.base_type = base_type
                     break
 
@@ -113,7 +113,7 @@ class Node:
                 if value["required"] and not edges:
                     # If a required parameter is not found, raise an error
                     raise ValueError(
-                        f"Required input {key} for module {self.node_type} not found"
+                        f"Required input {key} for module {self.vertex_type} not found"
                     )
                 elif value["list"]:
                     # If this is a list parameter, append all sources to a list
@@ -128,7 +128,7 @@ class Node:
                 # so we need to check if value has value
                 new_value = value.get("value")
                 if new_value is None:
-                    warnings.warn(f"Value for {key} in {self.node_type} is None. ")
+                    warnings.warn(f"Value for {key} in {self.vertex_type} is None. ")
                 if value.get("type") == "int":
                     with contextlib.suppress(TypeError, ValueError):
                         new_value = int(new_value)  # type: ignore
@@ -148,12 +148,12 @@ class Node:
         # and continue
         # Another aspect is that the node_type is the class that we need to import
         # and instantiate with these built params
-        logger.debug(f"Building {self.node_type}")
+        logger.debug(f"Building {self.vertex_type}")
         # Build each node in the params dict
         for key, value in self.params.copy().items():
             # Check if Node or list of Nodes and not self
             # to avoid recursion
-            if isinstance(value, Node):
+            if isinstance(value, Vertex):
                 if value == self:
                     del self.params[key]
                     continue
@@ -183,7 +183,7 @@ class Node:
 
                 self.params[key] = result
             elif isinstance(value, list) and all(
-                isinstance(node, Node) for node in value
+                isinstance(node, Vertex) for node in value
             ):
                 self.params[key] = []
                 for node in value:
@@ -199,17 +199,17 @@ class Node:
 
         try:
             self._built_object = loading.instantiate_class(
-                node_type=self.node_type,
+                node_type=self.vertex_type,
                 base_type=self.base_type,
                 params=self.params,
             )
         except Exception as exc:
             raise ValueError(
-                f"Error building node {self.node_type}: {str(exc)}"
+                f"Error building node {self.vertex_type}: {str(exc)}"
             ) from exc
 
         if self._built_object is None:
-            raise ValueError(f"Node type {self.node_type} not found")
+            raise ValueError(f"Node type {self.vertex_type} not found")
 
         self._built = True
 
@@ -226,57 +226,10 @@ class Node:
         return f"Node(id={self.id}, data={self.data})"
 
     def __eq__(self, __o: object) -> bool:
-        return self.id == __o.id if isinstance(__o, Node) else False
+        return self.id == __o.id if isinstance(__o, Vertex) else False
 
     def __hash__(self) -> int:
         return id(self)
 
     def _built_object_repr(self):
         return repr(self._built_object)
-
-
-class Edge:
-    def __init__(self, source: "Node", target: "Node"):
-        self.source: "Node" = source
-        self.target: "Node" = target
-        self.validate_edge()
-
-    def validate_edge(self) -> None:
-        # Validate that the outputs of the source node are valid inputs
-        # for the target node
-        self.source_types = self.source.output
-        self.target_reqs = self.target.required_inputs + self.target.optional_inputs
-        # Both lists contain strings and sometimes a string contains the value we are
-        # looking for e.g. comgin_out=["Chain"] and target_reqs=["LLMChain"]
-        # so we need to check if any of the strings in source_types is in target_reqs
-        self.valid = any(
-            output in target_req
-            for output in self.source_types
-            for target_req in self.target_reqs
-        )
-        # Get what type of input the target node is expecting
-
-        self.matched_type = next(
-            (
-                output
-                for output in self.source_types
-                for target_req in self.target_reqs
-                if output in target_req
-            ),
-            None,
-        )
-        no_matched_type = self.matched_type is None
-        if no_matched_type:
-            logger.debug(self.source_types)
-            logger.debug(self.target_reqs)
-        if no_matched_type:
-            raise ValueError(
-                f"Edge between {self.source.node_type} and {self.target.node_type} "
-                f"has no matched type"
-            )
-
-    def __repr__(self) -> str:
-        return (
-            f"Edge(source={self.source.id}, target={self.target.id}, valid={self.valid}"
-            f", matched_type={self.matched_type})"
-        )
