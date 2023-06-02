@@ -8,11 +8,7 @@ import {
 import { Fragment, useContext, useEffect, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { NodeDataType } from "../../types/flow";
-import {
-  classNames,
-  limitScrollFieldsModal,
-  nodeIcons,
-} from "../../utils";
+import { classNames, limitScrollFieldsModal, nodeIcons } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import {
   Table,
@@ -22,7 +18,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../../components/ui/table"
+} from "../../components/ui/table";
 
 const invoices = [
   {
@@ -67,7 +63,7 @@ const invoices = [
     totalAmount: "$300.00",
     paymentMethod: "Credit Card",
   },
-]
+];
 
 export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const [open, setOpen] = useState(true);
@@ -84,7 +80,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
   }
   const [advanced, setAdvanced] = useState([]);
   const [parameters, setParameters] = useState([]);
-  const [enabled, setEnabled] = useState(false)
+  const [enabled, setEnabled] = useState(false);
 
   const updateAdvancedParameters = () => {
     setAdvanced(
@@ -112,13 +108,13 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
       )
     );
   };
-  
+
   useEffect(() => {
     updateAdvancedParameters();
   }, [data.node.template]);
 
   console.log("DATA", data.node.template);
-  
+
   const Icon = nodeIcons[types[data.type]];
   return (
     <Transition.Root show={open} appear={true} as={Fragment}>
@@ -203,88 +199,113 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                         )}
                       >
                         <div className="flex flex-col h-full gap-5 h-fit	">
+                          <Table>
+                            <TableCaption>
+                              A list of your recent invoices.
+                            </TableCaption>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="w-[100px]">
+                                  Invoice
+                                </TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Method</TableHead>
+                                <TableHead className="text-right">
+                                  Amount
+                                </TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {invoices.map((invoice) => (
+                                <TableRow key={invoice.invoice}>
+                                  <TableCell className="font-medium">
+                                    {invoice.invoice}
+                                  </TableCell>
+                                  <TableCell>{invoice.paymentStatus}</TableCell>
+                                  <TableCell>{invoice.paymentMethod}</TableCell>
+                                  <TableCell className="text-right">
+                                    {invoice.totalAmount}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
 
-
-                        <Table>
-      <TableCaption>A list of your recent invoices.</TableCaption>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-[100px]">Invoice</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Method</TableHead>
-          <TableHead className="text-right">Amount</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {invoices.map((invoice) => (
-          <TableRow key={invoice.invoice}>
-            <TableCell className="font-medium">{invoice.invoice}</TableCell>
-            <TableCell>{invoice.paymentStatus}</TableCell>
-            <TableCell>{invoice.paymentMethod}</TableCell>
-            <TableCell className="text-right">{invoice.totalAmount}</TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-
-
-                        <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="py-1 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
-                      Param
-                    </th>
-                    <th scope="col" className="px-3 py-1 text-left text-sm font-semibold text-gray-900">
-                      Value
-                    </th>
-                    <th scope="col" className="px-3 py-1 text-left text-sm font-semibold text-gray-900">
-                      Show
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-
-                {
-                Object.keys(data.node.template).filter(
-                  (t) =>
-                    t.charAt(0) !== "_"
-                ).map((n, i) => (
-                  <tr key={i}>
-                  <td className="whitespace-nowrap py-1 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
-                    {data.node.template[n].name ? data.node.template[n].name : data.node.template[n].display_name }
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-1 text-sm text-gray-500">{data.node.template[n].value ? data.node.template[n].value : '-'}</td>
-                  <td className="whitespace-nowrap px-3 py-1 text-sm text-gray-500">
-                  <Switch
-      checked={enabled}
-      onChange={setEnabled}
-      className="group relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"
-    >
-      <span className="sr-only">Use setting</span>
-      <span aria-hidden="true" className="pointer-events-none absolute h-full w-full rounded-md bg-white" />
-      <span
-        aria-hidden="true"
-        className={classNames(
-          enabled ? 'bg-indigo-600' : 'bg-gray-200',
-          'pointer-events-none absolute mx-auto h-4 w-9 rounded-full transition-colors duration-200 ease-in-out'
-        )}
-      />
-      <span
-        aria-hidden="true"
-        className={classNames(
-          enabled ? 'translate-x-5' : 'translate-x-0',
-          'pointer-events-none absolute left-0 inline-block h-5 w-5 transform rounded-full border border-gray-200 bg-white shadow ring-0 transition-transform duration-200 ease-in-out'
-        )}
-      />
-    </Switch>
-
-                  </td>
-                </tr>
-                ))}
-                
-                </tbody>
-              </table>
-
+                          <table className="min-w-full divide-y divide-gray-300">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th
+                                  scope="col"
+                                  className="py-1 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
+                                >
+                                  Param
+                                </th>
+                                <th
+                                  scope="col"
+                                  className="px-3 py-1 text-left text-sm font-semibold text-gray-900"
+                                >
+                                  Value
+                                </th>
+                                <th
+                                  scope="col"
+                                  className="px-3 py-1 text-left text-sm font-semibold text-gray-900"
+                                >
+                                  Show
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200 bg-white">
+                              {Object.keys(data.node.template)
+                                .filter((t) => t.charAt(0) !== "_")
+                                .map((n, i) => (
+                                  <tr key={i}>
+                                    <td className="whitespace-nowrap py-1 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+                                      {data.node.template[n].name
+                                        ? data.node.template[n].name
+                                        : data.node.template[n].display_name}
+                                    </td>
+                                    <td className="whitespace-nowrap px-3 py-1 text-sm text-gray-500">
+                                      {data.node.template[n].value
+                                        ? data.node.template[n].value
+                                        : "-"}
+                                    </td>
+                                    <td className="whitespace-nowrap px-3 py-1 text-sm text-gray-500">
+                                      <Switch
+                                        checked={enabled}
+                                        onChange={setEnabled}
+                                        className="group relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"
+                                      >
+                                        <span className="sr-only">
+                                          Use setting
+                                        </span>
+                                        <span
+                                          aria-hidden="true"
+                                          className="pointer-events-none absolute h-full w-full rounded-md bg-white"
+                                        />
+                                        <span
+                                          aria-hidden="true"
+                                          className={classNames(
+                                            enabled
+                                              ? "bg-indigo-600"
+                                              : "bg-gray-200",
+                                            "pointer-events-none absolute mx-auto h-4 w-9 rounded-full transition-colors duration-200 ease-in-out"
+                                          )}
+                                        />
+                                        <span
+                                          aria-hidden="true"
+                                          className={classNames(
+                                            enabled
+                                              ? "translate-x-5"
+                                              : "translate-x-0",
+                                            "pointer-events-none absolute left-0 inline-block h-5 w-5 transform rounded-full border border-gray-200 bg-white shadow ring-0 transition-transform duration-200 ease-in-out"
+                                          )}
+                                        />
+                                      </Switch>
+                                    </td>
+                                  </tr>
+                                ))}
+                            </tbody>
+                          </table>
                         </div>
                       </div>
                     </div>
