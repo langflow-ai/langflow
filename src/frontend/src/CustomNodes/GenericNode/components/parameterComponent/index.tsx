@@ -122,7 +122,7 @@ export default function ParameterComponent({
           <></>
         ) : (
           <ShadTooltip
-            delayDuration={1500}
+            delayDuration={0}
             content={refHtml.current}
             side={left ? "left" : "right"}
           >
