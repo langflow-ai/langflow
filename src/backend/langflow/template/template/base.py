@@ -1,4 +1,5 @@
 from typing import Callable, Optional, Union
+from langflow.template.field.fields import RootField
 
 from pydantic import BaseModel
 
@@ -29,5 +30,5 @@ class Template(BaseModel):
     def add_field(self, field: TemplateField) -> None:
         self.fields.append(field)
 
-    def set_root_field(self, field: TemplateField) -> None:
+    def set_root_field(self, field: RootField) -> None:
         self.root_field = field
