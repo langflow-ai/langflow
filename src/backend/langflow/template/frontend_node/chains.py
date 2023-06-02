@@ -8,9 +8,7 @@ from langflow.template.template.base import Template
 
 class ChainFrontendNode(FrontendNode):
     def add_extra_fields(self) -> None:
-        self.template.add_field(
-            RootField(field_type="Text"),
-        )
+        self.template.root_field = RootField(field_type="Text")
 
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:

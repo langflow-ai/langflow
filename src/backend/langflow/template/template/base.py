@@ -8,6 +8,7 @@ from langflow.template.field.base import TemplateField
 class Template(BaseModel):
     type_name: str
     fields: list[TemplateField]
+    root_field: Optional[TemplateField] = None
 
     def process_fields(
         self,
