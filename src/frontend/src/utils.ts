@@ -155,6 +155,7 @@ export const nodeIcons: {
   // SerpAPIWrapper: SerperIcon,
   // AZLyricsLoader: AzIcon,
   Anthropic: AnthropicIcon,
+  ChatAnthropic: AnthropicIcon,
   BingSearchAPIWrapper: BingIcon,
   BingSearchRun: BingIcon,
   Cohere: CohereIcon,
