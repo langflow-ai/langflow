@@ -1,15 +1,15 @@
 from typing import Any, Dict, List, Optional, Union
 
 from langflow.graph.vertex.base import Vertex
-from langflow.graph.utils import extract_input_variables_from_prompt
+from langflow.graph.utils import extract_input_variables_from_prompt, flatten_list
 
 
 class AgentVertex(Vertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="agents")
 
-        self.tools: List[Union[ToolNode, ToolkitNode]] = []
-        self.chains: List[ChainNode] = []
+        self.tools: List[Union[ToolVertex, ToolkitVertex]] = []
+        self.chains: List[ChainVertex] = []
 
     def _set_tools_and_chains(self) -> None:
         for edge in self.edges:
@@ -94,10 +94,10 @@ class ChainVertex(Vertex):
         tools: Optional[Union[List[Vertex], List[ToolVertex]]] = None,
     ) -> Any:
         if not self._built or force:
-            # Check if the chain requires a PromptNode
+            # Check if the chain requires a PromptVertex
             for key, value in self.params.items():
                 if isinstance(value, PromptVertex):
-                    # Build the PromptNode, passing the tools if available
+                    # Build the PromptVertex, passing the tools if available
                     self.params[key] = value.build(tools=tools, force=force)
 
             self._build()
