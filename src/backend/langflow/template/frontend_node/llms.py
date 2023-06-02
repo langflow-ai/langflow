@@ -34,7 +34,11 @@ class LLMFrontendNode(FrontendNode):
             field.required = True
             field.show = True
             field.is_list = True
-            field.options = ["text-generation", "text2text-generation"]
+            field.options = [
+                "text-generation",
+                "text2text-generation",
+                "summarization"
+            ]
             field.advanced = True
 
         if display_name := display_names_dict.get(field.name):
