@@ -23,7 +23,7 @@ from langflow.template.frontend_node.prompts import (
     ZeroShotPromptNode,
     PromptFrontendNode,
 )
-from langflow.template.frontend_node.tools import ToolNode, PythonFunctionNode
+from langflow.template.frontend_node.tools import ToolNode, PythonFunctionToolNode
 from langflow.template.frontend_node.vectorstores import VectorStoreFrontendNode
 from langflow.template.frontend_node.utilities import UtilitiesFrontendNode
 
@@ -47,7 +47,7 @@ __all__ = [
     "ZeroShotPromptNode",
     "PromptFrontendNode",
     "ToolNode",
-    "PythonFunctionNode",
+    "PythonFunctionToolNode",
     "VectorStoreFrontendNode",
     "UtilitiesFrontendNode",
 ]
