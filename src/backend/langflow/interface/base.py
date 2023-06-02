@@ -50,7 +50,7 @@ class Creator(BaseModel, ABC):
             fields = [
                 TemplateField(
                     name=key,
-                    field_type=value["type"],
+                    field_type=value.get("type", "str"),
                     required=value.get("required", False),
                     placeholder=value.get("placeholder", ""),
                     is_list=value.get("list", False),
@@ -62,7 +62,7 @@ class Creator(BaseModel, ABC):
                     content=value.get("content", None),
                 )
                 for key, value in signature["template"].items()
-                if key != "_type"
+                if key != "_type" and isinstance(value, dict)
             ]
             template = Template(type_name=name, fields=fields)
             signature = self.frontend_node_class(
