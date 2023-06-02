@@ -2,10 +2,10 @@ from copy import deepcopy
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from langflow.cache.base import memoize_dict
-from langflow.graph import Node
+from langflow.graph import Vertex
 from langflow.graph import Graph
-from langflow.graph.node.types import LangChainNode
-from langflow.graph.node.types import ConnectorNode
+from langflow.graph.vertex.types import LangChainVertex
+from langflow.graph.vertex.types import ConnectorVertex
 from langflow.interface.run import get_result_and_steps
 
 
@@ -16,8 +16,8 @@ class GraphMap:
             self._build_elements.clear_cache()
         self.graph, self.elements = GraphMap._build_elements(graph_data)
         self.intermediate_steps: List[str] = []
-        self.node_cache: Dict[Union[Node, "ConnectorNode"], Any] = {}
-        self.last_node: Optional[Union[Node, "ConnectorNode"]] = None
+        self.node_cache: Dict[Union[Vertex, "ConnectorVertex"], Any] = {}
+        self.last_node: Optional[Union[Vertex, "ConnectorVertex"]] = None
 
     async def process(self, input: str, **kwargs) -> Tuple[str, str]:
         result = input
@@ -31,7 +31,7 @@ class GraphMap:
                 # Build the graph or connector node and get the root node
                 built_object = element.build()
                 # check if it is a
-                if isinstance(element, LangChainNode):
+                if isinstance(element, LangChainVertex):
                     # result must be a str
                     result = str(result)
                     result, steps = await get_result_and_steps(
@@ -52,10 +52,10 @@ class GraphMap:
     @staticmethod
     def _build_elements(
         graph_data: Dict,
-    ) -> Tuple[Graph, List[Union[Node, ConnectorNode]]]:
+    ) -> Tuple[Graph, List[Union[Vertex, ConnectorVertex]]]:
         graph = Graph(graph_data=graph_data)
         graph_copy = deepcopy(graph)
-        elements: List[Node] = []
+        elements: List[Vertex] = []
 
         current_root = graph.root_node
         while current_root:

@@ -68,7 +68,7 @@ def test_invalid_node_types():
                     "node": {
                         "base_classes": ["BaseClass"],
                         "template": {
-                            "_type": "InvalidNodeType",
+                            "_type": "InvalidVertexType",
                         },
                     },
                 },
@@ -100,7 +100,7 @@ def test_get_node_neighbors_basic(basic_graph):
     neighbors = basic_graph.get_node_neighbors(root)
     assert neighbors is not None
     assert isinstance(neighbors, dict)
-    # Root Node is an Agent, it requires an LLMChain and tools
+    # Root Vertex is an Agent, it requires an LLMChain and tools
     # We need to check if there is a Chain in the one of the neighbors'
     # data attribute in the type key
     assert any(
@@ -124,7 +124,7 @@ def test_get_node_neighbors_complex(complex_graph):
     assert neighbors is not None
     # Neighbors should be a list of nodes
     assert isinstance(neighbors, list)
-    # Root Node is an Agent, it requires an LLMChain and tools
+    # Root Vertex is an Agent, it requires an LLMChain and tools
     # We need to check if there is a Chain in the one of the neighbors'
     assert any("Chain" in neighbor.data["type"] for neighbor in neighbors)
     # assert Tool is in the neighbors
@@ -236,14 +236,14 @@ def test_build_params(basic_graph):
     root = get_root_node(basic_graph)
     # Root node is a TimeTravelGuideChain
     # which requires an llm and memory
-    assert isinstance(root, Node)
+    assert isinstance(root, Vertex)
     assert isinstance(root.params, dict)
     assert "llm" in root.params
     assert "memory" in root.params
 
 
 def test_build(basic_graph, complex_graph, openapi_graph):
-    """Test Node's build method"""
+    """Test Vertex's build method"""
     assert_agent_was_built(basic_graph)
     assert_agent_was_built(complex_graph)
     assert_agent_was_built(openapi_graph)
@@ -271,7 +271,7 @@ def test_tool_node_build(complex_graph):
     assert tool_node is not None
     built_object = tool_node.build()
     assert built_object is not None
-    # Add any further assertions specific to the ToolNode's build() method
+    # Add any further assertions specific to the ToolVertex's build() method
 
 
 def test_chain_node_build(complex_graph):
@@ -279,7 +279,7 @@ def test_chain_node_build(complex_graph):
     assert chain_node is not None
     built_object = chain_node.build()
     assert built_object is not None
-    # Add any further assertions specific to the ChainNode's build() method
+    # Add any further assertions specific to the ChainVertex's build() method
 
 
 def test_prompt_node_build(complex_graph):
@@ -287,7 +287,7 @@ def test_prompt_node_build(complex_graph):
     assert prompt_node is not None
     built_object = prompt_node.build()
     assert built_object is not None
-    # Add any further assertions specific to the PromptNode's build() method
+    # Add any further assertions specific to the PromptVertex's build() method
 
 
 def test_llm_node_build(basic_graph):
@@ -295,7 +295,7 @@ def test_llm_node_build(basic_graph):
     assert llm_node is not None
     built_object = llm_node.build()
     assert built_object is not None
-    # Add any further assertions specific to the LLMNode's build() method
+    # Add any further assertions specific to the LLMVertex's build() method
 
 
 def test_toolkit_node_build(openapi_graph):
@@ -303,7 +303,7 @@ def test_toolkit_node_build(openapi_graph):
     assert toolkit_node is not None
     built_object = toolkit_node.build()
     assert built_object is not None
-    # Add any further assertions specific to the ToolkitNode's build() method
+    # Add any further assertions specific to the ToolkitVertex's build() method
 
 
 def test_file_tool_node_build(openapi_graph):
@@ -311,7 +311,7 @@ def test_file_tool_node_build(openapi_graph):
     assert file_tool_node is not None
     built_object = file_tool_node.build()
     assert built_object is not None
-    # Add any further assertions specific to the FileToolNode's build() method
+    # Add any further assertions specific to the FileToolVertex's build() method
 
 
 def test_wrapper_node_build(openapi_graph):
@@ -319,7 +319,7 @@ def test_wrapper_node_build(openapi_graph):
     assert wrapper_node is not None
     built_object = wrapper_node.build()
     assert built_object is not None
-    # Add any further assertions specific to the WrapperNode's build() method
+    # Add any further assertions specific to the WrapperVertex's build() method
 
 
 def test_get_result_and_thought(basic_graph):
@@ -328,7 +328,7 @@ def test_get_result_and_thought(basic_graph):
         "Final Answer: I am a response",
     ]
     message = "Hello"
-    # Find the node that is an LLMNode and change the
+    # Find the node that is an LLMVertex and change the
     # _built_object to a FakeListLLM
     llm_node = get_node_by_type(basic_graph, LLMVertex)
     assert llm_node is not None

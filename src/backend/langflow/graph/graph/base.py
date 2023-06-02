@@ -1,61 +1,23 @@
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
-from langflow.graph import Edge, Node
-from langflow.graph.node.types import (
-    AgentNode,
-    ChainNode,
-    DocumentLoaderNode,
-    EmbeddingNode,
-    FileToolNode,
-    LLMNode,
-    MemoryNode,
-    PromptNode,
-    TextSplitterNode,
-    ToolkitNode,
-    ToolNode,
-    VectorStoreNode,
-    WrapperNode,
+from langflow.graph import Edge, Vertex
+from langflow.graph.graph.constants import VERTEX_TYPE_MAP
+from langflow.graph.vertex.types import (
+    FileToolVertex,
+    LLMVertex,
+    ToolkitVertex,
 )
-from langflow.graph.node.types import ConnectorNode
-from langflow.interface.agents.base import agent_creator
-from langflow.interface.chains.base import chain_creator
-from langflow.interface.connectors.base import connector_creator
-from langflow.interface.document_loaders.base import documentloader_creator
-from langflow.interface.embeddings.base import embedding_creator
-from langflow.interface.llms.base import llm_creator
-from langflow.interface.memories.base import memory_creator
-from langflow.interface.prompts.base import prompt_creator
-from langflow.interface.text_splitters.base import textsplitter_creator
-from langflow.interface.toolkits.base import toolkits_creator
-from langflow.interface.tools.base import tool_creator
+from langflow.graph.vertex.types import ConnectorVertex
 from langflow.interface.tools.constants import FILE_TOOLS
-from langflow.interface.vector_store.base import vectorstore_creator
-from langflow.interface.wrappers.base import wrapper_creator
 from langflow.utils import payload
 
 
 class Graph:
-    node_type_map: Dict[str, Type[Node]] = {
-        **{t: PromptNode for t in prompt_creator.to_list()},
-        **{t: AgentNode for t in agent_creator.to_list()},
-        **{t: ChainNode for t in chain_creator.to_list()},
-        **{t: ToolNode for t in tool_creator.to_list()},
-        **{t: ToolkitNode for t in toolkits_creator.to_list()},
-        **{t: WrapperNode for t in wrapper_creator.to_list()},
-        **{t: LLMNode for t in llm_creator.to_list()},
-        **{t: MemoryNode for t in memory_creator.to_list()},
-        **{t: EmbeddingNode for t in embedding_creator.to_list()},
-        **{t: VectorStoreNode for t in vectorstore_creator.to_list()},
-        **{t: DocumentLoaderNode for t in documentloader_creator.to_list()},
-        **{t: TextSplitterNode for t in textsplitter_creator.to_list()},
-        **{t: ConnectorNode for t in connector_creator.to_list()},
-    }
-
     def __init__(
         self,
         *,
         graph_data: Optional[Dict] = None,
-        nodes: Optional[List[Node]] = None,
+        nodes: Optional[List[Vertex]] = None,
         edges: Optional[List[Edge]] = None,
     ) -> None:
         self.has_connectors = False
@@ -73,7 +35,7 @@ class Graph:
             self.edges = edges
 
     @classmethod
-    def from_root_node(cls, root_node: Node):
+    def from_root_node(cls, root_node: Vertex):
         # Starting at the root node
         # Iterate all of its edges to find
         # all nodes and edges
@@ -81,12 +43,12 @@ class Graph:
         return cls(nodes=nodes, edges=edges)
 
     @staticmethod
-    def traverse_graph(root_node: Node) -> Tuple[List[Node], List[Edge]]:
+    def traverse_graph(root_node: Vertex) -> Tuple[List[Vertex], List[Edge]]:
         """
         Traverses the graph from the root_node using depth-first search (DFS) and returns all the nodes and edges.
 
         Args:
-            root_node (Node): The root node to start traversal from.
+            root_node (Vertex): The root node to start traversal from.
 
         Returns:
             tuple: A tuple containing a set of all nodes and all edges visited in the graph.
@@ -139,11 +101,11 @@ class Graph:
         for node in self.nodes:
             node._build_params()
 
-            if isinstance(node, LLMNode):
+            if isinstance(node, LLMVertex):
                 llm_node = node
 
         for node in self.nodes:
-            if isinstance(node, ToolkitNode):
+            if isinstance(node, ToolkitVertex):
                 node.params["llm"] = llm_node
         # remove invalid nodes
         self.nodes = [
@@ -153,15 +115,15 @@ class Graph:
             or (len(self.nodes) == 1 and len(self.edges) == 0)
         ]
 
-    def _validate_node(self, node: Node) -> bool:
+    def _validate_node(self, node: Vertex) -> bool:
         # All nodes that do not have edges are invalid
         return len(node.edges) > 0
 
-    def get_node(self, node_id: str) -> Union[None, Node]:
+    def get_node(self, node_id: str) -> Union[None, Vertex]:
         return next((node for node in self.nodes if node.id == node_id), None)
 
-    def get_nodes_with_target(self, node: Node) -> List[Node]:
-        connected_nodes: List[Node] = [
+    def get_nodes_with_target(self, node: Vertex) -> List[Vertex]:
+        connected_nodes: List[Vertex] = [
             edge.source for edge in self.edges if edge.target == node
         ]
         return connected_nodes
@@ -174,11 +136,11 @@ class Graph:
         return root_node.build()
 
     @property
-    def root_node(self) -> Union[None, Node]:
+    def root_node(self) -> Union[None, Vertex]:
         return payload.get_root_node(self)
 
-    def get_node_neighbors(self, node: Node) -> Dict[Node, int]:
-        neighbors: Dict[Node, int] = {}
+    def get_node_neighbors(self, node: Vertex) -> Dict[Vertex, int]:
+        neighbors: Dict[Vertex, int] = {}
         for edge in self.edges:
             if edge.source == node:
                 neighbor = edge.target
@@ -208,15 +170,17 @@ class Graph:
             edges.append(Edge(source, target))
         return edges
 
-    def _get_node_class(self, node_type: str, node_lc_type: str) -> Type[Node]:
+    def _get_node_class(self, node_type: str, node_lc_type: str) -> Type[Vertex]:
         if node_type in FILE_TOOLS:
-            return FileToolNode
-        return self.node_type_map.get(
-            node_type, self.node_type_map.get(node_lc_type, Node)
-        )
+            return FileToolVertex
+        node_class = VERTEX_TYPE_MAP.get(node_type)
+        if node_class is None:
+            node_class = VERTEX_TYPE_MAP.get(node_lc_type, Vertex)
 
-    def _build_nodes(self) -> List[Node]:
-        nodes: List[Node] = []
+        return node_class
+
+    def _build_nodes(self) -> List[Vertex]:
+        nodes: List[Vertex] = []
 
         self.expand_flow_nodes(self._nodes)
         for node in self._nodes:
@@ -230,9 +194,9 @@ class Graph:
             # node_type is "flow" and node_data["node"] contains a "flow" key which
             # is itself a graph.
 
-            NodeClass = self._get_node_class(node_type, node_lc_type)
-            nodes.append(NodeClass(node))
-            if NodeClass == ConnectorNode:
+            VertexClass = self._get_node_class(node_type, node_lc_type)
+            nodes.append(VertexClass(node))
+            if VertexClass == ConnectorVertex:
                 self.has_connectors = True
 
         return nodes
@@ -286,7 +250,7 @@ class Graph:
         self.nodes.extend(subgraph.nodes)
         self.edges.extend(subgraph.edges)
 
-    def get_children_by_node_type(self, node: Node, node_type: str) -> List[Node]:
+    def get_children_by_node_type(self, node: Vertex, node_type: str) -> List[Vertex]:
         children = []
         node_types = [node.data["type"]]
         if "node" in node.data:

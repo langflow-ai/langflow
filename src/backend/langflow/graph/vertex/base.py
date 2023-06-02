@@ -18,12 +18,13 @@ if TYPE_CHECKING:
 
 
 class Vertex:
+    can_be_root: bool = False
+
     def __init__(self, data: Dict, base_type: Optional[str] = None) -> None:
         self.id: str = data["id"]
         self._data = data
         self.edges: List["Edge"] = []
         self.base_type: Optional[str] = base_type
-        self.can_be_root = False
         self._parse_data()
         self._built_object = None
         self._built = False
@@ -58,11 +59,6 @@ class Vertex:
                     self.base_type = base_type
                     break
 
-        # Node is root if it is base_type
-        # chains, connectors or agents
-        # check if root_field is in template_dict
-        self.can_be_root = "root_field" in template_dict
-
     def _build_params(self):
         # Some params are required, some are optional
         # but most importantly, some params are python base classes
@@ -85,7 +81,7 @@ class Vertex:
         }
         params = {}
         for key, value in template_dict.items():
-            if key in ["_type", "root_field"]:
+            if key == "_type":
                 continue
             # If the type is not transformable to a python base class
             # then we need to get the edge that connects to this node

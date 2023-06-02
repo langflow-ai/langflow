@@ -7,9 +7,10 @@ from copy import deepcopy
 from langflow.interface.connectors.custom import ConnectorFunction
 
 
-class ConnectorNode(Vertex):
+class ConnectorVertex(Vertex):
     _built_object: Any = None
     _built: bool = False
+    can_be_root: bool = True
 
     def __init__(self, data: Dict) -> None:
         super().__init__(data, base_type="connectors")
@@ -32,6 +33,8 @@ class LangChainVertex(Vertex):
 
 
 class AgentVertex(LangChainVertex):
+    can_be_root: bool = True
+
     def __init__(self, data: Dict):
         super().__init__(data, base_type="agents")
 
@@ -115,6 +118,8 @@ class PromptVertex(LangChainVertex):
 
 
 class ChainVertex(LangChainVertex):
+    can_be_root: bool = True
+
     def __init__(self, data: Dict):
         super().__init__(data, base_type="chains")
 
@@ -124,10 +129,10 @@ class ChainVertex(LangChainVertex):
         tools: Optional[Union[List[Vertex], List[ToolVertex]]] = None,
     ) -> Any:
         if not self._built or force:
-            # Check if the chain requires a PromptNode
+            # Check if the chain requires a PromptVertex
             for key, value in self.params.items():
                 if isinstance(value, PromptVertex):
-                    # Build the PromptNode, passing the tools if available
+                    # Build the PromptVertex, passing the tools if available
                     self.params[key] = value.build(tools=tools, force=force)
 
             self._build()
@@ -138,28 +143,12 @@ class ChainVertex(LangChainVertex):
         return deepcopy(self._built_object)
 
 
-class LLMVertex(Vertex):
-    built_node_type = None
-    class_built_object = None
-
+class LLMVertex(LangChainVertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="llms")
 
-    def build(self, force: bool = False) -> Any:
-        # LLM is different because some models might take up too much memory
-        # or time to load. So we only load them when we need them.ß
-        if self.vertex_type == self.built_node_type:
-            return self.class_built_object
-        if not self._built or force:
-            self._build()
-            self.built_node_type = self.vertex_type
-            self.class_built_object = self._built_object
-        # Avoid deepcopying the LLM
-        # that are loaded from a file
-        return self._built_object
 
-
-class ToolkitVertex(Vertex):
+class ToolkitVertex(LangChainVertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="toolkits")
 
@@ -190,7 +179,7 @@ class DocumentLoaderVertex(LangChainVertex):
         # show how many documents are in the list?
         if self._built_object:
             return f"""{self.vertex_type}({len(self._built_object)} documents)
-            Documents: {self._built_object[:3]}..."""
+            \nDocuments: {self._built_object[:3]}..."""
         return f"{self.vertex_type}()"
 
 

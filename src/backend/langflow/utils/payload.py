@@ -49,7 +49,7 @@ def build_json(root, graph) -> Dict:
     else:
         # Otherwise, find all children whose type matches the type
         # specified in the template
-        node_type = root.node_type
+        node_type = root.vertex_type
         local_nodes = graph.get_nodes_with_target(root)
 
     if len(local_nodes) == 1:
