@@ -1,6 +1,11 @@
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import Tooltip from "../../../../components/TooltipComponent";
-import { classNames, isValidConnection } from "../../../../utils";
+import {
+  classNames,
+  groupByFamily,
+  isValidConnection,
+  toFirstUpperCase,
+} from "../../../../utils";
 import { useContext, useEffect, useRef, useState } from "react";
 import InputComponent from "../../../../components/inputComponent";
 import ToggleComponent from "../../../../components/toggleComponent";
@@ -17,6 +22,8 @@ import IntComponent from "../../../../components/intComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
 import { nodeNames, nodeIcons } from "../../../../utils";
 import React from "react";
+import { nodeColors } from "../../../../utils";
+import ShadTooltip from "../../../../components/ShadTooltipComponent";
 
 export default function ParameterComponent({
   left,
@@ -30,8 +37,7 @@ export default function ParameterComponent({
   required = false,
 }: ParameterComponentType) {
   const ref = useRef(null);
-  const refParent = useRef("");
-  const refParentIcon = useRef(null);
+  const refHtml = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   useEffect(() => {
@@ -55,16 +61,45 @@ export default function ParameterComponent({
   const [myData, setMyData] = useState(useContext(typesContext).data);
 
   useEffect(() => {
-    Object.keys(myData).forEach((d) => {
-      let keys = Object.keys(myData[d]).filter(
-        (nd) => nd.toLowerCase() == data.type.toLowerCase()
-      );
-      if (keys.length > 0) {
-        refParent.current = d;
-        refParentIcon.current = nodeIcons[d];
-      }
-    });
-  }, []);
+    const groupedObj = groupByFamily(myData, tooltipTitle);
+
+    refHtml.current = groupedObj.map((item, i) => (
+      <span
+        key={item}
+        className={classNames(
+          i > 0 ? "items-center flex mt-3" : "items-center flex"
+        )}
+      >
+        <div
+          className="h-5 w-5"
+          style={{
+            color: nodeColors[item.family],
+          }}
+        >
+          {React.createElement(nodeIcons[item.family])}
+        </div>
+        <span className="ps-2 text-gray-950">
+          {nodeNames[item.family] ?? ""}{" "}
+          <span className={classNames(left ? "hidden" : "")}>
+            {" "}
+            -&nbsp;
+            {item.type.split(", ").length > 2
+              ? item.type.split(", ").map((el, i) => (
+                  <>
+                    <span key={el}>
+                      {i == item.type.split(", ").length - 1
+                        ? el
+                        : (el += `, `)}
+                    </span>
+                    {i % 2 == 0 && i > 0 && <br></br>}
+                  </>
+                ))
+              : item.type}
+          </span>
+        </span>
+      </span>
+    ));
+  }, [tooltipTitle]);
 
   return (
     <div
@@ -86,24 +121,10 @@ export default function ParameterComponent({
           type === "int") ? (
           <></>
         ) : (
-          <Tooltip
-            title={
-              <>
-                <div className="flex center items-center">
-                  <div
-                    className="h-5 w-5"
-                    style={{
-                      color: color,
-                    }}
-                  >
-                    {React.createElement(refParentIcon.current)}
-                  </div>
-                  <span className="ms-2 items-center">
-                    {nodeNames[refParent?.current] ?? ""}
-                  </span>
-                </div>
-              </>
-            }
+          <ShadTooltip
+            delayDuration={1500}
+            content={refHtml.current}
+            side={left ? "left" : "right"}
           >
             <Handle
               type={left ? "target" : "source"}
@@ -121,7 +142,7 @@ export default function ParameterComponent({
                 top: position,
               }}
             ></Handle>
-          </Tooltip>
+          </ShadTooltip>
         )}
 
         {left === true &&

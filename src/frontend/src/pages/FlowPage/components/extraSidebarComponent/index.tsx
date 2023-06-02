@@ -9,8 +9,8 @@ import {
 import { useContext, useEffect, useState, useRef } from "react";
 import { typesContext } from "../../../../contexts/typesContext";
 import { APIClassType, APIObjectType } from "../../../../types/api";
-import TooltipReact from "../../../../components/ReactTooltipComponent";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import ShadTooltip from "../../../../components/ShadTooltipComponent";
 
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);
@@ -81,12 +81,10 @@ export default function ExtraSidebar() {
                   {Object.keys(dataFilter[d])
                     .sort()
                     .map((t: string, k) => (
-                      <TooltipReact
-                        selector={t}
-                        htmlContent={t}
-                        position="right"
-                        delayShow={1500}
-                        key={k}
+                      <ShadTooltip
+                        content={t}
+                        delayDuration={1500}
+                        side="right"
                       >
                         <div key={k} data-tooltip-id={t}>
                           <div
@@ -118,7 +116,7 @@ export default function ExtraSidebar() {
                             </div>
                           </div>
                         </div>
-                      </TooltipReact>
+                      </ShadTooltip>
                     ))}
                 </div>
               </DisclosureComponent>
