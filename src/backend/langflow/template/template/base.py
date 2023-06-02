@@ -28,3 +28,6 @@ class Template(BaseModel):
 
     def add_field(self, field: TemplateField) -> None:
         self.fields.append(field)
+
+    def set_root_field(self, field: TemplateField) -> None:
+        self.root_field = field
