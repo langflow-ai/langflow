@@ -58,6 +58,7 @@ sentence-transformers = "^2.2.2"
 ctransformers = "^0.2.2"
 cohere = "^4.6.0"
 faiss-cpu = "^1.7.4"
+anthropic = "^0.2.9"
 
 
 [tool.poetry.group.dev.dependencies]
