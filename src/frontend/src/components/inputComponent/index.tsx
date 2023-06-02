@@ -6,11 +6,12 @@ import { TabsContext } from "../../contexts/tabsContext";
 export default function InputComponent({
   value,
   onChange,
+  disableCopyPaste = false,
   disabled,
   password,
-  onFocus,
-  autoFocus,
+  autoFocus = false,
   onBlur,
+  onFocus,
 }: InputComponentType) {
   const [myValue, setMyValue] = useState(value ?? "");
   const [pwdVisible, setPwdVisible] = useState(false);
@@ -24,26 +25,28 @@ export default function InputComponent({
   return (
     <div
       className={
-        disabled ? "pointer-events-none cursor-not-allowed" : "relative"
+        disabled
+          ? "relative pointer-events-none cursor-not-allowed"
+          : "relative"
       }
     >
       <input
         autoFocus={autoFocus}
         value={myValue}
-        onBlur={(e) => {
-          setDisableCopyPaste(false);
-          if (onBlur) onBlur(e);
-        }}
         onFocus={(e) => {
-          setDisableCopyPaste(true);
+          if (disableCopyPaste) setDisableCopyPaste(true);
           if (onFocus) onFocus(e);
         }}
+        onBlur={(e) => {
+          if (disableCopyPaste) setDisableCopyPaste(false);
+          if (onBlur) onBlur(e);
+        }}
         className={classNames(
-          "form-input block w-full rounded-md border-gray-300 pr-12 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 sm:text-sm",
+          "block w-full pr-12 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
           disabled ? " bg-gray-200 dark:bg-gray-700" : "",
           password && !pwdVisible && myValue !== "" ? "password" : ""
         )}
-        placeholder="Type a text"
+        placeholder="Type something..."
         onChange={(e) => {
           setMyValue(e.target.value);
           onChange(e.target.value);
@@ -63,7 +66,7 @@ export default function InputComponent({
               viewBox="0 0 24 24"
               strokeWidth={1.5}
               stroke="currentColor"
-              className="h-5 w-5"
+              className="w-5 h-5"
             >
               <path
                 strokeLinecap="round"
@@ -78,7 +81,7 @@ export default function InputComponent({
               viewBox="0 0 24 24"
               strokeWidth={1.5}
               stroke="currentColor"
-              className="h-5 w-5"
+              className="w-5 h-5"
             >
               <path
                 strokeLinecap="round"

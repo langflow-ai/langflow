@@ -2,7 +2,6 @@ import {
   FocusEventHandler,
   ForwardRefExoticComponent,
   ReactElement,
-  ReactFragment,
   ReactNode,
 } from "react";
 import { FlowType, NodeDataType } from "../flow/index";
@@ -11,6 +10,7 @@ export type InputComponentType = {
   disabled?: boolean;
   onChange: (value: string) => void;
   password: boolean;
+  disableCopyPaste?: boolean;
   onFocus?: FocusEventHandler<HTMLInputElement>;
   onBlur?: FocusEventHandler<HTMLInputElement>;
   autoFocus?: boolean;
@@ -86,6 +86,7 @@ export type FileComponentType = {
 
 export type DisclosureComponentType = {
   children: ReactNode;
+  openDisc: boolean;
   button: {
     title: string;
     Icon: ForwardRefExoticComponent<React.SVGProps<SVGSVGElement>>;
@@ -99,6 +100,7 @@ export type DisclosureComponentType = {
 export type FloatComponentType = {
   value: string;
   disabled?: boolean;
+  disableCopyPaste?: boolean;
   onChange: (value: string) => void;
 };
 

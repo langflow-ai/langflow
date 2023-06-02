@@ -12,6 +12,7 @@ from langchain.agents.load_tools import (
     _LLM_TOOLS,
 )
 from langchain.agents.loading import load_agent_from_config
+from langflow.graph import Graph
 from langchain.agents.tools import Tool
 from langchain.base_language import BaseLanguageModel
 from langchain.callbacks.base import BaseCallbackManager
@@ -31,7 +32,7 @@ from langflow.utils import util, validate
 def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
     """Instantiate class from module type and key, and params"""
     params = convert_params_to_sets(params)
-
+    params = convert_kwargs(params)
     if node_type in CUSTOM_AGENTS:
         custom_agent = CUSTOM_AGENTS.get(node_type)
         if custom_agent:
@@ -50,16 +51,18 @@ def convert_params_to_sets(params):
     return params
 
 
-def remove_input_connection_from_params(params):
-    """Remove input_connection from params"""
-    if "input_connection" in params:
-        params.pop("input_connection")
+def convert_kwargs(params):
+    # if *kwargs are passed as a string, convert to dict
+    # first find any key that has kwargs in it
+    kwargs_keys = [key for key in params.keys() if "kwargs" in key]
+    for key in kwargs_keys:
+        if isinstance(params[key], str):
+            params[key] = json.loads(params[key])
     return params
 
 
 def instantiate_based_on_type(class_object, base_type, node_type, params):
     if base_type == "agents":
-        params = remove_input_connection_from_params(params)
         return instantiate_agent(class_object, params)
     elif base_type == "prompts":
         return instantiate_prompt(node_type, class_object, params)
@@ -78,7 +81,6 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
     elif base_type == "utilities":
         return instantiate_utility(node_type, class_object, params)
     else:
-        params = remove_input_connection_from_params(params)
         return class_object(**params)
 
 
@@ -143,7 +145,13 @@ def instantiate_documentloader(class_object, params):
 
 
 def instantiate_textsplitter(class_object, params):
-    documents = params.pop("documents")
+    try:
+        documents = params.pop("documents")
+    except KeyError as e:
+        raise ValueError(
+            "The source you provided did not load correctly or was empty."
+            "Try changing the chunk_size of the Text Splitter."
+        ) from e
     text_splitter = class_object(**params)
     return text_splitter.split_documents(documents)
 
@@ -155,10 +163,9 @@ def instantiate_utility(node_type, class_object, params):
 
 
 def load_flow_from_json(path: str, build=True):
-    # This is done to avoid circular imports
-    from langflow.graph import Graph
-
     """Load flow from json file"""
+    # This is done to avoid circular imports
+
     with open(path, "r", encoding="utf-8") as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]

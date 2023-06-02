@@ -4,7 +4,8 @@ import { PopUpContext } from "../../contexts/popUpContext";
 import CodeAreaModal from "../../modals/codeAreaModal";
 import TextAreaModal from "../../modals/textAreaModal";
 import { TextAreaComponentType } from "../../types/components";
-import PromptAreaModal from "../../modals/promptModal";
+import GenericModal from "../../modals/genericModal";
+import { TypeModal } from "../../utils";
 
 export default function PromptAreaComponent({
   value,
@@ -22,15 +23,18 @@ export default function PromptAreaComponent({
   return (
     <div
       className={
-        disabled ? "pointer-events-none w-full cursor-not-allowed" : " w-full"
+        disabled ? "pointer-events-none cursor-not-allowed w-full" : " w-full"
       }
     >
-      <div className="flex w-full items-center gap-3">
+      <div className="w-full flex items-center gap-3">
         <span
           onClick={() => {
             openPopUp(
-              <PromptAreaModal
+              <GenericModal
+                type={TypeModal.PROMPT}
                 value={myValue}
+                buttonText="Check & Save"
+                modalTitle="Edit Prompt"
                 setValue={(t: string) => {
                   setMyValue(t);
                   onChange(t);
@@ -39,7 +43,7 @@ export default function PromptAreaComponent({
             );
           }}
           className={
-            "block w-full truncate rounded-md border border-gray-300 px-3 py-2 text-gray-500 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 sm:text-sm" +
+            "truncate block w-full text-gray-500 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" +
             (disabled ? " bg-gray-200" : "")
           }
         >
@@ -48,8 +52,11 @@ export default function PromptAreaComponent({
         <button
           onClick={() => {
             openPopUp(
-              <PromptAreaModal
+              <GenericModal
+                type={TypeModal.PROMPT}
                 value={myValue}
+                buttonText="Check & Save"
+                modalTitle="Edit Prompt"
                 setValue={(t: string) => {
                   setMyValue(t);
                   onChange(t);
@@ -58,7 +65,7 @@ export default function PromptAreaComponent({
             );
           }}
         >
-          <ArrowTopRightOnSquareIcon className="h-6 w-6 hover:text-blue-600 dark:text-gray-300" />
+          <ArrowTopRightOnSquareIcon className="w-6 h-6 hover:text-blue-600 dark:text-gray-300" />
         </button>
       </div>
     </div>

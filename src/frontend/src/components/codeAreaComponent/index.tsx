@@ -21,10 +21,10 @@ export default function CodeAreaComponent({
   return (
     <div
       className={
-        disabled ? "pointer-events-none w-full cursor-not-allowed" : "w-full"
+        disabled ? "pointer-events-none cursor-not-allowed w-full" : "w-full"
       }
     >
-      <div className="flex w-full items-center gap-3">
+      <div className="w-full flex items-center gap-3">
         <span
           onClick={() => {
             openPopUp(
@@ -38,7 +38,7 @@ export default function CodeAreaComponent({
             );
           }}
           className={
-            "block w-full truncate rounded-md border border-gray-300 px-3 py-2 text-gray-500 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 sm:text-sm" +
+            "truncate block w-full text-gray-500 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" +
             (disabled ? " bg-gray-200" : "")
           }
         >
@@ -57,7 +57,7 @@ export default function CodeAreaComponent({
             );
           }}
         >
-          <ArrowTopRightOnSquareIcon className="h-6 w-6 hover:text-blue-600 dark:text-gray-300" />
+          <ArrowTopRightOnSquareIcon className="w-6 h-6 hover:text-blue-600 dark:text-gray-300" />
         </button>
       </div>
     </div>

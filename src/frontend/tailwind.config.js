@@ -17,6 +17,7 @@ module.exports = {
 
       animation: {
         "pulse-green": "pulseGreen 1s linear",
+        'spin-once': 'spin 1s linear 0.7'
       },
       keyframes: {
         pulseGreen: {
@@ -42,6 +43,14 @@ module.exports = {
             display: "none",
           },
         },
+        ".truncate-multiline": {
+          "display": "-webkit-box",
+          "-webkit-line-clamp": "3", /* Change this number to the number of lines you want to show */
+          "-webkit-box-orient": "vertical",
+          "overflow": "hidden",
+          "text-overflow": "ellipsis",
+        },
+
         ".arrow-hide": {
           "&::-webkit-inner-spin-button": {
             "-webkit-appearance": "none",
@@ -78,6 +87,7 @@ module.exports = {
         },
         ".dark .theme-attribution .react-flow__attribution": {
           backgroundColor: "rgba(255, 255, 255, 0.2)",
+          padding: "0px 5px",
         },
         ".dark .theme-attribution .react-flow__attribution a": {
           color: "black",

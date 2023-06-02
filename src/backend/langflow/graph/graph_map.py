@@ -2,10 +2,10 @@ from copy import deepcopy
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from langflow.cache.base import memoize_dict
-from langflow.graph.base import Node
-from langflow.graph.graph import Graph
-from langflow.graph.langchain_nodes import LangChainNode
-from langflow.graph.nodes import ConnectorNode
+from langflow.graph import Node
+from langflow.graph import Graph
+from langflow.graph.node.types import LangChainNode
+from langflow.graph.node.types import ConnectorNode
 from langflow.interface.run import get_result_and_steps
 
 

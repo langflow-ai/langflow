@@ -38,8 +38,8 @@ export default function ToggleComponent({
           <span
             className={classNames(
               enabled
-                ? "opacity-0 duration-100 ease-out"
-                : "opacity-100 duration-200 ease-in",
+                ? "opacity-0 ease-out duration-100"
+                : "opacity-100 ease-in duration-200",
               "absolute inset-0 flex h-full w-full items-center justify-center transition-opacity"
             )}
             aria-hidden="true"
@@ -47,8 +47,8 @@ export default function ToggleComponent({
           <span
             className={classNames(
               enabled
-                ? "opacity-100 duration-200 ease-in"
-                : "opacity-0 duration-100 ease-out",
+                ? "opacity-100 ease-in duration-200"
+                : "opacity-0 ease-out duration-100",
               "absolute inset-0 flex h-full w-full items-center justify-center transition-opacity"
             )}
             aria-hidden="true"

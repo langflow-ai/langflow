@@ -1,0 +1,7 @@
+#!/bin/sh
+
+added_files=$(git diff --name-only --cached --diff-filter=d)
+# make format does not return 0 which causes the commit to fail
+# so we need to redirect the output to /dev/null
+make format > /dev/null
+git add ${added_files}

@@ -4,7 +4,7 @@ from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import embedding_type_to_cls_dict
 from langflow.settings import settings
 from langflow.template.frontend_node.base import FrontendNode
-from langflow.template.frontend_node.nodes import EmbeddingFrontendNode
+from langflow.template.frontend_node.embeddings import EmbeddingFrontendNode
 from langflow.utils.logger import logger
 from langflow.utils.util import build_template_from_class
 

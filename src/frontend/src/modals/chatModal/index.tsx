@@ -15,7 +15,7 @@ import { sendAllProps } from "../../types/api";
 import { ChatMessageType, ChatType } from "../../types/chat";
 import ChatInput from "./chatInput";
 
-import _ from "lodash";
+import _, { set } from "lodash";
 
 export default function ChatModal({
   flow,
@@ -33,7 +33,14 @@ export default function ChatModal({
   const ws = useRef<WebSocket | null>(null);
   const [lockChat, setLockChat] = useState(false);
   const isOpen = useRef(open);
+  const messagesRef = useRef(null);
   const id = useRef(flow.id);
+
+  useEffect(() => {
+    if (messagesRef.current) {
+      messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+    }
+  }, [chatHistory]);
 
   useEffect(() => {
     isOpen.current = open;
@@ -100,9 +107,9 @@ export default function ChatModal({
   function handleOnClose(event: CloseEvent) {
     if (isOpen.current) {
       setErrorData({ title: event.reason });
-      setLockChat(false);
       setTimeout(() => {
         connectWS();
+        setLockChat(false);
       }, 1000);
     }
   }
@@ -183,7 +190,6 @@ export default function ChatModal({
       newWs.onopen = () => {
         console.log("WebSocket connection established!");
       };
-      console.log(flow.id);
       newWs.onmessage = (event) => {
         const data = JSON.parse(event.data);
         console.log("Received data:", data);
@@ -236,6 +242,16 @@ export default function ChatModal({
     };
   }, []);
 
+  useEffect(() => {
+    if (
+      ws.current.readyState === ws.current.CLOSED ||
+      ws.current.readyState === ws.current.CLOSING
+    ) {
+      connectWS();
+      setLockChat(false);
+    }
+  }, [lockChat]);
+
   async function sendAll(data: sendAllProps) {
     try {
       if (ws) {
@@ -277,7 +293,9 @@ export default function ChatModal({
         errors.concat(
           template[t].required &&
             template[t].show &&
-            (!template[t].value || template[t].value === "") &&
+            (template[t].value === undefined ||
+              template[t].value === null ||
+              template[t].value === "") &&
             !reactFlowInstance
               .getEdges()
               .some(
@@ -344,6 +362,7 @@ export default function ChatModal({
   function clearChat() {
     setChatHistory([]);
     ws.current.send(JSON.stringify({ clear_history: true }));
+    if (lockChat) setLockChat(false);
   }
 
   function setModalOpen(x: boolean) {
@@ -395,10 +414,18 @@ export default function ChatModal({
                     <HiX className="h-5 w-5" />
                   </button>
                 </div>
-                <div className="flex h-full w-full flex-col items-center overflow-scroll border-t bg-white scrollbar-hide dark:border-t-gray-600 dark:bg-gray-800">
+                <div
+                  ref={messagesRef}
+                  className="w-full h-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center overflow-scroll scrollbar-hide"
+                >
                   {chatHistory.length > 0 ? (
                     chatHistory.map((c, i) => (
-                      <ChatMessage lockChat={lockChat} chat={c} key={i} />
+                      <ChatMessage
+                        lockChat={lockChat}
+                        chat={c}
+                        lastMessage={chatHistory.length - 1 == i ? true : false}
+                        key={i}
+                      />
                     ))
                   ) : (
                     <div className="flex h-full w-full flex-col items-center justify-center text-center align-middle">

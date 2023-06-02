@@ -26,24 +26,24 @@ export default function FileCard({ fileName, content, fileType }) {
   if (fileType === "image") {
     return (
       <div
-        className="relative h-1/4 w-1/4"
+        className="relative w-1/4 h-1/4"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
         <img
           src={`data:image/png;base64,${content}`}
           alt="generated image"
-          className="h-full  w-full rounded-lg"
+          className="rounded-lg  w-full h-full"
         />
         {isHovered && (
           <div
-            className={`absolute right-0 top-0 rounded-bl-lg bg-gray-100 px-1 text-sm font-bold text-gray-700 dark:bg-gray-700 dark:text-gray-300`}
+            className={`absolute top-0 right-0 bg-gray-100 text-gray-700 rounded-bl-lg px-1 text-sm font-bold dark:bg-gray-700 dark:text-gray-300`}
           >
             <button
-              className="px-2 py-1 text-gray-500 dark:bg-gray-700 dark:text-gray-300"
+              className="text-gray-500 py-1 px-2 dark:bg-gray-700 dark:text-gray-300"
               onClick={handleDownload}
             >
-              <CloudArrowDownIcon className="h-5 w-5 text-current hover:scale-110"></CloudArrowDownIcon>
+              <CloudArrowDownIcon className="hover:scale-110 w-5 h-5 text-current"></CloudArrowDownIcon>
             </button>
           </div>
         )}
@@ -54,25 +54,25 @@ export default function FileCard({ fileName, content, fileType }) {
   return (
     <button
       onClick={handleDownload}
-      className="flex w-1/2 items-center justify-between rounded border border-gray-300 bg-gray-100 px-2 py-2 text-gray-700 shadow hover:drop-shadow-lg"
+      className="bg-gray-100 shadow rounded w-1/2 text-gray-700 hover:drop-shadow-lg px-2 py-2 flex justify-between items-center border border-gray-300"
     >
-      <div className="mr-2 flex w-full items-center gap-2 text-current">
+      <div className="flex gap-2 text-current items-center w-full mr-2">
         {" "}
         {fileType === "image" ? (
           <img
             src={`data:image/png;base64,${content}`}
             alt=""
-            className="h-8 w-8"
+            className="w-8 h-8"
           />
         ) : (
-          <DocumentIcon className="h-8 w-8" />
+          <DocumentIcon className="w-8 h-8" />
         )}
         <div className="flex flex-col items-start">
           {" "}
           <div className="truncate text-sm text-current">{fileName}</div>
           <div className="truncate text-xs  text-gray-500">{fileType}</div>
         </div>
-        <CloudArrowDownIcon className="ml-auto h-6 w-6 text-current" />
+        <CloudArrowDownIcon className="w-6 h-6 text-current ml-auto" />
       </div>
     </button>
   );

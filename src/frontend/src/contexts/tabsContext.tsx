@@ -20,6 +20,7 @@ import { typesContext } from "./typesContext";
 import { APITemplateType, TemplateVariableType } from "../types/api";
 import { v4 as uuidv4 } from "uuid";
 import { addEdge } from "reactflow";
+import _ from "lodash";
 
 const TabsContextInitialValue: TabsContextType = {
   save: () => {},
@@ -47,7 +48,6 @@ export const TabsContext = createContext<TabsContextType>(
 );
 
 export function TabsProvider({ children }: { children: ReactNode }) {
-  const [disableCopyPaste, setDisableCopyPaste] = useState(false);
   const { setNoticeData } = useContext(alertContext);
   const [tabIndex, setTabIndex] = useState(0);
   const [flows, setFlows] = useState<Array<FlowType>>([]);
@@ -60,17 +60,30 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     return newNodeId.current;
   }
   function save() {
-    if (flows.length !== 0)
+    // added clone deep to avoid mutating the original object
+    let Saveflows = _.cloneDeep(flows);
+    if (Saveflows.length !== 0) {
+      Saveflows.forEach((flow) => {
+        if (flow.data && flow.data?.nodes)
+          flow.data?.nodes.forEach((node) => {
+            console.log(node.data.type);
+            //looking for file fields to prevent saving the content and breaking the flow for exceeding the the data limite for local storage
+            Object.keys(node.data.node.template).forEach((key) => {
+              console.log(node.data.node.template[key].type);
+              if (node.data.node.template[key].type === "file") {
+                console.log(node.data.node.template[key]);
+                node.data.node.template[key].content = null;
+                node.data.node.template[key].value = "";
+              }
+            });
+          });
+      });
       window.localStorage.setItem(
         "tabsData",
-        JSON.stringify({ tabIndex, flows, id })
+        JSON.stringify({ tabIndex, flows: Saveflows, id })
       );
+    }
   }
-  useEffect(() => {
-    //save tabs locally
-    // console.log(id)
-    save();
-  }, [flows, id, tabIndex, newNodeId]);
 
   useEffect(() => {
     //get tabs locally saved
@@ -78,43 +91,51 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     if (cookie && Object.keys(templates).length > 0) {
       let cookieObject: LangFlowState = JSON.parse(cookie);
       cookieObject.flows.forEach((flow) => {
-        if (flow.data) {
-          flow.data.nodes.forEach((node) => {
-            if (
-              node.type !== "groupNode" &&
-              templates &&
-              templates[node.data.type] &&
-              Object.keys(templates[node.data.type]["template"]).length > 0
-            ) {
-              node.data.node.base_classes =
-                templates[node.data.type]["base_classes"];
-              flow.data.edges.forEach((edge) => {
-                if (edge.source === node.id) {
-                  edge.sourceHandle = edge.sourceHandle
-                    .split("|")
-                    .slice(0, 2)
-                    .concat(templates[node.data.type]["base_classes"])
-                    .join("|");
-                }
-              });
-              node.data.node.description =
-                templates[node.data.type]["description"];
-              node.data.node.template = updateTemplate(
-                templates[node.data.type][
-                  "template"
-                ] as unknown as APITemplateType,
+        flow.data.edges.forEach((edge) => {
+          edge.className = "";
+          edge.style = { stroke: "#555555" };
+        });
+        flow.data.nodes.forEach((node) => {
+          if (
+            node.type !== "groupNode" &&
+            templates &&
+            templates[node.data.type] &&
+            Object.keys(templates[node.data.type]["template"]).length > 0
+          ) {
+            node.data.node.base_classes =
+              templates[node.data.type]["base_classes"];
+            flow.data.edges.forEach((edge) => {
+              if (edge.source === node.id) {
+                edge.sourceHandle = edge.sourceHandle
+                  .split("|")
+                  .slice(0, 2)
+                  .concat(templates[node.data.type]["base_classes"])
+                  .join("|");
+              }
+            });
+            node.data.node.description =
+              templates[node.data.type]["description"];
+            node.data.node.template = updateTemplate(
+              templates[node.data.type][
+                "template"
+              ] as unknown as APITemplateType,
 
-                node.data.node.template as APITemplateType
-              );
-            }
-          });
-        }
+              node.data.node.template as APITemplateType
+            );
+          }
+        });
       });
       setTabIndex(cookieObject.tabIndex);
       setFlows(cookieObject.flows);
       setId(cookieObject.id);
     }
   }, [templates]);
+
+  useEffect(() => {
+    //save tabs locally
+    console.log(id);
+    save();
+  }, [flows, id, tabIndex, newNodeId]);
 
   function hardReset() {
     newNodeId.current = uuidv4();
@@ -153,7 +174,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
    * If the file type is application/json, the file is read and parsed into a JSON object.
    * The resulting JSON object is passed to the addFlow function.
    */
-  function uploadFlow(newTab: boolean = true) {
+  function uploadFlow() {
     // create a file input
     const input = document.createElement("input");
     input.type = "file";
@@ -168,7 +189,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           // parse the text into a JSON object
           let flow: FlowType = JSON.parse(text);
 
-          addFlow(flow, newTab);
+          addFlow(flow);
         });
       }
     };
@@ -272,7 +293,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           sourceHandle,
           targetHandle,
           id,
-          className: "animate-pulse",
+          style: { stroke: "inherit" },
+          className:
+            targetHandle.split("|")[0] === "Text"
+              ? "stroke-gray-800 dark:stroke-gray-300"
+              : "stroke-gray-900 dark:stroke-gray-200",
+          animated: targetHandle.split("|")[0] === "Text",
           selected: false,
         },
         edges.map((e) => ({ ...e, selected: false }))
@@ -281,13 +307,24 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     reactFlowInstance.setEdges(edges);
   }
 
-  function addFlow(flow?: FlowType, newTab: boolean = true) {
+  function addFlow(flow?: FlowType) {
     // Get data from the flow or set it to null if there's no flow provided.
+
     let data = flow?.data ? flow.data : null;
+    const description = flow?.description ? flow.description : "";
     if (data) {
+      data.edges.forEach((edge) => {
+        edge.style = { stroke: "inherit" };
+        edge.className =
+          edge.targetHandle.split("|")[0] === "Text"
+            ? "stroke-gray-800 dark:stroke-gray-300"
+            : "stroke-gray-900 dark:stroke-gray-200";
+        edge.animated = edge.targetHandle.split("|")[0] === "Text";
+      });
       data.nodes.forEach((node) => {
         if (
           node.type !== "groupNode" &&
+          templates &&
           templates[node.data.type] &&
           Object.keys(templates[node.data.type]["template"]).length > 0
         ) {
@@ -309,37 +346,28 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           );
         }
       });
+      updateIds(data, getNodeId);
     }
+    // Create a new flow with a default name if no flow is provided.
+    let newFlow: FlowType = {
+      description,
+      name: flow?.name ?? "New Flow",
+      id: uuidv4(),
+      data,
+    };
 
-    if (!newTab) {
-      paste(
-        { nodes: flow.data.nodes, edges: flow.data.edges },
-        { x: 10, y: 10 }
-      );
-    } else {
-      const description = flow?.description ? flow.description : "";
+    // Increment the ID counter.
+    setId(uuidv4());
 
-      // Create a new flow with a default name if no flow is provided.
-      let newFlow: FlowType = {
-        description,
-        name: flow?.name ?? "New Flow",
-        id: uuidv4(),
-        data,
-      };
+    // Add the new flow to the list of flows.
 
-      // Increment the ID counter.
-      setId(uuidv4());
+    setFlows((prevState) => {
+      const newFlows = [...prevState, newFlow];
+      return newFlows;
+    });
 
-      // Add the new flow to the list of flows.
-
-      setFlows((prevState) => {
-        const newFlows = [...prevState, newFlow];
-        return newFlows;
-      });
-
-      // Set the tab index to the new flow.
-      if (newTab) setTabIndex(flows.length);
-    }
+    // Set the tab index to the new flow.
+    setTabIndex(flows.length);
   }
   /**
    * Updates an existing flow with new data
@@ -357,7 +385,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       return newFlows;
     });
   }
-  const [disableCP, setDisableCP] = useState(false);
+  const [disableCopyPaste, setDisableCopyPaste] = useState(false);
 
   return (
     <TabsContext.Provider

@@ -17,7 +17,6 @@ export default function InputListComponent({
       onChange([""]);
     }
   }, [disabled, onChange]);
-  const { setDisableCopyPaste } = useContext(TabsContext);
   return (
     <div
       className={
@@ -26,15 +25,15 @@ export default function InputListComponent({
       }
     >
       {inputList.map((i, idx) => (
-        <div key={idx} className="flex w-full gap-3">
+        <div key={idx} className="w-full flex gap-3">
           <input
             type="text"
             value={i}
             className={
-              "form-input block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" +
+              "block w-full form-input rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" +
               (disabled ? " bg-gray-200" : "")
             }
-            placeholder="Type a text"
+            placeholder="Type something..."
             onChange={(e) => {
               setInputList((old) => {
                 let newInputList = _.cloneDeep(old);
@@ -42,12 +41,6 @@ export default function InputListComponent({
                 return newInputList;
               });
               onChange(inputList);
-            }}
-            onBlur={() => {
-              setDisableCopyPaste(false);
-            }}
-            onFocus={() => {
-              setDisableCopyPaste(true);
             }}
           />
           {idx === inputList.length - 1 ? (
@@ -61,7 +54,7 @@ export default function InputListComponent({
                 onChange(inputList);
               }}
             >
-              <PlusIcon className="h-4 w-4 hover:text-blue-600" />
+              <PlusIcon className="w-4 h-4 hover:text-blue-600" />
             </button>
           ) : (
             <button
@@ -74,7 +67,7 @@ export default function InputListComponent({
                 onChange(inputList);
               }}
             >
-              <XMarkIcon className="h-4 w-4 hover:text-red-600" />
+              <XMarkIcon className="w-4 h-4 hover:text-red-600" />
             </button>
           )}
         </div>

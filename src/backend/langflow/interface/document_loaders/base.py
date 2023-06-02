@@ -89,6 +89,9 @@ class DocumentLoaderCreator(LangChainTypeCreator):
                 "UnstructuredWordDocumentLoader": build_file_path_template(
                     suffixes=[".docx", ".doc"], fileTypes=["docx", "doc"]
                 ),
+                "SlackDirectoryLoader": build_file_path_template(
+                    suffixes=[".zip"], fileTypes=["zip"]
+                ),
             }
 
             if name in file_path_templates:
@@ -118,7 +121,7 @@ class DocumentLoaderCreator(LangChainTypeCreator):
                     "value": "",
                     "display_name": "Web Page",
                 }
-            elif name in {"ReadTheDocsLoader"}:
+            elif name in {"ReadTheDocsLoader", "NotionDirectoryLoader"}:
                 signature["template"]["path"] = {
                     "type": "str",
                     "required": True,

@@ -1,5 +1,4 @@
-import { TemplateVariableType } from "./types/api/index";
-import { NodeDataType, NodeType } from "./types/flow/index";
+import { NodeDataType } from "./types/flow/index";
 import {
   RocketLaunchIcon,
   LinkIcon,
@@ -25,18 +24,51 @@ import {
   Edge,
   Node,
   OnSelectionChangeParams,
-  Position,
   ReactFlowInstance,
   ReactFlowJsonObject,
   XYPosition,
+  addEdge,
 } from "reactflow";
-import { FlowType } from "./types/flow";
-import { APITemplateType } from "./types/api";
-import _, { forEach, functionsIn, get, template } from "lodash";
-import { v4 as uuidv4, validate } from "uuid";
+import { FlowType, NodeType } from "./types/flow";
+import { APITemplateType, TemplateVariableType } from "./types/api";
+import _ from "lodash";
+import { ChromaIcon } from "./icons/ChromaIcon";
+import { AirbyteIcon } from "./icons/Airbyte";
+import { AzIcon } from "./icons/AzLogo";
+import { BingIcon } from "./icons/Bing";
+import { CohereIcon } from "./icons/Cohere";
+import { EvernoteIcon } from "./icons/Evernote";
+import { FBIcon } from "./icons/FacebookMessenger";
+import { GitBookIcon } from "./icons/GitBook";
+import { GoogleIcon } from "./icons/Google";
+import { HackerNewsIcon } from "./icons/hackerNews";
+import { HugginFaceIcon } from "./icons/HuggingFace";
+import { IFixIcon } from "./icons/IFixIt";
+import { MetaIcon } from "./icons/Meta";
+import { MidjorneyIcon } from "./icons/Midjorney";
+import { NotionIcon } from "./icons/Notion";
+import { OpenAiIcon } from "./icons/OpenAi";
+import { PowerPointIcon } from "./icons/PowerPoint";
+import { QDrantIcon } from "./icons/QDrant";
+import { ReadTheDocsIcon } from "./icons/ReadTheDocs";
+import { SearxIcon } from "./icons/Searx";
+import { SlackIcon } from "./icons/Slack";
+import { WeaviateIcon } from "./icons/Weaviate";
+import { WikipediaIcon } from "./icons/Wikipedia";
+import { WolframIcon } from "./icons/Wolfram";
+import { WordIcon } from "./icons/Word";
+import { SerperIcon } from "./icons/Serper";
+import { v4 as uuidv4 } from "uuid";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
+}
+
+export const limitScrollFieldsModal = 7;
+
+export enum TypeModal {
+  TEXT = 1,
+  PROMPT = 2,
 }
 
 export const textColors = {
@@ -133,6 +165,40 @@ export const nodeIcons: {
     React.SVGProps<SVGSVGElement>
   >;
 } = {
+  Chroma: ChromaIcon,
+  AirbyteJSONLoader: AirbyteIcon,
+  // SerpAPIWrapper: SerperIcon,
+  // AZLyricsLoader: AzIcon,
+  BingSearchAPIWrapper: BingIcon,
+  BingSearchRun: BingIcon,
+  Cohere: CohereIcon,
+  CohereEmbeddings: CohereIcon,
+  EverNoteLoader: EvernoteIcon,
+  FacebookChatLoader: FBIcon,
+  GitbookLoader: GitBookIcon,
+  GoogleSearchAPIWrapper: GoogleIcon,
+  GoogleSearchResults: GoogleIcon,
+  GoogleSearchRun: GoogleIcon,
+  HNLoader: HackerNewsIcon,
+  HuggingFaceHub: HugginFaceIcon,
+  HuggingFaceEmbeddings: HugginFaceIcon,
+  IFixitLoader: IFixIcon,
+  Meta: MetaIcon,
+  Midjorney: MidjorneyIcon,
+  NotionDirectoryLoader: NotionIcon,
+  ChatOpenAI: OpenAiIcon,
+  OpenAI: OpenAiIcon,
+  OpenAIEmbeddings: OpenAiIcon,
+  // UnstructuredPowerPointLoader: PowerPointIcon, // word and powerpoint have differente styles
+  Qdrant: QDrantIcon,
+  // ReadTheDocsLoader: ReadTheDocsIcon, // does not work
+  Searx: SearxIcon,
+  SlackDirectoryLoader: SlackIcon,
+  // Weaviate: WeaviateIcon,
+  // WikipediaAPIWrapper: WikipediaIcon,
+  // WolframAlphaQueryRun: WolframIcon,
+  // WolframAlphaAPIWrapper: WolframIcon,
+  // UnstructuredWordDocumentLoader: WordIcon, // word and powerpoint have differente styles
   agents: RocketLaunchIcon,
   chains: LinkIcon,
   memories: CpuChipIcon,
@@ -702,30 +768,6 @@ export function expandGroupNode(
   ReactFlowInstance.setEdges(edges);
 }
 
-export function updateIds(newFLow: FlowType, baseFlow: FlowType) {
-  newFLow.data.nodes.forEach((node) => {
-    while (baseFlow.data.nodes.some((n) => n.id === node.id)) {
-      const newId = uuidv4();
-      newFLow.data.edges.forEach((edge) => {
-        if (edge.source === node.id) {
-          edge.source = newId;
-        }
-        if (edge.target === node.id) {
-          edge.target = newId;
-        }
-        const index = edge.id.split("|").findIndex((e) => e === node.id);
-        if (index != -1) {
-          let tempList = edge.id.split("|");
-          tempList[index] = newId;
-          edge.id = tempList.concat(newId).join("|");
-        }
-        node.id = newId;
-      });
-    }
-  });
-  return newFLow;
-}
-
 export function updateFlowPosition(NewPosition: XYPosition, flow: FlowType) {
   const middlePoint = getMiddlePoint(flow.data.nodes);
   let deltaPosition = {
@@ -1046,4 +1088,76 @@ export function processFLow(FlowObject: ReactFlowJsonObject) {
   });
   console.log(clonedFLow);
   return clonedFLow;
+}
+
+export function toTitleCase(str: string) {
+  let result = str
+    .split("_")
+    .map((word, index) => {
+      if (index === 0) {
+        return checkUpperWords(
+          word[0].toUpperCase() + word.slice(1).toLowerCase()
+        );
+      }
+      return checkUpperWords(word.toLowerCase());
+    })
+    .join(" ");
+
+  return result
+    .split("-")
+    .map((word, index) => {
+      if (index === 0) {
+        return checkUpperWords(
+          word[0].toUpperCase() + word.slice(1).toLowerCase()
+        );
+      }
+      return checkUpperWords(word.toLowerCase());
+    })
+    .join(" ");
+}
+
+export const upperCaseWords: string[] = ["llm", "uri"];
+export function checkUpperWords(str: string) {
+  const words = str.split(" ").map((word) => {
+    return upperCaseWords.includes(word.toLowerCase())
+      ? word.toUpperCase()
+      : word[0].toUpperCase() + word.slice(1).toLowerCase();
+  });
+
+  return words.join(" ");
+}
+
+export function updateIds(newFlow, getNodeId) {
+  let idsMap = {};
+
+  newFlow.nodes.forEach((n) => {
+    // Generate a unique node ID
+    let newId = getNodeId();
+    idsMap[n.id] = newId;
+    n.id = newId;
+    n.data.id = newId;
+    // Add the new node to the list of nodes in state
+  });
+
+  newFlow.edges.forEach((e) => {
+    e.source = idsMap[e.source];
+    e.target = idsMap[e.target];
+    let sourceHandleSplitted = e.sourceHandle.split("|");
+    e.sourceHandle =
+      sourceHandleSplitted[0] +
+      "|" +
+      e.source +
+      "|" +
+      sourceHandleSplitted.slice(2).join("|");
+    let targetHandleSplitted = e.targetHandle.split("|");
+    e.targetHandle =
+      targetHandleSplitted.slice(0, -1).join("|") + "|" + e.target;
+    e.id =
+      "reactflow__edge-" +
+      e.source +
+      e.sourceHandle +
+      "-" +
+      e.target +
+      e.targetHandle;
+  });
 }

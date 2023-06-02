@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
-from langflow.graph.base import Edge, Node
-from langflow.graph.langchain_nodes import (
+from langflow.graph import Edge, Node
+from langflow.graph.node.types import (
     AgentNode,
     ChainNode,
     DocumentLoaderNode,
@@ -16,7 +16,7 @@ from langflow.graph.langchain_nodes import (
     VectorStoreNode,
     WrapperNode,
 )
-from langflow.graph.nodes import ConnectorNode
+from langflow.graph.node.types import ConnectorNode
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
 from langflow.interface.connectors.base import connector_creator

@@ -1,8 +1,9 @@
 import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
 import { useContext, useEffect, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
-import TextAreaModal from "../../modals/textAreaModal";
 import { TextAreaComponentType } from "../../types/components";
+import GenericModal from "../../modals/genericModal";
+import { TypeModal } from "../../utils";
 
 export default function TextAreaComponent({
   value,
@@ -19,11 +20,14 @@ export default function TextAreaComponent({
   }, [disabled, onChange]);
   return (
     <div className={disabled ? "pointer-events-none cursor-not-allowed" : ""}>
-      <div className="flex w-full items-center gap-3">
+      <div className="w-full flex items-center gap-3">
         <span
           onClick={() => {
             openPopUp(
-              <TextAreaModal
+              <GenericModal
+                type={TypeModal.TEXT}
+                buttonText="Finishing Editing"
+                modalTitle="Edit Text"
                 value={myValue}
                 setValue={(t: string) => {
                   setMyValue(t);
@@ -38,11 +42,15 @@ export default function TextAreaComponent({
           }
         >
           {myValue !== "" ? myValue : "Text empty"}
+          {myValue !== "" ? myValue : "Text empty"}
         </span>
         <button
           onClick={() => {
             openPopUp(
-              <TextAreaModal
+              <GenericModal
+                type={TypeModal.TEXT}
+                buttonText="Finishing Editing"
+                modalTitle="Edit Text"
                 value={myValue}
                 setValue={(t: string) => {
                   setMyValue(t);
@@ -52,7 +60,7 @@ export default function TextAreaComponent({
             );
           }}
         >
-          <ArrowTopRightOnSquareIcon className="h-6 w-6 hover:text-blue-600 dark:text-gray-300" />
+          <ArrowTopRightOnSquareIcon className="w-6 h-6 hover:text-blue-600 dark:text-gray-300" />
         </button>
       </div>
     </div>

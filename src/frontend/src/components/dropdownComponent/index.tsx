@@ -23,9 +23,9 @@ export default function Dropdown({
       >
         {({ open }) => (
           <>
-            <div className="relative mt-1">
-              <Listbox.Button className="relative w-full cursor-default rounded-md border border-gray-300 bg-white py-2 pl-3 pr-10 text-left shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:bg-gray-900 sm:text-sm">
-                <span className="block w-max truncate">{internalValue}</span>
+            <div className="relative mt-1 w-full">
+              <Listbox.Button className="relative w-full cursor-default rounded-md border border-gray-300 bg-white dark:bg-gray-900 py-2 pl-3 pr-10 text-left shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm">
+                <span className="block truncate w-full">{internalValue}</span>
                 <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
                   <ChevronUpDownIcon
                     className="h-5 w-5 text-gray-400"
@@ -41,16 +41,16 @@ export default function Dropdown({
                 leaveFrom="opacity-100"
                 leaveTo="opacity-0"
               >
-                <Listbox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none dark:bg-gray-800 sm:text-sm">
+                <Listbox.Options className="absolute z-10 mt-1 max-h-60 w-full dark:bg-gray-800 overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
                   {options.map((option, id) => (
                     <Listbox.Option
                       key={id}
                       className={({ active }) =>
                         classNames(
                           active
-                            ? "bg-indigo-600 text-white dark:bg-indigo-500"
+                            ? "text-white bg-indigo-600 dark:bg-indigo-500"
                             : "text-gray-900",
-                          "relative cursor-default select-none py-2 pl-3 pr-9 dark:bg-gray-800 dark:text-gray-300"
+                          "relative cursor-default select-none py-2 pl-3 pr-9 dark:text-gray-300 dark:bg-gray-800"
                         )
                       }
                       value={option}

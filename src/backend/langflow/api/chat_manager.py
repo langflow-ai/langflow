@@ -27,10 +27,10 @@ class ChatHistory(Subject):
         if not isinstance(message, FileResponse):
             self.notify()
 
-    def get_history(self, client_id: str, filter=True) -> List[ChatMessage]:
+    def get_history(self, client_id: str, filter_messages=True) -> List[ChatMessage]:
         """Get the chat history for a client."""
         if history := self.history.get(client_id, []):
-            if filter:
+            if filter_messages:
                 return [msg for msg in history if msg.type not in ["start", "stream"]]
             return history
         else:
@@ -52,7 +52,9 @@ class ChatManager:
         """Send the last chat message to the client."""
         client_id = self.cache_manager.current_client_id
         if client_id in self.active_connections:
-            chat_response = self.chat_history.get_history(client_id, filter=False)[-1]
+            chat_response = self.chat_history.get_history(
+                client_id, filter_messages=False
+            )[-1]
             if chat_response.is_bot:
                 # Process FileResponse
                 if isinstance(chat_response, FileResponse):
@@ -108,7 +110,7 @@ class ChatManager:
         start_resp = ChatResponse(message=None, type="start", intermediate_steps="")
         await self.send_json(client_id, start_resp)
 
-        is_first_message = len(self.chat_history.get_history(client_id=client_id)) == 1
+        is_first_message = len(self.chat_history.get_history(client_id=client_id)) <= 1
         # Generate result and thought
         try:
             logger.debug("Generating result and thought")
@@ -126,7 +128,7 @@ class ChatManager:
             raise e
         # Send a response back to the frontend, if needed
         intermediate_steps = intermediate_steps or ""
-        history = self.chat_history.get_history(client_id, filter=False)
+        history = self.chat_history.get_history(client_id, filter_messages=False)
         file_responses = []
         if history:
             # Iterate backwards through the history

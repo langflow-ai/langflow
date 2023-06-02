@@ -14,8 +14,7 @@ export default function TabComponent({
   selected: boolean;
   onClick: () => void;
 }) {
-  const { removeFlow, updateFlow, flows, setDisableCopyPaste } =
-    useContext(TabsContext);
+  const { removeFlow, updateFlow, flows } = useContext(TabsContext);
   const [isRename, setIsRename] = useState(false);
   const [value, setValue] = useState("");
   return (
@@ -23,7 +22,7 @@ export default function TabComponent({
       {flow ? (
         !selected ? (
           <div
-            className="my-1.5 -ml-px flex w-44 select-none items-center justify-between truncate border-x border-x-gray-300 px-4 dark:border-x-gray-600 dark:text-white"
+            className="dark:text-white flex justify-between select-none truncate w-44 items-center px-4 my-1.5 border-x border-x-gray-300 dark:border-x-gray-600 -ml-px"
             onClick={onClick}
           >
             <span className="w-32 truncate text-left">{flow.name}</span>
@@ -34,21 +33,17 @@ export default function TabComponent({
                 removeFlow(flow.id);
               }}
             >
-              <XMarkIcon className="h-4 rounded-full hover:bg-white dark:hover:bg-gray-600" />
+              <XMarkIcon className="h-4 hover:bg-white dark:hover:bg-gray-600 rounded-full" />
             </button>
           </div>
         ) : (
-          <div className="-ml-px flex w-44 select-none items-center justify-between rounded-t-xl border border-b-0 border-gray-300 bg-white px-4 py-1 dark:border-gray-600 dark:bg-gray-700/60 dark:text-white">
+          <div className="bg-white dark:text-white dark:bg-gray-700/60 flex select-none justify-between w-44 items-center border border-b-0 border-gray-300 dark:border-gray-600 px-4 py-1 rounded-t-xl -ml-px">
             {isRename ? (
               <input
-                onFocus={() => {
-                  setDisableCopyPaste(true);
-                }}
                 autoFocus
-                className="w-28 rounded-md bg-transparent outline-gray-300 hover:outline focus:border-none focus:outline  active:outline"
+                className="bg-transparent focus:border-none active:outline hover:outline focus:outline outline-gray-300 rounded-md  w-28"
                 onBlur={() => {
                   setIsRename(false);
-                  setDisableCopyPaste(false);
                   if (value !== "") {
                     let newFlow = _.cloneDeep(flow);
                     newFlow.name = value;
@@ -63,7 +58,7 @@ export default function TabComponent({
             ) : (
               <div className="flex items-center gap-2">
                 <span
-                  className="w-32 truncate text-left"
+                  className="text-left w-32 truncate"
                   onDoubleClick={() => {
                     setIsRename(true);
                     setValue(flow.name);
@@ -79,15 +74,15 @@ export default function TabComponent({
               }}
             >
               {flows.length > 1 && (
-                <XMarkIcon className="h-4 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600" />
+                <XMarkIcon className="h-4 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full" />
               )}
             </button>
           </div>
         )
       ) : (
-        <div className="flex h-full items-center justify-center py-1.5">
+        <div className="h-full py-1.5 flex justify-center items-center">
           <button
-            className="-ml-px flex h-full items-center border-x-gray-300 px-3 pb-0.5 pt-0.5 dark:border-x-gray-600 dark:text-white"
+            className="px-3 flex items-center h-full pb-0.5 pt-0.5 border-x-gray-300 dark:border-x-gray-600 dark:text-white -ml-px"
             onClick={onClick}
           >
             <PlusIcon className="h-5 rounded-full hover:bg-white dark:hover:bg-gray-600" />

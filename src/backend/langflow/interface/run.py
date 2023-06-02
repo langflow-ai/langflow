@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from langchain.schema import AgentAction
 
 from langflow.cache.base import compute_dict_hash, load_cache, memoize_dict
-from langflow.graph.graph import Graph
+from langflow.graph import Graph
 from langflow.utils.logger import logger
 
 

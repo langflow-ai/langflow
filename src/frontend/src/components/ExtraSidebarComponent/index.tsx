@@ -1,6 +1,6 @@
 import { Disclosure } from "@headlessui/react";
 import { ChevronLeftIcon } from "@heroicons/react/24/outline";
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { Link } from "react-router-dom";
 import { classNames } from "../../utils";
 import { locationContext } from "../../contexts/locationContext";
@@ -13,20 +13,19 @@ export default function ExtraSidebar() {
     extraNavigation,
     extraComponent,
   } = useContext(locationContext);
+
   return (
     <>
       <aside
         className={` ${
           isStackedOpen ? "w-52" : "w-0 "
-        } flex flex-shrink-0 flex-col overflow-hidden border-r transition-all duration-500 dark:border-r-gray-700`}
+        } flex-shrink-0 flex overflow-hidden flex-col border-r dark:border-r-gray-700 transition-all duration-500`}
       >
-        <div className="flex h-full w-52 flex-col  items-start overflow-y-auto border scrollbar-hide dark:border-gray-700 dark:bg-gray-800">
-          <div className="flex w-full justify-between px-4 pt-1 align-middle">
-            <span className="py-[2px] font-medium text-gray-900 dark:text-white ">
-              {extraNavigation.title}
-            </span>
+        <div className="w-52 dark:bg-gray-800 border dark:border-gray-700  overflow-y-auto scrollbar-hide h-full flex flex-col items-start">
+          <div className="flex px-4 justify-between align-middle w-full">
+            <span className="text-gray-900 dark:text-white py-[2px] font-medium "></span>
           </div>
-          <div className="flex w-full flex-grow flex-col">
+          <div className="flex flex-grow flex-col w-full">
             {extraNavigation.options ? (
               <div className="p-4">
                 <nav className="flex-1 space-y-1">
@@ -39,7 +38,7 @@ export default function ExtraSidebar() {
                             item.href.split("/")[2] === current[4]
                               ? "bg-gray-100 text-gray-900"
                               : "bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900",
-                            "group flex w-full items-center rounded-md py-2 pl-2 text-sm font-medium"
+                            "group w-full flex items-center pl-2 py-2 text-sm font-medium rounded-md"
                           )}
                         >
                           <item.icon
@@ -47,7 +46,7 @@ export default function ExtraSidebar() {
                               item.href.split("/")[2] === current[4]
                                 ? "text-gray-500"
                                 : "text-gray-400 group-hover:text-gray-500",
-                              "mr-3 h-6 w-6 flex-shrink-0"
+                              "mr-3 flex-shrink-0 h-6 w-6"
                             )}
                           />
                           {item.name}
@@ -66,7 +65,7 @@ export default function ExtraSidebar() {
                                 item.href.split("/")[2] === current[4]
                                   ? "bg-gray-100 text-gray-900"
                                   : "bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900",
-                                "group flex w-full items-center rounded-md py-2 pl-2 pr-1 text-left text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                "group w-full flex items-center pl-2 pr-1 py-2 text-left text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                               )}
                             >
                               <item.icon
@@ -77,9 +76,9 @@ export default function ExtraSidebar() {
                               <svg
                                 className={classNames(
                                   open
-                                    ? "rotate-90 text-gray-400"
+                                    ? "text-gray-400 rotate-90"
                                     : "text-gray-300",
-                                  "transition-rotate ml-3 h-5 w-5 flex-shrink-0 duration-150 ease-in-out group-hover:text-gray-400"
+                                  "ml-3 h-5 w-5 flex-shrink-0 transition-rotate duration-150 ease-in-out group-hover:text-gray-400"
                                 )}
                                 viewBox="0 0 20 20"
                                 aria-hidden="true"

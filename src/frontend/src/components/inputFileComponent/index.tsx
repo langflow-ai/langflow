@@ -64,21 +64,21 @@ export default function InputFileComponent({
   return (
     <div
       className={
-        disabled ? "pointer-events-none w-full cursor-not-allowed" : "w-full"
+        disabled ? "pointer-events-none cursor-not-allowed w-full" : "w-full"
       }
     >
-      <div className="flex w-full items-center gap-3">
+      <div className="w-full flex items-center gap-3">
         <span
           onClick={handleButtonClick}
           className={
-            "block w-full truncate rounded-md border border-gray-300 px-3 py-2 text-gray-500 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:text-gray-300 sm:text-sm" +
+            "truncate block w-full text-gray-500 dark:text-gray-300 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" +
             (disabled ? " bg-gray-200" : "")
           }
         >
           {myValue !== "" ? myValue : "No file"}
         </span>
         <button onClick={handleButtonClick}>
-          <DocumentMagnifyingGlassIcon className="h-8 w-8  hover:text-blue-600" />
+          <DocumentMagnifyingGlassIcon className="w-8 h-8  hover:text-blue-600" />
         </button>
       </div>
     </div>

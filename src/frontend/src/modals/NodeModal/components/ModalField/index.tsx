@@ -12,7 +12,15 @@ import PromptAreaComponent from "../../../../components/promptComponent";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
 import { classNames } from "../../../../utils";
 
-export default function ModalField({ data, title, required, id, name, type }) {
+export default function ModalField({
+  data,
+  title,
+  required,
+  id,
+  name,
+  type,
+  index,
+}) {
   const { save } = useContext(TabsContext);
   const [enabled, setEnabled] = useState(
     data.node.template[name]?.value ?? false
@@ -29,8 +37,18 @@ export default function ModalField({ data, title, required, id, name, type }) {
   return (
     <div
       className={classNames(
-        "flex w-full flex-row items-center justify-between",
-        display ? "" : "hidden"
+        "flex flex-row w-full items-center justify-between",
+        display ? "" : "hidden",
+        Object.keys(data.node.template).filter(
+          (t) =>
+            t.charAt(0) !== "_" &&
+            data.node.template[t].advanced &&
+            data.node.template[t].show
+        ).length -
+          1 ===
+          index
+          ? "pb-4"
+          : ""
       )}
     >
       {display && (

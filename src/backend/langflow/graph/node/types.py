@@ -1,8 +1,30 @@
-from copy import deepcopy
 from typing import Any, Dict, List, Optional, Union
 
-from langflow.graph.base import Node
+from langflow.graph.node.base import Node
 from langflow.graph.utils import extract_input_variables_from_prompt
+from copy import deepcopy
+
+from langflow.interface.connectors.custom import ConnectorFunction
+
+
+class ConnectorNode(Node):
+    _built_object: Any = None
+    _built: bool = False
+
+    def __init__(self, data: Dict) -> None:
+        super().__init__(data, base_type="connectors")
+
+    def _build(self) -> None:
+        func = None
+        for param, value in self.params.items():
+            if param == "code":
+                conn_func = ConnectorFunction(code=value)
+                func = conn_func.get_function()
+
+        if func is None:
+            raise ValueError("Connector function not found")
+        self._built_object = func
+        self._built = True
 
 
 class LangChainNode(Node):
