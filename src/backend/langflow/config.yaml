@@ -51,6 +51,7 @@ embeddings:
 llms:
   - OpenAI
   # - AzureOpenAI
+  # - AzureChatOpenAI
   - ChatOpenAI
   - LlamaCpp
   - CTransformers
