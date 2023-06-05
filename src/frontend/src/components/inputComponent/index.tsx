@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { InputHTMLAttributes, useContext, useEffect, useState } from "react";
 import { InputComponentType } from "../../types/components";
 import { classNames } from "../../utils";
 import { TabsContext } from "../../contexts/tabsContext";
@@ -31,6 +31,11 @@ export default function InputComponent({
       }
     >
       <input
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            (event.target as HTMLInputElement).blur();
+          }
+        }}
         autoFocus={autoFocus}
         value={myValue}
         onFocus={(e) => {
