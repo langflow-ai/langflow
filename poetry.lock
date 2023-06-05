@@ -1265,14 +1265,14 @@ importlib-resources = {version = ">=5.0", markers = "python_version < \"3.10\""}
 
 [[package]]
 name = "fastapi"
-version = "0.95.2"
+version = "0.96.0"
 description = "FastAPI framework, high performance, easy to learn, fast to code, ready for production"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "fastapi-0.95.2-py3-none-any.whl", hash = "sha256:d374dbc4ef2ad9b803899bd3360d34c534adc574546e25314ab72c0c4411749f"},
-    {file = "fastapi-0.95.2.tar.gz", hash = "sha256:4d9d3e8c71c73f11874bcf5e33626258d143252e329a01002f767306c64fb982"},
+    {file = "fastapi-0.96.0-py3-none-any.whl", hash = "sha256:b8e11fe81e81eab4e1504209917338e0b80f783878a42c2b99467e5e1019a1e9"},
+    {file = "fastapi-0.96.0.tar.gz", hash = "sha256:71232d47c2787446991c81c41c249f8a16238d52d779c0e6b43927d3773dbe3c"},
 ]
 
 [package.dependencies]
@@ -6234,4 +6234,4 @@ deploy = ["langchain-serve"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "9dbfdba31c45b1d79c6b487cb4e5e9cb43252e2f2f52fe625648162bf4cd4d9a"
+content-hash = "4cac7dea0c1222711ba7eed82d5716d5e361d454edb6e0299b387fbb115d2c3d"
