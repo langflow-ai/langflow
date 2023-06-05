@@ -21,6 +21,7 @@ import {
   ChevronDownIcon,
   CodeBracketSquareIcon,
   GlobeAltIcon,
+  PencilSquareIcon,
   PlusIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
@@ -47,6 +48,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../../components/ui/card";
+import RenameLabel from "../../components/ui/rename-label";
 
 export default function HomePage() {
   const {
@@ -63,6 +65,7 @@ export default function HomePage() {
   const AlertWidth = 384;
   const { dark, setDark } = useContext(darkContext);
   const [activeTab, setActiveTab] = useState("myflow");
+  const [rename, setRename] = useState(false);
   const { notificationCenter, setNotificationCenter } =
     useContext(alertContext);
   useEffect(() => {
@@ -84,13 +87,26 @@ export default function HomePage() {
             <span className="text-2xl ml-4">⛓️</span>
             <div className="flex gap-2 p-2">
               <TabsTrigger value="myflow" className="flex items-center gap-2">
-                {flows[tabIndex].name}
+                <RenameLabel
+                  value={flows[tabIndex].name}
+                  setValue={() => {}}
+                  rename={rename}
+                  setRename={setRename}
+                />
                 <DropdownMenu>
                   <DropdownMenuTrigger>
                     <ChevronDownIcon className="w-3" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-40">
                     <DropdownMenuLabel>Current Flow</DropdownMenuLabel>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setRename(true);
+                      }}
+                    >
+                      <PencilSquareIcon className="w-4 h-4 mr-2" />
+                      Rename
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => {
                         openPopUp(<ImportModal />);
@@ -126,7 +142,7 @@ export default function HomePage() {
                       {flows.map((flow, idx) => {
                         return (
                           <DropdownMenuRadioItem value={idx.toString()}>
-                            <span onDoubleClick={() => {}}>{flow.name}</span>
+                            {flow.name}
                           </DropdownMenuRadioItem>
                         );
                       })}
