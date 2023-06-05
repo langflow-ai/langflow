@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     textsplitters: List[str] = []
     utilities: List[str] = []
     dev: bool = False
-    dabatabase_url: str = "sqlite:///./langflow.db"
+    database_url: str = "sqlite:///./langflow.db"
 
     class Config:
         validate_assignment = True
