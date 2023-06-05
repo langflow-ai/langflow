@@ -8,6 +8,8 @@
         "@headlessui/react": "^1.7.10",
         "@heroicons/react": "^2.0.15",
         "@mui/material": "^5.11.9",
+        "@radix-ui/react-label": "^2.0.2",
+        "@radix-ui/react-switch": "^1.0.3",
         "@tabler/icons-react": "^2.18.0",
         "@tailwindcss/forms": "^0.5.3",
         "@tailwindcss/line-clamp": "^0.4.4",

@@ -1,4 +1,4 @@
-import { Dialog, Switch, Transition } from "@headlessui/react";
+import { Dialog, Transition } from "@headlessui/react";
 import {
   ChevronDoubleLeftIcon,
   ChevronDoubleRightIcon,
@@ -19,57 +19,17 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
+import { Switch } from "../../components/ui/switch";
+import ToggleShadComponent from "../../components/toggleShadComponent";
 
-const invoices = [
-  {
-    invoice: "INV001",
-    paymentStatus: "Paid",
-    totalAmount: "$250.00",
-    paymentMethod: "Credit Card",
-  },
-  {
-    invoice: "INV002",
-    paymentStatus: "Pending",
-    totalAmount: "$150.00",
-    paymentMethod: "PayPal",
-  },
-  {
-    invoice: "INV003",
-    paymentStatus: "Unpaid",
-    totalAmount: "$350.00",
-    paymentMethod: "Bank Transfer",
-  },
-  {
-    invoice: "INV004",
-    paymentStatus: "Paid",
-    totalAmount: "$450.00",
-    paymentMethod: "Credit Card",
-  },
-  {
-    invoice: "INV005",
-    paymentStatus: "Paid",
-    totalAmount: "$550.00",
-    paymentMethod: "PayPal",
-  },
-  {
-    invoice: "INV006",
-    paymentStatus: "Pending",
-    totalAmount: "$200.00",
-    paymentMethod: "Bank Transfer",
-  },
-  {
-    invoice: "INV007",
-    paymentStatus: "Unpaid",
-    totalAmount: "$300.00",
-    paymentMethod: "Credit Card",
-  },
-];
+
 
 export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const [open, setOpen] = useState(true);
   const { closePopUp } = useContext(PopUpContext);
   const { types } = useContext(typesContext);
   const ref = useRef();
+
   function setModalOpen(x: boolean) {
     setOpen(x);
     if (x === false) {
@@ -78,44 +38,16 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
       }, 300);
     }
   }
-  const [advanced, setAdvanced] = useState([]);
-  const [parameters, setParameters] = useState([]);
-  const [enabled, setEnabled] = useState(false);
 
-  const updateAdvancedParameters = () => {
-    setAdvanced(
-      Object.keys(data.node.template).filter(
-        (t) =>
-          t.charAt(0) !== "_" &&
-          data.node.template[t].advanced &&
-          data.node.template[t].show
-      )
-    );
-    setParameters(
-      Object.keys(data.node.template).filter(
-        (t) =>
-          t.charAt(0) !== "_" &&
-          !data.node.template[t].advanced &&
-          data.node.template[t].show &&
-          (data.node.template[t].type === "str" ||
-            data.node.template[t].type === "bool" ||
-            data.node.template[t].type === "float" ||
-            data.node.template[t].type === "code" ||
-            data.node.template[t].type === "prompt" ||
-            data.node.template[t].type === "file" ||
-            data.node.template[t].type === "Any" ||
-            data.node.template[t].type === "int")
-      )
-    );
-  };
+  function changeAdvanced(node): void{
+    Object.keys(data.node.template).filter((n, i) => {
+      if (n === node.name) {
+        data.node.template[n].advanced = !data.node.template[n].advanced;
+      }
+      return true;
+    });
+  }
 
-  useEffect(() => {
-    updateAdvancedParameters();
-  }, [data.node.template]);
-
-  console.log("DATA", data.node.template);
-
-  const Icon = nodeIcons[types[data.type]];
   return (
     <Transition.Root show={open} appear={true} as={Fragment}>
       <Dialog
@@ -185,127 +117,70 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                           Object.keys(data.node.template).filter(
                             (t) =>
                               t.charAt(0) !== "_" &&
-                              data.node.template[t].advanced &&
-                              data.node.template[t].show
-                          ).length > limitScrollFieldsModal ||
-                            Object.keys(data.node.template).filter(
-                              (t) =>
-                                t.charAt(0) !== "_" &&
-                                !data.node.template[t].advanced &&
-                                data.node.template[t].show
-                            ).length > limitScrollFieldsModal
+                              data.node.template[t].show &&
+                              (data.node.template[t].type === "str" ||
+                                data.node.template[t].type === "bool" ||
+                                data.node.template[t].type === "float" ||
+                                data.node.template[t].type === "code" ||
+                                data.node.template[t].type === "prompt" ||
+                                data.node.template[t].type === "file" ||
+                                data.node.template[t].type === "Any" ||
+                                data.node.template[t].type === "int")
+                          ).length > limitScrollFieldsModal
                             ? "overflow-scroll overflow-x-hidden custom-scroll h-fit"
                             : "overflow-hidden h-fit"
                         )}
                       >
                         <div className="flex flex-col h-full gap-5 h-fit	">
                           <Table>
-                            <TableCaption>
-                              A list of your recent invoices.
-                            </TableCaption>
                             <TableHeader>
                               <TableRow>
-                                <TableHead className="w-[100px]">
-                                  Invoice
+                                <TableHead className="w-[80px]">
+                                  Param
                                 </TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Method</TableHead>
-                                <TableHead className="text-right">
-                                  Amount
-                                </TableHead>
+                                <TableHead>Value</TableHead>
+                                <TableHead>Show</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {invoices.map((invoice) => (
-                                <TableRow key={invoice.invoice}>
+                            { Object.keys(data.node.template).filter(
+                                  (t) =>
+                                    t.charAt(0) !== "_" &&
+                                    data.node.template[t].show &&
+                                    (data.node.template[t].type === "str" ||
+                                      data.node.template[t].type === "bool" ||
+                                      data.node.template[t].type === "float" ||
+                                      data.node.template[t].type === "code" ||
+                                      data.node.template[t].type === "prompt" ||
+                                      data.node.template[t].type === "file" ||
+                                      data.node.template[t].type === "Any" ||
+                                      data.node.template[t].type === "int")
+                                )
+                                .map((n, i) => (
+                                <TableRow key={i}>
                                   <TableCell className="font-medium">
-                                    {invoice.invoice}
+                                  {data.node.template[n].name
+                                        ? data.node.template[n].name
+                                        : data.node.template[n].display_name}
                                   </TableCell>
-                                  <TableCell>{invoice.paymentStatus}</TableCell>
-                                  <TableCell>{invoice.paymentMethod}</TableCell>
-                                  <TableCell className="text-right">
-                                    {invoice.totalAmount}
+                                  <TableCell>
+                                  {data.node.template[n].value
+                                        ? data.node.template[n].value
+                                        : "-"}
+                                  </TableCell>
+                                  <TableCell>
+
+                                  <div className="flex items-center space-x-2">
+                                  <ToggleShadComponent 
+                                  enabled={data.node.template[n].advanced}
+                                  setEnabled={(e) => changeAdvanced(data.node.template[n])}
+                                  disabled={false} />
+                                </div>
                                   </TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>
                           </Table>
-
-                          <table className="min-w-full divide-y divide-gray-300">
-                            <thead className="bg-gray-50">
-                              <tr>
-                                <th
-                                  scope="col"
-                                  className="py-1 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
-                                >
-                                  Param
-                                </th>
-                                <th
-                                  scope="col"
-                                  className="px-3 py-1 text-left text-sm font-semibold text-gray-900"
-                                >
-                                  Value
-                                </th>
-                                <th
-                                  scope="col"
-                                  className="px-3 py-1 text-left text-sm font-semibold text-gray-900"
-                                >
-                                  Show
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200 bg-white">
-                              {Object.keys(data.node.template)
-                                .filter((t) => t.charAt(0) !== "_")
-                                .map((n, i) => (
-                                  <tr key={i}>
-                                    <td className="whitespace-nowrap py-1 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
-                                      {data.node.template[n].name
-                                        ? data.node.template[n].name
-                                        : data.node.template[n].display_name}
-                                    </td>
-                                    <td className="whitespace-nowrap px-3 py-1 text-sm text-gray-500">
-                                      {data.node.template[n].value
-                                        ? data.node.template[n].value
-                                        : "-"}
-                                    </td>
-                                    <td className="whitespace-nowrap px-3 py-1 text-sm text-gray-500">
-                                      <Switch
-                                        checked={enabled}
-                                        onChange={setEnabled}
-                                        className="group relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"
-                                      >
-                                        <span className="sr-only">
-                                          Use setting
-                                        </span>
-                                        <span
-                                          aria-hidden="true"
-                                          className="pointer-events-none absolute h-full w-full rounded-md bg-white"
-                                        />
-                                        <span
-                                          aria-hidden="true"
-                                          className={classNames(
-                                            enabled
-                                              ? "bg-indigo-600"
-                                              : "bg-gray-200",
-                                            "pointer-events-none absolute mx-auto h-4 w-9 rounded-full transition-colors duration-200 ease-in-out"
-                                          )}
-                                        />
-                                        <span
-                                          aria-hidden="true"
-                                          className={classNames(
-                                            enabled
-                                              ? "translate-x-5"
-                                              : "translate-x-0",
-                                            "pointer-events-none absolute left-0 inline-block h-5 w-5 transform rounded-full border border-gray-200 bg-white shadow ring-0 transition-transform duration-200 ease-in-out"
-                                          )}
-                                        />
-                                      </Switch>
-                                    </td>
-                                  </tr>
-                                ))}
-                            </tbody>
-                          </table>
                         </div>
                       </div>
                     </div>
