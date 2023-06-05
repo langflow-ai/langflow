@@ -47,6 +47,8 @@ import { WolframIcon } from "./icons/Wolfram";
 import { WordIcon } from "./icons/Word";
 import { SerperIcon } from "./icons/Serper";
 import { v4 as uuidv4 } from "uuid";
+import clsx, { ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -341,6 +343,10 @@ export function measureTextWidth(text: string, fontSize: number) {
     wordWidth += charWidth * fontSize;
   }
   return wordWidth;
+}
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
 }
 
 export function measureTextHeight(
