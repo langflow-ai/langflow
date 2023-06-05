@@ -92,7 +92,10 @@ async def upload_file(
     """Upload flows from a file."""
     contents = await file.read()
     data = json.loads(contents)
-    flow_list = FlowListCreate(**data)
+    if "flows" in data:
+        flow_list = FlowListCreate(**data)
+    else:
+        flow_list = FlowListCreate(flows=[FlowCreate(**flow) for flow in data])
     return create_flows(session=session, flow_list=flow_list)
 
 
@@ -100,4 +103,4 @@ async def upload_file(
 async def download_file(*, session: Session = Depends(get_session)):
     """Download all flows as a file."""
     flows = read_flows(session=session)
-    return {"file": json.dumps([flow.dict() for flow in flows])}
+    return {"file": json.dumps([flow.dict() for flow in flows], default=str)}
