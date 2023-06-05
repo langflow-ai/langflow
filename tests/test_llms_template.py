@@ -71,7 +71,7 @@ def test_llms_settings(client: TestClient):
 #         "show": True,
 #         "multiline": False,
 #         "password": False,
-#         "options": ["text-generation", "text2text-generation"],
+#         "options": ["text-generation", "text2text-generation", "summarization"],
 #         "name": "task",
 #         "type": "str",
 #         "list": True,

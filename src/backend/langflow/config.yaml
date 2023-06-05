@@ -54,9 +54,8 @@ llms:
   - ChatOpenAI
   - LlamaCpp
   - HuggingFaceTextGenInference
-  - SelfHostedHuggingFaceLLM
+  # - SelfHostedHuggingFaceLLM
   - HuggingFacePipeline
-
   - CTransformers
   - Cohere
 memories:

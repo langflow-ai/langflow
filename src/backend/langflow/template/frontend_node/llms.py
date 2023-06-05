@@ -18,9 +18,26 @@ class LLMFrontendNode(FrontendNode):
             "huggingfacehub_api_token": "HuggingFace Hub API Token",
         }
         FrontendNode.format_field(field, name)
-        SHOW_FIELDS = ["repo_id"]
+
+        SHOW_FIELDS = [
+            "repo_id",
+            "top_k",
+            "top_p",
+            "temperature",
+            "max_new_tokens",
+            "typical_p",
+        ]
+
+        SHOW_ADVANCED_FIELDS = [
+            "verbose",
+            "cache",
+        ]
+
         if field.name in SHOW_FIELDS:
             field.show = True
+        elif field.name in SHOW_ADVANCED_FIELDS:
+            field.show = True
+            field.advanced = True
 
         if "api" in field.name and ("key" in field.name or "token" in field.name):
             field.password = True
@@ -30,11 +47,14 @@ class LLMFrontendNode(FrontendNode):
             field.required = False
             field.advanced = False
 
-        if field.name == "task":
+        if field.name in "inference_server_url":
+            field.required = True
+            field.show = True
+        elif field.name == "task":
             field.required = True
             field.show = True
             field.is_list = True
-            field.options = ["text-generation", "text2text-generation"]
+            field.options = ["text-generation", "text2text-generation", "summarization"]
             field.advanced = True
 
         if display_name := display_names_dict.get(field.name):
@@ -46,5 +66,8 @@ class LLMFrontendNode(FrontendNode):
         elif field.name in ["model_name", "temperature", "model_file", "model_type"]:
             field.advanced = False
             field.show = True
+
+        # TODO: Delete, just for test
+        # field.show = True
 
         LLMFrontendNode.format_openai_field(field)
