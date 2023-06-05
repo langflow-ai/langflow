@@ -80,41 +80,8 @@ export default function HomePage() {
         className="w-full h-full flex flex-col"
       >
         <TabsList className="w-full flex justify-between items-center border-b">
-          <div className="flex gap-2 justify-start w-96">
-            <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-2 text-xl bg-foreground px-2 py-1 font-semibold text-secondary">
-                <span className="text-2xl">⛓️</span>{" "}
-                <ChevronDownIcon className="w-3" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-40">
-                <DropdownMenuLabel>Flow</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => {
-                    openPopUp(<ImportModal />);
-                  }}
-                >
-                  <ArrowUpTrayIcon className="w-4 h-4 mr-2" />
-                  Import
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    openPopUp(<ExportModal />);
-                  }}
-                >
-                  <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
-                  Export
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    openPopUp(<ApiModal flowName={flows[tabIndex].name} />);
-                  }}
-                >
-                  <CodeBracketSquareIcon className="w-4 h-4 mr-2" />
-                  Code
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <div className="flex gap-2 justify-start items-center w-96">
+            <span className="text-2xl ml-4">⛓️</span>
             <div className="flex gap-2 p-2">
               <TabsTrigger value="myflow" className="flex items-center gap-2">
                 {flows[tabIndex].name}
@@ -123,6 +90,33 @@ export default function HomePage() {
                     <ChevronDownIcon className="w-3" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-40">
+                    <DropdownMenuLabel>Current Flow</DropdownMenuLabel>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        openPopUp(<ImportModal />);
+                      }}
+                    >
+                      <ArrowUpTrayIcon className="w-4 h-4 mr-2" />
+                      Import
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        openPopUp(<ExportModal />);
+                      }}
+                    >
+                      <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
+                      Export
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        openPopUp(<ApiModal flowName={flows[tabIndex].name} />);
+                      }}
+                    >
+                      <CodeBracketSquareIcon className="w-4 h-4 mr-2" />
+                      Code
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>Flows</DropdownMenuLabel>
                     <DropdownMenuRadioGroup
                       value={tabIndex.toString()}
                       onValueChange={(value) => {
@@ -132,12 +126,11 @@ export default function HomePage() {
                       {flows.map((flow, idx) => {
                         return (
                           <DropdownMenuRadioItem value={idx.toString()}>
-                            {flow.name}
+                            <span onDoubleClick={() => {}}>{flow.name}</span>
                           </DropdownMenuRadioItem>
                         );
                       })}
                     </DropdownMenuRadioGroup>
-                    <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={() => {
                         addFlow();
