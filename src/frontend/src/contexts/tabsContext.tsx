@@ -346,7 +346,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           );
         }
       });
-      updateIds(data, getNodeId);
+      // updateIds(data, getNodeId);
     }
     // Create a new flow with a default name if no flow is provided.
     let newFlow: FlowType = {
