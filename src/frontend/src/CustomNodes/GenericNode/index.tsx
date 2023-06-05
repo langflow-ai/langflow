@@ -28,8 +28,8 @@ import NodeModal from "../../modals/NodeModal";
 import { useCallback } from "react";
 import { TabsContext } from "../../contexts/tabsContext";
 import { debounce } from "../../utils";
-import TooltipReact from "../../components/ReactTooltipComponent";
 import Tooltip from "../../components/TooltipComponent";
+import ShadTooltip from "../../components/ShadTooltipComponent";
 export default function GenericNode({
   data,
   selected,
@@ -115,14 +115,9 @@ export default function GenericNode({
             }}
           />
           <div className="ml-2 truncate">
-            <TooltipReact
-              delayShow={1000}
-              selector={`node-selector-${data.type}`}
-              htmlContent={data.type}
-              position="top"
-            >
+            <ShadTooltip delayDuration={1500} content={data.type}>
               <div className="ml-2 truncate">{data.type}</div>
-            </TooltipReact>
+            </ShadTooltip>
           </div>
         </div>
         <div className="flex gap-3">
@@ -253,11 +248,7 @@ export default function GenericNode({
                         : toTitleCase(t)
                     }
                     name={t}
-                    tooltipTitle={
-                      "Type: " +
-                      data.node.template[t].type +
-                      (data.node.template[t].list ? " list" : "")
-                    }
+                    tooltipTitle={data.node.template[t].type}
                     required={data.node.template[t].required}
                     id={data.node.template[t].type + "|" + t + "|" + data.id}
                     left={true}
@@ -283,7 +274,7 @@ export default function GenericNode({
             data={data}
             color={nodeColors[types[data.type]] ?? nodeColors.unknown}
             title={data.type}
-            tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
+            tooltipTitle={`${data.node.base_classes.join("\n")}`}
             id={[data.type, data.id, ...data.node.base_classes].join("|")}
             type={data.node.base_classes.join("|")}
             left={false}
