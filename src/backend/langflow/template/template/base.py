@@ -26,6 +26,7 @@ class Template(BaseModel):
         result["_type"] = self.type_name  # type: ignore
         if self.root_field:
             result["root_field"] = self.root_field.to_dict()
+
         return result
 
     def add_field(self, field: TemplateField) -> None:

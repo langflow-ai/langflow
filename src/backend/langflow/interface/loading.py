@@ -62,6 +62,9 @@ def convert_kwargs(params):
 
 
 def instantiate_based_on_type(class_object, base_type, node_type, params):
+    """Instantiate class based on type"""
+    # always pop root_field if it exists
+    params.pop("root_field", None)
     if base_type == "agents":
         return instantiate_agent(class_object, params)
     elif base_type == "prompts":
