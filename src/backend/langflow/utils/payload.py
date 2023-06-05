@@ -28,16 +28,16 @@ def extract_input_variables(nodes):
     return nodes
 
 
-def get_root_node(graph):
+def get_root_vertex(graph):
     """
     Returns the root node of the template.
     """
     incoming_edges = {edge.source for edge in graph.edges}
 
-    if not incoming_edges and len(graph.nodes) == 1:
-        return graph.nodes[0]
+    if not incoming_edges and len(graph.vertices) == 1:
+        return graph.vertices[0]
 
-    return next((node for node in graph.nodes if node not in incoming_edges), None)
+    return next((node for node in graph.vertices if node not in incoming_edges), None)
 
 
 def build_json(root, graph) -> Dict:
@@ -50,7 +50,7 @@ def build_json(root, graph) -> Dict:
         # Otherwise, find all children whose type matches the type
         # specified in the template
         node_type = root.vertex_type
-        local_nodes = graph.get_nodes_with_target(root)
+        local_nodes = graph.get_vertices_with_target(root)
 
     if len(local_nodes) == 1:
         return build_json(local_nodes[0], graph)

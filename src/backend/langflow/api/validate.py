@@ -46,7 +46,7 @@ def post_validate_node(node_id: str, data: dict):
         # build graph
         graph = build_graph(data)
         # validate node
-        node = graph.get_node(node_id)
+        node = graph.get_vertex(node_id)
         if node is None:
             raise ValueError(f"Node {node_id} not found")
         if not isinstance(node, VectorStoreVertex):

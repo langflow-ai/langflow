@@ -1,3 +1,4 @@
+# Path: src/backend/langflow/graph/graph_map.py
 from copy import deepcopy
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -7,6 +8,7 @@ from langflow.graph import Graph
 from langflow.graph.vertex.types import LangChainVertex
 from langflow.graph.vertex.types import ConnectorVertex
 from langflow.interface.run import get_result_and_steps
+from collections import deque
 
 
 class GraphMap:
@@ -14,7 +16,7 @@ class GraphMap:
         self.graph_data = graph_data
         if is_first_message:
             self._build_elements.clear_cache()
-        self.graph, self.elements = GraphMap._build_elements(graph_data)
+        self.graph, self.runnable_elements = GraphMap._build_elements(graph_data)
         self.intermediate_steps: List[str] = []
         self.node_cache: Dict[Union[Vertex, "ConnectorVertex"], Any] = {}
         self.last_node: Optional[Union[Vertex, "ConnectorVertex"]] = None
@@ -23,7 +25,7 @@ class GraphMap:
         result = input
         built_object = None
         self.results = []
-        for element in self.elements:
+        for element in self.runnable_elements:
             # If the element is the same as the last one, reuse the cached result
             if element == self.last_node:
                 result = self.node_cache[element]
@@ -55,33 +57,44 @@ class GraphMap:
     ) -> Tuple[Graph, List[Union[Vertex, ConnectorVertex]]]:
         graph = Graph(graph_data=graph_data)
         graph_copy = deepcopy(graph)
-        elements: List[Vertex] = []
+        sorted_vertices = GraphMap.topological_sort(graph)
 
-        current_root = graph.root_node
-        while current_root:
-            if current_root.can_be_root:
-                graph.nodes.remove(current_root)
-                edges_to_remove = [
-                    edge
-                    for edge in graph.edges
-                    if edge.source == current_root or edge.target == current_root
-                ]
-                for edge in edges_to_remove:
-                    graph.edges.remove(edge)
-                for node in graph.nodes:
-                    node.edges = [
-                        edge
-                        for edge in node.edges
-                        if edge.source != current_root and edge.target != current_root
-                    ]
-                elements.insert(0, current_root)
-                current_root = graph.root_node
-            else:
-                current_root = next(
-                    (node for node in graph.nodes if node.can_be_root), None
-                )
-        # Build elements to cache built objects
-        for element in elements:
-            # Build the element but keep the node instead of the object
-            element.build()
-        return graph_copy, elements
+        for vertex in sorted_vertices:
+            vertex.build()
+
+        runnable_elements = [vertex for vertex in sorted_vertices if vertex.can_be_root]
+        return graph_copy, runnable_elements
+
+    @staticmethod
+    def topological_sort(graph):
+        """Perform a topological sort of vertices in the graph."""
+        indegree_map = {node: 0 for node in graph.vertices}
+        for edge in graph.edges:
+            indegree_map[edge.target] += 1
+
+        # Use a queue to process vertices with in-degree of 0.
+        zero_indegree_queue = deque(
+            node for node, indegree in indegree_map.items() if indegree == 0
+        )
+        sorted_vertices = []
+
+        while zero_indegree_queue:
+            node = zero_indegree_queue.popleft()
+            sorted_vertices.append(node)
+
+            # Decrement the in-degrees of the neighboring vertices.
+            for edge in node.edges:
+                if edge.source == node:
+                    indegree_map[edge.target] -= 1
+
+                    # If a neighboring node's in-degree drops to 0, add it to the queue.
+                    if indegree_map[edge.target] == 0:
+                        zero_indegree_queue.append(edge.target)
+
+        # If not all vertices are in sorted_vertices, the graph has at least one cycle.
+        if len(sorted_vertices) != len(graph.vertices):
+            raise ValueError(
+                "The graph has at least one cycle and cannot be sorted topologically."
+            )
+
+        return sorted_vertices
