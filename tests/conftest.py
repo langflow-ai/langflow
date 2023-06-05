@@ -108,6 +108,5 @@ def client_fixture(session: Session):  #
 
     app.dependency_overrides[get_session] = get_session_override  #
 
-    client = TestClient(app)  #
-    yield client  #
+    yield TestClient(app)
     app.dependency_overrides.clear()  #
