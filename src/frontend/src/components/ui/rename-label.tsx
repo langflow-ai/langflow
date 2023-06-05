@@ -7,9 +7,14 @@ export default function RenameLabel(props) {
     ? [props.rename, props.setRename]
     : [internalState, setInternalState];
 
+  useEffect(() => {
+    if (props.value) setMyValue(props.value);
+  }, [props.value]);
+
   const [myValue, setMyValue] = useState(props.value);
   useEffect(() => {
     if (isRename) {
+      setMyValue(props.value);
       document.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
           setIsRename(false);
