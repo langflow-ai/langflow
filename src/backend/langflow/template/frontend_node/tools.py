@@ -59,11 +59,33 @@ class ToolNode(FrontendNode):
         return super().to_dict()
 
 
-class PythonFunctionNode(FrontendNode):
-    name: str = "PythonFunction"
+class PythonFunctionToolNode(FrontendNode):
+    name: str = "PythonFunctionTool"
     template: Template = Template(
-        type_name="python_function",
+        type_name="PythonFunctionTool",
         fields=[
+            TemplateField(
+                field_type="str",
+                required=True,
+                placeholder="",
+                is_list=False,
+                show=True,
+                multiline=False,
+                value="",
+                name="name",
+                advanced=False,
+            ),
+            TemplateField(
+                field_type="str",
+                required=True,
+                placeholder="",
+                is_list=False,
+                show=True,
+                multiline=False,
+                value="",
+                name="description",
+                advanced=False,
+            ),
             TemplateField(
                 field_type="code",
                 required=True,
@@ -73,11 +95,11 @@ class PythonFunctionNode(FrontendNode):
                 value=DEFAULT_PYTHON_FUNCTION,
                 name="code",
                 advanced=False,
-            )
+            ),
         ],
     )
     description: str = "Python function to be executed."
-    base_classes: list[str] = ["function"]
+    base_classes: list[str] = ["Tool"]
 
     def to_dict(self):
         return super().to_dict()
