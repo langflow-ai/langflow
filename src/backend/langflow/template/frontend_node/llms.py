@@ -30,7 +30,6 @@ class LLMFrontendNode(FrontendNode):
 
         SHOW_ADVANCED_FIELDS = [
             "verbose",
-            "cache",
         ]
 
         if field.name in SHOW_FIELDS:
