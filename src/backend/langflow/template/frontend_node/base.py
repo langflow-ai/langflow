@@ -16,6 +16,12 @@ class FrontendNode(BaseModel):
     name: str = ""
 
     def to_dict(self) -> dict:
+        """Returns a dict with the following structure:
+        {name: {template: {fields}, description: str}}
+        """
+        if root_type := getattr(self.template.root_field, "field_type", None):
+            if root_type not in self.base_classes:
+                self.base_classes.append(root_type)
         return {
             self.name: {
                 "template": self.template.to_dict(self.format_field),

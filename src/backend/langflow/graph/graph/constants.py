@@ -2,6 +2,7 @@ from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.types import (
     AgentVertex,
     ChainVertex,
+    ConnectorVertex,
     DocumentLoaderVertex,
     EmbeddingVertex,
     LLMVertex,
@@ -25,6 +26,7 @@ from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.tools.base import tool_creator
 from langflow.interface.vector_store.base import vectorstore_creator
 from langflow.interface.wrappers.base import wrapper_creator
+from langflow.interface.connectors.base import connector_creator
 
 
 from typing import Dict, Type
@@ -46,4 +48,5 @@ VERTEX_TYPE_MAP: Dict[str, Type[Vertex]] = {
     **{t: VectorStoreVertex for t in vectorstore_creator.to_list()},
     **{t: DocumentLoaderVertex for t in documentloader_creator.to_list()},
     **{t: TextSplitterVertex for t in textsplitter_creator.to_list()},
+    **{t: ConnectorVertex for t in connector_creator.to_list()},
 }
