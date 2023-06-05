@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import AsyncGenerator
 from langflow.api.database import get_session
 
+from langflow.graph.graph.base import Graph
 import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
@@ -49,7 +50,6 @@ def client():
 
 def get_graph(_type="basic"):
     """Get a graph from a json file"""
-    from langflow.graph.graph import Graph
 
     if _type == "basic":
         path = pytest.BASIC_EXAMPLE_PATH
