@@ -33,6 +33,7 @@ import { FlowType, NodeType } from "./types/flow";
 import { APITemplateType, TemplateVariableType } from "./types/api";
 import _ from "lodash";
 import { ChromaIcon } from "./icons/ChromaIcon";
+import { AnthropicIcon } from "./icons/Anthropic";
 import { AirbyteIcon } from "./icons/Airbyte";
 import { AzIcon } from "./icons/AzLogo";
 import { BingIcon } from "./icons/Bing";
@@ -169,6 +170,8 @@ export const nodeIcons: {
   AirbyteJSONLoader: AirbyteIcon,
   // SerpAPIWrapper: SerperIcon,
   // AZLyricsLoader: AzIcon,
+  Anthropic: AnthropicIcon,
+  ChatAnthropic: AnthropicIcon,
   BingSearchAPIWrapper: BingIcon,
   BingSearchRun: BingIcon,
   Cohere: CohereIcon,
