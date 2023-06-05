@@ -17,6 +17,7 @@ import { PopUpContext } from "../../contexts/popUpContext";
 import { typesContext } from "../../contexts/typesContext";
 import {
   ArrowDownTrayIcon,
+  ArrowTopRightOnSquareIcon,
   ArrowUpTrayIcon,
   ChevronDownIcon,
   CodeBracketSquareIcon,
@@ -44,11 +45,15 @@ import { FaGithub } from "react-icons/fa";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
 } from "../../components/ui/card";
 import RenameLabel from "../../components/ui/rename-label";
+import _ from "lodash";
+import { Badge } from "../../components/ui/badge";
+import { OpenAiIcon } from "../../icons/OpenAi";
 
 export default function HomePage() {
   const {
@@ -61,6 +66,7 @@ export default function HomePage() {
     downloadFlow,
   } = useContext(TabsContext);
   const { openPopUp } = useContext(PopUpContext);
+  const { updateFlow } = useContext(TabsContext);
   const { templates } = useContext(typesContext);
   const AlertWidth = 384;
   const { dark, setDark } = useContext(darkContext);
@@ -89,7 +95,13 @@ export default function HomePage() {
               <TabsTrigger value="myflow" className="flex items-center gap-2">
                 <RenameLabel
                   value={flows[tabIndex].name}
-                  setValue={() => {}}
+                  setValue={(value) => {
+                    if (value !== "") {
+                      let newFlow = _.cloneDeep(flows[tabIndex]);
+                      newFlow.name = value;
+                      updateFlow(newFlow);
+                    }
+                  }}
                   rename={rename}
                   setRename={setRename}
                 />
@@ -251,28 +263,60 @@ export default function HomePage() {
             {flows.map((flow, idx) => (
               <Card className="group">
                 <CardHeader>
-                  <CardTitle className="flex justify-between items-center h-6">
-                    {flow.name}
+                  <CardTitle className="flex justify-between items-start">
+                    <div className="flex gap-4 items-center">
+                      <span
+                        className={
+                          "rounded-md w-10 h-10 flex items-center justify-center text-2xl " +
+                          (idx === 0 ? "bg-blue-100" : " bg-orange-100")
+                        }
+                      >
+                        {idx === 0 ? "🤖" : "🛠️"}
+                      </span>
+                      {flow.name}
+                    </div>
                     <button
                       onClick={() => {
                         removeFlow(flow.id);
                       }}
                     >
-                      <TrashIcon className="w-5 text-primary hidden group-hover:block " />
+                      <TrashIcon className="w-5 text-primary opacity-0 group-hover:opacity-100 transition-all" />
                     </button>
                   </CardTitle>
+                  <CardDescription className="pt-2 pb-8">
+                    {/* {flow.description} */}
+                    {idx === 0 ? "This is a new agent" : "This is a new tool"}
+                  </CardDescription>
                 </CardHeader>
+
                 <CardFooter>
-                  <Button
-                    variant="outline"
-                    className=""
-                    onClick={() => {
-                      setTabIndex(idx);
-                      setActiveTab("myflow");
-                    }}
-                  >
-                    Open Flow
-                  </Button>
+                  <div className="flex gap-2 w-full justify-between items-end">
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="secondary">
+                        {idx === 0 ? "Agent" : "Tool"}
+                      </Badge>
+                      {idx === 0 && (
+                        <Badge variant="secondary">
+                          <div className="w-3">
+                            <OpenAiIcon />
+                          </div>
+                          <span className="text-base">&nbsp;</span>OpenAI+
+                        </Badge>
+                      )}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all"
+                      onClick={() => {
+                        setTabIndex(idx);
+                        setActiveTab("myflow");
+                      }}
+                    >
+                      <ArrowTopRightOnSquareIcon className="w-4 mr-2" />
+                      Edit Flow
+                    </Button>
+                  </div>
                 </CardFooter>
               </Card>
             ))}
