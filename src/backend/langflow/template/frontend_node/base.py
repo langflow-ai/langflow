@@ -125,6 +125,9 @@ class FrontendNode(BaseModel):
         elif name == "ChatOpenAI" and key == "model_name":
             field.options = constants.CHAT_OPENAI_MODELS
             field.is_list = True
+        elif (name == "Anthropic" or name == "ChatAnthropic") and key == "model_name":
+            field.options = constants.ANTHROPIC_MODELS
+            field.is_list = True
         if "api_key" in key and "OpenAI" in str(name):
             field.display_name = "OpenAI API Key"
             field.required = False

@@ -1,22 +1,22 @@
 from typing import Any, Dict, List, Optional, Union
 
-from langflow.graph.node.base import Node
+from langflow.graph.vertex.base import Vertex
 from langflow.graph.utils import extract_input_variables_from_prompt
 
 
-class AgentNode(Node):
+class AgentVertex(Vertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="agents")
 
-        self.tools: List[ToolNode] = []
-        self.chains: List[ChainNode] = []
+        self.tools: List[ToolVertex] = []
+        self.chains: List[ChainVertex] = []
 
     def _set_tools_and_chains(self) -> None:
         for edge in self.edges:
             source_node = edge.source
-            if isinstance(source_node, ToolNode):
+            if isinstance(source_node, ToolVertex):
                 self.tools.append(source_node)
-            elif isinstance(source_node, ChainNode):
+            elif isinstance(source_node, ChainVertex):
                 self.chains.append(source_node)
 
     def build(self, force: bool = False) -> Any:
@@ -33,24 +33,28 @@ class AgentNode(Node):
             self._build()
 
         #! Cannot deepcopy VectorStore, VectorStoreRouter, or SQL agents
-        if self.node_type in ["VectorStoreAgent", "VectorStoreRouterAgent", "SQLAgent"]:
+        if self.vertex_type in [
+            "VectorStoreAgent",
+            "VectorStoreRouterAgent",
+            "SQLAgent",
+        ]:
             return self._built_object
         return self._built_object
 
 
-class ToolNode(Node):
+class ToolVertex(Vertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="tools")
 
 
-class PromptNode(Node):
+class PromptVertex(Vertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="prompts")
 
     def build(
         self,
         force: bool = False,
-        tools: Optional[Union[List[Node], List[ToolNode]]] = None,
+        tools: Optional[Union[List[Vertex], List[ToolVertex]]] = None,
     ) -> Any:
         if not self._built or force:
             if (
@@ -59,7 +63,7 @@ class PromptNode(Node):
             ):
                 self.params["input_variables"] = []
             # Check if it is a ZeroShotPrompt and needs a tool
-            if "ShotPrompt" in self.node_type:
+            if "ShotPrompt" in self.vertex_type:
                 tools = (
                     [tool_node.build() for tool_node in tools]
                     if tools is not None
@@ -83,31 +87,31 @@ class PromptNode(Node):
         return self._built_object
 
 
-class ChainNode(Node):
+class ChainVertex(Vertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="chains")
 
     def build(
         self,
         force: bool = False,
-        tools: Optional[Union[List[Node], List[ToolNode]]] = None,
+        tools: Optional[Union[List[Vertex], List[ToolVertex]]] = None,
     ) -> Any:
         if not self._built or force:
             # Check if the chain requires a PromptNode
             for key, value in self.params.items():
-                if isinstance(value, PromptNode):
+                if isinstance(value, PromptVertex):
                     # Build the PromptNode, passing the tools if available
                     self.params[key] = value.build(tools=tools, force=force)
 
             self._build()
 
         #! Cannot deepcopy SQLDatabaseChain
-        if self.node_type in ["SQLDatabaseChain"]:
+        if self.vertex_type in ["SQLDatabaseChain"]:
             return self._built_object
         return self._built_object
 
 
-class LLMNode(Node):
+class LLMVertex(Vertex):
     built_node_type = None
     class_built_object = None
 
@@ -117,28 +121,28 @@ class LLMNode(Node):
     def build(self, force: bool = False) -> Any:
         # LLM is different because some models might take up too much memory
         # or time to load. So we only load them when we need them.ß
-        if self.node_type == self.built_node_type:
+        if self.vertex_type == self.built_node_type:
             return self.class_built_object
         if not self._built or force:
             self._build()
-            self.built_node_type = self.node_type
+            self.built_node_type = self.vertex_type
             self.class_built_object = self._built_object
         # Avoid deepcopying the LLM
         # that are loaded from a file
         return self._built_object
 
 
-class ToolkitNode(Node):
+class ToolkitVertex(Vertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="toolkits")
 
 
-class FileToolNode(ToolNode):
+class FileToolVertex(ToolVertex):
     def __init__(self, data: Dict):
         super().__init__(data)
 
 
-class WrapperNode(Node):
+class WrapperVertex(Vertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="wrappers")
 
@@ -150,7 +154,7 @@ class WrapperNode(Node):
         return self._built_object
 
 
-class DocumentLoaderNode(Node):
+class DocumentLoaderVertex(Vertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="documentloaders")
 
@@ -158,17 +162,17 @@ class DocumentLoaderNode(Node):
         # This built_object is a list of documents. Maybe we should
         # show how many documents are in the list?
         if self._built_object:
-            return f"""{self.node_type}({len(self._built_object)} documents)
+            return f"""{self.vertex_type}({len(self._built_object)} documents)
             Documents: {self._built_object[:3]}..."""
-        return f"{self.node_type}()"
+        return f"{self.vertex_type}()"
 
 
-class EmbeddingNode(Node):
+class EmbeddingVertex(Vertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="embeddings")
 
 
-class VectorStoreNode(Node):
+class VectorStoreVertex(Vertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="vectorstores")
 
@@ -176,12 +180,12 @@ class VectorStoreNode(Node):
         return "Vector stores can take time to build. It will build on the first query."
 
 
-class MemoryNode(Node):
+class MemoryVertex(Vertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="memory")
 
 
-class TextSplitterNode(Node):
+class TextSplitterVertex(Vertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="textsplitters")
 
@@ -189,5 +193,6 @@ class TextSplitterNode(Node):
         # This built_object is a list of documents. Maybe we should
         # show how many documents are in the list?
         if self._built_object:
-            return f"""{self.node_type}({len(self._built_object)} documents)\nDocuments: {self._built_object[:3]}..."""
-        return f"{self.node_type}()"
+            return f"""{self.vertex_type}({len(self._built_object)} documents)
+            \nDocuments: {self._built_object[:3]}..."""
+        return f"{self.vertex_type}()"
