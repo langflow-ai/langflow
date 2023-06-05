@@ -35,7 +35,7 @@ async def get_load(
         if flow_obj is None:
             raise ValueError(f"Flow {flow_id} not found")
         graph_data: GraphData = json.loads(flow_obj.flow)
-        data = graph_data.dict()
+        data = graph_data.get("data")
         response = process_graph_cached(data, predict_request.message)
         return PredictResponse(
             result=response.get("result", ""),
