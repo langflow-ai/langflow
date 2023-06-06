@@ -9,12 +9,13 @@ import {
 import { useContext, useEffect, useState, useRef } from "react";
 import { typesContext } from "../../../../contexts/typesContext";
 import { APIClassType, APIObjectType } from "../../../../types/api";
-import TooltipReact from "../../../../components/ReactTooltipComponent";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import ShadTooltip from "../../../../components/ShadTooltipComponent";
 
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);
   const [dataFilter, setFilterData] = useState(data);
+  const [search, setSearch] = useState("");
 
   function onDragStart(
     event: React.DragEvent<any>,
@@ -58,6 +59,7 @@ export default function ExtraSidebar() {
           className="dark:text-white focus:outline-none block w-full rounded-md py-1.5 ps-3 pr-9 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 sm:text-sm sm:leading-6 dark:ring-0 dark:bg-[#2d3747] dark:focus:outline-none"
           onChange={(e) => {
             handleSearchInput(e.target.value);
+            setSearch(e.target.value);
           }}
         />
         <div className="absolute inset-y-0 right-0 flex py-1.5 pr-3 items-center">
@@ -71,6 +73,7 @@ export default function ExtraSidebar() {
           .map((d: keyof APIObjectType, i) =>
             Object.keys(dataFilter[d]).length > 0 ? (
               <DisclosureComponent
+                openDisc={search.length == 0 ? false : true}
                 key={i}
                 button={{
                   title: nodeNames[d] ?? nodeNames.unknown,
@@ -81,12 +84,10 @@ export default function ExtraSidebar() {
                   {Object.keys(dataFilter[d])
                     .sort()
                     .map((t: string, k) => (
-                      <TooltipReact
-                        selector={t}
-                        htmlContent={t}
-                        position="right"
-                        delayShow={1500}
-                        key={k}
+                      <ShadTooltip
+                        content={t}
+                        delayDuration={1500}
+                        side="right"
                       >
                         <div key={k} data-tooltip-id={t}>
                           <div
@@ -118,7 +119,7 @@ export default function ExtraSidebar() {
                             </div>
                           </div>
                         </div>
-                      </TooltipReact>
+                      </ShadTooltip>
                     ))}
                 </div>
               </DisclosureComponent>

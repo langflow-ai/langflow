@@ -1,12 +1,12 @@
 from typing import Dict, List, Type, Union
 
 from langflow.graph.edge.base import Edge
-from langflow.graph.graph.constants import NODE_TYPE_MAP
-from langflow.graph.node.base import Node
-from langflow.graph.node.types import (
-    FileToolNode,
-    LLMNode,
-    ToolkitNode,
+from langflow.graph.graph.constants import VERTEX_TYPE_MAP
+from langflow.graph.vertex.base import Vertex
+from langflow.graph.vertex.types import (
+    FileToolVertex,
+    LLMVertex,
+    ToolkitVertex,
 )
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
@@ -24,9 +24,30 @@ class Graph:
         self._edges = edges
         self._build_graph()
 
+    @classmethod
+    @classmethod
+    def from_payload(cls, payload: Dict) -> "Graph":
+        """
+        Creates a graph from a payload.
+
+        Args:
+            payload (Dict): The payload to create the graph from.
+
+        Returns:
+            Graph: The created graph.
+        """
+        if "data" in payload:
+            payload = payload["data"]
+        try:
+            nodes = payload["nodes"]
+            edges = payload["edges"]
+            return cls(nodes, edges)
+        except KeyError as exc:
+            raise ValueError("Invalid payload") from exc
+
     def _build_graph(self) -> None:
         """Builds the graph from the nodes and edges."""
-        self.nodes = self._build_nodes()
+        self.nodes = self._build_vertices()
         self.edges = self._build_edges()
         for edge in self.edges:
             edge.source.add_edge(edge)
@@ -43,12 +64,12 @@ class Graph:
         llm_node = None
         for node in self.nodes:
             node._build_params()
-            if isinstance(node, LLMNode):
+            if isinstance(node, LLMVertex):
                 llm_node = node
 
         if llm_node:
             for node in self.nodes:
-                if isinstance(node, ToolkitNode):
+                if isinstance(node, ToolkitVertex):
                     node.params["llm"] = llm_node
 
     def _remove_invalid_nodes(self) -> None:
@@ -60,23 +81,23 @@ class Graph:
             or (len(self.nodes) == 1 and len(self.edges) == 0)
         ]
 
-    def _validate_node(self, node: Node) -> bool:
+    def _validate_node(self, node: Vertex) -> bool:
         """Validates a node."""
         # All nodes that do not have edges are invalid
         return len(node.edges) > 0
 
-    def get_node(self, node_id: str) -> Union[None, Node]:
+    def get_node(self, node_id: str) -> Union[None, Vertex]:
         """Returns a node by id."""
         return next((node for node in self.nodes if node.id == node_id), None)
 
-    def get_nodes_with_target(self, node: Node) -> List[Node]:
+    def get_nodes_with_target(self, node: Vertex) -> List[Vertex]:
         """Returns the nodes connected to a node."""
-        connected_nodes: List[Node] = [
+        connected_nodes: List[Vertex] = [
             edge.source for edge in self.edges if edge.target == node
         ]
         return connected_nodes
 
-    def build(self) -> List[Node]:
+    def build(self) -> List[Vertex]:
         """Builds the graph."""
         # Get root node
         root_node = payload.get_root_node(self)
@@ -84,9 +105,9 @@ class Graph:
             raise ValueError("No root node found")
         return root_node.build()
 
-    def get_node_neighbors(self, node: Node) -> Dict[Node, int]:
+    def get_node_neighbors(self, node: Vertex) -> Dict[Vertex, int]:
         """Returns the neighbors of a node."""
-        neighbors: Dict[Node, int] = {}
+        neighbors: Dict[Vertex, int] = {}
         for edge in self.edges:
             if edge.source == node:
                 neighbor = edge.target
@@ -117,28 +138,30 @@ class Graph:
             edges.append(Edge(source, target))
         return edges
 
-    def _get_node_class(self, node_type: str, node_lc_type: str) -> Type[Node]:
+    def _get_vertex_class(self, node_type: str, node_lc_type: str) -> Type[Vertex]:
         """Returns the node class based on the node type."""
         if node_type in FILE_TOOLS:
-            return FileToolNode
-        if node_type in NODE_TYPE_MAP:
-            return NODE_TYPE_MAP[node_type]
-        return NODE_TYPE_MAP[node_lc_type] if node_lc_type in NODE_TYPE_MAP else Node
+            return FileToolVertex
+        if node_type in VERTEX_TYPE_MAP:
+            return VERTEX_TYPE_MAP[node_type]
+        return (
+            VERTEX_TYPE_MAP[node_lc_type] if node_lc_type in VERTEX_TYPE_MAP else Vertex
+        )
 
-    def _build_nodes(self) -> List[Node]:
-        """Builds the nodes of the graph."""
-        nodes: List[Node] = []
+    def _build_vertices(self) -> List[Vertex]:
+        """Builds the vertices of the graph."""
+        nodes: List[Vertex] = []
         for node in self._nodes:
             node_data = node["data"]
             node_type: str = node_data["type"]  # type: ignore
             node_lc_type: str = node_data["node"]["template"]["_type"]  # type: ignore
 
-            NodeClass = self._get_node_class(node_type, node_lc_type)
-            nodes.append(NodeClass(node))
+            VertexClass = self._get_vertex_class(node_type, node_lc_type)
+            nodes.append(VertexClass(node))
 
         return nodes
 
-    def get_children_by_node_type(self, node: Node, node_type: str) -> List[Node]:
+    def get_children_by_node_type(self, node: Vertex, node_type: str) -> List[Vertex]:
         """Returns the children of a node based on the node type."""
         children = []
         node_types = [node.data["type"]]
