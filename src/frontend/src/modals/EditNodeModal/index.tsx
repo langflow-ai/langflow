@@ -27,11 +27,30 @@ import { VariableIcon } from "@heroicons/react/24/outline";
 
 export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const [open, setOpen] = useState(true);
+  const [nodeLength, setNodeLength] = useState(
+    Object.keys(data.node.template).filter(
+      (t) =>
+        t.charAt(0) !== "_" &&
+        data.node.template[t].show &&
+        (data.node.template[t].type === "str" ||
+          data.node.template[t].type === "bool" ||
+          data.node.template[t].type === "float" ||
+          data.node.template[t].type === "code" ||
+          data.node.template[t].type === "prompt" ||
+          data.node.template[t].type === "file" ||
+          data.node.template[t].type === "Any" ||
+          data.node.template[t].type === "int")
+    ).length
+  );
   const [nodeValue, setNodeValue] = useState(true);
   const { closePopUp } = useContext(PopUpContext);
   const { types } = useContext(typesContext);
   const ref = useRef();
   
+  if(nodeLength == 0){
+    closePopUp();
+  }
+
   function setModalOpen(x: boolean) {
     setOpen(x);
     if (x === false) {
@@ -85,7 +104,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className="relative flex flex-col justify-between transform h-[600px] overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all sm:my-8 w-[700px]">
+              <Dialog.Panel className="relative flex flex-col justify-between transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all sm:my-8 w-[700px]">
                 <div className=" z-50 absolute top-0 right-0 hidden pt-4 pr-4 sm:block">
                   <button
                     type="button"
@@ -122,29 +141,19 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
 
                   </div>
 
-                    <div className="flex w-full h-[415px]">
+                    <div className="flex w-full h-fit max-h-[415px]">
 
                       <div
                         className={classNames(
                           "w-full rounded-lg bg-white dark:bg-gray-800 shadow",
-                          Object.keys(data.node.template).filter(
-                            (t) =>
-                              t.charAt(0) !== "_" &&
-                              data.node.template[t].show &&
-                              (data.node.template[t].type === "str" ||
-                                data.node.template[t].type === "bool" ||
-                                data.node.template[t].type === "float" ||
-                                data.node.template[t].type === "code" ||
-                                data.node.template[t].type === "prompt" ||
-                                data.node.template[t].type === "file" ||
-                                data.node.template[t].type === "Any" ||
-                                data.node.template[t].type === "int")
-                          ).length > limitScrollFieldsModal
+                          nodeLength > limitScrollFieldsModal
                           ? "overflow-scroll overflow-x-hidden custom-scroll"
                           : "overflow-hidden"
                         )}
                       >
-                        <div className="flex flex-col gap-5 h-fit">
+                        {
+                         nodeLength > 0 &&
+                          <div className="flex flex-col gap-5 h-fit">
                           <Table>
                             <TableHeader className="border-gray-200 text-gray-500 text-xs font-medium">
                               <TableRow>
@@ -172,11 +181,11 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                 .map((n, i) => (
                                 <TableRow key={i} className="h-8">
                                   <TableCell className="p-0 text-center text-gray-900 text-xs">
-                                  {data.node.template[n].display_name
-                                        ? data.node.template[n].display_name
-                                        : data.node.template[n].name}
+                                  {data.node.template[n].name
+                                        ? data.node.template[n].name
+                                        : data.node.template[n].display_name}
                                   </TableCell>
-                                  <TableCell className="p-0 text-center text-gray-900 text-xs max-w-[140px]"
+                                  <TableCell className="p-0 text-center text-gray-900 text-xs w-[300px]"
 
                                   >
                                   {data.node.template[n].value
@@ -196,7 +205,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                               ))}
                             </TableBody>
                           </Table>
-                        </div>
+                        </div>}
                       </div>
                     </div>
                   </div>

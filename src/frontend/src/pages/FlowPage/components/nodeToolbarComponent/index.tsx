@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React, { useContext, useState } from "react";
 import { Menu, Transition } from "@headlessui/react";
 import { EllipsisVerticalIcon } from "@heroicons/react/20/solid";
 import {
@@ -18,6 +18,23 @@ import EditNodeModal from "../../../../modals/EditNodeModal";
 import TooltipReact from "../../../../components/ReactTooltipComponent";
 
 const NodeToolbarComponent = (props) => {
+
+  const [nodeLength, setNodeLength] = useState(
+    Object.keys(props.data.node.template).filter(
+      (t) =>
+        t.charAt(0) !== "_" &&
+        props.data.node.template[t].show &&
+        (props.data.node.template[t].type === "str" ||
+        props.data.node.template[t].type === "bool" ||
+        props.data.node.template[t].type === "float" ||
+        props.data.node.template[t].type === "code" ||
+        props.data.node.template[t].type === "prompt" ||
+        props.data.node.template[t].type === "file" ||
+        props.data.node.template[t].type === "Any" ||
+        props.data.node.template[t].type === "int")
+    ).length
+  );
+  
   const { setLastCopiedSelection, paste } = useContext(TabsContext);
   const reactFlowInstance = useReactFlow();
   return (
@@ -92,7 +109,12 @@ const NodeToolbarComponent = (props) => {
             position="top"
           >
             <button
-              className="hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
+              className={
+                classNames(
+                  nodeLength > 0 ?
+                "hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10" : 
+                "hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10 rounded-r-md"
+                )}
               onClick={(event) => {
                 event.preventDefault();
                 console.log(reactFlowInstance.getNode(props.data.id));
@@ -114,22 +136,23 @@ const NodeToolbarComponent = (props) => {
             </button>
           </TooltipReact>
 
-          <TooltipReact
-            delayShow={1000}
-            selector="Edit"
-            htmlContent="Edit"
-            position="top"
-          >
-            <button
-              className="hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10 rounded-r-md"
-              onClick={(event) => {
-                event.preventDefault();
-                props.openPopUp(<EditNodeModal data={props.data} />);
-              }}
-            >
-              <PencilSquareIcon className="w-5 h-5  dark:text-gray-300"></PencilSquareIcon>
-            </button>
-          </TooltipReact>
+{nodeLength > 0 &&           <TooltipReact
+    delayShow={1000}
+    selector="Edit"
+    htmlContent="Edit"
+    position="top"
+  >
+    <button
+      className="hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10 rounded-r-md"
+      onClick={(event) => {
+        event.preventDefault();
+        props.openPopUp(<EditNodeModal data={props.data} />);
+      }}
+    >
+      <PencilSquareIcon className="w-5 h-5  dark:text-gray-300"></PencilSquareIcon>
+    </button>
+  </TooltipReact>}
+
 
           {/* 
           <Menu as="div" className="relative inline-block text-left z-100">
