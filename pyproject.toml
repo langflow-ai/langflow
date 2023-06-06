@@ -60,6 +60,7 @@ cohere = "^4.6.0"
 sqlmodel = "^0.0.8"
 faiss-cpu = "^1.7.4"
 anthropic = "^0.2.9"
+orjson = "^3.9.0"
 
 
 [tool.poetry.group.dev.dependencies]
