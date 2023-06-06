@@ -78,6 +78,15 @@ types-pillow = "^9.5.0.2"
 [tool.poetry.extras]
 deploy = ["langchain-serve"]
 
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra"
+testpaths = ["tests", "integration"]
+console_output_style = "progress"
+filterwarnings = ["ignore::DeprecationWarning"]
+log_cli = true
+
+
 [tool.ruff]
 line-length = 120
 
