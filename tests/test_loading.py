@@ -2,7 +2,7 @@ import json
 
 import pytest
 from langchain.chains.base import Chain
-from langflow import load_flow_from_json
+from langflow.processing.process import load_flow_from_json
 from langflow.graph import Graph
 from langflow.utils.payload import get_root_node
 
