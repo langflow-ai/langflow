@@ -21,15 +21,17 @@ import {
 } from "../../components/ui/table";
 import { Switch } from "../../components/ui/switch";
 import ToggleShadComponent from "../../components/toggleShadComponent";
+import { VariableIcon } from "@heroicons/react/24/outline";
 
 
 
 export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const [open, setOpen] = useState(true);
+  const [nodeValue, setNodeValue] = useState(true);
   const { closePopUp } = useContext(PopUpContext);
   const { types } = useContext(typesContext);
   const ref = useRef();
-
+  
   function setModalOpen(x: boolean) {
     setOpen(x);
     if (x === false) {
@@ -46,7 +48,11 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
       }
       return true;
     });
+    setNodeValue(!nodeValue)
   }
+
+  console.log(data.node.template);
+  
 
   return (
     <Transition.Root show={open} appear={true} as={Fragment}>
@@ -109,8 +115,15 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                       </Dialog.Title>
                     </div>
                   </div>
-                  <div className="h-full w-full bg-gray-200 dark:bg-gray-900 p-4 gap-4 flex flex-row justify-center items-center">
-                    <div className="flex w-full h-full max-h-[445px]">
+                  <div className="h-full w-full bg-gray-200 dark:bg-gray-900 p-4 pt-0 gap-4 justify-center items-center">
+                  <div className="py-3 flex items-center">
+                    <VariableIcon  className="w-5 h-5 pe-1 text-orange-500 stroke-2">&nbsp;</VariableIcon>
+                  <span className="text-sm font-semibold text-gray-800">Variables</span>
+
+                  </div>
+
+                    <div className="flex w-full h-[415px]">
+
                       <div
                         className={classNames(
                           "w-full rounded-lg bg-white dark:bg-gray-800 shadow",
@@ -127,22 +140,22 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                 data.node.template[t].type === "Any" ||
                                 data.node.template[t].type === "int")
                           ).length > limitScrollFieldsModal
-                            ? "overflow-scroll overflow-x-hidden custom-scroll h-fit"
-                            : "overflow-hidden h-fit"
+                          ? "overflow-scroll overflow-x-hidden custom-scroll"
+                          : "overflow-hidden"
                         )}
                       >
-                        <div className="flex flex-col h-full gap-5 h-fit	">
+                        <div className="flex flex-col gap-5 h-fit">
                           <Table>
-                            <TableHeader>
+                            <TableHeader className="border-gray-200 text-gray-500 text-xs font-medium">
                               <TableRow>
-                                <TableHead className="w-[80px]">
-                                  Param
+                                <TableHead className="h-7 text-center">
+                                  PARAM
                                 </TableHead>
-                                <TableHead>Value</TableHead>
-                                <TableHead>Show</TableHead>
+                                <TableHead className="p-0 h-7 text-center">VALUE</TableHead>
+                                <TableHead className="text-center h-7">SHOW</TableHead>
                               </TableRow>
                             </TableHeader>
-                            <TableBody>
+                            <TableBody className="p-0">
                             { Object.keys(data.node.template).filter(
                                   (t) =>
                                     t.charAt(0) !== "_" &&
@@ -157,22 +170,24 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                       data.node.template[t].type === "int")
                                 )
                                 .map((n, i) => (
-                                <TableRow key={i}>
-                                  <TableCell className="font-medium">
-                                  {data.node.template[n].name
-                                        ? data.node.template[n].name
-                                        : data.node.template[n].display_name}
+                                <TableRow key={i} className="h-8">
+                                  <TableCell className="p-0 text-center text-gray-900 text-xs">
+                                  {data.node.template[n].display_name
+                                        ? data.node.template[n].display_name
+                                        : data.node.template[n].name}
                                   </TableCell>
-                                  <TableCell>
+                                  <TableCell className="p-0 text-center text-gray-900 text-xs max-w-[140px]"
+
+                                  >
                                   {data.node.template[n].value
                                         ? data.node.template[n].value
                                         : "-"}
                                   </TableCell>
-                                  <TableCell>
+                                  <TableCell className="p-0 text-right">
 
-                                  <div className="flex items-center space-x-2">
+                                  <div className="items-center text-center">
                                   <ToggleShadComponent 
-                                  enabled={data.node.template[n].advanced}
+                                  enabled={!data.node.template[n].advanced}
                                   setEnabled={(e) => changeAdvanced(data.node.template[n])}
                                   disabled={false} />
                                 </div>
