@@ -22,6 +22,17 @@ import {
 import { Switch } from "../../components/ui/switch";
 import ToggleShadComponent from "../../components/toggleShadComponent";
 import { VariableIcon } from "@heroicons/react/24/outline";
+import InputListComponent from "../../components/inputListComponent";
+import TextAreaComponent from "../../components/textAreaComponent";
+import InputComponent from "../../components/inputComponent";
+import ToggleComponent from "../../components/toggleComponent";
+import FloatComponent from "../../components/floatComponent";
+import Dropdown from "../../components/dropdownComponent";
+import IntComponent from "../../components/intComponent";
+import InputFileComponent from "../../components/inputFileComponent";
+import PromptAreaComponent from "../../components/promptComponent";
+import CodeAreaComponent from "../../components/codeAreaComponent";
+import { TabsContext } from "../../contexts/tabsContext";
 
 
 
@@ -46,7 +57,10 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const { closePopUp } = useContext(PopUpContext);
   const { types } = useContext(typesContext);
   const ref = useRef();
-  
+  const { save } = useContext(TabsContext);
+  const [enabled, setEnabled] = useState(
+    false
+  );
   if(nodeLength == 0){
     closePopUp();
   }
@@ -185,12 +199,136 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                         ? data.node.template[n].name
                                         : data.node.template[n].display_name}
                                   </TableCell>
-                                  <TableCell className="p-0 text-center text-gray-900 text-xs w-[300px]"
+                                  <TableCell className="p-0 text-center text-gray-900 text-xs w-[300px]">
 
-                                  >
+      {data.node.template[n].type === "str" && !data.node.template[n].options ? (
+        <div className="w-1/2">
+          {data.node.template[n].list ? (
+            <InputListComponent
+              disabled={false}
+              value={
+                !data.node.template[n].value ||
+                data.node.template[n].value === ""
+                  ? [""]
+                  : data.node.template[n].value
+              }
+              onChange={(t: string[]) => {
+                data.node.template[n].value = t;
+                save();
+              }}
+            />
+          ) : data.node.template[n].multiline ? (
+            <TextAreaComponent
+              disabled={false}
+              value={data.node.template[n].value ?? ""}
+              onChange={(t: string) => {
+                data.node.template[n].value = t;
+                save();
+              }}
+            />
+          ) : (
+            <InputComponent
+              disabled={false}
+              password={data.node.template[n].password ?? false}
+              value={data.node.template[n].value ?? ""}
+              onChange={(t) => {
+                data.node.template[n].value = t;
+                save();
+              }}
+            />
+          )}
+        </div>
+      ) : data.node.template[n].type === "bool" ? (
+        <div className="ml-auto">
+          {" "}
+          <ToggleComponent
+            disabled={false}
+            enabled={enabled}
+            setEnabled={(t) => {
+              data.node.template[n].value = t;
+              setEnabled(t);
+              save();
+            }}
+          />
+        </div>
+      ) : data.node.template[n].type === "float" ? (
+        <div className="w-1/2">
+          <FloatComponent
+            disabled={false}
+            value={data.node.template[n].value ?? ""}
+            onChange={(t) => {
+              data.node.template[n].value = t;
+              save();
+            }}
+          />
+        </div>
+      ) : data.node.template[n].type === "str" && data.node.template[n].options ? (
+        <div className="w-1/2">
+          <Dropdown
+            options={data.node.template[n].options}
+            onSelect={(newValue) => (data.node.template[n].value = newValue)}
+            value={data.node.template[n].value ?? "Choose an option"}
+          ></Dropdown>
+        </div>
+      ) : data.node.template[n].type === "int" ? (
+        <div className="w-1/2">
+          <IntComponent
+            disabled={false}
+            value={data.node.template[n].value ?? ""}
+            onChange={(t) => {
+              data.node.template[n].value = t;
+              save();
+            }}
+          />
+        </div>
+      ) : data.node.template[n].type === "file" ? (
+        <div className="w-1/2">
+          <InputFileComponent
+            disabled={false}
+            value={data.node.template[n].value ?? ""}
+            onChange={(t: string) => {
+              data.node.template[n].value = t;
+            }}
+            fileTypes={data.node.template[n].fileTypes}
+            suffixes={data.node.template[n].suffixes}
+            onFileChange={(t: string) => {
+              data.node.template[n].content = t;
+              save();
+            }}
+          ></InputFileComponent>
+        </div>
+      ) : data.node.template[n].type === "prompt" ? (
+        <div className="w-1/2">
+          <PromptAreaComponent
+            disabled={false}
+            value={data.node.template[n].value ?? ""}
+            onChange={(t: string) => {
+              data.node.template[n].value = t;
+              save();
+            }}
+          />
+        </div>
+      ) : data.node.template[n].type === "code" ? (
+        <div className="w-1/2">
+          <CodeAreaComponent
+            disabled={false}
+            value={data.node.template[n].value ?? ""}
+            onChange={(t: string) => {
+              data.node.template[n].value = t;
+              save();
+            }}
+          />
+        </div>
+      ) : (
+        <div className="hidden"></div>
+      )}
+
+
+{/* 
                                   {data.node.template[n].value
                                         ? data.node.template[n].value
-                                        : "-"}
+                                        : "-"} */}
+
                                   </TableCell>
                                   <TableCell className="p-0 text-right">
 
