@@ -299,9 +299,9 @@ def test_update_flow_style(client: TestClient):
     flow_style = FlowStyleCreate(color="red", emoji="🔴")
     response = client.post("api/v1/flow_styles/", json=flow_style.dict())
     created_flow_style = FlowStyleRead(**response.json())
-    updated_flow_style = FlowStyleUpdate(color="blue")
+    to_update_flow_style = FlowStyleUpdate(color="blue")
     response = client.patch(
-        f"api/v1/flow_styles/{created_flow_style.id}", json=updated_flow_style.dict()
+        f"api/v1/flow_styles/{created_flow_style.id}", json=to_update_flow_style.dict()
     )
     assert response.status_code == 200
     updated_flow_style = FlowStyleRead(**response.json())
