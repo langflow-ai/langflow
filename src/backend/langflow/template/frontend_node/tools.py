@@ -103,3 +103,27 @@ class PythonFunctionToolNode(FrontendNode):
 
     def to_dict(self):
         return super().to_dict()
+
+
+class PythonFunctionNode(FrontendNode):
+    name: str = "PythonFunction"
+    template: Template = Template(
+        type_name="python_function",
+        fields=[
+            TemplateField(
+                field_type="code",
+                required=True,
+                placeholder="",
+                is_list=False,
+                show=True,
+                value=DEFAULT_PYTHON_FUNCTION,
+                name="code",
+                advanced=False,
+            )
+        ],
+    )
+    description: str = "Python function to be executed."
+    base_classes: list[str] = ["function"]
+
+    def to_dict(self):
+        return super().to_dict()
