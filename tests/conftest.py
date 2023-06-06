@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 from typing import AsyncGenerator
-from langflow.api.database import get_session
+from langflow.api.v1.flows import get_session
 
 from langflow.graph.graph.base import Graph
 import pytest
