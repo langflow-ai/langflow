@@ -38,6 +38,12 @@ def test_create_flow(client: TestClient, json_flow: str):
     assert response.status_code == 200
     assert response.json()["name"] == flow.name
     assert response.json()["flow"] == flow.flow
+    # flow is optional so we can create a flow without a flow
+    flow = FlowCreate(name="Test Flow")
+    response = client.post("api/v1/flows/", json=flow.dict(exclude_unset=True))
+    assert response.status_code == 200
+    assert response.json()["name"] == flow.name
+    assert response.json()["flow"] == flow.flow
 
 
 def test_read_flows(client: TestClient, json_flow: str):

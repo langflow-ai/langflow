@@ -12,11 +12,13 @@ from langflow.database.models.flow_style import FlowStyle, FlowStyleRead
 
 class FlowBase(SQLModelSerializable):
     name: str = Field(index=True)
-    flow: Dict = Field(default_factory=dict, sa_column=Column(JSON))
+    flow: Optional[Dict] = Field(default_factory=dict, sa_column=Column(JSON))
 
     @validator("flow")
     def validate_json(v):
         # dict_keys(['description', 'name', 'id', 'data'])
+        if not v:
+            return v
         if not isinstance(v, dict):
             raise ValueError("Flow must be a valid JSON")
         if "description" not in v.keys():
