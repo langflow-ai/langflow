@@ -182,10 +182,10 @@ export default function ChatModal({
     try {
       const urlWs =
         process.env.NODE_ENV === "development"
-          ? `ws://localhost:7860/chat/${id.current}`
+          ? `ws://localhost:7860/api/v1/chat/${id.current}`
           : `${window.location.protocol === "https:" ? "wss" : "ws"}://${
               window.location.host
-            }/chat/${id.current}`;
+            }api/v1/chat/${id.current}`;
       const newWs = new WebSocket(urlWs);
       newWs.onopen = () => {
         console.log("WebSocket connection established!");

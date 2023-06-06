@@ -2,7 +2,7 @@ import json
 
 from fastapi import APIRouter, HTTPException
 
-from langflow.api.base import (
+from langflow.api.v1.base import (
     Code,
     CodeValidationResponse,
     Prompt,
@@ -10,7 +10,7 @@ from langflow.api.base import (
     validate_prompt,
 )
 from langflow.graph.vertex.types import VectorStoreVertex
-from langflow.interface.run import build_graph
+from langflow.graph import Graph
 from langflow.utils.logger import logger
 from langflow.utils.validate import validate_code
 
@@ -44,7 +44,7 @@ def post_validate_prompt(prompt: Prompt):
 def post_validate_node(node_id: str, data: dict):
     try:
         # build graph
-        graph = build_graph(data)
+        graph = Graph.from_payload(data)
         # validate node
         node = graph.get_node(node_id)
         if node is None:
