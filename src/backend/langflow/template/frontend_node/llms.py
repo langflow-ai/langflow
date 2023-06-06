@@ -13,6 +13,18 @@ class LLMFrontendNode(FrontendNode):
             ).replace("Api", "API")
 
     @staticmethod
+    def format_azure_field(field: TemplateField):
+        if field.name == "model_name":
+            field.show = False  # Azure uses deployment_name instead of model_name.
+        if field.name == "openai_api_type":
+            field.show = False
+            field.password = False
+            field.value = "azure"
+        if field.name == "openai_api_version":
+            field.password = False
+            field.value = "2023-03-15-preview"
+
+    @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         display_names_dict = {
             "huggingfacehub_api_token": "HuggingFace Hub API Token",
@@ -43,8 +55,16 @@ class LLMFrontendNode(FrontendNode):
             field.field_type = "code"
             field.advanced = True
             field.show = True
-        elif field.name in ["model_name", "temperature", "model_file", "model_type"]:
+        elif field.name in [
+            "model_name",
+            "temperature",
+            "model_file",
+            "model_type",
+            "deployment_name",
+        ]:
             field.advanced = False
             field.show = True
 
         LLMFrontendNode.format_openai_field(field)
+        if "azure" in name.lower():
+            LLMFrontendNode.format_azure_field(field)
