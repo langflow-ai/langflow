@@ -75,6 +75,7 @@ toolkits:
   - JsonToolkit
   - VectorStoreInfo
   - VectorStoreRouterToolkit
+  - VectorStoreToolkit
 tools:
   - Search
   - PAL-MATH
