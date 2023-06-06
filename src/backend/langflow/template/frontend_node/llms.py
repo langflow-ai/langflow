@@ -66,5 +66,5 @@ class LLMFrontendNode(FrontendNode):
             field.show = True
 
         LLMFrontendNode.format_openai_field(field)
-        if "azure" in name.lower():
+        if name and "azure" in name.lower():
             LLMFrontendNode.format_azure_field(field)
