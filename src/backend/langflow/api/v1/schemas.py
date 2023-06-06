@@ -1,6 +1,5 @@
 from typing import Any, Dict, List, Union
-from langflow.database.models.flow import FlowCreate
-
+from langflow.database.models.flow import FlowCreate, FlowRead
 from pydantic import BaseModel, validator
 
 
@@ -73,3 +72,7 @@ class FileResponse(ChatMessage):
 
 class FlowListCreate(BaseModel):
     flows: List[FlowCreate]
+
+
+class FlowListRead(BaseModel):
+    flows: List[FlowRead]
