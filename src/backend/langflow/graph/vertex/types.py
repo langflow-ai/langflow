@@ -1,7 +1,8 @@
 from typing import Any, Dict, List, Optional, Union
 
 from langflow.graph.vertex.base import Vertex
-from langflow.graph.utils import extract_input_variables_from_prompt, flatten_list
+from langflow.graph.utils import flatten_list
+from langflow.interface.utils import extract_input_variables_from_prompt
 
 
 class AgentVertex(Vertex):
