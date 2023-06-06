@@ -3,13 +3,13 @@ from importlib.metadata import version
 
 from fastapi import APIRouter, HTTPException
 
-from langflow.api.schemas import (
+from langflow.api.v1.schemas import (
     ExportedFlow,
     GraphData,
     PredictRequest,
     PredictResponse,
 )
-from langflow.interface.run import process_graph_cached
+
 from langflow.interface.types import build_langchain_types_dict
 
 # build router
@@ -25,6 +25,8 @@ def get_all():
 @router.post("/predict", response_model=PredictResponse)
 async def get_load(predict_request: PredictRequest):
     try:
+        from langflow.processing.process import process_graph_cached
+
         exported_flow: ExportedFlow = predict_request.exported_flow
         graph_data: GraphData = exported_flow.data
         data = graph_data.dict()
@@ -40,8 +42,3 @@ async def get_load(predict_request: PredictRequest):
 @router.get("/version")
 def get_version():
     return {"version": version("langflow")}
-
-
-@router.get("/health")
-def get_health():
-    return {"status": "OK"}

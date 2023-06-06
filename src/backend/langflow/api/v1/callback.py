@@ -3,7 +3,7 @@ from typing import Any
 
 from langchain.callbacks.base import AsyncCallbackHandler, BaseCallbackHandler
 
-from langflow.api.schemas import ChatResponse
+from langflow.api.v1.schemas import ChatResponse
 
 
 # https://github.com/hwchase17/chat-langchain/blob/master/callback.py

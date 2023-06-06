@@ -3,7 +3,7 @@ from typing import Dict, List, Optional, Type
 from langchain.prompts import PromptTemplate
 from pydantic import root_validator
 
-from langflow.graph.utils import extract_input_variables_from_prompt
+from langflow.interface.utils import extract_input_variables_from_prompt
 
 # Steps to create a BaseCustomPrompt:
 # 1. Create a prompt template that endes with:
