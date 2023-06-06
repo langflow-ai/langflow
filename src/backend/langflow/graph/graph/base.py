@@ -24,6 +24,27 @@ class Graph:
         self._edges = edges
         self._build_graph()
 
+    @classmethod
+    @classmethod
+    def from_payload(cls, payload: Dict) -> "Graph":
+        """
+        Creates a graph from a payload.
+
+        Args:
+            payload (Dict): The payload to create the graph from.
+
+        Returns:
+            Graph: The created graph.
+        """
+        if "data" in payload:
+            payload = payload["data"]
+        try:
+            nodes = payload["nodes"]
+            edges = payload["edges"]
+            return cls(nodes, edges)
+        except KeyError as exc:
+            raise ValueError("Invalid payload") from exc
+
     def _build_graph(self) -> None:
         """Builds the graph from the nodes and edges."""
         self.nodes = self._build_vertices()
