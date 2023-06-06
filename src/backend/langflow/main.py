@@ -1,16 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from langflow.api.chat import router as chat_router
-from langflow.api.endpoints import router as endpoints_router
-from langflow.api.validate import router as validate_router
-from langflow.api.database import router as database_router
-from langflow.database.base import create_db_and_tables
-from fastapi import APIRouter
-
-
-# build router
-router = APIRouter()
+from langflow.api import router
 
 
 def create_app():
@@ -21,6 +12,10 @@ def create_app():
         "*",
     ]
 
+    @app.get("/health")
+    def get_health():
+        return {"status": "OK"}
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
@@ -29,13 +24,7 @@ def create_app():
         allow_headers=["*"],
     )
 
-    app.include_router(endpoints_router)
-    app.include_router(validate_router)
-    app.include_router(chat_router)
-    app.include_router(database_router)
-
-    app.on_event("startup")(create_db_and_tables)
-
+    app.include_router(router)
     return app
 
 

@@ -1,16 +1,15 @@
-import json
 from langflow.database.models.flow import Flow
+from langflow.processing.process import process_graph_cached
 from langflow.utils.logger import logger
 from importlib.metadata import version
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from langflow.api.schemas import (
-    GraphData,
+from langflow.api.v1.schemas import (
     PredictRequest,
     PredictResponse,
 )
-from langflow.interface.run import process_graph_cached
+
 from langflow.interface.types import build_langchain_types_dict
 from langflow.database.base import get_session
 from sqlmodel import Session
@@ -34,8 +33,8 @@ async def get_load(
         flow_obj = session.get(Flow, flow_id)
         if flow_obj is None:
             raise ValueError(f"Flow {flow_id} not found")
-        graph_data: GraphData = json.loads(flow_obj.flow)
-        data = graph_data.get("data")
+        graph_data = flow_obj.flow
+        data: dict = graph_data.get("data", {})
         response = process_graph_cached(data, predict_request.message)
         return PredictResponse(
             result=response.get("result", ""),
@@ -51,8 +50,3 @@ async def get_load(
 @router.get("/version")
 def get_version():
     return {"version": version("langflow")}
-
-
-@router.get("/health")
-def get_health():
-    return {"status": "OK"}

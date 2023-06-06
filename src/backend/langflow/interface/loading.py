@@ -12,7 +12,6 @@ from langchain.agents.load_tools import (
     _LLM_TOOLS,
 )
 from langchain.agents.loading import load_agent_from_config
-from langflow.graph import Graph
 from langchain.agents.tools import Tool
 from langchain.base_language import BaseLanguageModel
 from langchain.callbacks.base import BaseCallbackManager
@@ -22,7 +21,6 @@ from pydantic import ValidationError
 
 from langflow.interface.agents.custom import CUSTOM_AGENTS
 from langflow.interface.importing.utils import get_function, import_by_type
-from langflow.interface.run import fix_memory_inputs
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.types import get_type_list
 from langflow.interface.utils import load_file_into_dict
@@ -161,37 +159,6 @@ def instantiate_utility(node_type, class_object, params):
     if node_type == "SQLDatabase":
         return class_object.from_uri(params.pop("uri"))
     return class_object(**params)
-
-
-def load_flow_from_json(path: str, build=True):
-    """Load flow from json file"""
-    # This is done to avoid circular imports
-
-    with open(path, "r", encoding="utf-8") as f:
-        flow_graph = json.load(f)
-    data_graph = flow_graph["data"]
-    nodes = data_graph["nodes"]
-    # Substitute ZeroShotPrompt with PromptTemplate
-    # nodes = replace_zero_shot_prompt_with_prompt_template(nodes)
-    # Add input variables
-    # nodes = payload.extract_input_variables(nodes)
-
-    # Nodes, edges and root node
-    edges = data_graph["edges"]
-    graph = Graph(nodes, edges)
-    if build:
-        langchain_object = graph.build()
-        if hasattr(langchain_object, "verbose"):
-            langchain_object.verbose = True
-
-        if hasattr(langchain_object, "return_intermediate_steps"):
-            # https://github.com/hwchase17/langchain/issues/2068
-            # Deactivating until we have a frontend solution
-            # to display intermediate steps
-            langchain_object.return_intermediate_steps = False
-        fix_memory_inputs(langchain_object)
-        return langchain_object
-    return graph
 
 
 def replace_zero_shot_prompt_with_prompt_template(nodes):

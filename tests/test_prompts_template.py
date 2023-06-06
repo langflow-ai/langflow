@@ -3,7 +3,7 @@ from langflow.settings import settings
 
 
 def test_prompts_settings(client: TestClient):
-    response = client.get("/all")
+    response = client.get("api/v1/all")
     assert response.status_code == 200
     json_response = response.json()
     prompts = json_response["prompts"]
@@ -11,7 +11,7 @@ def test_prompts_settings(client: TestClient):
 
 
 def test_prompt_template(client: TestClient):
-    response = client.get("/all")
+    response = client.get("api/v1/all")
     assert response.status_code == 200
     json_response = response.json()
     prompts = json_response["prompts"]
@@ -89,7 +89,7 @@ def test_prompt_template(client: TestClient):
 
 
 def test_few_shot_prompt_template(client: TestClient):
-    response = client.get("/all")
+    response = client.get("api/v1/all")
     assert response.status_code == 200
     json_response = response.json()
     prompts = json_response["prompts"]
@@ -168,7 +168,7 @@ def test_few_shot_prompt_template(client: TestClient):
 
 
 def test_zero_shot_prompt(client: TestClient):
-    response = client.get("/all")
+    response = client.get("api/v1/all")
     assert response.status_code == 200
     json_response = response.json()
     prompts = json_response["prompts"]

@@ -6,7 +6,7 @@ from fastapi import (
     status,
 )
 
-from langflow.api.chat_manager import ChatManager
+from langflow.chat.manager import ChatManager
 from langflow.utils.logger import logger
 
 router = APIRouter(tags=["Chat"])
