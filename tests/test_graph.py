@@ -16,7 +16,7 @@ from langflow.graph.vertex.types import (
     ToolVertex,
     WrapperVertex,
 )
-from langflow.interface.run import get_result_and_thought
+from langflow.processing.process import get_result_and_thought
 from langflow.utils.payload import get_root_node
 
 # Test cases for the graph module

@@ -3,7 +3,7 @@ from langflow.settings import settings
 
 
 def test_llms_settings(client: TestClient):
-    response = client.get("/all")
+    response = client.get("api/v1/all")
     assert response.status_code == 200
     json_response = response.json()
     llms = json_response["llms"]
@@ -11,7 +11,7 @@ def test_llms_settings(client: TestClient):
 
 
 # def test_hugging_face_hub(client: TestClient):
-#     response = client.get("/all")
+#     response = client.get("api/v1/all")
 #     assert response.status_code == 200
 #     json_response = response.json()
 #     language_models = json_response["llms"]
@@ -103,7 +103,7 @@ def test_llms_settings(client: TestClient):
 
 
 def test_openai(client: TestClient):
-    response = client.get("/all")
+    response = client.get("api/v1/all")
     assert response.status_code == 200
     json_response = response.json()
     language_models = json_response["llms"]
@@ -333,7 +333,7 @@ def test_openai(client: TestClient):
 
 
 def test_chat_open_ai(client: TestClient):
-    response = client.get("/all")
+    response = client.get("api/v1/all")
     assert response.status_code == 200
     json_response = response.json()
     language_models = json_response["llms"]
