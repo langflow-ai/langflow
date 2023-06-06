@@ -16,6 +16,9 @@ export default function ToggleShadComponent({
   return (
     <div className={disabled ? "pointer-events-none cursor-not-allowed" : ""}>
       <Switch
+  style={{
+    transform: 'scaleX(0.6) scaleY(0.6)',
+  }}
         checked={enabled}
         onCheckedChange={(x: boolean) => {
           setEnabled(x);
