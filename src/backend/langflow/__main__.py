@@ -1,6 +1,7 @@
 import multiprocessing
 import platform
 from pathlib import Path
+from typing import Optional
 
 import typer
 from fastapi.staticfiles import StaticFiles
@@ -18,7 +19,7 @@ def get_number_of_workers(workers=None):
     return workers
 
 
-def update_settings(config: str, dev: bool = False, database_url: str = None):
+def update_settings(config: str, dev: bool = False, database_url: Optional[str] = None):
     """Update the settings from a config file."""
     if config:
         settings.update_from_yaml(config, dev=dev)
