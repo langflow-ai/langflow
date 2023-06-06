@@ -55,6 +55,7 @@ llms:
   - LlamaCpp
   - CTransformers
   - Cohere
+  - HuggingFaceHub
 memories:
   - ConversationBufferMemory
   - ConversationSummaryMemory
