@@ -84,6 +84,7 @@ tools:
   - Serper Search
   - Tool
   - PythonFunctionTool
+  - PythonFunction
   - JsonSpec
   - News API
   - TMDB API
