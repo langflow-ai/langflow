@@ -32,8 +32,7 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
     params = convert_params_to_sets(params)
     params = convert_kwargs(params)
     if node_type in CUSTOM_AGENTS:
-        custom_agent = CUSTOM_AGENTS.get(node_type)
-        if custom_agent:
+        if custom_agent := CUSTOM_AGENTS.get(node_type):
             return custom_agent.initialize(**params)
 
     class_object = import_by_type(_type=base_type, name=node_type)
