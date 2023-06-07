@@ -111,6 +111,13 @@ module.exports = {
           "overflow": "hidden",
           "text-overflow": "ellipsis",
         },
+        ".truncate-doubleline": {
+          "display": "-webkit-box",
+          "-webkit-line-clamp": "2", /* Change this number to the number of lines you want to show */
+          "-webkit-box-orient": "vertical",
+          "overflow": "hidden",
+          "text-overflow": "ellipsis",
+        },
 
         ".arrow-hide": {
           "&::-webkit-inner-spin-button": {

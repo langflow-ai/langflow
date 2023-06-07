@@ -9,6 +9,7 @@
         "@heroicons/react": "^2.0.15",
         "@mui/material": "^5.11.9",
         "@radix-ui/react-dropdown-menu": "^2.0.5",
+        "@radix-ui/react-menubar": "^1.0.3",
         "@radix-ui/react-separator": "^1.0.3",
         "@radix-ui/react-slot": "^1.0.2",
         "@radix-ui/react-tabs": "^1.0.4",

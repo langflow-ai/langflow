@@ -23,7 +23,9 @@ import {
   CodeBracketSquareIcon,
   GlobeAltIcon,
   PencilSquareIcon,
+  PlusCircleIcon,
   PlusIcon,
+  PlusSmallIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import {
@@ -54,6 +56,16 @@ import RenameLabel from "../../components/ui/rename-label";
 import _ from "lodash";
 import { Badge } from "../../components/ui/badge";
 import { OpenAiIcon } from "../../icons/OpenAi";
+import { Menu } from "@mui/material";
+import {
+  Menubar,
+  MenubarContent,
+  MenubarItem,
+  MenubarMenu,
+  MenubarRadioGroup,
+  MenubarRadioItem,
+  MenubarTrigger,
+} from "../../components/ui/menubar";
 
 export default function HomePage() {
   const {
@@ -88,89 +100,101 @@ export default function HomePage() {
         onValueChange={setActiveTab}
         className="w-full h-full flex flex-col"
       >
-        <TabsList className="w-full flex justify-between items-center border-b">
+        <TabsList className="w-full h-16 flex justify-between items-center border-b">
           <div className="flex gap-2 justify-start items-center w-96">
             <span className="text-2xl ml-4">⛓️</span>
-            <div className="flex gap-2 p-2">
-              <TabsTrigger value="myflow" className="flex items-center gap-2">
-                <RenameLabel
-                  value={flows[tabIndex].name}
-                  setValue={(value) => {
-                    if (value !== "") {
-                      let newFlow = _.cloneDeep(flows[tabIndex]);
-                      newFlow.name = value;
-                      updateFlow(newFlow);
-                    }
-                  }}
-                  rename={rename}
-                  setRename={setRename}
-                />
-                <DropdownMenu>
-                  <DropdownMenuTrigger>
-                    <ChevronDownIcon className="w-3" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-40">
-                    <DropdownMenuLabel>Current Flow</DropdownMenuLabel>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setRename(true);
-                      }}
-                    >
-                      <PencilSquareIcon className="w-4 h-4 mr-2" />
-                      Rename
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        openPopUp(<ImportModal />);
-                      }}
-                    >
-                      <ArrowUpTrayIcon className="w-4 h-4 mr-2" />
-                      Import
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        openPopUp(<ExportModal />);
-                      }}
-                    >
-                      <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
-                      Export
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        openPopUp(<ApiModal flowName={flows[tabIndex].name} />);
-                      }}
-                    >
-                      <CodeBracketSquareIcon className="w-4 h-4 mr-2" />
-                      Code
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel>Flows</DropdownMenuLabel>
-                    <DropdownMenuRadioGroup
-                      value={tabIndex.toString()}
-                      onValueChange={(value) => {
-                        setTabIndex(parseInt(value));
-                      }}
-                    >
-                      {flows.map((flow, idx) => {
-                        return (
-                          <DropdownMenuRadioItem value={idx.toString()}>
-                            {flow.name}
-                          </DropdownMenuRadioItem>
-                        );
-                      })}
-                    </DropdownMenuRadioGroup>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        addFlow();
-                      }}
-                    >
-                      <PlusIcon className="w-4 h-4 mr-2" />
-                      Add Flow
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TabsTrigger>
-            </div>
+            {activeTab === "myflow" && (
+              <div className="flex gap-2 p-2">
+                <Menubar>
+                  <MenubarMenu>
+                    <MenubarTrigger className="px-2">
+                      <b>
+                        <RenameLabel
+                          value={flows[tabIndex].name}
+                          setValue={(value) => {
+                            if (value !== "") {
+                              let newFlow = _.cloneDeep(flows[tabIndex]);
+                              newFlow.name = value;
+                              updateFlow(newFlow);
+                            }
+                          }}
+                          rename={rename}
+                          setRename={setRename}
+                        />
+                      </b>
+                    </MenubarTrigger>
+                    <MenubarContent>
+                      <MenubarItem
+                        onClick={() => {
+                          openPopUp(<ImportModal />);
+                        }}
+                      >
+                        <ArrowUpTrayIcon className="w-4 h-4 mr-2" />
+                        Import
+                      </MenubarItem>
+                      <MenubarItem
+                        onClick={() => {
+                          openPopUp(<ExportModal />);
+                        }}
+                      >
+                        <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
+                        Export
+                      </MenubarItem>
+                      <MenubarItem
+                        onClick={() => {
+                          openPopUp(
+                            <ApiModal flowName={flows[tabIndex].name} />
+                          );
+                        }}
+                      >
+                        <CodeBracketSquareIcon className="w-4 h-4 mr-2" />
+                        Code
+                      </MenubarItem>
+                    </MenubarContent>
+                  </MenubarMenu>
+                  <MenubarMenu>
+                    <MenubarTrigger>Edit</MenubarTrigger>
+                    <MenubarContent>
+                      <MenubarItem
+                        onClick={() => {
+                          setRename(true);
+                        }}
+                      >
+                        <PencilSquareIcon className="w-4 h-4 mr-2" />
+                        Rename
+                      </MenubarItem>
+                    </MenubarContent>
+                  </MenubarMenu>
+                  <MenubarMenu>
+                    <MenubarTrigger>Flows</MenubarTrigger>
+                    <MenubarContent>
+                      <MenubarRadioGroup
+                        value={tabIndex.toString()}
+                        onValueChange={(value) => {
+                          setTabIndex(parseInt(value));
+                        }}
+                      >
+                        {flows.map((flow, idx) => {
+                          return (
+                            <MenubarRadioItem value={idx.toString()}>
+                              {flow.name}
+                            </MenubarRadioItem>
+                          );
+                        })}
+                      </MenubarRadioGroup>
+                      <MenubarItem
+                        onClick={() => {
+                          addFlow();
+                        }}
+                      >
+                        <PlusIcon className="w-4 h-4 mr-2" />
+                        Add Flow
+                      </MenubarItem>
+                    </MenubarContent>
+                  </MenubarMenu>
+                </Menubar>
+              </div>
+            )}
           </div>
           <div className="flex">
             <TabsTrigger value="community">Explore</TabsTrigger>
@@ -283,9 +307,13 @@ export default function HomePage() {
                       <TrashIcon className="w-5 text-primary opacity-0 group-hover:opacity-100 transition-all" />
                     </button>
                   </CardTitle>
-                  <CardDescription className="pt-2 pb-8">
-                    {/* {flow.description} */}
-                    {idx === 0 ? "This is a new agent" : "This is a new tool"}
+                  <CardDescription className="pt-2 pb-2">
+                    <div className="truncate-doubleline">
+                      {idx === 0
+                        ? "This flow creates an agent that accesses a department store database and APIs to monitor customer activity and overall storage."
+                        : "This is a new tool"}
+                      {/* {flow.description} */}
+                    </div>
                   </CardDescription>
                 </CardHeader>
 
@@ -314,7 +342,7 @@ export default function HomePage() {
                       }}
                     >
                       <ArrowTopRightOnSquareIcon className="w-4 mr-2" />
-                      Edit Flow
+                      Edit
                     </Button>
                   </div>
                 </CardFooter>
