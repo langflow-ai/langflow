@@ -236,9 +236,9 @@ export default function ChatModal({
 
   useEffect(() => {
     if (
-      ws.current && 
+      ws.current &&
       (ws.current.readyState === ws.current.CLOSED ||
-      ws.current.readyState === ws.current.CLOSING)
+        ws.current.readyState === ws.current.CLOSING)
     ) {
       connectWS();
       setLockChat(false);
