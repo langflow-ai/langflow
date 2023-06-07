@@ -59,6 +59,7 @@ ctransformers = "^0.2.2"
 cohere = "^4.6.0"
 faiss-cpu = "^1.7.4"
 anthropic = "^0.2.9"
+multiprocess = "^0.70.14"
 
 
 [tool.poetry.group.dev.dependencies]
