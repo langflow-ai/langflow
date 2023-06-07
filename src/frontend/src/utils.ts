@@ -7,7 +7,6 @@ import {
   WrenchScrewdriverIcon,
   WrenchIcon,
   ComputerDesktopIcon,
-  Bars3CenterLeftIcon,
   GiftIcon,
   PaperClipIcon,
   QuestionMarkCircleIcon,
@@ -15,6 +14,7 @@ import {
   ScissorsIcon,
   CircleStackIcon,
   Squares2X2Icon,
+  Bars3CenterLeftIcon,
 } from "@heroicons/react/24/outline";
 import { Connection, Edge, Node, ReactFlowInstance, addEdge } from "reactflow";
 import { FlowType, NodeType } from "./types/flow";
