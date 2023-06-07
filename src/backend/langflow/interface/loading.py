@@ -19,9 +19,10 @@ from langchain.chains.loading import load_chain_from_config
 from langchain.llms.loading import load_llm_from_config
 from pydantic import ValidationError
 
-from langflow.interface.agents.custom import CUSTOM_AGENTS
+from langflow.interface.custom_lists import CUSTOM_NODES
 from langflow.interface.importing.utils import get_function, import_by_type
 from langflow.interface.toolkits.base import toolkits_creator
+from langflow.interface.chains.base import chain_creator
 from langflow.interface.types import get_type_list
 from langflow.interface.utils import load_file_into_dict
 from langflow.utils import util, validate
@@ -31,8 +32,8 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
     """Instantiate class from module type and key, and params"""
     params = convert_params_to_sets(params)
     params = convert_kwargs(params)
-    if node_type in CUSTOM_AGENTS:
-        if custom_agent := CUSTOM_AGENTS.get(node_type):
+    if node_type in CUSTOM_NODES:
+        if custom_agent := CUSTOM_NODES.get(node_type):
             return custom_agent.initialize(**params)
 
     class_object = import_by_type(_type=base_type, name=node_type)
@@ -77,8 +78,22 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
         return instantiate_textsplitter(class_object, params)
     elif base_type == "utilities":
         return instantiate_utility(node_type, class_object, params)
+    elif base_type == "chains":
+        return instantiate_chains(node_type, class_object, params)
     else:
         return class_object(**params)
+
+
+def instantiate_chains(node_type, class_object, params):
+    if "retriever" in params and hasattr(params["retriever"], "as_retriever"):
+        params["retriever"] = params["retriever"].as_retriever()
+    if node_type in chain_creator.from_method_nodes:
+        method = chain_creator.from_method_nodes[node_type]
+        if class_method := getattr(class_object, method, None):
+            return class_method(**params)
+        raise ValueError(f"Method {method} not found in {class_object}")
+
+    return class_object(**params)
 
 
 def instantiate_agent(class_object, params):
@@ -141,6 +156,14 @@ def instantiate_vectorstore(class_object, params):
             "The source you provided did not load correctly or was empty."
             "This may cause an error in the vectorstore."
         )
+    # Chroma requires all metadata values to not be None
+    if class_object.__name__ == "Chroma":
+        for doc in params["documents"]:
+            if doc.metadata is None:
+                doc.metadata = {}
+            for key, value in doc.metadata.items():
+                if value is None:
+                    doc.metadata[key] = ""
     return class_object.from_documents(**params)
 
 
