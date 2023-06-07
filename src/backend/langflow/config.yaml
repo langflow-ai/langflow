@@ -16,6 +16,11 @@ chains:
   - MidJourneyPromptChain
   - TimeTravelGuideChain
   - SQLDatabaseChain
+  - RetrievalQA
+  - RetrievalQAWithSourcesChain
+  - QAWithSourcesChain
+  - ConversationalRetrievalChain
+  - CombineDocsChain
 documentloaders:
   - AirbyteJSONLoader
   - CoNLLULoader
