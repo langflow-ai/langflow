@@ -52,7 +52,7 @@ llms:
   - OpenAI
   # - AzureOpenAI
   - ChatOpenAI
-  - LlamaCpp
+  - LlamaCpp 
   - CTransformers
   - Cohere
 memories:
