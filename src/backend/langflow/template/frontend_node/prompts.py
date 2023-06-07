@@ -13,6 +13,19 @@ from langflow.template.template.base import Template
 
 
 class PromptFrontendNode(FrontendNode):
+    def add_extra_fields(self) -> None:
+        # add input_variables field if not ZeroShotPromptNode
+        # if self.name != "ZeroShotPromptNode":
+        self.template.add_field(
+            TemplateField(
+                name="input_variables",
+                field_type="Text",
+                is_list=True,
+                advanced=False,
+                description="Variables to be passed to the prompt.",
+            )
+        )
+
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         # if field.field_type  == "StringPromptTemplate"
@@ -45,7 +58,7 @@ class PromptFrontendNode(FrontendNode):
         field.password = False
 
 
-class PromptTemplateNode(FrontendNode):
+class PromptTemplateNode(PromptFrontendNode):
     name: str = "PromptTemplate"
     template: Template
     description: str
@@ -61,17 +74,7 @@ class PromptTemplateNode(FrontendNode):
             field.advanced = False
 
 
-class BasePromptFrontendNode(FrontendNode):
-    name: str
-    template: Template
-    description: str
-    base_classes: list[str]
-
-    def to_dict(self):
-        return super().to_dict()
-
-
-class ZeroShotPromptNode(BasePromptFrontendNode):
+class ZeroShotPromptNode(PromptFrontendNode):
     name: str = "ZeroShotPrompt"
     template: Template = Template(
         type_name="zero_shot",
