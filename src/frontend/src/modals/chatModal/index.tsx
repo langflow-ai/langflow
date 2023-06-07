@@ -215,19 +215,11 @@ export default function ChatModal({
         }
       };
       ws.current = newWs;
-    } catch {
+    } catch (error) {
       if (flow.id === "") {
         connectWS();
-      } else {
-        setErrorData({
-          title: "There was an error on web connection, please: ",
-          list: [
-            "Refresh the page",
-            "Use a new flow tab",
-            "Check if the backend is up",
-          ],
-        });
       }
+      console.log(error);
     }
   }
 
@@ -236,7 +228,7 @@ export default function ChatModal({
     return () => {
       console.log("unmount");
       console.log(ws);
-      if (ws) {
+      if (ws.current) {
         ws.current.close();
       }
     };
@@ -244,8 +236,9 @@ export default function ChatModal({
 
   useEffect(() => {
     if (
-      ws.current.readyState === ws.current.CLOSED ||
-      ws.current.readyState === ws.current.CLOSING
+      ws.current &&
+      (ws.current.readyState === ws.current.CLOSED ||
+        ws.current.readyState === ws.current.CLOSING)
     ) {
       connectWS();
       setLockChat(false);
