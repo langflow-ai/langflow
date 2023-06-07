@@ -43,6 +43,7 @@ install_backend:
 	poetry install
 
 backend:
+	make install_backend
 	poetry run uvicorn langflow.main:app --port 7860 --reload --log-level debug
 
 build_frontend:

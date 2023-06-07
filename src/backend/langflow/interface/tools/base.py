@@ -71,7 +71,8 @@ class ToolCreator(LangChainTypeCreator):
 
             for tool, tool_fcn in ALL_TOOLS_NAMES.items():
                 tool_params = get_tool_params(tool_fcn)
-                tool_name = tool_params.get("name", tool)
+
+                tool_name = tool_params.get("name") or tool
 
                 if tool_name in settings.tools or settings.dev:
                     if tool_name == "JsonSpec":

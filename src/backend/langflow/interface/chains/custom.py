@@ -5,7 +5,7 @@ from langchain.memory.buffer import ConversationBufferMemory
 from langchain.schema import BaseMemory
 from pydantic import Field, root_validator
 
-from langflow.graph.utils import extract_input_variables_from_prompt
+from langflow.interface.utils import extract_input_variables_from_prompt
 
 DEFAULT_SUFFIX = """"
 Current conversation:
