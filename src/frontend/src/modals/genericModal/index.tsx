@@ -42,102 +42,91 @@ export default function PromptAreaModal({
   function setModalOpen(x: boolean) {
     setOpen(x);
     if (x === false) {
-        closePopUp();
+      closePopUp();
     }
   }
 
   return (
-
-    
     <Dialog open={true} onOpenChange={setModalOpen}>
-    <DialogTrigger>
-    </DialogTrigger>
-    <DialogContent className="lg:max-w-[700px]">
-      <DialogHeader>
-        <DialogTitle className="flex items-center">
-          <span className="pr-2">
-          {myModalTitle}
-          </span>
+      <DialogTrigger></DialogTrigger>
+      <DialogContent className="lg:max-w-[700px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center">
+            <span className="pr-2">{myModalTitle}</span>
             <DocumentTextIcon
-            className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
-            aria-hidden="true"
+              className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
+              aria-hidden="true"
             />
-          
           </DialogTitle>
-        <DialogDescription>
-          Make configurations changes to your nodes. Click save when you're done.
+          <DialogDescription>
+            Make configurations changes to your nodes. Click save when you're
+            done.
+          </DialogDescription>
+        </DialogHeader>
 
-        </DialogDescription>
-      </DialogHeader>
+        <div className="flex h-full w-full mt-2">
+          <Textarea
+            ref={ref}
+            className="form-input h-[300px] w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+            value={myValue}
+            onChange={(e) => {
+              setMyValue(e.target.value);
+              setValue(e.target.value);
+            }}
+            placeholder="Type message here."
+          />
+        </div>
 
-
-                    <div className="flex h-full w-full mt-2">
-                      <Textarea 
-                          ref={ref}
-                          className="form-input h-[300px] w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                          value={myValue}
-                          onChange={(e) => {
-                            setMyValue(e.target.value);
-                            setValue(e.target.value);
-                          }}
-                      placeholder="Type message here." />
-
-                    </div>
-
-
-   
-      <DialogFooter>
-      <Button
-      className="mt-3" 
-      onClick={() => {
-        switch (myModalType) {
-          case 1:
-            setModalOpen(false);
-            break;
-          case 2:
-            checkPrompt(myValue)
-              .then((apiReturn) => {
-                if (apiReturn.data) {
-                  let inputVariables =
-                    apiReturn.data.input_variables;
-                  if (inputVariables.length === 0) {
-                    setErrorData({
-                      title:
-                        "The template you are attempting to use does not contain any variables for data entry.",
+        <DialogFooter>
+          <Button
+            className="mt-3"
+            onClick={() => {
+              switch (myModalType) {
+                case 1:
+                  setModalOpen(false);
+                  break;
+                case 2:
+                  checkPrompt(myValue)
+                    .then((apiReturn) => {
+                      if (apiReturn.data) {
+                        let inputVariables = apiReturn.data.input_variables;
+                        if (inputVariables.length === 0) {
+                          setErrorData({
+                            title:
+                              "The template you are attempting to use does not contain any variables for data entry.",
+                          });
+                        } else {
+                          setSuccessData({
+                            title: "Prompt is ready",
+                          });
+                          setModalOpen(false);
+                          setValue(myValue);
+                        }
+                      } else {
+                        setErrorData({
+                          title: "Something went wrong, please try again",
+                        });
+                      }
+                    })
+                    .catch((error) => {
+                      return setErrorData({
+                        title:
+                          "There is something wrong with this prompt, please review it",
+                        list: [error.response.data.detail],
+                      });
                     });
-                  } else {
-                    setSuccessData({
-                      title: "Prompt is ready",
-                    });
-                    setModalOpen(false);
-                    setValue(myValue);
-                  }
-                } else {
-                  setErrorData({
-                    title:
-                      "Something went wrong, please try again",
-                  });
-                }
-              })
-              .catch((error) => {
-                return setErrorData({
-                  title:
-                    "There is something wrong with this prompt, please review it",
-                  list: [error.response.data.detail],
-                });
-              });
-            break;
+                  break;
 
-          default:
-            break;
-        }
-      }}
-      type="submit">{myButtonText}</Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
-
-
-
+                default:
+                  break;
+              }
+            }}
+            type="submit"
+          >
+            {myButtonText}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

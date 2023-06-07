@@ -44,100 +44,89 @@ export default function CodeAreaModal({
     }
   }
   return (
-
     <Dialog open={true} onOpenChange={setModalOpen}>
-    <DialogTrigger>
-    </DialogTrigger>
-    <DialogContent className="lg:max-w-[700px] h-[500px]">
-      <DialogHeader>
-        <DialogTitle className="flex items-center">
-          <span className="pr-2">
-          Edit Code
-          </span>
+      <DialogTrigger></DialogTrigger>
+      <DialogContent className="lg:max-w-[700px] h-[500px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center">
+            <span className="pr-2">Edit Code</span>
             <CommandLineIcon
-            className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
-            aria-hidden="true"
+              className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
+              aria-hidden="true"
             />
-          
           </DialogTitle>
-        <DialogDescription>
-          Make configurations changes to your nodes. Click save when you're done.
+          <DialogDescription>
+            Make configurations changes to your nodes. Click save when you're
+            done.
+          </DialogDescription>
+        </DialogHeader>
 
-        </DialogDescription>
-      </DialogHeader>
+        <div className="flex h-full w-full mt-2">
+          <AceEditor
+            value={code}
+            mode="python"
+            highlightActiveLine={true}
+            showPrintMargin={false}
+            fontSize={14}
+            showGutter
+            enableLiveAutocompletion
+            theme={dark ? "twilight" : "github"}
+            name="CodeEditor"
+            onChange={(value) => {
+              setCode(value);
+            }}
+            className="w-full rounded-lg h-[300px] custom-scroll"
+          />
+        </div>
 
-
-                    <div className="flex h-full w-full mt-2">
-                    <AceEditor
-                          value={code}
-                          mode="python"
-                          highlightActiveLine={true}
-                          showPrintMargin={false}
-                          fontSize={14}
-                          showGutter
-                          enableLiveAutocompletion
-                          theme={dark ? "twilight" : "github"}
-                          name="CodeEditor"
-                          onChange={(value) => {
-                            setCode(value);
-                          }}
-                          className="w-full rounded-lg h-[300px] custom-scroll"
-                        />
-
-                    </div>
-
-
-   
-      <DialogFooter>
-      <Button
-      className="mt-3" 
-      onClick={() => {
-        checkCode(code)
-          .then((apiReturn) => {
-            if (apiReturn.data) {
-              let importsErrors = apiReturn.data.imports.errors;
-              let funcErrors = apiReturn.data.function.errors;
-              if (
-                funcErrors.length === 0 &&
-                importsErrors.length === 0
-              ) {
-                setSuccessData({
-                  title: "Code is ready to run",
-                });
-                setModalOpen(false);
-                setValue(code);
-              } else {
-                if (funcErrors.length !== 0) {
+        <DialogFooter>
+          <Button
+            className="mt-3"
+            onClick={() => {
+              checkCode(code)
+                .then((apiReturn) => {
+                  if (apiReturn.data) {
+                    let importsErrors = apiReturn.data.imports.errors;
+                    let funcErrors = apiReturn.data.function.errors;
+                    if (funcErrors.length === 0 && importsErrors.length === 0) {
+                      setSuccessData({
+                        title: "Code is ready to run",
+                      });
+                      setModalOpen(false);
+                      setValue(code);
+                    } else {
+                      if (funcErrors.length !== 0) {
+                        setErrorData({
+                          title: "There is an error in your function",
+                          list: funcErrors,
+                        });
+                      }
+                      if (importsErrors.length !== 0) {
+                        setErrorData({
+                          title: "There is an error in your imports",
+                          list: importsErrors,
+                        });
+                      }
+                    }
+                  } else {
+                    setErrorData({
+                      title: "Something went wrong, please try again",
+                    });
+                  }
+                })
+                .catch((_) =>
                   setErrorData({
-                    title: "There is an error in your function",
-                    list: funcErrors,
-                  });
-                }
-                if (importsErrors.length !== 0) {
-                  setErrorData({
-                    title: "There is an error in your imports",
-                    list: importsErrors,
-                  });
-                }
-              }
-            } else {
-              setErrorData({
-                title: "Something went wrong, please try again",
-              });
-            }
-          })
-          .catch((_) =>
-            setErrorData({
-              title:
-                "There is something wrong with this code, please review it",
-            })
-          );
-      }}
-
-      type="submit">Check & Save</Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
-
+                    title:
+                      "There is something wrong with this code, please review it",
+                  })
+                );
+            }}
+            type="submit"
+          >
+            Check & Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

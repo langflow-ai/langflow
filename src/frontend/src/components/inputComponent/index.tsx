@@ -9,7 +9,7 @@ export default function InputComponent({
   disableCopyPaste = false,
   disabled,
   password,
-  editNode = false
+  editNode = false,
 }: InputComponentType) {
   const [myValue, setMyValue] = useState(value ?? "");
   const [pwdVisible, setPwdVisible] = useState(false);
@@ -41,8 +41,10 @@ export default function InputComponent({
           "block w-full pr-12 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm  sm:text-sm",
           disabled ? " bg-gray-200 dark:bg-gray-700" : "",
           password && !pwdVisible && myValue !== "" ? "password" : "",
-          editNode ? "placeholder:text-center border-0 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm focus:outline-none focus:ring-1 focus:ring-inset focus:ring-gray-200" : "focus:border-indigo-500 focus:ring-indigo-500",
-          password && editNode ? "pr-8" : "pr-3",
+          editNode
+            ? "placeholder:text-center border-0 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm focus:outline-none focus:ring-1 focus:ring-inset focus:ring-gray-200"
+            : "focus:border-indigo-500 focus:ring-indigo-500",
+          password && editNode ? "pr-8" : "pr-3"
         )}
         placeholder={password && editNode ? "Key" : "Type something..."}
         onChange={(e) => {
@@ -50,14 +52,13 @@ export default function InputComponent({
           onChange(e.target.value);
         }}
       />
-      {
-        password && (
-          <button
-          className={
-            classNames(
-              editNode ? "absolute inset-y-0 right-0 pr-2 items-center text-gray-600" : "absolute inset-y-0 right-0 items-center px-4 text-gray-600",
-            )
-          }
+      {password && (
+        <button
+          className={classNames(
+            editNode
+              ? "absolute inset-y-0 right-0 pr-2 items-center text-gray-600"
+              : "absolute inset-y-0 right-0 items-center px-4 text-gray-600"
+          )}
           onClick={() => {
             setPwdVisible(!pwdVisible);
           }}
@@ -100,9 +101,7 @@ export default function InputComponent({
               </svg>
             ))}
         </button>
-        )
-      }
-
+      )}
     </div>
   );
 }

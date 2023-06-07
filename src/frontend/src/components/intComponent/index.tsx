@@ -8,11 +8,11 @@ export default function IntComponent({
   onChange,
   disableCopyPaste = false,
   disabled,
-  editNode = false
+  editNode = false,
 }: FloatComponentType) {
   const [myValue, setMyValue] = useState(value ?? "");
   const { setDisableCopyPaste } = useContext(TabsContext);
-  
+
   useEffect(() => {
     if (disabled) {
       setMyValue("");
@@ -55,9 +55,10 @@ export default function IntComponent({
         type="number"
         value={myValue}
         className={
-          editNode ? "arrow-hide placeholder:text-center border-0 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm focus:outline-none focus:ring-1 focus:ring-inset focus:ring-gray-200" :
-          "block w-full form-input dark:bg-gray-900 arrow-hide dark:border-gray-600 dark:text-gray-300 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" +
-          (disabled ? " bg-gray-200 dark:bg-gray-700" : "")
+          editNode
+            ? "arrow-hide placeholder:text-center border-0 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm focus:outline-none focus:ring-1 focus:ring-inset focus:ring-gray-200"
+            : "block w-full form-input dark:bg-gray-900 arrow-hide dark:border-gray-600 dark:text-gray-300 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" +
+              (disabled ? " bg-gray-200 dark:bg-gray-700" : "")
         }
         placeholder={editNode ? "Integer number" : "Type a integer number"}
         onChange={(e) => {

@@ -48,7 +48,7 @@ export default function ApiModal({ flowName }) {
   function setModalOpen(x: boolean) {
     setOpen(x);
     if (x === false) {
-        closePopUp();
+      closePopUp();
     }
   }
 
@@ -88,78 +88,69 @@ flow("Hey, have you heard of LangFlow?")`;
     },
   ];
   return (
-
-
     <Dialog open={true} onOpenChange={setModalOpen}>
-    <DialogTrigger>
-    </DialogTrigger>
-    <DialogContent className="lg:max-w-[800px] sm:max-w-[600px] h-[600px]">
-      <DialogHeader>
-        <DialogTitle className="flex items-center">
-          <span className="pr-2">
-          Code
-          </span>
+      <DialogTrigger></DialogTrigger>
+      <DialogContent className="lg:max-w-[800px] sm:max-w-[600px] h-[600px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center">
+            <span className="pr-2">Code</span>
             <CodeBracketSquareIcon
-            className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
-            aria-hidden="true"
+              className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
+              aria-hidden="true"
             />
-          
           </DialogTitle>
-        <DialogDescription>
-        Export your flow to use it with this code.
+          <DialogDescription>
+            Export your flow to use it with this code.
+          </DialogDescription>
+        </DialogHeader>
 
-        </DialogDescription>
-      </DialogHeader>
-
-
-                    <div className="flex flex-col h-full w-full ">
-                      <div className="flex px-5 z-10">
-                        {tabs.map((tab, index) => (
-                          <button key={index}
-                            onClick={() => {
-                              setActiveTab(index);
-                            }}
-                            className={
-                              "p-2 rounded-t-lg w-44 border border-b-0 border-gray-300 dark:border-gray-700 dark:text-gray-300 -mr-px flex justify-center items-center gap-4 " +
-                              (activeTab === index
-                                ? " bg-white dark:bg-gray-800"
-                                : "bg-gray-100 dark:bg-gray-900")
-                            }
-                          >
-                            {tab.name}
-                            <img src={tab.image} className="w-6" />
-                          </button>
-                        ))}
-                      </div>
-                      <div className="overflow-hidden px-4 py-2 sm:p-4 sm:pb-0 sm:pt-2 w-full h-full rounded-lg shadow bg-white dark:bg-gray-800">
-                        <div className="items-center mb-2">
-                          <div className="float-right">
-                          <button
-                            className="flex gap-1.5 items-center rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
-                            onClick={copyToClipboard}
-                          >
-                            {isCopied ? (
-                              <IconCheck size={18} />
-                            ) : (
-                              <IconClipboard size={18} />
-                            )}
-                            {isCopied ? "Copied!" : "Copy code"}
-                          </button>
-                            </div>
-
-                        </div>
-                        <SyntaxHighlighter
-                          className="h-[370px] w-full"
-                          language={tabs[activeTab].mode}
-                          style={oneDark}
-                          customStyle={{ margin: 0 }}
-                        >
-                          {tabs[activeTab].code}
-                        </SyntaxHighlighter>
-                      </div>
-                    </div>
-    </DialogContent>
-  </Dialog>
-
+        <div className="flex flex-col h-full w-full ">
+          <div className="flex px-5 z-10">
+            {tabs.map((tab, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  setActiveTab(index);
+                }}
+                className={
+                  "p-2 rounded-t-lg w-44 border border-b-0 border-gray-300 dark:border-gray-700 dark:text-gray-300 -mr-px flex justify-center items-center gap-4 " +
+                  (activeTab === index
+                    ? " bg-white dark:bg-gray-800"
+                    : "bg-gray-100 dark:bg-gray-900")
+                }
+              >
+                {tab.name}
+                <img src={tab.image} className="w-6" />
+              </button>
+            ))}
+          </div>
+          <div className="overflow-hidden px-4 py-2 sm:p-4 sm:pb-0 sm:pt-2 w-full h-full rounded-lg shadow bg-white dark:bg-gray-800">
+            <div className="items-center mb-2">
+              <div className="float-right">
+                <button
+                  className="flex gap-1.5 items-center rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
+                  onClick={copyToClipboard}
+                >
+                  {isCopied ? (
+                    <IconCheck size={18} />
+                  ) : (
+                    <IconClipboard size={18} />
+                  )}
+                  {isCopied ? "Copied!" : "Copy code"}
+                </button>
+              </div>
+            </div>
+            <SyntaxHighlighter
+              className="h-[370px] w-full"
+              language={tabs[activeTab].mode}
+              style={oneDark}
+              customStyle={{ margin: 0 }}
+            >
+              {tabs[activeTab].code}
+            </SyntaxHighlighter>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
