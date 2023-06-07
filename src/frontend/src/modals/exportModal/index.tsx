@@ -41,98 +41,88 @@ export default function ExportModal() {
   const [checked, setChecked] = useState(true);
   const [name, setName] = useState(flows[tabIndex].name);
   return (
-
-    <Dialog open={true} onOpenChange={setModalOpen} >
-    <DialogTrigger asChild>
-
-    </DialogTrigger>
-    <DialogContent className="lg:max-w-[600px] h-[450px]">
-      <DialogHeader>
-        <DialogTitle className="flex items-center">
-          <span className="pr-2">
-          Export
-          </span>
+    <Dialog open={true} onOpenChange={setModalOpen}>
+      <DialogTrigger asChild></DialogTrigger>
+      <DialogContent className="lg:max-w-[600px] h-[450px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center">
+            <span className="pr-2">Export</span>
             <ArrowDownTrayIcon
-            className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
-            aria-hidden="true"
+              className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
+              aria-hidden="true"
             />
-          
           </DialogTitle>
-        <DialogDescription>
-          Make configurations changes to your nodes. Click save when you're done.
+          <DialogDescription>
+            Make configurations changes to your nodes. Click save when you're
+            done.
+          </DialogDescription>
+        </DialogHeader>
 
-        </DialogDescription>
-      </DialogHeader>
-
-      <Label>
+        <Label>
           <span className="font-medium">Name</span>
 
-      <Input 
-      className="mt-2"
-      onChange={(event) => {
-        if (event.target.value != "") {
-          let newFlow = flows[tabIndex];
-          newFlow.name = event.target.value;
-          setName(event.target.value);
-          updateFlow(newFlow);
-        } else {
-          setName(event.target.value);
-        }
-      }}
-      type="text"
-      name="name"
-      value={name ?? null}
-      placeholder="File name"
-      id="name"
-      />
-</Label>
-<Label>
-  <span className="font-medium">Description (optional)</span>
-      <Textarea 
-      
-                        name="description"
-                        id="description"
-                        onChange={(event) => {
-                          let newFlow = flows[tabIndex];
-                          newFlow.description = event.target.value;
-                          updateFlow(newFlow);
-                        }}
-                        value={flows[tabIndex].description ?? null}
-                        placeholder="Flow description"
-                        className="max-h-[100px] mt-2"
-                        rows={3} />
+          <Input
+            className="mt-2"
+            onChange={(event) => {
+              if (event.target.value != "") {
+                let newFlow = flows[tabIndex];
+                newFlow.name = event.target.value;
+                setName(event.target.value);
+                updateFlow(newFlow);
+              } else {
+                setName(event.target.value);
+              }
+            }}
+            type="text"
+            name="name"
+            value={name ?? null}
+            placeholder="File name"
+            id="name"
+          />
+        </Label>
+        <Label>
+          <span className="font-medium">Description (optional)</span>
+          <Textarea
+            name="description"
+            id="description"
+            onChange={(event) => {
+              let newFlow = flows[tabIndex];
+              newFlow.description = event.target.value;
+              updateFlow(newFlow);
+            }}
+            value={flows[tabIndex].description ?? null}
+            placeholder="Flow description"
+            className="max-h-[100px] mt-2"
+            rows={3}
+          />
+        </Label>
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="terms"
+            onCheckedChange={(event: boolean) => {
+              setChecked(event);
+            }}
+          />
+          <label
+            htmlFor="terms"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          >
+            Save with my API keys
+          </label>
+        </div>
 
-</Label>
-<div className="flex items-center space-x-2">
-      <Checkbox id="terms"
-                onCheckedChange={(event: boolean) => {
-                  setChecked(event);
-                }}
-               
-      />
-      <label
-        htmlFor="terms"
-        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-      >
-        Save with my API keys
-      </label>
-    </div>
-
-      <DialogFooter>
-      <Button
-                        onClick={() => {
-                          if (checked) downloadFlow(flows[tabIndex]);
-                          else downloadFlow(removeApiKeys(flows[tabIndex]));
-                        }}
-
-      type="submit">Download Flow</Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
-
-
-
-
-
+        <DialogFooter>
+          <Button
+            onClick={() => {
+              if (checked) downloadFlow(flows[tabIndex]);
+              else downloadFlow(removeApiKeys(flows[tabIndex]));
+            }}
+            type="submit"
+          >
+            Download Flow
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
