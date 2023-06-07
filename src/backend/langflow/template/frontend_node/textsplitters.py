@@ -12,13 +12,18 @@ class TextSplittersFrontendNode(FrontendNode):
                 name="documents",
             )
         )
+        name = "separator"
+        if self.template.type_name == "CharacterTextSplitter":
+            name = "separator"
+        elif self.template.type_name == "RecursiveCharacterTextSplitter":
+            name = "separators"
         self.template.add_field(
             TemplateField(
                 field_type="str",
                 required=True,
                 show=True,
                 value=".",
-                name="separator",
+                name=name,
                 display_name="Separator",
             )
         )
