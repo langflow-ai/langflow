@@ -11,6 +11,7 @@ export type InputComponentType = {
   onChange: (value: string) => void;
   password: boolean;
   disableCopyPaste?: boolean;
+  editNode?: boolean;
 };
 export type ToggleComponentType = {
   enabled: boolean;
@@ -21,6 +22,7 @@ export type DropDownComponentType = {
   value: string;
   options: string[];
   onSelect: (value: string) => void;
+  editNode?: boolean;
 };
 export type ParameterComponentType = {
   data: NodeDataType;
@@ -43,6 +45,7 @@ export type TextAreaComponentType = {
   disabled: boolean;
   onChange: (value: string[] | string) => void;
   value: string;
+  editNode?: boolean;
 };
 
 export type FileComponentType = {
@@ -52,6 +55,7 @@ export type FileComponentType = {
   suffixes: Array<string>;
   fileTypes: Array<string>;
   onFileChange: (value: string) => void;
+  editNode?: boolean;
 };
 
 export type DisclosureComponentType = {
@@ -71,6 +75,7 @@ export type FloatComponentType = {
   disabled?: boolean;
   disableCopyPaste?: boolean;
   onChange: (value: string) => void;
+  editNode?: boolean;
 };
 
 export type TooltipComponentType = {
