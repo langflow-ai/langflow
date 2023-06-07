@@ -4,6 +4,10 @@ from langflow.template.template.base import Template
 from langflow.utils.constants import DEFAULT_PYTHON_FUNCTION
 
 
+class ToolFrontendNode(FrontendNode):
+    ...
+
+
 class ToolNode(FrontendNode):
     name: str = "Tool"
     template: Template = Template(
