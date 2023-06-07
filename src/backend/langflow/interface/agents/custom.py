@@ -1,4 +1,3 @@
-from abc import ABC
 from typing import Any, List, Optional
 
 from langchain import LLMChain
@@ -33,27 +32,10 @@ from langchain.memory.chat_memory import BaseChatMemory
 from langchain.sql_database import SQLDatabase
 from langchain.tools.python.tool import PythonAstREPLTool
 from langchain.tools.sql_database.prompt import QUERY_CHECKER
+from langflow.interface.base import CustomChain
 
 
-class CustomAgentExecutor(AgentExecutor, ABC):
-    """Custom agent executor"""
-
-    @staticmethod
-    def function_name():
-        return "CustomAgentExecutor"
-
-    @classmethod
-    def initialize(cls, *args, **kwargs):
-        pass
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def run(self, *args, **kwargs):
-        return super().run(*args, **kwargs)
-
-
-class JsonAgent(CustomAgentExecutor):
+class JsonAgent(CustomChain):
     """Json agent"""
 
     @staticmethod
@@ -89,7 +71,7 @@ class JsonAgent(CustomAgentExecutor):
         return super().run(*args, **kwargs)
 
 
-class CSVAgent(CustomAgentExecutor):
+class CSVAgent(CustomChain):
     """CSV agent"""
 
     @staticmethod
@@ -137,7 +119,7 @@ class CSVAgent(CustomAgentExecutor):
         return super().run(*args, **kwargs)
 
 
-class VectorStoreAgent(CustomAgentExecutor):
+class VectorStoreAgent(CustomChain):
     """Vector Store agent"""
 
     @staticmethod
@@ -175,7 +157,7 @@ class VectorStoreAgent(CustomAgentExecutor):
         return super().run(*args, **kwargs)
 
 
-class SQLAgent(CustomAgentExecutor):
+class SQLAgent(CustomChain):
     """SQL agent"""
 
     @staticmethod
@@ -247,7 +229,7 @@ class SQLAgent(CustomAgentExecutor):
         return super().run(*args, **kwargs)
 
 
-class VectorStoreRouterAgent(CustomAgentExecutor):
+class VectorStoreRouterAgent(CustomChain):
     """Vector Store Router Agent"""
 
     @staticmethod
@@ -286,7 +268,7 @@ class VectorStoreRouterAgent(CustomAgentExecutor):
         return super().run(*args, **kwargs)
 
 
-class InitializeAgent(CustomAgentExecutor):
+class InitializeAgent(CustomChain):
     """Implementation of initialize_agent function"""
 
     @staticmethod
