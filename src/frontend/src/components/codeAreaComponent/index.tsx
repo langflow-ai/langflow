@@ -9,6 +9,7 @@ export default function CodeAreaComponent({
   value,
   onChange,
   disabled,
+  editNode = false,
 }: TextAreaComponentType) {
   const [myValue, setMyValue] = useState(value);
   const { openPopUp } = useContext(PopUpContext);
@@ -38,6 +39,7 @@ export default function CodeAreaComponent({
             );
           }}
           className={
+            editNode ? "placeholder:text-center text-gray-500 border-0 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm focus:outline-none focus:ring-1 focus:ring-inset focus:ring-gray-200" :
             "truncate block w-full text-gray-500 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" +
             (disabled ? " bg-gray-200" : "")
           }
@@ -57,7 +59,10 @@ export default function CodeAreaComponent({
             );
           }}
         >
+          {
+            !editNode && 
           <ArrowTopRightOnSquareIcon className="w-6 h-6 hover:text-blue-600 dark:text-gray-300" />
+          }
         </button>
       </div>
     </div>
