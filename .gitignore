@@ -244,3 +244,7 @@ dmypy.json
 
 # cache
 qdrant_*
+
+# db
+*.db
+*.sqlite3

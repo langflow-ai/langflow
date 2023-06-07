@@ -64,7 +64,7 @@ def test_build_langchain_object_with_caching(basic_data_graph):
 def test_build_graph(basic_data_graph):
     graph = build_graph(basic_data_graph)
     assert graph is not None
-    assert len(graph.nodes) == len(basic_data_graph["nodes"])
+    assert len(graph.vertices) == len(basic_data_graph["nodes"])
     assert len(graph.edges) == len(basic_data_graph["edges"])
 
 

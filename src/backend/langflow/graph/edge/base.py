@@ -1,3 +1,4 @@
+# Path: src/backend/langflow/graph/edge/base.py
 from langflow.utils.logger import logger
 from typing import TYPE_CHECKING
 
@@ -6,10 +7,19 @@ if TYPE_CHECKING:
 
 
 class Edge:
-    def __init__(self, source: "Vertex", target: "Vertex"):
+    def __init__(self, source: "Vertex", target: "Vertex", raw_edge: dict):
         self.source: "Vertex" = source
         self.target: "Vertex" = target
         self.validate_edge()
+        self.parse_handles(raw_edge)
+
+    def parse_handles(self, raw_edge: dict) -> None:
+        # handle structure: base_class|type|id for target
+        # handle structure: name|id|base_classes for source
+        self._target_handle = raw_edge["targetHandle"]
+        self._target_handle_parts = self._target_handle.split("|")
+        # This param can be used to pass data to the target
+        self._target_param_key = self._target_handle_parts[1]
 
     def validate_edge(self) -> None:
         # Validate that the outputs of the source node are valid inputs

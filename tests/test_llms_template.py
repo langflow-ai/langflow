@@ -121,6 +121,7 @@ def test_openai(client: TestClient):
         "type": "bool",
         "list": False,
         "advanced": False,
+        "root": False,
     }
     assert template["verbose"] == {
         "required": False,
@@ -132,6 +133,7 @@ def test_openai(client: TestClient):
         "type": "bool",
         "list": False,
         "advanced": False,
+        "root": False,
     }
     assert template["client"] == {
         "required": False,
@@ -143,6 +145,7 @@ def test_openai(client: TestClient):
         "type": "Any",
         "list": False,
         "advanced": False,
+        "root": False,
     }
     assert template["model_name"] == {
         "required": False,
@@ -162,6 +165,7 @@ def test_openai(client: TestClient):
         "type": "str",
         "list": True,
         "advanced": False,
+        "root": False,
     }
     # Add more assertions for other properties here
     assert template["temperature"] == {
@@ -175,6 +179,7 @@ def test_openai(client: TestClient):
         "type": "float",
         "list": False,
         "advanced": False,
+        "root": False,
     }
     assert template["max_tokens"] == {
         "required": False,
@@ -187,6 +192,7 @@ def test_openai(client: TestClient):
         "type": "int",
         "list": False,
         "advanced": False,
+        "root": False,
     }
     assert template["top_p"] == {
         "required": False,
@@ -199,6 +205,7 @@ def test_openai(client: TestClient):
         "type": "float",
         "list": False,
         "advanced": False,
+        "root": False,
     }
     assert template["frequency_penalty"] == {
         "required": False,
@@ -211,6 +218,7 @@ def test_openai(client: TestClient):
         "type": "float",
         "list": False,
         "advanced": False,
+        "root": False,
     }
     assert template["presence_penalty"] == {
         "required": False,
@@ -223,6 +231,7 @@ def test_openai(client: TestClient):
         "type": "float",
         "list": False,
         "advanced": False,
+        "root": False,
     }
     assert template["n"] == {
         "required": False,
@@ -235,6 +244,7 @@ def test_openai(client: TestClient):
         "type": "int",
         "list": False,
         "advanced": False,
+        "root": False,
     }
     assert template["best_of"] == {
         "required": False,
@@ -247,6 +257,7 @@ def test_openai(client: TestClient):
         "type": "int",
         "list": False,
         "advanced": False,
+        "root": False,
     }
     assert template["model_kwargs"] == {
         "required": False,
@@ -258,6 +269,7 @@ def test_openai(client: TestClient):
         "type": "code",
         "list": False,
         "advanced": True,
+        "root": False,
     }
     assert template["openai_api_key"] == {
         "required": False,
@@ -271,6 +283,7 @@ def test_openai(client: TestClient):
         "type": "str",
         "list": False,
         "advanced": False,
+        "root": False,
     }
     assert template["batch_size"] == {
         "required": False,
@@ -283,6 +296,7 @@ def test_openai(client: TestClient):
         "type": "int",
         "list": False,
         "advanced": False,
+        "root": False,
     }
     assert template["request_timeout"] == {
         "required": False,
@@ -294,6 +308,7 @@ def test_openai(client: TestClient):
         "type": "float",
         "list": False,
         "advanced": False,
+        "root": False,
     }
     assert template["logit_bias"] == {
         "required": False,
@@ -305,6 +320,7 @@ def test_openai(client: TestClient):
         "type": "code",
         "list": False,
         "advanced": False,
+        "root": False,
     }
     assert template["max_retries"] == {
         "required": False,
@@ -317,6 +333,7 @@ def test_openai(client: TestClient):
         "type": "int",
         "list": False,
         "advanced": False,
+        "root": False,
     }
     assert template["streaming"] == {
         "required": False,
@@ -329,6 +346,7 @@ def test_openai(client: TestClient):
         "type": "bool",
         "list": False,
         "advanced": False,
+        "root": False,
     }
 
 
@@ -352,6 +370,7 @@ def test_chat_open_ai(client: TestClient):
         "type": "bool",
         "list": False,
         "advanced": False,
+        "root": False,
     }
     assert template["client"] == {
         "required": False,
@@ -363,6 +382,7 @@ def test_chat_open_ai(client: TestClient):
         "type": "Any",
         "list": False,
         "advanced": False,
+        "root": False,
     }
     assert template["model_name"] == {
         "required": False,
@@ -376,6 +396,7 @@ def test_chat_open_ai(client: TestClient):
         "type": "str",
         "list": True,
         "advanced": False,
+        "root": False,
     }
     assert template["temperature"] == {
         "required": False,
@@ -388,6 +409,7 @@ def test_chat_open_ai(client: TestClient):
         "type": "float",
         "list": False,
         "advanced": False,
+        "root": False,
     }
     assert template["model_kwargs"] == {
         "required": False,
@@ -399,6 +421,7 @@ def test_chat_open_ai(client: TestClient):
         "type": "code",
         "list": False,
         "advanced": True,
+        "root": False,
     }
     assert template["openai_api_key"] == {
         "required": False,
@@ -412,6 +435,7 @@ def test_chat_open_ai(client: TestClient):
         "type": "str",
         "list": False,
         "advanced": False,
+        "root": False,
     }
     assert template["request_timeout"] == {
         "required": False,
@@ -423,6 +447,7 @@ def test_chat_open_ai(client: TestClient):
         "type": "float",
         "list": False,
         "advanced": False,
+        "root": False,
     }
     assert template["max_retries"] == {
         "required": False,
@@ -435,6 +460,7 @@ def test_chat_open_ai(client: TestClient):
         "type": "int",
         "list": False,
         "advanced": False,
+        "root": False,
     }
     assert template["streaming"] == {
         "required": False,
@@ -447,6 +473,7 @@ def test_chat_open_ai(client: TestClient):
         "type": "bool",
         "list": False,
         "advanced": False,
+        "root": False,
     }
     assert template["n"] == {
         "required": False,
@@ -459,6 +486,7 @@ def test_chat_open_ai(client: TestClient):
         "type": "int",
         "list": False,
         "advanced": False,
+        "root": False,
     }
 
     assert template["max_tokens"] == {
@@ -471,6 +499,7 @@ def test_chat_open_ai(client: TestClient):
         "type": "int",
         "list": False,
         "advanced": False,
+        "root": False,
     }
     assert template["_type"] == "ChatOpenAI"
     assert (

@@ -55,10 +55,19 @@ def get_graph(_type="basic"):
     elif _type == "openapi":
         path = pytest.OPENAPI_EXAMPLE_PATH
 
+    data_graph = load_graph(path)
+    return Graph(graph_data=data_graph)
+
+
+def load_graph(path: Path):
     with open(path, "r") as f:
         flow_graph = json.load(f)
-    data_graph = flow_graph["data"]
-    return Graph(graph_data=data_graph)
+    return flow_graph["data"]
+
+
+@pytest.fixture
+def basic_graph_data():
+    return load_graph(pytest.BASIC_EXAMPLE_PATH)
 
 
 @pytest.fixture
