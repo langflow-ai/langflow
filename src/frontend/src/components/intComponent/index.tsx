@@ -12,8 +12,6 @@ export default function IntComponent({
 }: FloatComponentType) {
   const [myValue, setMyValue] = useState(value ?? "");
   const { setDisableCopyPaste } = useContext(TabsContext);
-
-  console.log(editNode);
   
   useEffect(() => {
     if (disabled) {
