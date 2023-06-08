@@ -153,12 +153,12 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                       )
                       .map((n, i) => (
                         <TableRow key={i} className="h-8">
-                          <TableCell className="p-0 text-center text-gray-900 text-xs">
+                          <TableCell className="p-0 text-center text-gray-900 text-xs dark:text-gray-300">
                             {data.node.template[n].name
                               ? data.node.template[n].name
                               : data.node.template[n].display_name}
                           </TableCell>
-                          <TableCell className="p-0 text-center text-gray-900 text-xs w-[300px]">
+                          <TableCell className="p-0 text-center text-gray-900 text-xs w-[300px] dark:text-gray-300">
                             {data.node.template[n].type === "str" &&
                             !data.node.template[n].options ? (
                               <div className="mx-auto">
