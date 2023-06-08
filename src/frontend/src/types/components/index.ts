@@ -3,6 +3,7 @@ import {
   ReactElement,
   ReactFragment,
   ReactNode,
+  SVGProps,
 } from "react";
 import { NodeDataType } from "../flow/index";
 export type InputComponentType = {
@@ -60,6 +61,7 @@ export type FileComponentType = {
 
 export type DisclosureComponentType = {
   children: ReactNode;
+  openDisc: boolean;
   button: {
     title: string;
     Icon: ForwardRefExoticComponent<React.SVGProps<SVGSVGElement>>;

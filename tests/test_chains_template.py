@@ -3,7 +3,7 @@ from langflow.settings import settings
 
 
 def test_chains_settings(client: TestClient):
-    response = client.get("/all")
+    response = client.get("api/v1/all")
     assert response.status_code == 200
     json_response = response.json()
     chains = json_response["chains"]
@@ -12,7 +12,7 @@ def test_chains_settings(client: TestClient):
 
 # Test the ConversationChain object
 def test_conversation_chain(client: TestClient):
-    response = client.get("/all")
+    response = client.get("api/v1/all")
     assert response.status_code == 200
     json_response = response.json()
     chains = json_response["chains"]
@@ -94,7 +94,7 @@ def test_conversation_chain(client: TestClient):
 
 
 def test_llm_chain(client: TestClient):
-    response = client.get("/all")
+    response = client.get("api/v1/all")
     assert response.status_code == 200
     json_response = response.json()
     chains = json_response["chains"]
@@ -152,7 +152,7 @@ def test_llm_chain(client: TestClient):
 
 
 def test_llm_checker_chain(client: TestClient):
-    response = client.get("/all")
+    response = client.get("api/v1/all")
     assert response.status_code == 200
     json_response = response.json()
     chains = json_response["chains"]
@@ -228,7 +228,7 @@ def test_llm_checker_chain(client: TestClient):
 
 
 def test_llm_math_chain(client: TestClient):
-    response = client.get("/all")
+    response = client.get("api/v1/all")
     assert response.status_code == 200
     json_response = response.json()
     chains = json_response["chains"]
@@ -306,7 +306,7 @@ def test_llm_math_chain(client: TestClient):
 
 
 def test_series_character_chain(client: TestClient):
-    response = client.get("/all")
+    response = client.get("api/v1/all")
     assert response.status_code == 200
     json_response = response.json()
     chains = json_response["chains"]
@@ -368,7 +368,7 @@ def test_series_character_chain(client: TestClient):
 
 
 def test_mid_journey_prompt_chain(client: TestClient):
-    response = client.get("/all")
+    response = client.get("api/v1/all")
     assert response.status_code == 200
     json_response = response.json()
     chains = json_response["chains"]
@@ -407,7 +407,7 @@ def test_mid_journey_prompt_chain(client: TestClient):
 
 
 def test_time_travel_guide_chain(client: TestClient):
-    response = client.get("/all")
+    response = client.get("api/v1/all")
     assert response.status_code == 200
     json_response = response.json()
     chains = json_response["chains"]

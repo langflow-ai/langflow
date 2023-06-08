@@ -20,8 +20,7 @@ from langchain.llms.loading import load_llm_from_config
 from pydantic import ValidationError
 
 from langflow.interface.agents.custom import CUSTOM_AGENTS
-from langflow.interface.importing.utils import import_by_type
-from langflow.interface.run import fix_memory_inputs
+from langflow.interface.importing.utils import get_function, import_by_type
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.types import get_type_list
 from langflow.interface.utils import load_file_into_dict
@@ -31,7 +30,7 @@ from langflow.utils import util, validate
 def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
     """Instantiate class from module type and key, and params"""
     params = convert_params_to_sets(params)
-
+    params = convert_kwargs(params)
     if node_type in CUSTOM_AGENTS:
         custom_agent = CUSTOM_AGENTS.get(node_type)
         if custom_agent:
@@ -47,6 +46,16 @@ def convert_params_to_sets(params):
         params["allowed_special"] = set(params["allowed_special"])
     if "disallowed_special" in params:
         params["disallowed_special"] = set(params["disallowed_special"])
+    return params
+
+
+def convert_kwargs(params):
+    # if *kwargs are passed as a string, convert to dict
+    # first find any key that has kwargs in it
+    kwargs_keys = [key for key in params.keys() if "kwargs" in key]
+    for key in kwargs_keys:
+        if isinstance(params[key], str):
+            params[key] = json.loads(params[key])
     return params
 
 
@@ -89,6 +98,10 @@ def instantiate_tool(node_type, class_object, params):
     if node_type == "JsonSpec":
         params["dict_"] = load_file_into_dict(params.pop("path"))
         return class_object(**params)
+    elif node_type == "PythonFunctionTool":
+        params["func"] = get_function(params.get("code"))
+        return class_object(**params)
+    # For backward compatibility
     elif node_type == "PythonFunction":
         function_string = params["code"]
         if isinstance(function_string, str):
@@ -101,8 +114,11 @@ def instantiate_tool(node_type, class_object, params):
 
 def instantiate_toolkit(node_type, class_object, params):
     loaded_toolkit = class_object(**params)
-    if toolkits_creator.has_create_function(node_type):
-        return load_toolkits_executor(node_type, loaded_toolkit, params)
+    # Commenting this out for now to use toolkits as normal tools
+    # if toolkits_creator.has_create_function(node_type):
+    #     return load_toolkits_executor(node_type, loaded_toolkit, params)
+    if isinstance(loaded_toolkit, BaseToolkit):
+        return loaded_toolkit.get_tools()
     return loaded_toolkit
 
 
@@ -149,38 +165,6 @@ def instantiate_utility(node_type, class_object, params):
     if node_type == "SQLDatabase":
         return class_object.from_uri(params.pop("uri"))
     return class_object(**params)
-
-
-def load_flow_from_json(path: str, build=True):
-    """Load flow from json file"""
-    # This is done to avoid circular imports
-    from langflow.graph import Graph
-
-    with open(path, "r", encoding="utf-8") as f:
-        flow_graph = json.load(f)
-    data_graph = flow_graph["data"]
-    nodes = data_graph["nodes"]
-    # Substitute ZeroShotPrompt with PromptTemplate
-    # nodes = replace_zero_shot_prompt_with_prompt_template(nodes)
-    # Add input variables
-    # nodes = payload.extract_input_variables(nodes)
-
-    # Nodes, edges and root node
-    edges = data_graph["edges"]
-    graph = Graph(nodes, edges)
-    if build:
-        langchain_object = graph.build()
-        if hasattr(langchain_object, "verbose"):
-            langchain_object.verbose = True
-
-        if hasattr(langchain_object, "return_intermediate_steps"):
-            # https://github.com/hwchase17/langchain/issues/2068
-            # Deactivating until we have a frontend solution
-            # to display intermediate steps
-            langchain_object.return_intermediate_steps = False
-        fix_memory_inputs(langchain_object)
-        return langchain_object
-    return graph
 
 
 def replace_zero_shot_prompt_with_prompt_template(nodes):
