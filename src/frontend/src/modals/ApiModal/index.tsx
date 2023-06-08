@@ -90,7 +90,7 @@ flow("Hey, have you heard of LangFlow?")`;
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger></DialogTrigger>
-      <DialogContent className="lg:max-w-[800px] sm:max-w-[600px] h-[600px]">
+      <DialogContent className="lg:max-w-[800px] sm:max-w-[600px] h-[550px]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Code</span>
