@@ -91,10 +91,12 @@ class CustomChain(Chain, ABC):
     """Custom chain"""
 
     @staticmethod
+    @abstractmethod
     def function_name():
         return "CustomChain"
 
     @classmethod
+    @abstractmethod
     def initialize(cls, *args, **kwargs):
         pass
 
@@ -109,10 +111,12 @@ class CustomAgentExecutor(AgentExecutor, ABC):
     """Custom chain"""
 
     @staticmethod
+    @abstractmethod
     def function_name():
         return "CustomChain"
 
     @classmethod
+    @abstractmethod
     def initialize(cls, *args, **kwargs):
         pass
 
