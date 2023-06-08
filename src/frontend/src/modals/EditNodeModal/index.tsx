@@ -57,7 +57,6 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
           data.node.template[t].type === "code" ||
           data.node.template[t].type === "prompt" ||
           data.node.template[t].type === "file" ||
-          data.node.template[t].type === "Any" ||
           data.node.template[t].type === "int")
     ).length
   );
@@ -148,7 +147,6 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                             data.node.template[t].type === "code" ||
                             data.node.template[t].type === "prompt" ||
                             data.node.template[t].type === "file" ||
-                            data.node.template[t].type === "Any" ||
                             data.node.template[t].type === "int")
                       )
                       .map((n, i) => (
