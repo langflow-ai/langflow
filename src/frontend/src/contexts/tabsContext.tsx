@@ -89,8 +89,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     let cookie = window.localStorage.getItem("tabsData");
     if (cookie && Object.keys(templates).length > 0) {
       let cookieObject: LangFlowState = JSON.parse(cookie);
-      try {
         cookieObject.flows.forEach((flow) => {
+                  if (!flow.data) {
+          return;
+        }
           flow.data.edges.forEach((edge) => {
             edge.className = "";
             edge.style = { stroke: "#555555" };
@@ -124,8 +126,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         setTabIndex(cookieObject.tabIndex);
         setFlows(cookieObject.flows);
         setId(cookieObject.id);
-      } catch (e) {
-        console.log(e);
       }
     }
   }, [templates]);
