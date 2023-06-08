@@ -21,7 +21,7 @@ import {
   DialogTrigger,
 } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
-import { modalSubtitle } from "../modal-texts";
+import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants";
 
 export default function CodeAreaModal({
   value,
@@ -56,9 +56,7 @@ export default function CodeAreaModal({
               aria-hidden="true"
             />
           </DialogTitle>
-          <DialogDescription>
-            {modalSubtitle['codeprompt']}
-          </DialogDescription>
+          <DialogDescription>{CODE_PROMPT_DIALOG_SUBTITLE}</DialogDescription>
         </DialogHeader>
 
         <div className="flex h-full w-full mt-2">
