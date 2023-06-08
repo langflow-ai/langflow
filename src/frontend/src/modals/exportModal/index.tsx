@@ -23,7 +23,7 @@ import { Label } from "@radix-ui/react-label";
 import { Checkbox } from "../../components/ui/checkbox";
 import { Textarea } from "../../components/ui/textarea";
 import { Input } from "../../components/ui/input";
-import { modalSubtitle } from "../modal-texts";
+import { EXPORT_DIALOG_SUBTITLE } from "../../constants";
 
 export default function ExportModal() {
   const [open, setOpen] = useState(true);
@@ -53,9 +53,7 @@ export default function ExportModal() {
               aria-hidden="true"
             />
           </DialogTitle>
-          <DialogDescription>
-          {modalSubtitle['export']}
-          </DialogDescription>
+          <DialogDescription>{EXPORT_DIALOG_SUBTITLE}</DialogDescription>
         </DialogHeader>
 
         <Label>

@@ -16,7 +16,7 @@ import {
 } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
-import { modalSubtitle } from "../modal-texts";
+import { PROMPT_DIALOG_SUBTITLE, TEXT_DIALOG_SUBTITLE } from "../../constants";
 
 export default function PromptAreaModal({
   value,
@@ -60,7 +60,18 @@ export default function PromptAreaModal({
             />
           </DialogTitle>
           <DialogDescription>
-          {modalSubtitle['prompt']}
+            {(() => {
+              switch (myModalTitle) {
+                case "Edit Text":
+                  return TEXT_DIALOG_SUBTITLE;
+
+                case "Edit Prompt":
+                  return PROMPT_DIALOG_SUBTITLE;
+
+                default:
+                  return null;
+              }
+            })()}
           </DialogDescription>
         </DialogHeader>
 

@@ -42,7 +42,7 @@ import {
   DialogTrigger,
 } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
-import { modalSubtitle } from "../modal-texts";
+import { EDIT_DIALOG_SUBTITLE } from "../../constants";
 
 export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const [open, setOpen] = useState(true);
@@ -103,7 +103,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
             />
           </DialogTitle>
           <DialogDescription>
-          {modalSubtitle['edit']}
+            {EDIT_DIALOG_SUBTITLE}
             <div className="flex pt-3">
               <VariableIcon className="w-5 h-5 pe-1 text-gray-700 stroke-2">
                 &nbsp;
@@ -179,6 +179,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                 ) : data.node.template[n].multiline ? (
                                   <TextAreaComponent
                                     disabled={false}
+                                    editNode={true}
                                     value={data.node.template[n].value ?? ""}
                                     onChange={(t: string) => {
                                       data.node.template[n].value = t;
