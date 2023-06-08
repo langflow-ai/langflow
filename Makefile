@@ -43,6 +43,7 @@ install_backend:
 	poetry install
 
 backend:
+	make install_backend
 	poetry run uvicorn langflow.main:app --port 7860 --reload --log-level debug
 
 build_frontend:
@@ -59,7 +60,7 @@ lcserve_push:
 	make build_frontend
 	@version=$$(poetry version --short); \
 	lc-serve push --app langflow.lcserve:app --app-dir . \
-		--image-name langflow --image-tag $${version} --verbose
+		--image-name langflow --image-tag $${version} --verbose --public
 
 lcserve_deploy:
 	@:$(if $(uses),,$(error `uses` is not set. Please run `make uses=... lcserve_deploy`))

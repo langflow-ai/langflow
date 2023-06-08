@@ -77,7 +77,7 @@ const NodeToolbarComponent = (props) => {
                 props.openPopUp(<NodeModal data={props.data} />);
               }}
             >
-              <div className=" absolute right-1 top-0 text-red-600">
+              <div className=" absolute right-1 top-[-2px] text-red-600">
                 {Object.keys(props.data.node.template).some(
                   (t) =>
                     props.data.node.template[t].advanced &&

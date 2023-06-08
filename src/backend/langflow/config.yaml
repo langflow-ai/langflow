@@ -51,11 +51,14 @@ embeddings:
 llms:
   - OpenAI
   # - AzureOpenAI
+  # - AzureChatOpenAI
   - ChatOpenAI
-  - HuggingFaceHub
   - LlamaCpp
   - CTransformers
   - Cohere
+  - Anthropic
+  - ChatAnthropic
+  - HuggingFaceHub
 memories:
   - ConversationBufferMemory
   - ConversationSummaryMemory
@@ -74,12 +77,14 @@ toolkits:
   - JsonToolkit
   - VectorStoreInfo
   - VectorStoreRouterToolkit
+  - VectorStoreToolkit
 tools:
   - Search
   - PAL-MATH
   - Calculator
   - Serper Search
   - Tool
+  - PythonFunctionTool
   - PythonFunction
   - JsonSpec
   - News API
@@ -119,6 +124,7 @@ vectorstores:
   - Chroma
   - Qdrant
   - Weaviate
+  - FAISS
 wrappers:
   - RequestsWrapper
   # - ChatPromptTemplate
