@@ -65,7 +65,7 @@ Human: {input}
 {character}:"""
 
     ai_prefix: str = "{character}"
-    input_variables: List[str] = ["character", "series"]
+    input_variables: List[str] = ["character", "series", "history","input"]
 
 
 CUSTOM_PROMPTS: Dict[str, Type[BaseCustomPrompt]] = {
