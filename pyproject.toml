@@ -22,14 +22,14 @@ langflow = "langflow.__main__:main"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.12"
-fastapi = "^0.95.0"
+fastapi = "^0.96.0"
 uvicorn = "^0.20.0"
 beautifulsoup4 = "^4.11.2"
 google-search-results = "^2.4.1"
 google-api-python-client = "^2.79.0"
 typer = "^0.7.0"
 gunicorn = "^20.1.0"
-langchain = "^0.0.186"
+langchain = "^0.0.194"
 openai = "^0.27.7"
 types-pyyaml = "^6.0.12.8"
 dill = "^0.3.6"
@@ -58,6 +58,7 @@ sentence-transformers = "^2.2.2"
 ctransformers = "^0.2.2"
 cohere = "^4.6.0"
 faiss-cpu = "^1.7.4"
+anthropic = "^0.2.9"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -76,6 +77,15 @@ types-pillow = "^9.5.0.2"
 
 [tool.poetry.extras]
 deploy = ["langchain-serve"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra"
+testpaths = ["tests", "integration"]
+console_output_style = "progress"
+filterwarnings = ["ignore::DeprecationWarning"]
+log_cli = true
+
 
 [tool.ruff]
 line-length = 120

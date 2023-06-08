@@ -1,10 +1,10 @@
 import json
+from langflow.graph import Graph
+from langflow.processing.process import load_or_build_langchain_object
 
 import pytest
 from langflow.interface.run import (
-    build_graph,
     build_langchain_object_with_caching,
-    load_or_build_langchain_object,
 )
 
 
@@ -62,7 +62,7 @@ def test_build_langchain_object_with_caching(basic_data_graph):
 
 # Test build_graph
 def test_build_graph(basic_data_graph):
-    graph = build_graph(basic_data_graph)
+    graph = Graph.from_payload(basic_data_graph)
     assert graph is not None
     assert len(graph.nodes) == len(basic_data_graph["nodes"])
     assert len(graph.edges) == len(basic_data_graph["edges"])

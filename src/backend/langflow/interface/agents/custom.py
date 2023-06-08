@@ -69,7 +69,7 @@ class JsonAgent(CustomAgentExecutor):
 
     @classmethod
     def from_toolkit_and_llm(cls, toolkit: JsonToolkit, llm: BaseLanguageModel):
-        tools = toolkit.get_tools()
+        tools = toolkit if isinstance(toolkit, list) else toolkit.get_tools()
         tool_names = {tool.name for tool in tools}
         prompt = ZeroShotAgent.create_prompt(
             tools,

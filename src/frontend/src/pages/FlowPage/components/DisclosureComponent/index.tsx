@@ -5,6 +5,7 @@ import { DisclosureComponentType } from "../../../../types/components";
 export default function DisclosureComponent({
   button: { title, Icon, buttons = [] },
   children,
+  openDisc,
 }: DisclosureComponentType) {
   return (
     <Disclosure as="div" key={title}>
@@ -27,14 +28,14 @@ export default function DisclosureComponent({
                 <div>
                   <ChevronRightIcon
                     className={`${
-                      open ? "rotate-90 transform" : ""
+                      open || openDisc ? "rotate-90 transform" : ""
                     } h-4 w-4 text-gray-800 dark:text-white`}
                   />
                 </div>
               </div>
             </Disclosure.Button>
           </div>
-          <Disclosure.Panel as="div" className="-mt-px">
+          <Disclosure.Panel as="div" className="-mt-px" static={openDisc}>
             {children}
           </Disclosure.Panel>
         </>

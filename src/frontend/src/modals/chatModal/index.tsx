@@ -182,10 +182,10 @@ export default function ChatModal({
     try {
       const urlWs =
         process.env.NODE_ENV === "development"
-          ? `ws://localhost:7860/chat/${id.current}`
+          ? `ws://localhost:7860/api/v1/chat/${id.current}`
           : `${window.location.protocol === "https:" ? "wss" : "ws"}://${
               window.location.host
-            }/chat/${id.current}`;
+            }api/v1/chat/${id.current}`;
       const newWs = new WebSocket(urlWs);
       newWs.onopen = () => {
         console.log("WebSocket connection established!");
@@ -409,7 +409,12 @@ export default function ChatModal({
                 >
                   {chatHistory.length > 0 ? (
                     chatHistory.map((c, i) => (
-                      <ChatMessage lockChat={lockChat} chat={c} key={i} />
+                      <ChatMessage
+                        lockChat={lockChat}
+                        chat={c}
+                        lastMessage={chatHistory.length - 1 == i ? true : false}
+                        key={i}
+                      />
                     ))
                   ) : (
                     <div className="flex flex-col h-full text-center justify-center w-full items-center align-middle">
