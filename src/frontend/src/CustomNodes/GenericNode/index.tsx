@@ -102,45 +102,43 @@ export default function GenericNode({
   }
 
   return (
-
     <>
-    <NodeToolbar>
-      <NodeToolbarComponent
-        data={data}
-        openPopUp={openPopUp}
-        deleteNode={deleteNode}
-      ></NodeToolbarComponent>
-    </NodeToolbar>
-    
-    <div
-      className={classNames(
-        selected ? "border border-blue-500" : "border dark:border-gray-700",
-        "prompt-node relative flex w-96 flex-col justify-center rounded-lg bg-white dark:bg-gray-900"
-      )}
-    >
-      <div className="flex w-full items-center justify-between gap-8 rounded-t-lg border-b bg-gray-50 p-4 dark:border-b-gray-700 dark:bg-gray-800 dark:text-white ">
-        <div className="flex w-full items-center gap-2 truncate text-lg">
-          <Icon
-            className="h-10 w-10 rounded p-1"
-            style={{
-              color: nodeColors[types[data.type]] ?? nodeColors.unknown,
-            }}
-          />
-          <div className="ml-2 truncate">
-            <ShadTooltip delayDuration={1500} content={data.type}>
-              <div className="ml-2 truncate">{data.type}</div>
-            </ShadTooltip>
+      <NodeToolbar>
+        <NodeToolbarComponent
+          data={data}
+          openPopUp={openPopUp}
+          deleteNode={deleteNode}
+        ></NodeToolbarComponent>
+      </NodeToolbar>
+
+      <div
+        className={classNames(
+          selected ? "border border-blue-500" : "border dark:border-gray-700",
+          "prompt-node relative flex w-96 flex-col justify-center rounded-lg bg-white dark:bg-gray-900"
+        )}
+      >
+        <div className="flex w-full items-center justify-between gap-8 rounded-t-lg border-b bg-gray-50 p-4 dark:border-b-gray-700 dark:bg-gray-800 dark:text-white ">
+          <div className="flex w-full items-center gap-2 truncate text-lg">
+            <Icon
+              className="h-10 w-10 rounded p-1"
+              style={{
+                color: nodeColors[types[data.type]] ?? nodeColors.unknown,
+              }}
+            />
+            <div className="ml-2 truncate">
+              <ShadTooltip delayDuration={1500} content={data.type}>
+                <div className="ml-2 truncate">{data.type}</div>
+              </ShadTooltip>
+            </div>
           </div>
-        </div>
-        <div className="flex gap-3">
-          <button
-            className="relative"
-            onClick={(event) => {
-              event.preventDefault();
-              openPopUp(<NodeModal data={data} />);
-            }}
-          >
-            </button>
+          <div className="flex gap-3">
+            <button
+              className="relative"
+              onClick={(event) => {
+                event.preventDefault();
+                openPopUp(<NodeModal data={data} />);
+              }}
+            ></button>
           </div>
           <div className="flex gap-3">
             <div>
@@ -222,25 +220,25 @@ export default function GenericNode({
                   {data.node.template[t].show &&
                   !data.node.template[t].advanced ? (
                     <ParameterComponent
-                    data={data}
-                    color={
-                      nodeColors[types[data.node.template[t].type]] ??
-                      nodeColors.unknown
-                    }
-                    title={
-                      data.node.template[t].display_name
-                        ? data.node.template[t].display_name
-                        : data.node.template[t].name
-                        ? toTitleCase(data.node.template[t].name)
-                        : toTitleCase(t)
-                    }
-                    name={t}
-                    tooltipTitle={data.node.template[t].type}
-                    required={data.node.template[t].required}
-                    id={data.node.template[t].type + "|" + t + "|" + data.id}
-                    left={true}
-                    type={data.node.template[t].type}
-                  />
+                      data={data}
+                      color={
+                        nodeColors[types[data.node.template[t].type]] ??
+                        nodeColors.unknown
+                      }
+                      title={
+                        data.node.template[t].display_name
+                          ? data.node.template[t].display_name
+                          : data.node.template[t].name
+                          ? toTitleCase(data.node.template[t].name)
+                          : toTitleCase(t)
+                      }
+                      name={t}
+                      tooltipTitle={data.node.template[t].type}
+                      required={data.node.template[t].required}
+                      id={data.node.template[t].type + "|" + t + "|" + data.id}
+                      left={true}
+                      type={data.node.template[t].type}
+                    />
                   ) : (
                     <></>
                   )}
@@ -257,15 +255,15 @@ export default function GenericNode({
             {/* <div className="px-5 py-2 mt-2 dark:text-white text-center">
                   Output
               </div> */}
-          <ParameterComponent
-            data={data}
-            color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-            title={data.type}
-            tooltipTitle={`${data.node.base_classes.join("\n")}`}
-            id={[data.type, data.id, ...data.node.base_classes].join("|")}
-            type={data.node.base_classes.join("|")}
-            left={false}
-          />
+            <ParameterComponent
+              data={data}
+              color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+              title={data.type}
+              tooltipTitle={`${data.node.base_classes.join("\n")}`}
+              id={[data.type, data.id, ...data.node.base_classes].join("|")}
+              type={data.node.base_classes.join("|")}
+              left={false}
+            />
           </>
         </div>
       </div>
