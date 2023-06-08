@@ -65,7 +65,7 @@ export default function ParameterComponent({
 
     refHtml.current = groupedObj.map((item, i) => (
       <span
-        key={item}
+        key={i}
         className={classNames(
           i > 0 ? "items-center flex mt-3" : "items-center flex"
         )}
@@ -86,7 +86,7 @@ export default function ParameterComponent({
             {item.type.split(", ").length > 2
               ? item.type.split(", ").map((el, i) => (
                   <>
-                    <span key={el}>
+                    <span key={i}>
                       {i == item.type.split(", ").length - 1
                         ? el
                         : (el += `, `)}
