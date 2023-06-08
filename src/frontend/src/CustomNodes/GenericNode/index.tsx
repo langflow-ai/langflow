@@ -251,11 +251,7 @@ export default function GenericNode({
                         : toTitleCase(field_name)
                     }
                     name={field_name}
-                    tooltipTitle={
-                      "Type: " +
-                      data.node.template[field_name].type +
-                      (data.node.template[field_name].list ? " list" : "")
-                    }
+                    tooltipTitle={data.node.template[field_name].type}
                     required={data.node.template[field_name].required}
                     id={
                       data.node.template[field_name].type +
@@ -289,7 +285,7 @@ export default function GenericNode({
               data={data}
               color={nodeColors[types[data.type]] ?? nodeColors.unknown}
               title={data.node.template.root_field.display_name}
-              tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
+              tooltipTitle={`${data.node.base_classes.join("\n")}`}
               id={
                 data.node.template.root_field.type +
                 "|" +
@@ -305,7 +301,7 @@ export default function GenericNode({
               data={data}
               color={nodeColors[types[data.type]] ?? nodeColors.unknown}
               title={data.type}
-              tooltipTitle={`Type: ${data.node.base_classes.join(" | ")}`}
+              tooltipTitle={`${data.node.base_classes.join("\n")}`}
               id={[data.type, data.id, ...data.node.base_classes].join("|")}
               type={data.node.base_classes.join("|")}
               left={false}
