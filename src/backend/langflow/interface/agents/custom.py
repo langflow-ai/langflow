@@ -32,10 +32,10 @@ from langchain.memory.chat_memory import BaseChatMemory
 from langchain.sql_database import SQLDatabase
 from langchain.tools.python.tool import PythonAstREPLTool
 from langchain.tools.sql_database.prompt import QUERY_CHECKER
-from langflow.interface.base import CustomChain
+from langflow.interface.base import CustomAgentExecutor
 
 
-class JsonAgent(CustomChain):
+class JsonAgent(CustomAgentExecutor):
     """Json agent"""
 
     @staticmethod
@@ -71,7 +71,7 @@ class JsonAgent(CustomChain):
         return super().run(*args, **kwargs)
 
 
-class CSVAgent(CustomChain):
+class CSVAgent(CustomAgentExecutor):
     """CSV agent"""
 
     @staticmethod
@@ -119,7 +119,7 @@ class CSVAgent(CustomChain):
         return super().run(*args, **kwargs)
 
 
-class VectorStoreAgent(CustomChain):
+class VectorStoreAgent(CustomAgentExecutor):
     """Vector Store agent"""
 
     @staticmethod
@@ -157,7 +157,7 @@ class VectorStoreAgent(CustomChain):
         return super().run(*args, **kwargs)
 
 
-class SQLAgent(CustomChain):
+class SQLAgent(CustomAgentExecutor):
     """SQL agent"""
 
     @staticmethod
@@ -229,7 +229,7 @@ class SQLAgent(CustomChain):
         return super().run(*args, **kwargs)
 
 
-class VectorStoreRouterAgent(CustomChain):
+class VectorStoreRouterAgent(CustomAgentExecutor):
     """Vector Store Router Agent"""
 
     @staticmethod
@@ -268,7 +268,7 @@ class VectorStoreRouterAgent(CustomChain):
         return super().run(*args, **kwargs)
 
 
-class InitializeAgent(CustomChain):
+class InitializeAgent(CustomAgentExecutor):
     """Implementation of initialize_agent function"""
 
     @staticmethod
