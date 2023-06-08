@@ -23,6 +23,7 @@ import { Label } from "@radix-ui/react-label";
 import { Checkbox } from "../../components/ui/checkbox";
 import { Textarea } from "../../components/ui/textarea";
 import { Input } from "../../components/ui/input";
+import { modalSubtitle } from "../modal-texts";
 
 export default function ExportModal() {
   const [open, setOpen] = useState(true);
@@ -53,8 +54,7 @@ export default function ExportModal() {
             />
           </DialogTitle>
           <DialogDescription>
-            Make configurations changes to your nodes. Click save when you're
-            done.
+          {modalSubtitle['export']}
           </DialogDescription>
         </DialogHeader>
 

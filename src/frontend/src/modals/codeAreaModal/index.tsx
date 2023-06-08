@@ -21,6 +21,7 @@ import {
   DialogTrigger,
 } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
+import { modalSubtitle } from "../modal-texts";
 
 export default function CodeAreaModal({
   value,
@@ -56,8 +57,7 @@ export default function CodeAreaModal({
             />
           </DialogTitle>
           <DialogDescription>
-            Make configurations changes to your nodes. Click save when you're
-            done.
+            {modalSubtitle['codeprompt']}
           </DialogDescription>
         </DialogHeader>
 

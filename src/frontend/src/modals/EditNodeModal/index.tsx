@@ -42,6 +42,7 @@ import {
   DialogTrigger,
 } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
+import { modalSubtitle } from "../modal-texts";
 
 export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const [open, setOpen] = useState(true);
@@ -102,8 +103,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
             />
           </DialogTitle>
           <DialogDescription>
-            Make configurations changes to your nodes. Click save when you're
-            done.
+          {modalSubtitle['edit']}
             <div className="flex pt-3">
               <VariableIcon className="w-5 h-5 pe-1 text-gray-700 stroke-2">
                 &nbsp;
