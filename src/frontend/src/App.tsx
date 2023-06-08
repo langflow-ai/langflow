@@ -170,7 +170,7 @@ export default function App() {
         className="absolute left-7 bottom-2 flex h-6 cursor-pointer flex-col items-center justify-start overflow-hidden rounded-lg bg-gray-800 px-2 text-center font-sans text-xs tracking-wide text-gray-300 transition-all duration-500 ease-in-out hover:h-12 dark:bg-gray-100 dark:text-gray-800"
       >
         {version && <div className="mt-1">⛓️ LangFlow v{version}</div>}
-        <div className="mt-2">Created by Logspace</div>
+        <div className={version ? "mt-2" : "mt-1"}>Created by Logspace</div>
       </a>
     </div>
   );

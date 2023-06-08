@@ -58,6 +58,7 @@ llms:
   - Cohere
   - Anthropic
   - ChatAnthropic
+  - HuggingFaceHub
 memories:
   - ConversationBufferMemory
   - ConversationSummaryMemory
