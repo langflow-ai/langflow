@@ -5,7 +5,7 @@ from langflow.settings import settings
 # check that all agents are in settings.agents
 # are in json_response["agents"]
 def test_agents_settings(client: TestClient):
-    response = client.get("/all")
+    response = client.get("api/v1/all")
     assert response.status_code == 200
     json_response = response.json()
     agents = json_response["agents"]
@@ -13,7 +13,7 @@ def test_agents_settings(client: TestClient):
 
 
 def test_zero_shot_agent(client: TestClient):
-    response = client.get("/all")
+    response = client.get("api/v1/all")
     assert response.status_code == 200
     json_response = response.json()
     agents = json_response["agents"]
@@ -54,7 +54,7 @@ def test_zero_shot_agent(client: TestClient):
 
 
 def test_json_agent(client: TestClient):
-    response = client.get("/all")
+    response = client.get("api/v1/all")
     assert response.status_code == 200
     json_response = response.json()
     agents = json_response["agents"]
@@ -91,7 +91,7 @@ def test_json_agent(client: TestClient):
 
 
 def test_csv_agent(client: TestClient):
-    response = client.get("/all")
+    response = client.get("api/v1/all")
     assert response.status_code == 200
     json_response = response.json()
     agents = json_response["agents"]
@@ -132,7 +132,7 @@ def test_csv_agent(client: TestClient):
 
 
 def test_initialize_agent(client: TestClient):
-    response = client.get("/all")
+    response = client.get("api/v1/all")
     assert response.status_code == 200
     json_response = response.json()
     agents = json_response["agents"]

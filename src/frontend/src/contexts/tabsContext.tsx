@@ -48,7 +48,7 @@ export const TabsContext = createContext<TabsContextType>(
 );
 
 export function TabsProvider({ children }: { children: ReactNode }) {
-  const { setNoticeData } = useContext(alertContext);
+  const { setErrorData, setNoticeData } = useContext(alertContext);
   const [tabIndex, setTabIndex] = useState(0);
   const [flows, setFlows] = useState<Array<FlowType>>([]);
   const [id, setId] = useState(uuidv4());
@@ -96,6 +96,11 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           edge.style = { stroke: "#555555" };
         });
         flow.data.nodes.forEach((node) => {
+          const template = templates[node.data.type];
+          if (!template) {
+            setErrorData({ title: `Unknown node type: ${node.data.type}` });
+            return;
+          }
           if (
             node.type !== "groupNode" &&
             templates &&
@@ -109,17 +114,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
                 edge.sourceHandle = edge.sourceHandle
                   .split("|")
                   .slice(0, 2)
-                  .concat(templates[node.data.type]["base_classes"])
+                  .concat(template["base_classes"])
                   .join("|");
               }
             });
-            node.data.node.description =
-              templates[node.data.type]["description"];
+            node.data.node.description = template["description"];
             node.data.node.template = updateTemplate(
-              templates[node.data.type][
-                "template"
-              ] as unknown as APITemplateType,
-
+              template["template"] as unknown as APITemplateType,
               node.data.node.template as APITemplateType
             );
           }
@@ -322,6 +323,11 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         edge.animated = edge.targetHandle.split("|")[0] === "Text";
       });
       data.nodes.forEach((node) => {
+        const template = templates[node.data.type];
+        if (!template) {
+          setErrorData({ title: `Unknown node type: ${node.data.type}` });
+          return;
+        }
         if (
           node.type !== "groupNode" &&
           templates &&
@@ -335,13 +341,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
               edge.sourceHandle = edge.sourceHandle
                 .split("|")
                 .slice(0, 2)
-                .concat(templates[node.data.type]["base_classes"])
+                .concat(template["base_classes"])
                 .join("|");
             }
           });
-          node.data.node.description = templates[node.data.type]["description"];
+          node.data.node.description = template["description"];
           node.data.node.template = updateTemplate(
-            templates[node.data.type]["template"] as unknown as APITemplateType,
+            template["template"] as unknown as APITemplateType,
             node.data.node.template as APITemplateType
           );
         }

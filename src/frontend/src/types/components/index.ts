@@ -3,6 +3,7 @@ import {
   ForwardRefExoticComponent,
   ReactElement,
   ReactNode,
+  SVGProps,
 } from "react";
 import { FlowType, NodeDataType } from "../flow/index";
 export type InputComponentType = {

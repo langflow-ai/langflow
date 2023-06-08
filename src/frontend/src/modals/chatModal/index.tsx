@@ -182,10 +182,10 @@ export default function ChatModal({
     try {
       const urlWs =
         process.env.NODE_ENV === "development"
-          ? `ws://localhost:7860/chat/${id.current}`
+          ? `ws://localhost:7860/api/v1/chat/${id.current}`
           : `${window.location.protocol === "https:" ? "wss" : "ws"}://${
               window.location.host
-            }/chat/${id.current}`;
+            }api/v1/chat/${id.current}`;
       const newWs = new WebSocket(urlWs);
       newWs.onopen = () => {
         console.log("WebSocket connection established!");
@@ -215,19 +215,11 @@ export default function ChatModal({
         }
       };
       ws.current = newWs;
-    } catch {
+    } catch (error) {
       if (flow.id === "") {
         connectWS();
-      } else {
-        setErrorData({
-          title: "There was an error on web connection, please: ",
-          list: [
-            "Refresh the page",
-            "Use a new flow tab",
-            "Check if the backend is up",
-          ],
-        });
       }
+      console.log(error);
     }
   }
 
@@ -236,7 +228,7 @@ export default function ChatModal({
     return () => {
       console.log("unmount");
       console.log(ws);
-      if (ws) {
+      if (ws.current) {
         ws.current.close();
       }
     };
@@ -244,8 +236,9 @@ export default function ChatModal({
 
   useEffect(() => {
     if (
-      ws.current.readyState === ws.current.CLOSED ||
-      ws.current.readyState === ws.current.CLOSING
+      ws.current &&
+      (ws.current.readyState === ws.current.CLOSED ||
+        ws.current.readyState === ws.current.CLOSING)
     ) {
       connectWS();
       setLockChat(false);

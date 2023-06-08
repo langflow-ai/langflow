@@ -29,10 +29,10 @@ import NodeModal from "../../modals/NodeModal";
 import { useCallback } from "react";
 import { TabsContext } from "../../contexts/tabsContext";
 import { debounce } from "../../utils";
-import TooltipReact from "../../components/ReactTooltipComponent";
 import Tooltip from "../../components/TooltipComponent";
 import { useUpdateNodeInternals } from "reactflow";
 import HandleComponent from "./components/parameterComponent/components/handleComponent";
+import ShadTooltip from "../../components/ShadTooltipComponent";
 export default function GenericNode({
   data,
   selected,
@@ -117,14 +117,9 @@ export default function GenericNode({
             }}
           />
           <div className="ml-2 truncate">
-            <TooltipReact
-              delayShow={1000}
-              selector={`node-selector-${data.type}`}
-              htmlContent={data.type}
-              position="top"
-            >
+            <ShadTooltip delayDuration={1500} content={data.type}>
               <div className="ml-2 truncate">{data.type}</div>
-            </TooltipReact>
+            </ShadTooltip>
           </div>
         </div>
         <div className="flex gap-3">

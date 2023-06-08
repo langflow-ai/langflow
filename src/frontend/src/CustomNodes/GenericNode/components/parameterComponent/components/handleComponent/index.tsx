@@ -17,7 +17,9 @@ import {
   HandleComponentType,
   ParameterComponentType,
 } from "../../../../../../types/components";
-import { isValidConnection, classNames } from "../../../../../../utils";
+import { isValidConnection, classNames, groupByFamily, nodeColors, nodeIcons, nodeNames } from "../../../../../../utils";
+import React from "react";
+import ShadTooltip from "../../../../../../components/ShadTooltipComponent";
 
 export default function HandleComponent({
   left,
@@ -40,6 +42,50 @@ export default function HandleComponent({
   let disabled =
     reactFlowInstance?.getEdges().some((e) => e.targetHandle === id) ?? false;
   const { save } = useContext(TabsContext);
+  const [myData, setMyData] = useState(useContext(typesContext).data);
+  const refHtml = useRef(null);
+
+  useEffect(() => {
+    const groupedObj = groupByFamily(myData, tooltipTitle);
+
+    refHtml.current = groupedObj.map((item, i) => (
+      <span
+        key={item}
+        className={classNames(
+          i > 0 ? "items-center flex mt-3" : "items-center flex"
+        )}
+      >
+        <div
+          className="h-5 w-5"
+          style={{
+            color: nodeColors[item.family],
+          }}
+        >
+          {React.createElement(nodeIcons[item.family])}
+        </div>
+        <span className="ps-2 text-gray-950">
+          {nodeNames[item.family] ?? ""}{" "}
+          <span className={classNames(left ? "hidden" : "")}>
+            {" "}
+            -&nbsp;
+            {item.type.split(", ").length > 2
+              ? item.type.split(", ").map((el, i) => (
+                  <>
+                    <span key={el}>
+                      {i == item.type.split(", ").length - 1
+                        ? el
+                        : (el += `, `)}
+                    </span>
+                    {i % 2 == 0 && i > 0 && <br></br>}
+                  </>
+                ))
+              : item.type}
+          </span>
+        </span>
+      </span>
+    ));
+  }, [tooltipTitle]);
+
 
   return (
     <>
@@ -61,7 +107,11 @@ export default function HandleComponent({
         type === "int") ? (
         <></>
       ) : (
-        <Tooltip title={tooltipTitle + (required ? " (required)" : "")}>
+        <ShadTooltip
+        delayDuration={0}
+        content={refHtml.current}
+        side={left ? "left" : "right"}
+      >
           <Handle
             type={left ? "target" : "source"}
             position={left ? Position.Left : Position.Right}
@@ -86,7 +136,7 @@ export default function HandleComponent({
                 : "white",
             }}
           ></Handle>
-        </Tooltip>
+      </ShadTooltip>
       )}
 
       {data &&
