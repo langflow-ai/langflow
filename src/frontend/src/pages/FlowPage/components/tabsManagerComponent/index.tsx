@@ -116,7 +116,7 @@ export default function TabsManagerComponent() {
           </button>
         </div>
       </div>
-      <div className="w-full h-full">
+      <div className="w-full h-full dark:bg-gray-800">
         <ReactFlowProvider>
           {flows[tabIndex] ? (
             <FlowPage flow={flows[tabIndex]}></FlowPage>
