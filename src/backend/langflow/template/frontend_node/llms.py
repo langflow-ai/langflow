@@ -16,13 +16,18 @@ class LLMFrontendNode(FrontendNode):
     def format_azure_field(field: TemplateField):
         if field.name == "model_name":
             field.show = False  # Azure uses deployment_name instead of model_name.
-        if field.name == "openai_api_type":
+        elif field.name == "openai_api_type":
             field.show = False
             field.password = False
             field.value = "azure"
-        if field.name == "openai_api_version":
+        elif field.name == "openai_api_version":
             field.password = False
             field.value = "2023-03-15-preview"
+
+    @staticmethod
+    def format_llama_field(field: TemplateField):
+        field.show = True
+        field.advanced = not field.required
 
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
@@ -30,6 +35,11 @@ class LLMFrontendNode(FrontendNode):
             "huggingfacehub_api_token": "HuggingFace Hub API Token",
         }
         FrontendNode.format_field(field, name)
+        LLMFrontendNode.format_openai_field(field)
+        if name and "azure" in name.lower():
+            LLMFrontendNode.format_azure_field(field)
+        if name and "llama" in name.lower():
+            LLMFrontendNode.format_llama_field(field)
         SHOW_FIELDS = ["repo_id"]
         if field.name in SHOW_FIELDS:
             field.show = True
@@ -65,7 +75,3 @@ class LLMFrontendNode(FrontendNode):
         ]:
             field.advanced = False
             field.show = True
-
-        LLMFrontendNode.format_openai_field(field)
-        if name and "azure" in name.lower():
-            LLMFrontendNode.format_azure_field(field)
