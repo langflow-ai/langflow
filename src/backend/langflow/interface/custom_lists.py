@@ -71,4 +71,4 @@ textsplitter_type_to_cls_dict: dict[str, Any] = dict(
 )
 
 # merge CUSTOM_AGENTS and CUSTOM_CHAINS
-CUSTOM_NODES = {**CUSTOM_AGENTS, **CUSTOM_CHAINS}
+CUSTOM_NODES = {**CUSTOM_AGENTS, **CUSTOM_CHAINS}  # type: ignore
