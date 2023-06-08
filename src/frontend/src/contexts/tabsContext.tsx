@@ -90,6 +90,9 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     if (cookie && Object.keys(templates).length > 0) {
       let cookieObject: LangFlowState = JSON.parse(cookie);
       cookieObject.flows.forEach((flow) => {
+        if (!flow.data) {
+          return;
+        }
         flow.data.edges.forEach((edge) => {
           edge.className = "";
           edge.style = { stroke: "#555555" };
