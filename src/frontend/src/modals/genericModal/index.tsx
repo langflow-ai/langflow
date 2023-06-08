@@ -16,6 +16,7 @@ import {
 } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
+import { modalSubtitle } from "../modal-texts";
 
 export default function PromptAreaModal({
   value,
@@ -59,8 +60,7 @@ export default function PromptAreaModal({
             />
           </DialogTitle>
           <DialogDescription>
-            Make configurations changes to your nodes. Click save when you're
-            done.
+          {modalSubtitle['prompt']}
           </DialogDescription>
         </DialogHeader>
 
