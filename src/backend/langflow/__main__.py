@@ -89,6 +89,13 @@ def serve(
     log_file: Path = typer.Option("logs/langflow.log", help="Path to the log file."),
     jcloud: bool = typer.Option(False, help="Deploy on Jina AI Cloud"),
     dev: bool = typer.Option(False, help="Run in development mode (may contain bugs)"),
+    path: str = typer.Option(
+        None,
+        help="Path to the frontend directory containing build files. This is for development purposes only.",
+    ),
+    open_browser: bool = typer.Option(
+        True, help="Open the browser after starting the server."
+    ),
 ):
     """
     Run the Langflow server.
@@ -101,8 +108,11 @@ def serve(
     update_settings(config, dev=dev)
     app = create_app()
     # get the directory of the current file
-    path = Path(__file__).parent
-    static_files_dir = path / "frontend"
+    if not path:
+        path = Path(__file__).parent
+        static_files_dir = path / "frontend"
+    else:
+        static_files_dir = Path(path)
     app.mount(
         "/",
         StaticFiles(directory=static_files_dir, html=True),
@@ -127,22 +137,30 @@ def serve(
             time.sleep(1)
 
     print_banner(host, port)
-    webbrowser.open(f"http://{host}:{port}")
+    if open_browser:
+        webbrowser.open(f"http://{host}:{port}")
 
 
 def print_banner(host, port):
     # console = Console()
 
+    word = "LangFlow"
+    colors = ["#690080", "#660099", "#4d00b3", "#3300cc", "#1a00e6", "#0000ff"]
+
+    styled_word = ""
+
+    for i, char in enumerate(word):
+        color = colors[i % len(colors)]
+        styled_word += f"[{color}]{char}[/]"
+
     # Title with emojis and gradient text
     title = (
-        "[bold yellow]:chains: Welcome to Langflow :chains:[/bold yellow]\n\n"
+        f"[bold]Welcome to :chains: {styled_word} [/bold]\n\n"
         f"Access [link=http://{host}:{port}]http://{host}:{port}[/link]"
     )
-
-    # Info with gradient text
     info_text = (
-        "Access, collaborate, contribute, and explore at our "
-        "[bold magenta][link=https://github.com/logspace-ai/langflow]GitHub Repo[/link][/bold magenta] :rocket:"
+        "Collaborate, and contribute at our "
+        "[bold][link=https://github.com/logspace-ai/langflow]GitHub Repo[/link][/bold] :rocket:"
     )
 
     # Create a panel with the title and the info text, and a border around it
