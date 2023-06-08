@@ -16,6 +16,7 @@ import { TabsContext } from "../../../../contexts/tabsContext";
 import { useReactFlow } from "reactflow";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import TooltipReact from "../../../../components/ReactTooltipComponent";
+import ShadTooltip from "../../../../components/ShadTooltipComponent";
 
 const NodeToolbarComponent = (props) => {
   const [nodeLength, setNodeLength] = useState(
@@ -40,12 +41,7 @@ const NodeToolbarComponent = (props) => {
     <>
       <div className="h-10 w-26">
         <span className="isolate inline-flex rounded-md shadow-sm">
-          <TooltipReact
-            delayShow={1000}
-            selector="Delete"
-            htmlContent="Delete"
-            position="top"
-          >
+          <ShadTooltip delayDuration={1000} content="Delete" side="top">
             <button
               className="hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative inline-flex items-center rounded-l-md bg-white px-2 py-2 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
               onClick={() => {
@@ -54,59 +50,9 @@ const NodeToolbarComponent = (props) => {
             >
               <TrashIcon className="w-5 h-5 dark:text-gray-300"></TrashIcon>
             </button>
-          </TooltipReact>
+          </ShadTooltip>
 
-          <TooltipReact
-            delayShow={1000}
-            selector="Settings"
-            htmlContent="Settings"
-            position="top"
-          >
-            <button
-              className={classNames(
-                Object.keys(props.data.node.template).some(
-                  (t) =>
-                    props.data.node.template[t].advanced &&
-                    props.data.node.template[t].show
-                )
-                  ? "hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
-                  : "hidden"
-              )}
-              onClick={(event) => {
-                event.preventDefault();
-                props.openPopUp(<NodeModal data={props.data} />);
-              }}
-            >
-              <div className=" absolute right-1 top-[-2px] text-red-600">
-                {Object.keys(props.data.node.template).some(
-                  (t) =>
-                    props.data.node.template[t].advanced &&
-                    props.data.node.template[t].required
-                )
-                  ? " *"
-                  : ""}
-              </div>
-              <Cog6ToothIcon
-                className={classNames(
-                  Object.keys(props.data.node.template).some(
-                    (t) =>
-                      props.data.node.template[t].advanced &&
-                      props.data.node.template[t].show
-                  )
-                    ? ""
-                    : "hidden",
-                  "w-5 h-5  dark:text-gray-300"
-                )}
-              ></Cog6ToothIcon>
-            </button>
-          </TooltipReact>
-
-          <TooltipReact
-            delayShow={1000}
-            selector="Duplicate"
-            htmlContent="Duplicate"
-            position="top"
-          >
+          <ShadTooltip delayDuration={1000} content="Duplicate" side="top">
             <button
               className={classNames(
                 nodeLength > 0
@@ -132,15 +78,10 @@ const NodeToolbarComponent = (props) => {
             >
               <Square2StackIcon className="w-5 h-5  dark:text-gray-300"></Square2StackIcon>
             </button>
-          </TooltipReact>
+          </ShadTooltip>
 
           {nodeLength > 0 && (
-            <TooltipReact
-              delayShow={1000}
-              selector="Edit"
-              htmlContent="Edit"
-              position="top"
-            >
+            <ShadTooltip delayDuration={1000} content="Edit" side="top">
               <button
                 className="hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10 rounded-r-md"
                 onClick={(event) => {
@@ -150,7 +91,7 @@ const NodeToolbarComponent = (props) => {
               >
                 <PencilSquareIcon className="w-5 h-5  dark:text-gray-300"></PencilSquareIcon>
               </button>
-            </TooltipReact>
+            </ShadTooltip>
           )}
 
           {/* 
