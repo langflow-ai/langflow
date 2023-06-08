@@ -1,7 +1,7 @@
 import sys
 import time
 import httpx
-from multiprocess import Process, cpu_count
+from multiprocess import Process, cpu_count  # type: ignore
 import platform
 from pathlib import Path
 
@@ -109,8 +109,8 @@ def serve(
     app = create_app()
     # get the directory of the current file
     if not path:
-        path = Path(__file__).parent
-        static_files_dir = path / "frontend"
+        frontend_path = Path(__file__).parent
+        static_files_dir = frontend_path / "frontend"
     else:
         static_files_dir = Path(path)
     app.mount(
