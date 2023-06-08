@@ -6323,4 +6323,4 @@ deploy = ["langchain-serve"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "94e4a4ca5ec150ef6f673d4a3ab4964a876ce795ae398b78c76719695c63758e"
+content-hash = "3cefd738bb8466d22b1403d9b40c92420ec7f248705a2604b21d96e58d5db990"
