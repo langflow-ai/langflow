@@ -43,7 +43,7 @@ export default function ExportModal() {
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger asChild></DialogTrigger>
-      <DialogContent className="lg:max-w-[600px] h-[450px]">
+      <DialogContent className="lg:max-w-[600px] h-[420px]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Export</span>
