@@ -49,7 +49,7 @@ export default function App() {
   // Initialize state variable for the version
   const [version, setVersion] = useState("");
   useEffect(() => {
-    fetch("api/v1/version")
+    fetch("/version")
       .then((res) => res.json())
       .then((data) => {
         setVersion(data.version);
