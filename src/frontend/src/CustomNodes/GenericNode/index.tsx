@@ -53,6 +53,7 @@ export default function GenericNode({
   const { reactFlowInstance } = useContext(typesContext);
   const [params, setParams] = useState([]);
 
+
   useEffect(() => {
     if (reactFlowInstance) {
       setParams(Object.values(reactFlowInstance.toObject()));
@@ -110,12 +111,14 @@ export default function GenericNode({
     >
       <div className="flex w-full items-center justify-between gap-8 rounded-t-lg border-b bg-gray-50 p-4 dark:border-b-gray-700 dark:bg-gray-800 dark:text-white ">
         <div className="flex w-full items-center gap-2 truncate text-lg">
+        <ShadTooltip  content={data.type}>
           <Icon
             className="h-10 w-10 rounded p-1"
             style={{
               color: nodeColors[types[data.type]] ?? nodeColors.unknown,
             }}
           />
+          </ShadTooltip>
           <div className="ml-2 truncate">
             <ShadTooltip delayDuration={1500} content={data.type}>
               <div className="ml-2 truncate">{data.type}</div>

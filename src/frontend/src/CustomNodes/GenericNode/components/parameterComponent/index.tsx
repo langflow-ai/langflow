@@ -1,29 +1,6 @@
-import { Handle, Position, useUpdateNodeInternals } from "reactflow";
-import Tooltip from "../../../../components/TooltipComponent";
-import {
-  classNames,
-  groupByFamily,
-  isValidConnection,
-  toFirstUpperCase,
-} from "../../../../utils";
-import { useContext, useEffect, useRef, useState } from "react";
-import InputComponent from "../../../../components/inputComponent";
-import ToggleComponent from "../../../../components/toggleComponent";
-import InputListComponent from "../../../../components/inputListComponent";
-import TextAreaComponent from "../../../../components/textAreaComponent";
-import { typesContext } from "../../../../contexts/typesContext";
+import { useUpdateNodeInternals } from "reactflow";
+import { useEffect, useRef, useState } from "react";
 import { ParameterComponentType } from "../../../../types/components";
-import FloatComponent from "../../../../components/floatComponent";
-import Dropdown from "../../../../components/dropdownComponent";
-import CodeAreaComponent from "../../../../components/codeAreaComponent";
-import InputFileComponent from "../../../../components/inputFileComponent";
-import { TabsContext } from "../../../../contexts/tabsContext";
-import IntComponent from "../../../../components/intComponent";
-import PromptAreaComponent from "../../../../components/promptComponent";
-import { nodeNames, nodeIcons } from "../../../../utils";
-import React from "react";
-import { nodeColors } from "../../../../utils";
-import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import HandleComponent from "./components/handleComponent";
 
 export default function ParameterComponent({
@@ -51,15 +28,6 @@ export default function ParameterComponent({
   useEffect(() => {
     if (ref.current) updateNodeInternals(data.id);
   }, [data.id, position, updateNodeInternals]);
-
-  const [enabled, setEnabled] = useState(
-    data.node.template[name]?.value ?? false
-  );
-  const { reactFlowInstance } = useContext(typesContext);
-  let disabled =
-    reactFlowInstance?.getEdges().some((e) => e.targetHandle === id) ?? false;
-  const { save } = useContext(TabsContext);
-  const [myData, setMyData] = useState(useContext(typesContext).data);
 
   return (
     <div
