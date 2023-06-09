@@ -10,6 +10,9 @@ const apiRoutes = [
   "/health",
   "/flows/*",
   "/flows/",
+  "/flows_styles",
+  "/flows_styles/",
+  "/flows_styles/*",
 ];
 
 // Use environment variable to determine the target.
