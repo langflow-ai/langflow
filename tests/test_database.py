@@ -1,6 +1,6 @@
 from uuid import UUID, uuid4
 from langflow.api.v1.schemas import FlowListCreate
-from langflow.database.models.flow import FlowCreate
+from langflow.database.models.flow import FlowCreate, FlowUpdate
 import json
 from sqlalchemy.orm import Session
 from langflow.database.models.flow import Flow
@@ -33,25 +33,29 @@ def json_style():
 
 
 def test_create_flow(client: TestClient, json_flow: str):
-    flow = FlowCreate(name="Test Flow", flow=json.loads(json_flow))
+    flow = json.loads(json_flow)
+    data = flow["data"]
+    flow = FlowCreate(name="Test Flow", description="description", data=data)
     response = client.post("api/v1/flows/", json=flow.dict())
     assert response.status_code == 200
     assert response.json()["name"] == flow.name
-    assert response.json()["flow"] == flow.flow
+    assert response.json()["data"] == flow.data
     # flow is optional so we can create a flow without a flow
     flow = FlowCreate(name="Test Flow")
     response = client.post("api/v1/flows/", json=flow.dict(exclude_unset=True))
     assert response.status_code == 200
     assert response.json()["name"] == flow.name
-    assert response.json()["flow"] == flow.flow
+    assert response.json()["data"] == flow.data
 
 
 def test_read_flows(client: TestClient, json_flow: str):
-    flow = FlowCreate(name="Test Flow", flow=json.loads(json_flow))
+    flow_data = json.loads(json_flow)
+    data = flow_data["data"]
+    flow = FlowCreate(name="Test Flow", description="description", data=data)
     response = client.post("api/v1/flows/", json=flow.dict())
     assert response.status_code == 200
     assert response.json()["name"] == flow.name
-    assert response.json()["flow"] == flow.flow
+    assert response.json()["data"] == flow.data
 
     flow_style = FlowStyleCreate(color="red", emoji="👍", flow_id=response.json()["id"])
     response = client.post(
@@ -62,11 +66,11 @@ def test_read_flows(client: TestClient, json_flow: str):
     assert response.json()["emoji"] == flow_style.emoji
     assert response.json()["flow_id"] == str(flow_style.flow_id)
 
-    flow = FlowCreate(name="Test Flow", flow=json.loads(json_flow))
+    flow = FlowCreate(name="Test Flow", description="description", data=data)
     response = client.post("api/v1/flows/", json=flow.dict())
     assert response.status_code == 200
     assert response.json()["name"] == flow.name
-    assert response.json()["flow"] == flow.flow
+    assert response.json()["data"] == flow.data
 
     # Now we need to create FlowStyle objects for each Flow
     flow_style = FlowStyleCreate(
@@ -86,7 +90,9 @@ def test_read_flows(client: TestClient, json_flow: str):
 
 
 def test_read_flow(client: TestClient, json_flow: str):
-    flow = FlowCreate(name="Test Flow", flow=json.loads(json_flow))
+    flow = json.loads(json_flow)
+    data = flow["data"]
+    flow = FlowCreate(name="Test Flow", description="description", data=data)
     response = client.post("api/v1/flows/", json=flow.dict())
     flow_id = response.json()["id"]  # flow_id should be a UUID but is a string
     # turn it into a UUID
@@ -105,26 +111,32 @@ def test_read_flow(client: TestClient, json_flow: str):
     response = client.get(f"api/v1/flows/{flow_id}")
     assert response.status_code == 200
     assert response.json()["name"] == flow.name
-    assert response.json()["flow"] == flow.flow
+    assert response.json()["data"] == flow.data
     assert response.json()["style"]["color"] == flow_style.color
 
 
 def test_update_flow(client: TestClient, json_flow: str):
-    flow = FlowCreate(name="Test Flow", flow=json.loads(json_flow))
+    flow = json.loads(json_flow)
+    data = flow["data"]
+    flow = FlowCreate(name="Test Flow", description="description", data=data)
     response = client.post("api/v1/flows/", json=flow.dict())
     flow_id = response.json()["id"]
-    updated_flow = FlowCreate(
+    updated_flow = FlowUpdate(
         name="Updated Flow",
-        flow=json.loads(json_flow.replace("BasicExample", "Updated Flow")),
+        description="updated description",
+        data=data,
     )
     response = client.patch(f"api/v1/flows/{flow_id}", json=updated_flow.dict())
     assert response.status_code == 200
     assert response.json()["name"] == updated_flow.name
-    assert response.json()["flow"] == updated_flow.flow
+    assert response.json()["description"] == updated_flow.description
+    assert response.json()["data"] == updated_flow.data
 
 
 def test_delete_flow(client: TestClient, json_flow: str):
-    flow = FlowCreate(name="Test Flow", flow=json.loads(json_flow))
+    flow = json.loads(json_flow)
+    data = flow["data"]
+    flow = FlowCreate(name="Test Flow", description="description", data=data)
     response = client.post("api/v1/flows/", json=flow.dict())
     flow_id = response.json()["id"]
     response = client.delete(f"api/v1/flows/{flow_id}")
@@ -133,11 +145,13 @@ def test_delete_flow(client: TestClient, json_flow: str):
 
 
 def test_create_flows(client: TestClient, session: Session, json_flow: str):
+    flow = json.loads(json_flow)
+    data = flow["data"]
     # Create test data
     flow_list = FlowListCreate(
         flows=[
-            FlowCreate(name="Flow 1", flow=json.loads(json_flow)),
-            FlowCreate(name="Flow 2", flow=json.loads(json_flow)),
+            FlowCreate(name="Flow 1", description="description", data=data),
+            FlowCreate(name="Flow 2", description="description", data=data),
         ]
     )
     # Make request to endpoint
@@ -148,17 +162,21 @@ def test_create_flows(client: TestClient, session: Session, json_flow: str):
     response_data = response.json()
     assert len(response_data) == 2
     assert response_data[0]["name"] == "Flow 1"
-    assert response_data[0]["flow"] == json.loads(json_flow)
+    assert response_data[0]["description"] == "description"
+    assert response_data[0]["data"] == data
     assert response_data[1]["name"] == "Flow 2"
-    assert response_data[1]["flow"] == json.loads(json_flow)
+    assert response_data[1]["description"] == "description"
+    assert response_data[1]["data"] == data
 
 
 def test_upload_file(client: TestClient, session: Session, json_flow: str):
+    flow = json.loads(json_flow)
+    data = flow["data"]
     # Create test data
     flow_list = FlowListCreate(
         flows=[
-            FlowCreate(name="Flow 1", flow=json.loads(json_flow)),
-            FlowCreate(name="Flow 2", flow=json.loads(json_flow)),
+            FlowCreate(name="Flow 1", description="description", data=data),
+            FlowCreate(name="Flow 2", description="description", data=data),
         ]
     )
     file_contents = json.dumps(flow_list.dict())
@@ -172,17 +190,21 @@ def test_upload_file(client: TestClient, session: Session, json_flow: str):
     response_data = response.json()
     assert len(response_data) == 2
     assert response_data[0]["name"] == "Flow 1"
-    assert response_data[0]["flow"] == json.loads(json_flow)
+    assert response_data[0]["description"] == "description"
+    assert response_data[0]["data"] == data
     assert response_data[1]["name"] == "Flow 2"
-    assert response_data[1]["flow"] == json.loads(json_flow)
+    assert response_data[1]["description"] == "description"
+    assert response_data[1]["data"] == data
 
 
 def test_download_file(client: TestClient, session: Session, json_flow):
+    flow = json.loads(json_flow)
+    data = flow["data"]
     # Create test data
     flow_list = FlowListCreate(
         flows=[
-            FlowCreate(name="Flow 1", flow=json.loads(json_flow)),
-            FlowCreate(name="Flow 2", flow=json.loads(json_flow)),
+            FlowCreate(name="Flow 1", description="description", data=data),
+            FlowCreate(name="Flow 2", description="description", data=data),
         ]
     )
     for flow in flow_list.flows:
@@ -197,13 +219,15 @@ def test_download_file(client: TestClient, session: Session, json_flow):
     response_data = response.json()["flows"]
     assert len(response_data) == 2
     assert response_data[0]["name"] == "Flow 1"
-    assert response_data[0]["flow"] == json.loads(json_flow)
+    assert response_data[0]["description"] == "description"
+    assert response_data[0]["data"] == data
     assert response_data[1]["name"] == "Flow 2"
-    assert response_data[1]["flow"] == json.loads(json_flow)
+    assert response_data[1]["description"] == "description"
+    assert response_data[1]["data"] == data
 
 
 def test_create_flow_with_invalid_data(client: TestClient):
-    flow = {"name": "a" * 256, "flow": "Invalid flow data"}
+    flow = {"name": "a" * 256, "data": "Invalid flow data"}
     response = client.post("api/v1/flows/", json=flow)
     assert response.status_code == 422
 
@@ -216,20 +240,25 @@ def test_get_nonexistent_flow(client: TestClient):
 
 
 def test_update_flow_idempotency(client: TestClient, json_flow: str):
-    flow = FlowCreate(name="Test Flow", flow=json.loads(json_flow))
-    response = client.post("api/v1/flows/", json=flow.dict())
+    flow_data = json.loads(json_flow)
+    data = flow_data["data"]
+    flow_data = FlowCreate(name="Test Flow", description="description", data=data)
+    response = client.post("api/v1/flows/", json=flow_data.dict())
     flow_id = response.json()["id"]
-    updated_flow = FlowCreate(name="Updated Flow", flow=json.loads(json_flow))
+    updated_flow = FlowCreate(name="Updated Flow", description="description", data=data)
     response1 = client.put(f"api/v1/flows/{flow_id}", json=updated_flow.dict())
     response2 = client.put(f"api/v1/flows/{flow_id}", json=updated_flow.dict())
     assert response1.json() == response2.json()
 
 
 def test_update_nonexistent_flow(client: TestClient, json_flow: str):
+    flow_data = json.loads(json_flow)
+    data = flow_data["data"]
     uuid = uuid4()
     updated_flow = FlowCreate(
         name="Updated Flow",
-        flow=json.loads(json_flow.replace("BasicExample", "Updated Flow")),
+        description="description",
+        data=data,
     )
     response = client.patch(f"api/v1/flows/{uuid}", json=updated_flow.dict())
     assert response.status_code == 404
@@ -248,7 +277,9 @@ def test_read_empty_flows(client: TestClient):
 
 
 def test_stress_create_flow(client: TestClient, json_flow: str):
-    flow = FlowCreate(name="Test Flow", flow=json.loads(json_flow))
+    flow_data = json.loads(json_flow)
+    data = flow_data["data"]
+    flow = FlowCreate(name="Test Flow", description="description", data=data)
 
     def create_flow():
         response = client.post("api/v1/flows/", json=flow.dict())
