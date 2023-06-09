@@ -8,8 +8,8 @@ const apiRoutes = [
   "^/chat/*",
   "/version",
   "/health",
-  "/flows",
   "/flows/*",
+  "/flows/",
 ];
 
 // Use environment variable to determine the target.
