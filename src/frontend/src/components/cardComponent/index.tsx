@@ -13,13 +13,28 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/card";
+import { FlowType } from "../../types/flow";
 export const CardComponent = ({
   flow,
   idx,
   removeFlow,
   setTabIndex,
   setActiveTab,
+}: {
+  flow: FlowType;
+  idx: number;
+  removeFlow: (id: string) => void;
+  setTabIndex: (idx: number) => void;
+  setActiveTab: (tab: string) => void;
 }) => {
+  // flow has a style attribute
+  // if it is empty just get a random style
+  // if it is not empty use that style
+  // if it is not empty and it is not a valid style get a random style
+
+  let emoji = flow.style?.emoji || "🤖";
+  // get random tailwind color
+  let color = flow.style?.color || "bg-blue-400";
   return (
     <Card className="group">
       <CardHeader>
@@ -28,10 +43,10 @@ export const CardComponent = ({
             <span
               className={
                 "rounded-md w-10 h-10 flex items-center justify-center text-2xl " +
-                (idx === 0 ? "bg-blue-100" : " bg-orange-100")
+                color
               }
             >
-              {idx === 0 ? "🤖" : "🛠️"}
+              {emoji}
             </span>
             {flow.name}
           </div>

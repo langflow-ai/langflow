@@ -87,7 +87,7 @@ export default function HomePage() {
   const { dark, setDark } = useContext(darkContext);
   const [activeTab, setActiveTab] = useState("myflow");
   const [rename, setRename] = useState(false);
-  const { notificationCenter, setNotificationCenter } =
+  const { notificationCenter, setNotificationCenter, setErrorData } =
     useContext(alertContext);
   useEffect(() => {
     //create the first flow
@@ -96,9 +96,23 @@ export default function HomePage() {
     }
   }, [addFlow, flows.length, templates]);
 
+  function handleAddFlow() {
+    try {
+      addFlow();
+      // saveFlowStyleInDataBase();
+    } catch (err) {
+      setErrorData(err);
+    }
+  }
+
   function handleSave(flow) {
     // Put your save logic here.
-    updateFlowInDatabase(flow);
+    try {
+      updateFlowInDatabase(flow);
+      // updateFlowStyleInDataBase(flow);
+    } catch (err) {
+      setErrorData(err);
+    }
   }
 
   return (
@@ -197,7 +211,7 @@ export default function HomePage() {
                       </MenubarRadioGroup>
                       <MenubarItem
                         onClick={() => {
-                          addFlow();
+                          handleAddFlow();
                         }}
                       >
                         <PlusIcon className="w-4 h-4 mr-2" />
