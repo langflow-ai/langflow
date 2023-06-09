@@ -535,6 +535,13 @@ export function updateTemplate(
     if (objectToUpdate[key] && objectToUpdate[key].value) {
       clonedObject[key].value = objectToUpdate[key].value;
     }
+    if (
+      objectToUpdate[key] &&
+      objectToUpdate[key].advanced !== null &&
+      objectToUpdate[key].advanced !== undefined
+    ) {
+      clonedObject[key].advanced = objectToUpdate[key].advanced;
+    }
   }
   return clonedObject;
 }

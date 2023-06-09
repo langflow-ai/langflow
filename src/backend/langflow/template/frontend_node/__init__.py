@@ -7,6 +7,8 @@ from langflow.template.frontend_node import (
     prompts,
     tools,
     vectorstores,
+    documentloaders,
+    textsplitters,
 )
 
 __all__ = [
@@ -18,4 +20,6 @@ __all__ = [
     "llms",
     "prompts",
     "vectorstores",
+    "documentloaders",
+    "textsplitters",
 ]
