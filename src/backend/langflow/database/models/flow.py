@@ -12,24 +12,21 @@ from langflow.database.models.flow_style import FlowStyle, FlowStyleRead
 
 class FlowBase(SQLModelSerializable):
     name: str = Field(index=True)
-    flow: Optional[Dict] = Field(default_factory=dict, sa_column=Column(JSON))
+    description: Optional[str] = Field(index=True)
+    data: Optional[Dict] = Field(default=None)
 
-    @validator("flow")
+    @validator("data")
     def validate_json(v):
         # dict_keys(['description', 'name', 'id', 'data'])
         if not v:
             return v
         if not isinstance(v, dict):
             raise ValueError("Flow must be a valid JSON")
-        if "description" not in v.keys():
-            raise ValueError("Flow must have a description")
-        if "data" not in v.keys():
-            raise ValueError("Flow must have data")
 
         # data must contain nodes and edges
-        if "nodes" not in v["data"].keys():
+        if "nodes" not in v.keys():
             raise ValueError("Flow must have nodes")
-        if "edges" not in v["data"].keys():
+        if "edges" not in v.keys():
             raise ValueError("Flow must have edges")
 
         return v
@@ -37,8 +34,11 @@ class FlowBase(SQLModelSerializable):
 
 class Flow(FlowBase, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
+    data: Optional[Dict] = Field(default=None, sa_column=Column(JSON))
     style: Optional["FlowStyle"] = Relationship(
-        back_populates="flow", sa_relationship_kwargs={"uselist": False}
+        back_populates="flow",
+        # use "uselist=False" to make it a one-to-one relationship
+        sa_relationship_kwargs={"uselist": False},
     )
 
 
@@ -56,4 +56,5 @@ class FlowReadWithStyle(FlowRead):
 
 class FlowUpdate(SQLModelSerializable):
     name: Optional[str] = None
-    flow: Optional[Dict] = None
+    description: Optional[str] = None
+    data: Optional[Dict] = None
