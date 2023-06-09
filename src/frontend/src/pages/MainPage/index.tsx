@@ -311,7 +311,7 @@ export default function HomePage() {
                     <div className="truncate-doubleline">
                       {idx === 0
                         ? "This flow creates an agent that accesses a department store database and APIs to monitor customer activity and overall storage."
-                        : "This is a new tool"}
+                        : "This is a new Flow"}
                       {/* {flow.description} */}
                     </div>
                   </CardDescription>
