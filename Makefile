@@ -83,22 +83,8 @@ else
 endif
 
 publish:
-	@while true; do \
-		read -p "Do you want to build and publish LangFlow? [y/n]: " yn; \
-		case "$$yn" in \
-			y|Y ) \
-				echo "Building..."; \
-				make build; \
-				echo "Publishing..."; \
-				poetry publish; \
-				break ;; \
-			n|N ) \
-				echo "Bye!!!"; \
-				break ;; \
-			* ) \
-				echo "Invalid response, please enter 'y' or 'n'.\n" ;; \
-		esac \
-	done
+	make build
+	poetry publish
 
 help:
 	@echo '----'
