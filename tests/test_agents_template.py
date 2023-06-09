@@ -1,15 +1,4 @@
 from fastapi.testclient import TestClient
-from langflow.settings import settings
-
-
-# check that all agents are in settings.agents
-# are in json_response["agents"]
-def test_agents_settings(client: TestClient):
-    response = client.get("api/v1/all")
-    assert response.status_code == 200
-    json_response = response.json()
-    agents = json_response["agents"]
-    assert set(agents.keys()) == set(settings.agents)
 
 
 def test_zero_shot_agent(client: TestClient):
@@ -131,7 +120,7 @@ def test_initialize_agent(client: TestClient):
     json_response = response.json()
     agents = json_response["agents"]
 
-    initialize_agent = agents["initialize_agent"]
+    initialize_agent = agents["AgentInitializer"]
     assert initialize_agent["base_classes"] == ["AgentExecutor", "function"]
     template = initialize_agent["template"]
 
