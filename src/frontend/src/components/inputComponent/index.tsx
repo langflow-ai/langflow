@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { InputComponentType } from "../../types/components";
 import { classNames } from "../../utils";
 import { TabsContext } from "../../contexts/tabsContext";
+import { PopUpContext } from "../../contexts/popUpContext";
 
 export default function InputComponent({
   value,
@@ -14,12 +15,18 @@ export default function InputComponent({
   const [myValue, setMyValue] = useState(value ?? "");
   const [pwdVisible, setPwdVisible] = useState(false);
   const { setDisableCopyPaste } = useContext(TabsContext);
+  const { closePopUp } = useContext(PopUpContext);
+
   useEffect(() => {
     if (disabled) {
       setMyValue("");
       onChange("");
     }
   }, [disabled, onChange]);
+
+  useEffect(() => {
+    setMyValue(value ?? "");
+  }, [closePopUp]);
 
   return (
     <div

@@ -40,6 +40,7 @@ export default function ParameterComponent({
   const refHtml = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
+
   useEffect(() => {
     if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
       setPosition(ref.current.offsetTop + ref.current.clientHeight / 2);
@@ -54,6 +55,7 @@ export default function ParameterComponent({
   const [enabled, setEnabled] = useState(
     data.node.template[name]?.value ?? false
   );
+
   const { reactFlowInstance } = useContext(typesContext);
   let disabled =
     reactFlowInstance?.getEdges().some((e) => e.targetHandle === id) ?? false;
@@ -125,6 +127,7 @@ export default function ParameterComponent({
             delayDuration={0}
             content={refHtml.current}
             side={left ? "left" : "right"}
+            open={refHtml?.current?.length > 0}
           >
             <Handle
               type={left ? "target" : "source"}

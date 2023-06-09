@@ -60,12 +60,12 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
           data.node.template[t].type === "int")
     ).length
   );
-  const [nodeValue, setNodeValue] = useState(true);
+  const [nodeValue, setNodeValue] = useState(null);
   const { closePopUp } = useContext(PopUpContext);
   const { types } = useContext(typesContext);
   const ref = useRef();
   const { save } = useContext(TabsContext);
-  const [enabled, setEnabled] = useState(false);
+  const [enabled, setEnabled] = useState(null);
   if (nodeLength == 0) {
     closePopUp();
   }
@@ -86,8 +86,6 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
     });
     setNodeValue(!nodeValue);
   }
-
-  console.log(data.node.template);
 
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
