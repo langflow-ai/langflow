@@ -63,7 +63,6 @@ export default function HomePage() {
             rename={rename}
             flows={flows}
             tabIndex={tabIndex}
-            handleSaveFlow={handleSaveFlow}
           />
           <div className="flex">
             <TabsTrigger value="community">Explore</TabsTrigger>
