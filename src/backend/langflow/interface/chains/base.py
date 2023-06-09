@@ -60,12 +60,6 @@ class ChainCreator(LangChainTypeCreator):
             logger.error(f"Chain {name} not loaded: {exc}")
             return None
 
-    # def to_list(self) -> List[str]:
-    #     custom_chains = list(get_custom_nodes("chains").keys())
-    #     default_chains = list(self.type_to_loader_dict.keys())
-
-    #     return default_chains + custom_chains
-
     def to_list(self) -> List[str]:
         names = []
         for _, chain in self.type_to_loader_dict.items():

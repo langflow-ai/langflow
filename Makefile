@@ -46,6 +46,11 @@ backend:
 	make install_backend
 	poetry run uvicorn langflow.main:app --port 7860 --reload --log-level debug
 
+build_and_run:
+	echo 'Removing dist folder'
+	rm -rf dist
+	make build && poetry run pip install dist/*.tar.gz && poetry run langflow
+
 build_frontend:
 	cd src/frontend && CI='' npm run build
 	cp -r src/frontend/build src/backend/langflow/frontend
@@ -78,8 +83,22 @@ else
 endif
 
 publish:
-	make build
-	poetry publish
+	@while true; do \
+		read -p "Do you want to build and publish LangFlow? [y/n]: " yn; \
+		case "$$yn" in \
+			y|Y ) \
+				echo "Building..."; \
+				make build; \
+				echo "Publishing..."; \
+				poetry publish; \
+				break ;; \
+			n|N ) \
+				echo "Bye!!!"; \
+				break ;; \
+			* ) \
+				echo "Invalid response, please enter 'y' or 'n'.\n" ;; \
+		esac \
+	done
 
 help:
 	@echo '----'

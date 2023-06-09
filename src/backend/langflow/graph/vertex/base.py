@@ -53,7 +53,7 @@ class Vertex:
             if "Tool" not in self.output or template_dict["_type"].islower()
             else template_dict["_type"]
         )
-        # self.vertex_type = template_dict["_type"]
+
         if self.base_type is None:
             for base_type, value in ALL_TYPES_DICT.items():
                 if self.vertex_type in value:

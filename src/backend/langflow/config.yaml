@@ -18,7 +18,6 @@ chains:
   - SQLDatabaseChain
   - RetrievalQA
   - RetrievalQAWithSourcesChain
-  - QAWithSourcesChain
   - ConversationalRetrievalChain
   - CombineDocsChain
 documentloaders:
