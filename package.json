@@ -1,7 +1,0 @@
-{
-  "dependencies": {
-    "@radix-ui/react-avatar": "^1.0.3",
-    "@radix-ui/react-dropdown-menu": "^2.0.5",
-    "vite-plugin-svgr": "^3.2.0"
-  }
-}
