@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Callable, Optional
 from langflow.interface.importing.utils import get_function
 
 from pydantic import BaseModel, validator
@@ -9,6 +9,7 @@ from langchain.agents.tools import Tool
 
 class Function(BaseModel):
     code: str
+    function: Optional[Callable] = None
     imports: Optional[str] = None
 
     # Eval code and store the function
@@ -25,6 +26,12 @@ class Function(BaseModel):
 
         return v
 
+    def get_function(self):
+        """Get the function"""
+        function_name = validate.extract_function_name(self.code)
+
+        return validate.create_function(self.code, function_name)
+
 
 class PythonFunctionTool(Function, Tool):
     """Python function"""
@@ -39,3 +46,9 @@ class PythonFunctionTool(Function, Tool):
         self.code = code
         self.func = get_function(self.code)
         super().__init__(name=name, description=description, func=self.func)
+
+
+class PythonFunction(Function):
+    """Python function"""
+
+    code: str

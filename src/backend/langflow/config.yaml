@@ -58,6 +58,7 @@ llms:
   - Cohere
   - Anthropic
   - ChatAnthropic
+  - HuggingFaceHub
 memories:
   - ConversationBufferMemory
   - ConversationSummaryMemory
@@ -84,6 +85,7 @@ tools:
   - Serper Search
   - Tool
   - PythonFunctionTool
+  - PythonFunction
   - JsonSpec
   - News API
   - TMDB API
