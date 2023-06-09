@@ -134,7 +134,10 @@ export default function App() {
         </div>
       </ErrorBoundary>
       <div></div>
-      <div className="flex z-40 flex-col-reverse fixed bottom-5 left-5">
+      <div
+        className="flex flex-col-reverse fixed bottom-5 left-5"
+        style={{ zIndex: 999 }}
+      >
         {alertsList.map((alert) => (
           <div key={alert.id}>
             {alert.type === "error" ? (
