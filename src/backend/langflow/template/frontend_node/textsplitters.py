@@ -10,7 +10,7 @@ class TextSplittersFrontendNode(FrontendNode):
                 required=True,
                 show=True,
                 name="documents",
-            ) 
+            )
         )
         name = "separator"
         if self.template.type_name == "CharacterTextSplitter":
