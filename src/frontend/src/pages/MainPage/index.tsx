@@ -15,61 +15,14 @@ import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { typesContext } from "../../contexts/typesContext";
-import {
-  ArrowDownTrayIcon,
-  ArrowTopRightOnSquareIcon,
-  ArrowUpTrayIcon,
-  ChevronDownIcon,
-  CodeBracketSquareIcon,
-  GlobeAltIcon,
-  PencilSquareIcon,
-  CloudArrowUpIcon,
-  PlusCircleIcon,
-  PlusIcon,
-  PlusSmallIcon,
-  TrashIcon,
-} from "@heroicons/react/24/outline";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "../../components/ui/dropdown-menu";
-import ImportModal from "../../modals/importModal";
-import ExportModal from "../../modals/exportModal";
-import ApiModal from "../../modals/ApiModal";
-import { Separator } from "../../components/ui/separator";
 import { Button } from "../../components/ui/button";
 import { FaGithub } from "react-icons/fa";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
-import RenameLabel from "../../components/ui/rename-label";
-import _ from "lodash";
-import { Badge } from "../../components/ui/badge";
-import { OpenAiIcon } from "../../icons/OpenAi";
-import { Menu } from "@mui/material";
-import {
-  Menubar,
-  MenubarContent,
-  MenubarItem,
-  MenubarMenu,
-  MenubarRadioGroup,
-  MenubarRadioItem,
-  MenubarTrigger,
-} from "../../components/ui/menubar";
-import { updateFlowInDatabase } from "../../controllers/API";
-import { CardComponent } from "../../components/cardComponent";
 
+import _ from "lodash";
+
+import { updateFlowInDatabase } from "../../controllers/API";
+import { CardComponent } from "./components/cardComponent";
+import { MenuBar } from "./components/menuBar";
 export default function HomePage() {
   const {
     flows,
@@ -81,7 +34,6 @@ export default function HomePage() {
     downloadFlow,
   } = useContext(TabsContext);
   const { openPopUp } = useContext(PopUpContext);
-  const { updateFlow } = useContext(TabsContext);
   const { templates } = useContext(typesContext);
   const AlertWidth = 384;
   const { dark, setDark } = useContext(darkContext);
@@ -96,25 +48,6 @@ export default function HomePage() {
     }
   }, [addFlow, flows.length, templates]);
 
-  function handleAddFlow() {
-    try {
-      addFlow();
-      // saveFlowStyleInDataBase();
-    } catch (err) {
-      setErrorData(err);
-    }
-  }
-
-  function handleSave(flow) {
-    // Put your save logic here.
-    try {
-      updateFlowInDatabase(flow);
-      // updateFlowStyleInDataBase(flow);
-    } catch (err) {
-      setErrorData(err);
-    }
-  }
-
   return (
     flows.length !== 0 && (
       <Tabs
@@ -124,105 +57,14 @@ export default function HomePage() {
         className="w-full h-full flex flex-col"
       >
         <TabsList className="w-full h-16 flex justify-between items-center border-b">
-          <div className="flex gap-2 justify-start items-center w-96">
-            <span className="text-2xl ml-4">⛓️</span>
-            {activeTab === "myflow" && (
-              <div className="flex gap-2 p-2">
-                <Menubar>
-                  <MenubarMenu>
-                    <MenubarTrigger className="px-2">
-                      <b>
-                        <RenameLabel
-                          value={flows[tabIndex].name}
-                          setValue={(value) => {
-                            if (value !== "") {
-                              let newFlow = _.cloneDeep(flows[tabIndex]);
-                              newFlow.name = value;
-                              updateFlow(newFlow);
-                            }
-                          }}
-                          rename={rename}
-                          setRename={setRename}
-                        />
-                      </b>
-                    </MenubarTrigger>
-                    <MenubarContent>
-                      <MenubarItem
-                        onClick={() => {
-                          openPopUp(<ImportModal />);
-                        }}
-                      >
-                        <ArrowUpTrayIcon className="w-4 h-4 mr-2" />
-                        Import
-                      </MenubarItem>
-                      <MenubarItem
-                        onClick={() => {
-                          openPopUp(<ExportModal />);
-                        }}
-                      >
-                        <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
-                        Export
-                      </MenubarItem>
-                      <MenubarItem
-                        onClick={() => {
-                          openPopUp(
-                            <ApiModal flowName={flows[tabIndex].name} />
-                          );
-                        }}
-                      >
-                        <CodeBracketSquareIcon className="w-4 h-4 mr-2" />
-                        Code
-                      </MenubarItem>
-                    </MenubarContent>
-                  </MenubarMenu>
-                  <MenubarMenu>
-                    <MenubarTrigger>Edit</MenubarTrigger>
-                    <MenubarContent>
-                      <MenubarItem onClick={handleSave(flows[tabIndex])}>
-                        <CloudArrowUpIcon className="w-4 h-4 mr-2" />
-                        Save
-                      </MenubarItem>
-                      <MenubarItem
-                        onClick={() => {
-                          setRename(true);
-                        }}
-                      >
-                        <PencilSquareIcon className="w-4 h-4 mr-2" />
-                        Rename
-                      </MenubarItem>
-                    </MenubarContent>
-                  </MenubarMenu>
-                  <MenubarMenu>
-                    <MenubarTrigger>Flows</MenubarTrigger>
-                    <MenubarContent>
-                      <MenubarRadioGroup
-                        value={tabIndex.toString()}
-                        onValueChange={(value) => {
-                          setTabIndex(parseInt(value));
-                        }}
-                      >
-                        {flows.map((flow, idx) => {
-                          return (
-                            <MenubarRadioItem value={idx.toString()}>
-                              {flow.name}
-                            </MenubarRadioItem>
-                          );
-                        })}
-                      </MenubarRadioGroup>
-                      <MenubarItem
-                        onClick={() => {
-                          handleAddFlow();
-                        }}
-                      >
-                        <PlusIcon className="w-4 h-4 mr-2" />
-                        Add Flow
-                      </MenubarItem>
-                    </MenubarContent>
-                  </MenubarMenu>
-                </Menubar>
-              </div>
-            )}
-          </div>
+          <MenuBar
+            activeTab={activeTab}
+            setRename={setRename}
+            rename={rename}
+            flows={flows}
+            tabIndex={tabIndex}
+            handleSaveFlow={handleSaveFlow}
+          />
           <div className="flex">
             <TabsTrigger value="community">Explore</TabsTrigger>
             <TabsTrigger value="myflows">My Flows</TabsTrigger>
@@ -260,10 +102,9 @@ export default function HomePage() {
                 className="text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200 relative"
                 onClick={(event: React.MouseEvent<HTMLElement>) => {
                   setNotificationCenter(false);
-                  const top = (event.target as Element).getBoundingClientRect()
-                    .top;
-                  const left = (event.target as Element).getBoundingClientRect()
-                    .left;
+                  const { top, left } = (
+                    event.target as Element
+                  ).getBoundingClientRect();
                   openPopUp(
                     <>
                       <div
