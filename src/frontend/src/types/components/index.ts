@@ -13,11 +13,14 @@ export type InputComponentType = {
   password: boolean;
   disableCopyPaste?: boolean;
   editNode?: boolean;
+  onChangePass?: (value: boolean | boolean) => void;
+  showPass?: boolean;
 };
 export type ToggleComponentType = {
   enabled: boolean;
   setEnabled: (state: boolean) => void;
   disabled: boolean;
+  name?: string;
 };
 export type DropDownComponentType = {
   value: string;
