@@ -20,7 +20,6 @@ export type ToggleComponentType = {
   enabled: boolean;
   setEnabled: (state: boolean) => void;
   disabled: boolean;
-  name?: string;
 };
 export type DropDownComponentType = {
   value: string;
