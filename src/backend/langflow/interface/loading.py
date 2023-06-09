@@ -24,7 +24,7 @@ from langflow.interface.importing.utils import get_function, import_by_type
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.types import get_type_list
 from langflow.interface.utils import load_file_into_dict
-from langflow.utils import util
+from langflow.utils import util, validate
 
 
 def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
@@ -101,6 +101,12 @@ def instantiate_tool(node_type, class_object, params):
     elif node_type == "PythonFunctionTool":
         params["func"] = get_function(params.get("code"))
         return class_object(**params)
+    # For backward compatibility
+    elif node_type == "PythonFunction":
+        function_string = params["code"]
+        if isinstance(function_string, str):
+            return validate.eval_function(function_string)
+        raise ValueError("Function should be a string")
     elif node_type.lower() == "tool":
         return class_object(**params)
     return class_object(**params)

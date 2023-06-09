@@ -54,4 +54,4 @@ jobs:
           token: ${{ secrets.SERVE_GITHUB_TOKEN }}
           repository: jina-ai/langchain-serve
           event-type: langflow-push
-          client-payload: '{"push_token": "${{ secrets.LCSERVE_PUSH_TOKEN }}", "branch": "dev"}'
+          client-payload: '{"push_token": "${{ secrets.LCSERVE_PUSH_TOKEN }}", "branch": "main"}'

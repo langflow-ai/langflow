@@ -14,13 +14,13 @@ export async function sendAll(data: sendAllProps) {
 export async function checkCode(
   code: string
 ): Promise<AxiosResponse<errorsTypeAPI>> {
-  return await axios.post("api/v1/validate/code", { code });
+  return await axios.post("/validate/code", { code });
 }
 
 export async function checkPrompt(
   template: string
 ): Promise<AxiosResponse<PromptTypeAPI>> {
-  return await axios.post("api/v1/validate/prompt", { template });
+  return await axios.post("/validate/prompt", { template });
 }
 
 export async function getExamples(): Promise<FlowType[]> {
@@ -37,7 +37,5 @@ export async function getExamples(): Promise<FlowType[]> {
     return contentResponse.data;
   });
 
-  const contents = await Promise.all(contentsPromises);
-
-  return contents;
+  return await Promise.all(contentsPromises);
 }
