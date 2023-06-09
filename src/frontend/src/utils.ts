@@ -7,7 +7,6 @@ import {
   WrenchScrewdriverIcon,
   WrenchIcon,
   ComputerDesktopIcon,
-  Bars3CenterLeftIcon,
   GiftIcon,
   PaperClipIcon,
   QuestionMarkCircleIcon,
@@ -15,6 +14,7 @@ import {
   ScissorsIcon,
   CircleStackIcon,
   Squares2X2Icon,
+  Bars3CenterLeftIcon,
 } from "@heroicons/react/24/outline";
 import { Connection, Edge, Node, ReactFlowInstance, addEdge } from "reactflow";
 import { FlowType, NodeType } from "./types/flow";
@@ -48,12 +48,8 @@ import { WolframIcon } from "./icons/Wolfram";
 import { WordIcon } from "./icons/Word";
 import { SerperIcon } from "./icons/Serper";
 import { v4 as uuidv4 } from "uuid";
-import { clsx, type ClassValue } from "clsx";
+import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -350,6 +346,10 @@ export function measureTextWidth(text: string, fontSize: number) {
     wordWidth += charWidth * fontSize;
   }
   return wordWidth;
+}
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
 }
 
 export function measureTextHeight(
