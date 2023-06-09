@@ -20,6 +20,10 @@ import { APITemplateType, TemplateVariableType } from "../types/api";
 import { v4 as uuidv4 } from "uuid";
 import { addEdge } from "reactflow";
 import _ from "lodash";
+import {
+  readFlowsFromDatabase,
+  deleteFlowFromDatabase,
+} from "../controllers/API";
 
 const TabsContextInitialValue: TabsContextType = {
   save: () => {},
@@ -84,54 +88,157 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  useEffect(() => {
-    //get tabs locally saved
-    let cookie = window.localStorage.getItem("tabsData");
-    if (cookie && Object.keys(templates).length > 0) {
-      let cookieObject: LangFlowState = JSON.parse(cookie);
-      try {
-        cookieObject.flows.forEach((flow) => {
-          if (!flow.data) {
-            return;
-          }
-          flow.data.edges.forEach((edge) => {
-            edge.className = "";
-            edge.style = { stroke: "#555555" };
-          });
+  // function loadCookie(cookie: string) {
+  //   if (cookie && Object.keys(templates).length > 0) {
+  //     let cookieObject: LangFlowState = JSON.parse(cookie);
+  //     try {
+  //       cookieObject.flows.forEach((flow) => {
+  //         if (!flow.data) {
+  //           return;
+  //         }
+  //         flow.data.edges.forEach((edge) => {
+  //           edge.className = "";
+  //           edge.style = { stroke: "#555555" };
+  //         });
 
-          flow.data.nodes.forEach((node) => {
-            const template = templates[node.data.type];
-            if (!template) {
-              setErrorData({ title: `Unknown node type: ${node.data.type}` });
-              return;
-            }
-            if (Object.keys(template["template"]).length > 0) {
-              node.data.node.base_classes = template["base_classes"];
-              flow.data.edges.forEach((edge) => {
-                if (edge.source === node.id) {
-                  edge.sourceHandle = edge.sourceHandle
-                    .split("|")
-                    .slice(0, 2)
-                    .concat(template["base_classes"])
-                    .join("|");
-                }
-              });
-              node.data.node.description = template["description"];
-              node.data.node.template = updateTemplate(
-                template["template"] as unknown as APITemplateType,
-                node.data.node.template as APITemplateType
-              );
-            }
-          });
-        });
-        setTabIndex(cookieObject.tabIndex);
-        setFlows(cookieObject.flows);
-        setId(cookieObject.id);
-      } catch (e) {
-        console.log(e);
+  //         flow.data.nodes.forEach((node) => {
+  //           const template = templates[node.data.type];
+  //           if (!template) {
+  //             setErrorData({ title: `Unknown node type: ${node.data.type}` });
+  //             return;
+  //           }
+  //           if (Object.keys(template["template"]).length > 0) {
+  //             node.data.node.base_classes = template["base_classes"];
+  //             flow.data.edges.forEach((edge) => {
+  //               if (edge.source === node.id) {
+  //                 edge.sourceHandle = edge.sourceHandle
+  //                   .split("|")
+  //                   .slice(0, 2)
+  //                   .concat(template["base_classes"])
+  //                   .join("|");
+  //               }
+  //             });
+  //             node.data.node.description = template["description"];
+  //             node.data.node.template = updateTemplate(
+  //               template["template"] as unknown as APITemplateType,
+  //               node.data.node.template as APITemplateType
+  //             );
+  //           }
+  //         });
+  //       });
+  //       setTabIndex(cookieObject.tabIndex);
+  //       setFlows(cookieObject.flows);
+  //       setId(cookieObject.id);
+  //     } catch (e) {
+  //       console.log(e);
+  //     }
+  //   }
+  // }
+
+  useEffect(() => {
+    // get data from db
+    //get tabs locally saved
+    // let tabsData = getLocalStorageTabsData();
+    getTabsDataFromDB().then((DbData) => {
+      if (DbData && Object.keys(templates).length > 0) {
+        try {
+          processDBData(DbData);
+          updateStateWithDbData(DbData);
+        } catch (e) {
+          console.error(e);
+        }
       }
-    }
+    });
   }, [templates]);
+
+  function getLocalStorageTabsData() {
+    let cookie = window.localStorage.getItem("tabsData");
+    let cookieObject: LangFlowState = JSON.parse(cookie);
+    return cookieObject;
+  }
+
+  function getTabsDataFromDB() {
+    //get tabs from db
+    return readFlowsFromDatabase();
+  }
+  function processDBData(DbData) {
+    DbData.forEach((flow) => {
+      if (!flow.data) {
+        return;
+      }
+      processFlowEdges(flow.data.edges);
+      processFlowNodes(flow.data.nodes);
+    });
+  }
+  function processTabsData(tabsData) {
+    tabsData.flows.forEach((flow) => {
+      if (!flow.data) {
+        return;
+      }
+      processFlowEdges(flow.data.edges);
+      processFlowNodes(flow.data.nodes);
+    });
+  }
+
+  function processFlowEdges(edges) {
+    edges.forEach((edge) => {
+      edge.className = "";
+      edge.style = { stroke: "#555555" };
+    });
+  }
+
+  function processFlowNodes(nodes) {
+    nodes.forEach((node) => {
+      const template = templates[node.data.type];
+      if (!template) {
+        setErrorData({ title: `Unknown node type: ${node.data.type}` });
+        return;
+      }
+      if (Object.keys(template["template"]).length > 0) {
+        updateNodeBaseClasses(node, template);
+        updateNodeEdges(node, template);
+        updateNodeDescription(node, template);
+        updateNodeTemplate(node, template);
+      }
+    });
+  }
+
+  function updateNodeBaseClasses(node, template) {
+    node.data.node.base_classes = template["base_classes"];
+  }
+
+  function updateNodeEdges(node, template) {
+    node.data.edges.forEach((edge) => {
+      if (edge.source === node.id) {
+        edge.sourceHandle = edge.sourceHandle
+          .split("|")
+          .slice(0, 2)
+          .concat(template["base_classes"])
+          .join("|");
+      }
+    });
+  }
+
+  function updateNodeDescription(node, template) {
+    node.data.node.description = template["description"];
+  }
+
+  function updateNodeTemplate(node, template) {
+    node.data.node.template = updateTemplate(
+      template["template"] as unknown as APITemplateType,
+      node.data.node.template as APITemplateType
+    );
+  }
+
+  function updateStateWithTabsData(tabsData) {
+    setTabIndex(tabsData.tabIndex);
+    setFlows(tabsData.flows);
+    setId(tabsData.id);
+  }
+
+  function updateStateWithDbData(tabsData) {
+    setFlows(tabsData);
+  }
 
   useEffect(() => {
     //save tabs locally
@@ -208,14 +315,16 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       const newFlows = [...prevState];
       const index = newFlows.findIndex((flow) => flow.id === id);
       if (index >= 0) {
-        if (index === tabIndex) {
-          setTabIndex(flows.length - 2);
-          newFlows.splice(index, 1);
-        } else {
-          let flowId = flows[tabIndex].id;
-          newFlows.splice(index, 1);
-          setTabIndex(newFlows.findIndex((flow) => flow.id === flowId));
-        }
+        deleteFlowFromDatabase(id).then(() => {
+          if (index === tabIndex) {
+            setTabIndex(flows.length - 2);
+            newFlows.splice(index, 1);
+          } else {
+            let flowId = flows[tabIndex].id;
+            newFlows.splice(index, 1);
+            setTabIndex(newFlows.findIndex((flow) => flow.id === flowId));
+          }
+        });
       }
       return newFlows;
     });
@@ -309,67 +418,90 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     reactFlowInstance.setEdges(edges);
   }
 
-  function addFlow(flow?: FlowType) {
-    // Get data from the flow or set it to null if there's no flow provided.
+  const addFlow = (flow?: FlowType) => {
+    let flowData = extractDataFromFlow(flow);
 
-    let data = flow?.data ? flow.data : null;
-    const description = flow?.description ? flow.description : "";
-    if (data) {
-      data.edges.forEach((edge) => {
-        edge.style = { stroke: "inherit" };
-        edge.className =
-          edge.targetHandle.split("|")[0] === "Text"
-            ? "stroke-gray-800 dark:stroke-gray-300"
-            : "stroke-gray-900 dark:stroke-gray-200";
-        edge.animated = edge.targetHandle.split("|")[0] === "Text";
-      });
-      data.nodes.forEach((node) => {
-        const template = templates[node.data.type];
-        if (!template) {
-          setErrorData({ title: `Unknown node type: ${node.data.type}` });
-          return;
-        }
-        if (Object.keys(template["template"]).length > 0) {
-          node.data.node.base_classes = template["base_classes"];
-          flow.data.edges.forEach((edge) => {
-            if (edge.source === node.id) {
-              edge.sourceHandle = edge.sourceHandle
-                .split("|")
-                .slice(0, 2)
-                .concat(template["base_classes"])
-                .join("|");
-            }
-          });
-          node.data.node.description = template["description"];
-          node.data.node.template = updateTemplate(
-            template["template"] as unknown as APITemplateType,
-            node.data.node.template as APITemplateType
-          );
-        }
-      });
-      updateIds(data, getNodeId);
-    }
     // Create a new flow with a default name if no flow is provided.
-    let newFlow: FlowType = {
-      description,
-      name: flow?.name ?? "New Flow",
-      id: uuidv4(),
-      data,
-    };
+    const newFlow = createNewFlow(flowData, flow);
 
     // Increment the ID counter.
     setId(uuidv4());
 
     // Add the new flow to the list of flows.
-
-    setFlows((prevState) => {
-      const newFlows = [...prevState, newFlow];
-      return newFlows;
-    });
+    addFlowToLocalState(newFlow);
 
     // Set the tab index to the new flow.
+    setTabIndexToLocalState();
+  };
+
+  const extractDataFromFlow = (flow) => {
+    let data = flow?.data ? flow.data : null;
+    const description = flow?.description ? flow.description : "";
+
+    if (data) {
+      updateEdges(data.edges);
+      updateNodes(data.nodes, data.edges);
+      updateIds(data, getNodeId); // Assuming updateIds is defined elsewhere
+    }
+
+    return { data, description };
+  };
+
+  const updateEdges = (edges) => {
+    edges.forEach((edge) => {
+      edge.style = { stroke: "inherit" };
+      edge.className =
+        edge.targetHandle.split("|")[0] === "Text"
+          ? "stroke-gray-800 dark:stroke-gray-300"
+          : "stroke-gray-900 dark:stroke-gray-200";
+      edge.animated = edge.targetHandle.split("|")[0] === "Text";
+    });
+  };
+
+  const updateNodes = (nodes, edges) => {
+    nodes.forEach((node) => {
+      const template = templates[node.data.type];
+      if (!template) {
+        setErrorData({ title: `Unknown node type: ${node.data.type}` });
+        return;
+      }
+      if (Object.keys(template["template"]).length > 0) {
+        node.data.node.base_classes = template["base_classes"];
+        edges.forEach((edge) => {
+          if (edge.source === node.id) {
+            edge.sourceHandle = edge.sourceHandle
+              .split("|")
+              .slice(0, 2)
+              .concat(template["base_classes"])
+              .join("|");
+          }
+        });
+        node.data.node.description = template["description"];
+        node.data.node.template = updateTemplate(
+          template["template"] as unknown as APITemplateType,
+          node.data.node.template as APITemplateType
+        );
+      }
+    });
+  };
+
+  const createNewFlow = (flowData, flow) => ({
+    description: flowData.description,
+    name: flow?.name ?? "New Flow",
+    id: uuidv4(),
+    data: flowData.data,
+  });
+
+  const addFlowToLocalState = (newFlow) => {
+    setFlows((prevState) => {
+      return [...prevState, newFlow];
+    });
+  };
+
+  const setTabIndexToLocalState = () => {
     setTabIndex(flows.length);
-  }
+  };
+
   /**
    * Updates an existing flow with new data
    * @param newFlow - The new flow object containing the updated data
@@ -386,6 +518,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       return newFlows;
     });
   }
+
   const [disableCopyPaste, setDisableCopyPaste] = useState(false);
 
   return (

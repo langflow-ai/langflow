@@ -39,3 +39,96 @@ export async function getExamples(): Promise<FlowType[]> {
 
   return await Promise.all(contentsPromises);
 }
+
+export async function saveFlowToDatabase(newFlow: FlowType) {
+  try {
+    const response = await fetch("/flows/", {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: newFlow.name,
+        data: newFlow.data,
+        description: newFlow.description,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+export async function updateFlowInDatabase(updatedFlow: FlowType) {
+  try {
+    const response = await fetch(`/flows/${updatedFlow.id}`, {
+      method: "PATCH", // Or "PATCH" depending on your backend API
+      headers: {
+        accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: updatedFlow.name,
+        data: updatedFlow.data,
+        description: updatedFlow.description,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+export async function readFlowsFromDatabase() {
+  try {
+    const response = await fetch("/flows/");
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+export async function deleteFlowFromDatabase(flowId: string) {
+  try {
+    const response = await fetch(`/flows/${flowId}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+export async function getFlowFromDatabase(flowId: number) {
+  try {
+    const response = await fetch(`/flows/${flowId}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+export async function getHealth() {
+  return await axios.get("/health");
+}
