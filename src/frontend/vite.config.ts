@@ -11,7 +11,7 @@ const apiRoutes = [
 ];
 
 // Use environment variable to determine the target.
-const target = process.env.VITE_PROXY_TARGET || "http://127.0.0.1:7860/api/v1";
+const target = process.env.VITE_PROXY_TARGET || "http://127.0.0.1:7860";
 
 const proxyTargets = apiRoutes.reduce((proxyObj, route) => {
   proxyObj[route] = {
@@ -19,6 +19,7 @@ const proxyTargets = apiRoutes.reduce((proxyObj, route) => {
     changeOrigin: true,
     secure: false,
     ws: true,
+    rewrite: (path) => `/api/v1${path}`,
   };
   return proxyObj;
 }, {});
