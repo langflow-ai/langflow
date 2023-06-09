@@ -26,7 +26,7 @@ import ApiModal from "../../../../modals/ApiModal";
 import { alertContext } from "../../../../contexts/alertContext";
 import { updateFlowInDatabase } from "../../../../controllers/API";
 
-const MenuBar = ({ activeTab, setRename, rename, flows, tabIndex }) => {
+export const MenuBar = ({ activeTab, setRename, rename, flows, tabIndex }) => {
   const { updateFlow, setTabIndex, addFlow } = useContext(TabsContext);
   const { setErrorData } = useContext(alertContext);
   const { openPopUp } = useContext(PopUpContext);

@@ -242,7 +242,7 @@ export async function saveFlowStyleToDatabase(flowStyle: FlowStyleType) {
  * @returns {Promise<AxiosResponse<any>>} A promise that resolves to an AxiosResponse containing the version information.
  */
 export async function getVersion() {
-  return await axios.get("/version");
+  return await fetch("/version");
 }
 
 /**
@@ -251,5 +251,5 @@ export async function getVersion() {
  * @returns {Promise<AxiosResponse<any>>} A promise that resolves to an AxiosResponse containing the health status.
  */
 export async function getHealth() {
-  return await axios.get("/health");
+  return await fetch("/health");
 }
