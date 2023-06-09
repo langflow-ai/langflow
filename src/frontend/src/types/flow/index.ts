@@ -26,4 +26,5 @@ export type NodeDataType = {
 export type FlowStyleType = {
   emoji: string;
   color: string;
+  flow_id: string;
 };

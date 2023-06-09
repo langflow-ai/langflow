@@ -3,17 +3,17 @@ import {
   ArrowTopRightOnSquareIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
-import { OpenAiIcon } from "../../icons/OpenAi";
-import { Button } from "../../components/ui/button";
-import { Badge } from "../../components/ui/badge";
+import { OpenAiIcon } from "../../../../icons/OpenAi";
+import { Button } from "../../../../components/ui/button";
+import { Badge } from "../../../../components/ui/badge";
 import {
   Card,
   CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
-} from "../ui/card";
-import { FlowType } from "../../types/flow";
+} from "../../../../components/ui/card";
+import { FlowType } from "../../../../types/flow";
 export const CardComponent = ({
   flow,
   idx,
