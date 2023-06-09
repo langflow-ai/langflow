@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from langflow.api import router
+from langflow.database.base import create_db_and_tables
 
 
 def create_app():
@@ -25,6 +26,7 @@ def create_app():
     )
 
     app.include_router(router)
+    app.on_event("startup")(create_db_and_tables)
     return app
 
 
