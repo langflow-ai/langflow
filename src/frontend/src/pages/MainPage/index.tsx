@@ -73,7 +73,7 @@ export default function HomePage() {
               <Button
                 asChild
                 variant="outline"
-                className="text-gray-600 dark:text-gray-300"
+                className="text-gray-600 dark:text-gray-300 "
               >
                 <a
                   href="https://github.com/logspace-ai/langflow"
