@@ -1,0 +1,153 @@
+@import url('https://fonts.googleapis.com/css2?family=Noticia+Text:wght@400;700&display=swap');
+
+.headerText {
+	font-family: 'Noticia Text';
+	font-weight: 900;
+	font-size: 60px;
+	text-align: center;
+	padding-top: 40px;
+}
+
+.subheaderText {
+	font-family: 'Noticia Text';
+	font-weight: 400;
+	font-size: 20px;
+	text-align: center;
+	width: 60%;
+	margin: 0 auto;
+}
+
+.opensourceText {
+	font-family: 'Noticia Text';
+	font-weight: 400;
+	font-size: 14px;
+	text-align: center;
+	width: 60%;
+	margin: 10px auto;
+}
+
+.container {
+	padding-right: 15px;
+	padding-left: 15px;
+	margin-right: auto;
+	margin-left: auto;
+}
+
+@media (min-width: 768px) {
+	.container {
+		width: 750px;
+	}
+}
+
+@media (min-width: 992px) {
+	.container {
+		width: 970px;
+	}
+}
+
+@media (min-width: 1200px) {
+	.container {
+		width: 1170px;
+	}
+}
+
+.graphContainer {
+	width: 80%;
+	height: 80%;
+	background-color: rgb(255, 255, 255);
+	border-radius: 10px;
+	overflow: hidden;
+	border: 1px solid rgb(0, 0, 0);
+	box-shadow: 0 0 5px rgb(0 0 0 / 10%);
+	margin: 0 auto;
+	margin-bottom: 10px;
+}
+
+.footer {
+	font-family: 'Noticia Text';
+	font-weight: 400;
+	font-size: 13px;
+	text-align: center;
+	margin: 0 auto;
+	margin-bottom: 100px;
+}
+
+.inputContainer {
+	width: 60%;
+	margin: 0 auto;
+	margin-top: 50px;
+	margin-bottom: 50px;
+}
+
+.searchBar {
+	border: 1px solid rgb(0, 0, 0);
+	border-radius: 5px;
+	box-shadow: 0 0 5px rgb(0 0 0 / 10%);
+	display: block;
+	font-size: 16px;
+	height: 50px;
+	outline: none;
+	padding: 0 10px;
+	width: 90%;
+	margin-left: auto;
+	margin-right: auto;
+	margin-bottom: 20px;
+}
+
+.apiKeyTextField {
+	border: 1px solid rgb(0, 0, 0);
+	border-radius: 5px;
+	box-shadow: 0 0 5px rgb(0 0 0 / 10%);
+	display: block;
+	font-size: 16px;
+	height: 50px;
+	outline: none;
+	padding: 0 10px;
+	width: 90%;
+	margin-left: auto;
+	margin-right: auto;
+	margin-bottom: 20px;
+}
+
+.generateButton {
+	background-color: rgb(0, 0, 0);
+	border: none;
+	border-radius: 5px;
+	color: rgb(255, 255, 255);
+	cursor: pointer;
+	font-size: 16px;
+	height: 50px;
+	outline: none;
+	width: 40%;
+	display: inline-block;
+	margin-right: 5px;
+}
+
+.generateButton:hover {
+	background-color: rgb(0, 0, 0, 0.8);
+}
+
+.generateButton:disabled {
+	background-color: rgb(0, 0, 0, 0.5);
+	cursor: wait;
+}
+
+.clearButton {
+	background-color: rgb(255, 255, 255);
+	border: 1px solid rgb(0, 0, 0);
+	border-radius: 5px;
+	color: rgb(0, 0, 0);
+	cursor: pointer;
+	font-size: 16px;
+	height: 50px;
+	outline: none;
+	width: 40%;
+	margin-left: auto;
+	margin-right: auto;
+	display: inline-block;
+	margin-left: 5px;
+}
+
+.clearButton:hover {
+	background-color: rgba(239, 239, 239, 0.8);
+}
