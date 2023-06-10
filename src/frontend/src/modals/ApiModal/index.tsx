@@ -24,8 +24,9 @@ import {
   DialogTrigger,
 } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
+import { FlowType } from "src/types/flow";
 
-export default function ApiModal({ flowName }) {
+export default function ApiModal({ flow }: { flow: FlowType }) {
   const [open, setOpen] = useState(true);
   const { dark } = useContext(darkContext);
   const { closePopUp } = useContext(PopUpContext);
@@ -53,22 +54,25 @@ export default function ApiModal({ flowName }) {
   }
 
   const pythonApiCode = `import requests
-import json
 
-API_URL = "${window.location.protocol}//${window.location.host}/predict"
+FLOW_ID = "${flow.id}"
+API_URL = f"${window.location.protocol}//${window.location.host}/predict/{FLOW_ID}"
 
 def predict(message):
-    with open("${flowName}.json", "r") as f:
-        json_data = json.load(f)
-    payload = {'exported_flow': json_data, 'message': message}
+    payload = {'message': message}
     response = requests.post(API_URL, json=payload)
-    return response.json() # JSON {"result": "Response"}
+    return response.json()
 
 print(predict("Your message"))`;
 
+  const curl_code = `curl -X POST \\
+  -H "Content-Type: application/json" \\
+  -d '{"message": "Your message"}' \\
+  ${window.location.protocol}//${window.location.host}/predict/${flow.id}`;
+
   const pythonCode = `from langflow import load_flow_from_json
 
-flow = load_flow_from_json("${flowName}.json")
+flow = load_flow_from_json("${flow.name}.json")
 # Now you can use it like any chain
 flow("Hey, have you heard of LangFlow?")`;
 
@@ -79,6 +83,12 @@ flow("Hey, have you heard of LangFlow?")`;
       image:
         "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
       code: pythonApiCode,
+    },
+    {
+      name: "cURL",
+      mode: "bash",
+      image: "https://cdn-icons-png.flaticon.com/512/631/631558.png",
+      code: curl_code,
     },
     {
       name: "Python Code",
