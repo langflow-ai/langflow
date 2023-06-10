@@ -23,6 +23,7 @@ import _ from "lodash";
 import {
   readFlowsFromDatabase,
   deleteFlowFromDatabase,
+  saveFlowToDatabase,
 } from "../controllers/API";
 
 const TabsContextInitialValue: TabsContextType = {
@@ -71,7 +72,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     let Saveflows = _.cloneDeep(flows);
     if (Saveflows.length !== 0) {
       Saveflows.forEach((flow) => {
-        if (flow.data && flow.data?.nodes)
+        if (flow.data && flow.data?.nodes) {
           flow.data?.nodes.forEach((node) => {
             console.log(node.data.type);
             //looking for file fields to prevent saving the content and breaking the flow for exceeding the the data limite for local storage
@@ -84,6 +85,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
               }
             });
           });
+        }
       });
       window.localStorage.setItem(
         "tabsData",
@@ -167,32 +169,41 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
   function processDBData(DbData) {
     DbData.forEach((flow) => {
-      if (!flow.data) {
-        return;
+      try {
+        if (!flow.data) {
+          return;
+        }
+        processFlowEdges(flow);
+        processFlowNodes(flow);
+      } catch (e) {
+        console.error(e);
       }
-      processFlowEdges(flow.data.edges);
-      processFlowNodes(flow.data.nodes);
-    });
-  }
-  function processTabsData(tabsData) {
-    tabsData.flows.forEach((flow) => {
-      if (!flow.data) {
-        return;
-      }
-      processFlowEdges(flow.data.edges);
-      processFlowNodes(flow.data.nodes);
     });
   }
 
-  function processFlowEdges(edges) {
-    edges.forEach((edge) => {
+  function processTabsData(tabsData) {
+    tabsData.flows.forEach((flow) => {
+      try {
+        if (!flow.data) {
+          return;
+        }
+        processFlowEdges(flow);
+        processFlowNodes(flow);
+      } catch (e) {
+        console.error(e);
+      }
+    });
+  }
+
+  function processFlowEdges(flow) {
+    flow.data.edges.forEach((edge) => {
       edge.className = "";
       edge.style = { stroke: "#555555" };
     });
   }
 
-  function processFlowNodes(nodes) {
-    nodes.forEach((node) => {
+  function processFlowNodes(flow) {
+    flow.data.nodes.forEach((node) => {
       const template = templates[node.data.type];
       if (!template) {
         setErrorData({ title: `Unknown node type: ${node.data.type}` });
@@ -200,7 +211,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       }
       if (Object.keys(template["template"]).length > 0) {
         updateNodeBaseClasses(node, template);
-        updateNodeEdges(node, template);
+        updateNodeEdges(flow, node, template);
         updateNodeDescription(node, template);
         updateNodeTemplate(node, template);
       }
@@ -211,8 +222,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     node.data.node.base_classes = template["base_classes"];
   }
 
-  function updateNodeEdges(node, template) {
-    node.data.edges.forEach((edge) => {
+  function updateNodeEdges(flow, node, template) {
+    flow.data.edges.forEach((edge) => {
       if (edge.source === node.id) {
         edge.sourceHandle = edge.sourceHandle
           .split("|")
@@ -433,14 +444,18 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     // Create a new flow with a default name if no flow is provided.
     const newFlow = createNewFlow(flowData, flow);
 
-    // Increment the ID counter.
-    setId(uuidv4());
+    saveFlowToDatabase(newFlow)
+      .then((id) => {
+        // Increment the ID counter.
+        setId(id);
+      })
+      .then(() => {
+        // Add the new flow to the list of flows.
+        addFlowToLocalState(newFlow);
 
-    // Add the new flow to the list of flows.
-    addFlowToLocalState(newFlow);
-
-    // Set the tab index to the new flow.
-    setTabIndexToLocalState();
+        // Set the tab index to the new flow.
+        setTabIndexToLocalState();
+      });
   };
 
   const extractDataFromFlow = (flow) => {
