@@ -1,6 +1,7 @@
 import React, { useContext } from "react";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { PopUpContext } from "../../../../contexts/popUpContext";
+import { Save, Edit, Upload, Download, Code, Plus } from "lucide-react";
 import {
   Menubar,
   MenubarContent,
@@ -10,14 +11,7 @@ import {
   MenubarRadioGroup,
   MenubarRadioItem,
 } from "../../../../components/ui/menubar";
-import {
-  ArrowUpTrayIcon,
-  ArrowDownTrayIcon,
-  CodeBracketSquareIcon,
-  CloudArrowUpIcon,
-  PencilSquareIcon,
-  PlusIcon,
-} from "@heroicons/react/24/outline";
+
 import RenameLabel from "../../../../components/ui/rename-label";
 import _ from "lodash";
 import ImportModal from "../../../../modals/importModal";
@@ -48,37 +42,49 @@ export const MenuBar = ({ activeTab, setRename, rename, flows, tabIndex }) => {
       setErrorData(err);
     }
   }
+  let current_flow = flows[tabIndex];
+
+  // robot emoji
+  let emoji = current_flow.style?.emoji || "🤖";
+  let color = current_flow.style?.color || "bg-blue-200";
 
   return (
     <div className="flex gap-2 justify-start items-center w-96">
       <span className="text-2xl ml-4">⛓️</span>
       {activeTab === "myflow" && (
         <div className="flex gap-2 p-2">
+          <div className="flex gap-2 items-center">
+            <span
+              className={
+                "rounded-md w-10 h-10 flex items-center justify-center text-2xl " +
+                color
+              }
+            >
+              {emoji}
+            </span>
+            <RenameLabel
+              value={flows[tabIndex].name}
+              setValue={(value) => {
+                if (value !== "") {
+                  let newFlow = _.cloneDeep(flows[tabIndex]);
+                  newFlow.name = value;
+                  updateFlow(newFlow);
+                }
+              }}
+              rename={rename}
+              setRename={setRename}
+            />
+          </div>
           <Menubar>
             <MenubarMenu>
-              <MenubarTrigger className="px-2">
-                <b>
-                  <RenameLabel
-                    value={flows[tabIndex].name}
-                    setValue={(value) => {
-                      if (value !== "") {
-                        let newFlow = _.cloneDeep(flows[tabIndex]);
-                        newFlow.name = value;
-                        updateFlow(newFlow);
-                      }
-                    }}
-                    rename={rename}
-                    setRename={setRename}
-                  />
-                </b>
-              </MenubarTrigger>
+              <MenubarTrigger className="px-2">File</MenubarTrigger>
               <MenubarContent>
                 <MenubarItem
                   onClick={() => {
                     openPopUp(<ImportModal />);
                   }}
                 >
-                  <ArrowUpTrayIcon className="w-4 h-4 mr-2" />
+                  <Upload className="w-4 h-4 mr-2" />
                   Import
                 </MenubarItem>
                 <MenubarItem
@@ -86,15 +92,15 @@ export const MenuBar = ({ activeTab, setRename, rename, flows, tabIndex }) => {
                     openPopUp(<ExportModal />);
                   }}
                 >
-                  <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
+                  <Download className="w-4 h-4 mr-2" />
                   Export
                 </MenubarItem>
                 <MenubarItem
                   onClick={() => {
-                    openPopUp(<ApiModal flowName={flows[tabIndex].name} />);
+                    openPopUp(<ApiModal flow={flows[tabIndex]} />);
                   }}
                 >
-                  <CodeBracketSquareIcon className="w-4 h-4 mr-2" />
+                  <Code className="w-4 h-4 mr-2" />
                   Code
                 </MenubarItem>
               </MenubarContent>
@@ -107,7 +113,7 @@ export const MenuBar = ({ activeTab, setRename, rename, flows, tabIndex }) => {
                     handleSaveFlow(flows[tabIndex]);
                   }}
                 >
-                  <CloudArrowUpIcon className="w-4 h-4 mr-2" />
+                  <Save className="w-4 h-4 mr-2" />
                   Save
                 </MenubarItem>
                 <MenubarItem
@@ -115,7 +121,7 @@ export const MenuBar = ({ activeTab, setRename, rename, flows, tabIndex }) => {
                     setRename(true);
                   }}
                 >
-                  <PencilSquareIcon className="w-4 h-4 mr-2" />
+                  <Edit className="w-4 h-4 mr-2" />
                   Rename
                 </MenubarItem>
               </MenubarContent>
@@ -132,7 +138,7 @@ export const MenuBar = ({ activeTab, setRename, rename, flows, tabIndex }) => {
                   {flows.map((flow, idx) => {
                     return (
                       <MenubarRadioItem value={idx.toString()}>
-                        {flow.name}
+                        {emoji} {flow.name}
                       </MenubarRadioItem>
                     );
                   })}
@@ -142,7 +148,7 @@ export const MenuBar = ({ activeTab, setRename, rename, flows, tabIndex }) => {
                     handleAddFlow();
                   }}
                 >
-                  <PlusIcon className="w-4 h-4 mr-2" />
+                  <Plus className="w-4 h-4 mr-2" />
                   Add Flow
                 </MenubarItem>
               </MenubarContent>
