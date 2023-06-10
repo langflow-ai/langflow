@@ -33,9 +33,8 @@ async def get_load(
         flow_obj = session.get(Flow, flow_id)
         if flow_obj is None:
             raise ValueError(f"Flow {flow_id} not found")
-        graph_data = flow_obj.flow
-        data: dict = graph_data.get("data", {})
-        response = process_graph_cached(data, predict_request.message)
+        graph_data = flow_obj.data
+        response = process_graph_cached(graph_data, predict_request.message)
         return PredictResponse(
             result=response.get("result", ""),
             intermediate_steps=response.get("thought", ""),
