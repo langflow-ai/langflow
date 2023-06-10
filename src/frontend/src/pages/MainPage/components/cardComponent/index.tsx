@@ -3,6 +3,7 @@ import {
   ArrowTopRightOnSquareIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
+import { Edit, Trash } from "lucide-react";
 import { OpenAiIcon } from "../../../../icons/OpenAi";
 import { Button } from "../../../../components/ui/button";
 import { Badge } from "../../../../components/ui/badge";
@@ -34,29 +35,38 @@ export const CardComponent = ({
 
   let emoji = flow.style?.emoji || "🤖";
   // get random tailwind color
-  let color = flow.style?.color || "bg-blue-400";
+  let color = flow.style?.color || "bg-blue-200";
   return (
     <Card className="group">
       <CardHeader>
         <CardTitle className="flex justify-between items-start">
           <div className="flex gap-4 items-center">
-            <span
+            {/* <span
               className={
                 "rounded-md w-10 h-10 flex items-center justify-center text-2xl " +
                 color
               }
             >
               {emoji}
-            </span>
+            </span> */}
             {flow.name}
           </div>
-          <button
-            onClick={() => {
-              removeFlow(flow.id);
-            }}
-          >
-            <TrashIcon className="w-5 text-primary opacity-0 group-hover:opacity-100 transition-all" />
-          </button>
+          <div className="flex gap-5">
+            {/* make the icons shake a bit on hover */}
+            <Edit
+              className="w-4"
+              onClick={() => {
+                setTabIndex(idx);
+                setActiveTab("myflow");
+              }}
+            />
+            <Trash
+              className="w-4"
+              onClick={() => {
+                removeFlow(flow.id);
+              }}
+            />
+          </div>
         </CardTitle>
         <CardDescription className="pt-2 pb-2">
           <div className="truncate-doubleline">
@@ -69,8 +79,8 @@ export const CardComponent = ({
       </CardHeader>
 
       <CardFooter>
-        <div className="flex gap-2 w-full justify-between items-end">
-          <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2 w-full justify-end items-end">
+          {/* <div className="flex flex-wrap gap-2">
             <Badge variant="secondary">{idx === 0 ? "Agent" : "Tool"}</Badge>
             {idx === 0 && (
               <Badge variant="secondary">
@@ -80,19 +90,7 @@ export const CardComponent = ({
                 <span className="text-base">&nbsp;</span>OpenAI+
               </Badge>
             )}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all"
-            onClick={() => {
-              setTabIndex(idx);
-              setActiveTab("myflow");
-            }}
-          >
-            <ArrowTopRightOnSquareIcon className="w-4 mr-2" />
-            Edit
-          </Button>
+          </div> */}
         </div>
       </CardFooter>
     </Card>
