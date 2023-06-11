@@ -15,7 +15,7 @@ from langflow.main import create_app
 from langflow.settings import settings
 from langflow.utils.logger import configure, logger
 import webbrowser
-
+from dotenv import load_dotenv
 
 app = typer.Typer()
 
@@ -85,6 +85,10 @@ def serve(
     timeout: int = typer.Option(60, help="Worker timeout in seconds."),
     port: int = typer.Option(7860, help="Port to listen on."),
     config: str = typer.Option("config.yaml", help="Path to the configuration file."),
+    # .env file param
+    env_file: Path = typer.Option(
+        ".env", help="Path to the .env file containing environment variables."
+    ),
     log_level: str = typer.Option("critical", help="Logging level."),
     log_file: Path = typer.Option("logs/langflow.log", help="Path to the log file."),
     jcloud: bool = typer.Option(False, help="Deploy on Jina AI Cloud"),
@@ -99,10 +103,26 @@ def serve(
 ):
     """
     Run the Langflow server.
+
+    Args:
+        host (str): Host to bind the server to.
+        workers (int): Number of worker processes.
+        timeout (int): Worker timeout in seconds.
+        port (int): Port to listen on.
+        config (str): Path to the configuration file.
+        env_file (Path): Path to the .env file containing environment variables.
+        log_level (str): Logging level.
+        log_file (Path): Path to the log file.
+        jcloud (bool): Deploy on Jina AI Cloud.
+        dev (bool): Run in development mode (may contain bugs).
+        path (str): Path to the frontend directory containing build files. This is for development purposes only.
+        open_browser (bool): Open the browser after starting the server.
     """
 
     if jcloud:
         return serve_on_jcloud()
+
+    load_dotenv(env_file)
 
     configure(log_level=log_level, log_file=log_file)
     update_settings(config, dev=dev)
