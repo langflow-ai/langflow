@@ -2,11 +2,11 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import svgr from "vite-plugin-svgr";
 const apiRoutes = [
-  "/all",
-  "/predict",
-  "^/validate/*",
-  "^/chat/*",
-  "/version",
+  "/api/v1/all",
+  "/api/v1/predict",
+  "/api/v1/validate/*",
+  "/api/v1/chat/*",
+  "/api/v1/version",
   "/health",
 ];
 
@@ -19,7 +19,7 @@ const proxyTargets = apiRoutes.reduce((proxyObj, route) => {
     changeOrigin: true,
     secure: false,
     ws: true,
-    rewrite: (path) => `/api/v1${path}`,
+    // rewrite: (path) => `/api/v1${path}`,
   };
   return proxyObj;
 }, {});
