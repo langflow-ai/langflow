@@ -3,7 +3,6 @@ from langflow.template.frontend_node.base import FrontendNode
 
 
 class DocumentLoaderFrontNode(FrontendNode):
-    @staticmethod
     def build_template(
         suffixes: list, fileTypes: list, name: str = "file_path"
     ) -> TemplateField:
@@ -52,6 +51,7 @@ class DocumentLoaderFrontNode(FrontendNode):
 
     def add_extra_fields(self) -> None:
         name = None
+        display_name = "Web Page"
         if self.template.type_name in self.file_path_templates:
             self.template.add_field(self.file_path_templates[self.template.type_name])
         elif self.template.type_name in {
@@ -70,6 +70,7 @@ class DocumentLoaderFrontNode(FrontendNode):
             "ReadTheDocsLoader",
         }:
             name = "path"
+            display_name = "Local directory"
         if name:
             self.template.add_field(
                 TemplateField(
@@ -78,6 +79,6 @@ class DocumentLoaderFrontNode(FrontendNode):
                     show=True,
                     name=name,
                     value="",
-                    display_name="Web Page",
+                    display_name=display_name,
                 )
             )
