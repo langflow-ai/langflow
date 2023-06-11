@@ -160,6 +160,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                               <div className="mx-auto">
                                 {data.node.template[n].list ? (
                                   <InputListComponent
+                                    editNode={true}
                                     disabled={false}
                                     value={
                                       !data.node.template[n].value ||
@@ -226,6 +227,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                               data.node.template[n].options ? (
                               <div className="mx-auto">
                                 <Dropdown
+                                  numberOfOptions={nodeLength}
                                   editNode={true}
                                   options={data.node.template[n].options}
                                   onSelect={(newValue) =>
