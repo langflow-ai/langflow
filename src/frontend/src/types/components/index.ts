@@ -26,6 +26,7 @@ export type DropDownComponentType = {
   options: string[];
   onSelect: (value: string) => void;
   editNode?: boolean;
+  numberOfOptions?: number;
 };
 export type ParameterComponentType = {
   data: NodeDataType;
@@ -42,6 +43,7 @@ export type InputListComponentType = {
   value: string[];
   onChange: (value: string[]) => void;
   disabled: boolean;
+  editNode?: boolean;
 };
 
 export type TextAreaComponentType = {
