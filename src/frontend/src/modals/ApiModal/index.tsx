@@ -25,6 +25,7 @@ import {
 } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
 import { FlowType } from "src/types/flow";
+import { getCurlCode, getPythonApiCode, getPythonCode } from "../../constants";
 
 export default function ApiModal({ flow }: { flow: FlowType }) {
   const [open, setOpen] = useState(true);
@@ -53,28 +54,10 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
     }
   }
 
-  const pythonApiCode = `import requests
+  const pythonApiCode = getPythonApiCode(flow.id);
 
-FLOW_ID = "${flow.id}"
-API_URL = f"${window.location.protocol}//${window.location.host}/predict/{FLOW_ID}"
-
-def predict(message):
-    payload = {'message': message}
-    response = requests.post(API_URL, json=payload)
-    return response.json()
-
-print(predict("Your message"))`;
-
-  const curl_code = `curl -X POST \\
-  -H "Content-Type: application/json" \\
-  -d '{"message": "Your message"}' \\
-  ${window.location.protocol}//${window.location.host}/predict/${flow.id}`;
-
-  const pythonCode = `from langflow import load_flow_from_json
-
-flow = load_flow_from_json("${flow.name}.json")
-# Now you can use it like any chain
-flow("Hey, have you heard of LangFlow?")`;
+  const curl_code = getCurlCode(flow.id);
+  const pythonCode = getPythonCode(flow.name);
 
   const tabs = [
     {
