@@ -1,24 +1,15 @@
 import { Dialog, Transition } from '@headlessui/react';
-import {
-	XMarkIcon,
-	ArrowDownTrayIcon,
-	DocumentDuplicateIcon,
-	ComputerDesktopIcon,
-	ArrowUpTrayIcon,
-	ArrowLeftIcon,
-} from '@heroicons/react/24/outline';
-import { Fragment, useContext, useRef, useState } from 'react';
+import { XMarkIcon } from '@heroicons/react/24/outline';
+import { Fragment, useContext, useEffect, useRef, useState } from 'react';
 import { PopUpContext } from '../../contexts/popUpContext';
 import { TabsContext } from '../../contexts/tabsContext';
-import ButtonBox from '../importModal/buttonBox';
 import { getExamples } from '../../controllers/API';
-import { error } from 'console';
 import { alertContext } from '../../contexts/alertContext';
-import LoadingComponent from '../../components/loadingComponent';
 import { FlowType } from '../../types/flow';
-import { classNames, snakeToSpaces, toNormalCase } from '../../utils';
 import './index.css';
-import axios, { AxiosResponse } from 'axios';
+import templates from './templates';
+import { v4 as uuidv4 } from 'uuid';
+import messageSummary from './message_summary.json';
 
 export default function PromptImportModal() {
 	const [open, setOpen] = useState(true);
@@ -100,7 +91,10 @@ export default function PromptImportModal() {
 										/>
 									</button>
 								</div>
-								<GraphApp />
+								<GraphApp
+									addFlow={addFlow}
+									setModalOpen={setModalOpen}
+								/>
 							</Dialog.Panel>
 						</Transition.Child>
 					</div>
@@ -121,20 +115,17 @@ const DEFAULT_PARAMS = {
 
 const SELECTED_PROMPT = 'STATELESS';
 
-const options = {
-	layout: {
-		hierarchical: false,
-	},
-	edges: {
-		color: '#34495e',
-	},
-};
-
-function GraphApp() {
+function GraphApp({ addFlow, setModalOpen }) {
 	const [graphState, setGraphState] = useState({
 		nodes: [],
 		edges: [],
 	});
+
+	useEffect(() => {
+		return () => {
+			clearState();
+		};
+	}, []);
 
 	const clearState = () => {
 		setGraphState({
@@ -247,72 +238,134 @@ function GraphApp() {
 			}
 		});
 		setGraphState(current_graph);
+		parseGraphData(current_graph);
 	};
 
-	const queryStatelessPrompt = (prompt, apiKey) => {
-		fetch('prompts/stateless.prompt')
-			.then((response) => response.text())
-			.then((text) => text.replace('$prompt', prompt))
-			.then((prompt) => {
-				console.log(prompt);
+	const nodes = [
+		'AzureChatOpenAI',
+		'LLMChain',
+		'PromptTemplate',
+		'飞书群聊回复',
+		'飞书群聊读取',
+		'飞书妙计读取',
+		'飞书任务生成',
+		'飞书文档生成',
+	];
 
-				const params = {
-					...DEFAULT_PARAMS,
-					prompt: prompt,
-					stop: '\n',
-				};
+	const queryStatelessPrompt = async (promptText, apiKey) => {
+		const prompt = `Given a prompt, extrapolate as many relationships as possible from it and provide a list of updates.\n\nIf an update is a relationship, provide [ENTITY 1, RELATIONSHIP, ENTITY 2]. The relationship is directed, so the order matters. Match the ENTITY 1 and ENTITY 2 as closely as possible from one of [${nodes}]. Replace the original ENTITY with the matched one.\n\nExample:\nprompt: 构建一个工作流，从“飞书群消息读取组件”、“Prompt组件”、“OpenAI组件”输出到同一个“LLM组件”，再从这个“LLM组件”输出到“飞书群消息回复组件”\nupdates:\n[["飞书群聊读取", "输出", "LLMChain"], ["PromptTemplate", "输出", "LLMChain"], ["AzureChatOpenAI", "输出", "LLMChain"], ["LLMChain", "输出", "飞书群聊回复"]]\n\nprompt: ${promptText}\nupdates:\n`;
 
-				const requestOptions = {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						Authorization: 'Bearer ' + String(apiKey),
-					},
-					body: JSON.stringify(params),
-				};
-				fetch('https://api.openai.com/v1/completions', requestOptions)
-					.then((response) => {
-						if (!response.ok) {
-							switch (response.status) {
-								case 401: // 401: Unauthorized: API key is wrong
-									throw new Error(
-										'Please double-check your API key.'
-									);
-								case 429: // 429: Too Many Requests: Need to pay
-									throw new Error(
-										'You exceeded your current quota, please check your plan and billing details.'
-									);
-								default:
-									throw new Error(
-										'Something went wrong with the request, please check the Network log'
-									);
-							}
-						}
-						return response.json();
-					})
-					.then((response) => {
-						const { choices } = response;
-						console.log(response);
-						const text = choices[0].text;
-						console.log(text);
-						const updates = JSON.parse(text);
-						console.log('openai output');
-						console.log(updates);
+		const params = {
+			...DEFAULT_PARAMS,
+			prompt: prompt,
+			stop: '\n',
+		};
 
-						updateGraph(updates);
+		const requestOptions = {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: 'Bearer ' + String(apiKey),
+			},
+			body: JSON.stringify(params),
+		};
+		fetch('https://api.openai.com/v1/completions', requestOptions)
+			.then((response) => {
+				if (!response.ok) {
+					switch (response.status) {
+						case 401: // 401: Unauthorized: API key is wrong
+							throw new Error(
+								'Please double-check your API key.'
+							);
+						case 429: // 429: Too Many Requests: Need to pay
+							throw new Error(
+								'You exceeded your current quota, please check your plan and billing details.'
+							);
+						default:
+							throw new Error(
+								'Something went wrong with the request, please check the Network log'
+							);
+					}
+				}
+				return response.json();
+			})
+			.then((response) => {
+				const { choices } = response;
+				const text = choices[0].text;
+				console.log(text);
 
-						document.getElementsByClassName('searchBar')[0].value =
-							'';
-						document.body.style.cursor = 'default';
-						document.getElementsByClassName(
-							'generateButton'
-						)[0].disabled = false;
-					})
-					.catch((error) => {
-						console.log(error);
-						alert(error);
-					});
+				const updates = JSON.parse(text);
+				console.log('openai output');
+
+				updateGraph(updates);
+
+				document.getElementsByClassName('searchBar')[0].value = '';
+				document.body.style.cursor = 'default';
+				document.getElementsByClassName('generateButton')[0].disabled =
+					false;
+			})
+			.catch((error) => {
+				console.log(error);
+				alert(error);
+				document.getElementsByClassName('generateButton')[0].disabled =
+					false;
 			});
+	};
+
+	const parseGraphData = (data) => {
+		const replacedNodes = data.nodes.map((node) => {
+			const id = uuidv4();
+			const template = templates[node?.id];
+			if (template?.id) {
+				template.id = id;
+			}
+			if (template?.data?.id) {
+				template.data.id = id;
+			}
+			return template;
+		});
+
+		const replaceEdges = data.edges.map((edge) => {
+			const { from, to } = edge;
+			const sourceNode = replacedNodes.find(
+				(node) => node?.data?.type === from
+			);
+			const targetNode = replacedNodes.find(
+				(node) => node?.data?.type === to
+			);
+			return {
+				source: sourceNode?.id,
+				sourceHandle: [
+					sourceNode?.data.type,
+					sourceNode?.id,
+					...sourceNode?.data?.node.base_classes,
+				].join('|'),
+				target: targetNode?.id,
+				targetHandle: [
+					...sourceNode?.data.node?.targetHandleBase,
+					targetNode?.id,
+				].join('|'),
+				style: { stroke: 'inherit' },
+			};
+		});
+
+		setModalOpen(false);
+		const json = {
+			data: {
+				nodes: replacedNodes,
+				edges: replaceEdges,
+				viewport: {
+					x: -1000,
+					y: -500,
+					zoom: 1,
+				},
+			},
+		};
+		console.log(
+			'Dogtiti ~ file: index.tsx:372 ~ parseGraphData ~ json:',
+			json
+		);
+		addFlow(json);
 	};
 
 	const queryPrompt = (prompt, apiKey) => {
@@ -326,6 +379,11 @@ function GraphApp() {
 		}
 	};
 
+	const promptStr =
+		'构建一个工作流，从“AzureChatOpenAI”、“PromptTemplate”输出到同一个“LLMChain”';
+
+	const apikey = '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';
+
 	const createGraph = () => {
 		document.body.style.cursor = 'wait';
 
@@ -337,8 +395,6 @@ function GraphApp() {
 		queryPrompt(prompt, apiKey);
 	};
 
-	console.log('graphState', graphState);
-
 	return (
 		<div className='container'>
 			<h1 className='headerText'>GraphGPT 🔎</h1>
@@ -347,18 +403,13 @@ function GraphApp() {
 				using natural language. Understand the relationships between
 				people, systems, and maybe solve a mystery.
 			</p>
-			<p className='opensourceText'>
-				<a href='https://github.com/varunshenoy/graphgpt'>
-					GraphGPT is open-source
-				</a>
-				&nbsp;🎉
-			</p>
 			<center>
 				<div className='inputContainer'>
-					<input
+					<textarea
+						rows={5}
 						className='searchBar'
 						placeholder='Describe your graph...'
-					></input>
+					></textarea>
 					<input
 						className='apiKeyTextField'
 						type='password'
@@ -372,13 +423,6 @@ function GraphApp() {
 					</button>
 				</div>
 			</center>
-			<div className='graphContainer'>
-				{/* <Graph graph={graphState} options={options} style={{ height: "640px" }} /> */}
-			</div>
-			<p className='footer'>
-				Pro tip: don't take a screenshot! You can right-click and save
-				the graph as a .png 📸
-			</p>
 		</div>
 	);
 }

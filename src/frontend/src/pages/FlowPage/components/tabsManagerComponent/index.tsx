@@ -73,7 +73,7 @@ export default function TabsManagerComponent() {
 						onClick={() => openPopUp(<PromptImportModal />)}
 						className='flex items-center gap-1 pr-2 border-gray-400 border-r text-sm text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200'
 					>
-						Prompt Import <ArrowUpTrayIcon className='w-5 h-5' />
+						Prompt Generate <ArrowUpTrayIcon className='w-5 h-5' />
 					</button>
 					<button
 						onClick={() => openPopUp(<ImportModal />)}
