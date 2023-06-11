@@ -39,3 +39,7 @@ export async function getExamples(): Promise<FlowType[]> {
 
   return await Promise.all(contentsPromises);
 }
+
+export async function postBuild(flow: FlowType) {
+  return await axios.post(`/build/${flow.id}`, flow);
+}
