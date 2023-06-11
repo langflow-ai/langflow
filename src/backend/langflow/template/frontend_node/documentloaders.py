@@ -3,6 +3,7 @@ from langflow.template.frontend_node.base import FrontendNode
 
 
 class DocumentLoaderFrontNode(FrontendNode):
+    @staticmethod
     def build_template(
         suffixes: list, fileTypes: list, name: str = "file_path"
     ) -> TemplateField:
