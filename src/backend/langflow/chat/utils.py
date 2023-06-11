@@ -12,12 +12,10 @@ from typing import Dict
 
 
 async def process_graph(
-    graph_data: Dict,
-    is_first_message: bool,
+    langchain_object,
     chat_message: ChatMessage,
     websocket: WebSocket,
 ):
-    langchain_object = load_or_build_langchain_object(graph_data, is_first_message)
     langchain_object = try_setting_streaming_options(langchain_object, websocket)
     logger.debug("Loaded langchain object")
 
