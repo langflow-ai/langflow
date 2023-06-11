@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useContext, useState } from "react";
 import {
   ArrowTopRightOnSquareIcon,
   TrashIcon,
@@ -15,6 +15,11 @@ import {
   CardTitle,
 } from "../../../../components/ui/card";
 import { FlowType } from "../../../../types/flow";
+import RenameLabel from "../../../../components/ui/rename-label";
+import _ from "lodash";
+import { TabsContext } from "../../../../contexts/tabsContext";
+import { alertContext } from "../../../../contexts/alertContext";
+import { updateFlowInDatabase } from "../../../../controllers/API";
 export const CardComponent = ({
   flow,
   idx,
@@ -28,31 +33,38 @@ export const CardComponent = ({
   setTabIndex: (idx: number) => void;
   setActiveTab: (tab: string) => void;
 }) => {
-  // flow has a style attribute
-  // if it is empty just get a random style
-  // if it is not empty use that style
-  // if it is not empty and it is not a valid style get a random style
+  const { setErrorData } = useContext(alertContext);
+  const { updateFlow } = useContext(TabsContext);
+  function handleSaveFlow(flow) {
+    try {
+      updateFlowInDatabase(flow);
+      updateFlow(flow);
+      // updateFlowStyleInDataBase(flow);
+    } catch (err) {
+      setErrorData(err);
+    }
+  }
+  const [rename, setRename] = useState(false);
 
-  let emoji = flow.style?.emoji || "🤖";
-  // get random tailwind color
-  let color = flow.style?.color || "bg-blue-200";
   return (
     <Card className="group">
       <CardHeader>
         <CardTitle className="flex justify-between items-start">
           <div className="flex gap-4 items-center">
-            {/* <span
-              className={
-                "rounded-md w-10 h-10 flex items-center justify-center text-2xl " +
-                color
-              }
-            >
-              {emoji}
-            </span> */}
-            {flow.name}
+            <RenameLabel
+              value={flow.name}
+              setValue={(value) => {
+                if (value !== "") {
+                  let newFlow = _.cloneDeep(flow);
+                  newFlow.name = value;
+                  handleSaveFlow(newFlow);
+                }
+              }}
+              rename={rename}
+              setRename={setRename}
+            />
           </div>
           <div className="flex gap-5">
-            {/* make the icons shake a bit on hover */}
             <Edit
               className="w-4"
               onClick={() => {
@@ -68,13 +80,23 @@ export const CardComponent = ({
             />
           </div>
         </CardTitle>
-        <CardDescription className="pt-2 pb-2">
-          <div className="truncate-doubleline">
-            {idx === 0
-              ? "This flow creates an agent that accesses a department store database and APIs to monitor customer activity and overall storage."
-              : "This is a new Flow"}
-            {/* {flow.description} */}
-          </div>
+        <CardDescription className="pt-2 pb-2 h-10">
+          {/* <div className="flex gap-2"> */}
+          <RenameLabel
+            className="truncate-doubleline w-full h-full"
+            placeholder="Description"
+            value={flow.description || "Description"}
+            setValue={(value) => {
+              if (value !== "") {
+                let newFlow = _.cloneDeep(flow);
+                newFlow.description = value;
+                handleSaveFlow(newFlow);
+              }
+            }}
+            rename={rename}
+            setRename={setRename}
+          />
+          {/* </div> */}
         </CardDescription>
       </CardHeader>
 
