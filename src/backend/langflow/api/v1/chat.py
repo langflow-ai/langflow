@@ -1,5 +1,6 @@
 from fastapi import (
     APIRouter,
+    HTTPException,
     WebSocket,
     WebSocketDisconnect,
     WebSocketException,
@@ -24,3 +25,14 @@ async def websocket_endpoint(client_id: str, websocket: WebSocket):
     except WebSocketDisconnect as exc:
         logger.error(exc)
         await websocket.close(code=status.WS_1000_NORMAL_CLOSURE, reason=str(exc))
+
+
+@router.post("/build/{client_id}")
+async def post_build(client_id: str, graph_data: dict):
+    """Build langchain object from data_graph."""
+    try:
+        if chat_manager.build(client_id, graph_data.get("data")):
+            return {"message": "Build successful"}
+    except Exception as exc:
+        logger.exception(exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc

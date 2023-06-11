@@ -1,5 +1,4 @@
 import logging
-from importlib.metadata import version
 
 from fastapi import APIRouter, HTTPException
 
