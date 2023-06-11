@@ -42,6 +42,7 @@ class DocumentLoaderFrontNode(FrontendNode):
             suffixes=[".pptx", ".ppt"], fileTypes=["pptx", "ppt"]
         ),
         "SRTLoader": build_template(suffixes=[".srt"], fileTypes=["srt"]),
+        "SlackDirectoryLoader": build_template(suffixes=[".zip"], fileTypes=["zip"]),
         "TelegramChatLoader": build_template(suffixes=[".json"], fileTypes=["json"]),
         "TextLoader": build_template(suffixes=[".txt"], fileTypes=["txt"]),
         "UnstructuredWordDocumentLoader": build_template(
@@ -64,7 +65,10 @@ class DocumentLoaderFrontNode(FrontendNode):
             name = "web_path"
         elif self.template.type_name in {"GitbookLoader"}:
             name = "web_page"
-        elif self.template.type_name in {"ReadTheDocsLoader"}:
+        elif self.template.type_name in {
+            "ReadTheDocsLoader",
+            "NotionDirectoryLoader",
+        }:
             name = "path"
         if name:
             self.template.add_field(
