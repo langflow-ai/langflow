@@ -8,6 +8,8 @@ import ChatModal from "../../../modals/chatModal";
 import { FlowType } from "../../../types/flow";
 import { postBuild } from "../../../controllers/API";
 import Loading from "../../../components/ui/loading";
+import { useSSE } from "../../../contexts/SSEContext";
+import axios from "axios";
 
 export default function BuildTrigger({
   open,
@@ -22,34 +24,64 @@ export default function BuildTrigger({
 }) {
   const [isBuilding, setIsBuilding] = useState(false);
 
-  function handleBuild(flow: FlowType) {
-    const minimumLoadingTime = 500; // in milliseconds
-    const startTime = Date.now();
+  const { updateSSEData } = useSSE();
 
+  function handleBuild(flow) {
     setIsBuilding(true);
 
-    postBuild(flow)
-      .then((res) => {
-        console.log(res);
-        setIsBuilt(true);
-      })
+    // State to keep track of validity status of all chunks
+    let allChunksValid = true;
+
+    const apiUrl = `/build/${flow.id}`;
+
+    // Post data to the server
+    axios({
+      method: "post",
+      url: apiUrl,
+      data: { data: flow },
+      headers: { "Content-Type": "application/json" },
+      onDownloadProgress: (progressEvent) => {
+        const { currentTarget } = progressEvent.event;
+        const { responseText } = currentTarget;
+        // responseText is a string with \n\n delimiters
+
+        // Get only the new data since the last read
+        // by splitting the string and getting the one before the last \n\n
+
+        const chunks = responseText.split("\n\n");
+
+        // Process each chunk
+        chunks.forEach((chunk: string) => {
+          if (chunk !== "") {
+            let valid = processChunk(chunk);
+            console.log("Valid: ", valid);
+            allChunksValid = allChunksValid && valid;
+          }
+        });
+      },
+    })
       .catch((err) => {
-        console.log(err);
-        setIsBuilt(false);
+        console.error("Error:", err);
       })
       .finally(() => {
-        const endTime = Date.now();
-        const elapsedTime = endTime - startTime;
-
-        if (elapsedTime < minimumLoadingTime) {
-          const remainingTime = minimumLoadingTime - elapsedTime;
-          setTimeout(() => {
-            setIsBuilding(false);
-          }, remainingTime);
-        } else {
-          setIsBuilding(false);
-        }
+        // Set isBuilt to the value of allChunksValid
+        setIsBuilt(allChunksValid);
+        setIsBuilding(false);
       });
+  }
+
+  function processChunk(chunk: string) {
+    // Process each chunk of data here
+    // Parse the chunk and update the context
+    let parsedData = { valid: false, id: null };
+    try {
+      parsedData = JSON.parse(chunk.slice(6)); // Remove the "data: " part
+      updateSSEData({ [parsedData.id]: parsedData });
+    } catch (err) {
+      console.log("Chunk is not valid JSON: ", chunk);
+      console.log("Error parsing chunk: ", err);
+    }
+    return parsedData.valid;
   }
 
   return (
