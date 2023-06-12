@@ -1,4 +1,4 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useRef, useEffect } from "react";
 import { Transition } from "@headlessui/react";
 import { Bars3CenterLeftIcon } from "@heroicons/react/24/outline";
 import { Zap } from "lucide-react";
@@ -128,7 +128,7 @@ export default function BuildTrigger({
       <div className={`fixed right-4` + (isBuilt ? " bottom-20" : " bottom-4")}>
         <div
           className="border flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full bg-gradient-to-r from-blue-700 via-blue-600 to-blue-500 dark:border-gray-600 cursor-pointer"
-          onClick={() => handleBuild(flow)}
+          onClick={() => {if(!isBuilding) handleBuild(flow)}}
         >
           <button>
             <div className="flex gap-3 items-center">
