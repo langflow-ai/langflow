@@ -6,7 +6,6 @@ import { nodeColors } from "../../../utils";
 import { PopUpContext } from "../../../contexts/popUpContext";
 import ChatModal from "../../../modals/chatModal";
 import { FlowType } from "../../../types/flow";
-import { postBuild } from "../../../controllers/API";
 import Loading from "../../../components/ui/loading";
 import { useSSE } from "../../../contexts/SSEContext";
 import axios from "axios";
@@ -48,7 +47,6 @@ export default function BuildTrigger({
     const { flowId } = response.data;
 
     // Step 2: Use the session ID to establish an SSE connection using EventSource
-
     let validationResults = [];
     let finished = false;
     apiUrl = `/build/stream/${flowId}`;
