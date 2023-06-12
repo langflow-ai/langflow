@@ -87,7 +87,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
     setNodeValue(!nodeValue);
   }
 
-  console.log(data.node.template);
+  // console.log(data.node.template);
 
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
