@@ -38,3 +38,7 @@ export type errorsTypeAPI = {
   imports: { errors: Array<string> };
 };
 export type PromptTypeAPI = { input_variables: Array<string> };
+
+export type BuildStatusTypeAPI = {
+  built: boolean;
+};
