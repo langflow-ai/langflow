@@ -2,13 +2,15 @@ import { useState, useContext } from "react";
 import { Transition } from "@headlessui/react";
 import { Bars3CenterLeftIcon } from "@heroicons/react/24/outline";
 import { Zap } from "lucide-react";
-import { nodeColors } from "../../../utils";
+import { nodeColors, validateNodes } from "../../../utils";
 import { PopUpContext } from "../../../contexts/popUpContext";
 import ChatModal from "../../../modals/chatModal";
 import { FlowType } from "../../../types/flow";
 import Loading from "../../../components/ui/loading";
 import { useSSE } from "../../../contexts/SSEContext";
 import axios from "axios";
+import { typesContext } from "../../../contexts/typesContext";
+import { alertContext } from "../../../contexts/alertContext";
 
 export default function BuildTrigger({
   open,
@@ -24,8 +26,15 @@ export default function BuildTrigger({
   const [isBuilding, setIsBuilding] = useState(false);
 
   const { updateSSEData } = useSSE();
+  const {reactFlowInstance} = useContext(typesContext);
+  const {setErrorData} = useContext(alertContext)
 
   async function handleBuild(flow: FlowType) {
+    const errors = validateNodes(reactFlowInstance)
+    if(errors.length > 0) {
+      setErrorData({title: "Oops! Looks like you missed something", list: errors})
+      return
+    }
     const minimumLoadingTime = 200; // in milliseconds
     const startTime = Date.now();
     setIsBuilding(true);
