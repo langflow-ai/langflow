@@ -14,6 +14,7 @@ import TabsManagerComponent from "./pages/FlowPage/components/tabsManagerCompone
 import { ErrorBoundary } from "react-error-boundary";
 import CrashErrorComponent from "./components/CrashErrorComponent";
 import { TabsContext } from "./contexts/tabsContext";
+import { SSEProvider } from "./contexts/SSEContext";
 
 export default function App() {
   let { setCurrent, setShowSideBar, setIsStackedOpen } =
@@ -128,7 +129,9 @@ export default function App() {
           <main className="min-w-0 flex-1 border-t border-gray-200 dark:border-gray-700 flex">
             {/* Primary column */}
             <div className="w-full h-full">
-              <TabsManagerComponent></TabsManagerComponent>
+              <SSEProvider>
+                <TabsManagerComponent></TabsManagerComponent>
+              </SSEProvider>
             </div>
           </main>
         </div>
