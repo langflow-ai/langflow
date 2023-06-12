@@ -1,7 +1,6 @@
 import json
 from fastapi import (
     APIRouter,
-    HTTPException,
     WebSocket,
     WebSocketDisconnect,
     WebSocketException,
@@ -63,29 +62,35 @@ async def stream_build(flow_id: str):
             yield f"data: {json.dumps({'error': error_message})}\n\n"
             return
 
-        try:
-            logger.debug("Building langchain object")
-            graph = Graph.from_payload(graph_data)
-            for node_repr, node_id in graph.generator_build():
+        logger.debug("Building langchain object")
+        graph = Graph.from_payload(graph_data)
+        for node in graph.generator_build():
+            try:
+                node.build()
+                params = node._built_object_repr()
+                valid = True
                 logger.debug(
-                    f"Building node {node_repr[:50]}{'...' if len(node_repr) > 50 else ''}"
+                    f"Building node {params[:50]}{'...' if len(params) > 50 else ''}"
                 )
-                response = json.dumps(
-                    {
-                        "valid": True,
-                        "params": node_repr,
-                        "id": node_id,
-                    }
-                )
-                yield f"data: {response}\n\n"  # SSE format
+            except Exception as exc:
+                params = str(exc)
+                valid = False
 
-            chat_manager.set_cache(flow_id, graph.build())
-            final_response = json.dumps({"end_of_stream": True})
-            yield f"data: {final_response}\n\n"  # SSE format
+            response = json.dumps(
+                {
+                    "valid": valid,
+                    "params": params,
+                    "id": node.id,
+                }
+            )
+            yield f"data: {response}\n\n"  # SSE format
 
-        except Exception as exc:
-            logger.exception(exc)
-            error_response = json.dumps({"valid": False, "params": str(exc)})
-            yield f"data: {error_response}\n\n"  # SSE format
+        chat_manager.set_cache(flow_id, graph.build())
+        final_response = json.dumps({"end_of_stream": True})
+        yield f"data: {final_response}\n\n"  # SSE format
 
-    return StreamingResponse(event_stream(flow_id), media_type="text/event-stream")
+    try:
+        return StreamingResponse(event_stream(flow_id), media_type="text/event-stream")
+    except Exception as exc:
+        logger.error(exc)
+        return JSONResponse(content={"error": str(exc)})
