@@ -77,6 +77,8 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
     }
   }
 
+  useEffect(() => {}, [closePopUp, data.node.template]);
+
   function changeAdvanced(node): void {
     Object.keys(data.node.template).filter((n, i) => {
       if (n === node.name) {
@@ -102,10 +104,10 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
           <DialogDescription>
             {EDIT_DIALOG_SUBTITLE}
             <div className="flex pt-3">
-              <VariableIcon className="w-5 h-5 pe-1 text-gray-700 stroke-2">
+              <VariableIcon className="w-5 h-5 pe-1 text-gray-700 stroke-2 dark:text-slate-200">
                 &nbsp;
               </VariableIcon>
-              <span className="text-sm font-semibold text-gray-800">
+              <span className="text-sm font-semibold text-gray-800 dark:text-white">
                 Parameters
               </span>
             </div>

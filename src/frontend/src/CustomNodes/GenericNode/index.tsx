@@ -44,6 +44,7 @@ export default function GenericNode({
   const showError = useRef(true);
   const { types, deleteNode } = useContext(typesContext);
   const { openPopUp } = useContext(PopUpContext);
+  const { closePopUp } = useContext(PopUpContext);
 
   const Icon = nodeIcons[data.type] || nodeIcons[types[data.type]];
   const [validationStatus, setValidationStatus] = useState(null);
@@ -58,6 +59,8 @@ export default function GenericNode({
       setParams(Object.values(reactFlowInstance.toObject()));
     }
   }, [save]);
+
+  useEffect(() => {}, [closePopUp]);
 
   const validateNode = useCallback(
     debounce(async () => {
