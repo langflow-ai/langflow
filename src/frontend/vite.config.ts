@@ -4,7 +4,7 @@ import svgr from "vite-plugin-svgr";
 const apiRoutes = [
   "/api/v1/all",
   "/api/v1/predict",
-  "/api/v1/validate/*",
+  "^/api/v1/validate/*",
   "/api/v1/chat/*",
   "/api/v1/version",
   "/health",
