@@ -19,6 +19,7 @@ import ExportModal from "../../../../modals/exportModal";
 import ApiModal from "../../../../modals/ApiModal";
 import { alertContext } from "../../../../contexts/alertContext";
 import { updateFlowInDatabase } from "../../../../controllers/API";
+import { Link } from "react-router-dom";
 
 export const MenuBar = ({ activeTab, setRename, rename, flows, tabId }) => {
   const { updateFlow, setTabId, addFlow } = useContext(TabsContext);
@@ -129,6 +130,7 @@ export const MenuBar = ({ activeTab, setRename, rename, flows, tabId }) => {
             <MenubarMenu>
               <MenubarTrigger>Flows</MenubarTrigger>
               <MenubarContent>
+                
                 <MenubarRadioGroup
                   value={tabId}
                   onValueChange={(value) => {
@@ -137,9 +139,12 @@ export const MenuBar = ({ activeTab, setRename, rename, flows, tabId }) => {
                 >
                   {flows.map((flow, idx) => {
                     return (
-                      <MenubarRadioItem value={idx.toString()}>
+                      <Link to={"/flow/" + flow.id}>
+                  <MenubarRadioItem value={flow.id}>
                         {emoji} {flow.name}
                       </MenubarRadioItem>
+                </Link>
+                      
                     );
                   })}
                 </MenubarRadioGroup>

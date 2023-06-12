@@ -49,7 +49,7 @@ export default function ExtraSidebar() {
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col overflow-auto scrollbar-hide">
       <div className="relative mt-2 flex items-center mb-2 mx-2">
         <input
           type="text"
