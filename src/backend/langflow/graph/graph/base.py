@@ -1,4 +1,4 @@
-from typing import Dict, List, Type, Union
+from typing import Dict, Generator, List, Type, Union
 
 from langflow.graph.edge.base import Edge
 from langflow.graph.graph.constants import VERTEX_TYPE_MAP
@@ -143,9 +143,8 @@ class Graph:
 
         return list(reversed(sorted_vertices))
 
-    def generator_build(self) -> List[Vertex]:
-        """Builds each
-        node in the graph and yields it."""
+    def generator_build(self) -> Generator:
+        """Builds each vertex in the graph and yields it."""
         sorted_vertices = self.topological_sort()
         logger.info("Sorted vertices: %s", sorted_vertices)
         for node in sorted_vertices:
