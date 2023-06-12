@@ -10,6 +10,7 @@ from langflow.graph.vertex.types import (
 )
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
+from langflow.utils.logger import logger
 
 
 class Graph:
@@ -146,8 +147,10 @@ class Graph:
         """Builds each
         node in the graph and yields it."""
         sorted_vertices = self.topological_sort()
+        logger.info("Sorted vertices: %s", sorted_vertices)
         for node in sorted_vertices:
-            yield node.build()
+            node.build()
+            yield node._built_object_repr(), node.id
 
     def get_node_neighbors(self, node: Vertex) -> Dict[Vertex, int]:
         """Returns the neighbors of a node."""

@@ -31,7 +31,7 @@ async def websocket_endpoint(client_id: str, websocket: WebSocket):
 
 
 @router.post("/build/{client_id}", response_class=StreamingResponse)
-async def post_build(client_id: str, graph_data: dict):
+async def stream_build(client_id: str, graph_data: dict):
     """Build langchain object from data_graph."""
 
     async def event_stream(graph_data):
@@ -42,13 +42,15 @@ async def post_build(client_id: str, graph_data: dict):
 
             logger.debug("Building langchain object")
             graph = Graph.from_payload(graph_data)
-            for node in graph.generator_build():
-                logger.debug(f"Building node {node.name}")
+            for node_repr, node_id in graph.generator_build():
+                logger.debug(
+                    f"Building node {node_repr[:50]}{'...' if len(node_repr) > 50 else ''}"
+                )
                 response = json.dumps(
                     {
                         "valid": True,
-                        "params": str(node._built_object_repr()),
-                        "id": node.id,
+                        "params": node_repr,
+                        "id": node_id,
                     }
                 )
                 yield f"data: {response}\n\n"  # SSE format
@@ -57,7 +59,9 @@ async def post_build(client_id: str, graph_data: dict):
 
         except Exception as exc:
             logger.exception(exc)
-            error_response = json.dumps({"error": str(exc)})
+            error_response = json.dumps(
+                {"valid": False, "params": str(exc), "id": node_id}
+            )
             yield f"data: {error_response}\n\n"  # SSE format
 
     return StreamingResponse(event_stream(graph_data), media_type="text/event-stream")

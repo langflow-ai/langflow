@@ -199,8 +199,8 @@ class ChatManager:
 
         except Exception as e:
             # Handle any exceptions that might occur
-            logger.exception(e)
-            self.close_connection(
+            logger.error(e)
+            await self.close_connection(
                 client_id=client_id,
                 code=status.WS_1011_INTERNAL_ERROR,
                 reason=str(e)[:120],
@@ -213,5 +213,5 @@ class ChatManager:
                     reason="Client disconnected",
                 )
             except Exception as e:
-                logger.exception(e)
+                logger.error(e)
             self.disconnect(client_id)
