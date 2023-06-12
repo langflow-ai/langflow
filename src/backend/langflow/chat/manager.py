@@ -186,15 +186,8 @@ class ChatManager:
                     continue
 
                 with self.cache_manager.set_client_id(client_id):
-                    if client_id not in self.in_memory_cache:
-                        await self.close_connection(
-                            client_id=client_id,
-                            code=status.WS_1011_INTERNAL_ERROR,
-                            reason="Please, build the flow before sending messages",
-                        )
-                    else:
-                        langchain_object = self.in_memory_cache.get(client_id)
-                        await self.process_message(client_id, payload, langchain_object)
+                    langchain_object = self.in_memory_cache.get(client_id)
+                    await self.process_message(client_id, payload, langchain_object)
 
         except Exception as e:
             # Handle any exceptions that might occur
