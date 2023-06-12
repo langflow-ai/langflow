@@ -23,14 +23,14 @@ import { updateFlowInDatabase } from "../../../../controllers/API";
 import { Link } from "react-router-dom";
 export const CardComponent = ({
   flow,
-  idx,
+  id,
   removeFlow,
-  setTabIndex,
+  setTabId,
 }: {
   flow: FlowType;
-  idx: number;
+  id: string;
   removeFlow: (id: string) => void;
-  setTabIndex: (idx: number) => void;
+  setTabId: (id: string) => void;
 }) => {
   const { setErrorData } = useContext(alertContext);
   const { updateFlow } = useContext(TabsContext);
@@ -68,7 +68,7 @@ export const CardComponent = ({
             <Edit
               className="w-4"
               onClick={() => {
-                setTabIndex(idx);
+                setTabId(id);
 
               }}
             />

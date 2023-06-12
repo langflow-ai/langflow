@@ -57,7 +57,6 @@ export default function ParameterComponent({
   const { reactFlowInstance } = useContext(typesContext);
   let disabled =
     reactFlowInstance?.getEdges().some((e) => e.targetHandle === id) ?? false;
-  const { save } = useContext(TabsContext);
   const [myData, setMyData] = useState(useContext(typesContext).data);
 
   useEffect(() => {
@@ -160,7 +159,7 @@ export default function ParameterComponent({
                 }
                 onChange={(t: string[]) => {
                   data.node.template[name].value = t;
-                  save();
+  
                 }}
               />
             ) : data.node.template[name].multiline ? (
@@ -169,7 +168,7 @@ export default function ParameterComponent({
                 value={data.node.template[name].value ?? ""}
                 onChange={(t: string) => {
                   data.node.template[name].value = t;
-                  save();
+  
                 }}
               />
             ) : (
@@ -180,7 +179,7 @@ export default function ParameterComponent({
                 value={data.node.template[name].value ?? ""}
                 onChange={(t) => {
                   data.node.template[name].value = t;
-                  save();
+  
                 }}
               />
             )}
@@ -193,7 +192,7 @@ export default function ParameterComponent({
               setEnabled={(t) => {
                 data.node.template[name].value = t;
                 setEnabled(t);
-                save();
+
               }}
             />
           </div>
@@ -204,7 +203,6 @@ export default function ParameterComponent({
             value={data.node.template[name].value ?? ""}
             onChange={(t) => {
               data.node.template[name].value = t;
-              save();
             }}
           />
         ) : left === true &&
@@ -221,7 +219,7 @@ export default function ParameterComponent({
             value={data.node.template[name].value ?? ""}
             onChange={(t: string) => {
               data.node.template[name].value = t;
-              save();
+              
             }}
           />
         ) : left === true && type === "file" ? (
@@ -235,7 +233,7 @@ export default function ParameterComponent({
             suffixes={data.node.template[name].suffixes}
             onFileChange={(t: string) => {
               data.node.template[name].content = t;
-              save();
+              
             }}
           ></InputFileComponent>
         ) : left === true && type === "int" ? (
@@ -245,7 +243,7 @@ export default function ParameterComponent({
             value={data.node.template[name].value ?? ""}
             onChange={(t) => {
               data.node.template[name].value = t;
-              save();
+              
             }}
           />
         ) : left === true && type === "prompt" ? (
@@ -254,7 +252,7 @@ export default function ParameterComponent({
             value={data.node.template[name].value ?? ""}
             onChange={(t: string) => {
               data.node.template[name].value = t;
-              save();
+              
             }}
           />
         ) : (

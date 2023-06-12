@@ -32,7 +32,7 @@ export const useUndoRedo: UseUndoRedo = ({
   enableShortcuts = defaultOptions.enableShortcuts,
 } = defaultOptions) => {
   // the past and future arrays store the states that we can jump to
-  const { tabIndex, flows } = useContext(TabsContext);
+  const { tabId, flows } = useContext(TabsContext);
 
   const [past, setPast] = useState<HistoryItem[][]>(flows.map(() => []));
   const [future, setFuture] = useState<HistoryItem[][]>(flows.map(() => []));
@@ -68,11 +68,13 @@ export const useUndoRedo: UseUndoRedo = ({
     getEdges,
     past,
     future,
-    tabIndex,
+    tabId,
     setPast,
     setFuture,
     maxHistorySize,
   ]);
+
+  const tabIndex = flows.findIndex((f) => f.id === tabId);
 
   const undo = useCallback(() => {
     // get the last state that we want to go back to
