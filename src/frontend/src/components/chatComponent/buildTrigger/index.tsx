@@ -26,17 +26,15 @@ export default function BuildTrigger({
 
   const { updateSSEData } = useSSE();
 
-  const CHUNK_DELIMITER = "\n\n";
-
   async function handleBuild(flow: FlowType) {
     const minimumLoadingTime = 200; // in milliseconds
     const startTime = Date.now();
     setIsBuilding(true);
 
     try {
-      const allChunksValid = await postDataToServer(`/build/${flow.id}`, flow);
+      const allNodesValid = await streamNodeData(`/build/init`, flow);
       await enforceMinimumLoadingTime(startTime, minimumLoadingTime);
-      setIsBuilt(allChunksValid);
+      setIsBuilt(allNodesValid);
     } catch (error) {
       console.error("Error:", error);
     } finally {
@@ -44,40 +42,41 @@ export default function BuildTrigger({
     }
   }
 
-  async function postDataToServer(apiUrl: string, flow: FlowType) {
-    let allChunksValid = true;
+  async function streamNodeData(apiUrl: string, flow: FlowType) {
+    // Step 1: Make a POST request to send the flow data and receive a unique session ID
+    const response = await axios.post(apiUrl, flow);
+    const { flowId } = response.data;
 
-    await axios({
-      method: "post",
-      url: apiUrl,
-      data: { data: flow },
-      headers: { "Content-Type": "application/json" },
-      onDownloadProgress: (progressEvent) => {
-        const chunks =
-          progressEvent.event.currentTarget.responseText.split(CHUNK_DELIMITER);
-        chunks.forEach((chunk) => {
-          if (chunk === "") {
-            return;
-          }
-          const isValid = processChunk(chunk);
-          allChunksValid = allChunksValid && isValid;
-        });
-      },
-    });
+    // Step 2: Use the session ID to establish an SSE connection using EventSource
 
-    return allChunksValid;
+    let allNodesValid = true;
+    apiUrl = `/build/stream/${flowId}`;
+    const eventSource = new EventSource(apiUrl);
+
+    eventSource.onmessage = (event) => {
+      const parsedData = JSON.parse(event.data);
+      if (parsedData.end_of_stream) {
+        eventSource.close();
+        return;
+      }
+      const isValid = processStreamResult(parsedData);
+      allNodesValid = allNodesValid && isValid;
+    };
+
+    eventSource.onerror = (error) => {
+      console.error("EventSource failed:", error);
+      eventSource.close();
+    };
+    return allNodesValid;
   }
 
-  function processChunk(chunk: string) {
+  function processStreamResult(parsedData) {
     // Process each chunk of data here
     // Parse the chunk and update the context
-    let parsedData = { valid: false, id: null };
     try {
-      parsedData = JSON.parse(chunk.slice(6)); // Remove the "data: " part
       updateSSEData({ [parsedData.id]: parsedData });
     } catch (err) {
-      console.log("Chunk is not valid JSON: ", chunk);
-      console.log("Error parsing chunk: ", err);
+      console.log("Error parsing stream data: ", err);
     }
     return parsedData.valid;
   }
