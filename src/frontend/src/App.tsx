@@ -135,7 +135,7 @@ export default function App() {
       >
         {flows.length !== 0 && (
           <>
-            {/* <Header /> */}
+            <Header />
             <Router />
           </>
         )}
