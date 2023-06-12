@@ -178,14 +178,23 @@ export default function ChatModal({
     }
   }
 
+  function getWebSocketUrl(chatId, isDevelopment = false) {
+    const isSecureProtocol = window.location.protocol === "https:";
+    const webSocketProtocol = isSecureProtocol ? "wss" : "ws";
+    const host = isDevelopment ? "localhost:7860" : window.location.host;
+    const chatEndpoint = `/api/v1/chat/${chatId}`;
+
+    return `${
+      isDevelopment ? "ws" : webSocketProtocol
+    }://${host}${chatEndpoint}`;
+  }
+
   function connectWS() {
     try {
-      const urlWs =
+      const urlWs = getWebSocketUrl(
+        id.current,
         process.env.NODE_ENV === "development"
-          ? `ws://localhost:7860/api/v1/chat/${id.current}`
-          : `${window.location.protocol === "https:" ? "wss" : "ws"}://${
-              window.location.host
-            }api/v1/chat/${id.current}`;
+      );
       const newWs = new WebSocket(urlWs);
       newWs.onopen = () => {
         console.log("WebSocket connection established!");
