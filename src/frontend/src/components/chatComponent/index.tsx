@@ -61,8 +61,6 @@ export default function Chat({ flow }: ChatType) {
 
   return (
     <>
-      <ChatModal key={flow.id} flow={flow} open={open} setOpen={setOpen} />
-
       {isBuilt ? (
         <div>
           <BuildTrigger
@@ -71,6 +69,7 @@ export default function Chat({ flow }: ChatType) {
             setIsBuilt={setIsBuilt}
             isBuilt={isBuilt}
           />
+          <ChatModal key={flow.id} flow={flow} open={open} setOpen={setOpen} />
           <ChatTrigger open={open} setOpen={setOpen} isBuilt={isBuilt} />
         </div>
       ) : (
