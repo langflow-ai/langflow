@@ -217,11 +217,15 @@ export default function ParameterComponent({
         ) : left === true &&
           type === "str" &&
           data.node.template[name].options ? (
-          <Dropdown
-            options={data.node.template[name].options}
-            onSelect={(newValue) => (data.node.template[name].value = newValue)}
-            value={data.node.template[name].value ?? "Choose an option"}
-          ></Dropdown>
+          <div className="w-full">
+            <Dropdown
+              options={data.node.template[name].options}
+              onSelect={(newValue) =>
+                (data.node.template[name].value = newValue)
+              }
+              value={data.node.template[name].value ?? "Choose an option"}
+            ></Dropdown>
+          </div>
         ) : left === true && type === "code" ? (
           <CodeAreaComponent
             disabled={disabled}
