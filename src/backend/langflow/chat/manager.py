@@ -13,7 +13,6 @@ import json
 from typing import Any, Dict, List
 
 from langflow.cache.flow import InMemoryCache
-from langflow.graph import Graph
 
 
 class ChatHistory(Subject):
