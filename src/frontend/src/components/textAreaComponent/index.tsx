@@ -12,13 +12,19 @@ export default function TextAreaComponent({
   editNode = false,
 }: TextAreaComponentType) {
   const [myValue, setMyValue] = useState(value);
-  const { openPopUp } = useContext(PopUpContext);
+  const { openPopUp, closePopUp } = useContext(PopUpContext);
+
   useEffect(() => {
     if (disabled) {
       setMyValue("");
       onChange("");
     }
   }, [disabled, onChange]);
+
+  useEffect(() => {
+    setMyValue(value);
+  }, [closePopUp]);
+
   return (
     <div className={disabled ? "pointer-events-none cursor-not-allowed" : ""}>
       <div className="w-full flex items-center gap-3">

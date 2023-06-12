@@ -34,7 +34,15 @@ export default function Dropdown({
                     : "relative w-full cursor-default rounded-md border border-gray-300 bg-white py-2 pl-3 pr-10 text-left shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
                 }
               >
-                <span className="block truncate w-full">{internalValue}</span>
+                <span
+                  className={
+                    editNode
+                      ? "block truncate w-full dark:text-white"
+                      : "block truncate w-full dark:text-black"
+                  }
+                >
+                  {internalValue}
+                </span>
                 <span
                   className={
                     editNode
@@ -59,8 +67,8 @@ export default function Dropdown({
                 <Listbox.Options
                   className={
                     editNode
-                      ? "arrow-hide absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm w-[215px]"
-                      : "absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm"
+                      ? "arrow-hide absolute z-10 mt-1 max-h-60 overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm w-[215px]"
+                      : "absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm "
                   }
                 >
                   {options.map((option, id) => (
@@ -69,10 +77,10 @@ export default function Dropdown({
                       className={({ active }) =>
                         classNames(
                           active && !editNode
-                            ? "text-white bg-indigo-600 dark:bg-indigo-500"
+                            ? "text-white bg-indigo-600 dark:bg-indigo-500 dark:text-black"
                             : "text-gray-900",
                           active && editNode
-                            ? "text-white bg-gray-400 dark:bg-gray-500"
+                            ? "text-white bg-gray-400 dark:bg-gray-500 dark:text-black"
                             : "",
                           editNode
                             ? "relative cursor-default select-none py-0.5 pl-3 pr-12 dark:text-gray-300 dark:bg-gray-800"
@@ -86,7 +94,7 @@ export default function Dropdown({
                           <span
                             className={classNames(
                               selected ? "font-semibold" : "font-normal",
-                              "block truncate"
+                              "block truncate "
                             )}
                           >
                             {option}
@@ -96,7 +104,7 @@ export default function Dropdown({
                             <span
                               className={classNames(
                                 editNode ? "text-gray-600" : "text-indigo-600",
-                                active ? "text-white" : "",
+                                active ? "text-white dark:text-black" : "",
                                 "absolute inset-y-0 right-0 flex items-center pr-4"
                               )}
                             >
