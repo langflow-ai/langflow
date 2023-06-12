@@ -1,4 +1,4 @@
-import { SunIcon, MoonIcon, BellIcon } from "lucide-react";
+import { SunIcon, MoonIcon, BellIcon} from "lucide-react";
 import { useContext, useState, useEffect } from "react";
 import { FaGithub } from "react-icons/fa";
 import { Button } from "../ui/button";
@@ -8,7 +8,8 @@ import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { typesContext } from "../../contexts/typesContext";
-import MenuBar from "../../pages/MainPage/components/menuBar";
+import MenuBar from "./components/menuBar";
+import { Link } from "react-router-dom";
 
 export default function Header(){
     const {
@@ -35,7 +36,10 @@ export default function Header(){
         }
       }, [addFlow, flows.length, templates]);
     return (
-        <div className="w-full h-16 flex justify-between items-center border-b">
+        <div className="w-full h-14 flex justify-between items-center border-b bg-muted">
+          
+          <div className="flex gap-2 justify-start items-center w-96">
+          <Link to="/"><span className="text-2xl ml-4">⛓️</span></Link>
           {flows.findIndex((f) => tabId === f.id) !== -1 && 
           <MenuBar
             activeTab={activeTab}
@@ -44,10 +48,8 @@ export default function Header(){
             flows={flows}
             tabId={tabId}
           />
-        }
-          <div className="flex">
-            <Button>Explore</Button>
-            <Button>My Flows</Button>
+          }
+
           </div>
           <div className="flex justify-end px-2 w-96">
             <div className="ml-auto mr-2 flex gap-5">

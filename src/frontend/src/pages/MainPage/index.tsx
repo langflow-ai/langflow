@@ -22,7 +22,7 @@ import _ from "lodash";
 
 import { updateFlowInDatabase } from "../../controllers/API";
 import { CardComponent } from "./components/cardComponent";
-import { MenuBar } from "./components/menuBar";
+import { MenuBar } from "../../components/headerComponent/components/menuBar";
 export default function HomePage() {
   const {
     flows,
