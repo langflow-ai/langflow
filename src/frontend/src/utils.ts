@@ -1225,3 +1225,7 @@ export function groupByFamily(data, baseClasses) {
 
   return groupedObj;
 }
+
+export function connectedInputNodesOnHandle(nodeId:string,handleId,{nodes,edges}:{nodes:NodeType[],edges:Edge[]}){
+  // return the nodes connected to the input handle of the node
+}
