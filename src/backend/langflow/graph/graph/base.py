@@ -107,6 +107,48 @@ class Graph:
             raise ValueError("No root node found")
         return root_node.build()
 
+    def topological_sort(self) -> List[Vertex]:
+        """
+        Performs a topological sort of the vertices in the graph.
+
+        Returns:
+            List[Vertex]: A list of vertices in topological order.
+
+        Raises:
+            ValueError: If the graph contains a cycle.
+        """
+        # States: 0 = unvisited, 1 = visiting, 2 = visited
+        state = {node: 0 for node in self.nodes}
+        sorted_vertices = []
+
+        def dfs(node):
+            if state[node] == 1:
+                # We have a cycle
+                raise ValueError(
+                    "Graph contains a cycle, cannot perform topological sort"
+                )
+            if state[node] == 0:
+                state[node] = 1
+                for edge in node.edges:
+                    if edge.source == node:
+                        dfs(edge.target)
+                state[node] = 2
+                sorted_vertices.append(node)
+
+        # Visit each node
+        for node in self.nodes:
+            if state[node] == 0:
+                dfs(node)
+
+        return list(reversed(sorted_vertices))
+
+    def generator_build(self) -> List[Vertex]:
+        """Builds each
+        node in the graph and yields it."""
+        sorted_vertices = self.topological_sort()
+        for node in sorted_vertices:
+            yield node.build()
+
     def get_node_neighbors(self, node: Vertex) -> Dict[Vertex, int]:
         """Returns the neighbors of a node."""
         neighbors: Dict[Vertex, int] = {}
