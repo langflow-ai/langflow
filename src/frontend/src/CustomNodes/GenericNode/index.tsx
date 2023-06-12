@@ -33,6 +33,8 @@ import { NodeToolbar } from "reactflow";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 
 import ShadTooltip from "../../components/ShadTooltipComponent";
+import { useSSE } from "../../contexts/SSEContext";
+
 export default function GenericNode({
   data,
   selected,
@@ -48,45 +50,22 @@ export default function GenericNode({
   const Icon = nodeIcons[data.type] || nodeIcons[types[data.type]];
   const [validationStatus, setValidationStatus] = useState(null);
   // State for outline color
-  const [isValid, setIsValid] = useState(false);
-  const { save } = useContext(TabsContext);
-  const { reactFlowInstance } = useContext(typesContext);
-  const [params, setParams] = useState([]);
+  const { sseData } = useSSE();
 
+  // useEffect(() => {
+  //   if (reactFlowInstance) {
+  //     setParams(Object.values(reactFlowInstance.toObject()));
+  //   }
+  // }, [save]);
+
+  // New useEffect to watch for changes in sseData and update validation status
   useEffect(() => {
-    if (reactFlowInstance) {
-      setParams(Object.values(reactFlowInstance.toObject()));
+    const relevantData = sseData[data.id];
+    if (relevantData) {
+      // Extract validation information from relevantData and update the validationStatus state
+      setValidationStatus(relevantData);
     }
-  }, [save]);
-
-  const validateNode = useCallback(
-    debounce(async () => {
-      try {
-        const response = await fetch(`/validate/node/${data.id}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(reactFlowInstance.toObject()),
-        });
-
-        if (response.status === 200) {
-          let jsonResponse = await response.json();
-          let jsonResponseParsed = await JSON.parse(jsonResponse);
-          setValidationStatus(jsonResponseParsed);
-        }
-      } catch (error) {
-        // console.error("Error validating node:", error);
-        setValidationStatus("error");
-      }
-    }, 1000), // Adjust the debounce delay (500ms) as needed
-    [reactFlowInstance, data.id]
-  );
-  useEffect(() => {
-    if (params.length > 0) {
-      validateNode();
-    }
-  }, [params, validateNode]);
+  }, [sseData, data.id]);
 
   if (!Icon) {
     if (showError.current) {
