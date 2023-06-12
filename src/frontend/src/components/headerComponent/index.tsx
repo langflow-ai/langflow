@@ -36,6 +36,7 @@ export default function Header(){
       }, [addFlow, flows.length, templates]);
     return (
         <div className="w-full h-16 flex justify-between items-center border-b">
+          {flows.findIndex((f) => tabId === f.id) !== -1 && 
           <MenuBar
             activeTab={activeTab}
             setRename={setRename}
@@ -43,6 +44,7 @@ export default function Header(){
             flows={flows}
             tabId={tabId}
           />
+        }
           <div className="flex">
             <Button>Explore</Button>
             <Button>My Flows</Button>

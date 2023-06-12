@@ -42,13 +42,6 @@ export default function App() {
 
   const { flows, addFlow } = useContext(TabsContext);
 
-  useEffect(() => {
-    //create the first flow
-    if (flows.length === 0) {
-      addFlow();
-    }
-  }, [addFlow, flows.length]);
-
   // Initialize state variable for the list of alerts
   const [alertsList, setAlertsList] = useState<
     Array<{
@@ -133,12 +126,8 @@ export default function App() {
         }}
         FallbackComponent={CrashErrorComponent}
       >
-        {flows.length !== 0 && (
-          <>
             <Header />
             <Router />
-          </>
-        )}
       </ErrorBoundary>
       <div></div>
       <div

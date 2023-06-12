@@ -130,12 +130,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     });
   }, [templates]);
 
-  function getLocalStorageTabsData() {
-    let cookie = window.localStorage.getItem("tabsData");
-    let cookieObject: LangFlowState = JSON.parse(cookie);
-    return cookieObject;
-  }
-
   function getTabsDataFromDB() {
     //get tabs from db
     return readFlowsFromDatabase();

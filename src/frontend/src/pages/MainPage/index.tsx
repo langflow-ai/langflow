@@ -30,7 +30,6 @@ export default function HomePage() {
     setTabId,
   } = useContext(TabsContext);
   return (
-    Object.keys(flows).length !== 0 && (
       <div
         className="w-full h-full flex flex-col bg-muted"
       >
@@ -45,6 +44,5 @@ export default function HomePage() {
             ))}
           </div>
       </div>
-    )
   );
 }
