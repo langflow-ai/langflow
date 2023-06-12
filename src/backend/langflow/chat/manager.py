@@ -103,7 +103,7 @@ class ChatManager:
         websocket = self.active_connections[client_id]
         await websocket.send_json(message.dict())
 
-    async def close_connection(self, client_id: str, code: status, reason: str):
+    async def close_connection(self, client_id: str, code: int, reason: str):
         if websocket := self.active_connections[client_id]:
             await websocket.close(code=code, reason=reason)
             self.disconnect(client_id)
@@ -159,14 +159,11 @@ class ChatManager:
         await self.send_json(client_id, response)
         self.chat_history.add_message(client_id, response)
 
-    def build(self, client_id: str, graph_data: Dict) -> bool:
+    def set_cache(self, client_id: str, langchain_object: Any) -> bool:
         """
-        Build the langchain object and set the streaming options,
-        then store it in the in-memory cache.
+        Set the cache for a client.
         """
-        logger.debug("Building langchain object")
-        graph = Graph.from_payload(graph_data)
-        langchain_object = graph.build()
+
         self.in_memory_cache.set(client_id, langchain_object)
         return client_id in self.in_memory_cache
 
@@ -191,7 +188,7 @@ class ChatManager:
 
                 with self.cache_manager.set_client_id(client_id):
                     if client_id not in self.in_memory_cache:
-                        self.close_connection(
+                        await self.close_connection(
                             client_id=client_id,
                             code=status.WS_1011_INTERNAL_ERROR,
                             reason="Please, build the flow before sending messages",
@@ -210,10 +207,11 @@ class ChatManager:
             )
         finally:
             try:
-                connection = self.active_connections.get(client_id)
-                if connection:
-                    await connection.close(code=1000, reason="Client disconnected")
-                    self.disconnect(client_id)
+                await self.close_connection(
+                    client_id=client_id,
+                    code=status.WS_1000_NORMAL_CLOSURE,
+                    reason="Client disconnected",
+                )
             except Exception as e:
                 logger.exception(e)
             self.disconnect(client_id)
