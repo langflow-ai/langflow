@@ -18,7 +18,7 @@ import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
 import { PROMPT_DIALOG_SUBTITLE, TEXT_DIALOG_SUBTITLE } from "../../constants";
 
-export default function PromptAreaModal({
+export default function GenericModal({
   value,
   setValue,
   buttonText,

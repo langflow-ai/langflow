@@ -24,6 +24,7 @@ import { nodeNames, nodeIcons } from "../../../../utils";
 import React from "react";
 import { nodeColors } from "../../../../utils";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
+import { PopUpContext } from "../../../../contexts/popUpContext";
 
 export default function ParameterComponent({
   left,
@@ -40,6 +41,7 @@ export default function ParameterComponent({
   const refHtml = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
+  const { closePopUp } = useContext(PopUpContext);
 
   useEffect(() => {
     if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
@@ -55,6 +57,8 @@ export default function ParameterComponent({
   const [enabled, setEnabled] = useState(
     data.node.template[name]?.value ?? false
   );
+
+  useEffect(() => {}, [closePopUp, data.node.template]);
 
   const { reactFlowInstance } = useContext(typesContext);
   let disabled =
