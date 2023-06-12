@@ -20,18 +20,17 @@ import _ from "lodash";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { alertContext } from "../../../../contexts/alertContext";
 import { updateFlowInDatabase } from "../../../../controllers/API";
+import { Link } from "react-router-dom";
 export const CardComponent = ({
   flow,
   idx,
   removeFlow,
   setTabIndex,
-  setActiveTab,
 }: {
   flow: FlowType;
   idx: number;
   removeFlow: (id: string) => void;
   setTabIndex: (idx: number) => void;
-  setActiveTab: (tab: string) => void;
 }) => {
   const { setErrorData } = useContext(alertContext);
   const { updateFlow } = useContext(TabsContext);
@@ -65,13 +64,15 @@ export const CardComponent = ({
             />
           </div>
           <div className="flex gap-5">
+            <Link to={`/flow/${flow.id}`}>
             <Edit
               className="w-4"
               onClick={() => {
                 setTabIndex(idx);
-                setActiveTab("myflow");
+
               }}
             />
+            </Link>
             <Trash
               className="w-4"
               onClick={() => {

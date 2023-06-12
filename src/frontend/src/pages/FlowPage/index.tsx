@@ -18,6 +18,7 @@ import ReactFlow, {
   useOnViewportChange,
   OnSelectionChangeParams,
   OnNodesChange,
+  ReactFlowProvider,
 } from "reactflow";
 import _ from "lodash";
 import { locationContext } from "../../contexts/locationContext";
@@ -32,12 +33,13 @@ import { FlowType, NodeType } from "../../types/flow";
 import { APIClassType } from "../../types/api";
 import { isValidConnection } from "../../utils";
 import useUndoRedo from "./hooks/useUndoRedo";
+import { useParams } from "react-router-dom";
 
 const nodeTypes = {
   genericNode: GenericNode,
 };
 
-export default function FlowPage({ flow }: { flow: FlowType }) {
+export default function FlowPage() {
   let {
     updateFlow,
     disableCopyPaste,
@@ -46,12 +48,28 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
     paste,
     lastCopiedSelection,
     setLastCopiedSelection,
+    flows,
+    tabIndex,
+    setTabIndex
+
   } = useContext(TabsContext);
   const { types, reactFlowInstance, setReactFlowInstance, templates } =
     useContext(typesContext);
   const reactFlowWrapper = useRef(null);
 
   const { takeSnapshot } = useUndoRedo();
+
+  const {id} = useParams();
+
+  useEffect(() => {
+    if(flows.length !== 0){
+      console.log(id, "o id é esse");
+      setTabIndex(flows.findIndex((flow) => flow.id === id) == -1 ? 0 : flows.findIndex((flow) => flow.id === id));
+      console.log("setou", flows.findIndex((flow) => flow.id === id))
+      console.log(flows[tabIndex])
+    }
+    
+  }, [flows, id])
 
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
@@ -111,28 +129,28 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
   const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
   const { setErrorData } = useContext(alertContext);
   const [nodes, setNodes, onNodesChange] = useNodesState(
-    flow.data?.nodes ?? []
+    flows[tabIndex].data?.nodes ?? []
   );
   const [edges, setEdges, onEdgesChange] = useEdgesState(
-    flow.data?.edges ?? []
+    flows[tabIndex].data?.edges ?? []
   );
   const { setViewport } = useReactFlow();
   const edgeUpdateSuccessful = useRef(true);
   useEffect(() => {
-    if (reactFlowInstance && flow) {
-      flow.data = reactFlowInstance.toObject();
-      updateFlow(flow);
+    if (reactFlowInstance && flows[tabIndex]) {
+      flows[tabIndex].data = reactFlowInstance.toObject();
+      updateFlow(flows[tabIndex]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes, edges]);
   //update flow when tabs change
   useEffect(() => {
-    setNodes(flow?.data?.nodes ?? []);
-    setEdges(flow?.data?.edges ?? []);
+    setNodes(flows[tabIndex]?.data?.nodes ?? []);
+    setEdges(flows[tabIndex]?.data?.edges ?? []);
     if (reactFlowInstance) {
-      setViewport(flow?.data?.viewport ?? { x: 1, y: 0, zoom: 0.5 });
+      setViewport(flows[tabIndex]?.data?.viewport ?? { x: 1, y: 0, zoom: 0.5 });
     }
-  }, [flow, reactFlowInstance, setEdges, setNodes, setViewport]);
+  }, [flows[tabIndex], reactFlowInstance, setEdges, setNodes, setViewport]);
   //set extra sidebar
   useEffect(() => {
     setExtraComponent(<ExtraSidebar />);
@@ -312,55 +330,66 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
   const { setDisableCopyPaste } = useContext(TabsContext);
 
   return (
-    <div className="w-full h-full" ref={reactFlowWrapper}>
-      {Object.keys(templates).length > 0 && Object.keys(types).length > 0 ? (
-        <>
-          <ReactFlow
-            nodes={nodes}
-            onMove={() => {
-              updateFlow({ ...flow, data: reactFlowInstance.toObject() });
-            }}
-            edges={edges}
-            onPaneClick={() => {
-              setDisableCopyPaste(false);
-            }}
-            onPaneMouseLeave={() => {
-              setDisableCopyPaste(true);
-            }}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChangeMod}
-            onConnect={onConnect}
-            disableKeyboardA11y={true}
-            onLoad={setReactFlowInstance}
-            onInit={setReactFlowInstance}
-            nodeTypes={nodeTypes}
-            onEdgeUpdate={onEdgeUpdate}
-            onEdgeUpdateStart={onEdgeUpdateStart}
-            onEdgeUpdateEnd={onEdgeUpdateEnd}
-            onNodeDragStart={onNodeDragStart}
-            onSelectionDragStart={onSelectionDragStart}
-            onSelectionEnd={onSelectionEnd}
-            onSelectionStart={onSelectionStart}
-            onEdgesDelete={onEdgesDelete}
-            connectionLineComponent={ConnectionLineComponent}
-            onDragOver={onDragOver}
-            onDrop={onDrop}
-            onNodesDelete={onDelete}
-            onSelectionChange={onSelectionChange}
-            nodesDraggable={!disableCopyPaste}
-            panOnDrag={!disableCopyPaste}
-            zoomOnDoubleClick={!disableCopyPaste}
-            selectNodesOnDrag={false}
-            className="theme-attribution"
-          >
-            <Background className="dark:bg-gray-900" />
-            <Controls className="[&>button]:text-black  [&>button]:dark:bg-gray-800 hover:[&>button]:dark:bg-gray-700 [&>button]:dark:text-gray-400 [&>button]:dark:fill-gray-400 [&>button]:dark:border-gray-600"></Controls>
-          </ReactFlow>
-          <Chat flow={flow} reactFlowInstance={reactFlowInstance} />
-        </>
-      ) : (
-        <></>
-      )}
+    <div className="h-full w-full flex basis-auto flex-1 overflow-hidden">
+      <ExtraSidebar />
+      <main className="h-full w-full flex-1 border-t border-gray-200 dark:border-gray-700 flex">
+        {/* Primary column */}
+          
+            <div className="w-full h-full" ref={reactFlowWrapper}>
+              {Object.keys(templates).length > 0 &&
+              Object.keys(types).length > 0 ? (
+                <>
+                  <ReactFlow
+                    nodes={nodes}
+                    onMove={() => {
+                      updateFlow({
+                        ...flows[tabIndex],
+                        data: reactFlowInstance.toObject(),
+                      });
+                    }}
+                    edges={edges}
+                    onPaneClick={() => {
+                      setDisableCopyPaste(false);
+                    }}
+                    onPaneMouseLeave={() => {
+                      setDisableCopyPaste(true);
+                    }}
+                    onNodesChange={onNodesChange}
+                    onEdgesChange={onEdgesChangeMod}
+                    onConnect={onConnect}
+                    disableKeyboardA11y={true}
+                    onLoad={setReactFlowInstance}
+                    onInit={setReactFlowInstance}
+                    nodeTypes={nodeTypes}
+                    onEdgeUpdate={onEdgeUpdate}
+                    onEdgeUpdateStart={onEdgeUpdateStart}
+                    onEdgeUpdateEnd={onEdgeUpdateEnd}
+                    onNodeDragStart={onNodeDragStart}
+                    onSelectionDragStart={onSelectionDragStart}
+                    onSelectionEnd={onSelectionEnd}
+                    onSelectionStart={onSelectionStart}
+                    onEdgesDelete={onEdgesDelete}
+                    connectionLineComponent={ConnectionLineComponent}
+                    onDragOver={onDragOver}
+                    onDrop={onDrop}
+                    onNodesDelete={onDelete}
+                    onSelectionChange={onSelectionChange}
+                    nodesDraggable={!disableCopyPaste}
+                    panOnDrag={!disableCopyPaste}
+                    zoomOnDoubleClick={!disableCopyPaste}
+                    selectNodesOnDrag={false}
+                    className="theme-attribution"
+                  >
+                    <Background className="dark:bg-gray-900" />
+                    <Controls className="[&>button]:text-black  [&>button]:dark:bg-gray-800 hover:[&>button]:dark:bg-gray-700 [&>button]:dark:text-gray-400 [&>button]:dark:fill-gray-400 [&>button]:dark:border-gray-600"></Controls>
+                  </ReactFlow>
+                  <Chat flow={flows[tabIndex]} reactFlowInstance={reactFlowInstance} />
+                </>
+              ) : (
+                <></>
+              )}
+              </div>
+      </main>
     </div>
   );
 }
