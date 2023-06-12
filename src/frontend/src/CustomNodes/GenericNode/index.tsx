@@ -64,6 +64,8 @@ export default function GenericNode({
     if (relevantData) {
       // Extract validation information from relevantData and update the validationStatus state
       setValidationStatus(relevantData);
+    } else {
+      setValidationStatus(null);
     }
   }, [sseData, data.id]);
 
