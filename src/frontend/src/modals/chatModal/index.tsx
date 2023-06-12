@@ -6,7 +6,7 @@ import {
 import { Fragment, useContext, useEffect, useRef, useState } from "react";
 import { FlowType, NodeType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
-import { toNormalCase } from "../../utils";
+import { toNormalCase, validateNodes } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import ChatMessage from "./chatMessage";
 import { FaEraser } from "react-icons/fa";
@@ -273,53 +273,6 @@ export default function ChatModal({
     if (ref.current) ref.current.scrollIntoView({ behavior: "smooth" });
   }, [chatHistory]);
 
-  function validateNode(n: NodeType): Array<string> {
-    if (!n.data?.node?.template || !Object.keys(n.data.node.template)) {
-      setNoticeData({
-        title:
-          "We've noticed a potential issue with a node in the flow. Please review it and, if necessary, submit a bug report with your exported flow file. Thank you for your help!",
-      });
-      return [];
-    }
-
-    const {
-      type,
-      node: { template },
-    } = n.data;
-
-    return Object.keys(template).reduce(
-      (errors: Array<string>, t) =>
-        errors.concat(
-          template[t].required &&
-            template[t].show &&
-            (template[t].value === undefined ||
-              template[t].value === null ||
-              template[t].value === "") &&
-            !reactFlowInstance
-              .getEdges()
-              .some(
-                (e) =>
-                  e.targetHandle.split("|")[1] === t &&
-                  e.targetHandle.split("|")[2] === n.id
-              )
-            ? [
-                `${type} is missing ${
-                  template.display_name
-                    ? template.display_name
-                    : toNormalCase(template[t].name)
-                }.`,
-              ]
-            : []
-        ),
-      [] as string[]
-    );
-  }
-
-  function validateNodes() {
-    return reactFlowInstance
-      .getNodes()
-      .flatMap((n: NodeType) => validateNode(n));
-  }
 
   const ref = useRef(null);
 
@@ -331,7 +284,7 @@ export default function ChatModal({
 
   function sendMessage() {
     if (chatValue !== "") {
-      let nodeValidationErrors = validateNodes();
+      let nodeValidationErrors = validateNodes(reactFlowInstance);
       if (nodeValidationErrors.length === 0) {
         setLockChat(true);
         let message = chatValue;
