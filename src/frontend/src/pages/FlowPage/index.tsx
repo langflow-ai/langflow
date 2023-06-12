@@ -68,7 +68,7 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
         !disableCopyPaste
       ) {
         event.preventDefault();
-        console.log(_.cloneDeep(lastSelection));
+        // console.log(_.cloneDeep(lastSelection));
         setLastCopiedSelection(_.cloneDeep(lastSelection));
       }
       if (
