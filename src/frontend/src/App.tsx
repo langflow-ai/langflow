@@ -126,8 +126,8 @@ export default function App() {
         }}
         FallbackComponent={CrashErrorComponent}
       >
-            <Header />
-            <Router />
+        <Header />
+        <Router />
       </ErrorBoundary>
       <div></div>
       <div

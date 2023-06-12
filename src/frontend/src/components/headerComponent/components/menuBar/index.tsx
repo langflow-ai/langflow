@@ -10,9 +10,11 @@ import {
   MenubarTrigger,
   MenubarRadioGroup,
   MenubarRadioItem,
-} from "../../../../components/ui/menubar";
+  MenubarLabel,
+  MenubarSeparator,
+} from "../../../ui/menubar";
 
-import RenameLabel from "../../../../components/ui/rename-label";
+import RenameLabel from "../../../ui/rename-label";
 import _ from "lodash";
 import ImportModal from "../../../../modals/importModal";
 import ExportModal from "../../../../modals/exportModal";
@@ -50,20 +52,10 @@ export const MenuBar = ({ activeTab, setRename, rename, flows, tabId }) => {
   let color = current_flow.style?.color || "bg-blue-200";
 
   return (
-    <div className="flex gap-2 justify-start items-center w-96">
-      <span className="text-2xl ml-4">⛓️</span>
-      {activeTab === "myflow" && (
-        <div className="flex gap-2 p-2">
-          <div className="flex gap-2 items-center">
-            <span
-              className={
-                "rounded-md w-10 h-10 flex items-center justify-center text-2xl " +
-                color
-              }
-            >
-              {emoji}
-            </span>
-            <RenameLabel
+          <Menubar>
+            <MenubarMenu>
+              <MenubarTrigger className="px-1">
+              <RenameLabel
               value={current_flow.name}
               setValue={(value) => {
                 if (value !== "") {
@@ -75,11 +67,12 @@ export const MenuBar = ({ activeTab, setRename, rename, flows, tabId }) => {
               rename={rename}
               setRename={setRename}
             />
-          </div>
-          <Menubar>
-            <MenubarMenu>
-              <MenubarTrigger className="px-2">File</MenubarTrigger>
+            
+              </MenubarTrigger>
               <MenubarContent>
+                <MenubarLabel>
+                  File
+                </MenubarLabel>
                 <MenubarItem
                   onClick={() => {
                     openPopUp(<ImportModal />);
@@ -104,11 +97,10 @@ export const MenuBar = ({ activeTab, setRename, rename, flows, tabId }) => {
                   <Code className="w-4 h-4 mr-2" />
                   Code
                 </MenubarItem>
-              </MenubarContent>
-            </MenubarMenu>
-            <MenubarMenu>
-              <MenubarTrigger>Edit</MenubarTrigger>
-              <MenubarContent>
+                <MenubarSeparator />
+                <MenubarLabel>
+                  Edit
+                </MenubarLabel>
                 <MenubarItem
                   onClick={() => {
                     handleSaveFlow(current_flow);
@@ -125,12 +117,10 @@ export const MenuBar = ({ activeTab, setRename, rename, flows, tabId }) => {
                   <Edit className="w-4 h-4 mr-2" />
                   Rename
                 </MenubarItem>
-              </MenubarContent>
-            </MenubarMenu>
-            <MenubarMenu>
-              <MenubarTrigger>Flows</MenubarTrigger>
-              <MenubarContent>
-                
+                <MenubarSeparator />
+                <MenubarLabel>
+                  Flows
+                </MenubarLabel>
                 <MenubarRadioGroup
                   value={tabId}
                   onValueChange={(value) => {
@@ -158,10 +148,8 @@ export const MenuBar = ({ activeTab, setRename, rename, flows, tabId }) => {
                 </MenubarItem>
               </MenubarContent>
             </MenubarMenu>
+            
           </Menubar>
-        </div>
-      )}
-    </div>
   );
 };
 
