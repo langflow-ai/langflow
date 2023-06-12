@@ -1,6 +1,7 @@
 import json
 from fastapi import (
     APIRouter,
+    HTTPException,
     WebSocket,
     WebSocketDisconnect,
     WebSocketException,
@@ -18,7 +19,7 @@ flow_data_store = {}
 
 
 @router.websocket("/chat/{client_id}")
-async def websocket_endpoint(client_id: str, websocket: WebSocket):
+async def chat(client_id: str, websocket: WebSocket):
     """Websocket endpoint for chat."""
     try:
         if client_id in chat_manager.in_memory_cache:
@@ -43,6 +44,19 @@ async def init_build(graph_data: dict):
     flow_data_store[flow_id] = graph_data
 
     return JSONResponse(content={"flowId": flow_id})
+
+
+@router.get("/build/{flow_id}/status")
+async def build_status(flow_id: str):
+    """Check the flow_id is in the flow_data_store."""
+    try:
+        if flow_id in flow_data_store:
+            return JSONResponse(content={"built": True})
+        else:
+            return JSONResponse(content={"built": False})
+    except Exception as exc:
+        logger.error(exc)
+        return HTTPException(status_code=500, detail=str(exc))
 
 
 @router.get("/build/stream/{flow_id}", response_class=StreamingResponse)
