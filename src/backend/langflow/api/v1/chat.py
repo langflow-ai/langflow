@@ -46,44 +46,6 @@ async def init_build(graph_data: dict):
     return JSONResponse(content={"flowId": flow_id})
 
 
-# @router.post("/build/{client_id}", response_class=StreamingResponse)
-# async def stream_build(client_id: str, graph_data: dict):
-#     """Build langchain object from data_graph."""
-
-#     async def event_stream(graph_data):
-#         node_id = None
-#         try:
-#             graph_data = graph_data.get("data")
-#             if not graph_data:
-#                 raise HTTPException(status_code=400, detail="No data provided")
-
-#             logger.debug("Building langchain object")
-#             graph = Graph.from_payload(graph_data)
-#             for node_repr, node_id in graph.generator_build():
-#                 logger.debug(
-#                     f"Building node {node_repr[:50]}{'...' if len(node_repr) > 50 else ''}"
-#                 )
-#                 response = json.dumps(
-#                     {
-#                         "valid": True,
-#                         "params": node_repr,
-#                         "id": node_id,
-#                     }
-#                 )
-#                 yield f"data: {response}\n\n"  # SSE format
-
-#             chat_manager.set_cache(client_id, graph.build())
-
-#         except Exception as exc:
-#             logger.exception(exc)
-#             error_response = json.dumps(
-#                 {"valid": False, "params": str(exc), "id": node_id}
-#             )
-#             yield f"data: {error_response}\n\n"  # SSE format
-
-#     return StreamingResponse(event_stream(graph_data), media_type="text/event-stream")
-
-
 @router.get("/build/stream/{flow_id}", response_class=StreamingResponse)
 async def stream_build(flow_id: str):
     """Stream the build process based on stored flow data."""
