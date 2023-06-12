@@ -1,6 +1,6 @@
-import * as React from "react";
 import { SVGProps } from "react";
 
+// https://github.com/feathericons/feather/issues/695#issuecomment-1503699643
 export const Loading = (props: SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
