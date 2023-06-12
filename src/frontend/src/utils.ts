@@ -744,6 +744,9 @@ export function validateNode(n: NodeType, reactFlowInstance:ReactFlowInstance):A
 }
 
 export function validateNodes(reactFlowInstance:ReactFlowInstance){
+  if(reactFlowInstance.getNodes().length === 0){
+    return ["No nodes found in the flow. Please add at least one node to the flow."];
+  }
   return reactFlowInstance
   .getNodes()
   .flatMap((n: NodeType) => validateNode(n, reactFlowInstance));
