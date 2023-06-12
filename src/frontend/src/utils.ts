@@ -703,3 +703,48 @@ export function groupByFamily(data, baseClasses) {
 
   return groupedObj;
 }
+
+export function validateNode(n: NodeType, reactFlowInstance:ReactFlowInstance):Array<string>{
+  if (!n.data?.node?.template || !Object.keys(n.data.node.template)) {
+    return ["We've noticed a potential issue with a node in the flow. Please review it and, if necessary, submit a bug report with your exported flow file. Thank you for your help!"];
+  }
+
+  const {
+    type,
+    node: { template },
+  } = n.data;
+
+  return Object.keys(template).reduce(
+    (errors: Array<string>, t) =>
+      errors.concat(
+        template[t].required &&
+          template[t].show &&
+          (template[t].value === undefined ||
+            template[t].value === null ||
+            template[t].value === "") &&
+          !reactFlowInstance
+            .getEdges()
+            .some(
+              (e) =>
+                e.targetHandle.split("|")[1] === t &&
+                e.targetHandle.split("|")[2] === n.id
+            )
+          ? [
+              `${type} is missing ${
+                template.display_name
+                  ? template.display_name
+                  : toNormalCase(template[t].name)
+              }.`,
+            ]
+          : []
+      ),
+    [] as string[]
+  );
+
+}
+
+export function validateNodes(reactFlowInstance:ReactFlowInstance){
+  return reactFlowInstance
+  .getNodes()
+  .flatMap((n: NodeType) => validateNode(n, reactFlowInstance));
+}
