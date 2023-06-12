@@ -105,4 +105,4 @@ async def stream_build(flow_id: str):
         return StreamingResponse(event_stream(flow_id), media_type="text/event-stream")
     except Exception as exc:
         logger.error(exc)
-        return JSONResponse(content={"error": str(exc)})
+        raise HTTPException(status_code=500, detail=str(exc))
