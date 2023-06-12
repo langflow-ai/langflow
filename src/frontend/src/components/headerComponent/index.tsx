@@ -15,8 +15,8 @@ export default function Header(){
         flows,
         addFlow,
         removeFlow,
-        tabIndex,
-        setTabIndex,
+        tabId,
+        setTabId,
         uploadFlow,
         downloadFlow,
       } = useContext(TabsContext);
@@ -41,7 +41,7 @@ export default function Header(){
             setRename={setRename}
             rename={rename}
             flows={flows}
-            tabIndex={tabIndex}
+            tabId={tabId}
           />
           <div className="flex">
             <Button>Explore</Button>

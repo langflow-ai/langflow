@@ -20,8 +20,8 @@ import ApiModal from "../../../../modals/ApiModal";
 import { alertContext } from "../../../../contexts/alertContext";
 import { updateFlowInDatabase } from "../../../../controllers/API";
 
-export const MenuBar = ({ activeTab, setRename, rename, flows, tabIndex }) => {
-  const { updateFlow, setTabIndex, addFlow } = useContext(TabsContext);
+export const MenuBar = ({ activeTab, setRename, rename, flows, tabId }) => {
+  const { updateFlow, setTabId, addFlow } = useContext(TabsContext);
   const { setErrorData } = useContext(alertContext);
   const { openPopUp } = useContext(PopUpContext);
 
@@ -42,7 +42,7 @@ export const MenuBar = ({ activeTab, setRename, rename, flows, tabIndex }) => {
       setErrorData(err);
     }
   }
-  let current_flow = flows[tabIndex];
+  let current_flow = flows.find((flow) => flow.id === tabId);
 
   // robot emoji
   let emoji = current_flow.style?.emoji || "🤖";
@@ -63,10 +63,10 @@ export const MenuBar = ({ activeTab, setRename, rename, flows, tabIndex }) => {
               {emoji}
             </span>
             <RenameLabel
-              value={flows[tabIndex].name}
+              value={current_flow.name}
               setValue={(value) => {
                 if (value !== "") {
-                  let newFlow = _.cloneDeep(flows[tabIndex]);
+                  let newFlow = _.cloneDeep(current_flow);
                   newFlow.name = value;
                   updateFlow(newFlow);
                 }
@@ -97,7 +97,7 @@ export const MenuBar = ({ activeTab, setRename, rename, flows, tabIndex }) => {
                 </MenubarItem>
                 <MenubarItem
                   onClick={() => {
-                    openPopUp(<ApiModal flow={flows[tabIndex]} />);
+                    openPopUp(<ApiModal flow={current_flow} />);
                   }}
                 >
                   <Code className="w-4 h-4 mr-2" />
@@ -110,7 +110,7 @@ export const MenuBar = ({ activeTab, setRename, rename, flows, tabIndex }) => {
               <MenubarContent>
                 <MenubarItem
                   onClick={() => {
-                    handleSaveFlow(flows[tabIndex]);
+                    handleSaveFlow(current_flow);
                   }}
                 >
                   <Save className="w-4 h-4 mr-2" />
@@ -130,9 +130,9 @@ export const MenuBar = ({ activeTab, setRename, rename, flows, tabIndex }) => {
               <MenubarTrigger>Flows</MenubarTrigger>
               <MenubarContent>
                 <MenubarRadioGroup
-                  value={tabIndex.toString()}
+                  value={tabId}
                   onValueChange={(value) => {
-                    setTabIndex(parseInt(value));
+                    setTabId(value);
                   }}
                 >
                   {flows.map((flow, idx) => {
