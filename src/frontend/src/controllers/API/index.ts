@@ -1,4 +1,8 @@
-import { PromptTypeAPI, errorsTypeAPI } from "./../../types/api/index";
+import {
+  BuildStatusTypeAPI,
+  PromptTypeAPI,
+  errorsTypeAPI,
+} from "./../../types/api/index";
 import { APIObjectType, sendAllProps } from "../../types/api/index";
 import axios, { AxiosResponse } from "axios";
 import { FlowType } from "../../types/flow";
@@ -40,6 +44,8 @@ export async function getExamples(): Promise<FlowType[]> {
   return await Promise.all(contentsPromises);
 }
 
-export async function postBuild(flow: FlowType) {
-  return await axios.post(`/build/${flow.id}`, flow);
+export async function getBuildStatus(
+  flowId: string
+): Promise<BuildStatusTypeAPI> {
+  return await axios.get(`/build/${flowId}/status`);
 }
