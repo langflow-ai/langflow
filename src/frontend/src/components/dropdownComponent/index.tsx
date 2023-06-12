@@ -31,18 +31,10 @@ export default function Dropdown({
                 className={
                   editNode
                     ? "relative pr-9 arrow-hide placeholder:text-center border-0 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm focus:outline-none focus:ring-1 focus:ring-inset focus:ring-gray-200"
-                    : "relative w-full cursor-default rounded-md border border-gray-300 bg-white py-2 pl-3 pr-10 text-left shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                    : "relative w-full cursor-default rounded-md border border-gray-300 bg-white py-2 pl-3 pr-10 text-left shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md"
                 }
               >
-                <span
-                  className={
-                    editNode
-                      ? "block truncate w-full dark:text-white"
-                      : "block truncate w-full dark:text-black"
-                  }
-                >
-                  {internalValue}
-                </span>
+                <span className="block truncate w-full">{internalValue}</span>
                 <span
                   className={
                     editNode
@@ -80,7 +72,7 @@ export default function Dropdown({
                             ? "text-white bg-indigo-600 dark:bg-indigo-500 dark:text-black"
                             : "text-gray-900",
                           active && editNode
-                            ? "text-white bg-gray-400 dark:bg-gray-500 dark:text-black"
+                            ? "text-white bg-gray-400 dark:bg-gray-500 dark:text-gray-500"
                             : "",
                           editNode
                             ? "relative cursor-default select-none py-0.5 pl-3 pr-12 dark:text-gray-300 dark:bg-gray-800"
