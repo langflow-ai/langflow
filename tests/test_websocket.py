@@ -1,46 +1,52 @@
-from fastapi.testclient import TestClient
+import json
+from fastapi import WebSocketDisconnect, WebSocketException
+from langflow.graph.graph.base import Graph
+from langflow.api.v1.chat import chat_manager
+
+# from langflow.chat.manager import ChatManager
+from langflow.utils.logger import logger
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
-def test_websocket_connection(client: TestClient):
-    with client.websocket_connect("api/v1/chat/test_client") as websocket:
-        assert websocket.scope["client"] == ["testclient", 50000]
-        assert websocket.scope["path"] == "/api/v1/chat/test_client"
+def test_init_build(client):
+    response = client.post(
+        "api/v1/build/init", json={"id": "test", "data": {"key": "value"}}
+    )
+    assert response.status_code == 200
+    assert response.json() == {"flowId": "test"}
 
 
-# This does not work anymore because now we require
-# the flow to be built before sending messages
-# def test_chat_history(client: TestClient):
-#     # Mock the process_graph function to return a specific value
-#     with patch("langflow.chat.manager.process_graph") as mock_process_graph:
-#         mock_process_graph.return_value = ("Hello, I'm a mock response!", "")
+def test_stream_build(client):
+    client.post("/build/init", json={"id": "stream_test", "data": {"key": "value"}})
 
-#         with client.websocket_connect("api/v1/chat/test_client") as websocket:
-#             # First message should be the history
-#             history = websocket.receive_json()
-#             assert history == []  # Empty history
-#             # Send a message
-#             payload = {"message": "Hello"}
-#             websocket.send_json(json.dumps(payload))
+    # Test the stream
+    response = client.get("api/v1/build/stream/stream_test")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
 
-#             # Receive the response from the server
-#             response = websocket.receive_json()
-#             assert response == {
-#                 "is_bot": True,
-#                 "message": None,
-#                 "type": "start",
-#                 "intermediate_steps": "",
-#                 "files": [],
-#             }
-#             # Send another message
-#             payload = {"message": "How are you?"}
-#             websocket.send_json(json.dumps(payload))
 
-#             # Receive the response from the server
-#             response = websocket.receive_json()
-#             assert response == {
-#                 "is_bot": True,
-#                 "message": "Hello, I'm a mock response!",
-#                 "type": "end",
-#                 "intermediate_steps": "",
-#                 "files": [],
-#             }
+def test_websocket_endpoint(client):
+    with pytest.raises(WebSocketDisconnect):
+        with client.websocket_connect(
+            "api/v1/chat/non_existing_client_id"
+        ) as websocket:
+            websocket.send_json({"type": "test"})
+            data = websocket.receive_json()
+            assert "Please, build the flow before sending messages" in data["message"]
+
+
+def test_websocket_endpoint_after_build(client, basic_graph_data):
+    # Assuming your websocket_endpoint uses chat_manager which caches data from stream_build
+    client.post("/build/init", json=basic_graph_data)
+    client.get("/build/stream/websocket_test")
+
+    # There should be more to test here, but it depends on the inner workings of your websocket handler
+    # and how your chat_manager and other classes behave. The following is just an example structure.
+    with pytest.raises(WebSocketDisconnect):
+        with client.websocket_connect("api/v1/chat/websocket_test") as websocket:
+            websocket.send_json({"type": "test"})
+            # Perform assertions here, based on what you expect the websocket to return
+            # data = websocket.receive_json()
+            # assert ...
