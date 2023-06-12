@@ -14,6 +14,7 @@ import TabsManagerComponent from "./pages/FlowPage/components/tabsManagerCompone
 import { ErrorBoundary } from "react-error-boundary";
 import CrashErrorComponent from "./components/CrashErrorComponent";
 import { TabsContext } from "./contexts/tabsContext";
+import { getVersion } from "./controllers/API";
 
 export default function App() {
   let { setCurrent, setShowSideBar, setIsStackedOpen } =
@@ -49,11 +50,9 @@ export default function App() {
   // Initialize state variable for the version
   const [version, setVersion] = useState("");
   useEffect(() => {
-    fetch("/version")
-      .then((res) => res.json())
-      .then((data) => {
-        setVersion(data.version);
-      });
+    getVersion().then((response) => {
+      setVersion(response.data.version);
+    });
   }, []);
   // Use effect hook to update alertsList when a new alert is added
   useEffect(() => {
