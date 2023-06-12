@@ -1,7 +1,7 @@
 import "reactflow/dist/style.css";
 import { useState, useEffect, useContext } from "react";
 import "./App.css";
-import { useLocation, useParams } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import _ from "lodash";
 
 import ErrorAlert from "./alerts/error";
@@ -27,7 +27,7 @@ export default function App() {
     setShowSideBar(true);
     setIsStackedOpen(true);
   }, [location.pathname, setCurrent, setIsStackedOpen, setShowSideBar]);
-  const { hardReset, setTabIndex } = useContext(TabsContext);
+  const { hardReset } = useContext(TabsContext);
   const {
     errorData,
     errorOpen,
@@ -46,10 +46,8 @@ export default function App() {
     //create the first flow
     if (flows.length === 0) {
       addFlow();
-      console.log("que");
     }
   }, [addFlow, flows.length]);
-  
 
   // Initialize state variable for the list of alerts
   const [alertsList, setAlertsList] = useState<
@@ -137,7 +135,7 @@ export default function App() {
       >
         {flows.length !== 0 && (
           <>
-            <Header />
+            {/* <Header /> */}
             <Router />
           </>
         )}

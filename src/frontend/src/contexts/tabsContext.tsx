@@ -27,9 +27,8 @@ import {
 } from "../controllers/API";
 
 const TabsContextInitialValue: TabsContextType = {
-  save: () => {},
-  tabIndex: 0,
-  setTabIndex: (index: number) => {},
+  tabId: "",
+  setTabId: (index: string) => {},
   flows: [],
   removeFlow: (id: string) => {},
   addFlow: (flowData?: any) => {},
@@ -56,7 +55,7 @@ export const TabsContext = createContext<TabsContextType>(
 
 export function TabsProvider({ children }: { children: ReactNode }) {
   const { setErrorData, setNoticeData } = useContext(alertContext);
-  const [tabIndex, setTabIndex] = useState(0);
+  const [tabId, setTabId] = useState("");
   const [flows, setFlows] = useState<Array<FlowType>>([]);
   const [id, setId] = useState(uuidv4());
   const { templates, reactFlowInstance } = useContext(typesContext);
@@ -66,32 +65,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   function incrementNodeId() {
     newNodeId.current = uuidv4();
     return newNodeId.current;
-  }
-  function save() {
-    // added clone deep to avoid mutating the original object
-    let Saveflows = _.cloneDeep(flows);
-    if (Saveflows.length !== 0) {
-      Saveflows.forEach((flow) => {
-        if (flow.data && flow.data?.nodes) {
-          flow.data?.nodes.forEach((node) => {
-            console.log(node.data.type);
-            //looking for file fields to prevent saving the content and breaking the flow for exceeding the the data limite for local storage
-            Object.keys(node.data.node.template).forEach((key) => {
-              console.log(node.data.node.template[key].type);
-              if (node.data.node.template[key].type === "file") {
-                console.log(node.data.node.template[key]);
-                node.data.node.template[key].content = null;
-                node.data.node.template[key].value = "";
-              }
-            });
-          });
-        }
-      });
-      window.localStorage.setItem(
-        "tabsData",
-        JSON.stringify({ tabIndex, flows: Saveflows, id })
-      );
-    }
   }
 
   // function loadCookie(cookie: string) {
@@ -245,25 +218,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     );
   }
 
-  function updateStateWithTabsData(tabsData) {
-    setTabIndex(tabsData.tabIndex);
-    setFlows(tabsData.flows);
-    setId(tabsData.id);
-  }
-
   function updateStateWithDbData(tabsData) {
     setFlows(tabsData);
   }
 
-  useEffect(() => {
-    //save tabs locally
-    console.log(id);
-    save();
-  }, [flows, id, tabIndex, newNodeId]);
-
   function hardReset() {
     newNodeId.current = uuidv4();
-    setTabIndex(0);
+    setTabId("");
     setFlows([]);
     setId(uuidv4());
   }
@@ -280,7 +241,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     // create a link element and set its properties
     const link = document.createElement("a");
     link.href = jsonString;
-    link.download = `${flows[tabIndex].name}.json`;
+    link.download = `${flows.find((f) => f.id === tabId).name}.json`;
 
     // simulate a click on the link element to trigger the download
     link.click();
@@ -331,13 +292,14 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       const index = newFlows.findIndex((flow) => flow.id === id);
       if (index >= 0) {
         deleteFlowFromDatabase(id).then(() => {
+          let tabIndex = flows.findIndex((flow) => flow.id === tabId);
           if (index === tabIndex) {
-            setTabIndex(flows.length - 2);
+            setTabId(flows[flows.length - 2].id);
             newFlows.splice(index, 1);
           } else {
             let flowId = flows[tabIndex].id;
             newFlows.splice(index, 1);
-            setTabIndex(newFlows.findIndex((flow) => flow.id === flowId));
+            setTabId(flowId);
           }
         });
       }
@@ -452,9 +414,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       .then(() => {
         // Add the new flow to the list of flows.
         addFlowToLocalState(newFlow);
-
-        // Set the tab index to the new flow.
-        setTabIndexToLocalState();
       });
   };
 
@@ -522,10 +481,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const setTabIndexToLocalState = () => {
-    setTabIndex(flows.length);
-  };
-
   /**
    * Updates an existing flow with new data
    * @param newFlow - The new flow object containing the updated data
@@ -552,10 +507,9 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         setLastCopiedSelection,
         disableCopyPaste,
         setDisableCopyPaste,
-        save,
         hardReset,
-        tabIndex,
-        setTabIndex,
+        tabId,
+        setTabId,
         flows,
         incrementNodeId,
         removeFlow,

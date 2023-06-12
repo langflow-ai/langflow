@@ -1,9 +1,8 @@
 import { FlowType } from "../flow";
 
 export type TabsContextType = {
-  save: () => void;
-  tabIndex: number;
-  setTabIndex: (index: number) => void;
+  tabId: string;
+  setTabId: (index: string) => void;
   flows: Array<FlowType>;
   removeFlow: (id: string) => void;
   addFlow: (flowData?: FlowType, newFlow?: boolean) => void;
