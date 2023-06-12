@@ -3,7 +3,6 @@ from fastapi import (
     APIRouter,
     HTTPException,
     WebSocket,
-    WebSocketDisconnect,
     WebSocketException,
     status,
 )
@@ -30,9 +29,6 @@ async def chat(client_id: str, websocket: WebSocket):
     except WebSocketException as exc:
         logger.error(exc)
         await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=str(exc))
-    except WebSocketDisconnect as exc:
-        logger.error(exc)
-        await websocket.close(code=status.WS_1000_NORMAL_CLOSURE, reason=str(exc))
 
 
 @router.post("/build/init")
@@ -50,7 +46,9 @@ async def init_build(graph_data: dict):
 async def build_status(flow_id: str):
     """Check the flow_id is in the flow_data_store."""
     try:
-        if flow_id in flow_data_store:
+        if flow_id in flow_data_store and not isinstance(
+            flow_data_store[flow_id], dict
+        ):
             return JSONResponse(content={"built": True})
         else:
             return JSONResponse(content={"built": False})
