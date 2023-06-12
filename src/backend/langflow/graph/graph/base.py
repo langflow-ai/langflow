@@ -147,9 +147,7 @@ class Graph:
         """Builds each vertex in the graph and yields it."""
         sorted_vertices = self.topological_sort()
         logger.info("Sorted vertices: %s", sorted_vertices)
-        for node in sorted_vertices:
-            node.build()
-            yield node._built_object_repr(), node.id
+        yield from sorted_vertices
 
     def get_node_neighbors(self, node: Vertex) -> Dict[Vertex, int]:
         """Returns the neighbors of a node."""
