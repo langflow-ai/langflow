@@ -3,7 +3,7 @@ agents:
   - ZeroShotAgent
   - JsonAgent
   - CSVAgent
-  - initialize_agent
+  - AgentInitializer
   - VectorStoreAgent
   - VectorStoreRouterAgent
   - SQLAgent
@@ -16,6 +16,10 @@ chains:
   - MidJourneyPromptChain
   - TimeTravelGuideChain
   - SQLDatabaseChain
+  - RetrievalQA
+  - RetrievalQAWithSourcesChain
+  - ConversationalRetrievalChain
+  - CombineDocsChain
 documentloaders:
   - AirbyteJSONLoader
   - CoNLLULoader
@@ -51,10 +55,13 @@ embeddings:
 llms:
   - OpenAI
   # - AzureOpenAI
+  # - AzureChatOpenAI
   - ChatOpenAI
-  - LlamaCpp
+  - LlamaCpp 
   - CTransformers
   - Cohere
+  - Anthropic
+  - ChatAnthropic
   - HuggingFaceHub
 memories:
   - ConversationBufferMemory
@@ -66,7 +73,7 @@ prompts:
   - ZeroShotPrompt
 textsplitters:
   - CharacterTextSplitter
-  # - RecursiveCharacterTextSplitter
+  - RecursiveCharacterTextSplitter
   # - LatexTextSplitter
   # - PythonCodeTextSplitter
 toolkits:
@@ -74,12 +81,14 @@ toolkits:
   - JsonToolkit
   - VectorStoreInfo
   - VectorStoreRouterToolkit
+  - VectorStoreToolkit
 tools:
   - Search
   - PAL-MATH
   - Calculator
   - Serper Search
   - Tool
+  - PythonFunctionTool
   - PythonFunction
   - JsonSpec
   - News API

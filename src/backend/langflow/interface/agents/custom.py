@@ -1,4 +1,3 @@
-from abc import ABC
 from typing import Any, List, Optional
 
 from langchain import LLMChain
@@ -33,24 +32,7 @@ from langchain.memory.chat_memory import BaseChatMemory
 from langchain.sql_database import SQLDatabase
 from langchain.tools.python.tool import PythonAstREPLTool
 from langchain.tools.sql_database.prompt import QUERY_CHECKER
-
-
-class CustomAgentExecutor(AgentExecutor, ABC):
-    """Custom agent executor"""
-
-    @staticmethod
-    def function_name():
-        return "CustomAgentExecutor"
-
-    @classmethod
-    def initialize(cls, *args, **kwargs):
-        pass
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def run(self, *args, **kwargs):
-        return super().run(*args, **kwargs)
+from langflow.interface.base import CustomAgentExecutor
 
 
 class JsonAgent(CustomAgentExecutor):
@@ -69,7 +51,7 @@ class JsonAgent(CustomAgentExecutor):
 
     @classmethod
     def from_toolkit_and_llm(cls, toolkit: JsonToolkit, llm: BaseLanguageModel):
-        tools = toolkit.get_tools()
+        tools = toolkit if isinstance(toolkit, list) else toolkit.get_tools()
         tool_names = {tool.name for tool in tools}
         prompt = ZeroShotAgent.create_prompt(
             tools,
@@ -82,7 +64,8 @@ class JsonAgent(CustomAgentExecutor):
             llm=llm,
             prompt=prompt,
         )
-        agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names)  # type: ignore
+        agent = ZeroShotAgent(llm_chain=llm_chain,
+                              allowed_tools=tool_names)  # type: ignore
         return cls.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
 
     def run(self, *args, **kwargs):
@@ -129,7 +112,8 @@ class CSVAgent(CustomAgentExecutor):
             prompt=partial_prompt,
         )
         tool_names = {tool.name for tool in tools}
-        agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)  # type: ignore
+        agent = ZeroShotAgent(
+            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)  # type: ignore
 
         return cls.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
 
@@ -166,7 +150,8 @@ class VectorStoreAgent(CustomAgentExecutor):
             prompt=prompt,
         )
         tool_names = {tool.name for tool in tools}
-        agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)  # type: ignore
+        agent = ZeroShotAgent(
+            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)  # type: ignore
         return AgentExecutor.from_agent_and_tools(
             agent=agent, tools=tools, verbose=True
         )
@@ -219,7 +204,8 @@ class SQLAgent(CustomAgentExecutor):
             QuerySQLDataBaseTool(db=db),  # type: ignore
             InfoSQLDatabaseTool(db=db),  # type: ignore
             ListSQLDatabaseTool(db=db),  # type: ignore
-            QueryCheckerTool(db=db, llm_chain=llmchain, llm=llm),  # type: ignore
+            QueryCheckerTool(db=db, llm_chain=llmchain,
+                             llm=llm),  # type: ignore
         ]
 
         prefix = SQL_PREFIX.format(dialect=toolkit.dialect, top_k=10)
@@ -234,7 +220,8 @@ class SQLAgent(CustomAgentExecutor):
             prompt=prompt,
         )
         tool_names = {tool.name for tool in tools}  # type: ignore
-        agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)  # type: ignore
+        agent = ZeroShotAgent(
+            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)  # type: ignore
         return AgentExecutor.from_agent_and_tools(
             agent=agent,
             tools=tools,  # type: ignore
@@ -271,13 +258,15 @@ class VectorStoreRouterAgent(CustomAgentExecutor):
         """Construct a vector store router agent from an LLM and tools."""
 
         tools = vectorstoreroutertoolkit.get_tools()
-        prompt = ZeroShotAgent.create_prompt(tools, prefix=VECTORSTORE_ROUTER_PREFIX)
+        prompt = ZeroShotAgent.create_prompt(
+            tools, prefix=VECTORSTORE_ROUTER_PREFIX)
         llm_chain = LLMChain(
             llm=llm,
             prompt=prompt,
         )
         tool_names = {tool.name for tool in tools}
-        agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)  # type: ignore
+        agent = ZeroShotAgent(
+            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)  # type: ignore
         return AgentExecutor.from_agent_and_tools(
             agent=agent, tools=tools, verbose=True
         )
@@ -287,11 +276,11 @@ class VectorStoreRouterAgent(CustomAgentExecutor):
 
 
 class InitializeAgent(CustomAgentExecutor):
-    """Implementation of initialize_agent function"""
+    """Implementation of AgentInitializer function"""
 
     @staticmethod
     def function_name():
-        return "initialize_agent"
+        return "AgentInitializer"
 
     @classmethod
     def initialize(
@@ -320,7 +309,7 @@ class InitializeAgent(CustomAgentExecutor):
 CUSTOM_AGENTS = {
     "JsonAgent": JsonAgent,
     "CSVAgent": CSVAgent,
-    "initialize_agent": InitializeAgent,
+    "AgentInitializer": InitializeAgent,
     "VectorStoreAgent": VectorStoreAgent,
     "VectorStoreRouterAgent": VectorStoreRouterAgent,
     "SQLAgent": SQLAgent,
