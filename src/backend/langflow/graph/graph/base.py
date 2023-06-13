@@ -26,7 +26,6 @@ class Graph:
         self._build_graph()
 
     @classmethod
-    @classmethod
     def from_payload(cls, payload: Dict) -> "Graph":
         """
         Creates a graph from a payload.
