@@ -29,6 +29,9 @@ export default function HomePage() {
     removeFlow,
     setTabId,
   } = useContext(TabsContext);
+  useEffect(() => {
+    setTabId("");
+  }, [])
   return (
       <div
         className="w-full h-full flex flex-col bg-muted"

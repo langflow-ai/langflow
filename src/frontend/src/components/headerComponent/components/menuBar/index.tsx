@@ -1,18 +1,26 @@
 import React, { useContext } from "react";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { PopUpContext } from "../../../../contexts/popUpContext";
-import { Save, Edit, Upload, Download, Code, Plus } from "lucide-react";
 import {
-  Menubar,
-  MenubarContent,
-  MenubarItem,
-  MenubarMenu,
-  MenubarTrigger,
-  MenubarRadioGroup,
-  MenubarRadioItem,
-  MenubarLabel,
-  MenubarSeparator,
-} from "../../../ui/menubar";
+  Save,
+  Edit,
+  Upload,
+  Download,
+  Code,
+  Plus,
+  ChevronDown,
+  ChevronLeft,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "../../../ui/dropdown-menu";
 
 import RenameLabel from "../../../ui/rename-label";
 import _ from "lodash";
@@ -23,7 +31,7 @@ import { alertContext } from "../../../../contexts/alertContext";
 import { updateFlowInDatabase } from "../../../../controllers/API";
 import { Link } from "react-router-dom";
 
-export const MenuBar = ({ activeTab, setRename, rename, flows, tabId }) => {
+export const MenuBar = ({ setRename, rename, flows, tabId }) => {
   const { updateFlow, setTabId, addFlow } = useContext(TabsContext);
   const { setErrorData } = useContext(alertContext);
   const { openPopUp } = useContext(PopUpContext);
@@ -47,109 +55,102 @@ export const MenuBar = ({ activeTab, setRename, rename, flows, tabId }) => {
   }
   let current_flow = flows.find((flow) => flow.id === tabId);
 
-  // robot emoji
-  let emoji = current_flow.style?.emoji || "🤖";
-  let color = current_flow.style?.color || "bg-blue-200";
-
   return (
-          <Menubar>
-            <MenubarMenu>
-              <MenubarTrigger className="px-1">
-              <RenameLabel
-              value={current_flow.name}
-              setValue={(value) => {
-                if (value !== "") {
-                  let newFlow = _.cloneDeep(current_flow);
-                  newFlow.name = value;
-                  updateFlow(newFlow);
-                }
+    <div className="flex gap-2 items-center">
+      <Link to="/">
+        <ChevronLeft className="w-5" />
+      </Link>
+      <div className="flex items-center font-medium text-sm rounded-md py-1 px-1.5 bg-background gap-0.5">
+        <RenameLabel
+          value={current_flow.name}
+          setValue={(value) => {
+            if (value !== "") {
+              let newFlow = _.cloneDeep(current_flow);
+              newFlow.name = value;
+              updateFlow(newFlow);
+            }
+          }}
+          rename={rename}
+          setRename={setRename}
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger className="px-1">
+            <ChevronDown className="w-4 h-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-44">
+            <DropdownMenuLabel>File</DropdownMenuLabel>
+            <DropdownMenuItem
+              onClick={() => {
+                openPopUp(<ImportModal />);
               }}
-              rename={rename}
-              setRename={setRename}
-            />
-            
-              </MenubarTrigger>
-              <MenubarContent>
-                <MenubarLabel>
-                  File
-                </MenubarLabel>
-                <MenubarItem
-                  onClick={() => {
-                    openPopUp(<ImportModal />);
-                  }}
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Import
-                </MenubarItem>
-                <MenubarItem
-                  onClick={() => {
-                    openPopUp(<ExportModal />);
-                  }}
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Export
-                </MenubarItem>
-                <MenubarItem
-                  onClick={() => {
-                    openPopUp(<ApiModal flow={current_flow} />);
-                  }}
-                >
-                  <Code className="w-4 h-4 mr-2" />
-                  Code
-                </MenubarItem>
-                <MenubarSeparator />
-                <MenubarLabel>
-                  Edit
-                </MenubarLabel>
-                <MenubarItem
-                  onClick={() => {
-                    handleSaveFlow(current_flow);
-                  }}
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  Save
-                </MenubarItem>
-                <MenubarItem
-                  onClick={() => {
-                    setRename(true);
-                  }}
-                >
-                  <Edit className="w-4 h-4 mr-2" />
-                  Rename
-                </MenubarItem>
-                <MenubarSeparator />
-                <MenubarLabel>
-                  Flows
-                </MenubarLabel>
-                <MenubarRadioGroup
-                  value={tabId}
-                  onValueChange={(value) => {
-                    setTabId(value);
-                  }}
-                >
-                  {flows.map((flow, idx) => {
-                    return (
-                      <Link to={"/flow/" + flow.id}>
-                  <MenubarRadioItem value={flow.id}>
-                        {emoji} {flow.name}
-                      </MenubarRadioItem>
-                </Link>
-                      
-                    );
-                  })}
-                </MenubarRadioGroup>
-                <MenubarItem
-                  onClick={() => {
-                    handleAddFlow();
-                  }}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Flow
-                </MenubarItem>
-              </MenubarContent>
-            </MenubarMenu>
-            
-          </Menubar>
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Import
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                openPopUp(<ExportModal />);
+              }}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                openPopUp(<ApiModal flow={current_flow} />);
+              }}
+            >
+              <Code className="w-4 h-4 mr-2" />
+              Code
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Edit</DropdownMenuLabel>
+            <DropdownMenuItem
+              onClick={() => {
+                handleSaveFlow(current_flow);
+              }}
+            >
+              <Save className="w-4 h-4 mr-2" />
+              Save
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                setRename(true);
+              }}
+            >
+              <Edit className="w-4 h-4 mr-2" />
+              Rename
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Flows</DropdownMenuLabel>
+            <DropdownMenuRadioGroup
+              value={tabId}
+              onValueChange={(value) => {
+                setTabId(value);
+              }}
+            >
+              {flows.map((flow, idx) => {
+                return (
+                  <Link to={"/flow/" + flow.id}>
+                    <DropdownMenuRadioItem value={flow.id}>
+                      {flow.name}
+                    </DropdownMenuRadioItem>
+                  </Link>
+                );
+              })}
+            </DropdownMenuRadioGroup>
+            <DropdownMenuItem
+              onClick={() => {
+                handleAddFlow();
+              }}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Flow
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
   );
 };
 

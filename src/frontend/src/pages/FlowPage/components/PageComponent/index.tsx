@@ -311,7 +311,7 @@ export default function Page({ flow }: { flow: FlowType }) {
     <div className="flex grow shrink basis-auto min-h-0 flex-1 overflow-hidden">
       <ExtraSidebar />
       {/* Main area */}
-      <main className="min-w-0 flex-1 border-t border-gray-200 dark:border-gray-700 flex">
+      <main className="flex-1 flex">
         {/* Primary column */}
         <div className="w-full h-full">
           <div className="w-full h-full" ref={reactFlowWrapper}>
