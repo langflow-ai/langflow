@@ -60,6 +60,12 @@ import { WolframIcon } from "./icons/Wolfram";
 import { WordIcon } from "./icons/Word";
 import { SerperIcon } from "./icons/Serper";
 import { v4 as uuidv4 } from "uuid";
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -557,6 +563,13 @@ export function updateTemplate(
     // If the key is not in the object to update, add it
     if (objectToUpdate[key] && objectToUpdate[key].value) {
       clonedObject[key].value = objectToUpdate[key].value;
+    }
+    if (
+      objectToUpdate[key] &&
+      objectToUpdate[key].advanced !== null &&
+      objectToUpdate[key].advanced !== undefined
+    ) {
+      clonedObject[key].advanced = objectToUpdate[key].advanced;
     }
   }
   return clonedObject;
@@ -1163,4 +1176,92 @@ export function updateIds(newFlow, getNodeId) {
       e.target +
       e.targetHandle;
   });
+}
+
+export function groupByFamily(data, baseClasses) {
+  let arrOfParent: string[] = [];
+  let arrOfType: { family: string; type: string }[] = [];
+
+  Object.keys(data).map((d) => {
+    Object.keys(data[d]).map((n) => {
+      if (
+        data[d][n].base_classes.some((r) => baseClasses.split("\n").includes(r))
+      ) {
+        arrOfParent.push(d);
+      }
+    });
+  });
+
+  let uniq = arrOfParent.filter(
+    (item, index) => arrOfParent.indexOf(item) === index
+  );
+
+  Object.keys(data).map((d) => {
+    Object.keys(data[d]).map((n) => {
+      baseClasses.split("\n").forEach((tol) => {
+        data[d][n].base_classes.forEach((data) => {
+          if (tol == data) {
+            arrOfType.push({
+              family: d,
+              type: data,
+            });
+          }
+        });
+      });
+    });
+  });
+
+  let groupedBy = arrOfType.filter((object, index, self) => {
+    const foundIndex = self.findIndex(
+      (o) => o.family === object.family && o.type === object.type
+    );
+    return foundIndex === index;
+  });
+
+  let groupedObj = groupedBy.reduce((result, item) => {
+    const existingGroup = result.find((group) => group.family === item.family);
+
+    if (existingGroup) {
+      existingGroup.type += `, ${item.type}`;
+    } else {
+      result.push({ family: item.family, type: item.type });
+    }
+
+    return result;
+  }, []);
+
+  return groupedObj;
+}
+
+export function connectedInputNodesOnHandle(nodeId:string,handleId:string,{nodes,edges}:{nodes:NodeType[],edges:Edge[]}){
+  const connectedNodes:Array<{name:string,id:string,isGroup:boolean}>=[]
+  // return the nodes connected to the input handle of the node
+  const TargetEdges = edges.filter((e) => e.target === nodeId);
+  TargetEdges.forEach((edge) => {
+    if(edge.targetHandle===handleId){
+      const sourceNode = nodes.find((n) => n.id === edge.source);
+      if(sourceNode){
+        if(sourceNode.type==="groupNode"){
+          let lastNode = findLastNode(sourceNode.data.node.flow.data)
+            while(lastNode && lastNode.type==="groupNode")
+            {
+              lastNode = findLastNode(lastNode.data.node.flow.data)
+            }
+            if(lastNode){
+              connectedNodes.push({name:sourceNode.data.node.flow.name,id:lastNode.id,isGroup:true})
+            }
+        }
+        else{
+          connectedNodes.push({name:sourceNode.data.type,id:sourceNode.id,isGroup:false})
+        }
+      }
+    }
+  })
+  return connectedNodes
+}
+
+function checkDuplicatedNames(connectedNodes:Array<{name:string,id:string,isGroup:boolean}>){
+  const names = connectedNodes.map((n)=>n.name)
+  const duplicatedNames = names.filter((n,i)=>names.indexOf(n)!==i)
+  return duplicatedNames
 }

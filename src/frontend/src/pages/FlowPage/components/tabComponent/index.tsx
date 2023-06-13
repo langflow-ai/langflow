@@ -1,9 +1,9 @@
 import { PlusIcon, XMarkIcon } from "@heroicons/react/24/solid";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { FlowType } from "../../../../types/flow";
 
-import _ from "lodash";
+import _, { functionsIn } from "lodash";
 
 export default function TabComponent({
   selected,
@@ -17,6 +17,14 @@ export default function TabComponent({
   const { removeFlow, updateFlow, flows } = useContext(TabsContext);
   const [isRename, setIsRename] = useState(false);
   const [value, setValue] = useState("");
+  function saveName() {
+    setIsRename(false);
+    if (value !== "") {
+      let newFlow = _.cloneDeep(flow);
+      newFlow.name = value;
+      updateFlow(newFlow);
+    }
+  }
   return (
     <>
       {flow ? (
@@ -42,13 +50,13 @@ export default function TabComponent({
               <input
                 autoFocus
                 className="bg-transparent focus:border-none active:outline hover:outline focus:outline outline-gray-300 rounded-md  w-28"
-                onBlur={() => {
-                  setIsRename(false);
-                  if (value !== "") {
-                    let newFlow = _.cloneDeep(flow);
-                    newFlow.name = value;
-                    updateFlow(newFlow);
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    saveName();
                   }
+                }}
+                onBlur={() => {
+                  saveName();
                 }}
                 value={value}
                 onChange={(e) => {

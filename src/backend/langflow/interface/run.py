@@ -1,6 +1,6 @@
 import contextlib
 import io
-from typing import Any, Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 from langchain.schema import AgentAction
 
@@ -23,15 +23,6 @@ def load_langchain_object(data_graph, is_first_message=False):
     return computed_hash, langchain_object
 
 
-def load_or_build_langchain_object(data_graph, is_first_message=False):
-    """
-    Load langchain object from cache if it exists, otherwise build it.
-    """
-    if is_first_message:
-        build_langchain_object_with_caching.clear_cache()
-    return build_langchain_object_with_caching(data_graph)
-
-
 @memoize_dict(maxsize=10)
 def build_langchain_object_with_caching(data_graph):
     """
@@ -39,7 +30,7 @@ def build_langchain_object_with_caching(data_graph):
     """
 
     logger.debug("Building langchain object")
-    graph = build_graph(data_graph)
+    graph = Graph.from_payload(data_graph)
     return graph.build()
 
 
@@ -61,29 +52,6 @@ def build_langchain_object(data_graph):
     graph = Graph(nodes, edges)
 
     return graph.build()
-
-
-def process_graph_cached(data_graph: Dict[str, Any], message: str):
-    """
-    Process graph by extracting input variables and replacing ZeroShotPrompt
-    with PromptTemplate,then run the graph and return the result and thought.
-    """
-    # Load langchain object
-    is_first_message = len(data_graph.get("chatHistory", [])) == 0
-    langchain_object = load_or_build_langchain_object(data_graph, is_first_message)
-    logger.debug("Loaded langchain object")
-
-    if langchain_object is None:
-        # Raise user facing error
-        raise ValueError(
-            "There was an error loading the langchain_object. Please, check all the nodes and try again."
-        )
-
-    # Generate result and thought
-    logger.debug("Generating result and thought")
-    result, thought = get_result_and_thought(langchain_object, message)
-    logger.debug("Generated result and thought")
-    return {"result": str(result), "thought": thought.strip()}
 
 
 def get_memory_key(langchain_object):

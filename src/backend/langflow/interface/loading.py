@@ -12,7 +12,6 @@ from langchain.agents.load_tools import (
     _LLM_TOOLS,
 )
 from langchain.agents.loading import load_agent_from_config
-from langflow.graph import Graph
 from langchain.agents.tools import Tool
 from langchain.base_language import BaseLanguageModel
 from langchain.callbacks.base import BaseCallbackManager
@@ -20,23 +19,24 @@ from langchain.chains.loading import load_chain_from_config
 from langchain.llms.loading import load_llm_from_config
 from pydantic import ValidationError
 
-from langflow.interface.agents.custom import CUSTOM_AGENTS
+from langflow.interface.custom_lists import CUSTOM_NODES
 from langflow.interface.importing.utils import get_function, import_by_type
-from langflow.interface.run import fix_memory_inputs
 from langflow.interface.toolkits.base import toolkits_creator
+from langflow.interface.chains.base import chain_creator
 from langflow.interface.types import get_type_list
 from langflow.interface.utils import load_file_into_dict
-from langflow.utils import util
+from langflow.utils import util, validate
 
 
 def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
     """Instantiate class from module type and key, and params"""
     params = convert_params_to_sets(params)
     params = convert_kwargs(params)
-    if node_type in CUSTOM_AGENTS:
-        custom_agent = CUSTOM_AGENTS.get(node_type)
-        if custom_agent:
-            return custom_agent.initialize(**params)
+    if node_type in CUSTOM_NODES:
+        if custom_node := CUSTOM_NODES.get(node_type):
+            if hasattr(custom_node, "initialize"):
+                return custom_node.initialize(**params)
+            return custom_node(**params)
 
     class_object = import_by_type(_type=base_type, name=node_type)
     return instantiate_based_on_type(class_object, base_type, node_type, params)
@@ -83,8 +83,22 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
         return instantiate_textsplitter(class_object, params)
     elif base_type == "utilities":
         return instantiate_utility(node_type, class_object, params)
+    elif base_type == "chains":
+        return instantiate_chains(node_type, class_object, params)
     else:
         return class_object(**params)
+
+
+def instantiate_chains(node_type, class_object, params):
+    if "retriever" in params and hasattr(params["retriever"], "as_retriever"):
+        params["retriever"] = params["retriever"].as_retriever()
+    if node_type in chain_creator.from_method_nodes:
+        method = chain_creator.from_method_nodes[node_type]
+        if class_method := getattr(class_object, method, None):
+            return class_method(**params)
+        raise ValueError(f"Method {method} not found in {class_object}")
+
+    return class_object(**params)
 
 
 def instantiate_agent(class_object, params):
@@ -106,6 +120,12 @@ def instantiate_tool(node_type, class_object, params):
     elif node_type == "PythonFunctionTool":
         params["func"] = get_function(params.get("code"))
         return class_object(**params)
+    # For backward compatibility
+    elif node_type == "PythonFunction":
+        function_string = params["code"]
+        if isinstance(function_string, str):
+            return validate.eval_function(function_string)
+        raise ValueError("Function should be a string")
     elif node_type.lower() == "tool":
         return class_object(**params)
     return class_object(**params)
@@ -113,8 +133,11 @@ def instantiate_tool(node_type, class_object, params):
 
 def instantiate_toolkit(node_type, class_object, params):
     loaded_toolkit = class_object(**params)
-    if toolkits_creator.has_create_function(node_type):
-        return load_toolkits_executor(node_type, loaded_toolkit, params)
+    # Commenting this out for now to use toolkits as normal tools
+    # if toolkits_creator.has_create_function(node_type):
+    #     return load_toolkits_executor(node_type, loaded_toolkit, params)
+    if isinstance(loaded_toolkit, BaseToolkit):
+        return loaded_toolkit.get_tools()
     return loaded_toolkit
 
 
@@ -138,6 +161,14 @@ def instantiate_vectorstore(class_object, params):
             "The source you provided did not load correctly or was empty."
             "This may cause an error in the vectorstore."
         )
+    # Chroma requires all metadata values to not be None
+    if class_object.__name__ == "Chroma":
+        for doc in params["documents"]:
+            if doc.metadata is None:
+                doc.metadata = {}
+            for key, value in doc.metadata.items():
+                if value is None:
+                    doc.metadata[key] = ""
     return class_object.from_documents(**params)
 
 

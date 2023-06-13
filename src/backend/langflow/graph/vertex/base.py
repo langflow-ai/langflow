@@ -54,8 +54,11 @@ class Vertex:
 
         template_dict = self.data["node"]["template"]
         self.vertex_type = (
-            self.data["type"] if "Tool" not in self.output else template_dict["_type"]
+            self.data["type"]
+            if "Tool" not in self.output or template_dict["_type"].islower()
+            else template_dict["_type"]
         )
+
         if self.base_type is None:
             for base_type, value in ALL_TYPES_DICT.items():
                 if self.vertex_type in value:
@@ -156,6 +159,12 @@ class Vertex:
                         # turn result which is a function into a coroutine
                         # so that it can be awaited
                         self.params["coroutine"] = sync_to_async(result)
+                if isinstance(result, list):
+                    # If the result is a list, then we need to extend the list
+                    # with the result but first check if the key exists
+                    # if it doesn't, then we need to create a new list
+                    if isinstance(self.params[key], list):
+                        self.params[key].extend(result)
 
                 self.params[key] = result
             elif isinstance(value, list) and all(

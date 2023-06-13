@@ -37,13 +37,15 @@ const TooltipReact: FC<TooltipProps> = ({
         id={selector}
         content={content}
         className={classNames(
-          "!bg-white !text-xs !font-normal !text-gray-700 !shadow-md !opacity-100 z-20",
+          "!bg-white !text-xs !font-normal !text-gray-700 !shadow-md !opacity-100 z-[9999]",
           className
         )}
         place={position}
         clickable={clickable}
         isOpen={disabled ? false : undefined}
         delayShow={delayShow}
+        positionStrategy="absolute"
+        float={true}
       >
         {htmlContent && htmlContent}
       </ReactTooltip>

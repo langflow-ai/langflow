@@ -16,6 +16,10 @@ chains:
   - MidJourneyPromptChain
   - TimeTravelGuideChain
   - SQLDatabaseChain
+  - RetrievalQA
+  - RetrievalQAWithSourcesChain
+  - ConversationalRetrievalChain
+  - CombineDocsChain
 documentloaders:
   - AirbyteJSONLoader
   - CoNLLULoader
@@ -51,12 +55,14 @@ embeddings:
 llms:
   - OpenAI
   # - AzureOpenAI
+  # - AzureChatOpenAI
   - ChatOpenAI
-  - LlamaCpp
+  - LlamaCpp 
   - CTransformers
   - Cohere
   - Anthropic
   - ChatAnthropic
+  - HuggingFaceHub
 memories:
   - ConversationBufferMemory
   - ConversationSummaryMemory
@@ -67,7 +73,7 @@ prompts:
   - ZeroShotPrompt
 textsplitters:
   - CharacterTextSplitter
-  # - RecursiveCharacterTextSplitter
+  - RecursiveCharacterTextSplitter
   # - LatexTextSplitter
   # - PythonCodeTextSplitter
 toolkits:
@@ -75,6 +81,7 @@ toolkits:
   - JsonToolkit
   - VectorStoreInfo
   - VectorStoreRouterToolkit
+  - VectorStoreToolkit
 tools:
   - Search
   - PAL-MATH
@@ -82,6 +89,7 @@ tools:
   - Serper Search
   - Tool
   - PythonFunctionTool
+  - PythonFunction
   - JsonSpec
   - News API
   - TMDB API

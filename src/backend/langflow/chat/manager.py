@@ -4,13 +4,15 @@ from collections import defaultdict
 from typing import Dict, List
 
 from fastapi import WebSocket, status
-from langflow.api.callback import AsyncStreamingLLMCallbackHandler
 
-from langflow.api.schemas import ChatMessage, ChatResponse, FileResponse
+from langflow.api.v1.schemas import ChatMessage, ChatResponse, FileResponse
 from langflow.cache import cache_manager
 from langflow.cache.manager import Subject
-from langflow.graph.graph_map import GraphMap
-from langflow.interface.utils import pil_to_base64
+from langflow.processing.process import (
+    load_or_build_langchain_object,
+)
+from langflow.interface.run import get_result_and_steps
+from langflow.interface.utils import pil_to_base64, try_setting_streaming_options
 from langflow.utils.logger import logger
 
 
@@ -171,6 +173,7 @@ class ChatManager:
 
                 with self.cache_manager.set_client_id(client_id):
                     await self.process_message(client_id, payload)
+
         except Exception as e:
             # Handle any exceptions that might occur
             logger.exception(e)
@@ -196,21 +199,22 @@ async def process_graph(
     chat_message: ChatMessage,
     websocket: WebSocket,
 ):
-    try:
-        gmap = GraphMap(graph_data=graph_data, is_first_message=is_first_message)
-        logger.debug("Generating result and thought")
-        if not chat_message.message:
-            raise
+    langchain_object = load_or_build_langchain_object(graph_data, is_first_message)
+    langchain_object = try_setting_streaming_options(langchain_object, websocket)
+    logger.debug("Loaded langchain object")
 
-        callbacks = [AsyncStreamingLLMCallbackHandler(websocket=websocket)]
-        result, intermediate_steps = await gmap.process(
-            chat_message.message, callbacks=callbacks
+    if langchain_object is None:
+        # Raise user facing error
+        raise ValueError(
+            "There was an error loading the langchain_object. Please, check all the nodes and try again."
         )
-        # result, intermediate_steps = await get_result_and_steps(
-        #     langchain_object,
-        #     chat_message.message or "",
-        #     callbacks_kwargs=dict(websocket=websocket),
-        # )
+
+    # Generate result and thought
+    try:
+        logger.debug("Generating result and thought")
+        result, intermediate_steps = await get_result_and_steps(
+            langchain_object, chat_message.message or "", websocket=websocket
+        )
         logger.debug("Generated result and intermediate_steps")
         return result, intermediate_steps
     except Exception as e:
