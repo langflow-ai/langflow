@@ -43,6 +43,28 @@ class Graph:
         vertices, edges = cls.traverse_graph(root_vertex)
         return cls(vertices=vertices, edges=edges)
 
+    @classmethod
+    def from_payload(cls, payload: Dict) -> "Graph":
+        """
+        Creates a graph from a payload.
+
+        Args:
+            payload (Dict): The payload to create the graph from.
+
+        Returns:
+            Graph: The created graph.
+        """
+        if "data" in payload:
+            payload = payload["data"]
+        try:
+            nodes = payload["nodes"]
+            edges = payload["edges"]
+            return cls(nodes, edges)
+        except KeyError as exc:
+            raise ValueError(
+                f"Invalid payload. Expected keys 'nodes' and 'edges'. Found {list(payload.keys())}"
+            ) from exc
+
     @staticmethod
     def traverse_graph(root_vertex: Vertex) -> Tuple[List[Vertex], List[Edge]]:
         """
