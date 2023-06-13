@@ -1227,7 +1227,7 @@ export function groupByFamily(data, baseClasses) {
 }
 
 export function connectedInputNodesOnHandle(nodeId:string,handleId:string,{nodes,edges}:{nodes:NodeType[],edges:Edge[]}){
-  const connectedNodes ={}
+  const connectedNodes:Array<{name:string,id:string,isGroup:boolean}>=[]
   // return the nodes connected to the input handle of the node
   const TargetEdges = edges.filter((e) => e.target === nodeId);
   TargetEdges.forEach((edge) => {
@@ -1241,11 +1241,11 @@ export function connectedInputNodesOnHandle(nodeId:string,handleId:string,{nodes
               lastNode = findLastNode(lastNode.data.node.flow.data)
             }
             if(lastNode){
-              connectedNodes[lastNode.data.type]=lastNode.id
+              connectedNodes.push({name:sourceNode.data.node.flow.name,id:lastNode.id,isGroup:true})
             }
         }
         else{
-          connectedNodes[sourceNode.data.type]=sourceNode.id
+          connectedNodes.push({name:sourceNode.data.type,id:sourceNode.id,isGroup:false})
         }
       }
     }
