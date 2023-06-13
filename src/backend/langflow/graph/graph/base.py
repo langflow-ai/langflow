@@ -11,6 +11,7 @@ from langflow.graph.vertex.types import (
 from langflow.graph.vertex.types import ConnectorVertex
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
+from langflow.utils.logger import logger
 
 
 class Graph:
@@ -54,36 +55,16 @@ class Graph:
         Returns:
             tuple: A tuple containing a set of all vertices and all edges visited in the graph.
         """
-        # Initialize empty sets for visited vertices and edges.
-        visited_vertices = set()
-        visited_edges = set()
-
-        # Initialize a stack with the root vertex.
-        stack = [root_vertex]
-
-        # Continue while there are vertices to be visited in the stack.
-        while stack:
-            # Pop a vertex from the stack.
-            vertex = stack.pop()
-
-            # If this vertex has not been visited, add it to visited_vertices.
-            if vertex not in visited_vertices:
-                visited_vertices.add(vertex)
-
-                # Iterate over the edges of the current vertex.
-                for edge in vertex.edges:
-                    # If this edge has not been visited, add it to visited_edges.
-                    if edge not in visited_edges:
-                        visited_edges.add(edge)
-
-                        # Add the adjacent vertex (the one that's not the current vertex)
-                        #  to the stack for future exploration.
-                        stack.append(
-                            edge.source if edge.source != vertex else edge.target
-                        )
-
-        # Return the sets of visited vertices and edges.
-        return list(visited_vertices), list(visited_edges)
+        if "data" in payload:
+            payload = payload["data"]
+        try:
+            nodes = payload["nodes"]
+            edges = payload["edges"]
+            return cls(nodes, edges)
+        except KeyError as exc:
+            raise ValueError(
+                f"Invalid payload. Expected keys 'nodes' and 'edges'. Found {list(payload.keys())}"
+            ) from exc
 
     def _build_vertices_and_edges(self) -> None:
         self.vertices += self._build_vertices()

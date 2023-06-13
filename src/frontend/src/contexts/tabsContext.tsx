@@ -36,10 +36,13 @@ const TabsContextInitialValue: TabsContextType = {
   hardReset: () => {},
   disableCopyPaste: false,
   setDisableCopyPaste: (state: boolean) => {},
+  lastCopiedSelection: null,
+  setLastCopiedSelection: (selection: any) => {},
+
   getNodeId: () => "",
   paste: (
     selection: { nodes: any; edges: any },
-    position: { x: number; y: number }
+    position: { x: number; y: number; paneX?: number; paneY?: number }
   ) => {},
 };
 
@@ -53,6 +56,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   const [flows, setFlows] = useState<Array<FlowType>>([]);
   const [id, setId] = useState(uuidv4());
   const { templates, reactFlowInstance } = useContext(typesContext);
+  const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
 
   const newNodeId = useRef(uuidv4());
   function incrementNodeId() {
@@ -66,12 +70,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       Saveflows.forEach((flow) => {
         if (flow.data && flow.data?.nodes)
           flow.data?.nodes.forEach((node) => {
-            console.log(node.data.type);
+            // console.log(node.data.type);
             //looking for file fields to prevent saving the content and breaking the flow for exceeding the the data limite for local storage
             Object.keys(node.data.node.template).forEach((key) => {
-              console.log(node.data.node.template[key].type);
+              // console.log(node.data.node.template[key].type);
               if (node.data.node.template[key].type === "file") {
-                console.log(node.data.node.template[key]);
+                // console.log(node.data.node.template[key]);
                 node.data.node.template[key].content = null;
                 node.data.node.template[key].value = "";
               }
@@ -142,7 +146,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     //save tabs locally
-    console.log(id);
+    // console.log(id);
     save();
   }, [flows, id, tabIndex, newNodeId]);
 
@@ -170,7 +174,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     // simulate a click on the link element to trigger the download
     link.click();
     setNoticeData({
-      title: "Warning: Critical data,JSON file may including API keys.",
+      title: "Warning: Critical data, JSON file may include API keys.",
     });
   }
 
@@ -232,7 +236,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
    * @param flow Optional flow to add.
    */
 
-  function paste(selectionInstance, position) {
+  function paste(
+    selectionInstance,
+    position: { x: number; y: number; paneX?: number; paneY?: number }
+  ) {
     let minimumX = Infinity;
     let minimumY = Infinity;
     let idsMap = {};
@@ -247,7 +254,9 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    const insidePosition = reactFlowInstance.project(position);
+    const insidePosition = position.paneX
+      ? { x: position.paneX + position.x, y: position.paneY + position.y }
+      : reactFlowInstance.project({ x: position.x, y: position.y });
 
     selectionInstance.nodes.forEach((n) => {
       // Generate a unique node ID
@@ -404,6 +413,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   return (
     <TabsContext.Provider
       value={{
+        lastCopiedSelection,
+        setLastCopiedSelection,
         disableCopyPaste,
         setDisableCopyPaste,
         save,

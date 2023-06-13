@@ -159,10 +159,10 @@ class CSVAgentNode(AgentFrontendNode):
         return super().to_dict()
 
 
-class InitializeAgentNode(AgentFrontendNode):
-    name: str = "initialize_agent"
+class InitializeAgentNode(FrontendNode):
+    name: str = "AgentInitializer"
     template: Template = Template(
-        type_name="initailize_agent",
+        type_name="initialize_agent",
         fields=[
             TemplateField(
                 field_type="str",

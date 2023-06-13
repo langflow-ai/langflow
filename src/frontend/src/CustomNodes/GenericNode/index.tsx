@@ -32,7 +32,11 @@ import { debounce } from "../../utils";
 import Tooltip from "../../components/TooltipComponent";
 import { useUpdateNodeInternals } from "reactflow";
 import HandleComponent from "./components/parameterComponent/components/handleComponent";
+import { NodeToolbar } from "reactflow";
+import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
+
 import ShadTooltip from "../../components/ShadTooltipComponent";
+import { postValidateNode } from "../../controllers/API";
 export default function GenericNode({
   data,
   selected,
@@ -63,17 +67,13 @@ export default function GenericNode({
   const validateNode = useCallback(
     debounce(async () => {
       try {
-        const response = await fetch(`/validate/node/${data.id}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(reactFlowInstance.toObject()),
-        });
+        const response = await postValidateNode(
+          data.id,
+          reactFlowInstance.toObject()
+        );
 
         if (response.status === 200) {
-          let jsonResponse = await response.json();
-          let jsonResponseParsed = await JSON.parse(jsonResponse);
+          let jsonResponseParsed = await JSON.parse(response.data);
           setValidationStatus(jsonResponseParsed);
         }
       } catch (error) {
@@ -101,117 +101,99 @@ export default function GenericNode({
     deleteNode(data.id);
     return;
   }
-  // console.log(data);
+
   return (
-    <div
-      className={classNames(
-        selected ? "border border-blue-500" : "border dark:border-gray-700",
-        "prompt-node relative flex w-96 flex-col justify-center rounded-lg bg-white dark:bg-gray-900"
-      )}
-    >
-      <div className="flex w-full items-center justify-between gap-8 rounded-t-lg border-b bg-gray-50 p-4 dark:border-b-gray-700 dark:bg-gray-800 dark:text-white ">
-        <div className="flex w-full items-center gap-2 truncate text-lg">
-        <ShadTooltip  content={data.type}>
-          <Icon
-            className="h-10 w-10 rounded p-1"
-            style={{
-              color: nodeColors[types[data.type]] ?? nodeColors.unknown,
-            }}
-          />
-          </ShadTooltip>
-          <div className="ml-2 truncate">
-            <ShadTooltip delayDuration={1500} content={data.type}>
-              <div className="ml-2 truncate">{data.type}</div>
+    <>
+      <NodeToolbar>
+        <NodeToolbarComponent
+          data={data}
+          openPopUp={openPopUp}
+          deleteNode={deleteNode}
+        ></NodeToolbarComponent>
+      </NodeToolbar>
+
+      <div
+        className={classNames(
+          selected ? "border border-blue-500" : "border dark:border-gray-700",
+          "prompt-node relative flex w-96 flex-col justify-center rounded-lg bg-white dark:bg-gray-900"
+        )}
+      >
+        <div className="flex w-full items-center justify-between gap-8 rounded-t-lg border-b bg-gray-50 p-4 dark:border-b-gray-700 dark:bg-gray-800 dark:text-white ">
+          <div className="flex w-full items-center gap-2 truncate text-lg">
+          <ShadTooltip  content={data.type}>
+            <Icon
+              className="h-10 w-10 rounded p-1"
+              style={{
+                color: nodeColors[types[data.type]] ?? nodeColors.unknown,
+              }}
+            />
             </ShadTooltip>
-          </div>
-        </div>
-        <div className="flex gap-3">
-          <button
-            className="relative"
-            onClick={(event) => {
-              event.preventDefault();
-              openPopUp(<NodeModal data={data} />);
-            }}
-          >
-            <div className=" absolute -right-1 -top-2 text-red-600">
-              {Object.keys(data.node.template).some(
-                (t) =>
-                  data.node.template[t].advanced &&
-                  data.node.template[t].required
-              )
-                ? " *"
-                : ""}
+            <div className="ml-2 truncate">
+              <ShadTooltip delayDuration={1500} content={data.type}>
+                <div className="ml-2 truncate">{data.type}</div>
+              </ShadTooltip>
             </div>
-            <Cog6ToothIcon
-              className={classNames(
-                Object.keys(data.node.template).some(
-                  (t) =>
-                    data.node.template[t].advanced && data.node.template[t].show
-                )
-                  ? ""
-                  : "hidden",
-                "w-5 h-5  dark:text-gray-300"
-              )}
-            ></Cog6ToothIcon>
-          </button>
-
-          <button
-            onClick={() => {
-              deleteNode(data.id);
-            }}
-          >
-            <TrashIcon className="w-5 h-5 dark:text-gray-300"></TrashIcon>
-          </button>
-
-          <div>
-            <Tooltip
-              title={
-                !validationStatus ? (
-                  "Validating..."
-                ) : (
-                  <div className="max-h-96 overflow-auto">
-                    {validationStatus.params.split("\n").map((line, index) => (
-                      <div key={index}>{line}</div>
-                    ))}
-                  </div>
-                )
-              }
-            >
-              <div className="w-5 h-5 relative top-[3px]">
-                <div
-                  className={classNames(
-                    validationStatus && validationStatus.valid
-                      ? "w-4 h-4 rounded-full bg-green-500 opacity-100"
-                      : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
-                    "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
-                  )}
-                ></div>
-                <div
-                  className={classNames(
-                    validationStatus && !validationStatus.valid
-                      ? "w-4 h-4 rounded-full  bg-red-500 opacity-100"
-                      : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
-                    "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
-                  )}
-                ></div>
-                <div
-                  className={classNames(
-                    !validationStatus
-                      ? "w-4 h-4 rounded-full  bg-yellow-500 opacity-100"
-                      : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
-                    "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
-                  )}
-                ></div>
-              </div>
-            </Tooltip>
+          </div>
+          <div className="flex gap-3">
+            <button
+              className="relative"
+              onClick={(event) => {
+                event.preventDefault();
+                openPopUp(<NodeModal data={data} />);
+              }}
+            ></button>
+          </div>
+          <div className="flex gap-3">
+            <div>
+              <Tooltip
+                title={
+                  !validationStatus ? (
+                    "Validating..."
+                  ) : (
+                    <div className="max-h-96 overflow-auto">
+                      {validationStatus.params ||
+                        ""
+                          .split("\n")
+                          .map((line, index) => <div key={index}>{line}</div>)}
+                    </div>
+                  )
+                }
+              >
+                <div className="w-5 h-5 relative top-[3px]">
+                  <div
+                    className={classNames(
+                      validationStatus && validationStatus.valid
+                        ? "w-4 h-4 rounded-full bg-green-500 opacity-100"
+                        : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
+                      "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
+                    )}
+                  ></div>
+                  <div
+                    className={classNames(
+                      validationStatus && !validationStatus.valid
+                        ? "w-4 h-4 rounded-full  bg-red-500 opacity-100"
+                        : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
+                      "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
+                    )}
+                  ></div>
+                  <div
+                    className={classNames(
+                      !validationStatus
+                        ? "w-4 h-4 rounded-full  bg-yellow-500 opacity-100"
+                        : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
+                      "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
+                    )}
+                  ></div>
+                </div>
+              </Tooltip>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="h-full w-full py-5">
-        <div className="w-full px-5 pb-3 text-sm text-gray-500 dark:text-gray-300">
-          {data.node.description}
-        </div>
+        <div className="h-full w-full py-5">
+          <div className="w-full px-5 pb-3 text-sm text-gray-500 dark:text-gray-300">
+            {data.node.description}
+          </div>
 
         <>
           {Object.keys(data.node.template)
@@ -313,5 +295,6 @@ export default function GenericNode({
         </>
       </div>
     </div>
+    </>
   );
 }
