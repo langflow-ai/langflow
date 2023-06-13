@@ -1,6 +1,6 @@
-import { Trash2, ExternalLink } from "lucide-react";
+import { Trash2, ExternalLink, GitFork } from "lucide-react";
 import { useContext } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { FlowType } from "../../../../types/flow";
 import { gradients } from "../../../../utils";
@@ -8,7 +8,8 @@ import { CardTitle, CardDescription, CardFooter, Card, CardHeader } from "../../
 import { Button } from "../../../../components/ui/button";
 
 export const CardComponent = ({ flow, id }: { flow: FlowType; id: string }) => {
-  const { removeFlow } = useContext(TabsContext);
+  const { addFlow } = useContext(TabsContext);
+  const navigate = useNavigate();
 
   return (
     <Card className="group">
@@ -26,13 +27,7 @@ export const CardComponent = ({ flow, id }: { flow: FlowType; id: string }) => {
               {flow.name}
             </span>
           </div>
-          <button
-            onClick={() => {
-              removeFlow(flow.id);
-            }}
-          >
-            <Trash2 className="w-5 text-primary opacity-0 group-hover:opacity-100 transition-all" />
-          </button>
+          
         </CardTitle>
         <CardDescription className="pt-2 pb-2">
           <div className="truncate-doubleline">
@@ -53,17 +48,19 @@ export const CardComponent = ({ flow, id }: { flow: FlowType; id: string }) => {
               <span className="text-base">&nbsp;</span>OpenAI+
             </Badge> */}
           </div>
-          <Link to={"/flow/" + id}>
             <Button
               variant="outline"
               size="sm"
               className="whitespace-nowrap "
-              
+              onClick={() => {
+                addFlow(flow).then((id) => {
+                  navigate("/flow/"+id);
+                });
+              }}
             >
-              <ExternalLink className="w-4 mr-2" />
-              Edit Flow
+              <GitFork className="w-4 mr-2" />
+              Fork Example
             </Button>
-          </Link>
         </div>
       </CardFooter>
     </Card>

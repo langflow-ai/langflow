@@ -1,4 +1,4 @@
-import { SunIcon, MoonIcon, BellIcon } from "lucide-react";
+import { SunIcon, MoonIcon, BellIcon, Home, Users2 } from "lucide-react";
 import { useContext, useState, useEffect } from "react";
 import { FaGithub } from "react-icons/fa";
 import { Button } from "../ui/button";
@@ -9,7 +9,7 @@ import { darkContext } from "../../contexts/darkContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { typesContext } from "../../contexts/typesContext";
 import MenuBar from "./components/menuBar";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 
 export default function Header() {
   const { flows, addFlow, tabId } = useContext(TabsContext);
@@ -21,6 +21,7 @@ export default function Header() {
   const [rename, setRename] = useState(false);
   const { notificationCenter, setNotificationCenter, setErrorData } =
     useContext(alertContext);
+  const location = useLocation();
   return (
     <div className="w-full h-12 flex justify-between items-center border-b bg-muted">
       <div className="flex gap-2 justify-start items-center w-96">
@@ -35,6 +36,20 @@ export default function Header() {
             tabId={tabId}
           />
         )}
+      </div>
+      <div className="flex gap-2 items-center">
+        <Link to="/">
+        <Button variant={location.pathname === "/" ? "primary" : "secondary"} size="sm">
+          <Home className="w-4 mr-2" />
+          My Projects
+        </Button>
+        </Link>
+        <Link to="/community">
+        <Button variant={location.pathname === "/community" ? "primary" : "secondary"} size="sm">
+          <Users2 className="w-4 mr-2" />
+          Community Examples
+        </Button>
+        </Link>
       </div>
       <div className="flex justify-end px-2 w-96">
         <div className="ml-auto mr-2 flex gap-5">

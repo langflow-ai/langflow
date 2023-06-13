@@ -82,41 +82,7 @@ export const MenuBar = ({ setRename, rename, flows, tabId }) => {
             <ChevronDown className="w-4 h-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-44">
-            <DropdownMenuLabel>File</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => {
-                openPopUp(<ImportModal />);
-              }}
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              Import
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                openPopUp(<ExportModal />);
-              }}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                openPopUp(<ApiModal flow={current_flow} />);
-              }}
-            >
-              <Code className="w-4 h-4 mr-2" />
-              Code
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
             <DropdownMenuLabel>Edit</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => {
-                handleSaveFlow(current_flow);
-              }}
-            >
-              <Save className="w-4 h-4 mr-2" />
-              Save
-            </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
                 setRename(true);

@@ -17,6 +17,7 @@ import ImportModal from "../../../../modals/importModal";
 import ExportModal from "../../../../modals/exportModal";
 import ApiModal from "../../../../modals/ApiModal";
 import { TabsContext } from "../../../../contexts/tabsContext";
+import { Separator } from "../../../../components/ui/separator";
 
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);
@@ -62,7 +63,7 @@ export default function ExtraSidebar() {
 
   return (
     <div className="flex flex-col overflow-auto scrollbar-hide h-full border-r">
-      <div className="mt-2 w-full flex gap-2 justify-between px-2 items-center">
+      <div className="mt-2 mb-2 w-full flex gap-2 justify-between px-2 items-center">
           <ShadTooltip delayDuration={1000} content="Import" side="top">
             <button
               className="hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center rounded-md bg-white px-2 py-2 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
@@ -108,6 +109,7 @@ export default function ExtraSidebar() {
               </button>
             </ShadTooltip>
       </div>
+      <Separator />
       <div className="relative mt-2 flex items-center mb-2 mx-2">
         <input
           type="text"
