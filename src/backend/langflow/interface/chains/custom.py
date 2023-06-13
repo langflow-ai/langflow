@@ -97,7 +97,7 @@ class TimeTravelGuideChain(BaseCustomConversationChain):
 
 
 class CombineDocsChain(CustomChain):
-    """Implementation of AgentInitializer function"""
+    """Implementation of load_qa_chain function"""
 
     @staticmethod
     def function_name():
