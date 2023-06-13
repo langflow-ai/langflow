@@ -49,7 +49,6 @@ export default function GenericNode({
   const [validationStatus, setValidationStatus] = useState(null);
   // State for outline color
   const [isValid, setIsValid] = useState(false);
-  const { save } = useContext(TabsContext);
   const { reactFlowInstance } = useContext(typesContext);
   const [params, setParams] = useState([]);
 
@@ -57,7 +56,7 @@ export default function GenericNode({
     if (reactFlowInstance) {
       setParams(Object.values(reactFlowInstance.toObject()));
     }
-  }, [save]);
+  }, []);
 
   const validateNode = useCallback(
     debounce(async () => {

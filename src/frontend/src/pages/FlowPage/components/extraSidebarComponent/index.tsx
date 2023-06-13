@@ -1,4 +1,4 @@
-import { Bars2Icon } from "@heroicons/react/24/outline";
+import { Bars2Icon, PencilSquareIcon, Square2StackIcon, TrashIcon } from "@heroicons/react/24/outline";
 import DisclosureComponent from "../DisclosureComponent";
 import {
   classNames,
@@ -11,6 +11,7 @@ import { typesContext } from "../../../../contexts/typesContext";
 import { APIClassType, APIObjectType } from "../../../../types/api";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
+import { Code, Code2, FileDown, FileUp, Import, Save } from "lucide-react";
 
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);
@@ -49,7 +50,7 @@ export default function ExtraSidebar() {
   }
 
   return (
-    <div className="flex flex-col overflow-auto scrollbar-hide">
+    <div className="flex flex-col overflow-auto scrollbar-hide h-full border-r">
       <div className="relative mt-2 flex items-center mb-2 mx-2">
         <input
           type="text"
@@ -66,8 +67,52 @@ export default function ExtraSidebar() {
           <MagnifyingGlassIcon className="h-5 w-5 dark:text-white"></MagnifyingGlassIcon>
         </div>
       </div>
+      <div className="mb-2 w-full flex gap-2 justify-between px-2 items-center">
+          <ShadTooltip delayDuration={1000} content="Import" side="top">
+            <button
+              className="hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center rounded-md bg-white px-2 py-2 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+              onClick={() => {
+              }}
+            >
+              <FileDown className="w-5 h-5 dark:text-gray-300"></FileDown>
+            </button>
+          </ShadTooltip>
 
-      <div className="mt-1 w-full">
+          <ShadTooltip delayDuration={1000} content="Export" side="top">
+            <button
+              className={classNames("hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
+              )}
+              onClick={(event) => {
+                
+              }}
+            >
+              <FileUp className="w-5 h-5  dark:text-gray-300"></FileUp>
+            </button>
+          </ShadTooltip>
+          <ShadTooltip delayDuration={1000} content="Code" side="top">
+            <button
+              className={classNames("hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
+              )}
+              onClick={(event) => {
+                
+              }}
+            >
+              <Code2 className="w-5 h-5  dark:text-gray-300"></Code2>
+            </button>
+          </ShadTooltip>
+
+            <ShadTooltip delayDuration={1000} content="Save" side="top">
+              <button
+                className="hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center transition-all shadow-sm duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
+
+              >
+                <Save className="w-5 h-5  dark:text-gray-300"></Save>
+              </button>
+            </ShadTooltip>
+      </div>
+      
+
+      <div className="w-full">
         {Object.keys(dataFilter)
           .sort()
           .map((d: keyof APIObjectType, i) =>
