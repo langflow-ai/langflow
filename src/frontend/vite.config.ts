@@ -7,6 +7,7 @@ const apiRoutes = [
   "^/api/v1/validate/*",
   "/api/v1/chat/*",
   "/api/v1/version",
+  "^/api/v1/build/*",
   "/health",
 ];
 
