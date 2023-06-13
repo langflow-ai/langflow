@@ -42,3 +42,7 @@ export type PromptTypeAPI = { input_variables: Array<string> };
 export type BuildStatusTypeAPI = {
   built: boolean;
 };
+
+export type InitTypeAPI = {
+  flowId: string;
+};

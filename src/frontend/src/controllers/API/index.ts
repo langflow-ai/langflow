@@ -2,29 +2,30 @@ import {
   BuildStatusTypeAPI,
   PromptTypeAPI,
   errorsTypeAPI,
+  InitTypeAPI,
 } from "./../../types/api/index";
 import { APIObjectType, sendAllProps } from "../../types/api/index";
 import axios, { AxiosResponse } from "axios";
 import { FlowType } from "../../types/flow";
 
 export async function getAll(): Promise<AxiosResponse<APIObjectType>> {
-  return await axios.get(`/all`);
+  return await axios.get(`/api/v1/all`);
 }
 
 export async function sendAll(data: sendAllProps) {
-  return await axios.post(`/predict`, data);
+  return await axios.post(`/api/v1/predict`, data);
 }
 
 export async function checkCode(
   code: string
 ): Promise<AxiosResponse<errorsTypeAPI>> {
-  return await axios.post("/validate/code", { code });
+  return await axios.post("/api/v1/validate/code", { code });
 }
 
 export async function checkPrompt(
   template: string
 ): Promise<AxiosResponse<PromptTypeAPI>> {
-  return await axios.post("/validate/prompt", { template });
+  return await axios.post("/api/v1/validate/prompt", { template });
 }
 
 export async function getExamples(): Promise<FlowType[]> {
@@ -47,5 +48,11 @@ export async function getExamples(): Promise<FlowType[]> {
 export async function getBuildStatus(
   flowId: string
 ): Promise<BuildStatusTypeAPI> {
-  return await axios.get(`/build/${flowId}/status`);
+  return await axios.get(`/api/v1/build/${flowId}/status`);
+}
+
+export async function postBuildInit(
+  flow: FlowType
+): Promise<AxiosResponse<InitTypeAPI>> {
+  return await axios.post(`/api/v1/build/init`, flow);
 }

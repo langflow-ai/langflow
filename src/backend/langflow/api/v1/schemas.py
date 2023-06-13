@@ -68,3 +68,11 @@ class FileResponse(ChatMessage):
         if v not in ["image", "csv"]:
             raise ValueError("data_type must be image or csv")
         return v
+
+
+class InitResponse(BaseModel):
+    flowId: str
+
+
+class BuiltResponse(BaseModel):
+    built: bool
