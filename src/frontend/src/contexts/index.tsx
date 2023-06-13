@@ -6,6 +6,7 @@ import PopUpProvider from "./popUpContext";
 import { TabsProvider } from "./tabsContext";
 import { TypesProvider } from "./typesContext";
 import { ReactFlowProvider } from "reactflow";
+import { UndoRedoProvider } from "./undoRedoContext";
 
 export default function ContextWrapper({ children }: { children: ReactNode }) {
   //element to wrap all context
@@ -13,15 +14,17 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
     <>
       <ReactFlowProvider>
         <DarkProvider>
-          <TypesProvider>
-            <LocationProvider>
-              <AlertProvider>
-                <TabsProvider>
-                  <PopUpProvider>{children}</PopUpProvider>
-                </TabsProvider>
-              </AlertProvider>
-            </LocationProvider>
-          </TypesProvider>
+            <TypesProvider>
+              <LocationProvider>
+                <AlertProvider>
+                  <TabsProvider>
+          <UndoRedoProvider>
+                    <PopUpProvider>{children}</PopUpProvider>
+          </UndoRedoProvider>
+                  </TabsProvider>
+                </AlertProvider>
+              </LocationProvider>
+            </TypesProvider>
         </DarkProvider>
       </ReactFlowProvider>
     </>

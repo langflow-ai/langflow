@@ -25,9 +25,9 @@ import { typesContext } from "../../../../contexts/typesContext";
 import { APIClassType } from "../../../../types/api";
 import { FlowType, NodeType } from "../../../../types/flow";
 import { isValidConnection } from "../../../../utils";
-import useUndoRedo from "../../hooks/useUndoRedo";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import ExtraSidebar from "../extraSidebarComponent";
+import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -47,7 +47,7 @@ export default function Page({ flow }: { flow: FlowType }) {
     useContext(typesContext);
   const reactFlowWrapper = useRef(null);
 
-  const { takeSnapshot } = useUndoRedo();
+  const { takeSnapshot } = useContext(undoRedoContext);
 
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =

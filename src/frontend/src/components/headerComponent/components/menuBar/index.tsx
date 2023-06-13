@@ -30,11 +30,13 @@ import ApiModal from "../../../../modals/ApiModal";
 import { alertContext } from "../../../../contexts/alertContext";
 import { updateFlowInDatabase } from "../../../../controllers/API";
 import { Link } from "react-router-dom";
+import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 
 export const MenuBar = ({ setRename, rename, flows, tabId }) => {
   const { updateFlow, setTabId, addFlow } = useContext(TabsContext);
   const { setErrorData } = useContext(alertContext);
   const { openPopUp } = useContext(PopUpContext);
+  const { undo, redo } = useContext(undoRedoContext);
 
   function handleSaveFlow(flow) {
     try {
@@ -120,6 +122,22 @@ export const MenuBar = ({ setRename, rename, flows, tabId }) => {
             >
               <Edit className="w-4 h-4 mr-2" />
               Rename
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                undo();
+              }}
+            >
+              <Edit className="w-4 h-4 mr-2" />
+              Undo
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                redo();
+              }}
+            >
+              <Edit className="w-4 h-4 mr-2" />
+              Redo
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuLabel>Flows</DropdownMenuLabel>
