@@ -69,44 +69,48 @@ async def stream_build(flow_id: str):
     """Stream the build process based on stored flow data."""
 
     async def event_stream(flow_id):
-        if flow_id not in flow_data_store:
-            error_message = "Invalid session ID"
-            yield f"data: {json.dumps({'error': error_message})}\n\n"
-            return
-
-        graph_data = flow_data_store[flow_id].get("data")
-
-        if not graph_data:
-            error_message = "No data provided"
-            yield f"data: {json.dumps({'error': error_message})}\n\n"
-            return
-
-        logger.debug("Building langchain object")
-        graph = Graph.from_payload(graph_data)
-        for node in graph.generator_build():
-            try:
-                node.build()
-                params = node._built_object_repr()
-                valid = True
-                logger.debug(
-                    f"Building node {params[:50]}{'...' if len(params) > 50 else ''}"
-                )
-            except Exception as exc:
-                params = str(exc)
-                valid = False
-
-            response = json.dumps(
-                {
-                    "valid": valid,
-                    "params": params,
-                    "id": node.id,
-                }
-            )
-            yield f"data: {response}\n\n"  # SSE format
-
-        chat_manager.set_cache(flow_id, graph.build())
         final_response = json.dumps({"end_of_stream": True})
-        yield f"data: {final_response}\n\n"  # SSE format
+        try:
+            if flow_id not in flow_data_store:
+                error_message = "Invalid session ID"
+                yield f"data: {json.dumps({'error': error_message})}\n\n"
+                return
+
+            graph_data = flow_data_store[flow_id].get("data")
+
+            if not graph_data:
+                error_message = "No data provided"
+                yield f"data: {json.dumps({'error': error_message})}\n\n"
+                return
+
+            logger.debug("Building langchain object")
+            graph = Graph.from_payload(graph_data)
+            for node in graph.generator_build():
+                try:
+                    node.build()
+                    params = node._built_object_repr()
+                    valid = True
+                    logger.debug(
+                        f"Building node {params[:50]}{'...' if len(params) > 50 else ''}"
+                    )
+                except Exception as exc:
+                    params = str(exc)
+                    valid = False
+
+                response = json.dumps(
+                    {
+                        "valid": valid,
+                        "params": params,
+                        "id": node.id,
+                    }
+                )
+                yield f"data: {response}\n\n"
+
+            chat_manager.set_cache(flow_id, graph.build())
+        except Exception:
+            logger.error("Error while building the flow")
+        finally:
+            yield f"data: {final_response}\n\n"
 
     try:
         return StreamingResponse(event_stream(flow_id), media_type="text/event-stream")
