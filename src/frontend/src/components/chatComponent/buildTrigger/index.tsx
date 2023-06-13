@@ -60,35 +60,41 @@ export default function BuildTrigger({
     let finished = false;
     apiUrl = `/build/stream/${flowId}`;
     const eventSource = new EventSource(apiUrl);
-
-    eventSource.onmessage = (event) => {
-      // If the event is parseable, return
-      if (!event.data) {
-        return;
-      }
-      const parsedData = JSON.parse(event.data);
-      // if the event is the end of the stream, close the connection
-      if (parsedData.end_of_stream) {
+    try{
+      eventSource.onmessage = (event) => {
+        // If the event is parseable, return
+        if (!event.data) {
+          return;
+        }
+        const parsedData = JSON.parse(event.data);
+        // if the event is the end of the stream, close the connection
+        if (parsedData.end_of_stream) {
+          eventSource.close();
+  
+          return;
+        }
+        // Otherwise, process the data
+        const isValid = processStreamResult(parsedData);
+        validationResults.push(isValid);
+      };
+  
+      eventSource.onerror = (error) => {
+        console.error("EventSource failed:", error);
         eventSource.close();
-
-        return;
+      };
+      // Step 3: Wait for the stream to finish
+      while (!finished) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        finished = validationResults.length === flow.data.nodes.length;
       }
-      // Otherwise, process the data
-      const isValid = processStreamResult(parsedData);
-      validationResults.push(isValid);
-    };
-
-    eventSource.onerror = (error) => {
-      console.error("EventSource failed:", error);
-      eventSource.close();
-    };
-    // Step 3: Wait for the stream to finish
-    while (!finished) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      finished = validationResults.length === flow.data.nodes.length;
+      // Step 4: Return true if all nodes are valid, false otherwise
+      return validationResults.every((result) => result);
     }
-    // Step 4: Return true if all nodes are valid, false otherwise
-    return validationResults.every((result) => result);
+    catch(e){
+      console.log(e)
+      eventSource.close();
+      return false;
+    }
   }
 
   function processStreamResult(parsedData) {
