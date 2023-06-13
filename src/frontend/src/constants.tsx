@@ -46,15 +46,28 @@ export const TEXT_DIALOG_SUBTITLE = "Edit you text.";
 export const getPythonApiCode = (flowId: string): string => {
   return `import requests
 
-  FLOW_ID = "${flowId}"
-  API_URL = f"${window.location.protocol}//${window.location.host}/predict/{FLOW_ID}"
+FLOW_ID = "${flowId}"
+API_URL = f"${window.location.protocol}//${window.location.host}/predict"
 
-  def predict(message):
-      payload = {'message': message}
-      response = requests.post(API_URL, json=payload)
-      return response.json()
+def run_flow(message, tweaks=None):
 
-  print(predict("Your message"))`;
+    if tweaks:
+        payload = {'message': message, 'tweaks': tweaks}
+    else:
+        payload = {'message': message}
+
+    headers = {'Authorization':
+			 f'Bearer {FLOW_ID}',
+			 'Content-Type': 'application/json'
+		}
+
+    response = requests.post(API_URL, json=payload)
+    return response.json()
+
+# Setup any tweaks you want to apply to the flow
+tweaks = {} # {"nodeId": {"key": "value"}, "nodeId2": {"key": "value"}}
+
+print(run_flow("Your message", tweaks=tweaks))`;
 };
 
 /**
@@ -65,8 +78,9 @@ export const getPythonApiCode = (flowId: string): string => {
 export const getCurlCode = (flowId: string): string => {
   return `curl -X POST \\
   -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer ${flowId}" \\
   -d '{"message": "Your message"}' \\
-  ${window.location.protocol}//${window.location.host}/predict/${flowId}`;
+  ${window.location.protocol}//${window.location.host}/predict`;
 };
 
 /**
