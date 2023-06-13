@@ -10,6 +10,8 @@ import {
   Plus,
   ChevronDown,
   ChevronLeft,
+  Undo,
+  Redo,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -128,7 +130,7 @@ export const MenuBar = ({ setRename, rename, flows, tabId }) => {
                 undo();
               }}
             >
-              <Edit className="w-4 h-4 mr-2" />
+              <Undo className="w-4 h-4 mr-2" />
               Undo
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -136,7 +138,7 @@ export const MenuBar = ({ setRename, rename, flows, tabId }) => {
                 redo();
               }}
             >
-              <Edit className="w-4 h-4 mr-2" />
+              <Redo className="w-4 h-4 mr-2" />
               Redo
             </DropdownMenuItem>
             <DropdownMenuSeparator />
