@@ -12,9 +12,16 @@ import { APIClassType, APIObjectType } from "../../../../types/api";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import { Code, Code2, FileDown, FileUp, Import, Save } from "lucide-react";
+import { PopUpContext } from "../../../../contexts/popUpContext";
+import ImportModal from "../../../../modals/importModal";
+import ExportModal from "../../../../modals/exportModal";
+import ApiModal from "../../../../modals/ApiModal";
+import { TabsContext } from "../../../../contexts/tabsContext";
 
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);
+  const { openPopUp } = useContext(PopUpContext);
+  const { flows, tabId } = useContext(TabsContext);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
 
@@ -49,6 +56,10 @@ export default function ExtraSidebar() {
     });
   }
 
+  function handleSaveFlow(current_flow: any) {
+    throw new Error("Function not implemented.");
+  }
+
   return (
     <div className="flex flex-col overflow-auto scrollbar-hide h-full border-r">
       <div className="mt-2 w-full flex gap-2 justify-between px-2 items-center">
@@ -56,9 +67,10 @@ export default function ExtraSidebar() {
             <button
               className="hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center rounded-md bg-white px-2 py-2 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
               onClick={() => {
+                openPopUp(<ImportModal />);
               }}
             >
-              <FileDown className="w-5 h-5 dark:text-gray-300"></FileDown>
+              <FileUp className="w-5 h-5 dark:text-gray-300"></FileUp>
             </button>
           </ShadTooltip>
 
@@ -67,10 +79,10 @@ export default function ExtraSidebar() {
               className={classNames("hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
               )}
               onClick={(event) => {
-                
+                openPopUp(<ExportModal />);
               }}
             >
-              <FileUp className="w-5 h-5  dark:text-gray-300"></FileUp>
+              <FileDown className="w-5 h-5  dark:text-gray-300"></FileDown>
             </button>
           </ShadTooltip>
           <ShadTooltip delayDuration={1000} content="Code" side="top">
@@ -78,7 +90,7 @@ export default function ExtraSidebar() {
               className={classNames("hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
               )}
               onClick={(event) => {
-                
+                openPopUp(<ApiModal flow={flows.find((f) => f.id === tabId)} />);
               }}
             >
               <Code2 className="w-5 h-5  dark:text-gray-300"></Code2>
@@ -88,7 +100,9 @@ export default function ExtraSidebar() {
             <ShadTooltip delayDuration={1000} content="Save" side="top">
               <button
                 className="hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center transition-all shadow-sm duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
-
+                onClick={(event) => {
+                  handleSaveFlow(flows.find((f) => f.id === tabId));
+                }}
               >
                 <Save className="w-5 h-5  dark:text-gray-300"></Save>
               </button>

@@ -40,8 +40,6 @@ export default function App() {
     setSuccessOpen,
   } = useContext(alertContext);
 
-  const { flows, addFlow } = useContext(TabsContext);
-
   // Initialize state variable for the list of alerts
   const [alertsList, setAlertsList] = useState<
     Array<{
