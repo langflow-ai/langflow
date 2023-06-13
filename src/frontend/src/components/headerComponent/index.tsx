@@ -18,7 +18,6 @@ export default function Header() {
   const { id } = useParams();
   const AlertWidth = 384;
   const { dark, setDark } = useContext(darkContext);
-  const [rename, setRename] = useState(false);
   const { notificationCenter, setNotificationCenter, setErrorData } =
     useContext(alertContext);
   const location = useLocation();
@@ -30,8 +29,6 @@ export default function Header() {
         </Link>
         {flows.findIndex((f) => tabId === f.id) !== -1 && tabId !== "" && (
           <MenuBar
-            setRename={setRename}
-            rename={rename}
             flows={flows}
             tabId={tabId}
           />
@@ -39,16 +36,26 @@ export default function Header() {
       </div>
       <div className="flex gap-2 items-center">
         <Link to="/">
-        <Button variant={location.pathname === "/" ? "primary" : "secondary"} size="sm">
-          <Home className="w-4 mr-2" />
-          My Projects
-        </Button>
+          <Button
+            className="gap-2"
+            variant={location.pathname === "/" ? "primary" : "secondary"}
+            size="sm"
+          >
+            <Home className="w-4 h-4" />
+            <div className="flex-1">My Projects</div>
+          </Button>
         </Link>
         <Link to="/community">
-        <Button variant={location.pathname === "/community" ? "primary" : "secondary"} size="sm">
-          <Users2 className="w-4 mr-2" />
-          Community Examples
-        </Button>
+          <Button
+            className="gap-2"
+            variant={
+              location.pathname === "/community" ? "primary" : "secondary"
+            }
+            size="sm"
+          >
+            <Users2 className="w-4 h-4" />
+            <div className="flex-1">Community Examples</div>
+          </Button>
         </Link>
       </div>
       <div className="flex justify-end px-2 w-96">

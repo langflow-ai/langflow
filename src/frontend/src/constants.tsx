@@ -7,6 +7,12 @@
 export const EXPORT_DIALOG_SUBTITLE = "Export your models.";
 
 /**
+ * The base text for subtitle of Flow Settings (Menubar)
+ * @constant
+ */
+export const SETTINGS_DIALOG_SUBTITLE = "Edit details about your project.";
+
+/**
  * The base text for subtitle of Code Dialog (Toolbar)
  * @constant
  */

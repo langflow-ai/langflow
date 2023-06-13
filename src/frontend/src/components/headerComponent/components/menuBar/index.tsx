@@ -12,6 +12,8 @@ import {
   ChevronLeft,
   Undo,
   Redo,
+  Settings,
+  Settings2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -33,8 +35,9 @@ import { alertContext } from "../../../../contexts/alertContext";
 import { updateFlowInDatabase } from "../../../../controllers/API";
 import { Link } from "react-router-dom";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
+import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 
-export const MenuBar = ({ setRename, rename, flows, tabId }) => {
+export const MenuBar = ({flows, tabId }) => {
   const { updateFlow, setTabId, addFlow } = useContext(TabsContext);
   const { setErrorData } = useContext(alertContext);
   const { openPopUp } = useContext(PopUpContext);
@@ -65,7 +68,8 @@ export const MenuBar = ({ setRename, rename, flows, tabId }) => {
         <ChevronLeft className="w-5" />
       </Link>
       <div className="flex items-center font-medium text-sm rounded-md py-1 px-1.5 bg-background gap-0.5">
-        <RenameLabel
+        
+        {/* <RenameLabel
           value={current_flow.name}
           setValue={(value) => {
             if (value !== "") {
@@ -76,20 +80,21 @@ export const MenuBar = ({ setRename, rename, flows, tabId }) => {
           }}
           rename={rename}
           setRename={setRename}
-        />
+        /> */}
         <DropdownMenu>
-          <DropdownMenuTrigger className="px-1">
+          <DropdownMenuTrigger className="px-1 gap-2 flex items-center">
+            {current_flow.name}
             <ChevronDown className="w-4 h-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-44">
             <DropdownMenuLabel>Edit</DropdownMenuLabel>
             <DropdownMenuItem
               onClick={() => {
-                setRename(true);
+                openPopUp(<FlowSettingsModal />)
               }}
             >
-              <Edit className="w-4 h-4 mr-2" />
-              Rename
+              <Settings2 className="w-4 h-4 mr-2" />
+              Settings
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
