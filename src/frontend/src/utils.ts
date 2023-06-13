@@ -206,6 +206,23 @@ export const nodeIcons: {
   unknown: QuestionMarkCircleIcon,
 };
 
+export const gradients = [
+  "bg-gradient-to-br from-gray-800 via-rose-700 to-violet-900",
+  "bg-gradient-to-br from-green-200 via-green-300 to-blue-500",
+  "bg-gradient-to-br from-yellow-200 via-yellow-400 to-yellow-700",
+  "bg-gradient-to-br from-green-200 via-green-400 to-purple-700",
+  "bg-gradient-to-br from-blue-100 via-blue-300 to-blue-500",
+  "bg-gradient-to-br from-purple-400 to-yellow-400",
+  "bg-gradient-to-br from-red-800 via-yellow-600 to-yellow-500",
+  "bg-gradient-to-br from-blue-300 via-green-200 to-yellow-300",
+  "bg-gradient-to-br from-blue-700 via-blue-800 to-gray-900",
+  "bg-gradient-to-br from-green-300 to-purple-400",
+  "bg-gradient-to-br from-yellow-200 via-pink-200 to-pink-400",
+  "bg-gradient-to-br from-green-500 to-green-700",
+  "bg-gradient-to-br from-rose-400 via-fuchsia-500 to-indigo-500",
+  "bg-gradient-to-br from-sky-400 to-blue-500",
+];
+
 export const bgColors = {
   white: "bg-white",
   red: "bg-red-100",
