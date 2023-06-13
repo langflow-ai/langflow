@@ -11,7 +11,9 @@ from langflow.utils.logger import logger
 from langflow.graph import Graph
 
 
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+
+import yaml
 
 
 def fix_memory_inputs(langchain_object):
@@ -141,6 +143,45 @@ def process_graph_cached(data_graph: Dict[str, Any], message: str):
     return {"result": str(result), "thought": thought.strip()}
 
 
+def load_json(path: str):
+    """Load json file"""
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def load_yaml(path: str):
+    """Load yaml file"""
+    with open(path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+
+def load_flow(path: str, file_type: Optional[str] = None, build: bool = True):
+    """Load flow from json or yaml file"""
+    if file_type is None:
+        file_type = path.split(".")[-1]
+    if file_type == "json":
+        flow_graph = load_json(path)
+    elif file_type == "yaml":
+        flow_graph = load_yaml(path)
+
+    data_graph = flow_graph["data"]
+    graph = Graph.from_payload(data_graph)
+    if build:
+        langchain_object = graph.build()
+        if hasattr(langchain_object, "verbose"):
+            langchain_object.verbose = True
+
+        if hasattr(langchain_object, "return_intermediate_steps"):
+            # https://github.com/hwchase17/langchain/issues/2068
+            # Deactivating until we have a frontend solution
+            # to display intermediate steps
+            langchain_object.return_intermediate_steps = False
+        fix_memory_inputs(langchain_object)
+        return langchain_object
+    return graph
+
+
+# Leave it for backward compatibility
 def load_flow_from_json(path: str, build=True):
     """Load flow from json file"""
     # This is done to avoid circular imports
