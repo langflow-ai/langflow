@@ -14,6 +14,7 @@ class FrontendNode(BaseModel):
     description: str
     base_classes: List[str]
     name: str = ""
+    display_name: str = ""
 
     def to_dict(self) -> dict:
         return {
@@ -21,10 +22,14 @@ class FrontendNode(BaseModel):
                 "template": self.template.to_dict(self.format_field),
                 "description": self.description,
                 "base_classes": self.base_classes,
-            }
+                "display_name": self.display_name or self.name,
+            },
         }
 
     def add_extra_fields(self) -> None:
+        pass
+
+    def add_extra_base_classes(self) -> None:
         pass
 
     @staticmethod

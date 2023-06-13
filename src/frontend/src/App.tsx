@@ -14,6 +14,7 @@ import TabsManagerComponent from "./pages/FlowPage/components/tabsManagerCompone
 import { ErrorBoundary } from "react-error-boundary";
 import CrashErrorComponent from "./components/CrashErrorComponent";
 import { TabsContext } from "./contexts/tabsContext";
+import { getVersion } from "./controllers/API";
 
 export default function App() {
   let { setCurrent, setShowSideBar, setIsStackedOpen } =
@@ -49,11 +50,9 @@ export default function App() {
   // Initialize state variable for the version
   const [version, setVersion] = useState("");
   useEffect(() => {
-    fetch("/version")
-      .then((res) => res.json())
-      .then((data) => {
-        setVersion(data.version);
-      });
+    getVersion().then((response) => {
+      setVersion(response.data.version);
+    });
   }, []);
   // Use effect hook to update alertsList when a new alert is added
   useEffect(() => {
@@ -134,7 +133,10 @@ export default function App() {
         </div>
       </ErrorBoundary>
       <div></div>
-      <div className="flex z-40 flex-col-reverse fixed bottom-5 left-5">
+      <div
+        className="flex flex-col-reverse fixed bottom-5 left-5"
+        style={{ zIndex: 999 }}
+      >
         {alertsList.map((alert) => (
           <div key={alert.id}>
             {alert.type === "error" ? (
@@ -170,7 +172,7 @@ export default function App() {
         className="absolute left-7 bottom-2 flex h-6 cursor-pointer flex-col items-center justify-start overflow-hidden rounded-lg bg-gray-800 px-2 text-center font-sans text-xs tracking-wide text-gray-300 transition-all duration-500 ease-in-out hover:h-12 dark:bg-gray-100 dark:text-gray-800"
       >
         {version && <div className="mt-1">⛓️ LangFlow v{version}</div>}
-        <div className="mt-2">Created by Logspace</div>
+        <div className={version ? "mt-2" : "mt-1"}>Created by Logspace</div>
       </a>
     </div>
   );
