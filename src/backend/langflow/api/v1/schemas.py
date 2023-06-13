@@ -1,6 +1,6 @@
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 from langflow.database.models.flow import FlowCreate, FlowRead
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, Field, validator
 
 
 class GraphData(BaseModel):
@@ -23,6 +23,23 @@ class PredictRequest(BaseModel):
     """Predict request schema."""
 
     message: str
+    tweaks: Optional[Dict[str, Dict[str, str]]] = Field(default_factory=dict)
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "message": "Hello, how are you?",
+                "tweaks": {
+                    "dndnode_986363f0-4677-4035-9f38-74b94af5dd78": {
+                        "name": "A tool name",
+                        "description": "A tool description",
+                    },
+                    "dndnode_986363f0-4677-4035-9f38-74b94af57378": {
+                        "template": "A {template}",
+                    },
+                },
+            }
+        }
 
 
 class PredictResponse(BaseModel):
