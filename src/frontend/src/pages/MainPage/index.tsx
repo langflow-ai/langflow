@@ -34,7 +34,7 @@ export default function HomePage() {
   }, [])
   return (
       <div
-        className="w-full h-full flex flex-col bg-muted"
+        className="w-full h-full flex overflow-auto flex-col bg-muted"
       >
           <div className="w-full p-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {Object.keys(flows).map((flow, idx) => (
