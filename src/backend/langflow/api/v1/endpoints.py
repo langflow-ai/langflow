@@ -39,7 +39,7 @@ def get_all():
 
 
 @router.post("/predict", response_model=PredictResponse)
-async def get_load(
+async def predict_flow(
     predict_request: PredictRequest,
     flow: Flow = Depends(get_flow_from_token),
 ):
