@@ -154,9 +154,9 @@ class CSVAgentNode(FrontendNode):
 
 
 class InitializeAgentNode(FrontendNode):
-    name: str = "initialize_agent"
+    name: str = "AgentInitializer"
     template: Template = Template(
-        type_name="initailize_agent",
+        type_name="AgentInitializer",
         fields=[
             TemplateField(
                 field_type="str",
