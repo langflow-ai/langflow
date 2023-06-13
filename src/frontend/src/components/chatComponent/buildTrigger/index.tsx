@@ -1,16 +1,13 @@
-import { useState, useContext, useRef, useEffect } from "react";
+import { useState, useContext } from "react";
 import { Transition } from "@headlessui/react";
-import { Bars3CenterLeftIcon } from "@heroicons/react/24/outline";
 import { Zap } from "lucide-react";
-import { nodeColors, validateNodes } from "../../../utils";
-import { PopUpContext } from "../../../contexts/popUpContext";
-import ChatModal from "../../../modals/chatModal";
+import { validateNodes } from "../../../utils";
 import { FlowType } from "../../../types/flow";
 import Loading from "../../../components/ui/loading";
 import { useSSE } from "../../../contexts/SSEContext";
-import axios from "axios";
 import { typesContext } from "../../../contexts/typesContext";
 import { alertContext } from "../../../contexts/alertContext";
+import { postBuildInit } from "../../../controllers/API";
 
 export default function BuildTrigger({
   open,
@@ -26,21 +23,24 @@ export default function BuildTrigger({
   const [isBuilding, setIsBuilding] = useState(false);
 
   const { updateSSEData } = useSSE();
-  const {reactFlowInstance} = useContext(typesContext);
-  const {setErrorData} = useContext(alertContext)
+  const { reactFlowInstance } = useContext(typesContext);
+  const { setErrorData } = useContext(alertContext);
 
   async function handleBuild(flow: FlowType) {
-    const errors = validateNodes(reactFlowInstance)
-    if(errors.length > 0) {
-      setErrorData({title: "Oops! Looks like you missed something", list: errors})
-      return
+    const errors = validateNodes(reactFlowInstance);
+    if (errors.length > 0) {
+      setErrorData({
+        title: "Oops! Looks like you missed something",
+        list: errors,
+      });
+      return;
     }
     const minimumLoadingTime = 200; // in milliseconds
     const startTime = Date.now();
     setIsBuilding(true);
 
     try {
-      const allNodesValid = await streamNodeData(`/build/init`, flow);
+      const allNodesValid = await streamNodeData(flow);
       await enforceMinimumLoadingTime(startTime, minimumLoadingTime);
       setIsBuilt(allNodesValid);
     } catch (error) {
@@ -50,15 +50,15 @@ export default function BuildTrigger({
     }
   }
 
-  async function streamNodeData(apiUrl: string, flow: FlowType) {
+  async function streamNodeData(flow: FlowType) {
     // Step 1: Make a POST request to send the flow data and receive a unique session ID
-    const response = await axios.post(apiUrl, flow);
+    const response = await postBuildInit(flow);
     const { flowId } = response.data;
 
     // Step 2: Use the session ID to establish an SSE connection using EventSource
     let validationResults = [];
     let finished = false;
-    apiUrl = `/build/stream/${flowId}`;
+    const apiUrl = `/build/stream/${flowId}`;
     const eventSource = new EventSource(apiUrl);
 
     eventSource.onmessage = (event) => {
@@ -128,7 +128,9 @@ export default function BuildTrigger({
       <div className={`fixed right-4` + (isBuilt ? " bottom-20" : " bottom-4")}>
         <div
           className="border flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full bg-gradient-to-r from-blue-700 via-blue-600 to-blue-500 dark:border-gray-600 cursor-pointer"
-          onClick={() => {if(!isBuilding) handleBuild(flow)}}
+          onClick={() => {
+            if (!isBuilding) handleBuild(flow);
+          }}
         >
           <button>
             <div className="flex gap-3 items-center">
