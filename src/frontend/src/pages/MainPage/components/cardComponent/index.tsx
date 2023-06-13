@@ -1,26 +1,14 @@
 import { Trash2, ExternalLink } from "lucide-react";
 import { useContext } from "react";
 import { Link } from "react-router-dom";
-import { alertContext } from "../../../../contexts/alertContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
-import { updateFlowInDatabase } from "../../../../controllers/API";
 import { FlowType } from "../../../../types/flow";
 import { gradients } from "../../../../utils";
 import { CardTitle, CardDescription, CardFooter, Card, CardHeader } from "../../../../components/ui/card";
 import { Button } from "../../../../components/ui/button";
 
 export const CardComponent = ({ flow, id }: { flow: FlowType; id: string }) => {
-  const { setErrorData } = useContext(alertContext);
-  const { updateFlow, removeFlow, setTabId } = useContext(TabsContext);
-  function handleSaveFlow(flow) {
-    try {
-      updateFlowInDatabase(flow);
-      updateFlow(flow);
-      // updateFlowStyleInDataBase(flow);
-    } catch (err) {
-      setErrorData(err);
-    }
-  }
+  const { removeFlow } = useContext(TabsContext);
 
   return (
     <Card className="group">
