@@ -67,7 +67,7 @@ export default function CommunityPage() {
   }, []);
   return (
     <div className="w-full h-full flex overflow-auto flex-col bg-muted px-16">
-      <div className="w-full flex justify-between py-12 pb-8 px-6">
+      <div className="w-full flex justify-between py-12 pb-2 px-6">
         <span className="text-2xl flex items-center justify-center gap-2 font-semibold">
           <Users2 className="w-6" />
           Community Examples
@@ -81,6 +81,9 @@ export default function CommunityPage() {
           </a>
         </div>
       </div>
+      <span className="flex pb-8 px-6 w-[70%] text-muted-foreground">
+      Discover and learn from shared examples by the LangFlow community. We welcome new example contributions that can help our community explore new and powerful features.
+      </span>
       <div className="w-full p-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {!loadingExamples &&
           examples.map((flow, idx) => (
