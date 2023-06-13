@@ -33,7 +33,7 @@ const TabsContextInitialValue: TabsContextType = {
   setTabId: (index: string) => {},
   flows: [],
   removeFlow: (id: string) => {},
-  addFlow: (flowData?: any) => {},
+  addFlow: async (flowData?: any) => "",
   updateFlow: (newFlow: FlowType) => {},
   incrementNodeId: () => uuidv4(),
   downloadFlow: (flow: FlowType) => {},
@@ -415,21 +415,27 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     reactFlowInstance.setEdges(edges);
   }
 
-  const addFlow = (flow?: FlowType) => {
+  const addFlow = async (flow?: FlowType): Promise<String> => {
     let flowData = extractDataFromFlow(flow);
-
+  
     // Create a new flow with a default name if no flow is provided.
     const newFlow = createNewFlow(flowData, flow);
-
-    saveFlowToDatabase(newFlow)
-      .then((id) => {
-        // Change the id to the new id.
-        newFlow.id = id.id;
-      })
-      .then(() => {
-        // Add the new flow to the list of flows.
-        addFlowToLocalState(newFlow);
-      });
+  
+    try {
+      const id = await saveFlowToDatabase(newFlow);
+      // Change the id to the new id.
+      newFlow.id = id.id;
+  
+      // Add the new flow to the list of flows.
+      addFlowToLocalState(newFlow);
+  
+      // Return the id
+      return id.id;
+    } catch (error) {
+      // Handle the error if needed
+      console.error('Error while adding flow:', error);
+      throw error; // Re-throw the error so the caller can handle it if needed
+    }
   };
 
   const extractDataFromFlow = (flow) => {
