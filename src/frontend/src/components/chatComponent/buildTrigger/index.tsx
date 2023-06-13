@@ -58,7 +58,7 @@ export default function BuildTrigger({
     // Step 2: Use the session ID to establish an SSE connection using EventSource
     let validationResults = [];
     let finished = false;
-    const apiUrl = `/build/stream/${flowId}`;
+    const apiUrl = `/api/v1/build/stream/${flowId}`;
     const eventSource = new EventSource(apiUrl);
     try{
       eventSource.onmessage = (event) => {
