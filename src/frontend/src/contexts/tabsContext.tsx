@@ -19,11 +19,13 @@ import { typesContext } from "./typesContext";
 import { APITemplateType, TemplateVariableType } from "../types/api";
 import { v4 as uuidv4 } from "uuid";
 import { addEdge } from "reactflow";
-import _ from "lodash";
+import _, { flow } from "lodash";
 import {
   readFlowsFromDatabase,
   deleteFlowFromDatabase,
   saveFlowToDatabase,
+  downloadFlowsFromDatabase,
+  uploadFlowsToDatabase,
 } from "../controllers/API";
 
 const TabsContextInitialValue: TabsContextType = {
@@ -35,6 +37,8 @@ const TabsContextInitialValue: TabsContextType = {
   updateFlow: (newFlow: FlowType) => {},
   incrementNodeId: () => uuidv4(),
   downloadFlow: (flow: FlowType) => {},
+  downloadFlows: () => {},
+  uploadFlows: () => {},
   uploadFlow: () => {},
   hardReset: () => {},
   disableCopyPaste: false,
@@ -56,7 +60,7 @@ export const TabsContext = createContext<TabsContextType>(
 export function TabsProvider({ children }: { children: ReactNode }) {
   const { setErrorData, setNoticeData } = useContext(alertContext);
   const [tabId, setTabId] = useState("");
-  const [flows, setFlows] = useState<Array<FlowType>>([]);
+  const [flows, setFlows] = useState([]);
   const [id, setId] = useState(uuidv4());
   const { templates, reactFlowInstance } = useContext(typesContext);
   const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
@@ -114,10 +118,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   //   }
   // }
 
-  useEffect(() => {
-    // get data from db
-    //get tabs locally saved
-    // let tabsData = getLocalStorageTabsData();
+  function refreshFlows() {
     getTabsDataFromDB().then((DbData) => {
       if (DbData && Object.keys(templates).length > 0) {
         try {
@@ -128,6 +129,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         }
       }
     });
+  }
+
+  useEffect(() => {
+    // get data from db
+    //get tabs locally saved
+    // let tabsData = getLocalStorageTabsData();
+    refreshFlows();
   }, [templates]);
 
   function getTabsDataFromDB() {
@@ -136,20 +144,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
   function processDBData(DbData) {
     DbData.forEach((flow) => {
-      try {
-        if (!flow.data) {
-          return;
-        }
-        processFlowEdges(flow);
-        processFlowNodes(flow);
-      } catch (e) {
-        console.error(e);
-      }
-    });
-  }
-
-  function processTabsData(tabsData) {
-    tabsData.flows.forEach((flow) => {
       try {
         if (!flow.data) {
           return;
@@ -244,6 +238,22 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  function downloadFlows() {
+    downloadFlowsFromDatabase().then((flows) => {
+      const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
+        JSON.stringify(flows)
+      )}`;
+
+      // create a link element and set its properties
+      const link = document.createElement("a");
+      link.href = jsonString;
+      link.download = `flows.json`;
+
+      // simulate a click on the link element to trigger the download
+      link.click();
+    });
+  }
+
   function getNodeId() {
     return `dndnode_` + incrementNodeId();
   }
@@ -275,30 +285,41 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     // trigger the file input click event to open the file dialog
     input.click();
   }
+
+  function uploadFlows() {
+    // create a file input
+    const input = document.createElement("input");
+    input.type = "file";
+    // add a change event listener to the file input
+    input.onchange = (e: Event) => {
+      // check if the file type is application/json
+      if ((e.target as HTMLInputElement).files[0].type === "application/json") {
+        // get the file from the file input
+        const file = (e.target as HTMLInputElement).files[0];
+        // read the file as text
+        const formData = new FormData();
+        formData.append("file", file);
+        uploadFlowsToDatabase(formData).then(() => {
+          refreshFlows();
+        });
+      }
+    };
+    // trigger the file input click event to open the file dialog
+    input.click();
+  }
   /**
    * Removes a flow from an array of flows based on its id.
    * Updates the state of flows and tabIndex using setFlows and setTabIndex hooks.
    * @param {string} id - The id of the flow to remove.
    */
   function removeFlow(id: string) {
-    setFlows((prevState) => {
-      const newFlows = [...prevState];
-      const index = newFlows.findIndex((flow) => flow.id === id);
+    const index = flows.findIndex((flow) => flow.id === id);
+      console.log(index);
       if (index >= 0) {
         deleteFlowFromDatabase(id).then(() => {
-          let tabIndex = flows.findIndex((flow) => flow.id === tabId);
-          if (index === tabIndex) {
-            setTabId(flows[flows.length - 2].id);
-            newFlows.splice(index, 1);
-          } else {
-            let flowId = flows[tabIndex].id;
-            newFlows.splice(index, 1);
-            setTabId(flowId);
-          }
+          setFlows(flows.filter((flow) => flow.id !== id));
         });
       }
-      return newFlows;
-    });
   }
   /**
    * Add a new flow to the list of flows.
@@ -510,6 +531,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         addFlow,
         updateFlow,
         downloadFlow,
+        downloadFlows,
+        uploadFlows,
         uploadFlow,
         getNodeId,
         paste,

@@ -148,6 +148,35 @@ export async function readFlowsFromDatabase() {
   }
 }
 
+export async function downloadFlowsFromDatabase() {
+  try {
+    const response = await fetch("/flows/download/");
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+export async function uploadFlowsToDatabase(flows) {
+  try {
+    const response = await fetch(`/flows/upload/`, {
+      method: "POST", // Or "PATCH" depending on your backend API
+      body: flows,
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
 /**
  * Deletes a flow from the database.
  *
@@ -198,7 +227,7 @@ export async function getFlowFromDatabase(flowId: number) {
  */
 export async function getFlowStylesFromDatabase() {
   try {
-    const response = await fetch("/flows_styles/");
+    const response = await fetch("/flow_styles/");
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -218,7 +247,7 @@ export async function getFlowStylesFromDatabase() {
  */
 export async function saveFlowStyleToDatabase(flowStyle: FlowStyleType) {
   try {
-    const response = await fetch("/flows_styles/", {
+    const response = await fetch("/flow_styles/", {
       method: "POST",
       headers: {
         accept: "application/json",

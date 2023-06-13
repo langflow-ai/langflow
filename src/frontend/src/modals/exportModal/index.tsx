@@ -30,7 +30,7 @@ export default function ExportModal() {
   const { closePopUp } = useContext(PopUpContext);
   const ref = useRef();
   const { setErrorData } = useContext(alertContext);
-  const { flows, tabIndex, updateFlow, downloadFlow } = useContext(TabsContext);
+  const { flows, tabId, updateFlow, downloadFlow } = useContext(TabsContext);
   function setModalOpen(x: boolean) {
     setOpen(x);
     if (x === false) {
@@ -40,7 +40,7 @@ export default function ExportModal() {
     }
   }
   const [checked, setChecked] = useState(true);
-  const [name, setName] = useState(flows[tabIndex].name);
+  const [name, setName] = useState(flows.find((f) => f.id === tabId).name);
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger asChild></DialogTrigger>
@@ -63,7 +63,7 @@ export default function ExportModal() {
             className="mt-2"
             onChange={(event) => {
               if (event.target.value != "") {
-                let newFlow = flows[tabIndex];
+                let newFlow = flows.find((f) => f.id === tabId);
                 newFlow.name = event.target.value;
                 setName(event.target.value);
                 updateFlow(newFlow);
@@ -84,11 +84,11 @@ export default function ExportModal() {
             name="description"
             id="description"
             onChange={(event) => {
-              let newFlow = flows[tabIndex];
+              let newFlow = flows.find((f) => f.id === tabId);
               newFlow.description = event.target.value;
               updateFlow(newFlow);
             }}
-            value={flows[tabIndex].description ?? null}
+            value={flows.find((f) => f.id === tabId).description ?? null}
             placeholder="Flow description"
             className="max-h-[100px] mt-2"
             rows={3}
@@ -112,8 +112,8 @@ export default function ExportModal() {
         <DialogFooter>
           <Button
             onClick={() => {
-              if (checked) downloadFlow(flows[tabIndex]);
-              else downloadFlow(removeApiKeys(flows[tabIndex]));
+              if (checked) downloadFlow(flows.find((f) => f.id === tabId));
+              else downloadFlow(removeApiKeys(flows.find((f) => f.id === tabId)));
             }}
             type="submit"
           >

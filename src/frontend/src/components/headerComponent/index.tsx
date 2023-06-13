@@ -21,12 +21,6 @@ export default function Header() {
   const [rename, setRename] = useState(false);
   const { notificationCenter, setNotificationCenter, setErrorData } =
     useContext(alertContext);
-  useEffect(() => {
-    //create the first flow
-    if (flows.length === 0 && Object.keys(templates).length > 0) {
-      addFlow();
-    }
-  }, [addFlow, flows.length, templates]);
   return (
     <div className="w-full h-12 flex justify-between items-center border-b bg-muted">
       <div className="flex gap-2 justify-start items-center w-96">
