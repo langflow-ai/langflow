@@ -83,8 +83,8 @@ class JsonAgent(CustomAgentExecutor):
             prompt=prompt,
         )
         agent = ZeroShotAgent(
-            llm_chain=llm_chain, allowed_tools=tool_names
-        )  # type: ignore
+            llm_chain=llm_chain, allowed_tools=tool_names  # type: ignore
+        )
         return cls.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
 
     def run(self, *args, **kwargs):
@@ -132,8 +132,8 @@ class CSVAgent(CustomAgentExecutor):
         )
         tool_names = {tool.name for tool in tools}
         agent = ZeroShotAgent(
-            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs
-        )  # type: ignore
+            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs  # type: ignore
+        )
 
         return cls.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
 
@@ -171,8 +171,8 @@ class VectorStoreAgent(CustomAgentExecutor):
         )
         tool_names = {tool.name for tool in tools}
         agent = ZeroShotAgent(
-            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs
-        )  # type: ignore
+            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs  # type: ignore
+        )
         return AgentExecutor.from_agent_and_tools(
             agent=agent, tools=tools, verbose=True
         )
@@ -241,8 +241,8 @@ class SQLAgent(CustomAgentExecutor):
         )
         tool_names = {tool.name for tool in tools}  # type: ignore
         agent = ZeroShotAgent(
-            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs
-        )  # type: ignore
+            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs  # type: ignore
+        )
         return AgentExecutor.from_agent_and_tools(
             agent=agent,
             tools=tools,  # type: ignore
@@ -286,8 +286,8 @@ class VectorStoreRouterAgent(CustomAgentExecutor):
         )
         tool_names = {tool.name for tool in tools}
         agent = ZeroShotAgent(
-            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs
-        )  # type: ignore
+            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs  # type: ignore
+        )
         return AgentExecutor.from_agent_and_tools(
             agent=agent, tools=tools, verbose=True
         )
