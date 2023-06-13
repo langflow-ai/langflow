@@ -8,7 +8,7 @@ import ExtraSidebar from "../../components/ExtraSidebarComponent";
 import { ReactFlowProvider } from "reactflow";
 import FlowPage from "../FlowPage";
 import { useContext, useEffect, useState } from "react";
-import { SunIcon, MoonIcon, BellIcon, GithubIcon, Download, Upload } from "lucide-react";
+import { SunIcon, MoonIcon, BellIcon, GithubIcon, Download, Upload, Plus } from "lucide-react";
 import { TabsContext } from "../../contexts/tabsContext";
 import AlertDropdown from "../../alerts/alertDropDown";
 import { alertContext } from "../../contexts/alertContext";
@@ -29,6 +29,7 @@ export default function HomePage() {
     setTabId,
     downloadFlows,
     uploadFlows,
+    addFlow,
   } = useContext(TabsContext);
   useEffect(() => {
     setTabId("");
@@ -52,11 +53,16 @@ export default function HomePage() {
               <Upload className="w-4 mr-2" />
               Upload Database
               </Button>
+              <Button variant="outline" onClick={() => {addFlow();}}>
+              <Plus className="w-4 mr-2" />
+              Add Flow
+              </Button>
             </div>
           </div>
           <div className="w-full p-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {flows.map((flow, idx) => (
               <CardComponent
+                key={idx}
                 flow={flow}
                 id={flow.id}
               />

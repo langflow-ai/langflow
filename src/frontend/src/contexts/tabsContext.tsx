@@ -423,8 +423,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
     saveFlowToDatabase(newFlow)
       .then((id) => {
-        // Increment the ID counter.
-        setId(id);
+        // Change the id to the new id.
+        newFlow.id = id.id;
       })
       .then(() => {
         // Add the new flow to the list of flows.
