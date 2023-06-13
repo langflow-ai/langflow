@@ -32,7 +32,7 @@ async def chat(client_id: str, websocket: WebSocket):
         await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=str(exc))
 
 
-@router.post("/build/init", response_model=InitResponse)
+@router.post("/build/init", response_model=InitResponse, status_code=201)
 async def init_build(graph_data: dict):
     """Initialize the build by storing graph data and returning a unique session ID."""
 
