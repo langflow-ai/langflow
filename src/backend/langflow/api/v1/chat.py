@@ -36,11 +36,15 @@ async def chat(client_id: str, websocket: WebSocket):
 async def init_build(graph_data: dict):
     """Initialize the build by storing graph data and returning a unique session ID."""
 
-    flow_id = graph_data.get("id")
+    try:
+        flow_id = graph_data.get("id")
 
-    flow_data_store[flow_id] = graph_data
+        flow_data_store[flow_id] = graph_data
 
-    return InitResponse(flowId=flow_id)
+        return InitResponse(flowId=flow_id)
+    except Exception as exc:
+        logger.error(exc)
+        return HTTPException(status_code=500, detail=str(exc))
 
 
 @router.get("/build/{flow_id}/status", response_model=BuiltResponse)
