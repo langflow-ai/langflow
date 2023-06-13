@@ -10,7 +10,10 @@ export default function FlowPage(){
     setTabId(id);
   }, [id])
   return (
-    flows.length > 0 && tabId !== "" && flows.findIndex(flow => flow.id === tabId) !== -1 &&
+    <div className="h-full w-full">
+    {flows.length > 0 && tabId !== "" && flows.findIndex(flow => flow.id === tabId) !== -1 &&
     <Page flow={flows.find(flow => flow.id === tabId)} />
+    }
+    </div>
   )
 }

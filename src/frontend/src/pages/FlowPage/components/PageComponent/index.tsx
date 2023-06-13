@@ -308,10 +308,10 @@ export default function Page({ flow }: { flow: FlowType }) {
   const { setDisableCopyPaste } = useContext(TabsContext);
 
   return (
-    <div className="flex grow shrink basis-auto min-h-0 flex-1 overflow-hidden">
+    <div className="flex h-full w-full overflow-hidden">
       <ExtraSidebar />
       {/* Main area */}
-      <main className="flex-1 flex">
+      <main className="flex">
         {/* Primary column */}
         <div className="w-full h-full">
           <div className="w-full h-full" ref={reactFlowWrapper}>
