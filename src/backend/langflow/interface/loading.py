@@ -19,10 +19,10 @@ from langchain.chains.loading import load_chain_from_config
 from langchain.llms.loading import load_llm_from_config
 from pydantic import ValidationError
 
-from langflow.interface.agents.custom import CUSTOM_AGENTS
+from langflow.interface.custom_lists import CUSTOM_NODES
 from langflow.interface.importing.utils import import_by_type
-from langflow.interface.run import fix_memory_inputs
 from langflow.interface.toolkits.base import toolkits_creator
+from langflow.interface.chains.base import chain_creator
 from langflow.interface.types import get_type_list
 from langflow.interface.utils import load_file_into_dict
 from langflow.utils import util, validate
@@ -32,10 +32,11 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
     """Instantiate class from module type and key, and params"""
     params = convert_params_to_sets(params)
     params = convert_kwargs(params)
-    if node_type in CUSTOM_AGENTS:
-        custom_agent = CUSTOM_AGENTS.get(node_type)
-        if custom_agent:
-            return custom_agent.initialize(**params)
+    if node_type in CUSTOM_NODES:
+        if custom_node := CUSTOM_NODES.get(node_type):
+            if hasattr(custom_node, "initialize"):
+                return custom_node.initialize(**params)
+            return custom_node(**params)
 
     class_object = import_by_type(_type=base_type, name=node_type)
     return instantiate_based_on_type(class_object, base_type, node_type, params)
@@ -79,8 +80,22 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
         return instantiate_textsplitter(class_object, params)
     elif base_type == "utilities":
         return instantiate_utility(node_type, class_object, params)
+    elif base_type == "chains":
+        return instantiate_chains(node_type, class_object, params)
     else:
         return class_object(**params)
+
+
+def instantiate_chains(node_type, class_object, params):
+    if "retriever" in params and hasattr(params["retriever"], "as_retriever"):
+        params["retriever"] = params["retriever"].as_retriever()
+    if node_type in chain_creator.from_method_nodes:
+        method = chain_creator.from_method_nodes[node_type]
+        if class_method := getattr(class_object, method, None):
+            return class_method(**params)
+        raise ValueError(f"Method {method} not found in {class_object}")
+
+    return class_object(**params)
 
 
 def instantiate_agent(class_object, params):
@@ -159,38 +174,6 @@ def instantiate_utility(node_type, class_object, params):
     if node_type == "SQLDatabase":
         return class_object.from_uri(params.pop("uri"))
     return class_object(**params)
-
-
-def load_flow_from_json(path: str, build=True):
-    """Load flow from json file"""
-    # This is done to avoid circular imports
-    from langflow.graph import Graph
-
-    with open(path, "r", encoding="utf-8") as f:
-        flow_graph = json.load(f)
-    data_graph = flow_graph["data"]
-    nodes = data_graph["nodes"]
-    # Substitute ZeroShotPrompt with PromptTemplate
-    # nodes = replace_zero_shot_prompt_with_prompt_template(nodes)
-    # Add input variables
-    # nodes = payload.extract_input_variables(nodes)
-
-    # Nodes, edges and root node
-    edges = data_graph["edges"]
-    graph = Graph(nodes, edges)
-    if build:
-        langchain_object = graph.build()
-        if hasattr(langchain_object, "verbose"):
-            langchain_object.verbose = True
-
-        if hasattr(langchain_object, "return_intermediate_steps"):
-            # https://github.com/hwchase17/langchain/issues/2068
-            # Deactivating until we have a frontend solution
-            # to display intermediate steps
-            langchain_object.return_intermediate_steps = False
-        fix_memory_inputs(langchain_object)
-        return langchain_object
-    return graph
 
 
 def replace_zero_shot_prompt_with_prompt_template(nodes):

@@ -22,6 +22,7 @@ CUSTOM_NODES = {
         "SeriesCharacterChain": frontend_node.chains.SeriesCharacterChainNode(),
         "TimeTravelGuideChain": frontend_node.chains.TimeTravelGuideChainNode(),
         "MidJourneyPromptChain": frontend_node.chains.MidJourneyPromptChainNode(),
+        "load_qa_chain": frontend_node.chains.CombineDocsChainNode(),
     },
 }
 
