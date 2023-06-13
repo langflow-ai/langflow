@@ -263,7 +263,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
    * If the file type is application/json, the file is read and parsed into a JSON object.
    * The resulting JSON object is passed to the addFlow function.
    */
-  function uploadFlow() {
+  function uploadFlow(newProject?: boolean) {
     // create a file input
     const input = document.createElement("input");
     input.type = "file";
@@ -278,7 +278,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           // parse the text into a JSON object
           let flow: FlowType = JSON.parse(text);
 
-          addFlow(flow);
+          addFlow(flow, newProject);
         });
       }
     };
@@ -415,30 +415,35 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     reactFlowInstance.setEdges(edges);
   }
 
-  const addFlow = async (flow?: FlowType): Promise<String> => {
-    let flowData = extractDataFromFlow(flow);
-    if(flowData.description == ""){
-      flowData.description = "This is a new flow.";
+  const addFlow = async (flow?: FlowType, newProject?: Boolean): Promise<String> => {
+    if(newProject){
+      let flowData = extractDataFromFlow(flow);
+      if(flowData.description == ""){
+        flowData.description = "This is a new flow.";
+      }
+    
+      // Create a new flow with a default name if no flow is provided.
+      const newFlow = createNewFlow(flowData, flow);
+    
+      try {
+        const id = await saveFlowToDatabase(newFlow);
+        // Change the id to the new id.
+        newFlow.id = id.id;
+    
+        // Add the new flow to the list of flows.
+        addFlowToLocalState(newFlow);
+    
+        // Return the id
+        return id.id;
+      } catch (error) {
+        // Handle the error if needed
+        console.error('Error while adding flow:', error);
+        throw error; // Re-throw the error so the caller can handle it if needed
+      }
+    } else {
+      paste({nodes: flow.data.nodes, edges: flow.data.edges}, {x:10, y:10})
     }
-  
-    // Create a new flow with a default name if no flow is provided.
-    const newFlow = createNewFlow(flowData, flow);
-  
-    try {
-      const id = await saveFlowToDatabase(newFlow);
-      // Change the id to the new id.
-      newFlow.id = id.id;
-  
-      // Add the new flow to the list of flows.
-      addFlowToLocalState(newFlow);
-  
-      // Return the id
-      return id.id;
-    } catch (error) {
-      // Handle the error if needed
-      console.error('Error while adding flow:', error);
-      throw error; // Re-throw the error so the caller can handle it if needed
-    }
+    
   };
 
   const extractDataFromFlow = (flow) => {

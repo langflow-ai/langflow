@@ -160,7 +160,7 @@ export default function ImportModal() {
                             <ComputerDesktopIcon className="h-10 w-10 flex-shrink-0" />
                           }
                           onClick={() => {
-                            uploadFlow();
+                            uploadFlow(false);
                             setModalOpen(false);
                           }}
                           textColor="text-blue-500 dark:text-blue-500/75"
@@ -189,7 +189,7 @@ export default function ImportModal() {
                                 <DocumentDuplicateIcon className="h-6 w-6 flex-shrink-0" />
                               }
                               onClick={() => {
-                                addFlow(example);
+                                addFlow(example, false);
                                 setModalOpen(false);
                               }}
                               textColor="text-emerald-500 dark:text-emerald-500/75"
