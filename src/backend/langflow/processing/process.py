@@ -170,3 +170,25 @@ def load_flow_from_json(path: str, build=True):
         fix_memory_inputs(langchain_object)
         return langchain_object
     return graph
+
+
+def process_tweaks(graph_data: dict, tweaks: dict):
+    """This function is used to tweak the graph data using the node id and the tweaks dict"""
+    # the tweaks dict is a dict of dicts
+    # the key is the node id and the value is a dict of the tweaks
+    # the dict of tweaks contains the name of a certain parameter and the value to be tweaked
+
+    # We need to process the graph data to add the tweaks
+    nodes = graph_data["data"]["nodes"]
+    for node in nodes:
+        node_id = node["id"]
+        if node_id in tweaks:
+            node_tweaks = tweaks[node_id]
+            template_data = node["data"]["node"]["template"]
+            for tweak_name, tweake_value in node_tweaks.items():
+                if tweak_name in template_data:
+                    template_data[tweak_name]["value"] = tweake_value
+                    print(
+                        f"Something changed in node {node_id} with tweak {tweak_name} and value {tweake_value}"
+                    )
+    return graph_data
