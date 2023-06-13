@@ -6,7 +6,8 @@ from fastapi import (
     WebSocketException,
     status,
 )
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse
+from langflow.api.v1.schemas import BuiltResponse, InitResponse
 
 from langflow.chat.manager import ChatManager
 from langflow.graph.graph.base import Graph
@@ -31,7 +32,7 @@ async def chat(client_id: str, websocket: WebSocket):
         await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=str(exc))
 
 
-@router.post("/build/init")
+@router.post("/build/init", response_model=InitResponse)
 async def init_build(graph_data: dict):
     """Initialize the build by storing graph data and returning a unique session ID."""
 
@@ -39,19 +40,21 @@ async def init_build(graph_data: dict):
 
     flow_data_store[flow_id] = graph_data
 
-    return JSONResponse(content={"flowId": flow_id})
+    return InitResponse(flowId=flow_id)
 
 
-@router.get("/build/{flow_id}/status")
+@router.get("/build/{flow_id}/status", response_model=BuiltResponse)
 async def build_status(flow_id: str):
     """Check the flow_id is in the flow_data_store."""
     try:
-        if flow_id in flow_data_store and not isinstance(
+        built = flow_id in flow_data_store and not isinstance(
             flow_data_store[flow_id], dict
-        ):
-            return JSONResponse(content={"built": True})
-        else:
-            return JSONResponse(content={"built": False})
+        )
+
+        return BuiltResponse(
+            built=built,
+        )
+
     except Exception as exc:
         logger.error(exc)
         return HTTPException(status_code=500, detail=str(exc))
