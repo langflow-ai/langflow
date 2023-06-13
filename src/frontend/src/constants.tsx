@@ -37,3 +37,9 @@ export const PROMPT_DIALOG_SUBTITLE = "Edit you prompt.";
  * @constant
  */
 export const TEXT_DIALOG_SUBTITLE = "Edit you text.";
+
+/**
+ * The base text for subtitle of Import Dialog
+ * @constant
+ */
+export const IMPORT_DIALOG_SUBTITLE = "Import your models or pick one example.";
