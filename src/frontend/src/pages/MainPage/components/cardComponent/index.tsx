@@ -24,16 +24,12 @@ import { Link } from "react-router-dom";
 export const CardComponent = ({
   flow,
   id,
-  removeFlow,
-  setTabId,
 }: {
   flow: FlowType;
   id: string;
-  removeFlow: (id: string) => void;
-  setTabId: (id: string) => void;
 }) => {
   const { setErrorData } = useContext(alertContext);
-  const { updateFlow } = useContext(TabsContext);
+  const { updateFlow, removeFlow, setTabId } = useContext(TabsContext);
   function handleSaveFlow(flow) {
     try {
       updateFlowInDatabase(flow);
@@ -73,12 +69,11 @@ export const CardComponent = ({
               }}
             />
             </Link>
+            <button onClick={() => {removeFlow(flow.id)}}>
             <Trash
               className="w-4"
-              onClick={() => {
-                removeFlow(flow.id);
-              }}
             />
+            </button>
           </div>
         </CardTitle>
         <CardDescription className="pt-2 pb-2 h-10">

@@ -9,6 +9,8 @@ export type TabsContextType = {
   updateFlow: (newFlow: FlowType) => void;
   incrementNodeId: () => string;
   downloadFlow: (flow: FlowType) => void;
+  downloadFlows: () => void;
+  uploadFlows: () => void;
   uploadFlow: (newFlow?: boolean) => void;
   hardReset: () => void;
   //disable CopyPaste
