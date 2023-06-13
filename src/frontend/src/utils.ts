@@ -1252,3 +1252,9 @@ export function connectedInputNodesOnHandle(nodeId:string,handleId:string,{nodes
   })
   return connectedNodes
 }
+
+function checkDuplicatedNames(connectedNodes:Array<{name:string,id:string,isGroup:boolean}>){
+  const names = connectedNodes.map((n)=>n.name)
+  const duplicatedNames = names.filter((n,i)=>names.indexOf(n)!==i)
+  return duplicatedNames
+}
