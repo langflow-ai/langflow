@@ -417,6 +417,9 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
   const addFlow = async (flow?: FlowType): Promise<String> => {
     let flowData = extractDataFromFlow(flow);
+    if(flowData.description == ""){
+      flowData.description = "This is a new flow.";
+    }
   
     // Create a new flow with a default name if no flow is provided.
     const newFlow = createNewFlow(flowData, flow);

@@ -23,6 +23,7 @@ import _ from "lodash";
 import { updateFlowInDatabase, uploadFlowsToDatabase } from "../../controllers/API";
 import { MenuBar } from "../../components/headerComponent/components/menuBar";
 import { CardComponent } from "./components/cardComponent";
+import { useNavigate } from "react-router-dom";
 export default function HomePage() {
   const {
     flows,
@@ -34,6 +35,7 @@ export default function HomePage() {
   useEffect(() => {
     setTabId("");
   }, [])
+  const navigate = useNavigate();
   return (
       <div
         className="w-full h-full flex overflow-auto flex-col bg-muted px-16"
@@ -53,7 +55,9 @@ export default function HomePage() {
               <Upload className="w-4 mr-2" />
               Upload Database
               </Button>
-              <Button variant="primary" onClick={() => {addFlow();}}>
+              <Button variant="primary" onClick={() => {addFlow().then((id) => {
+                  navigate("/flow/"+id);
+                });}}>
               <Plus className="w-4 mr-2" />
               New Project
               </Button>

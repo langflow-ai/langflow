@@ -31,8 +31,7 @@ export const CardComponent = ({ flow, id }: { flow: FlowType; id: string }) => {
         </CardTitle>
         <CardDescription className="pt-2 pb-2">
           <div className="truncate-doubleline">
-            This flow creates an agent that accesses a department store database
-            and APIs to monitor customer activity and overall storage.
+            {flow.description}
             {/* {flow.description} */}
           </div>
         </CardDescription>
