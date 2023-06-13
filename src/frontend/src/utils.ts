@@ -1226,6 +1226,29 @@ export function groupByFamily(data, baseClasses) {
   return groupedObj;
 }
 
-export function connectedInputNodesOnHandle(nodeId:string,handleId,{nodes,edges}:{nodes:NodeType[],edges:Edge[]}){
+export function connectedInputNodesOnHandle(nodeId:string,handleId:string,{nodes,edges}:{nodes:NodeType[],edges:Edge[]}){
+  const connectedNodes ={}
   // return the nodes connected to the input handle of the node
+  const TargetEdges = edges.filter((e) => e.target === nodeId);
+  TargetEdges.forEach((edge) => {
+    if(edge.targetHandle===handleId){
+      const sourceNode = nodes.find((n) => n.id === edge.source);
+      if(sourceNode){
+        if(sourceNode.type==="groupNode"){
+          let lastNode = findLastNode(sourceNode.data.node.flow.data)
+            while(lastNode && lastNode.type==="groupNode")
+            {
+              lastNode = findLastNode(lastNode.data.node.flow.data)
+            }
+            if(lastNode){
+              connectedNodes[lastNode.data.type]=lastNode.id
+            }
+        }
+        else{
+          connectedNodes[sourceNode.data.type]=sourceNode.id
+        }
+      }
+    }
+  })
+  return connectedNodes
 }
