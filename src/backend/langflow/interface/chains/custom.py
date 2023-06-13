@@ -1,11 +1,13 @@
-from typing import Dict, Optional, Type
+from typing import Dict, Optional, Type, Union
 
 from langchain.chains import ConversationChain
 from langchain.memory.buffer import ConversationBufferMemory
 from langchain.schema import BaseMemory
+from langflow.interface.base import CustomChain
 from pydantic import Field, root_validator
-
-from langflow.graph.utils import extract_input_variables_from_prompt
+from langchain.chains.question_answering import load_qa_chain
+from langflow.interface.utils import extract_input_variables_from_prompt
+from langchain.base_language import BaseLanguageModel
 
 DEFAULT_SUFFIX = """"
 Current conversation:
@@ -14,7 +16,7 @@ Human: {input}
 {ai_prefix}"""
 
 
-class BaseCustomChain(ConversationChain):
+class BaseCustomConversationChain(ConversationChain):
     """BaseCustomChain is a chain you can use to have a conversation with a custom character."""
 
     template: Optional[str]
@@ -47,7 +49,7 @@ class BaseCustomChain(ConversationChain):
         return values
 
 
-class SeriesCharacterChain(BaseCustomChain):
+class SeriesCharacterChain(BaseCustomConversationChain):
     """SeriesCharacterChain is a chain you can use to have a conversation with a character from a series."""
 
     character: str
@@ -66,7 +68,7 @@ Human: {input}
     """Default memory store."""
 
 
-class MidJourneyPromptChain(BaseCustomChain):
+class MidJourneyPromptChain(BaseCustomConversationChain):
     """MidJourneyPromptChain is a chain you can use to generate new MidJourney prompts."""
 
     template: Optional[
@@ -84,7 +86,7 @@ class MidJourneyPromptChain(BaseCustomChain):
     AI:"""  # noqa: E501
 
 
-class TimeTravelGuideChain(BaseCustomChain):
+class TimeTravelGuideChain(BaseCustomConversationChain):
     template: Optional[
         str
     ] = """I want you to act as my time travel guide. You are helpful and creative. I will provide you with the historical period or future time I want to visit and you will suggest the best events, sights, or people to experience. Provide the suggestions and any necessary information.
@@ -94,7 +96,26 @@ class TimeTravelGuideChain(BaseCustomChain):
     AI:"""  # noqa: E501
 
 
-CUSTOM_CHAINS: Dict[str, Type[ConversationChain]] = {
+class CombineDocsChain(CustomChain):
+    """Implementation of AgentInitializer function"""
+
+    @staticmethod
+    def function_name():
+        return "load_qa_chain"
+
+    @classmethod
+    def initialize(cls, llm: BaseLanguageModel, chain_type: str):
+        return load_qa_chain(llm=llm, chain_type=chain_type)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def run(self, *args, **kwargs):
+        return super().run(*args, **kwargs)
+
+
+CUSTOM_CHAINS: Dict[str, Type[Union[ConversationChain, CustomChain]]] = {
+    "CombineDocsChain": CombineDocsChain,
     "SeriesCharacterChain": SeriesCharacterChain,
     "MidJourneyPromptChain": MidJourneyPromptChain,
     "TimeTravelGuideChain": TimeTravelGuideChain,
