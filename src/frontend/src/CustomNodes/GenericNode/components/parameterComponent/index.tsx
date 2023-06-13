@@ -205,15 +205,17 @@ export default function ParameterComponent({
             />
           </div>
         ) : left === true && type === "float" ? (
-          <FloatComponent
-            disabled={disabled}
-            disableCopyPaste={true}
-            value={data.node.template[name].value ?? ""}
-            onChange={(t) => {
-              data.node.template[name].value = t;
-              save();
-            }}
-          />
+          <div className="mt-2 w-full">
+            <FloatComponent
+              disabled={disabled}
+              disableCopyPaste={true}
+              value={data.node.template[name].value ?? ""}
+              onChange={(t) => {
+                data.node.template[name].value = t;
+                save();
+              }}
+            />
+          </div>
         ) : left === true &&
           type === "str" &&
           data.node.template[name].options ? (
@@ -250,15 +252,17 @@ export default function ParameterComponent({
             }}
           ></InputFileComponent>
         ) : left === true && type === "int" ? (
-          <IntComponent
-            disabled={disabled}
-            disableCopyPaste={true}
-            value={data.node.template[name].value ?? ""}
-            onChange={(t) => {
-              data.node.template[name].value = t;
-              save();
-            }}
-          />
+          <div className="mt-2 w-full">
+            <IntComponent
+              disabled={disabled}
+              disableCopyPaste={true}
+              value={data.node.template[name].value ?? ""}
+              onChange={(t) => {
+                data.node.template[name].value = t;
+                save();
+              }}
+            />
+          </div>
         ) : left === true && type === "prompt" ? (
           <PromptAreaComponent
             disabled={disabled}
