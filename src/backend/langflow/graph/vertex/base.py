@@ -25,7 +25,7 @@ class Vertex:
     def __init__(self, data: Dict, base_type: Optional[str] = None) -> None:
         self.id: str = data["id"]
         self._data = data
-        self.edges: List["Edge"] = []
+        self.edges: List["ContractEdge"] = []
         self.base_type: Optional[str] = base_type
         self._parse_data()
         self._built_object = None

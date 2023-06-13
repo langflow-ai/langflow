@@ -155,12 +155,12 @@ class Graph:
                 neighbors[neighbor] += 1
         return neighbors
 
-    def _build_edges(self) -> List[Edge]:
+    def _build_edges(self) -> List[ContractEdge]:
         # Edge takes two vertices as arguments, so we need to build the vertices first
         # and then build the edges
         # if we can't find a vertex, we raise an error
 
-        edges: List[Edge] = []
+        edges: List[ContractEdge] = []
         for raw_edge in self._edges:
             source = self.get_vertex(raw_edge["source"])
             target = self.get_vertex(raw_edge["target"])

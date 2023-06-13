@@ -11,13 +11,13 @@ class Edge:
         self.source: "Vertex" = source
         self.target: "Vertex" = target
         self.validate_edge()
-        self.parse_handles(raw_edge)
+        self.parse_target_handle(raw_edge)
 
-    def parse_handles(self, raw_edge: dict) -> None:
+    def parse_target_handle(self, raw_edge: dict) -> None:
         # handle structure: base_class|type|id for target
         # handle structure: name|id|base_classes for source
-        self._target_handle = raw_edge["targetHandle"]
-        self._target_handle_parts = self._target_handle.split("|")
+        _target_handle = raw_edge["targetHandle"]
+        self._target_handle_parts = _target_handle.split("|")
         # This param can be used to pass data to the target
         self._target_param_key = self._target_handle_parts[1]
 
@@ -35,7 +35,6 @@ class Edge:
             for target_req in self.target_reqs
         )
         # Get what type of input the target node is expecting
-
         self.matched_type = next(
             (
                 output

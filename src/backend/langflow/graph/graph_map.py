@@ -5,10 +5,9 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from langflow.cache.base import memoize_dict
 from langflow.graph import Vertex
 from langflow.graph import Graph
-from langflow.graph.vertex.types import LangChainVertex
 from langflow.graph.vertex.types import ConnectorVertex
-from langflow.interface.run import get_result_and_steps
 from collections import deque
+from langflow.graph.schema import Message
 
 
 class GraphMap:
@@ -16,39 +15,45 @@ class GraphMap:
         self.graph_data = graph_data
         if is_first_message:
             self._build_elements.clear_cache()
-        self.graph, self.runnable_elements = GraphMap._build_elements(graph_data)
+        self.graph, self.sorted_vertices = GraphMap._build_elements(graph_data)
         self.intermediate_steps: List[str] = []
         self.node_cache: Dict[Union[Vertex, "ConnectorVertex"], Any] = {}
         self.last_node: Optional[Union[Vertex, "ConnectorVertex"]] = None
 
-    async def process(self, input: str, **kwargs) -> Tuple[str, str]:
-        result = input
-        built_object = None
-        self.results = []
-        for element in self.runnable_elements:
-            # If the element is the same as the last one, reuse the cached result
-            if element == self.last_node:
-                result = self.node_cache[element]
-            else:
-                # Build the graph or connector node and get the root node
-                built_object = element.build()
-                # check if it is a
-                if isinstance(element, LangChainVertex):
-                    # result must be a str
-                    result = str(result)
-                    result, steps = await get_result_and_steps(
-                        built_object, result, **kwargs
-                    )
-                    self.intermediate_steps.append(steps)
-                else:
-                    result = built_object(result)
-                # Store the result in the cache
-                self.node_cache[element] = result
-                # Update the last node
-                self.last_node = element
-                self.results.append((element.base_type, result))
-        # str(result) is a temporary solution
-        return str(result), "\n".join(self.intermediate_steps)
+    # async def process(self, input: str, **kwargs) -> Tuple[str, str]:
+    #     result = input
+    #     built_object = None
+    #     self.results = []
+    #     for element in self.runnable_elements:
+    #         # If the element is the same as the last one, reuse the cached result
+    #         if element == self.last_node:
+    #             result = self.node_cache[element]
+    #         else:
+    #             # Build the graph or connector node and get the root node
+    #             built_object = element.build()
+    #             # check if it is a
+    #             if isinstance(element, LangChainVertex):
+    #                 # result must be a str
+    #                 result = str(result)
+    #                 result, steps = await get_result_and_steps(
+    #                     built_object, result, **kwargs
+    #                 )
+    #                 self.intermediate_steps.append(steps)
+    #             else:
+    #                 result = built_object(result)
+    #             # Store the result in the cache
+    #             self.node_cache[element] = result
+    #             # Update the last node
+    #             self.last_node = element
+    #             self.results.append((element.base_type, result))
+    #     # str(result) is a temporary solution
+    #     return str(result), "\n".join(self.intermediate_steps)
+
+    def process(self, input_data: str, **kwargs) -> Tuple[str, str]:
+        message = Message(input_data)
+        for vertex in self.sorted_vertices:
+            for edge in vertex.edges:
+                edge.fulfill(message)
 
     @memoize_dict(maxsize=20)
     @staticmethod
@@ -59,11 +64,7 @@ class GraphMap:
         graph_copy = deepcopy(graph)
         sorted_vertices = GraphMap.topological_sort(graph)
 
-        for vertex in sorted_vertices:
-            vertex.build()
-
-        runnable_elements = [vertex for vertex in sorted_vertices if vertex.can_be_root]
-        return graph_copy, runnable_elements
+        return graph_copy, sorted_vertices
 
     @staticmethod
     def topological_sort(graph):
