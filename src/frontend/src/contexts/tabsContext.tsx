@@ -17,9 +17,11 @@ import {
 import { alertContext } from "./alertContext";
 import { typesContext } from "./typesContext";
 import { APITemplateType, TemplateVariableType } from "../types/api";
-import { v4 as uuidv4 } from "uuid";
+import ShortUniqueId from "short-unique-id";
 import { addEdge } from "reactflow";
 import _ from "lodash";
+
+const uid = new ShortUniqueId({ length: 4 });
 
 const TabsContextInitialValue: TabsContextType = {
   save: () => {},
@@ -29,7 +31,7 @@ const TabsContextInitialValue: TabsContextType = {
   removeFlow: (id: string) => {},
   addFlow: (flowData?: any) => {},
   updateFlow: (newFlow: FlowType) => {},
-  incrementNodeId: () => uuidv4(),
+  incrementNodeId: () => uid(),
   downloadFlow: (flow: FlowType) => {},
   uploadFlow: () => {},
   hardReset: () => {},
@@ -53,13 +55,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   const { setErrorData, setNoticeData } = useContext(alertContext);
   const [tabIndex, setTabIndex] = useState(0);
   const [flows, setFlows] = useState<Array<FlowType>>([]);
-  const [id, setId] = useState(uuidv4());
+  const [id, setId] = useState(uid());
   const { templates, reactFlowInstance } = useContext(typesContext);
   const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
 
-  const newNodeId = useRef(uuidv4());
+  const newNodeId = useRef(uid());
   function incrementNodeId() {
-    newNodeId.current = uuidv4();
+    newNodeId.current = uid();
     return newNodeId.current;
   }
   function save() {
@@ -144,10 +146,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }, [flows, id, tabIndex, newNodeId]);
 
   function hardReset() {
-    newNodeId.current = uuidv4();
+    newNodeId.current = uid();
     setTabIndex(0);
     setFlows([]);
-    setId(uuidv4());
+    setId(uid());
   }
 
   /**
@@ -362,12 +364,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     let newFlow: FlowType = {
       description,
       name: flow?.name ?? "New Flow",
-      id: uuidv4(),
+      id: uid(),
       data,
     };
 
     // Increment the ID counter.
-    setId(uuidv4());
+    setId(uid());
 
     // Add the new flow to the list of flows.
 
