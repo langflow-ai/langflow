@@ -25,6 +25,7 @@ import { TabsContext } from "../../../../contexts/tabsContext";
 import { Separator } from "../../../../components/ui/separator";
 import { alertContext } from "../../../../contexts/alertContext";
 import { updateFlowInDatabase } from "../../../../controllers/API";
+import { INPUT_STYLE } from "../../../../constants";
 
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);
@@ -132,7 +133,10 @@ export default function ExtraSidebar() {
           name="search"
           id="search"
           placeholder="Search nodes"
-          className="dark:text-white focus:outline-none block w-full rounded-md py-1.5 ps-3 pr-9 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 sm:text-sm sm:leading-6 dark:ring-0 dark:bg-[#2d3747] dark:focus:outline-none"
+          className={
+            INPUT_STYLE +
+            "border-1 dark:border-slate-600 dark:border-0.5 dark:ring-0 focus-visible:dark:ring-0 focus-visible:dark:ring-offset-1 rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+          }
           onChange={(e) => {
             handleSearchInput(e.target.value);
             setSearch(e.target.value);
