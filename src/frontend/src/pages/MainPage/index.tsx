@@ -26,7 +26,7 @@ export default function HomePage() {
             }}
           >
             <Download className="w-4 mr-2" />
-            Download Database
+            Download Collection
           </Button>
           <Button
             variant="primary"
@@ -35,7 +35,7 @@ export default function HomePage() {
             }}
           >
             <Upload className="w-4 mr-2" />
-            Upload Database
+            Upload Collection
           </Button>
           <Button
             variant="primary"
