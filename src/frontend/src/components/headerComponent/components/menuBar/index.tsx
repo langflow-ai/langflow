@@ -43,14 +43,7 @@ export const MenuBar = ({flows, tabId }) => {
   const { openPopUp } = useContext(PopUpContext);
   const { undo, redo } = useContext(undoRedoContext);
 
-  function handleSaveFlow(flow) {
-    try {
-      updateFlowInDatabase(flow);
-      // updateFlowStyleInDataBase(flow);
-    } catch (err) {
-      setErrorData(err);
-    }
-  }
+  
 
   function handleAddFlow() {
     try {
