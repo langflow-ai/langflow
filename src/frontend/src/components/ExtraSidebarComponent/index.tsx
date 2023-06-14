@@ -21,10 +21,7 @@ export default function ExtraSidebar() {
           isStackedOpen ? "w-52" : "w-0 "
         } flex-shrink-0 flex overflow-hidden flex-col border-r dark:border-r-gray-700 transition-all duration-500`}
       >
-        <div className="w-52 dark:bg-gray-800 border dark:border-gray-700  overflow-y-auto scrollbar-hide h-full flex flex-col items-start">
-          <div className="flex px-4 justify-between align-middle w-full">
-            <span className="text-gray-900 dark:text-white py-[2px] font-medium "></span>
-          </div>
+        <div className="w-52 dark:bg-gray-800 border dark:border-gray-700  overflow-y-auto scrollbar-hide h-full flex flex-col items-start bg-white">
           <div className="flex flex-grow flex-col w-full">
             {extraNavigation.options ? (
               <div className="p-4">

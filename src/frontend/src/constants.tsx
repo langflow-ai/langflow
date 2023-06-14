@@ -46,3 +46,10 @@ export const TEXT_DIALOG_SUBTITLE = "Edit your text.";
  */
 export const IMPORT_DIALOG_SUBTITLE =
   "Upload a JSON file or select from the available community examples.";
+
+/**
+ * The base text for subtitle of code dialog
+ * @constant
+ */
+export const EXPORT_CODE_DIALOG =
+  "Generate the code to integrate your flow into an external application.";
