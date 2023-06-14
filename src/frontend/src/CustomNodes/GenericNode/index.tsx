@@ -187,7 +187,7 @@ export default function GenericNode({
         </div>
 
         <div className="h-full w-full py-5 text-gray-800">
-          <div className="w-full px-5 pb-3 text-sm text-gray-500 dark:text-gray-300">
+          <div className="w-full px-5 pb-3 text-sm text-muted-foreground">
             {data.node.description}
           </div>
 
