@@ -75,7 +75,7 @@ export default function Header() {
               Join The Community
             </a>
           </Button>
-          <button
+          {/* <button
             className="text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
             onClick={() => {
               setDark(!dark);
@@ -86,7 +86,7 @@ export default function Header() {
             ) : (
               <MoonIcon className="h-5 w-5" />
             )}
-          </button>
+          </button> */}
           <button
             className="text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200 relative"
             onClick={(event: React.MouseEvent<HTMLElement>) => {
