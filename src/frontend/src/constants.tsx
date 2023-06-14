@@ -52,7 +52,8 @@ export const TEXT_DIALOG_SUBTITLE = "Edit you text.";
 export const getPythonApiCode = (flowId: string): string => {
   return `import requests
 
-BASE_API_URL = "${window.location.protocol}//${window.location.host}/predict"
+BASE_API_URL = "${window.location.protocol}//${window.location.host}/ap1/v1/predict"
+FLOW_ID = "${flowId}"
 
 def run_flow(message: str, flow_id: str, tweaks: dict = None) -> dict:
     """
@@ -76,11 +77,9 @@ def run_flow(message: str, flow_id: str, tweaks: dict = None) -> dict:
 # Setup any tweaks you want to apply to the flow
 tweaks = {} # {"nodeId": {"key": "value"}, "nodeId2": {"key": "value"}}
 
-FLOW_ID = "${flowId}"
 
 print(run_flow("Your message", flow_id=FLOW_ID, tweaks=tweaks))`;
 };
-
 /**
  * Function to get the curl code for the API
  * @param {string} flowId - The id of the flow
@@ -88,12 +87,10 @@ print(run_flow("Your message", flow_id=FLOW_ID, tweaks=tweaks))`;
  */
 export const getCurlCode = (flowId: string): string => {
   return `curl -X POST \\
-  -H "Content-Type: application/json" \\
-  -H "Authorization: Bearer ${flowId}" \\
-  -d '{"message": "Your message"}' \\
-  ${window.location.protocol}//${window.location.host}/predict`;
+  ${window.location.protocol}//${window.location.host}/api/v1/predict/${flowId} \\
+  -H 'Content-Type: application/json' \\
+  -d '{"message": "Your message"}'`;
 };
-
 /**
  * Function to get the python code for the API
  * @param {string} flowName - The name of the flow
