@@ -43,6 +43,7 @@ import {
 } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
 import { EDIT_DIALOG_SUBTITLE } from "../../constants";
+import { Badge } from "../../components/ui/badge";
 
 export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const [open, setOpen] = useState(true);
@@ -95,15 +96,16 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
       <DialogContent className="lg:max-w-[700px]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
-            <span className="pr-2">Edit Node</span>
-            <span>{data.id}</span>
+            <span className="pr-2">{data.type}</span>
+            <Badge variant="outline" >{data.id}</Badge>
             <PencilSquareIcon
               className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
               aria-hidden="true"
             />
           </DialogTitle>
           <DialogDescription>
-            {EDIT_DIALOG_SUBTITLE}
+            {data.node.description? data.node.description : EDIT_DIALOG_SUBTITLE}
+            <br/>
             <div className="flex pt-3">
               <VariableIcon className="w-5 h-5 pe-1 text-gray-700 stroke-2">
                 &nbsp;
