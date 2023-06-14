@@ -2,6 +2,7 @@ import { PromptTypeAPI, errorsTypeAPI } from "./../../types/api/index";
 import { APIObjectType, sendAllProps } from "../../types/api/index";
 import axios, { AxiosResponse } from "axios";
 import { FlowStyleType, FlowType } from "../../types/flow";
+import { ReactFlowJsonObject } from "reactflow";
 
 /**
  * Fetches all objects from the API endpoint.
@@ -76,7 +77,13 @@ export async function getExamples(): Promise<FlowType[]> {
  * @returns {Promise<any>} The saved flow data.
  * @throws Will throw an error if saving fails.
  */
-export async function saveFlowToDatabase(newFlow: FlowType): Promise<FlowType> {
+export async function saveFlowToDatabase(newFlow: {
+  name: string;
+  id: string;
+  data: ReactFlowJsonObject;
+  description: string;
+  style?: FlowStyleType;
+}): Promise<FlowType> {
   try {
     const response = await axios.post("/api/v1/flows/", {
       name: newFlow.name,

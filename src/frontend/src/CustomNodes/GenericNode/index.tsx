@@ -1,17 +1,4 @@
 import {
-  BugAntIcon,
-  Cog6ToothIcon,
-  InformationCircleIcon,
-  TrashIcon,
-} from "@heroicons/react/24/outline";
-
-import {
-  CheckCircleIcon,
-  EllipsisHorizontalCircleIcon,
-  ExclamationCircleIcon,
-} from "@heroicons/react/24/solid";
-
-import {
   classNames,
   nodeColors,
   nodeIcons,
