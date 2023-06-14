@@ -18,6 +18,8 @@ import { Checkbox } from "../../components/ui/checkbox";
 import { EXPORT_DIALOG_SUBTITLE } from "../../constants";
 import EditFlowSettings from "../../components/nameInputComponent";
 import { Label } from "../../components/ui/label";
+import { Input } from "../../components/ui/input";
+import { Textarea } from "../../components/ui/textarea";
 
 export default function ExportModal() {
   const [open, setOpen] = useState(true);
@@ -61,7 +63,7 @@ export default function ExportModal() {
             className="mt-2 focus-visible:ring-1"
             onChange={(event) => {
               if (event.target.value != "") {
-                let newFlow = flows[tabIndex];
+                let newFlow = flows.find((f) => f.id === tabId);
                 newFlow.name = event.target.value;
                 setName(event.target.value);
                 updateFlow(newFlow);
