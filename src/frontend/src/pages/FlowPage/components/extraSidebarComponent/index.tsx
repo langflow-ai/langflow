@@ -1,9 +1,4 @@
-import {
-  Bars2Icon,
-  PencilSquareIcon,
-  Square2StackIcon,
-  TrashIcon,
-} from "@heroicons/react/24/outline";
+import { Bars2Icon } from "@heroicons/react/24/outline";
 import DisclosureComponent from "../DisclosureComponent";
 import {
   classNames,
@@ -11,18 +6,17 @@ import {
   nodeIcons,
   nodeNames,
 } from "../../../../utils";
-import { useContext, useEffect, useState, useRef } from "react";
+import { useContext, useState } from "react";
 import { typesContext } from "../../../../contexts/typesContext";
 import { APIClassType, APIObjectType } from "../../../../types/api";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
-import { Code, Code2, FileDown, FileUp, Import, Save } from "lucide-react";
+import { Code2, FileDown, FileUp, Save } from "lucide-react";
 import { PopUpContext } from "../../../../contexts/popUpContext";
 import ImportModal from "../../../../modals/importModal";
 import ExportModal from "../../../../modals/exportModal";
 import ApiModal from "../../../../modals/ApiModal";
 import { TabsContext } from "../../../../contexts/tabsContext";
-import { Separator } from "../../../../components/ui/separator";
 import { alertContext } from "../../../../contexts/alertContext";
 import { updateFlowInDatabase } from "../../../../controllers/API";
 import { INPUT_STYLE } from "../../../../constants";
@@ -126,7 +120,7 @@ export default function ExtraSidebar() {
           </button>
         </ShadTooltip>
       </div>
-      <Separator />
+      {/* <Separator /> */}
       <div className="relative mt-2 flex items-center mb-2 mx-2">
         <input
           type="text"
