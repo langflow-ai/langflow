@@ -52,10 +52,7 @@ export default function FlowSettingsModal() {
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Settings</span>
-            <ArrowDownTrayIcon
-              className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
-              aria-hidden="true"
-            />
+
           </DialogTitle>
           <DialogDescription>{SETTINGS_DIALOG_SUBTITLE}</DialogDescription>
         </DialogHeader>
