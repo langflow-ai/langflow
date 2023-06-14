@@ -7,13 +7,6 @@
 export const EXPORT_DIALOG_SUBTITLE = "Export flow as JSON file.";
 
 /**
- * The base text for subtitle of Code Dialog (Toolbar)
- * @constant
- */
-export const CODE_DIALOG_SUBTITLE =
-  "Generate the code to integrate your flow into an external application.";
-
-/**
  * The base text for subtitle of Edit Node Dialog
  * @constant
  */
@@ -53,3 +46,10 @@ export const IMPORT_DIALOG_SUBTITLE =
  */
 export const EXPORT_CODE_DIALOG =
   "Generate the code to integrate your flow into an external application.";
+
+/**
+ * The base text for subtitle of code dialog
+ * @constant
+ */
+export const INPUT_STYLE =
+  " focus:ring-1 focus:ring-offset-1 focus:ring-ring focus:outline-none ";

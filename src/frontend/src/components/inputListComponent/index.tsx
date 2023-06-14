@@ -4,7 +4,7 @@ import { InputListComponentType } from "../../types/components";
 import { TabsContext } from "../../contexts/tabsContext";
 
 import _ from "lodash";
-
+import { INPUT_STYLE } from "../../constants";
 export default function InputListComponent({
   value,
   onChange,
@@ -32,7 +32,8 @@ export default function InputListComponent({
             value={i}
             className={
               editNode
-                ? "border-[1px]  truncate cursor-pointer text-center placeholder:text-center text-gray-500 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-1 focus:ring-offset-1 focus:ring-ring"
+                ? "border-[1px]  truncate cursor-pointer text-center placeholder:text-center text-gray-500 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm" +
+                  INPUT_STYLE
                 : "block w-full form-input rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500 sm:text-sm" +
                   (disabled ? " bg-gray-200" : "") +
                   "focus:placeholder-transparent"
@@ -58,13 +59,7 @@ export default function InputListComponent({
                 onChange(inputList);
               }}
             >
-              <PlusIcon
-                className={
-                  editNode
-                    ? "w-4 h-4 hover:text-black"
-                    : "w-4 h-4 hover:text-blue-600"
-                }
-              />
+              <PlusIcon className={"w-4 h-4 hover:text-ring"} />
             </button>
           ) : (
             <button
