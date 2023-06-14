@@ -30,8 +30,8 @@ export default function Dropdown({
               <Listbox.Button
                 className={
                   editNode
-                    ? "relative pr-9 arrow-hide placeholder:text-center border-0 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm focus:outline-none focus:ring-1 focus:ring-inset focus:ring-gray-200"
-                    : "ring-1 ring-slate-300 dark:ring-slate-600 w-full py-2 pl-3 pr-10 text-left focus:ring-offset-1 focus:ring-offset-slate-400 dark:focus:ring-offset-1 dark:focus:ring-offset-gray-900 dark:focus:ring-1 dark:focus:ring-gray-600 dark:focus-visible:ring-gray-900 dark:focus-visible:ring-offset-1 focus-visible:outline-none dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm focus:outline-none focus:ring-1 focus:ring-inset focus:ring-gray-200"
+                    ? "relative pr-9 arrow-hide placeholder:text-center block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md shadow-sm sm:text-sm focus:ring-1 focus:ring-offset-1 focus:ring-ring focus:outline-none border-gray-300 border-1"
+                    : "ring-1 ring-slate-300 dark:ring-slate-600 w-full py-2 pl-3 pr-10 text-left dark:focus:ring-offset-2 dark:focus:ring-offset-gray-900 dark:focus:ring-1 dark:focus:ring-gray-600 dark:focus-visible:ring-gray-900 dark:focus-visible:ring-offset-2 focus-visible:outline-none dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-1 focus:ring-offset-1 focus:ring-ring focus:outline-none"
                 }
               >
                 <span className="block truncate w-full">{internalValue}</span>

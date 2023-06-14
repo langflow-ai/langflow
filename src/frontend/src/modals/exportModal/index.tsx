@@ -60,7 +60,7 @@ export default function ExportModal() {
           <span className="font-medium">Name</span>
 
           <Input
-            className="mt-2"
+            className="mt-2 focus-visible:ring-1"
             onChange={(event) => {
               if (event.target.value != "") {
                 let newFlow = flows[tabIndex];
@@ -90,7 +90,7 @@ export default function ExportModal() {
             }}
             value={flows[tabIndex].description ?? null}
             placeholder="Flow description"
-            className="max-h-[100px] mt-2"
+            className="max-h-[100px] mt-2 focus-visible:ring-1"
             rows={3}
           />
         </Label>
