@@ -68,8 +68,8 @@ export default function ImportModal() {
       <DialogContent
         className={classNames(
           showExamples
-            ? "lg:max-w-[650px] h-[600px] bg-muted"
-            : "lg:max-w-[650px] h-[450px] bg-muted"
+            ? "lg:max-w-[650px] h-[600px]"
+            : "lg:max-w-[650px] h-[450px]"
         )}
       >
         <DialogHeader>
@@ -176,7 +176,7 @@ export default function ImportModal() {
         </div>
 
         <DialogFooter>
-          <div className="bg-muted w-full flex items-center justify-center mt-2">
+          <div className="w-full flex items-center justify-center mt-2">
             <a
               href="https://github.com/logspace-ai/langflow_examples"
               target="_blank"
