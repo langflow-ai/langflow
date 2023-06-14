@@ -430,7 +430,7 @@ export default function ChatModal({
                         </span>
                       </span>
                       <br />
-                      <div className="bg-gray-100 dark:bg-gray-900 rounded-md w-2/4 px-6 py-8 border border-gray-200 dark:border-gray-700">
+                      <div className="bg-muted dark:bg-gray-900 rounded-md w-2/4 px-6 py-8 border border-gray-200 dark:border-gray-700">
                         <span className="text-base text-gray-500">
                           Start a conversation and click the agent’s thoughts{" "}
                           <span>

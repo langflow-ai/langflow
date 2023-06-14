@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { FloatComponentType } from "../../types/components";
 import { TabsContext } from "../../contexts/tabsContext";
 import { classNames } from "../../utils";
+import { INPUT_STYLE } from "../../constants";
 
 export default function IntComponent({
   value,
@@ -12,6 +13,7 @@ export default function IntComponent({
 }: FloatComponentType) {
   const [myValue, setMyValue] = useState(value ?? "");
   const { setDisableCopyPaste } = useContext(TabsContext);
+  const min = 0;
 
   useEffect(() => {
     if (disabled) {
@@ -53,11 +55,20 @@ export default function IntComponent({
           }
         }}
         type="number"
+        step="1"
+        min={min}
+        onInput={(e: React.ChangeEvent<HTMLInputElement>) => {
+          if (e.target.value < min.toString()) {
+            e.target.value = min.toString();
+          }
+        }}
         value={myValue}
         className={
           editNode
-            ? "text-center arrow-hide placeholder:text-center border-0 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm focus:outline-none focus:ring-1 focus:ring-inset focus:ring-gray-200"
-            : "block w-full form-input dark:bg-gray-900 arrow-hide dark:border-gray-600 dark:text-gray-300 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" +
+            ? "focus:placeholder-transparent text-center placeholder:text-center border-1 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm" +
+              INPUT_STYLE
+            : "focus:placeholder-transparent block w-full form-input dark:bg-gray-900 dark:border-gray-600 dark:text-gray-300 rounded-md border-gray-300 shadow-sm ring-offset-background sm:text-sm" +
+              INPUT_STYLE +
               (disabled ? " bg-gray-200 dark:bg-gray-700" : "")
         }
         placeholder={editNode ? "Integer number" : "Type a integer number"}

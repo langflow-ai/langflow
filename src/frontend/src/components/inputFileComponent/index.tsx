@@ -2,6 +2,7 @@ import { DocumentMagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { useContext, useEffect, useState } from "react";
 import { alertContext } from "../../contexts/alertContext";
 import { FileComponentType } from "../../types/components";
+import { INPUT_STYLE } from "../../constants";
 
 export default function InputFileComponent({
   value,
@@ -36,6 +37,10 @@ export default function InputFileComponent({
     }
     return false;
   }
+
+  useEffect(() => {
+    setMyValue(value);
+  }, [value]);
 
   const handleButtonClick = () => {
     const input = document.createElement("input");
@@ -73,8 +78,10 @@ export default function InputFileComponent({
           onClick={handleButtonClick}
           className={
             editNode
-              ? "placeholder:text-center text-gray-500 border-0 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm focus:outline-none focus:ring-1 focus:ring-inset focus:ring-gray-200"
-              : "truncate block w-full text-gray-500 dark:text-gray-300 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" +
+              ? "truncate placeholder:text-center text-gray-500 border-0 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm" +
+                INPUT_STYLE
+              : "truncate block w-full text-gray-500 dark:text-gray-300 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 shadow-sm sm:text-sm" +
+                INPUT_STYLE +
                 (disabled ? " bg-gray-200" : "")
           }
         >
@@ -82,7 +89,7 @@ export default function InputFileComponent({
         </span>
         <button onClick={handleButtonClick}>
           {!editNode && (
-            <DocumentMagnifyingGlassIcon className="w-8 h-8  hover:text-blue-600" />
+            <DocumentMagnifyingGlassIcon className="w-8 h-8  hover:text-ring" />
           )}
         </button>
       </div>

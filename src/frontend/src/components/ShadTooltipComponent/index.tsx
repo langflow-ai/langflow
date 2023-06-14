@@ -10,13 +10,15 @@ const ShadTooltip = (props) => {
     <TooltipProvider>
       <Tooltip delayDuration={props.delayDuration}>
         <TooltipTrigger asChild>{props.children}</TooltipTrigger>
-        <TooltipContent
-          side={props.side}
-          avoidCollisions={false}
-          sticky="always"
-        >
-          {props.content}
-        </TooltipContent>
+        {props.open && (
+          <TooltipContent
+            side={props.side}
+            avoidCollisions={false}
+            sticky="always"
+          >
+            {props.content}
+          </TooltipContent>
+        )}
       </Tooltip>
     </TooltipProvider>
   );

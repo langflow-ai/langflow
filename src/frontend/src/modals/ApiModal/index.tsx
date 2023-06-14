@@ -26,6 +26,7 @@ import {
 import { Button } from "../../components/ui/button";
 import { FlowType } from "src/types/flow";
 import { getCurlCode, getPythonApiCode, getPythonCode } from "../../constants";
+import { EXPORT_CODE_DIALOG } from "../../constants";
 
 export default function ApiModal({ flow }: { flow: FlowType }) {
   const [open, setOpen] = useState(true);
@@ -83,7 +84,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger></DialogTrigger>
-      <DialogContent className="lg:max-w-[800px] sm:max-w-[600px] h-[550px]">
+      <DialogContent className="lg:max-w-[800px] sm:max-w-[600px] h-[580px]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Code</span>
@@ -92,9 +93,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
               aria-hidden="true"
             />
           </DialogTitle>
-          <DialogDescription>
-            Export your flow to use it with this code.
-          </DialogDescription>
+          <DialogDescription>{EXPORT_CODE_DIALOG}</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col h-full w-full ">
@@ -106,18 +105,18 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                   setActiveTab(index);
                 }}
                 className={
-                  "p-2 rounded-t-lg w-44 border border-b-0 border-gray-300 dark:border-gray-700 dark:text-gray-300 -mr-px flex justify-center items-center gap-4 " +
+                  "p-1.5 rounded-t-lg w-44 border border-b-0 border-gray-300 dark:border-gray-700 dark:text-gray-300 -mr-px flex justify-center items-center gap-4 " +
                   (activeTab === index
                     ? " bg-white dark:bg-gray-800"
-                    : "bg-gray-100 dark:bg-gray-900")
+                    : "bg-muted dark:bg-gray-900")
                 }
               >
                 {tab.name}
-                <img src={tab.image} className="w-6" />
+                <img src={tab.image} className="w-[23px]" />
               </button>
             ))}
           </div>
-          <div className="overflow-hidden px-4 sm:p-4 sm:pb-0 sm:pt-0 w-full h-full rounded-lg shadow bg-white dark:bg-gray-800">
+          <div className=" overflow-hidden px-4 sm:p-4 sm:pb-0 sm:pt-0 w-full h-full rounded-lg border-gray-200 border-[1px] bg-muted dark:bg-gray-800">
             <div className="items-center mb-2">
               <div className="float-right">
                 <button
@@ -134,7 +133,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
               </div>
             </div>
             <SyntaxHighlighter
-              className="h-[370px] w-full"
+              className="h-[350px] w-full"
               language={tabs[activeTab].mode}
               style={oneDark}
               customStyle={{ margin: 0 }}
