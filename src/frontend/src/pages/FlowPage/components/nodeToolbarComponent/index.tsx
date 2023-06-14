@@ -36,7 +36,7 @@ const NodeToolbarComponent = (props) => {
                 props.deleteNode(props.data.id);
               }}
             >
-              <Trash2 className="w-5 h-5 dark:text-gray-300"></Trash2>
+              <Trash2 className="w-4 h-4 dark:text-gray-300"></Trash2>
             </button>
           </ShadTooltip>
 
@@ -64,7 +64,7 @@ const NodeToolbarComponent = (props) => {
                 );
               }}
             >
-              <Copy className="w-5 h-5 mr-2 dark:text-gray-300"></Copy>
+              <Copy className="w-4 h-4 dark:text-gray-300"></Copy>
             </button>
           </ShadTooltip>
 

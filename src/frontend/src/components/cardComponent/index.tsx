@@ -30,7 +30,7 @@ export const CardComponent = ({ flow, id, onDelete, button }: { flow: FlowType; 
           <button
             onClick={onDelete}
           >
-            <Trash2 className="w-5 text-primary opacity-0 group-hover:opacity-100 transition-all" />
+            <Trash2 className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-all" />
           </button>
           }
         </CardTitle>
