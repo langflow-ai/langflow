@@ -62,7 +62,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           )}
         </div>
         <Input
-          className="mt-2"
+          className="mt-2 font-normal"
           onChange={handleNameChange}
           type="text"
           name="name"
@@ -80,7 +80,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           onChange={handleDescriptionChange}
           value={description ?? ""}
           placeholder="Flow description"
-          className="max-h-[100px] mt-2"
+          className="max-h-[100px] mt-2 font-normal"
           rows={3}
         />
       </Label>
