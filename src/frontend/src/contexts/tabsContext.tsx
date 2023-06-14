@@ -43,7 +43,7 @@ const TabsContextInitialValue: TabsContextType = {
   lastCopiedSelection: null,
   setLastCopiedSelection: (selection: any) => {},
 
-  getNodeId: () => "",
+  getNodeId: (nodeType:string) => "",
   paste: (
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }
@@ -280,8 +280,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  function getNodeId() {
-    return incrementNodeId();
+  function getNodeId(nodeType:string) {
+    return nodeType+"-"+incrementNodeId();
   }
 
   /**
@@ -374,9 +374,9 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       ? { x: position.paneX + position.x, y: position.paneY + position.y }
       : reactFlowInstance.project({ x: position.x, y: position.y });
 
-    selectionInstance.nodes.forEach((n) => {
+    selectionInstance.nodes.forEach((n:NodeType) => {
       // Generate a unique node ID
-      let newId = getNodeId();
+      let newId = getNodeId(n.data.type);
       idsMap[n.id] = newId;
 
       // Create a new node object
