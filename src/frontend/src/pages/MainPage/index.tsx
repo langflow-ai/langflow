@@ -1,11 +1,11 @@
 import { useContext, useEffect } from "react";
-import { Download, Upload, Plus, Home } from "lucide-react";
+import { Download, Upload, Plus, Home, ExternalLink } from "lucide-react";
 import { TabsContext } from "../../contexts/tabsContext";
 import { Button } from "../../components/ui/button";
-import { CardComponent } from "./components/cardComponent";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { CardComponent } from "../../components/cardComponent";
 export default function HomePage() {
-  const { flows, setTabId, downloadFlows, uploadFlows, addFlow } =
+  const { flows, setTabId, downloadFlows, uploadFlows, addFlow, removeFlow } =
     useContext(TabsContext);
   useEffect(() => {
     setTabId("");
@@ -50,13 +50,32 @@ export default function HomePage() {
           </Button>
         </div>
       </div>
-      <span className="flex pb-8 px-6 text-muted-foreground w-[60%]">
+      <span className="flex pb-14 px-6 text-muted-foreground w-[60%]">
         Manage your personal projects. Download or upload your complete project
         collection.
       </span>
       <div className="w-full p-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {flows.map((flow, idx) => (
-          <CardComponent key={idx} flow={flow} id={flow.id} />
+          <CardComponent
+            key={idx}
+            flow={flow}
+            id={flow.id}
+            button={
+              <Link to={"/flow/" + flow.id}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="whitespace-nowrap "
+                >
+                  <ExternalLink className="w-4 mr-2" />
+                  Edit Flow
+                </Button>
+              </Link>
+            }
+            onDelete={() => {
+              removeFlow(flow.id);
+            }}
+          />
         ))}
       </div>
     </div>

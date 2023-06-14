@@ -51,7 +51,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
   };
 
   return (
-    <div>
+    <>
       <Label>
         <div className="flex justify-between">
           <span className="font-medium">Name</span>{" "}
@@ -84,7 +84,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           rows={3}
         />
       </Label>
-    </div>
+    </>
   );
 };
 
