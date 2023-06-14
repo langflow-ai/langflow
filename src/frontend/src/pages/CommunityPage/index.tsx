@@ -1,42 +1,10 @@
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "../../components/ui/tabs";
-import ExtraSidebar from "../../components/ExtraSidebarComponent";
-import { ReactFlowProvider } from "reactflow";
-import FlowPage from "../FlowPage";
 import { useContext, useEffect, useState } from "react";
-import {
-  SunIcon,
-  MoonIcon,
-  BellIcon,
-  GithubIcon,
-  Download,
-  Upload,
-  Plus,
-  Home,
-  Users2,
-  GitFork,
-} from "lucide-react";
+import { GithubIcon, Users2, GitFork } from "lucide-react";
 import { TabsContext } from "../../contexts/tabsContext";
-import AlertDropdown from "../../alerts/alertDropDown";
 import { alertContext } from "../../contexts/alertContext";
-import { darkContext } from "../../contexts/darkContext";
-import { PopUpContext } from "../../contexts/popUpContext";
-import { typesContext } from "../../contexts/typesContext";
 import { Button } from "../../components/ui/button";
-import { FaGithub } from "react-icons/fa";
 
-import _ from "lodash";
-
-import {
-  getExamples,
-  updateFlowInDatabase,
-  uploadFlowsToDatabase,
-} from "../../controllers/API";
-import { MenuBar } from "../../components/headerComponent/components/menuBar";
+import { getExamples } from "../../controllers/API";
 import { FlowType } from "../../types/flow";
 import { CardComponent } from "../../components/cardComponent";
 import { useNavigate } from "react-router-dom";
@@ -85,24 +53,33 @@ export default function CommunityPage() {
         </div>
       </div>
       <span className="flex pb-8 px-6 w-[70%] text-muted-foreground">
-      Discover and learn from shared examples by the LangFlow community. We welcome new example contributions that can help our community explore new and powerful features.
+        Discover and learn from shared examples by the LangFlow community. We
+        welcome new example contributions that can help our community explore
+        new and powerful features.
       </span>
       <div className="w-full p-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {!loadingExamples &&
           examples.map((flow, idx) => (
-            <CardComponent key={idx} flow={flow} id={flow.id} button={<Button
-              variant="outline"
-              size="sm"
-              className="whitespace-nowrap "
-              onClick={() => {
-                addFlow(flow, true).then((id) => {
-                  navigate("/flow/" + id);
-                });
-              }}
-            >
-              <GitFork className="w-4 mr-2" />
-              Fork Example
-            </Button>}/>
+            <CardComponent
+              key={idx}
+              flow={flow}
+              id={flow.id}
+              button={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="whitespace-nowrap "
+                  onClick={() => {
+                    addFlow(flow, true).then((id) => {
+                      navigate("/flow/" + id);
+                    });
+                  }}
+                >
+                  <GitFork className="w-4 mr-2" />
+                  Fork Example
+                </Button>
+              }
+            />
           ))}
       </div>
     </div>

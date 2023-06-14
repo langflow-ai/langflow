@@ -317,7 +317,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
             }}
             type="submit"
           >
-            Save changes
+            Save Changes
           </Button>
         </DialogFooter>
       </DialogContent>
