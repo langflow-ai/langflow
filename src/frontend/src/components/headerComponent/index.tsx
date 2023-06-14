@@ -112,12 +112,12 @@ export default function Header() {
             )}
             <BellIcon className="h-5 w-5" aria-hidden="true" />
           </button>
-          <button>
+          {/* <button>
             <img
               src="https://github.com/shadcn.png"
               className="rounded-full w-8"
             />
-          </button>
+          </button> */}
         </div>
       </div>
     </div>
