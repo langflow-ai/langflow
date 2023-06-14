@@ -1,18 +1,12 @@
-import React, { useContext } from "react";
+import { useContext } from "react";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { PopUpContext } from "../../../../contexts/popUpContext";
 import {
-  Save,
-  Edit,
-  Upload,
-  Download,
-  Code,
   Plus,
   ChevronDown,
   ChevronLeft,
   Undo,
   Redo,
-  Settings,
   Settings2,
 } from "lucide-react";
 import {
@@ -26,28 +20,20 @@ import {
   DropdownMenuSeparator,
 } from "../../../ui/dropdown-menu";
 
-import RenameLabel from "../../../ui/rename-label";
-import _ from "lodash";
-import ImportModal from "../../../../modals/importModal";
-import ExportModal from "../../../../modals/exportModal";
-import ApiModal from "../../../../modals/ApiModal";
 import { alertContext } from "../../../../contexts/alertContext";
-import { updateFlowInDatabase } from "../../../../controllers/API";
 import { Link } from "react-router-dom";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 
-export const MenuBar = ({flows, tabId }) => {
+export const MenuBar = ({ flows, tabId }) => {
   const { updateFlow, setTabId, addFlow } = useContext(TabsContext);
   const { setErrorData } = useContext(alertContext);
   const { openPopUp } = useContext(PopUpContext);
   const { undo, redo } = useContext(undoRedoContext);
 
-  
-
   function handleAddFlow() {
     try {
-      addFlow();
+      addFlow(null, true);
       // saveFlowStyleInDataBase();
     } catch (err) {
       setErrorData(err);
@@ -61,7 +47,6 @@ export const MenuBar = ({flows, tabId }) => {
         <ChevronLeft className="w-5" />
       </Link>
       <div className="flex items-center font-medium text-sm rounded-md py-1 px-1.5 bg-background gap-0.5">
-        
         {/* <RenameLabel
           value={current_flow.name}
           setValue={(value) => {
@@ -83,7 +68,7 @@ export const MenuBar = ({flows, tabId }) => {
             <DropdownMenuLabel>Edit</DropdownMenuLabel>
             <DropdownMenuItem
               onClick={() => {
-                openPopUp(<FlowSettingsModal />)
+                openPopUp(<FlowSettingsModal />);
               }}
             >
               <Settings2 className="w-4 h-4 mr-2" />
