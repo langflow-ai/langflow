@@ -13,11 +13,9 @@ import {
   DialogTrigger,
 } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
-import { Label } from "@radix-ui/react-label";
-import { Textarea } from "../../components/ui/textarea";
-import { Input } from "../../components/ui/input";
 import { SETTINGS_DIALOG_SUBTITLE } from "../../constants";
 import { updateFlowInDatabase } from "../../controllers/API";
+import EditFlowSettings from "../../components/nameInputComponent";
 
 export default function FlowSettingsModal() {
   const [open, setOpen] = useState(true);
@@ -25,6 +23,7 @@ export default function FlowSettingsModal() {
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const ref = useRef();
   const { flows, tabId, updateFlow } = useContext(TabsContext);
+  const maxLength = 50;
   function setModalOpen(x: boolean) {
     setOpen(x);
     if (x === false) {
@@ -61,35 +60,15 @@ export default function FlowSettingsModal() {
           <DialogDescription>{SETTINGS_DIALOG_SUBTITLE}</DialogDescription>
         </DialogHeader>
 
-        <Label>
-          <span className="font-medium">Name</span>
-
-          <Input
-            className="mt-2"
-            onChange={(event) => {
-              setName(event.target.value);
-            }}
-            type="text"
-            name="name"
-            value={name ?? null}
-            placeholder="File name"
-            id="name"
-          />
-        </Label>
-        <Label>
-          <span className="font-medium">Description (optional)</span>
-          <Textarea
-            name="description"
-            id="description"
-            onChange={(event) => {
-              setDescription(event.target.value);
-            }}
-            value={description ?? null}
-            placeholder="Flow description"
-            className="max-h-[100px] mt-2"
-            rows={3}
-          />
-        </Label>
+        <EditFlowSettings
+          name={name}
+          description={description}
+          flows={flows}
+          tabId={tabId}
+          setName={setName}
+          setDescription={setDescription}
+          updateFlow={updateFlow}
+        />
 
         <DialogFooter>
           <Button
