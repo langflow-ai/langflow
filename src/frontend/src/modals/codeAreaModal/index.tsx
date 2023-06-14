@@ -8,7 +8,7 @@ import "ace-builds/src-noconflict/theme-twilight";
 import "ace-builds/src-noconflict/ext-language_tools";
 // import "ace-builds/webpack-resolver";
 import { darkContext } from "../../contexts/darkContext";
-import { checkCode } from "../../controllers/API";
+import { postValidateCode } from "../../controllers/API";
 import { alertContext } from "../../contexts/alertContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import {
@@ -81,7 +81,7 @@ export default function CodeAreaModal({
           <Button
             className="mt-3"
             onClick={() => {
-              checkCode(code)
+              postValidateCode(code)
                 .then((apiReturn) => {
                   if (apiReturn.data) {
                     let importsErrors = apiReturn.data.imports.errors;

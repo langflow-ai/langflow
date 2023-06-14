@@ -108,7 +108,7 @@ class PythonFunctionToolNode(FrontendNode):
 class PythonFunctionNode(FrontendNode):
     name: str = "PythonFunction"
     template: Template = Template(
-        type_name="python_function",
+        type_name="PythonFunction",
         fields=[
             TemplateField(
                 field_type="code",

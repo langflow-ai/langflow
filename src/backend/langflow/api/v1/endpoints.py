@@ -70,4 +70,6 @@ async def predict_flow(
 # get endpoint to return version of langflow
 @router.get("/version")
 def get_version():
-    return {"version": version("langflow")}
+    from langflow import __version__
+
+    return {"version": __version__}

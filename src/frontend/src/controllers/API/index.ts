@@ -22,16 +22,17 @@ export async function sendAll(data: sendAllProps) {
   return await axios.post(`/api/v1/predict`, data);
 }
 
-/**
- * Validates code by sending it to an API endpoint.
- *
- * @param {string} code - The code to validate.
- * @returns {Promise<AxiosResponse<errorsTypeAPI>>} A promise that resolves to an AxiosResponse containing the validation results.
- */
-export async function checkCode(
+export async function postValidateCode(
   code: string
 ): Promise<AxiosResponse<errorsTypeAPI>> {
   return await axios.post("/api/v1/validate/code", { code });
+}
+
+export async function postValidateNode(
+  nodeId: string,
+  data: any
+): Promise<AxiosResponse<string>> {
+  return await axios.post(`/api/v1/validate/node/${nodeId}`, { data });
 }
 
 /**
