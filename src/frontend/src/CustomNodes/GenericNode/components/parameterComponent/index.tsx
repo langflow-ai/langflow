@@ -25,6 +25,7 @@ import React from "react";
 import { nodeColors } from "../../../../utils";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import { PopUpContext } from "../../../../contexts/popUpContext";
+import ToggleShadComponent from "../../../../components/toggleShadComponent";
 
 export default function ParameterComponent({
   left,
@@ -193,7 +194,7 @@ export default function ParameterComponent({
           </div>
         ) : left === true && type === "bool" ? (
           <div className="mt-2">
-            <ToggleComponent
+            <ToggleShadComponent
               disabled={disabled}
               enabled={enabled}
               setEnabled={(t) => {
@@ -201,6 +202,7 @@ export default function ParameterComponent({
                 setEnabled(t);
 
               }}
+              size="large"
             />
           </div>
         ) : left === true && type === "float" ? (

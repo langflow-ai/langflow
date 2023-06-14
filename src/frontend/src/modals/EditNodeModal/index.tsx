@@ -198,6 +198,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                     setEnabled(e);
                                     save();
                                   }}
+                                  size="small"
                                   disabled={false}
                                 />
                               </div>
@@ -296,6 +297,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                   changeAdvanced(data.node.template[n])
                                 }
                                 disabled={false}
+                                size="small"
                               />
                             </div>
                           </TableCell>

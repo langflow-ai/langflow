@@ -20,6 +20,7 @@ export type ToggleComponentType = {
   enabled: boolean;
   setEnabled: (state: boolean) => void;
   disabled: boolean;
+  size: "small" | "medium" | "large";
 };
 export type DropDownComponentType = {
   value: string;
