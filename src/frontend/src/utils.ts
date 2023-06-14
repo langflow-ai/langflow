@@ -17,7 +17,7 @@ import {
   Bars3CenterLeftIcon,
 } from "@heroicons/react/24/outline";
 import { Connection, Edge, Node, ReactFlowInstance } from "reactflow";
-import { FlowType } from "./types/flow";
+import { FlowType, NodeDataType, NodeType } from "./types/flow";
 import { APITemplateType } from "./types/api";
 import _ from "lodash";
 import { ChromaIcon } from "./icons/ChromaIcon";
@@ -625,9 +625,9 @@ export function checkUpperWords(str: string) {
 export function updateIds(newFlow, getNodeId) {
   let idsMap = {};
 
-  newFlow.nodes.forEach((n) => {
+  newFlow.nodes.forEach((n:NodeType) => {
     // Generate a unique node ID
-    let newId = getNodeId();
+    let newId = getNodeId(n.data.type);
     idsMap[n.id] = newId;
     n.id = newId;
     n.data.id = newId;
