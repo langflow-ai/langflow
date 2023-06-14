@@ -10,7 +10,7 @@ const ShadTooltip = (props) => {
     <TooltipProvider>
       <Tooltip delayDuration={props.delayDuration}>
         <TooltipTrigger asChild>{props.children}</TooltipTrigger>
-        {props.open && (
+
           <TooltipContent
             side={props.side}
             avoidCollisions={false}
@@ -18,7 +18,7 @@ const ShadTooltip = (props) => {
           >
             {props.content}
           </TooltipContent>
-        )}
+        
       </Tooltip>
     </TooltipProvider>
   );

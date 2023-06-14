@@ -59,7 +59,10 @@ export default function GenericNode({
     }
   }, []);
 
-  useEffect(() => {}, [closePopUp]);
+  useEffect(() => { 
+    console.log(data.node.template);
+     
+  }, [closePopUp, data.node.template]);
 
   const validateNode = useCallback(
     debounce(async () => {

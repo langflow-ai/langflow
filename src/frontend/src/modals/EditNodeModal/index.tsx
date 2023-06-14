@@ -43,6 +43,7 @@ import {
 } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
 import { EDIT_DIALOG_SUBTITLE } from "../../constants";
+import { Edit } from "lucide-react";
 
 export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const [open, setOpen] = useState(true);
@@ -95,8 +96,8 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Edit Node</span>
-            <PencilSquareIcon
-              className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
+            <Edit 
+              className="h-5 w-5 text-gray-800 pl-1 dark:text-white"
               aria-hidden="true"
             />
           </DialogTitle>
@@ -289,7 +290,6 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                   value={data.node.template[n].value ?? ""}
                                   onChange={(t: string) => {
                                     data.node.template[n].value = t;
-                                    
                                   }}
                                 />
                               </div>

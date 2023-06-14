@@ -58,7 +58,9 @@ export default function ParameterComponent({
     data.node.template[name]?.value ?? false
   );
 
-  useEffect(() => {}, [closePopUp, data.node.template]);
+  useEffect(() => {  
+    
+  }, [closePopUp, data.node.template]);
 
   const { reactFlowInstance } = useContext(typesContext);
   let disabled =
@@ -232,7 +234,6 @@ export default function ParameterComponent({
             value={data.node.template[name].value ?? ""}
             onChange={(t: string) => {
               data.node.template[name].value = t;
-              
             }}
           />
         ) : left === true && type === "file" ? (
