@@ -38,16 +38,20 @@ def get_all():
     return build_langchain_types_dict()
 
 
-@router.post("/predict", response_model=PredictResponse)
+@router.post("/predict/{flow_id}", response_model=PredictResponse)
 async def predict_flow(
     predict_request: PredictRequest,
-    flow: Flow = Depends(get_flow_from_token),
+    flow_id: str,
+    session: Session = Depends(get_session),
 ):
     """
     Endpoint to process a message using the flow passed in the bearer token.
     """
 
     try:
+        flow = session.get(Flow, flow_id)
+        if flow is None:
+            raise ValueError(f"Flow {flow_id} not found")
         graph_data = flow.data
         if predict_request.tweaks:
             graph_data = process_tweaks(graph_data, predict_request.tweaks)

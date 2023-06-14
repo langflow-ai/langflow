@@ -52,28 +52,33 @@ export const TEXT_DIALOG_SUBTITLE = "Edit you text.";
 export const getPythonApiCode = (flowId: string): string => {
   return `import requests
 
-FLOW_ID = "${flowId}"
-API_URL = f"${window.location.protocol}//${window.location.host}/predict"
+BASE_API_URL = "${window.location.protocol}//${window.location.host}/predict"
 
-def run_flow(message, tweaks=None):
+def run_flow(message: str, flow_id: str, tweaks: dict = None) -> dict:
+    """
+    Run a flow with a given message and optional tweaks.
+
+    :param message: The message to send to the flow
+    :param flow_id: The ID of the flow to run
+    :param tweaks: Optional tweaks to customize the flow
+    :return: The JSON response from the flow
+    """
+    api_url = f"{BASE_API_URL}/{flow_id}"
+
+    payload = {"message": message}
 
     if tweaks:
-        payload = {'message': message, 'tweaks': tweaks}
-    else:
-        payload = {'message': message}
+        payload["tweaks"] = tweaks
 
-    headers = {'Authorization':
-			 f'Bearer {FLOW_ID}',
-			 'Content-Type': 'application/json'
-		}
-
-    response = requests.post(API_URL, json=payload)
+    response = requests.post(api_url, json=payload)
     return response.json()
 
 # Setup any tweaks you want to apply to the flow
 tweaks = {} # {"nodeId": {"key": "value"}, "nodeId2": {"key": "value"}}
 
-print(run_flow("Your message", tweaks=tweaks))`;
+FLOW_ID = "${flowId}"
+
+print(run_flow("Your message", flow_id=FLOW_ID, tweaks=tweaks))`;
 };
 
 /**
