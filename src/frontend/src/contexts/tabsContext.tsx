@@ -174,7 +174,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
 
   function getNodeId() {
-    return `dndnode_` + incrementNodeId();
+    return incrementNodeId();
   }
 
   /**

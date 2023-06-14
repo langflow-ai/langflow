@@ -96,6 +96,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Edit Node</span>
+            <span>{data.id}</span>
             <PencilSquareIcon
               className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
               aria-hidden="true"
