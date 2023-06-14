@@ -42,7 +42,7 @@ export default function TextAreaModal({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-ring dark:bg-gray-600 dark:bg-opacity-75 bg-opacity-75 transition-opacity" />
+          <div className="fixed inset-0 bg-gray-500 dark:bg-gray-600 dark:bg-opacity-75 bg-opacity-75 transition-opacity" />
         </Transition.Child>
 
         <div className="fixed inset-0 z-10 overflow-y-auto">
@@ -86,7 +86,7 @@ export default function TextAreaModal({
                       </Dialog.Title>
                     </div>
                   </div>
-                  <div className="h-full w-full bg-accent dark:bg-gray-900 p-4 gap-4 flex flex-row justify-center items-center">
+                  <div className="h-full w-full bg-gray-200 dark:bg-gray-900 p-4 gap-4 flex flex-row justify-center items-center">
                     <div className="flex h-full w-full">
                       <div className="overflow-hidden px-4 py-5 sm:p-6 w-full rounded-lg bg-white dark:bg-gray-800 shadow">
                         <textarea

@@ -69,7 +69,7 @@ export default function IntComponent({
               INPUT_STYLE
             : "focus:placeholder-transparent block w-full form-input dark:bg-gray-900 dark:border-gray-600 dark:text-gray-300 rounded-md border-gray-300 shadow-sm ring-offset-background sm:text-sm" +
               INPUT_STYLE +
-              (disabled ? " bg-accent dark:bg-gray-700" : "")
+              (disabled ? " bg-gray-200 dark:bg-gray-700" : "")
         }
         placeholder={editNode ? "Integer number" : "Type a integer number"}
         onChange={(e) => {
