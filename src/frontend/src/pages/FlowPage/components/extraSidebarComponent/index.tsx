@@ -25,7 +25,7 @@ import { Input } from "../../../../components/ui/input";
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);
   const { openPopUp } = useContext(PopUpContext);
-  const { flows, tabId } = useContext(TabsContext);
+  const { flows, tabId, uploadFlow } = useContext(TabsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
@@ -77,7 +77,8 @@ export default function ExtraSidebar() {
           <button
             className="hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center rounded-md bg-white px-2 py-2 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
             onClick={() => {
-              openPopUp(<ImportModal />);
+              // openPopUp(<ImportModal />);
+              uploadFlow()
             }}
           >
             <FileUp className="w-5 h-5 dark:text-gray-300"></FileUp>
