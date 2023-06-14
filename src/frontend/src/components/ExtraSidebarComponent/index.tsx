@@ -62,7 +62,7 @@ export default function ExtraSidebar() {
                                 item.href.split("/")[2] === current[4]
                                   ? "bg-muted text-gray-900"
                                   : "bg-white text-gray-600 hover:bg-muted hover:text-gray-900",
-                                "group w-full flex items-center pl-2 pr-1 py-2 text-left text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                "group w-full flex items-center pl-2 pr-1 py-2 text-left text-sm font-medium rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500"
                               )}
                             >
                               <item.icon

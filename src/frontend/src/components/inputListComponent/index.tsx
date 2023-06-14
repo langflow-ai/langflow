@@ -32,7 +32,7 @@ export default function InputListComponent({
             value={i}
             className={
               editNode
-                ? "border-[1px]  truncate cursor-pointer text-center placeholder:text-center text-gray-500 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm focus:outline-none focus:ring-1 focus:ring-inset focus:ring-gray-200"
+                ? "border-[1px]  truncate cursor-pointer text-center placeholder:text-center text-gray-500 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-1 focus:ring-offset-1 focus:ring-ring"
                 : "block w-full form-input rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500 sm:text-sm" +
                   (disabled ? " bg-gray-200" : "") +
                   "focus:placeholder-transparent"
