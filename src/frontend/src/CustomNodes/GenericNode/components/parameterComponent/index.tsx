@@ -110,7 +110,7 @@ export default function ParameterComponent({
   return (
     <div
       ref={ref}
-      className="w-full flex flex-wrap justify-between items-center bg-gray-50 dark:bg-gray-800 dark:text-white mt-1 px-5 py-2"
+      className="w-full flex flex-wrap justify-between items-center bg-muted dark:bg-gray-800 dark:text-white mt-1 px-5 py-2"
     >
       <>
         <div className={"text-sm truncate w-full " + (left ? "" : "text-end")}>

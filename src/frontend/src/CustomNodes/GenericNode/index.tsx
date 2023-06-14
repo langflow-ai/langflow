@@ -116,11 +116,11 @@ export default function GenericNode({
 
       <div
         className={classNames(
-          selected ? "border border-blue-500" : "border dark:border-gray-700",
+          selected ? "border border-ring" : "border dark:border-gray-700",
           "prompt-node relative flex w-96 flex-col justify-center rounded-lg bg-white dark:bg-gray-900"
         )}
       >
-        <div className="flex w-full items-center justify-between gap-8 rounded-t-lg border-b bg-gray-50 p-4 dark:border-b-gray-700 dark:bg-gray-800 dark:text-white ">
+        <div className="flex w-full items-center justify-between gap-8 rounded-t-lg border-b bg-muted p-4 dark:border-b-gray-700 dark:bg-gray-800 dark:text-white ">
           <div className="flex w-full items-center gap-2 truncate text-lg">
             <Icon
               className="h-10 w-10 rounded p-1"
@@ -130,7 +130,7 @@ export default function GenericNode({
             />
             <div className="ml-2 truncate">
               <ShadTooltip delayDuration={1500} content={data.type}>
-                <div className="ml-2 truncate">{data.type}</div>
+                <div className="ml-2 truncate text-gray-800">{data.type}</div>
               </ShadTooltip>
             </div>
           </div>
@@ -191,7 +191,7 @@ export default function GenericNode({
           </div>
         </div>
 
-        <div className="h-full w-full py-5">
+        <div className="h-full w-full py-5 text-gray-800">
           <div className="w-full px-5 pb-3 text-sm text-gray-500 dark:text-gray-300">
             {data.node.description}
           </div>

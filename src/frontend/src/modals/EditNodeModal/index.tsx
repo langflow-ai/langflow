@@ -125,7 +125,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
           >
             {nodeLength > 0 && (
               <div className="flex flex-col gap-5 h-fit">
-                <Table className="table-fixed bg-gray-50 outline-1">
+                <Table className="table-fixed bg-muted outline-1">
                   <TableHeader className="border-gray-200 text-gray-500 text-xs font-medium h-10">
                     <TableRow className="dark:border-b-muted">
                       <TableHead className="h-7 text-center">PARAM</TableHead>

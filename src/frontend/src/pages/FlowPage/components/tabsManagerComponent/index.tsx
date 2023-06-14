@@ -38,7 +38,7 @@ export default function TabsManagerComponent() {
 
   return (
     <div className="h-full w-full flex flex-col">
-      <div className="w-full flex pr-2 flex-row text-center items-center bg-gray-100 dark:bg-gray-800 px-2">
+      <div className="w-full flex pr-2 flex-row text-center items-center bg-muted dark:bg-gray-800 px-2">
         {flows.map((flow, index) => {
           return (
             <TabComponent
