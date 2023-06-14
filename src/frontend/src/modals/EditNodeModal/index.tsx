@@ -33,7 +33,6 @@ import {
   DialogTrigger,
 } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
-import { EDIT_DIALOG_SUBTITLE } from "../../constants";
 import { Badge } from "../../components/ui/badge";
 
 export default function EditNodeModal({ data }: { data: NodeDataType }) {
@@ -91,7 +90,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
             <Badge variant="secondary">ID: {data.id}</Badge>
           </DialogTitle>
           <DialogDescription>
-            {EDIT_DIALOG_SUBTITLE}
+            {data.node?.description}
             <div className="flex pt-4">
               <VariableIcon className="w-5 h-5 pe-1 text-gray-700 stroke-2 dark:text-slate-200">
                 &nbsp;
