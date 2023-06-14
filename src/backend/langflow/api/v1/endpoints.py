@@ -1,7 +1,6 @@
 from langflow.database.models.flow import Flow
 from langflow.processing.process import process_graph_cached, process_tweaks
 from langflow.utils.logger import logger
-from importlib.metadata import version
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPBearer

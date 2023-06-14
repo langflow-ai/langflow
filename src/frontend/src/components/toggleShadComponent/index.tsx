@@ -6,7 +6,7 @@ export default function ToggleShadComponent({
   enabled,
   setEnabled,
   disabled,
-  size
+  size,
 }: ToggleComponentType) {
   useEffect(() => {
     if (disabled) {
@@ -14,7 +14,7 @@ export default function ToggleShadComponent({
     }
   }, [disabled, setEnabled]);
   let scaleX, scaleY;
-  switch(size){
+  switch (size) {
     case "small":
       scaleX = 0.6;
       scaleY = 0.6;

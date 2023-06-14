@@ -28,10 +28,7 @@ export default function Header() {
           <span className="text-2xl ml-4">⛓️</span>
         </Link>
         {flows.findIndex((f) => tabId === f.id) !== -1 && tabId !== "" && (
-          <MenuBar
-            flows={flows}
-            tabId={tabId}
-          />
+          <MenuBar flows={flows} tabId={tabId} />
         )}
       </div>
       <div className="flex gap-2 items-center">

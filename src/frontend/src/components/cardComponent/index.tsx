@@ -4,10 +4,25 @@ import { Link } from "react-router-dom";
 import { TabsContext } from "../../contexts/tabsContext";
 import { FlowType } from "../../types/flow";
 import { gradients } from "../../utils";
-import { CardTitle, CardDescription, CardFooter, Card, CardHeader } from "../ui/card";
+import {
+  CardTitle,
+  CardDescription,
+  CardFooter,
+  Card,
+  CardHeader,
+} from "../ui/card";
 
-
-export const CardComponent = ({ flow, id, onDelete, button }: { flow: FlowType; id: string, onDelete?: () => void, button?: JSX.Element }) => {
+export const CardComponent = ({
+  flow,
+  id,
+  onDelete,
+  button,
+}: {
+  flow: FlowType;
+  id: string;
+  onDelete?: () => void;
+  button?: JSX.Element;
+}) => {
   const { removeFlow } = useContext(TabsContext);
 
   return (
@@ -20,19 +35,14 @@ export const CardComponent = ({ flow, id, onDelete, button }: { flow: FlowType; 
                 "rounded-full w-8 h-8 flex items-center justify-center text-2xl " +
                 gradients[parseInt(flow.id.slice(0, 6), 16) % gradients.length]
               }
-            >
-            </span>
-            <span className="flex-1 truncate-doubleline">
-              {flow.name}
-            </span>
+            ></span>
+            <span className="flex-1 truncate-doubleline">{flow.name}</span>
           </div>
-          {onDelete &&
-          <button
-            onClick={onDelete}
-          >
-            <Trash2 className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-all" />
-          </button>
-          }
+          {onDelete && (
+            <button onClick={onDelete}>
+              <Trash2 className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-all" />
+            </button>
+          )}
         </CardTitle>
         <CardDescription className="pt-2 pb-2">
           <div className="truncate-doubleline">
@@ -53,10 +63,7 @@ export const CardComponent = ({ flow, id, onDelete, button }: { flow: FlowType; 
               <span className="text-base">&nbsp;</span>OpenAI+
             </Badge> */}
           </div>
-          {button &&
-            button
-          }
-          
+          {button && button}
         </div>
       </CardFooter>
     </Card>
