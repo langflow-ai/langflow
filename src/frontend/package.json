@@ -44,6 +44,7 @@
         "remark-gfm": "^3.0.1",
         "remark-math": "^5.1.1",
         "shadcn-ui": "^0.1.3",
+        "short-unique-id": "^4.4.4",
         "switch": "^0.0.0",
         "table": "^6.8.1",
         "tailwind-merge": "^1.13.0",
