@@ -88,7 +88,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">{data.type}</span>
-            <Badge variant="secondary">{data.id}</Badge>
+            <Badge variant="secondary">ID: {data.id}</Badge>
           </DialogTitle>
           <DialogDescription>
             {EDIT_DIALOG_SUBTITLE}
