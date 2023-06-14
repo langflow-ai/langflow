@@ -1,21 +1,9 @@
-import React, { useContext, useState } from "react";
-import { Menu, Transition } from "@headlessui/react";
-import { EllipsisVerticalIcon } from "@heroicons/react/20/solid";
-import {
-  Cog6ToothIcon,
-  TrashIcon,
-  PencilSquareIcon,
-  DocumentDuplicateIcon,
-  DocumentPlusIcon,
-  Square2StackIcon,
-} from "@heroicons/react/24/outline";
+import { useContext, useState } from "react";
+import { Settings2, Copy, Trash2 } from "lucide-react";
 import { classNames } from "../../../../utils";
-import { Fragment } from "react";
-import NodeModal from "../../../../modals/NodeModal";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { useReactFlow } from "reactflow";
 import EditNodeModal from "../../../../modals/EditNodeModal";
-import TooltipReact from "../../../../components/ReactTooltipComponent";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 
 const NodeToolbarComponent = (props) => {
@@ -48,7 +36,7 @@ const NodeToolbarComponent = (props) => {
                 props.deleteNode(props.data.id);
               }}
             >
-              <TrashIcon className="w-5 h-5 dark:text-gray-300"></TrashIcon>
+              <Trash2 className="w-5 h-5 dark:text-gray-300"></Trash2>
             </button>
           </ShadTooltip>
 
@@ -76,7 +64,7 @@ const NodeToolbarComponent = (props) => {
                 );
               }}
             >
-              <Square2StackIcon className="w-5 h-5  dark:text-gray-300"></Square2StackIcon>
+              <Copy className="w-5 h-5  dark:text-gray-300"></Copy>
             </button>
           </ShadTooltip>
 
@@ -89,7 +77,7 @@ const NodeToolbarComponent = (props) => {
                   props.openPopUp(<EditNodeModal data={props.data} />);
                 }}
               >
-                <PencilSquareIcon className="w-5 h-5  dark:text-gray-300"></PencilSquareIcon>
+                <Settings2 className="w-5 h-5  dark:text-gray-300"></Settings2>
               </button>
             </ShadTooltip>
           )}
@@ -133,7 +121,7 @@ const NodeToolbarComponent = (props) => {
                             "w-full group flex items-center px-4 py-2 text-sm"
                           )}
                         >
-                          <PencilSquareIcon
+                          <Settings
                             className="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-500"
                             aria-hidden="true"
                           />
