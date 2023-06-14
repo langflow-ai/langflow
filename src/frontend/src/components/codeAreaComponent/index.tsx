@@ -45,7 +45,7 @@ export default function CodeAreaComponent({
                 INPUT_STYLE
               : "truncate block w-full text-gray-500 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 shadow-sm sm:text-sm" +
                 INPUT_STYLE +
-                (disabled ? " bg-gray-200" : "")
+                (disabled ? " bg-accent" : "")
           }
         >
           {myValue !== "" ? myValue : "Type something..."}

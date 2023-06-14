@@ -55,7 +55,7 @@ export default function FloatComponent({
               INPUT_STYLE
             : "focus:placeholder-transparent block w-full form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm ring-offset-gray-200 sm:text-sm" +
               INPUT_STYLE +
-              (disabled ? " bg-gray-200 dark:bg-gray-700" : "")
+              (disabled ? " bg-accent dark:bg-gray-700" : "")
         }
         placeholder={
           editNode ? "Number 0 to 1" : "Type a number from zero to one"
