@@ -1,6 +1,7 @@
 import { FlowType } from "../flow";
 
 export type TabsContextType = {
+  save: () => void;
   tabId: string;
   setTabId: (index: string) => void;
   flows: Array<FlowType>;
