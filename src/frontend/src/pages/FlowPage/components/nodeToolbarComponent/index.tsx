@@ -64,7 +64,7 @@ const NodeToolbarComponent = (props) => {
                 );
               }}
             >
-              <Copy className="w-5 h-5  dark:text-gray-300"></Copy>
+              <Copy className="w-5 h-5 mr-2 dark:text-gray-300"></Copy>
             </button>
           </ShadTooltip>
 
@@ -77,7 +77,7 @@ const NodeToolbarComponent = (props) => {
                   props.openPopUp(<EditNodeModal data={props.data} />);
                 }}
               >
-                <Settings2 className="w-5 h-5  dark:text-gray-300"></Settings2>
+                <Settings2 className="w-4 h-4 dark:text-gray-300"></Settings2>
               </button>
             </ShadTooltip>
           )}
