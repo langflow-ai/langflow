@@ -1,30 +1,21 @@
-import {
-  ChevronDoubleLeftIcon,
-  ChevronDoubleRightIcon,
-  PencilSquareIcon,
-  XMarkIcon,
-} from "@heroicons/react/24/outline";
-import { Fragment, useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { NodeDataType } from "../../types/flow";
-import { classNames, limitScrollFieldsModal, nodeIcons } from "../../utils";
+import { classNames, limitScrollFieldsModal } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
-import { Switch } from "../../components/ui/switch";
 import ToggleShadComponent from "../../components/toggleShadComponent";
 import { VariableIcon } from "@heroicons/react/24/outline";
 import InputListComponent from "../../components/inputListComponent";
 import TextAreaComponent from "../../components/textAreaComponent";
 import InputComponent from "../../components/inputComponent";
-import ToggleComponent from "../../components/toggleComponent";
 import FloatComponent from "../../components/floatComponent";
 import Dropdown from "../../components/dropdownComponent";
 import IntComponent from "../../components/intComponent";
@@ -43,6 +34,7 @@ import {
 } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
 import { EDIT_DIALOG_SUBTITLE } from "../../constants";
+import { Badge } from "../../components/ui/badge";
 
 export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const [open, setOpen] = useState(true);
@@ -95,11 +87,8 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
       <DialogContent className="lg:max-w-[700px] ">
         <DialogHeader>
           <DialogTitle className="flex items-center">
-            <span className="pr-2">Edit Node</span>
-            <PencilSquareIcon
-              className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
-              aria-hidden="true"
-            />
+            <span className="pr-2">{data.type}</span>
+            <Badge variant="secondary">{data.id}</Badge>
           </DialogTitle>
           <DialogDescription>
             {EDIT_DIALOG_SUBTITLE}

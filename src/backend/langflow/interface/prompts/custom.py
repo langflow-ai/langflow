@@ -71,7 +71,3 @@ Human: {input}
 CUSTOM_PROMPTS: Dict[str, Type[BaseCustomPrompt]] = {
     "SeriesCharacterPrompt": SeriesCharacterPrompt
 }
-
-if __name__ == "__main__":
-    prompt = SeriesCharacterPrompt(character="Harry Potter", series="Harry Potter")
-    print(prompt.template)

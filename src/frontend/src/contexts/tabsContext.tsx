@@ -12,7 +12,7 @@ import { updateIds, updateTemplate } from "../utils";
 import { alertContext } from "./alertContext";
 import { typesContext } from "./typesContext";
 import { APITemplateType } from "../types/api";
-import { v4 as uuidv4 } from "uuid";
+import ShortUniqueId from "short-unique-id";
 import { addEdge } from "reactflow";
 import {
   readFlowsFromDatabase,
@@ -22,6 +22,8 @@ import {
   uploadFlowsToDatabase,
 } from "../controllers/API";
 
+const uid = new ShortUniqueId({ length: 5 });
+
 const TabsContextInitialValue: TabsContextType = {
   tabId: "",
   setTabId: (index: string) => {},
@@ -29,7 +31,7 @@ const TabsContextInitialValue: TabsContextType = {
   removeFlow: (id: string) => {},
   addFlow: async (flowData?: any) => "",
   updateFlow: (newFlow: FlowType) => {},
-  incrementNodeId: () => uuidv4(),
+  incrementNodeId: () => uid(),
   downloadFlow: (flow: FlowType) => {},
   downloadFlows: () => {},
   uploadFlows: () => {},
@@ -53,15 +55,17 @@ export const TabsContext = createContext<TabsContextType>(
 
 export function TabsProvider({ children }: { children: ReactNode }) {
   const { setErrorData, setNoticeData } = useContext(alertContext);
+
   const [tabId, setTabId] = useState("");
-  const [flows, setFlows] = useState([]);
-  const [id, setId] = useState(uuidv4());
+
+  const [flows, setFlows] = useState<Array<FlowType>>([]);
+  const [id, setId] = useState(uid());
   const { templates, reactFlowInstance } = useContext(typesContext);
   const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
 
-  const newNodeId = useRef(uuidv4());
+  const newNodeId = useRef(uid());
   function incrementNodeId() {
-    newNodeId.current = uuidv4();
+    newNodeId.current = uid();
     return newNodeId.current;
   }
 
@@ -205,10 +209,11 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
 
   function hardReset() {
-    newNodeId.current = uuidv4();
+    newNodeId.current = uid();
     setTabId("");
+
     setFlows([]);
-    setId(uuidv4());
+    setId(uid());
   }
 
   /**
@@ -249,7 +254,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
 
   function getNodeId() {
-    return `dndnode_` + incrementNodeId();
+    return incrementNodeId();
   }
 
   /**
