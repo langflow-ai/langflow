@@ -1,5 +1,8 @@
 // src/constants.tsx
 
+import { FlowType } from "./types/flow";
+import { buildTweaks } from "./utils";
+
 /**
  * The base text for subtitle of Export Dialog (Toolbar)
  * @constant
@@ -51,11 +54,21 @@ export const TEXT_DIALOG_SUBTITLE = "Edit your text.";
  * @param {string} flowId - The id of the flow
  * @returns {string} - The python code
  */
-export const getPythonApiCode = (flowId: string): string => {
+export const getPythonApiCode = (flow: FlowType): string => {
+  const flowId = flow.id;
+
+  // create a dictionary of node ids and the values is an empty dictionary
+  // flow.data.nodes.forEach((node) => {
+  //   node.data.id
+  // }
+  const tweaks = buildTweaks(flow);
   return `import requests
 
-BASE_API_URL = "${window.location.protocol}//${window.location.host}/ap1/v1/predict"
+BASE_API_URL = "${window.location.protocol}//${
+    window.location.host
+  }/ap1/v1/predict"
 FLOW_ID = "${flowId}"
+TWEAKS = ${JSON.stringify(tweaks, null, 2)}
 
 def run_flow(message: str, flow_id: str, tweaks: dict = None) -> dict:
     """
@@ -77,28 +90,35 @@ def run_flow(message: str, flow_id: str, tweaks: dict = None) -> dict:
     return response.json()
 
 # Setup any tweaks you want to apply to the flow
-tweaks = {} # {"nodeId": {"key": "value"}, "nodeId2": {"key": "value"}}
 
-
-print(run_flow("Your message", flow_id=FLOW_ID, tweaks=tweaks))`;
+print(run_flow("Your message", flow_id=FLOW_ID, tweaks=TWEAKS))`;
 };
 /**
  * Function to get the curl code for the API
  * @param {string} flowId - The id of the flow
  * @returns {string} - The curl code
  */
-export const getCurlCode = (flowId: string): string => {
+export const getCurlCode = (flow: FlowType): string => {
+  const flowId = flow.id;
+  const tweaks = buildTweaks(flow);
   return `curl -X POST \\
-  ${window.location.protocol}//${window.location.host}/api/v1/predict/${flowId} \\
+  ${window.location.protocol}//${
+    window.location.host
+  }/api/v1/predict/${flowId} \\
   -H 'Content-Type: application/json' \\
-  -d '{"message": "Your message"}'`;
+  -d '{"message": "Your message", "tweaks": ${JSON.stringify(
+    tweaks,
+    null,
+    2
+  )}}'`;
 };
 /**
  * Function to get the python code for the API
  * @param {string} flowName - The name of the flow
  * @returns {string} - The python code
  */
-export const getPythonCode = (flowName: string): string => {
+export const getPythonCode = (flow: FlowType): string => {
+  const flowName = flow.name;
   return `from langflow import load_flow_from_json
 
     flow = load_flow_from_json("${flowName}.json")

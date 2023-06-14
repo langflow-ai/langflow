@@ -711,3 +711,10 @@ export function groupByFamily(data, baseClasses) {
 
   return groupedObj;
 }
+
+export function buildTweaks(flow) {
+  return flow.data.nodes.reduce((acc, node) => {
+    acc[node.data.id] = {};
+    return acc;
+  }, {});
+}

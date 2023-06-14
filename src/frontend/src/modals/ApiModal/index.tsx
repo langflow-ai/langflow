@@ -1,10 +1,6 @@
-import { IconCheck, IconClipboard, IconDownload } from "@tabler/icons-react";
-import {
-  XMarkIcon,
-  CommandLineIcon,
-  CodeBracketSquareIcon,
-} from "@heroicons/react/24/outline";
-import { Fragment, useContext, useRef, useState } from "react";
+import { IconCheck, IconClipboard } from "@tabler/icons-react";
+import { CodeBracketSquareIcon } from "@heroicons/react/24/outline";
+import { useContext, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
@@ -18,12 +14,10 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-import { Button } from "../../components/ui/button";
 import { FlowType } from "../../types/flow/index";
 import { getCurlCode, getPythonApiCode, getPythonCode } from "../../constants";
 import { EXPORT_CODE_DIALOG } from "../../constants";
@@ -55,10 +49,10 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
     }
   }
 
-  const pythonApiCode = getPythonApiCode(flow.id);
+  const pythonApiCode = getPythonApiCode(flow);
 
-  const curl_code = getCurlCode(flow.id);
-  const pythonCode = getPythonCode(flow.name);
+  const curl_code = getCurlCode(flow);
+  const pythonCode = getPythonCode(flow);
 
   const tabs = [
     {
