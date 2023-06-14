@@ -74,7 +74,7 @@ export default function TabComponent({
               }}
             >
               {flows.length > 1 && (
-                <XMarkIcon className="h-4 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full" />
+                <XMarkIcon className="h-4 hover:bg-muted dark:hover:bg-gray-600 rounded-full" />
               )}
             </button>
           </div>

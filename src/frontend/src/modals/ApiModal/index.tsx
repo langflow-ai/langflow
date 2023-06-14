@@ -115,7 +115,7 @@ flow("Hey, have you heard of LangFlow?")`;
                   "p-1.5 rounded-t-lg w-44 border border-b-0 border-gray-300 dark:border-gray-700 dark:text-gray-300 -mr-px flex justify-center items-center gap-4 " +
                   (activeTab === index
                     ? " bg-white dark:bg-gray-800"
-                    : "bg-gray-100 dark:bg-gray-900")
+                    : "bg-muted dark:bg-gray-900")
                 }
               >
                 {tab.name}
@@ -123,7 +123,7 @@ flow("Hey, have you heard of LangFlow?")`;
               </button>
             ))}
           </div>
-          <div className=" overflow-hidden px-4 sm:p-4 sm:pb-0 sm:pt-0 w-full h-full rounded-lg border-gray-200 border-[1px] bg-gray-50 dark:bg-gray-800">
+          <div className=" overflow-hidden px-4 sm:p-4 sm:pb-0 sm:pt-0 w-full h-full rounded-lg border-gray-200 border-[1px] bg-muted dark:bg-gray-800">
             <div className="items-center mb-2">
               <div className="float-right">
                 <button

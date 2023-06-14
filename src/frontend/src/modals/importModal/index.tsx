@@ -79,7 +79,7 @@ export default function ImportModal() {
                 <div className="z-50 absolute top-2 left-0 hidden pt-4 pl-4 sm:block">
                   <button
                     type="button"
-                    className="rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                    className="rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-1"
                     onClick={() => {
                       setShowExamples(false);
                     }}
