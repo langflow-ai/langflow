@@ -73,7 +73,7 @@ export default function CodeAreaModal({
             onChange={(value) => {
               setCode(value);
             }}
-            className="w-full rounded-lg h-[300px] custom-scroll"
+            className="w-full rounded-lg h-[300px] custom-scroll border-[1px] border-gray-300 dark:border-gray-600"
           />
         </div>
 

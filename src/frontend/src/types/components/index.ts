@@ -13,6 +13,8 @@ export type InputComponentType = {
   password: boolean;
   disableCopyPaste?: boolean;
   editNode?: boolean;
+  onChangePass?: (value: boolean | boolean) => void;
+  showPass?: boolean;
 };
 export type ToggleComponentType = {
   enabled: boolean;
@@ -24,6 +26,7 @@ export type DropDownComponentType = {
   options: string[];
   onSelect: (value: string) => void;
   editNode?: boolean;
+  numberOfOptions?: number;
 };
 export type ParameterComponentType = {
   data: NodeDataType;
@@ -40,6 +43,7 @@ export type InputListComponentType = {
   value: string[];
   onChange: (value: string[]) => void;
   disabled: boolean;
+  editNode?: boolean;
 };
 
 export type TextAreaComponentType = {

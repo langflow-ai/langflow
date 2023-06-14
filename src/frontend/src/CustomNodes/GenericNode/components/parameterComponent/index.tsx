@@ -24,6 +24,7 @@ import { nodeNames, nodeIcons } from "../../../../utils";
 import React from "react";
 import { nodeColors } from "../../../../utils";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
+import { PopUpContext } from "../../../../contexts/popUpContext";
 
 export default function ParameterComponent({
   left,
@@ -40,6 +41,8 @@ export default function ParameterComponent({
   const refHtml = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
+  const { closePopUp } = useContext(PopUpContext);
+
   useEffect(() => {
     if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
       setPosition(ref.current.offsetTop + ref.current.clientHeight / 2);
@@ -54,6 +57,9 @@ export default function ParameterComponent({
   const [enabled, setEnabled] = useState(
     data.node.template[name]?.value ?? false
   );
+
+  useEffect(() => {}, [closePopUp, data.node.template]);
+
   const { reactFlowInstance } = useContext(typesContext);
   let disabled =
     reactFlowInstance?.getEdges().some((e) => e.targetHandle === id) ?? false;
@@ -103,7 +109,7 @@ export default function ParameterComponent({
   return (
     <div
       ref={ref}
-      className="w-full flex flex-wrap justify-between items-center bg-gray-50 dark:bg-gray-800 dark:text-white mt-1 px-5 py-2"
+      className="w-full flex flex-wrap justify-between items-center bg-muted dark:bg-gray-800 dark:text-white mt-1 px-5 py-2"
     >
       <>
         <div className={"text-sm truncate w-full " + (left ? "" : "text-end")}>
@@ -124,6 +130,7 @@ export default function ParameterComponent({
             delayDuration={0}
             content={refHtml.current}
             side={left ? "left" : "right"}
+            open={refHtml?.current?.length > 0}
           >
             <Handle
               type={left ? "target" : "source"}
@@ -197,22 +204,28 @@ export default function ParameterComponent({
             />
           </div>
         ) : left === true && type === "float" ? (
-          <FloatComponent
-            disabled={disabled}
-            disableCopyPaste={true}
-            value={data.node.template[name].value ?? ""}
-            onChange={(t) => {
-              data.node.template[name].value = t;
-            }}
-          />
+          <div className="mt-2 w-full">
+            <FloatComponent
+              disabled={disabled}
+              disableCopyPaste={true}
+              value={data.node.template[name].value ?? ""}
+              onChange={(t) => {
+                data.node.template[name].value = t;
+                }}
+            />
+          </div>
         ) : left === true &&
           type === "str" &&
           data.node.template[name].options ? (
-          <Dropdown
-            options={data.node.template[name].options}
-            onSelect={(newValue) => (data.node.template[name].value = newValue)}
-            value={data.node.template[name].value ?? "Choose an option"}
-          ></Dropdown>
+          <div className="w-full">
+            <Dropdown
+              options={data.node.template[name].options}
+              onSelect={(newValue) =>
+                (data.node.template[name].value = newValue)
+              }
+              value={data.node.template[name].value ?? "Choose an option"}
+            ></Dropdown>
+          </div>
         ) : left === true && type === "code" ? (
           <CodeAreaComponent
             disabled={disabled}
@@ -237,15 +250,17 @@ export default function ParameterComponent({
             }}
           ></InputFileComponent>
         ) : left === true && type === "int" ? (
-          <IntComponent
-            disabled={disabled}
-            disableCopyPaste={true}
-            value={data.node.template[name].value ?? ""}
-            onChange={(t) => {
-              data.node.template[name].value = t;
-              
-            }}
-          />
+          <div className="mt-2 w-full">
+            <IntComponent
+              disabled={disabled}
+              disableCopyPaste={true}
+              value={data.node.template[name].value ?? ""}
+              onChange={(t) => {
+                data.node.template[name].value = t;
+                
+              }}
+            />
+          </div>
         ) : left === true && type === "prompt" ? (
           <PromptAreaComponent
             disabled={disabled}

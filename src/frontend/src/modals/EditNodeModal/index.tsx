@@ -60,12 +60,12 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
           data.node.template[t].type === "int")
     ).length
   );
-  const [nodeValue, setNodeValue] = useState(true);
+  const [nodeValue, setNodeValue] = useState(null);
   const { closePopUp } = useContext(PopUpContext);
   const { types } = useContext(typesContext);
   const ref = useRef();
   const { save } = useContext(TabsContext);
-  const [enabled, setEnabled] = useState(false);
+  const [enabled, setEnabled] = useState(null);
   if (nodeLength == 0) {
     closePopUp();
   }
@@ -77,6 +77,8 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
     }
   }
 
+  useEffect(() => {}, [closePopUp, data.node.template]);
+
   function changeAdvanced(node): void {
     Object.keys(data.node.template).filter((n, i) => {
       if (n === node.name) {
@@ -87,12 +89,10 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
     setNodeValue(!nodeValue);
   }
 
-  console.log(data.node.template);
-
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger></DialogTrigger>
-      <DialogContent className="lg:max-w-[700px]">
+      <DialogContent className="lg:max-w-[700px] ">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Edit Node</span>
@@ -103,21 +103,21 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
           </DialogTitle>
           <DialogDescription>
             {EDIT_DIALOG_SUBTITLE}
-            <div className="flex pt-3">
-              <VariableIcon className="w-5 h-5 pe-1 text-gray-700 stroke-2">
+            <div className="flex pt-4">
+              <VariableIcon className="w-5 h-5 pe-1 text-gray-700 stroke-2 dark:text-slate-200">
                 &nbsp;
               </VariableIcon>
-              <span className="text-sm font-semibold text-gray-800">
+              <span className="text-sm font-semibold text-gray-800 dark:text-white">
                 Parameters
               </span>
             </div>
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex w-full h-fit max-h-[415px]">
+        <div className="flex w-full max-h-[350px] h-fit">
           <div
             className={classNames(
-              "w-full rounded-lg bg-white dark:bg-gray-800 shadow",
+              "w-full rounded-lg bg-white dark:bg-gray-800 border-[1px] border-gray-200",
               nodeLength > limitScrollFieldsModal
                 ? "overflow-scroll overflow-x-hidden custom-scroll"
                 : "overflow-hidden"
@@ -125,9 +125,9 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
           >
             {nodeLength > 0 && (
               <div className="flex flex-col gap-5 h-fit">
-                <Table className="table-fixed">
-                  <TableHeader className="border-gray-200 text-gray-500 text-xs font-medium">
-                    <TableRow>
+                <Table className="table-fixed bg-muted outline-1">
+                  <TableHeader className="border-gray-200 text-gray-500 text-xs font-medium h-10">
+                    <TableRow className="dark:border-b-muted">
                       <TableHead className="h-7 text-center">PARAM</TableHead>
                       <TableHead className="p-0 h-7 text-center">
                         VALUE
@@ -150,8 +150,8 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                             data.node.template[t].type === "int")
                       )
                       .map((n, i) => (
-                        <TableRow key={i} className="h-8">
-                          <TableCell className="p-0 text-center text-gray-900 text-xs dark:text-gray-300">
+                        <TableRow key={i} className="h-10 dark:border-b-muted">
+                          <TableCell className="p-0 text-center text-gray-900 text-xs dark:text-gray-300 text-sm">
                             {data.node.template[n].name
                               ? data.node.template[n].name
                               : data.node.template[n].display_name}
@@ -162,6 +162,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                               <div className="mx-auto">
                                 {data.node.template[n].list ? (
                                   <InputListComponent
+                                    editNode={true}
                                     disabled={false}
                                     value={
                                       !data.node.template[n].value ||
@@ -228,6 +229,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                               data.node.template[n].options ? (
                               <div className="mx-auto">
                                 <Dropdown
+                                  numberOfOptions={nodeLength}
                                   editNode={true}
                                   options={data.node.template[n].options}
                                   onSelect={(newValue) =>
