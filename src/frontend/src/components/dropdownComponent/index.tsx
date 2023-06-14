@@ -72,7 +72,7 @@ export default function Dropdown({
                       className={({ active }) =>
                         classNames(
                           active
-                            ? "text-white bg-slate-400 dark:bg-white dark:text-gray-500"
+                            ? " bg-accent dark:bg-white dark:text-gray-500"
                             : "",
                           editNode
                             ? "relative cursor-default select-none py-0.5 pl-3 pr-12 dark:text-gray-300 dark:bg-gray-800"
