@@ -123,7 +123,7 @@ flow("Hey, have you heard of LangFlow?")`;
               </button>
             ))}
           </div>
-          <div className=" overflow-hidden px-4 sm:p-4 sm:pb-0 sm:pt-0 w-full h-full rounded-lg border-muted border-[1px] bg-gray-50 dark:bg-gray-800">
+          <div className=" overflow-hidden px-4 sm:p-4 sm:pb-0 sm:pt-0 w-full h-full rounded-lg border-gray-200 border-[1px] bg-gray-50 dark:bg-gray-800">
             <div className="items-center mb-2">
               <div className="float-right">
                 <button
