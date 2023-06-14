@@ -21,6 +21,7 @@ import {
   downloadFlowsFromDatabase,
   uploadFlowsToDatabase,
 } from "../controllers/API";
+import _ from "lodash";
 
 const TabsContextInitialValue: TabsContextType = {
   tabId: "",
@@ -548,7 +549,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         uploadFlows,
         uploadFlow,
         getNodeId,
-        paste,
+        paste
       }}
     >
       {children}
