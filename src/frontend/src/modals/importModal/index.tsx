@@ -79,14 +79,13 @@ export default function ImportModal() {
                 <div className="z-50 absolute top-2 left-0 hidden pt-4 pl-4 sm:block">
                   <button
                     type="button"
-                    className="rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500 focus:ring-offset-1"
+                    className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
                     onClick={() => {
                       setShowExamples(false);
                     }}
                   >
-                    <span className="sr-only">Close</span>
                     <ArrowLeftIcon
-                      className="h-6 w-6 text-gray-800 ml-1 dark:text-white"
+                      className="h-5 w-5 text-gray-800 ml-1 dark:text-white"
                       aria-hidden="true"
                     />
                   </button>
@@ -98,7 +97,7 @@ export default function ImportModal() {
               {showExamples ? "Select an example" : "Import"}
             </span>
             <ArrowUpTrayIcon
-              className="h-6 w-6 text-gray-800 ml-1 dark:text-white"
+              className="h-5 w-5 text-gray-800 ml-1 dark:text-white"
               aria-hidden="true"
             />
           </DialogTitle>

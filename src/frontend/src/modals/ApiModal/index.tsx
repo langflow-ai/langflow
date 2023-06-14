@@ -24,7 +24,7 @@ import {
   DialogTrigger,
 } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
-import { FlowType } from "src/types/flow";
+import { FlowType } from "../../types/flow";
 import { getCurlCode, getPythonApiCode, getPythonCode } from "../../constants";
 import { EXPORT_CODE_DIALOG } from "../../constants";
 

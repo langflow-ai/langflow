@@ -29,20 +29,21 @@ export default function Dropdown({
           <>
             <div className={editNode ? "mt-1" : "relative mt-1"}>
               <Listbox.Button
+              
                 className={
                   editNode
-                    ? "relative pr-9 arrow-hide placeholder:text-center block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md shadow-sm sm:text-sm border-gray-300 border-1" +
+                    ? "relative pr-8 placeholder:text-center block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md shadow-sm sm:text-sm border-gray-300 border-1" +
                       INPUT_STYLE
                     : "ring-1 ring-slate-300 dark:ring-slate-600 w-full py-2 pl-3 pr-10 text-left dark:focus:ring-offset-2 dark:focus:ring-offset-gray-900 dark:focus:ring-1 dark:focus:ring-gray-600 dark:focus-visible:ring-gray-900 dark:focus-visible:ring-offset-2 focus-visible:outline-none dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm" +
                       INPUT_STYLE
                 }
               >
+                
                 <span className="block truncate w-full">{internalValue}</span>
                 <span
                   className={
-                    editNode
-                      ? "hidden"
-                      : "pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
+
+ "pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
                   }
                 >
                   <ChevronUpDownIcon
@@ -62,7 +63,7 @@ export default function Dropdown({
                 <Listbox.Options
                   className={
                     editNode
-                      ? "arrow-hide absolute z-10 mt-1 max-h-60 overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm w-[215px]"
+                      ? "absolute z-10 mt-1 max-h-60 overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm w-[215px]"
                       : "absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm "
                   }
                 >
