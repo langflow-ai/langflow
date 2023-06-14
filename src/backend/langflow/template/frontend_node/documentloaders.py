@@ -2,22 +2,22 @@ from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
 
 
-class DocumentLoaderFrontNode(FrontendNode):
-    @staticmethod
-    def build_template(
-        suffixes: list, fileTypes: list, name: str = "file_path"
-    ) -> TemplateField:
-        """Build a template field for a document loader."""
-        return TemplateField(
-            field_type="file",
-            required=True,
-            show=True,
-            name=name,
-            value="",
-            suffixes=suffixes,
-            fileTypes=fileTypes,
-        )
+def build_template(
+    suffixes: list, fileTypes: list, name: str = "file_path"
+) -> TemplateField:
+    """Build a template field for a document loader."""
+    return TemplateField(
+        field_type="file",
+        required=True,
+        show=True,
+        name=name,
+        value="",
+        suffixes=suffixes,
+        fileTypes=fileTypes,
+    )
 
+
+class DocumentLoaderFrontNode(FrontendNode):
     file_path_templates = {
         "AirbyteJSONLoader": build_template(suffixes=[".json"], fileTypes=["json"]),
         "CoNLLULoader": build_template(suffixes=[".csv"], fileTypes=["csv"]),
