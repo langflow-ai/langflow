@@ -16,10 +16,7 @@ import {
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { EXPORT_DIALOG_SUBTITLE } from "../../constants";
-import EditFlowSettings from "../../components/nameInputComponent";
-import { Label } from "../../components/ui/label";
-import { Input } from "../../components/ui/input";
-import { Textarea } from "../../components/ui/textarea";
+import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 
 export default function ExportModal() {
   const [open, setOpen] = useState(true);
@@ -56,44 +53,15 @@ export default function ExportModal() {
           <DialogDescription>{EXPORT_DIALOG_SUBTITLE}</DialogDescription>
         </DialogHeader>
 
-        <Label>
-          <span className="font-medium">Name</span>
-
-          <Input
-            className="mt-2 focus-visible:ring-1"
-            onChange={(event) => {
-              if (event.target.value != "") {
-                let newFlow = flows.find((f) => f.id === tabId);
-                newFlow.name = event.target.value;
-                setName(event.target.value);
-                updateFlow(newFlow);
-              } else {
-                setName(event.target.value);
-              }
-            }}
-            type="text"
-            name="name"
-            value={name ?? null}
-            placeholder="File name"
-            id="name"
-          />
-        </Label>
-        <Label>
-          <span className="font-medium">Description (optional)</span>
-          <Textarea
-            name="description"
-            id="description"
-            onChange={(event) => {
-              let newFlow = flows.find((f) => f.id === tabId);
-              newFlow.description = event.target.value;
-              updateFlow(newFlow);
-            }}
-            value={flows.find((f) => f.id === tabId).description ?? null}
-            placeholder="Flow description"
-            className="max-h-[100px] mt-2 focus-visible:ring-1"
-            rows={3}
-          />
-        </Label>
+        <EditFlowSettings
+          name={name}
+          description={description}
+          flows={flows}
+          tabId={tabId}
+          setName={setName}
+          setDescription={setDescription}
+          updateFlow={updateFlow}
+        />
         <div className="flex items-center space-x-2">
           <Checkbox
             id="terms"
