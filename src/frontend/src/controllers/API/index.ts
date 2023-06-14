@@ -9,7 +9,7 @@ import { FlowStyleType, FlowType } from "../../types/flow";
  * @returns {Promise<AxiosResponse<APIObjectType>>} A promise that resolves to an AxiosResponse containing all the objects.
  */
 export async function getAll(): Promise<AxiosResponse<APIObjectType>> {
-  return await axios.get(`/all`);
+  return await axios.get(`/api/v1/all`);
 }
 
 /**
@@ -19,7 +19,7 @@ export async function getAll(): Promise<AxiosResponse<APIObjectType>> {
  * @returns {AxiosResponse<any>} The API response.
  */
 export async function sendAll(data: sendAllProps) {
-  return await axios.post(`/predict`, data);
+  return await axios.post(`/api/v1/predict`, data);
 }
 
 /**
@@ -31,7 +31,7 @@ export async function sendAll(data: sendAllProps) {
 export async function checkCode(
   code: string
 ): Promise<AxiosResponse<errorsTypeAPI>> {
-  return await axios.post("/validate/code", { code });
+  return await axios.post("/api/v1/validate/code", { code });
 }
 
 /**
@@ -43,7 +43,7 @@ export async function checkCode(
 export async function checkPrompt(
   template: string
 ): Promise<AxiosResponse<PromptTypeAPI>> {
-  return await axios.post("/validate/prompt", { template });
+  return await axios.post("/api/v1/validate/prompt", { template });
 }
 
 /**
@@ -75,24 +75,17 @@ export async function getExamples(): Promise<FlowType[]> {
  * @returns {Promise<any>} The saved flow data.
  * @throws Will throw an error if saving fails.
  */
-export async function saveFlowToDatabase(newFlow: FlowType) {
+export async function saveFlowToDatabase(newFlow: FlowType): Promise<FlowType> {
   try {
-    const response = await fetch("/flows/", {
-      method: "POST",
-      headers: {
-        accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: newFlow.name,
-        data: newFlow.data,
-        description: newFlow.description,
-      }),
+    const response = await axios.post("/api/v1/flows/", {
+      name: newFlow.name,
+      data: newFlow.data,
+      description: newFlow.description,
     });
-    if (!response.ok) {
+    if (response.status !== 201) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.json();
+    return response.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -107,22 +100,16 @@ export async function saveFlowToDatabase(newFlow: FlowType) {
  */
 export async function updateFlowInDatabase(updatedFlow: FlowType) {
   try {
-    const response = await fetch(`/flows/${updatedFlow.id}`, {
-      method: "PATCH", // Or "PATCH" depending on your backend API
-      headers: {
-        accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: updatedFlow.name,
-        data: updatedFlow.data,
-        description: updatedFlow.description,
-      }),
+    const response = await axios.patch(`/api/v1/flows/${updatedFlow.id}`, {
+      name: updatedFlow.name,
+      data: updatedFlow.data,
+      description: updatedFlow.description,
     });
-    if (!response.ok) {
+
+    if (response.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.json();
+    return response.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -137,11 +124,11 @@ export async function updateFlowInDatabase(updatedFlow: FlowType) {
  */
 export async function readFlowsFromDatabase() {
   try {
-    const response = await fetch("/flows/");
-    if (!response.ok) {
+    const response = await axios.get("/api/v1/flows/");
+    if (response.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.json();
+    return response.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -150,11 +137,11 @@ export async function readFlowsFromDatabase() {
 
 export async function downloadFlowsFromDatabase() {
   try {
-    const response = await fetch("/flows/download/");
-    if (!response.ok) {
+    const response = await axios.get("/api/v1/flows/download/");
+    if (response.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.json();
+    return response.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -163,14 +150,12 @@ export async function downloadFlowsFromDatabase() {
 
 export async function uploadFlowsToDatabase(flows) {
   try {
-    const response = await fetch(`/flows/upload/`, {
-      method: "POST", // Or "PATCH" depending on your backend API
-      body: flows,
-    });
-    if (!response.ok) {
+    const response = await axios.post(`/api/v1/flows/upload/`, flows);
+
+    if (response.status !== 201) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.json();
+    return response.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -186,13 +171,11 @@ export async function uploadFlowsToDatabase(flows) {
  */
 export async function deleteFlowFromDatabase(flowId: string) {
   try {
-    const response = await fetch(`/flows/${flowId}`, {
-      method: "DELETE",
-    });
-    if (!response.ok) {
+    const response = await axios.delete(`/api/v1/flows/${flowId}`);
+    if (response.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.json();
+    return response.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -208,11 +191,11 @@ export async function deleteFlowFromDatabase(flowId: string) {
  */
 export async function getFlowFromDatabase(flowId: number) {
   try {
-    const response = await fetch(`/flows/${flowId}`);
-    if (!response.ok) {
+    const response = await axios.get(`/api/v1/flows/${flowId}`);
+    if (response.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.json();
+    return response.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -227,11 +210,11 @@ export async function getFlowFromDatabase(flowId: number) {
  */
 export async function getFlowStylesFromDatabase() {
   try {
-    const response = await fetch("/flow_styles/");
-    if (!response.ok) {
+    const response = await axios.get("/api/v1/flow_styles/");
+    if (response.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.json();
+    return response.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -247,18 +230,17 @@ export async function getFlowStylesFromDatabase() {
  */
 export async function saveFlowStyleToDatabase(flowStyle: FlowStyleType) {
   try {
-    const response = await fetch("/flow_styles/", {
-      method: "POST",
+    const response = await axios.post("/api/v1/flow_styles/", flowStyle, {
       headers: {
         accept: "application/json",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(flowStyle),
     });
-    if (!response.ok) {
+
+    if (response.status !== 201) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.json();
+    return response.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -271,7 +253,8 @@ export async function saveFlowStyleToDatabase(flowStyle: FlowStyleType) {
  * @returns {Promise<AxiosResponse<any>>} A promise that resolves to an AxiosResponse containing the version information.
  */
 export async function getVersion() {
-  return await fetch("/version");
+  const respnose = await axios.get("/api/v1/version");
+  return respnose.data;
 }
 
 /**
@@ -280,5 +263,5 @@ export async function getVersion() {
  * @returns {Promise<AxiosResponse<any>>} A promise that resolves to an AxiosResponse containing the health status.
  */
 export async function getHealth() {
-  return await fetch("/health");
+  return await axios.get("/health"); // Health is the only endpoint that doesn't require /api/v1
 }
