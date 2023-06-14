@@ -21,7 +21,7 @@ import ShortUniqueId from "short-unique-id";
 import { addEdge } from "reactflow";
 import _ from "lodash";
 
-const uid = new ShortUniqueId({ length: 4 });
+const uid = new ShortUniqueId({ length: 5 });
 
 const TabsContextInitialValue: TabsContextType = {
   save: () => {},
