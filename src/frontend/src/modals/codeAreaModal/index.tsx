@@ -47,7 +47,7 @@ export default function CodeAreaModal({
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger></DialogTrigger>
-      <DialogContent className="lg:max-w-[700px] h-[500px]">
+      <DialogContent className="lg:max-w-[700px] h-[500px] bg-muted">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Edit Code</span>

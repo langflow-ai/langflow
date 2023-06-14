@@ -68,8 +68,8 @@ export default function ImportModal() {
       <DialogContent
         className={classNames(
           showExamples
-            ? "lg:max-w-[650px] h-[600px]"
-            : "lg:max-w-[650px] h-[450px]"
+            ? "lg:max-w-[650px] h-[600px] bg-muted"
+            : "lg:max-w-[650px] h-[450px] bg-muted"
         )}
       >
         <DialogHeader>
@@ -86,7 +86,7 @@ export default function ImportModal() {
                   >
                     <span className="sr-only">Close</span>
                     <ArrowLeftIcon
-                      className="h-6 w-6 text-gray-800 ml-1"
+                      className="h-6 w-6 text-gray-800 ml-1 dark:text-white"
                       aria-hidden="true"
                     />
                   </button>
@@ -176,7 +176,7 @@ export default function ImportModal() {
         </div>
 
         <DialogFooter>
-          <div className="bg-white dark:bg-gray-800 w-full flex items-center justify-center">
+          <div className="bg-muted w-full flex items-center justify-center mt-2">
             <a
               href="https://github.com/logspace-ai/langflow_examples"
               target="_blank"

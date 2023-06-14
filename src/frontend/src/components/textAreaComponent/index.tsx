@@ -50,7 +50,7 @@ export default function TextAreaComponent({
                 (disabled ? " bg-gray-200" : "")
           }
         >
-          {myValue !== "" ? myValue : "Text empty"}
+          {myValue !== "" ? myValue : "Type something..."}
         </span>
         <button
           onClick={() => {

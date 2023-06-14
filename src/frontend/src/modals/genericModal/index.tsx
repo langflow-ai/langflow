@@ -50,7 +50,7 @@ export default function GenericModal({
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger></DialogTrigger>
-      <DialogContent className="lg:max-w-[700px]">
+      <DialogContent className="lg:max-w-[700px] bg-muted">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">{myModalTitle}</span>

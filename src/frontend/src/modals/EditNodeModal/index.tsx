@@ -92,7 +92,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger></DialogTrigger>
-      <DialogContent className="lg:max-w-[700px]">
+      <DialogContent className="lg:max-w-[700px] bg-muted ">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Edit Node</span>
@@ -114,7 +114,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex w-full h-fit max-h-[415px]">
+        <div className="flex w-full max-h-[350px] h-fit">
           <div
             className={classNames(
               "w-full rounded-lg bg-white dark:bg-gray-800 shadow",
@@ -151,7 +151,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                       )
                       .map((n, i) => (
                         <TableRow key={i} className="h-8">
-                          <TableCell className="p-0 text-center text-gray-900 text-xs dark:text-gray-300">
+                          <TableCell className="p-0 text-center text-gray-900 text-xs dark:text-gray-300 text-sm">
                             {data.node.template[n].name
                               ? data.node.template[n].name
                               : data.node.template[n].display_name}
