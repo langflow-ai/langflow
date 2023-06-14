@@ -215,7 +215,8 @@ export default function Page({ flow }: { flow: FlowType }) {
       // Generate a unique node ID
       let { type } = data;
       let newId = getNodeId();
-      newId = `${type}_${newId}`;
+      // add lowercase to the type
+      newId = `${type.toLowerCase()}-${newId}`;
       let newNode: NodeType;
 
       if (data.type !== "groupNode") {
