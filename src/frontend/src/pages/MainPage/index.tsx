@@ -1,39 +1,7 @@
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "../../components/ui/tabs";
-import ExtraSidebar from "../../components/ExtraSidebarComponent";
-import { ReactFlowProvider } from "reactflow";
-import FlowPage from "../FlowPage";
-import { useContext, useEffect, useState } from "react";
-import {
-  SunIcon,
-  MoonIcon,
-  BellIcon,
-  GithubIcon,
-  Download,
-  Upload,
-  Plus,
-  Home,
-} from "lucide-react";
+import { useContext, useEffect } from "react";
+import { Download, Upload, Plus, Home } from "lucide-react";
 import { TabsContext } from "../../contexts/tabsContext";
-import AlertDropdown from "../../alerts/alertDropDown";
-import { alertContext } from "../../contexts/alertContext";
-import { darkContext } from "../../contexts/darkContext";
-import { PopUpContext } from "../../contexts/popUpContext";
-import { typesContext } from "../../contexts/typesContext";
 import { Button } from "../../components/ui/button";
-import { FaGithub } from "react-icons/fa";
-
-import _ from "lodash";
-
-import {
-  updateFlowInDatabase,
-  uploadFlowsToDatabase,
-} from "../../controllers/API";
-import { MenuBar } from "../../components/headerComponent/components/menuBar";
 import { CardComponent } from "./components/cardComponent";
 import { useNavigate } from "react-router-dom";
 export default function HomePage() {
@@ -72,7 +40,7 @@ export default function HomePage() {
           <Button
             variant="primary"
             onClick={() => {
-              addFlow().then((id) => {
+              addFlow(null, true).then((id) => {
                 navigate("/flow/" + id);
               });
             }}
