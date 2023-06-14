@@ -213,7 +213,9 @@ export default function Page({ flow }: { flow: FlowType }) {
       });
 
       // Generate a unique node ID
+      let { type } = data;
       let newId = getNodeId();
+      newId = `${type}_${newId}`;
       let newNode: NodeType;
 
       if (data.type !== "groupNode") {
@@ -317,53 +319,53 @@ export default function Page({ flow }: { flow: FlowType }) {
           <div className="w-full h-full" ref={reactFlowWrapper}>
             {Object.keys(templates).length > 0 &&
             Object.keys(types).length > 0 ? (
-                <div className="w-full h-full">
-                  <ReactFlow
-                    nodes={nodes}
-                    onMove={() => {
-                      updateFlow({
-                        ...flow,
-                        data: reactFlowInstance.toObject(),
-                      });
-                    }}
-                    edges={edges}
-                    onPaneClick={() => {
-                      setDisableCopyPaste(false);
-                    }}
-                    onPaneMouseLeave={() => {
-                      setDisableCopyPaste(true);
-                    }}
-                    onNodesChange={onNodesChange}
-                    onEdgesChange={onEdgesChangeMod}
-                    onConnect={onConnect}
-                    disableKeyboardA11y={true}
-                    onLoad={setReactFlowInstance}
-                    onInit={setReactFlowInstance}
-                    nodeTypes={nodeTypes}
-                    onEdgeUpdate={onEdgeUpdate}
-                    onEdgeUpdateStart={onEdgeUpdateStart}
-                    onEdgeUpdateEnd={onEdgeUpdateEnd}
-                    onNodeDragStart={onNodeDragStart}
-                    onSelectionDragStart={onSelectionDragStart}
-                    onSelectionEnd={onSelectionEnd}
-                    onSelectionStart={onSelectionStart}
-                    onEdgesDelete={onEdgesDelete}
-                    connectionLineComponent={ConnectionLineComponent}
-                    onDragOver={onDragOver}
-                    onDrop={onDrop}
-                    onNodesDelete={onDelete}
-                    onSelectionChange={onSelectionChange}
-                    nodesDraggable={!disableCopyPaste}
-                    panOnDrag={!disableCopyPaste}
-                    zoomOnDoubleClick={!disableCopyPaste}
-                    selectNodesOnDrag={false}
-                    className="theme-attribution"
-                  >
-                    <Background className="dark:bg-gray-900" />
-                    <Controls className="[&>button]:text-black  [&>button]:dark:bg-gray-800 hover:[&>button]:dark:bg-gray-700 [&>button]:dark:text-gray-400 [&>button]:dark:fill-gray-400 [&>button]:dark:border-gray-600"></Controls>
-                  </ReactFlow>
-                  <Chat flow={flow} reactFlowInstance={reactFlowInstance} />
-                </div>
+              <div className="w-full h-full">
+                <ReactFlow
+                  nodes={nodes}
+                  onMove={() => {
+                    updateFlow({
+                      ...flow,
+                      data: reactFlowInstance.toObject(),
+                    });
+                  }}
+                  edges={edges}
+                  onPaneClick={() => {
+                    setDisableCopyPaste(false);
+                  }}
+                  onPaneMouseLeave={() => {
+                    setDisableCopyPaste(true);
+                  }}
+                  onNodesChange={onNodesChange}
+                  onEdgesChange={onEdgesChangeMod}
+                  onConnect={onConnect}
+                  disableKeyboardA11y={true}
+                  onLoad={setReactFlowInstance}
+                  onInit={setReactFlowInstance}
+                  nodeTypes={nodeTypes}
+                  onEdgeUpdate={onEdgeUpdate}
+                  onEdgeUpdateStart={onEdgeUpdateStart}
+                  onEdgeUpdateEnd={onEdgeUpdateEnd}
+                  onNodeDragStart={onNodeDragStart}
+                  onSelectionDragStart={onSelectionDragStart}
+                  onSelectionEnd={onSelectionEnd}
+                  onSelectionStart={onSelectionStart}
+                  onEdgesDelete={onEdgesDelete}
+                  connectionLineComponent={ConnectionLineComponent}
+                  onDragOver={onDragOver}
+                  onDrop={onDrop}
+                  onNodesDelete={onDelete}
+                  onSelectionChange={onSelectionChange}
+                  nodesDraggable={!disableCopyPaste}
+                  panOnDrag={!disableCopyPaste}
+                  zoomOnDoubleClick={!disableCopyPaste}
+                  selectNodesOnDrag={false}
+                  className="theme-attribution"
+                >
+                  <Background className="dark:bg-gray-900" />
+                  <Controls className="[&>button]:text-black  [&>button]:dark:bg-gray-800 hover:[&>button]:dark:bg-gray-700 [&>button]:dark:text-gray-400 [&>button]:dark:fill-gray-400 [&>button]:dark:border-gray-600"></Controls>
+                </ReactFlow>
+                <Chat flow={flow} reactFlowInstance={reactFlowInstance} />
+              </div>
             ) : (
               <></>
             )}
