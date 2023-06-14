@@ -24,6 +24,7 @@ import { alertContext } from "../../../../contexts/alertContext";
 import { Link } from "react-router-dom";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
+import { Button } from "../../../ui/button";
 
 export const MenuBar = ({ flows, tabId }) => {
   const { updateFlow, setTabId, addFlow } = useContext(TabsContext);
@@ -44,9 +45,9 @@ export const MenuBar = ({ flows, tabId }) => {
   return (
     <div className="flex gap-2 items-center">
       <Link to="/">
-        <ChevronLeft className="w-5" />
+        <ChevronLeft className="w-4" />
       </Link>
-      <div className="flex items-center font-medium text-sm rounded-md py-1 px-1.5 bg-background gap-0.5">
+      <Button variant="primary" size="sm">
         {/* <RenameLabel
           value={current_flow.name}
           setValue={(value) => {
@@ -60,7 +61,7 @@ export const MenuBar = ({ flows, tabId }) => {
           setRename={setRename}
         /> */}
         <DropdownMenu>
-          <DropdownMenuTrigger className="px-1 gap-2 flex items-center">
+          <DropdownMenuTrigger className="gap-2 flex items-center">
             {current_flow.name}
             <ChevronDown className="w-4 h-4" />
           </DropdownMenuTrigger>
@@ -118,7 +119,7 @@ export const MenuBar = ({ flows, tabId }) => {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
+      </Button>
     </div>
   );
 };
