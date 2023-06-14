@@ -20,7 +20,7 @@ import json
 router = APIRouter(prefix="/flows", tags=["Flows"])
 
 
-@router.post("/", response_model=FlowRead)
+@router.post("/", response_model=FlowRead, status_code=201)
 def create_flow(*, session: Session = Depends(get_session), flow: FlowCreate):
     """Create a new flow."""
     db_flow = Flow.from_orm(flow)
@@ -30,7 +30,7 @@ def create_flow(*, session: Session = Depends(get_session), flow: FlowCreate):
     return db_flow
 
 
-@router.get("/", response_model=list[FlowReadWithStyle])
+@router.get("/", response_model=list[FlowReadWithStyle], status_code=200)
 def read_flows(*, session: Session = Depends(get_session)):
     """Read all flows."""
     try:
@@ -40,7 +40,7 @@ def read_flows(*, session: Session = Depends(get_session)):
     return [jsonable_encoder(flow) for flow in flows]
 
 
-@router.get("/{flow_id}", response_model=FlowReadWithStyle)
+@router.get("/{flow_id}", response_model=FlowReadWithStyle, status_code=200)
 def read_flow(*, session: Session = Depends(get_session), flow_id: UUID):
     """Read a flow."""
     if flow := session.get(Flow, flow_id):
@@ -49,7 +49,7 @@ def read_flow(*, session: Session = Depends(get_session), flow_id: UUID):
         raise HTTPException(status_code=404, detail="Flow not found")
 
 
-@router.patch("/{flow_id}", response_model=FlowReadWithStyle)
+@router.patch("/{flow_id}", response_model=FlowReadWithStyle, status_code=200)
 def update_flow(
     *, session: Session = Depends(get_session), flow_id: UUID, flow: FlowUpdate
 ):
@@ -66,7 +66,7 @@ def update_flow(
     return db_flow
 
 
-@router.delete("/{flow_id}")
+@router.delete("/{flow_id}", status_code=200)
 def delete_flow(*, session: Session = Depends(get_session), flow_id: UUID):
     """Delete a flow."""
     flow = session.get(Flow, flow_id)
@@ -80,7 +80,7 @@ def delete_flow(*, session: Session = Depends(get_session), flow_id: UUID):
 # Define a new model to handle multiple flows
 
 
-@router.post("/batch/", response_model=List[FlowRead])
+@router.post("/batch/", response_model=List[FlowRead], status_code=201)
 def create_flows(*, session: Session = Depends(get_session), flow_list: FlowListCreate):
     """Create multiple new flows."""
     db_flows = []
@@ -94,7 +94,7 @@ def create_flows(*, session: Session = Depends(get_session), flow_list: FlowList
     return db_flows
 
 
-@router.post("/upload/", response_model=List[FlowRead])
+@router.post("/upload/", response_model=List[FlowRead], status_code=201)
 async def upload_file(
     *, session: Session = Depends(get_session), file: UploadFile = File(...)
 ):
@@ -108,7 +108,7 @@ async def upload_file(
     return create_flows(session=session, flow_list=flow_list)
 
 
-@router.get("/download/", response_model=FlowListRead)
+@router.get("/download/", response_model=FlowListRead, status_code=200)
 async def download_file(*, session: Session = Depends(get_session)):
     """Download all flows as a file."""
     flows = read_flows(session=session)
