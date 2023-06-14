@@ -90,7 +90,7 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
                       </Dialog.Title>
                     </div>
                   </div>
-                  <div className="h-full w-full bg-gray-200 dark:bg-gray-900 p-4 gap-4 flex flex-row justify-center items-center">
+                  <div className="h-full w-full bg-accent dark:bg-gray-900 p-4 gap-4 flex flex-row justify-center items-center">
                     <div className="flex w-full h-[445px]">
                       <div
                         className={classNames(

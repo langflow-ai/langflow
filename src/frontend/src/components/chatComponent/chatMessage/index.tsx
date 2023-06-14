@@ -48,7 +48,7 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
         </div>
       ) : (
         <div className="w-full text-end">
-          <div className="text-start inline-block rounded-xl p-3 overflow-hidden w-fit max-w-[280px] px-5 text-sm text-black dark:text-white dark:bg-gray-700 bg-gray-200 font-normal rounded-tr-none">
+          <div className="text-start inline-block rounded-xl p-3 overflow-hidden w-fit max-w-[280px] px-5 text-sm text-black dark:text-white dark:bg-gray-700 bg-accent font-normal rounded-tr-none">
             {chat.message}
           </div>
         </div>
