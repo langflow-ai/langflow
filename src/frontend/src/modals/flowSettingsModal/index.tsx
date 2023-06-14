@@ -15,7 +15,7 @@ import {
 import { Button } from "../../components/ui/button";
 import { SETTINGS_DIALOG_SUBTITLE } from "../../constants";
 import { updateFlowInDatabase } from "../../controllers/API";
-import EditFlowSettings from "../../components/nameInputComponent";
+import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 
 export default function FlowSettingsModal() {
   const [open, setOpen] = useState(true);

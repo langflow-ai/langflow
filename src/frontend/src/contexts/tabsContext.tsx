@@ -504,7 +504,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   const createNewFlow = (flowData, flow) => ({
     description: flowData.description,
     name: flow?.name ?? "New Flow",
-    id: uuidv4(),
     data: flowData.data,
   });
 
