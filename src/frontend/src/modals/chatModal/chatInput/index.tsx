@@ -2,7 +2,7 @@ import { LockClosedIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
 import { classNames } from "../../../utils";
 import { useContext, useEffect, useRef, useState } from "react";
 import { TabsContext } from "../../../contexts/tabsContext";
-
+import { INPUT_STYLE } from "../../../constants";
 export default function ChatInput({
   lockChat,
   chatValue,
@@ -46,7 +46,8 @@ export default function ChatInput({
           lockChat
             ? " bg-gray-300 text-black dark:bg-gray-700 dark:text-gray-300"
             : "  bg-white-200 text-black dark:bg-gray-900 dark:text-gray-300",
-          "form-input block w-full custom-scroll rounded-md border-gray-300 dark:border-gray-600 pr-10 sm:text-sm focus:ring-1 focus:ring-offset-1 focus:ring-ring"
+          "form-input block w-full custom-scroll rounded-md border-gray-300 dark:border-gray-600 pr-10 sm:text-sm" +
+            INPUT_STYLE
         )}
         placeholder={"Send a message..."}
       />

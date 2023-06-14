@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { FloatComponentType } from "../../types/components";
 import { TabsContext } from "../../contexts/tabsContext";
 import { classNames } from "../../utils";
+import { INPUT_STYLE } from "../../constants";
 
 export default function IntComponent({
   value,
@@ -64,8 +65,10 @@ export default function IntComponent({
         value={myValue}
         className={
           editNode
-            ? "focus:placeholder-transparent text-center placeholder:text-center border-1 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-1 focus:ring-offset-1 focus:ring-ring"
-            : "focus:placeholder-transparent block w-full form-input dark:bg-gray-900 dark:border-gray-600 dark:text-gray-300 rounded-md border-gray-300 shadow-sm ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1 sm:text-sm" +
+            ? "focus:placeholder-transparent text-center placeholder:text-center border-1 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm" +
+              INPUT_STYLE
+            : "focus:placeholder-transparent block w-full form-input dark:bg-gray-900 dark:border-gray-600 dark:text-gray-300 rounded-md border-gray-300 shadow-sm ring-offset-background sm:text-sm" +
+              INPUT_STYLE +
               (disabled ? " bg-gray-200 dark:bg-gray-700" : "")
         }
         placeholder={editNode ? "Integer number" : "Type a integer number"}
