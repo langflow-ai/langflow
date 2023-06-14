@@ -62,7 +62,7 @@ export default function ExtraSidebar() {
   }
 
   return (
-    <div className="flex flex-col overflow-auto scrollbar-hide h-full border-r">
+    <div className="flex flex-col overflow-hidden scrollbar-hide h-full border-r">
       <div className="mt-2 mb-2 w-full flex gap-2 justify-between px-2 items-center">
           <ShadTooltip delayDuration={1000} content="Import" side="top">
             <button
@@ -129,7 +129,7 @@ export default function ExtraSidebar() {
       
       
 
-      <div className="w-full">
+      <div className="w-full overflow-auto scrollbar-hide">
         {Object.keys(dataFilter)
           .sort()
           .map((d: keyof APIObjectType, i) =>
