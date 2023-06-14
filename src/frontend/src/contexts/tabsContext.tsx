@@ -7,19 +7,13 @@ import {
   useContext,
 } from "react";
 import { FlowType, NodeType } from "../types/flow";
-import { LangFlowState, TabsContextType } from "../types/tabs";
-import {
-  normalCaseToSnakeCase,
-  updateIds,
-  updateObject,
-  updateTemplate,
-} from "../utils";
+import { TabsContextType } from "../types/tabs";
+import { updateIds, updateTemplate } from "../utils";
 import { alertContext } from "./alertContext";
 import { typesContext } from "./typesContext";
-import { APITemplateType, TemplateVariableType } from "../types/api";
+import { APITemplateType } from "../types/api";
 import { v4 as uuidv4 } from "uuid";
 import { addEdge } from "reactflow";
-import _, { flow } from "lodash";
 import {
   readFlowsFromDatabase,
   deleteFlowFromDatabase,
@@ -314,12 +308,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
    */
   function removeFlow(id: string) {
     const index = flows.findIndex((flow) => flow.id === id);
-      console.log(index);
-      if (index >= 0) {
-        deleteFlowFromDatabase(id).then(() => {
-          setFlows(flows.filter((flow) => flow.id !== id));
-        });
-      }
+    console.log(index);
+    if (index >= 0) {
+      deleteFlowFromDatabase(id).then(() => {
+        setFlows(flows.filter((flow) => flow.id !== id));
+      });
+    }
   }
   /**
    * Add a new flow to the list of flows.
@@ -415,35 +409,40 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     reactFlowInstance.setEdges(edges);
   }
 
-  const addFlow = async (flow?: FlowType, newProject?: Boolean): Promise<String> => {
-    if(newProject){
+  const addFlow = async (
+    flow?: FlowType,
+    newProject?: Boolean
+  ): Promise<String> => {
+    if (newProject) {
       let flowData = extractDataFromFlow(flow);
-      if(flowData.description == ""){
+      if (flowData.description == "") {
         flowData.description = "This is a new flow.";
       }
-    
+
       // Create a new flow with a default name if no flow is provided.
       const newFlow = createNewFlow(flowData, flow);
-    
+
       try {
-        const id = await saveFlowToDatabase(newFlow);
+        const { id } = await saveFlowToDatabase(newFlow);
         // Change the id to the new id.
-        newFlow.id = id.id;
-    
+        newFlow.id = id;
+
         // Add the new flow to the list of flows.
         addFlowToLocalState(newFlow);
-    
+
         // Return the id
-        return id.id;
+        return id;
       } catch (error) {
         // Handle the error if needed
-        console.error('Error while adding flow:', error);
+        console.error("Error while adding flow:", error);
         throw error; // Re-throw the error so the caller can handle it if needed
       }
     } else {
-      paste({nodes: flow.data.nodes, edges: flow.data.edges}, {x:10, y:10})
+      paste(
+        { nodes: flow.data.nodes, edges: flow.data.edges },
+        { x: 10, y: 10 }
+      );
     }
-    
   };
 
   const extractDataFromFlow = (flow) => {

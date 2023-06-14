@@ -7,13 +7,11 @@ import _ from "lodash";
 import ErrorAlert from "./alerts/error";
 import NoticeAlert from "./alerts/notice";
 import SuccessAlert from "./alerts/success";
-import ExtraSidebar from "./components/ExtraSidebarComponent";
 import { alertContext } from "./contexts/alertContext";
 import { locationContext } from "./contexts/locationContext";
 import { ErrorBoundary } from "react-error-boundary";
 import CrashErrorComponent from "./components/CrashErrorComponent";
 import { TabsContext } from "./contexts/tabsContext";
-import MainPage from "./pages/MainPage";
 import { getVersion } from "./controllers/API";
 import Router from "./routes";
 import Header from "./components/headerComponent";
@@ -52,11 +50,9 @@ export default function App() {
   // Initialize state variable for the version
   const [version, setVersion] = useState("");
   useEffect(() => {
-    getVersion()
-      .then((res) => res.json())
-      .then((data) => {
-        setVersion(data.version);
-      });
+    getVersion().then((data) => {
+      setVersion(data.version);
+    });
   }, []);
   // Use effect hook to update alertsList when a new alert is added
   useEffect(() => {
