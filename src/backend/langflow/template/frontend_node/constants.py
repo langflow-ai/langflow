@@ -30,3 +30,5 @@ You are a good listener and you can talk about anything.
 """
 
 HUMAN_PROMPT = "{input}"
+
+QA_CHAIN_TYPES = ["stuff", "map_reduce", "map_rerank", "refine"]

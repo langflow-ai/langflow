@@ -82,7 +82,9 @@ class JsonAgent(CustomAgentExecutor):
             llm=llm,
             prompt=prompt,
         )
-        agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names)  # type: ignore
+        agent = ZeroShotAgent(
+            llm_chain=llm_chain, allowed_tools=tool_names  # type: ignore
+        )
         return cls.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
 
     def run(self, *args, **kwargs):
@@ -129,7 +131,9 @@ class CSVAgent(CustomAgentExecutor):
             prompt=partial_prompt,
         )
         tool_names = {tool.name for tool in tools}
-        agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)  # type: ignore
+        agent = ZeroShotAgent(
+            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs  # type: ignore
+        )
 
         return cls.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
 
@@ -166,7 +170,9 @@ class VectorStoreAgent(CustomAgentExecutor):
             prompt=prompt,
         )
         tool_names = {tool.name for tool in tools}
-        agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)  # type: ignore
+        agent = ZeroShotAgent(
+            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs  # type: ignore
+        )
         return AgentExecutor.from_agent_and_tools(
             agent=agent, tools=tools, verbose=True
         )
@@ -234,7 +240,9 @@ class SQLAgent(CustomAgentExecutor):
             prompt=prompt,
         )
         tool_names = {tool.name for tool in tools}  # type: ignore
-        agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)  # type: ignore
+        agent = ZeroShotAgent(
+            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs  # type: ignore
+        )
         return AgentExecutor.from_agent_and_tools(
             agent=agent,
             tools=tools,  # type: ignore
@@ -277,7 +285,9 @@ class VectorStoreRouterAgent(CustomAgentExecutor):
             prompt=prompt,
         )
         tool_names = {tool.name for tool in tools}
-        agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)  # type: ignore
+        agent = ZeroShotAgent(
+            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs  # type: ignore
+        )
         return AgentExecutor.from_agent_and_tools(
             agent=agent, tools=tools, verbose=True
         )
@@ -287,11 +297,11 @@ class VectorStoreRouterAgent(CustomAgentExecutor):
 
 
 class InitializeAgent(CustomAgentExecutor):
-    """Implementation of initialize_agent function"""
+    """Implementation of AgentInitializer function"""
 
     @staticmethod
     def function_name():
-        return "initialize_agent"
+        return "AgentInitializer"
 
     @classmethod
     def initialize(
@@ -320,7 +330,7 @@ class InitializeAgent(CustomAgentExecutor):
 CUSTOM_AGENTS = {
     "JsonAgent": JsonAgent,
     "CSVAgent": CSVAgent,
-    "initialize_agent": InitializeAgent,
+    "AgentInitializer": InitializeAgent,
     "VectorStoreAgent": VectorStoreAgent,
     "VectorStoreRouterAgent": VectorStoreRouterAgent,
     "SQLAgent": SQLAgent,

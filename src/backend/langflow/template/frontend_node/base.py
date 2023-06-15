@@ -27,6 +27,9 @@ class FrontendNode(BaseModel):
     def add_extra_fields(self) -> None:
         pass
 
+    def add_extra_base_classes(self) -> None:
+        pass
+
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         """Formats a given field based on its attributes and value."""

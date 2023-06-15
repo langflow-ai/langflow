@@ -10,7 +10,7 @@ CUSTOM_NODES = {
     "agents": {
         "JsonAgent": frontend_node.agents.JsonAgentNode(),
         "CSVAgent": frontend_node.agents.CSVAgentNode(),
-        "initialize_agent": frontend_node.agents.InitializeAgentNode(),
+        "AgentInitializer": frontend_node.agents.InitializeAgentNode(),
         "VectorStoreAgent": frontend_node.agents.VectorStoreAgentNode(),
         "VectorStoreRouterAgent": frontend_node.agents.VectorStoreRouterAgentNode(),
         "SQLAgent": frontend_node.agents.SQLAgentNode(),
@@ -22,6 +22,7 @@ CUSTOM_NODES = {
         "SeriesCharacterChain": frontend_node.chains.SeriesCharacterChainNode(),
         "TimeTravelGuideChain": frontend_node.chains.TimeTravelGuideChainNode(),
         "MidJourneyPromptChain": frontend_node.chains.MidJourneyPromptChainNode(),
+        "load_qa_chain": frontend_node.chains.CombineDocsChainNode(),
     },
 }
 
