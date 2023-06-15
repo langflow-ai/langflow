@@ -68,6 +68,8 @@ BASE_API_URL = "${window.location.protocol}//${
     window.location.host
   }/ap1/v1/predict"
 FLOW_ID = "${flowId}"
+# You can tweak the flow by adding a tweaks dictionary
+# e.g {"OpenAI-XXXXX": {"model_name": "gpt-4"}}
 TWEAKS = ${JSON.stringify(tweaks, null, 2)}
 
 def run_flow(message: str, flow_id: str, tweaks: dict = None) -> dict:

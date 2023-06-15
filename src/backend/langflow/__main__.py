@@ -27,12 +27,19 @@ def get_number_of_workers(workers=None):
     return workers
 
 
-def update_settings(config: str, dev: bool = False, database_url: Optional[str] = None):
+def update_settings(
+    config: str,
+    dev: bool = False,
+    database_url: Optional[str] = None,
+    remove_api_keys: bool = False,
+):
     """Update the settings from a config file."""
     if config:
         settings.update_from_yaml(config, dev=dev)
     if database_url:
-        settings.update_database_url(database_url)
+        settings.update_settings(database_url=database_url)
+    if remove_api_keys:
+        settings.update_settings(remove_api_keys=remove_api_keys)
 
 
 def serve_on_jcloud():
@@ -107,6 +114,9 @@ def serve(
     open_browser: bool = typer.Option(
         True, help="Open the browser after starting the server."
     ),
+    remove_api_keys: bool = typer.Option(
+        False, help="Remove API keys from the projects saved in the database."
+    ),
 ):
     """
     Run the Langflow server.
@@ -132,7 +142,9 @@ def serve(
     load_dotenv(env_file)
 
     configure(log_level=log_level, log_file=log_file)
-    update_settings(config, dev=dev, database_url=database_url)
+    update_settings(
+        config, dev=dev, database_url=database_url, remove_api_keys=remove_api_keys
+    )
     app = create_app()
     # get the directory of the current file
     if not path:

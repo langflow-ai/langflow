@@ -46,7 +46,10 @@ class LLMFrontendNode(FrontendNode):
         if field.name in SHOW_FIELDS:
             field.show = True
 
-        if "api" in field.name and ("key" in field.name or "token" in field.name):
+        if "api" in field.name and (
+            "key" in field.name
+            or ("token" in field.name and "tokens" not in field.name)
+        ):
             field.password = True
             field.show = True
             # Required should be False to support
