@@ -111,6 +111,17 @@ export default function ChatModal({
     }
   }
 
+  function getWebSocketUrl(chatId, isDevelopment = false) {
+    const isSecureProtocol = window.location.protocol === "https:";
+    const webSocketProtocol = isSecureProtocol ? "wss" : "ws";
+    const host = isDevelopment ? "localhost:7860" : window.location.host;
+    const chatEndpoint = `/api/v1/chat/${chatId}`;
+
+    return `${
+      isDevelopment ? "ws" : webSocketProtocol
+    }://${host}${chatEndpoint}`;
+  }
+
   function handleWsMessage(data: any) {
     if (Array.isArray(data)) {
       //set chat history
