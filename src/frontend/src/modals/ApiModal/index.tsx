@@ -32,7 +32,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
   const [open, setOpen] = useState(true);
   const { dark } = useContext(darkContext);
   const { closePopUp } = useContext(PopUpContext);
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeTab, setActiveTab] = useState("0");
   const [isCopied, setIsCopied] = useState<Boolean>(false);
 
   const copyToClipboard = () => {
@@ -96,32 +96,33 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
           <DialogDescription>{EXPORT_CODE_DIALOG}</DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue={"0"} className="w-full h-full overflow-hidden text-center bg-muted rounded-md border">
+        <Tabs
+          defaultValue={"0"}
+          className="w-full h-full overflow-hidden text-center bg-muted rounded-md border"
+          onValueChange={(value) => setActiveTab(value)}
+        >
           <div className="flex items-center justify-between px-2">
+            <TabsList>
+              {tabs.map((tab, index) => (
+                <TabsTrigger value={index.toString()}>{tab.name}</TabsTrigger>
+              ))}
+            </TabsList>
+            <div className="float-right">
+              <button
+                className="flex gap-1.5 items-center rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
+                onClick={copyToClipboard}
+              >
+                {isCopied ? <Check size={18} /> : <Clipboard size={15} />}
+                {isCopied ? "Copied!" : "Copy code"}
+              </button>
+            </div>
+          </div>
 
-          <TabsList>
-            {tabs.map((tab, index) => (
-              <TabsTrigger value={index.toString()}>{tab.name}</TabsTrigger>
-            ))}
-          </TabsList>
-                <div className="float-right">
-                  <button
-                    className="flex gap-1.5 items-center rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
-                    onClick={copyToClipboard}
-                  >
-                    {isCopied ? (
-                      <Check size={18} />
-                    ) : (
-                      <Clipboard size={15} />
-                    )}
-                    {isCopied ? "Copied!" : "Copy code"}
-                  </button>
-                </div>
-              </div>
-          
           {tabs.map((tab, index) => (
-            <TabsContent value={index.toString()} className="overflow-hidden w-full h-full px-4 pb-4 -mt-1">
-              
+            <TabsContent
+              value={index.toString()}
+              className="overflow-hidden w-full h-full px-4 pb-4 -mt-1"
+            >
               <SyntaxHighlighter
                 className="h-[400px] w-full overflow-auto"
                 language={tab.mode}
