@@ -76,7 +76,7 @@ export default function ExtraSidebar() {
   }
 
   return (
-    <div className="flex flex-col overflow-hidden scrollbar-hide h-full border-r">
+    <div className="flex flex-col overflow-hidden scrollbar-hide h-full border-r w-[200px]">
       <div className="mt-2 mb-2 w-full flex gap-2 justify-between px-2 items-center">
         <ShadTooltip delayDuration={1000} content="Import" side="top">
           <button
@@ -127,7 +127,7 @@ export default function ExtraSidebar() {
         </ShadTooltip>
       </div>
       <Separator />
-      <div className="relative mt-2 flex items-center mb-2 mx-2">
+      <div className="relative mt-2 flex items-center mb-2 mx-auto">
         <input
           type="text"
           name="search"

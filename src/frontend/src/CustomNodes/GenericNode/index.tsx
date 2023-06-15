@@ -59,11 +59,6 @@ export default function GenericNode({
     }
   }, []);
 
-  useEffect(() => { 
-    console.log(data.node.template);
-     
-  }, [closePopUp, data.node.template]);
-
   const validateNode = useCallback(
     debounce(async () => {
       try {
@@ -105,6 +100,9 @@ export default function GenericNode({
     deleteNode(data.id);
     return;
   }
+
+  useEffect(() => {  
+  }, [closePopUp, data.node.template]);
 
   return (
     <>

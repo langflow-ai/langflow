@@ -23,6 +23,11 @@ export default function FloatComponent({
       onChange("");
     }
   }, [disabled, onChange]);
+
+  useEffect(() => {
+    setMyValue(value);
+  }, [value]);
+  
   return (
     <div
       className={

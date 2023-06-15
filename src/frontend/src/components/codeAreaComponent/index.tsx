@@ -20,6 +20,11 @@ export default function CodeAreaComponent({
       onChange("");
     }
   }, [disabled, onChange]);
+
+  useEffect(() => {
+    setMyValue(value);
+  }, [value]);
+
   return (
     <div
       className={
