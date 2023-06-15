@@ -22,15 +22,18 @@ export default function ChatTrigger({ open, setOpen, isBuilt }) {
       show={!open}
       appear={true}
       enter="transition ease-out duration-300"
-      enterFrom="translate-y-96"
+      enterFrom="translate-x-96"
       enterTo="translate-y-0"
       leave="transition ease-in duration-300"
-      leaveFrom="translate-y-0"
-      leaveTo="translate-y-96"
+      leaveFrom="translate-x-0"
+      leaveTo="translate-x-96"
     >
-      <div className="absolute bottom-4 right-3">
+
+      <div className="absolute right-[100px] bottom-[620px]">
         <div
-          className="border flex justify-center items-center py-1 px-3 w-12 h-12 rounded-full bg-blue-500 dark:border-gray-600 cursor-pointer"
+          className="
+          rounded-full shadow-md hover:shadow-sm shadow-[#00000063] hover:shadow-[#00000063]
+          flex justify-center items-center w-12 h-12 bg-blue-500 dark:border-gray-600 cursor-pointer"
           onClick={handleClick}
         >
           <button>
