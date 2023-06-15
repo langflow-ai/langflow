@@ -51,13 +51,12 @@ export default function BuildTrigger({
   }
 
   async function streamNodeData(flow: FlowType) {
-    // Step 1: Make a POST request to send the flow data and receive a unique session ID
+    // Make a POST request to send the flow data and receive a unique session ID
     const response = await postBuildInit(flow);
     const { flowId } = response.data;
 
-    // Step 2: Use the session ID to establish an SSE connection using EventSource
+    // Use the session ID to establish an SSE connection using EventSource
     let validationResults = [];
-    let finished = false;
     const apiUrl = `/api/v1/build/stream/${flowId}`;
     const eventSource = new EventSource(apiUrl);
     try {
@@ -70,7 +69,6 @@ export default function BuildTrigger({
         // if the event is the end of the stream, close the connection
         if (parsedData.end_of_stream) {
           eventSource.close();
-
           return;
         }
         // Otherwise, process the data
@@ -82,12 +80,7 @@ export default function BuildTrigger({
         console.error("EventSource failed:", error);
         eventSource.close();
       };
-      // Step 3: Wait for the stream to finish
-      while (!finished) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        finished = validationResults.length === flow.data.nodes.length;
-      }
-      // Step 4: Return true if all nodes are valid, false otherwise
+      // Return true if all nodes are valid, false otherwise
       return validationResults.every((result) => result);
     } catch (e) {
       console.log(e);
