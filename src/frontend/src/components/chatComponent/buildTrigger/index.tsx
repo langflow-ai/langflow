@@ -128,13 +128,12 @@ export default function BuildTrigger({
       show={!open}
       appear={true}
       enter="transition ease-out duration-300"
-      enterFrom="translate-y-96"
-      enterTo="translate-y-0"
+      enterTo="translate-x-0"
       leave="transition ease-in duration-300"
-      leaveFrom="translate-y-0"
-      leaveTo="translate-y-96"
+      leaveFrom="translate-x-0"
+      leaveTo="translate-x-96"
     >
-      <div className={`fixed right-4` + (isBuilt ? " bottom-20" : " bottom-4")}>
+      <div className={`absolute right-8 bottom-[620px]`}>
         <div
           className="flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full shadow-md hover:shadow-sm shadow-[#00000063] hover:shadow-[#00000063]
            bg-[#E2E7EE] dark:border-gray-600 cursor-pointer"
@@ -148,7 +147,7 @@ export default function BuildTrigger({
                 // Render your loading animation here when isBuilding is true
                 <Loading strokeWidth={1.5} style={{ color: "white" }} />
               ) : (
-                <Zap className="sh-6 w-6 fill-[#dc735b] stroke-1 stroke-[#dc735b]"/>
+                <Zap className="sh-6 w-6 fill-[#884cb1] stroke-1 stroke-[#884cb1]"/>
               )}
             </div>
           </button>
