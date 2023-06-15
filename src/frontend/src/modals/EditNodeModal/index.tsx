@@ -96,7 +96,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Edit Node</span>
-            <Edit 
+            <Edit
               className="h-5 w-5 text-gray-800 pl-1 dark:text-white"
               aria-hidden="true"
             />
@@ -172,7 +172,6 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                     }
                                     onChange={(t: string[]) => {
                                       data.node.template[n].value = t;
-                                      
                                     }}
                                   />
                                 ) : data.node.template[n].multiline ? (
@@ -182,7 +181,6 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                     value={data.node.template[n].value ?? ""}
                                     onChange={(t: string) => {
                                       data.node.template[n].value = t;
-                                      
                                     }}
                                   />
                                 ) : (
@@ -195,7 +193,6 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                     value={data.node.template[n].value ?? ""}
                                     onChange={(t) => {
                                       data.node.template[n].value = t;
-                                      
                                     }}
                                   />
                                 )}
@@ -208,7 +205,6 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                   setEnabled={(e) => {
                                     data.node.template[n].value = e;
                                     setEnabled(e);
-                                    
                                   }}
                                   disabled={false}
                                 />
@@ -221,7 +217,6 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                   value={data.node.template[n].value ?? ""}
                                   onChange={(t) => {
                                     data.node.template[n].value = t;
-                                    
                                   }}
                                 />
                               </div>
@@ -249,7 +244,6 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                   value={data.node.template[n].value ?? ""}
                                   onChange={(t) => {
                                     data.node.template[n].value = t;
-                                    
                                   }}
                                 />
                               </div>
@@ -266,7 +260,6 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                   suffixes={data.node.template[n].suffixes}
                                   onFileChange={(t: string) => {
                                     data.node.template[n].content = t;
-                                    
                                   }}
                                 ></InputFileComponent>
                               </div>
@@ -278,7 +271,6 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                   value={data.node.template[n].value ?? ""}
                                   onChange={(t: string) => {
                                     data.node.template[n].value = t;
-                                    
                                   }}
                                 />
                               </div>

@@ -101,8 +101,7 @@ export default function GenericNode({
     return;
   }
 
-  useEffect(() => {  
-  }, [closePopUp, data.node.template]);
+  useEffect(() => {}, [closePopUp, data.node.template]);
 
   return (
     <>

@@ -29,7 +29,6 @@ export default function Dropdown({
           <>
             <div className={editNode ? "mt-1" : "relative mt-1"}>
               <Listbox.Button
-              
                 className={
                   editNode
                     ? "relative pr-8 placeholder:text-center block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md shadow-sm sm:text-sm border-gray-300 border-1" +
@@ -38,12 +37,10 @@ export default function Dropdown({
                       INPUT_STYLE
                 }
               >
-                
                 <span className="block truncate w-full">{internalValue}</span>
                 <span
                   className={
-
- "pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
+                    "pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
                   }
                 >
                   <ChevronUpDownIcon

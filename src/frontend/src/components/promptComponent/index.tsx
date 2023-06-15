@@ -24,7 +24,7 @@ export default function PromptAreaComponent({
   useEffect(() => {
     setMyValue(value);
   }, [value]);
-  
+
   return (
     <div
       className={

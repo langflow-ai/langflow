@@ -85,24 +85,33 @@ export default function CommunityPage() {
         </div>
       </div>
       <span className="flex pb-8 px-6 w-[70%] text-muted-foreground">
-      Discover and learn from shared examples by the LangFlow community. We welcome new example contributions that can help our community explore new and powerful features.
+        Discover and learn from shared examples by the LangFlow community. We
+        welcome new example contributions that can help our community explore
+        new and powerful features.
       </span>
       <div className="w-full p-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {!loadingExamples &&
           examples.map((flow, idx) => (
-            <CardComponent key={idx} flow={flow} id={flow.id} button={<Button
-              variant="outline"
-              size="sm"
-              className="whitespace-nowrap "
-              onClick={() => {
-                addFlow(flow, true).then((id) => {
-                  navigate("/flow/" + id);
-                });
-              }}
-            >
-              <GitFork className="w-4 mr-2" />
-              Fork Example
-            </Button>}/>
+            <CardComponent
+              key={idx}
+              flow={flow}
+              id={flow.id}
+              button={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="whitespace-nowrap "
+                  onClick={() => {
+                    addFlow(flow, true).then((id) => {
+                      navigate("/flow/" + id);
+                    });
+                  }}
+                >
+                  <GitFork className="w-4 mr-2" />
+                  Fork Example
+                </Button>
+              }
+            />
           ))}
       </div>
     </div>
