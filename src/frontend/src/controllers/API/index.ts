@@ -277,12 +277,27 @@ export async function getVersion() {
  */
 export async function getHealth() {
   return await axios.get("/health"); // Health is the only endpoint that doesn't require /api/v1
+}
+
+/**
+ * Fetches the build status of a flow.
+ * @param {string} flowId - The ID of the flow to fetch the build status for.
+ * @returns {Promise<BuildStatusTypeAPI>} A promise that resolves to an AxiosResponse containing the build status.
+ *
+ */
 export async function getBuildStatus(
   flowId: string
 ): Promise<BuildStatusTypeAPI> {
   return await axios.get(`/api/v1/build/${flowId}/status`);
 }
 
+//docs for postbuildinit
+/**
+ * Posts the build init of a flow.
+ * @param {string} flowId - The ID of the flow to fetch the build status for.
+ * @returns {Promise<InitTypeAPI>} A promise that resolves to an AxiosResponse containing the build status.
+ *
+ */
 export async function postBuildInit(
   flow: FlowType
 ): Promise<AxiosResponse<InitTypeAPI>> {
