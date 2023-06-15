@@ -1,7 +1,7 @@
 import React, { useState, ChangeEvent } from "react";
-import { Textarea } from "../ui/textarea";
-import { Label } from "../ui/label";
-import { Input } from "../ui/input";
+import { Textarea } from "../../components/ui/textarea";
+import { Label } from "../../components/ui/label";
+import { Input } from "../../components/ui/input";
 
 type InputProps = {
   name: string | null;
@@ -62,7 +62,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           )}
         </div>
         <Input
-          className="mt-2"
+          className="mt-2 font-normal"
           onChange={handleNameChange}
           type="text"
           name="name"
@@ -80,7 +80,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           onChange={handleDescriptionChange}
           value={description ?? ""}
           placeholder="Flow description"
-          className="max-h-[100px] mt-2"
+          className="max-h-[100px] mt-2 font-normal"
           rows={3}
         />
       </Label>

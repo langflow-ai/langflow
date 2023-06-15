@@ -45,7 +45,7 @@ export const MenuBar = ({ flows, tabId }) => {
   return (
     <div className="flex gap-2 items-center">
       <Link to="/">
-        <ChevronLeft className="w-5" />
+        <ChevronLeft className="w-4" />
       </Link>
       <div className="flex items-center font-medium text-sm rounded-md py-1 px-1.5 gap-0.5">
         <DropdownMenu>
@@ -62,7 +62,7 @@ export const MenuBar = ({ flows, tabId }) => {
                 openPopUp(<FlowSettingsModal />);
               }}
             >
-              <Settings2 className="w-4 h-4 mr-2" />
+              <Settings2 className="w-4 h-4 mr-2 dark:text-gray-300" />
               Settings
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -70,7 +70,7 @@ export const MenuBar = ({ flows, tabId }) => {
                 undo();
               }}
             >
-              <Undo className="w-4 h-4 mr-2" />
+              <Undo className="w-4 h-4 mr-2 dark:text-gray-300" />
               Undo
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -78,7 +78,7 @@ export const MenuBar = ({ flows, tabId }) => {
                 redo();
               }}
             >
-              <Redo className="w-4 h-4 mr-2" />
+              <Redo className="w-4 h-4 mr-2 dark:text-gray-300" />
               Redo
             </DropdownMenuItem>
             <DropdownMenuSeparator />

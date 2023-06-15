@@ -1,30 +1,21 @@
-import {
-  ChevronDoubleLeftIcon,
-  ChevronDoubleRightIcon,
-  PencilSquareIcon,
-  XMarkIcon,
-} from "@heroicons/react/24/outline";
-import { Fragment, useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { NodeDataType } from "../../types/flow";
-import { classNames, limitScrollFieldsModal, nodeIcons } from "../../utils";
+import { classNames, limitScrollFieldsModal } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
-import { Switch } from "../../components/ui/switch";
 import ToggleShadComponent from "../../components/toggleShadComponent";
 import { VariableIcon } from "@heroicons/react/24/outline";
 import InputListComponent from "../../components/inputListComponent";
 import TextAreaComponent from "../../components/textAreaComponent";
 import InputComponent from "../../components/inputComponent";
-import ToggleComponent from "../../components/toggleComponent";
 import FloatComponent from "../../components/floatComponent";
 import Dropdown from "../../components/dropdownComponent";
 import IntComponent from "../../components/intComponent";
@@ -42,8 +33,8 @@ import {
   DialogTrigger,
 } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
-import { EDIT_DIALOG_SUBTITLE } from "../../constants";
 import { Edit } from "lucide-react";
+import { Badge } from "../../components/ui/badge";
 
 export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const [open, setOpen] = useState(true);
@@ -95,14 +86,11 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
       <DialogContent className="lg:max-w-[700px] ">
         <DialogHeader>
           <DialogTitle className="flex items-center">
-            <span className="pr-2">Edit Node</span>
-            <Edit
-              className="h-5 w-5 text-gray-800 pl-1 dark:text-white"
-              aria-hidden="true"
-            />
+            <span className="pr-2">{data.type}</span>
+            <Badge variant="secondary">ID: {data.id}</Badge>
           </DialogTitle>
           <DialogDescription>
-            {EDIT_DIALOG_SUBTITLE}
+            {data.node?.description}
             <div className="flex pt-4">
               <VariableIcon className="w-5 h-5 pe-1 text-gray-700 stroke-2 dark:text-slate-200">
                 &nbsp;
@@ -151,7 +139,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                       )
                       .map((n, i) => (
                         <TableRow key={i} className="h-10 dark:border-b-muted">
-                          <TableCell className="p-0 text-center text-gray-900 text-xs dark:text-gray-300 text-sm">
+                          <TableCell className="p-0 text-center text-gray-900 dark:text-gray-300 text-sm">
                             {data.node.template[n].name
                               ? data.node.template[n].name
                               : data.node.template[n].display_name}
@@ -206,6 +194,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                     data.node.template[n].value = e;
                                     setEnabled(e);
                                   }}
+                                  size="small"
                                   disabled={false}
                                 />
                               </div>
@@ -299,6 +288,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                   changeAdvanced(data.node.template[n])
                                 }
                                 disabled={false}
+                                size="small"
                               />
                             </div>
                           </TableCell>
@@ -319,7 +309,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
             }}
             type="submit"
           >
-            Save changes
+            Save Changes
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -25,7 +25,6 @@ class Graph:
         self._build_graph()
 
     @classmethod
-    @classmethod
     def from_payload(cls, payload: Dict) -> "Graph":
         """
         Creates a graph from a payload.
@@ -43,7 +42,9 @@ class Graph:
             edges = payload["edges"]
             return cls(nodes, edges)
         except KeyError as exc:
-            raise ValueError("Invalid payload") from exc
+            raise ValueError(
+                f"Invalid payload. Expected keys 'nodes' and 'edges'. Found {list(payload.keys())}"
+            ) from exc
 
     def _build_graph(self) -> None:
         """Builds the graph from the nodes and edges."""

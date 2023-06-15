@@ -1,10 +1,6 @@
-import { IconCheck, IconClipboard, IconDownload } from "@tabler/icons-react";
-import {
-  XMarkIcon,
-  CommandLineIcon,
-  CodeBracketSquareIcon,
-} from "@heroicons/react/24/outline";
-import { Fragment, useContext, useRef, useState } from "react";
+import { IconCheck, IconClipboard } from "@tabler/icons-react";
+import { CodeBracketSquareIcon } from "@heroicons/react/24/outline";
+import { useContext, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
@@ -18,13 +14,11 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-import { Button } from "../../components/ui/button";
-import { FlowType } from "../../types/flow";
+import { FlowType } from "../../types/flow/index";
 import { getCurlCode, getPythonApiCode, getPythonCode } from "../../constants";
 import { EXPORT_CODE_DIALOG } from "../../constants";
 
@@ -55,10 +49,10 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
     }
   }
 
-  const pythonApiCode = getPythonApiCode(flow.id);
+  const pythonApiCode = getPythonApiCode(flow);
 
-  const curl_code = getCurlCode(flow.id);
-  const pythonCode = getPythonCode(flow.name);
+  const curl_code = getCurlCode(flow);
+  const pythonCode = getPythonCode(flow);
 
   const tabs = [
     {
@@ -96,8 +90,8 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
           <DialogDescription>{EXPORT_CODE_DIALOG}</DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col h-full w-full ">
-          <div className="flex px-5 z-10">
+        <div className="flex flex-col h-full w-full overflow-hidden">
+          <div className="flex px-5 z-10 w-full">
             {tabs.map((tab, index) => (
               <button
                 key={index}
@@ -117,7 +111,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
             ))}
           </div>
           <div className=" overflow-hidden px-4 sm:p-4 sm:pb-0 sm:pt-0 w-full h-full rounded-lg border-gray-200 border-[1px] bg-muted dark:bg-gray-800">
-            <div className="items-center mb-2">
+            <div className="items-center mb-2 w-full">
               <div className="float-right">
                 <button
                   className="flex gap-1.5 items-center rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
@@ -133,7 +127,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
               </div>
             </div>
             <SyntaxHighlighter
-              className="h-[350px] w-full"
+              className="h-[350px] w-full overflow-auto"
               language={tabs[activeTab].mode}
               style={oneDark}
               customStyle={{ margin: 0 }}
