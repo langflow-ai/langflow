@@ -34,7 +34,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
       setIsMaxLength(false);
     }
 
-    setName(value)
+    setName(value);
   };
 
   const handleDescriptionChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
