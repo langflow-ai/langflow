@@ -126,7 +126,7 @@ class TimeTravelGuideChainNode(FrontendNode):
             ),
         ],
     )
-    description: str = "Time travel guide chain to be used in the flow."
+    description: str = "Time travel guide chain."
     base_classes: list[str] = [
         "LLMChain",
         "BaseCustomChain",
@@ -197,7 +197,7 @@ class CombineDocsChainNode(FrontendNode):
             ),
         ],
     )
-    description: str = """Construct a zero shot agent from an LLM and tools."""
+    description: str = """Construct a chain from combined documents."""
     base_classes: list[str] = ["BaseCombineDocumentsChain", "function"]
 
     def to_dict(self):

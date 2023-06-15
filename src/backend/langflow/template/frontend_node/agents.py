@@ -37,7 +37,7 @@ class SQLAgentNode(FrontendNode):
             ),
         ],
     )
-    description: str = """Construct a sql agent from an LLM and tools."""
+    description: str = """Construct an SQL agent from an LLM and tools."""
     base_classes: list[str] = ["AgentExecutor"]
 
     def to_dict(self):
