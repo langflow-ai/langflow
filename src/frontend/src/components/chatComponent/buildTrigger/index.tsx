@@ -25,7 +25,6 @@ export default function BuildTrigger({
   const { updateSSEData } = useSSE();
   const { reactFlowInstance } = useContext(typesContext);
   const { setErrorData } = useContext(alertContext);
-  const [valid, setValid] = useState(true);
 
   async function handleBuild(flow: FlowType) {
     try {
@@ -44,17 +43,9 @@ export default function BuildTrigger({
       const startTime = Date.now();
       setIsBuilding(true);
 
-      try {
-        const allNodesValid = await streamNodeData(flow, (isAllNodesValid) => {
-          setIsBuilt(isAllNodesValid);
-        });
-        await enforceMinimumLoadingTime(startTime, minimumLoadingTime);
-        setIsBuilt(allNodesValid);
-      } catch (error) {
-        console.error("Error:", error);
-      } finally {
-        setIsBuilding(false);
-      }
+      const allNodesValid = await streamNodeData(flow);
+      await enforceMinimumLoadingTime(startTime, minimumLoadingTime);
+      setIsBuilt(allNodesValid);
     } catch (error) {
       console.error("Error:", error);
     } finally {
@@ -62,40 +53,45 @@ export default function BuildTrigger({
     }
   }
 
-  async function streamNodeData(flow: FlowType, onStreamComplete) {
-    // Make a POST request to send the flow data and receive a unique session ID
+  async function streamNodeData(flow: FlowType) {
+    // Step 1: Make a POST request to send the flow data and receive a unique session ID
     const response = await postBuildInit(flow);
     const { flowId } = response.data;
-    // Use the session ID to establish an SSE connection using EventSource
+
+    // Step 2: Use the session ID to establish an SSE connection using EventSource
+    let validationResults = [];
+    let finished = false;
     const apiUrl = `/api/v1/build/stream/${flowId}`;
     const eventSource = new EventSource(apiUrl);
 
-    try {
-      eventSource.onmessage = (event) => {
-        // If the event is parseable, return
-        if (!event.data) {
-          return;
-        }
-        const parsedData = JSON.parse(event.data);
-        // if the event is the end of the stream, close the connection
-        if (parsedData.end_of_stream) {
-          eventSource.close();
-          onStreamComplete(valid);
-          return;
-        }
-        // Otherwise, process the data
-        processStreamResult(parsedData);
-      };
-
-      eventSource.onerror = (error) => {
-        console.error("EventSource failed:", error);
+    eventSource.onmessage = (event) => {
+      // If the event is parseable, return
+      if (!event.data) {
+        return;
+      }
+      const parsedData = JSON.parse(event.data);
+      // if the event is the end of the stream, close the connection
+      if (parsedData.end_of_stream) {
         eventSource.close();
-        onStreamComplete(valid);
-      };
-    } catch (e) {
-      console.log(e);
+
+        return;
+      }
+      // Otherwise, process the data
+      const isValid = processStreamResult(parsedData);
+      validationResults.push(isValid);
+    };
+
+    eventSource.onerror = (error) => {
+      console.error("EventSource failed:", error);
       eventSource.close();
+    };
+    // Step 3: Wait for the stream to finish
+    while (!finished) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      finished = validationResults.length === flow.data.nodes.length;
     }
+    // Step 4: Return true if all nodes are valid, false otherwise
+    return validationResults.every((result) => result);
   }
 
   function processStreamResult(parsedData) {
@@ -106,9 +102,7 @@ export default function BuildTrigger({
     } catch (err) {
       console.log("Error parsing stream data: ", err);
     }
-    if (!parsedData.valid) {
-      setValid(false);
-    }
+    return parsedData.valid;
   }
 
   async function enforceMinimumLoadingTime(
