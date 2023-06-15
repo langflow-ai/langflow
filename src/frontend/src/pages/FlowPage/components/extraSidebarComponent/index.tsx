@@ -72,7 +72,7 @@ export default function ExtraSidebar() {
   }
 
   return (
-    <div className="w-56 flex flex-col overflow-hidden scrollbar-hide h-full border-r">
+    <div className="w-52 flex flex-col overflow-hidden scrollbar-hide h-full border-r">
       <div className="mt-2 mb-2 w-full flex gap-2 justify-between px-2 items-center">
         <ShadTooltip delayDuration={1000} content="Import" side="top">
           <button
