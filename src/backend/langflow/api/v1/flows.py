@@ -1,5 +1,7 @@
 from typing import List
 from uuid import UUID
+from langflow.settings import settings
+from langflow.api.utils import remove_api_keys
 from langflow.api.v1.schemas import FlowListCreate, FlowListRead
 from langflow.database.models.flow import (
     Flow,
@@ -54,10 +56,13 @@ def update_flow(
     *, session: Session = Depends(get_session), flow_id: UUID, flow: FlowUpdate
 ):
     """Update a flow."""
+
     db_flow = session.get(Flow, flow_id)
     if not db_flow:
         raise HTTPException(status_code=404, detail="Flow not found")
     flow_data = flow.dict(exclude_unset=True)
+    if not settings.remove_api_keys:
+        flow_data = remove_api_keys(flow_data)
     for key, value in flow_data.items():
         setattr(db_flow, key, value)
     session.add(db_flow)
