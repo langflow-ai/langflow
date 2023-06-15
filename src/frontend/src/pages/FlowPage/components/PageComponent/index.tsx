@@ -1,4 +1,4 @@
-import _ from "lodash";
+import _, { set } from "lodash";
 import { useContext, useRef, useState, useEffect, useCallback } from "react";
 import ReactFlow, {
   OnSelectionChangeParams,
@@ -15,6 +15,7 @@ import ReactFlow, {
   updateEdge,
   Background,
   Controls,
+  NodeChange,
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import Chat from "../../../../components/chatComponent";
@@ -43,7 +44,8 @@ export default function Page({ flow }: { flow: FlowType }) {
     lastCopiedSelection,
     setLastCopiedSelection,
     tabsState,
-    saveFlow
+    saveFlow,
+    setTabsState
   } = useContext(TabsContext);
   const { types, reactFlowInstance, setReactFlowInstance, templates } =
     useContext(typesContext);
@@ -145,8 +147,25 @@ export default function Page({ flow }: { flow: FlowType }) {
         let newX = _.cloneDeep(x);
         return newX;
       });
+      setTabsState((prev)=>{
+        let newState = _.cloneDeep(prev);
+        newState[flow.id].isPending = true;
+        return newState;
+      })
     },
-    [onEdgesChange, setNodes]
+    [onEdgesChange, setNodes,setTabsState,flow.id]
+  );
+
+  const onNodesChangeMod = useCallback(
+    (s: NodeChange[]) => {
+      onNodesChange(s);
+      setTabsState((prev)=>{
+        let newState = _.cloneDeep(prev);
+        newState[flow.id].isPending = true;
+        return newState;
+      })
+    },
+    [onNodesChange,setTabsState,flow.id]
   );
 
   const onConnect = useCallback(
@@ -345,7 +364,7 @@ export default function Page({ flow }: { flow: FlowType }) {
                   onPaneMouseLeave={() => {
                     setDisableCopyPaste(true);
                   }}
-                  onNodesChange={onNodesChange}
+                  onNodesChange={onNodesChangeMod}
                   onEdgesChange={onEdgesChangeMod}
                   onConnect={onConnect}
                   disableKeyboardA11y={true}
