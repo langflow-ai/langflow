@@ -22,7 +22,6 @@ import IntComponent from "../../components/intComponent";
 import InputFileComponent from "../../components/inputFileComponent";
 import PromptAreaComponent from "../../components/promptComponent";
 import CodeAreaComponent from "../../components/codeAreaComponent";
-import { TabsContext } from "../../contexts/tabsContext";
 import {
   Dialog,
   DialogContent,
@@ -33,7 +32,6 @@ import {
   DialogTrigger,
 } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
-import { Edit } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
 
 export default function EditNodeModal({ data }: { data: NodeDataType }) {

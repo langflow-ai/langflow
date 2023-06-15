@@ -1,4 +1,9 @@
-import { PromptTypeAPI, errorsTypeAPI } from "./../../types/api/index";
+import {
+  BuildStatusTypeAPI,
+  PromptTypeAPI,
+  errorsTypeAPI,
+  InitTypeAPI,
+} from "./../../types/api/index";
 import { APIObjectType, sendAllProps } from "../../types/api/index";
 import axios, { AxiosResponse } from "axios";
 import { FlowStyleType, FlowType } from "../../types/flow";
@@ -272,4 +277,14 @@ export async function getVersion() {
  */
 export async function getHealth() {
   return await axios.get("/health"); // Health is the only endpoint that doesn't require /api/v1
+export async function getBuildStatus(
+  flowId: string
+): Promise<BuildStatusTypeAPI> {
+  return await axios.get(`/api/v1/build/${flowId}/status`);
+}
+
+export async function postBuildInit(
+  flow: FlowType
+): Promise<AxiosResponse<InitTypeAPI>> {
+  return await axios.post(`/api/v1/build/init`, flow);
 }

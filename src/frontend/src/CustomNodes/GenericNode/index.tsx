@@ -1,26 +1,18 @@
-import {
-  classNames,
-  nodeColors,
-  nodeIcons,
-  toNormalCase,
-  toTitleCase,
-} from "../../utils";
+import { classNames, nodeColors, nodeIcons, toTitleCase } from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
 import { typesContext } from "../../contexts/typesContext";
-import { useContext, useState, useEffect, useRef, Fragment } from "react";
+import { useContext, useState, useEffect, useRef } from "react";
 import { NodeDataType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import NodeModal from "../../modals/NodeModal";
-import { useCallback } from "react";
-import { TabsContext } from "../../contexts/tabsContext";
-import { debounce } from "../../utils";
 import Tooltip from "../../components/TooltipComponent";
 import { NodeToolbar } from "reactflow";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 
 import ShadTooltip from "../../components/ShadTooltipComponent";
-import { postValidateNode } from "../../controllers/API";
+import { useSSE } from "../../contexts/SSEContext";
+
 export default function GenericNode({
   data,
   selected,
@@ -31,46 +23,30 @@ export default function GenericNode({
   const { setErrorData } = useContext(alertContext);
   const showError = useRef(true);
   const { types, deleteNode } = useContext(typesContext);
-  const { openPopUp } = useContext(PopUpContext);
-  const { closePopUp } = useContext(PopUpContext);
+
+  const { closePopUp, openPopUp } = useContext(PopUpContext);
 
   const Icon = nodeIcons[data.type] || nodeIcons[types[data.type]];
   const [validationStatus, setValidationStatus] = useState(null);
   // State for outline color
-  const [isValid, setIsValid] = useState(false);
-  const { reactFlowInstance } = useContext(typesContext);
-  const [params, setParams] = useState([]);
+  const { sseData } = useSSE();
 
+  // useEffect(() => {
+  //   if (reactFlowInstance) {
+  //     setParams(Object.values(reactFlowInstance.toObject()));
+  //   }
+  // }, [save]);
+
+  // New useEffect to watch for changes in sseData and update validation status
   useEffect(() => {
-    if (reactFlowInstance) {
-      setParams(Object.values(reactFlowInstance.toObject()));
+    const relevantData = sseData[data.id];
+    if (relevantData) {
+      // Extract validation information from relevantData and update the validationStatus state
+      setValidationStatus(relevantData);
+    } else {
+      setValidationStatus(null);
     }
-  }, []);
-
-  const validateNode = useCallback(
-    debounce(async () => {
-      try {
-        const response = await postValidateNode(
-          data.id,
-          reactFlowInstance.toObject()
-        );
-
-        if (response.status === 200) {
-          let jsonResponseParsed = await JSON.parse(response.data);
-          setValidationStatus(jsonResponseParsed);
-        }
-      } catch (error) {
-        // console.error("Error validating node:", error);
-        setValidationStatus("error");
-      }
-    }, 1000), // Adjust the debounce delay (500ms) as needed
-    [reactFlowInstance, data.id]
-  );
-  useEffect(() => {
-    if (params.length > 0) {
-      validateNode();
-    }
-  }, [params, validateNode]);
+  }, [sseData, data.id]);
 
   if (!Icon) {
     if (showError.current) {

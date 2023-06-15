@@ -93,3 +93,11 @@ class FlowListCreate(BaseModel):
 
 class FlowListRead(BaseModel):
     flows: List[FlowRead]
+
+
+class InitResponse(BaseModel):
+    flowId: str
+
+
+class BuiltResponse(BaseModel):
+    built: bool
