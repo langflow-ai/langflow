@@ -1,13 +1,7 @@
 import { Transition } from "@headlessui/react";
-import {
-  Bars3CenterLeftIcon,
-  ChatBubbleBottomCenterTextIcon,
-} from "@heroicons/react/24/outline";
 import { MessagesSquare } from "lucide-react";
-import { nodeColors } from "../../../utils";
 import { alertContext } from "../../../contexts/alertContext";
 import { useContext } from "react";
-import ChatModal from "../../../modals/chatModal";
 
 export default function ChatTrigger({ open, setOpen, isBuilt }) {
   const { setErrorData } = useContext(alertContext);
@@ -36,14 +30,15 @@ export default function ChatTrigger({ open, setOpen, isBuilt }) {
     >
       <div className="absolute bottom-4 right-3">
         <div
-          className="border flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full bg-amber-600 dark:border-gray-600 cursor-pointer"
+          className="border flex justify-center items-center py-1 px-3 w-12 h-12 rounded-full bg-blue-500 dark:border-gray-600 cursor-pointer"
           onClick={handleClick}
         >
           <button>
-            <div className="flex gap-3  items-center">
+            <div className="flex gap-3">
               <MessagesSquare
-                className="h-6 w-6 mt-1"
+                className="h-6 w-6  text-blue-100 fill-blue-100"
                 style={{ color: "white" }}
+                strokeWidth={1.5}
               />
             </div>
           </button>

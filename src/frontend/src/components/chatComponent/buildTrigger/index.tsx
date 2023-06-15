@@ -130,7 +130,7 @@ export default function BuildTrigger({
     >
       <div className={`fixed right-4` + (isBuilt ? " bottom-20" : " bottom-4")}>
         <div
-          className="border flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full bg-blue-600 dark:border-gray-600 cursor-pointer"
+          className="border flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full bg-amber-500 dark:border-gray-600 cursor-pointer"
           onClick={() => {
             handleBuild(flow);
           }}
@@ -139,9 +139,9 @@ export default function BuildTrigger({
             <div className="flex gap-3 items-center">
               {isBuilding ? (
                 // Render your loading animation here when isBuilding is true
-                <Loading style={{ color: "white" }} />
+                <Loading strokeWidth={1.5} style={{ color: "white" }} />
               ) : (
-                <Zap className="h-6 w-6" style={{ color: "white" }} />
+                <Zap className="h-6 w-6 text-amber-100 fill-amber-100" strokeWidth={1.5} style={{ color: "white" }} />
               )}
             </div>
           </button>
