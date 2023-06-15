@@ -32,8 +32,8 @@ export const CardComponent = ({
           <div className="flex gap-4 items-center">
             <span
               className={
-                "rounded-full w-8 h-8 flex items-center justify-center text-2xl " +
-                gradients[parseInt(flow.id.slice(0, 6), 16) % gradients.length]
+                "rounded-full w-7 h-7 flex items-center justify-center text-2xl " +
+                gradients[parseInt(flow.id.slice(0, 6), 30) % gradients.length]
               }
             ></span>
             <span className="flex-1 truncate-doubleline">{flow.name}</span>
