@@ -120,7 +120,7 @@ class CSVAgent(CustomAgentExecutor):
 
 
 class VectorStoreAgent(CustomAgentExecutor):
-    """Vector Store agent"""
+    """Vector store agent"""
 
     @staticmethod
     def function_name():
@@ -175,7 +175,7 @@ class SQLAgent(CustomAgentExecutor):
     def from_toolkit_and_llm(
         cls, llm: BaseLanguageModel, database_uri: str, **kwargs: Any
     ):
-        """Construct a sql agent from an LLM and tools."""
+        """Construct an SQL agent from an LLM and tools."""
         db = SQLDatabase.from_uri(database_uri)
         toolkit = SQLDatabaseToolkit(db=db, llm=llm)
 
