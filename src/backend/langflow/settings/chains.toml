@@ -1,0 +1,73 @@
+type = "chains"
+
+[langflow.CombineDocsChain]
+import_path = "langflow.interface.chains.CombineDocsChain"
+menu_name = "Combine-Docs-Chain"
+class_name = "CombineDocsChain"
+init = "from_xxx"
+
+[langflow.MidJourneyPromptChain]
+import_path = "langflow.interface.chains.MidJourneyPromptChain"
+menu_name = "Mid-Journey-Prompt-Chain"
+class_name = "MidJourneyPromptChain"
+init = "from_yyy"
+
+[langflow.SeriesCharacterChain]
+import_path = "langflow.interface.chains.SeriesCharacterChain"
+menu_name = "Series-Character-Chain"
+class_name = "SeriesCharacterChain"
+init = "from_zzz"
+
+[langflow.TimeTravelGuideChain]
+import_path = "langflow.interface.chains.TimeTravelGuideChain"
+menu_name = "Time-Travel-Guide-Chain"
+class_name = "TimeTravelGuideChain"
+init = "from_bbb"
+
+[langchain.ConversationalRetrievalChain]
+import_path = "langchain.chains.ConversationalRetrievalChain"
+menu_name = "Conversational-Retrieval-Chain"
+class_name = "ConversationalRetrievalChain"
+init = "from_xxx"
+
+[langchain.LLMChain]
+import_path = "langchain.chains.llm.LLMChain"
+menu_name = "LLM-Chain"
+class_name = "LLMChain"
+init = "from_xxx"
+
+[langchain.LLMMathChain]
+import_path = "langchain.chains.llm_math.base.LLMMathChain"
+menu_name = "LLM-Math-Chain"
+class_name = "LLMMathChain"
+init = "from_xxx"
+
+[langchain.LLMCheckerChain]
+import_path = "langchain.chains.llm_checker.base.LLMCheckerChain"
+menu_name = "LLM-Checker-Chain"
+class_name = "LLMCheckerChain"
+init = "from_xxx"
+
+[langchain.ConversationChain]
+import_path = "langchain.chains.conversation.base.ConversationChain"
+menu_name = "Conversation-Chain"
+class_name = "ConversationChain"
+init = "from_xxx"
+
+[langchain.SQLDatabaseChain]
+import_path = "langchain.chains.sql_database.base.SQLDatabaseChain"
+menu_name = "SQL-Database-Chain"
+class_name = "SQLDatabaseChain"
+init = "from_xxx"
+
+[langchain.RetrievalQA]
+import_path = "langchain.chains.retrieval_qa.base.RetrievalQA"
+menu_name = "Retrieval-QA"
+class_name = "RetrievalQA"
+init = "from_xxx"
+
+[langchain.RetrievalQAWithSourcesChain]
+import_path = "langchain.chains.qa_with_sources.retrieval.RetrievalQAWithSourcesChain"
+menu_name = "RetrievalQA-With-Sources-Chain"
+class_name = "RetrievalQAWithSourcesChain"
+init = "from_xxx"

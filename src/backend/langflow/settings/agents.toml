@@ -1,0 +1,8 @@
+agents:
+  - ZeroShotAgent
+  - JsonAgent
+  - CSVAgent
+  - initialize_agent
+  - VectorStoreAgent
+  - VectorStoreRouterAgent
+  - SQLAgent

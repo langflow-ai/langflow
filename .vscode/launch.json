@@ -37,6 +37,13 @@
       "request": "launch",
       "url": "http://localhost:3000/*",
       "webRoot": "${workspaceRoot}/src/frontend"
+    },
+    {
+      "name": "Python: File",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "justMyCode": true
     }
   ]
 }

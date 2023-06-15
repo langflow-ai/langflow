@@ -1,11 +1,27 @@
 import os
 from typing import List
 
+import toml
 import yaml
-from pydantic import BaseSettings, root_validator
+
+from toml.decoder import TomlDecodeError
+from pydantic import BaseModel, BaseSettings, PyObject, root_validator
+
+
+class ChainComponent(BaseModel):
+    type: str = None
+    import_path: str = None
+    menu_name: str = None
+    class_name: str = None
+    init: str = None
+    obj: PyObject = None
+    front_end_node: str = None
 
 
 class Settings(BaseSettings):
+    API_V1_STR: str = "/api/v1"
+
+    chains_toml: List[ChainComponent] = []
     chains: List[str] = []
     agents: List[str] = []
     prompts: List[str] = []
@@ -67,4 +83,22 @@ def load_settings_from_yaml(file_path: str) -> Settings:
     return Settings(**settings_dict)
 
 
+def load_settings_from_toml(file_path: str) -> Settings:
+    # Check if a string is a valid path or a file name
+    if "/" not in file_path:
+        # Get current path
+        current_path = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(current_path, file_path)
+
+    try:
+        with open(file_path) as toml_tile:
+            settings_dict = toml.load(toml_tile)
+    except TomlDecodeError as err:
+        raise TomlDecodeError(str(err)) from err
+
+    return Settings(**settings_dict)
+
+
 settings = load_settings_from_yaml("config.yaml")
+
+# settings_chains = load_settings_from_toml("chains.toml")
