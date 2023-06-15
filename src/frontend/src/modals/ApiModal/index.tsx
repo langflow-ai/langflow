@@ -1,4 +1,3 @@
-import { IconCheck, IconClipboard } from "@tabler/icons-react";
 import { CodeBracketSquareIcon } from "@heroicons/react/24/outline";
 import { useContext, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
@@ -21,6 +20,13 @@ import {
 import { FlowType } from "../../types/flow/index";
 import { getCurlCode, getPythonApiCode, getPythonCode } from "../../constants";
 import { EXPORT_CODE_DIALOG } from "../../constants";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../../components/ui/tabs";
+import { Check, Clipboard } from "lucide-react";
 
 export default function ApiModal({ flow }: { flow: FlowType }) {
   const [open, setOpen] = useState(true);
@@ -56,17 +62,17 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
 
   const tabs = [
     {
+      name: "cURL",
+      mode: "bash",
+      image: "https://curl.se/logo/curl-symbol-transparent.png",
+      code: curl_code,
+    },
+    {
       name: "Python API",
       mode: "python",
       image:
         "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
       code: pythonApiCode,
-    },
-    {
-      name: "cURL",
-      mode: "bash",
-      image: "https://curl.se/logo/curl-symbol-transparent.png",
-      code: curl_code,
     },
     {
       name: "Python Code",
@@ -90,52 +96,42 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
           <DialogDescription>{EXPORT_CODE_DIALOG}</DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col h-full w-full overflow-hidden">
-          <div className="flex px-5 z-10 w-full">
+        <Tabs defaultValue={"0"} className="w-full h-full overflow-hidden text-center bg-muted rounded-md border">
+          <div className="flex items-center justify-between px-2">
+
+          <TabsList>
             {tabs.map((tab, index) => (
-              <button
-                key={index}
-                onClick={() => {
-                  setActiveTab(index);
-                }}
-                className={
-                  "p-1.5 rounded-t-lg w-44 border border-b-0 border-gray-300 dark:border-gray-700 dark:text-gray-300 -mr-px flex justify-center items-center gap-4 " +
-                  (activeTab === index
-                    ? " bg-white dark:bg-gray-800"
-                    : "bg-muted dark:bg-gray-900")
-                }
-              >
-                {tab.name}
-                <img src={tab.image} className="w-[23px]" />
-              </button>
+              <TabsTrigger value={index.toString()}>{tab.name}</TabsTrigger>
             ))}
-          </div>
-          <div className=" overflow-hidden px-4 sm:p-4 sm:pb-0 sm:pt-0 w-full h-full rounded-lg border-gray-200 border-[1px] bg-muted dark:bg-gray-800">
-            <div className="items-center mb-2 w-full">
-              <div className="float-right">
-                <button
-                  className="flex gap-1.5 items-center rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
-                  onClick={copyToClipboard}
-                >
-                  {isCopied ? (
-                    <IconCheck size={18} />
-                  ) : (
-                    <IconClipboard size={18} />
-                  )}
-                  {isCopied ? "Copied!" : "Copy code"}
-                </button>
+          </TabsList>
+                <div className="float-right">
+                  <button
+                    className="flex gap-1.5 items-center rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
+                    onClick={copyToClipboard}
+                  >
+                    {isCopied ? (
+                      <Check size={18} />
+                    ) : (
+                      <Clipboard size={15} />
+                    )}
+                    {isCopied ? "Copied!" : "Copy code"}
+                  </button>
+                </div>
               </div>
-            </div>
-            <SyntaxHighlighter
-              className="h-[350px] w-full overflow-auto"
-              language={tabs[activeTab].mode}
-              style={oneDark}
-              customStyle={{ margin: 0 }}
-            >
-              {tabs[activeTab].code}
-            </SyntaxHighlighter>
-          </div>
-        </div>
+          
+          {tabs.map((tab, index) => (
+            <TabsContent value={index.toString()} className="overflow-hidden w-full h-full px-4 pb-4 -mt-1">
+              
+              <SyntaxHighlighter
+                className="h-[400px] w-full overflow-auto"
+                language={tab.mode}
+                style={oneDark}
+              >
+                {tab.code}
+              </SyntaxHighlighter>
+            </TabsContent>
+          ))}
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
