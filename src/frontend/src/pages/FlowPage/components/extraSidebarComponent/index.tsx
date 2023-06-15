@@ -13,24 +13,23 @@ import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import { Code2, FileDown, FileUp, Save } from "lucide-react";
 import { PopUpContext } from "../../../../contexts/popUpContext";
-import ImportModal from "../../../../modals/importModal";
 import ExportModal from "../../../../modals/exportModal";
 import ApiModal from "../../../../modals/ApiModal";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { alertContext } from "../../../../contexts/alertContext";
 import { updateFlowInDatabase } from "../../../../controllers/API";
 import { INPUT_STYLE } from "../../../../constants";
-import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
 
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);
   const { openPopUp } = useContext(PopUpContext);
-  const { flows, tabId, uploadFlow } = useContext(TabsContext);
+  const { flows, tabId, uploadFlow, updateFlow, tabsState, setTabsState } =
+    useContext(TabsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
-
+  const isPending = tabsState[tabId]?.isPending;
   function onDragStart(
     event: React.DragEvent<any>,
     data: { type: string; node?: APIClassType }
@@ -62,9 +61,21 @@ export default function ExtraSidebar() {
     });
   }
 
-  function handleSaveFlow(flow) {
+  async function handleSaveFlow(flow) {
     try {
-      updateFlowInDatabase(flow);
+      const updatedFlow = await updateFlowInDatabase(flow);
+      if (updatedFlow) {
+        updateFlow(updatedFlow);
+        setTabsState((prev) => {
+          console.log(prev);
+          return {
+            ...prev,
+            [tabId]: {
+              isPending: false,
+            },
+          };
+        });
+      }
       // updateFlowStyleInDataBase(flow);
     } catch (err) {
       setErrorData(err);
@@ -118,8 +129,13 @@ export default function ExtraSidebar() {
               handleSaveFlow(flows.find((f) => f.id === tabId));
               setSuccessData({ title: "Changes saved successfully" });
             }}
+            disabled={!isPending}
           >
-            <Save className="w-5 h-5  dark:text-gray-300"></Save>
+            <Save
+              className={
+                "w-5 h-5" + (isPending ? " text-muted-foreground" : " ")
+              }
+            ></Save>
           </button>
         </ShadTooltip>
       </div>

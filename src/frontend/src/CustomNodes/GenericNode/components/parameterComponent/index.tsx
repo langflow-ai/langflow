@@ -1,14 +1,11 @@
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
-import Tooltip from "../../../../components/TooltipComponent";
 import {
   classNames,
   groupByFamily,
   isValidConnection,
-  toFirstUpperCase,
 } from "../../../../utils";
 import { useContext, useEffect, useRef, useState } from "react";
 import InputComponent from "../../../../components/inputComponent";
-import ToggleComponent from "../../../../components/toggleComponent";
 import InputListComponent from "../../../../components/inputListComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import { typesContext } from "../../../../contexts/typesContext";
@@ -43,6 +40,7 @@ export default function ParameterComponent({
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   const { closePopUp } = useContext(PopUpContext);
+  const { setTabsState, tabId } = useContext(TabsContext);
 
   useEffect(() => {
     if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
@@ -65,6 +63,19 @@ export default function ParameterComponent({
   let disabled =
     reactFlowInstance?.getEdges().some((e) => e.targetHandle === id) ?? false;
   const [myData, setMyData] = useState(useContext(typesContext).data);
+
+  const handleOnNewValue = (newValue: any) => {
+    data.node.template[name].value = newValue;
+    // Set state to pending
+    setTabsState((prev) => {
+      return {
+        ...prev,
+        [tabId]: {
+          isPending: true,
+        },
+      };
+    });
+  };
 
   useEffect(() => {
     const groupedObj = groupByFamily(myData, tooltipTitle);
@@ -165,17 +176,13 @@ export default function ParameterComponent({
                     ? [""]
                     : data.node.template[name].value
                 }
-                onChange={(t: string[]) => {
-                  data.node.template[name].value = t;
-                }}
+                onChange={handleOnNewValue}
               />
             ) : data.node.template[name].multiline ? (
               <TextAreaComponent
                 disabled={disabled}
                 value={data.node.template[name].value ?? ""}
-                onChange={(t: string) => {
-                  data.node.template[name].value = t;
-                }}
+                onChange={handleOnNewValue}
               />
             ) : (
               <InputComponent
@@ -183,9 +190,7 @@ export default function ParameterComponent({
                 disableCopyPaste={true}
                 password={data.node.template[name].password ?? false}
                 value={data.node.template[name].value ?? ""}
-                onChange={(t) => {
-                  data.node.template[name].value = t;
-                }}
+                onChange={handleOnNewValue}
               />
             )}
           </div>
@@ -195,7 +200,7 @@ export default function ParameterComponent({
               disabled={disabled}
               enabled={enabled}
               setEnabled={(t) => {
-                data.node.template[name].value = t;
+                handleOnNewValue(t);
                 setEnabled(t);
               }}
               size="large"
@@ -207,9 +212,7 @@ export default function ParameterComponent({
               disabled={disabled}
               disableCopyPaste={true}
               value={data.node.template[name].value ?? ""}
-              onChange={(t) => {
-                data.node.template[name].value = t;
-              }}
+              onChange={handleOnNewValue}
             />
           </div>
         ) : left === true &&
@@ -218,9 +221,7 @@ export default function ParameterComponent({
           <div className="w-full">
             <Dropdown
               options={data.node.template[name].options}
-              onSelect={(newValue) =>
-                (data.node.template[name].value = newValue)
-              }
+              onSelect={handleOnNewValue}
               value={data.node.template[name].value ?? "Choose an option"}
             ></Dropdown>
           </div>
@@ -228,17 +229,13 @@ export default function ParameterComponent({
           <CodeAreaComponent
             disabled={disabled}
             value={data.node.template[name].value ?? ""}
-            onChange={(t: string) => {
-              data.node.template[name].value = t;
-            }}
+            onChange={handleOnNewValue}
           />
         ) : left === true && type === "file" ? (
           <InputFileComponent
             disabled={disabled}
             value={data.node.template[name].value ?? ""}
-            onChange={(t: string) => {
-              data.node.template[name].value = t;
-            }}
+            onChange={handleOnNewValue}
             fileTypes={data.node.template[name].fileTypes}
             suffixes={data.node.template[name].suffixes}
             onFileChange={(t: string) => {
@@ -251,18 +248,14 @@ export default function ParameterComponent({
               disabled={disabled}
               disableCopyPaste={true}
               value={data.node.template[name].value ?? ""}
-              onChange={(t) => {
-                data.node.template[name].value = t;
-              }}
+              onChange={handleOnNewValue}
             />
           </div>
         ) : left === true && type === "prompt" ? (
           <PromptAreaComponent
             disabled={disabled}
             value={data.node.template[name].value ?? ""}
-            onChange={(t: string) => {
-              data.node.template[name].value = t;
-            }}
+            onChange={handleOnNewValue}
           />
         ) : (
           <></>

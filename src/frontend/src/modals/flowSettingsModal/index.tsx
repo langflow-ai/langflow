@@ -1,4 +1,3 @@
-import { ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import { useContext, useRef, useState } from "react";
 import { alertContext } from "../../contexts/alertContext";
 import { PopUpContext } from "../../contexts/popUpContext";
@@ -14,16 +13,16 @@ import {
 } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
 import { SETTINGS_DIALOG_SUBTITLE } from "../../constants";
-import { updateFlowInDatabase } from "../../controllers/API";
 import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import { Settings2 } from "lucide-react";
+import { updateFlowInDatabase } from "../../controllers/API";
 
 export default function FlowSettingsModal() {
   const [open, setOpen] = useState(true);
   const { closePopUp } = useContext(PopUpContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const ref = useRef();
-  const { flows, tabId, updateFlow } = useContext(TabsContext);
+  const { flows, tabId, updateFlow, setTabsState } = useContext(TabsContext);
   const maxLength = 50;
   function setModalOpen(x: boolean) {
     setOpen(x);
@@ -34,22 +33,26 @@ export default function FlowSettingsModal() {
     }
   }
 
-  function handleSaveFlow(flow) {
-    if (name !== "") {
-      let newFlow = flows.find((f) => f.id === tabId);
-      if (newFlow) {
-        newFlow.name = name;
-        newFlow.description = description;
-        updateFlow(newFlow);
-      }
-    }
+  async function handleSaveFlow(flow) {
     try {
-      updateFlowInDatabase(flow);
+      const updatedFlow = await updateFlowInDatabase(flow);
+      if (updatedFlow) {
+        updateFlow(updatedFlow);
+        setTabsState((prev) => {
+          return {
+            ...prev,
+            [tabId]: {
+              isPending: false,
+            },
+          };
+        });
+      }
       // updateFlowStyleInDataBase(flow);
     } catch (err) {
       setErrorData(err);
     }
   }
+
   const [name, setName] = useState(flows.find((f) => f.id === tabId).name);
   const [description, setDescription] = useState(
     flows.find((f) => f.id === tabId).description
