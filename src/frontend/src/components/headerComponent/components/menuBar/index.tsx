@@ -21,7 +21,7 @@ import {
 } from "../../../ui/dropdown-menu";
 
 import { alertContext } from "../../../../contexts/alertContext";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 import { Button } from "../../../ui/button";
@@ -32,9 +32,13 @@ export const MenuBar = ({ flows, tabId }) => {
   const { openPopUp } = useContext(PopUpContext);
   const { undo, redo } = useContext(undoRedoContext);
 
+  const navigate = useNavigate();
+
   function handleAddFlow() {
     try {
-      addFlow(null, true);
+      addFlow(null, true).then((id) => {
+        navigate("/flow/" + id);
+      });
       // saveFlowStyleInDataBase();
     } catch (err) {
       setErrorData(err);
@@ -86,7 +90,7 @@ export const MenuBar = ({ flows, tabId }) => {
               Redo
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuLabel>Flows</DropdownMenuLabel>
+            <DropdownMenuLabel>Projects</DropdownMenuLabel>
             <DropdownMenuRadioGroup
               value={tabId}
               onValueChange={(value) => {
@@ -109,7 +113,7 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
             >
               <Plus className="w-4 h-4 mr-2" />
-              Add Flow
+              New Project
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
