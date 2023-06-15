@@ -32,7 +32,7 @@ export const CardComponent = ({
             <span
               className={
                 "rounded-full w-7 h-7 flex items-center justify-center text-2xl " +
-                gradients[parseInt(flow.id.slice(0, 6), 30) % gradients.length]
+                gradients[parseInt(flow.id.slice(0, 12), 16) % gradients.length]
               }
             ></span>
             <span className="flex-1 w-full inline-block truncate-doubleline break-words">{flow.name}</span>
