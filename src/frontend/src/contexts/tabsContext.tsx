@@ -20,6 +20,7 @@ import {
   saveFlowToDatabase,
   downloadFlowsFromDatabase,
   uploadFlowsToDatabase,
+  updateFlowInDatabase,
 } from "../controllers/API";
 import _ from "lodash";
 
@@ -39,6 +40,7 @@ const TabsContextInitialValue: TabsContextType = {
   uploadFlows: () => {},
   uploadFlow: () => {},
   hardReset: () => {},
+  saveFlow: async (flow:FlowType) => {},
   disableCopyPaste: false,
   setDisableCopyPaste: (state: boolean) => {},
   lastCopiedSelection: null,
@@ -562,11 +564,44 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  async function saveFlow(newFlow: FlowType) {
+    try{
+      // updates flow in db
+      const updatedFlow = await updateFlowInDatabase(newFlow);
+      if (updatedFlow){
+        // updates flow in state
+        setFlows((prevState) => {
+          const newFlows = [...prevState];
+          const index = newFlows.findIndex((flow) => flow.id === newFlow.id);
+          if (index !== -1) {
+            newFlows[index].description = newFlow.description ?? "";
+            newFlows[index].data = newFlow.data;
+            newFlows[index].name = newFlow.name;
+          }
+          return newFlows;
+        });
+        //update tabs state
+        setTabsState((prev) => {
+          return {
+            ...prev,
+            [tabId]: {
+              isPending: false,
+            },
+          };
+        });
+      }
+    }
+    catch(err){
+      setErrorData(err);
+    }
+  }
+
   const [disableCopyPaste, setDisableCopyPaste] = useState(false);
 
   return (
     <TabsContext.Provider
       value={{
+        saveFlow,
         lastCopiedSelection,
         setLastCopiedSelection,
         disableCopyPaste,
