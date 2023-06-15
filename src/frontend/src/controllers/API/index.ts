@@ -111,7 +111,9 @@ export async function saveFlowToDatabase(newFlow: {
  * @returns {Promise<any>} The updated flow data.
  * @throws Will throw an error if the update fails.
  */
-export async function updateFlowInDatabase(updatedFlow: FlowType) {
+export async function updateFlowInDatabase(
+  updatedFlow: FlowType
+): Promise<FlowType> {
   try {
     const response = await axios.patch(`/api/v1/flows/${updatedFlow.id}`, {
       name: updatedFlow.name,

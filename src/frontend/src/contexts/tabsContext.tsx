@@ -7,7 +7,7 @@ import {
   useContext,
 } from "react";
 import { FlowType, NodeType } from "../types/flow";
-import { TabsContextType } from "../types/tabs";
+import { TabsContextType, TabsState } from "../types/tabs";
 import { updateIds, updateTemplate } from "../utils";
 import { alertContext } from "./alertContext";
 import { typesContext } from "./typesContext";
@@ -43,7 +43,8 @@ const TabsContextInitialValue: TabsContextType = {
   setDisableCopyPaste: (state: boolean) => {},
   lastCopiedSelection: null,
   setLastCopiedSelection: (selection: any) => {},
-
+  tabsState: {},
+  setTabsState: (state: TabsState) => {},
   getNodeId: (nodeType: string) => "",
   paste: (
     selection: { nodes: any; edges: any },
@@ -64,6 +65,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   const [id, setId] = useState(uid());
   const { templates, reactFlowInstance } = useContext(typesContext);
   const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
+  const [tabsState, setTabsState] = useState<TabsState>({});
 
   const newNodeId = useRef(uid());
   function incrementNodeId() {
@@ -534,6 +536,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     description: flowData.description,
     name: flow?.name ?? "New Flow",
     data: flowData.data,
+    id: "",
   });
 
   const addFlowToLocalState = (newFlow) => {
@@ -582,6 +585,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         uploadFlows,
         uploadFlow,
         getNodeId,
+        tabsState,
+        setTabsState,
         paste,
       }}
     >
