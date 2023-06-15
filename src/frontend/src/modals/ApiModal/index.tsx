@@ -65,7 +65,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
     {
       name: "cURL",
       mode: "bash",
-      image: "https://cdn-icons-png.flaticon.com/512/631/631558.png",
+      image: "https://curl.se/logo/curl-symbol-transparent.png",
       code: curl_code,
     },
     {
