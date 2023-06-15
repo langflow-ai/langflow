@@ -45,7 +45,8 @@ export default function Page({ flow }: { flow: FlowType }) {
     setLastCopiedSelection,
     tabsState,
     saveFlow,
-    setTabsState
+    setTabsState,
+    tabId
   } = useContext(TabsContext);
   const { types, reactFlowInstance, setReactFlowInstance, templates } =
     useContext(typesContext);
@@ -147,25 +148,31 @@ export default function Page({ flow }: { flow: FlowType }) {
         let newX = _.cloneDeep(x);
         return newX;
       });
-      setTabsState((prev)=>{
-        let newState = _.cloneDeep(prev);
-        newState[flow.id].isPending = true;
-        return newState;
-      })
+      setTabsState((prev) => {
+        return {
+          ...prev,
+          [tabId]: {
+            isPending: true,
+          },
+        };
+      });
     },
-    [onEdgesChange, setNodes,setTabsState,flow.id]
+    [onEdgesChange, setNodes,setTabsState,tabId]
   );
 
   const onNodesChangeMod = useCallback(
     (s: NodeChange[]) => {
       onNodesChange(s);
-      setTabsState((prev)=>{
-        let newState = _.cloneDeep(prev);
-        newState[flow.id].isPending = true;
-        return newState;
-      })
+      setTabsState((prev) => {
+        return {
+          ...prev,
+          [tabId]: {
+            isPending: true,
+          },
+        };
+      });
     },
-    [onNodesChange,setTabsState,flow.id]
+    [onNodesChange,setTabsState,tabId]
   );
 
   const onConnect = useCallback(
