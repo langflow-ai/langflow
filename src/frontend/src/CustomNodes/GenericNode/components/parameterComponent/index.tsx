@@ -39,6 +39,7 @@ export default function ParameterComponent({
 }: ParameterComponentType) {
   const ref = useRef(null);
   const refHtml = useRef(null);
+  const refData = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   const { closePopUp } = useContext(PopUpContext);
@@ -59,57 +60,57 @@ export default function ParameterComponent({
   );
 
   useEffect(() => {  
-    
   }, [closePopUp, data.node.template]);
 
   const { reactFlowInstance } = useContext(typesContext);
   let disabled =
     reactFlowInstance?.getEdges().some((e) => e.targetHandle === id) ?? false;
+
   const [myData, setMyData] = useState(useContext(typesContext).data);
 
   useEffect(() => {
-    const groupedObj = groupByFamily(myData, tooltipTitle);
-
-    refHtml.current = groupedObj.map((item, i) => (
-      <span
-        key={i}
-        className={classNames(
-          i > 0 ? "items-center flex mt-3" : "items-center flex"
-        )}
-      >
-        <div
-          className="h-5 w-5"
-          style={{
-            color: nodeColors[item.family],
-          }}
+      const groupedObj = groupByFamily(myData, tooltipTitle);
+      refHtml.current = groupedObj.map((item, i) => (
+        <span
+          key={i}
+          className={classNames(
+            i > 0 ? "items-center flex mt-3" : "items-center flex"
+          )}
         >
-          {React.createElement(nodeIcons[item.family])}
-        </div>
-        <span className="ps-2 text-gray-950">
-          {nodeNames[item.family] ?? ""}{" "}
-          <span className={classNames(left ? "hidden" : "")}>
-            {" "}
-            -&nbsp;
-            {item.type.split(", ").length > 2
-              ? item.type.split(", ").map((el, i) => (
-                  <>
-                    <span key={i}>
-                      {i == item.type.split(", ").length - 1
-                        ? el
-                        : (el += `, `)}
-                    </span>
-                    {i % 2 == 0 && i > 0 && <br></br>}
-                  </>
-                ))
-              : item.type}
+          <div
+            className="h-5 w-5"
+            style={{
+              color: nodeColors[item.family],
+            }}
+          >
+            {React.createElement(nodeIcons[item.family])}
+          </div>
+          <span className="ps-2 text-gray-950">
+            {nodeNames[item.family] ?? ""}{" "}
+            <span className={classNames(left ? "hidden" : "")}>
+              {" "}
+              -&nbsp;
+              {item.type.split(", ").length > 2
+                ? item.type.split(", ").map((el, i) => (
+                    <>
+                      <span key={i}>
+                        {i == item.type.split(", ").length - 1
+                          ? el
+                          : (el += `, `)}
+                      </span>
+                      {i % 2 == 0 && i > 0 && <br></br>}
+                    </>
+                  ))
+                : item.type}
+            </span>
           </span>
         </span>
-      </span>
-    ));
+      ));
   }, [tooltipTitle]);
 
   return (
-    <div
+    <>
+        <div
       ref={ref}
       className="w-full flex flex-wrap justify-between items-center bg-muted dark:bg-gray-800 dark:text-white mt-1 px-5 py-2"
     >
@@ -234,6 +235,7 @@ export default function ParameterComponent({
             value={data.node.template[name].value ?? ""}
             onChange={(t: string) => {
               data.node.template[name].value = t;
+              
             }}
           />
         ) : left === true && type === "file" ? (
@@ -276,5 +278,7 @@ export default function ParameterComponent({
         )}
       </>
     </div>
+    </>
+
   );
 }

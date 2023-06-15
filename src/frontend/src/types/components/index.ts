@@ -6,6 +6,7 @@ import {
   SVGProps,
 } from "react";
 import { NodeDataType } from "../flow/index";
+import { typesContextType } from "../typesContext";
 export type InputComponentType = {
   value: string;
   disabled?: boolean;
@@ -38,6 +39,7 @@ export type ParameterComponentType = {
   required?: boolean;
   name?: string;
   tooltipTitle: string;
+  dataContext?: typesContextType;
 };
 export type InputListComponentType = {
   value: string[];

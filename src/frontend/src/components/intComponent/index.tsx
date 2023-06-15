@@ -21,6 +21,11 @@ export default function IntComponent({
       onChange("");
     }
   }, [disabled, onChange]);
+
+  useEffect(() => {
+    setMyValue(value);
+  }, [value]);
+
   return (
     <div
       className={
