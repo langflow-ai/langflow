@@ -124,7 +124,7 @@ export default function ExtraSidebar() {
         </ShadTooltip>
       </div>
       <Separator />
-      <div className="relative mt-2 flex items-center mb-2 mx-3">
+      <div className="relative mt-2 flex items-center mb-2 mx-2">
         <input
           type="text"
           name="search"
@@ -189,7 +189,7 @@ export default function ExtraSidebar() {
                             }}
                           >
                             <div className="flex w-full justify-between text-sm px-3 py-1 bg-white dark:bg-gray-800 items-center border-dashed border-gray-400 dark:border-gray-600 border-l-0 rounded-md rounded-l-none border">
-                              <span className="text-black dark:text-white w-36 pr-1 truncate text-xs">
+                              <span className="text-black dark:text-white w-3/4 pr-1 truncate text-xs">
                                 {t}
                               </span>
                               <Bars2Icon className="w-4 h-6  text-gray-400 dark:text-gray-600" />
