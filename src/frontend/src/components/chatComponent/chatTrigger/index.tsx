@@ -3,13 +3,26 @@ import {
   Bars3CenterLeftIcon,
   ChatBubbleBottomCenterTextIcon,
 } from "@heroicons/react/24/outline";
+import { MessagesSquare } from "lucide-react";
 import { nodeColors } from "../../../utils";
-import { PopUpContext } from "../../../contexts/popUpContext";
+import { alertContext } from "../../../contexts/alertContext";
 import { useContext } from "react";
 import ChatModal from "../../../modals/chatModal";
 
-export default function ChatTrigger({ open, setOpen }) {
-  const { openPopUp } = useContext(PopUpContext);
+export default function ChatTrigger({ open, setOpen, isBuilt }) {
+  const { setErrorData } = useContext(alertContext);
+
+  function handleClick() {
+    if (isBuilt) {
+      setOpen(true);
+    } else {
+      setErrorData({
+        title: "Flow not built",
+        list: ["Please build the flow before chatting"],
+      });
+    }
+  }
+
   return (
     <Transition
       show={!open}
@@ -24,13 +37,11 @@ export default function ChatTrigger({ open, setOpen }) {
       <div className="absolute bottom-4 right-3">
         <div
           className="border flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 dark:border-gray-600 cursor-pointer"
-          onClick={() => {
-            setOpen(true);
-          }}
+          onClick={handleClick}
         >
           <button>
             <div className="flex gap-3  items-center">
-              <ChatBubbleBottomCenterTextIcon
+              <MessagesSquare
                 className="h-6 w-6 mt-1"
                 style={{ color: "white" }}
               />

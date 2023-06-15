@@ -12,11 +12,9 @@ const proxyTargets = apiRoutes.reduce((proxyObj, route) => {
     changeOrigin: true,
     secure: false,
     ws: true,
-    // rewrite: (path) => `/api/v1${path}`,
   };
   return proxyObj;
 }, {});
-
 export default defineConfig(() => {
   return {
     build: {

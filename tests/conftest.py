@@ -67,6 +67,12 @@ def get_graph(_type="basic"):
 
 
 @pytest.fixture
+def basic_graph_data():
+    with open(pytest.BASIC_EXAMPLE_PATH, "r") as f:
+        return json.load(f)
+
+
+@pytest.fixture
 def basic_graph():
     return get_graph()
 

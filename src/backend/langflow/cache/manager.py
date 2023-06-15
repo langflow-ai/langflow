@@ -54,7 +54,7 @@ class CacheManager(Subject):
 
     def __init__(self):
         super().__init__()
-        self.CACHE = {}
+        self._cache = {}
         self.current_client_id = None
         self.current_cache = {}
 
@@ -68,12 +68,12 @@ class CacheManager(Subject):
         """
         previous_client_id = self.current_client_id
         self.current_client_id = client_id
-        self.current_cache = self.CACHE.setdefault(client_id, {})
+        self.current_cache = self._cache.setdefault(client_id, {})
         try:
             yield
         finally:
             self.current_client_id = previous_client_id
-            self.current_cache = self.CACHE.get(self.current_client_id, {})
+            self.current_cache = self._cache.get(self.current_client_id, {})
 
     def add(self, name: str, obj: Any, obj_type: str, extension: Optional[str] = None):
         """

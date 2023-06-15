@@ -1,4 +1,4 @@
-from langflow.cache.base import compute_dict_hash, load_cache, memoize_dict
+from langflow.cache.utils import compute_dict_hash, load_cache, memoize_dict
 from langflow.graph import Graph
 from langflow.utils.logger import logger
 

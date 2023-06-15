@@ -1,4 +1,4 @@
-from typing import Dict, List, Type, Union
+from typing import Dict, Generator, List, Type, Union
 
 from langflow.graph.edge.base import Edge
 from langflow.graph.graph.constants import VERTEX_TYPE_MAP
@@ -105,6 +105,47 @@ class Graph:
         if root_node is None:
             raise ValueError("No root node found")
         return root_node.build()
+
+    def topological_sort(self) -> List[Vertex]:
+        """
+        Performs a topological sort of the vertices in the graph.
+
+        Returns:
+            List[Vertex]: A list of vertices in topological order.
+
+        Raises:
+            ValueError: If the graph contains a cycle.
+        """
+        # States: 0 = unvisited, 1 = visiting, 2 = visited
+        state = {node: 0 for node in self.nodes}
+        sorted_vertices = []
+
+        def dfs(node):
+            if state[node] == 1:
+                # We have a cycle
+                raise ValueError(
+                    "Graph contains a cycle, cannot perform topological sort"
+                )
+            if state[node] == 0:
+                state[node] = 1
+                for edge in node.edges:
+                    if edge.source == node:
+                        dfs(edge.target)
+                state[node] = 2
+                sorted_vertices.append(node)
+
+        # Visit each node
+        for node in self.nodes:
+            if state[node] == 0:
+                dfs(node)
+
+        return list(reversed(sorted_vertices))
+
+    def generator_build(self) -> Generator:
+        """Builds each vertex in the graph and yields it."""
+        sorted_vertices = self.topological_sort()
+        logger.info("Sorted vertices: %s", sorted_vertices)
+        yield from sorted_vertices
 
     def get_node_neighbors(self, node: Vertex) -> Dict[Vertex, int]:
         """Returns the neighbors of a node."""
