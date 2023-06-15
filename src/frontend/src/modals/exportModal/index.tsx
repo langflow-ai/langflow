@@ -16,6 +16,7 @@ import {
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { EXPORT_DIALOG_SUBTITLE } from "../../constants";
+import { Download } from "lucide-react";
 import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 
 export default function ExportModal() {
@@ -45,7 +46,7 @@ export default function ExportModal() {
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Export</span>
-            <ArrowDownTrayIcon
+            <Download
               className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
               aria-hidden="true"
             />
