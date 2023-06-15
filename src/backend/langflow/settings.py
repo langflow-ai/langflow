@@ -1,5 +1,5 @@
 import os
-from typing import List, Optional
+from typing import List
 
 import yaml
 from pydantic import BaseSettings, root_validator
@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     utilities: List[str] = []
     dev: bool = False
     database_url: str = "sqlite:///./langflow.db"
+    save_api_keys: bool = True
 
     class Config:
         validate_assignment = True
@@ -47,10 +48,12 @@ class Settings(BaseSettings):
         self.textsplitters = new_settings.textsplitters or []
         self.utilities = new_settings.utilities or []
         self.dev = dev
+        self.save_api_keys = new_settings.save_api_keys
 
-    def update_database_url(self, database_url: Optional[str] = None):
-        if database_url:
-            self.database_url = database_url
+    def update_settings(self, **kwargs):
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
 
 
 def save_settings_to_yaml(settings: Settings, file_path: str):
