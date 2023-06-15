@@ -50,8 +50,11 @@ export const MenuBar = ({ flows, tabId }) => {
       <div className="flex items-center font-medium text-sm rounded-md py-1 px-1.5 gap-0.5">
         <DropdownMenu>
           <DropdownMenuTrigger>
-            <Button className="gap-2 flex items-center" variant="primary" size="sm">
+            <Button className="gap-2 flex items-center max-w-[200px]" variant="primary" size="sm">
+              <div className="truncate flex-1">
+
               {current_flow.name}
+              </div>
               <ChevronDown className="w-4 h-4" />
             </Button>
           </DropdownMenuTrigger>
