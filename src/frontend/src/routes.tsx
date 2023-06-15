@@ -11,6 +11,7 @@ const Router = () => {
       <Route path="/flow/:id/">
         <Route path="" element={<FlowPage />} />
       </Route>
+      <Route path="*" element={<HomePage/>}/>
     </Routes>
   );
 };
