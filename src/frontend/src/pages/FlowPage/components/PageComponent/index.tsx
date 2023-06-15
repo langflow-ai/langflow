@@ -42,6 +42,8 @@ export default function Page({ flow }: { flow: FlowType }) {
     paste,
     lastCopiedSelection,
     setLastCopiedSelection,
+    tabsState,
+    saveFlow
   } = useContext(TabsContext);
   const { types, reactFlowInstance, setReactFlowInstance, templates } =
     useContext(typesContext);
@@ -250,6 +252,14 @@ export default function Page({ flow }: { flow: FlowType }) {
     // Specify dependencies for useCallback
     [getNodeId, reactFlowInstance, setErrorData, setNodes, takeSnapshot]
   );
+  
+  useEffect(() => {
+    return () => {
+      if(tabsState && tabsState[flow.id]?.isPending) {
+        saveFlow(flow)
+      }
+    }
+  },[])
 
   const onDelete = useCallback(
     (mynodes) => {
