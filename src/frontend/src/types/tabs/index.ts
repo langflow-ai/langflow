@@ -1,3 +1,4 @@
+import { Dispatch, SetStateAction } from "react";
 import { FlowType } from "../flow";
 
 export type TabsContextType = {
@@ -18,6 +19,8 @@ export type TabsContextType = {
   disableCopyPaste: boolean;
   setDisableCopyPaste: (value: boolean) => void;
   getNodeId: (nodeType: string) => string;
+  tabsState: TabsState;
+  setTabsState: Dispatch<SetStateAction<TabsState>>;
   paste: (
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }
@@ -26,9 +29,8 @@ export type TabsContextType = {
   setLastCopiedSelection: (selection: { nodes: any; edges: any }) => void;
 };
 
-export type LangFlowState = {
-  tabIndex: number;
-  flows: FlowType[];
-  id: string;
-  nodeId: number;
+export type TabsState = {
+  [key: string]: {
+    isPending: boolean;
+  };
 };

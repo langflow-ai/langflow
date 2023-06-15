@@ -49,7 +49,7 @@ def read_flow(*, session: Session = Depends(get_session), flow_id: UUID):
         raise HTTPException(status_code=404, detail="Flow not found")
 
 
-@router.patch("/{flow_id}", response_model=FlowReadWithStyle, status_code=200)
+@router.patch("/{flow_id}", response_model=FlowRead, status_code=200)
 def update_flow(
     *, session: Session = Depends(get_session), flow_id: UUID, flow: FlowUpdate
 ):
