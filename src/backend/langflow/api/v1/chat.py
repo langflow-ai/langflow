@@ -109,7 +109,7 @@ async def stream_build(flow_id: str):
             chat_manager.set_cache(flow_id, graph.build())
         except Exception as exc:
             logger.error("Error while building the flow: %s", exc)
-            yield f"data: {json.dumps({'error': str(exc)})}\n\n"
+            yield f"error: {json.dumps({'error': str(exc)})}\n\n"
         finally:
             yield f"data: {final_response}\n\n"
 
