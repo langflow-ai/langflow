@@ -27,22 +27,31 @@ export default function BuildTrigger({
   const { setErrorData } = useContext(alertContext);
 
   async function handleBuild(flow: FlowType) {
-    const errors = validateNodes(reactFlowInstance);
-    if (errors.length > 0) {
-      setErrorData({
-        title: "Oops! Looks like you missed something",
-        list: errors,
-      });
-      return;
-    }
-    const minimumLoadingTime = 200; // in milliseconds
-    const startTime = Date.now();
-    setIsBuilding(true);
-
     try {
-      const allNodesValid = await streamNodeData(flow);
-      await enforceMinimumLoadingTime(startTime, minimumLoadingTime);
-      setIsBuilt(allNodesValid);
+      if (isBuilding) {
+        return;
+      }
+      const errors = validateNodes(reactFlowInstance);
+      if (errors.length > 0) {
+        setErrorData({
+          title: "Oops! Looks like you missed something",
+          list: errors,
+        });
+        return;
+      }
+      const minimumLoadingTime = 200; // in milliseconds
+      const startTime = Date.now();
+      setIsBuilding(true);
+
+      try {
+        const allNodesValid = await streamNodeData(flow);
+        await enforceMinimumLoadingTime(startTime, minimumLoadingTime);
+        setIsBuilt(allNodesValid);
+      } catch (error) {
+        console.error("Error:", error);
+      } finally {
+        setIsBuilding(false);
+      }
     } catch (error) {
       console.error("Error:", error);
     } finally {
@@ -127,7 +136,7 @@ export default function BuildTrigger({
         <div
           className="border flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full bg-gradient-to-r from-blue-700 via-blue-600 to-blue-500 dark:border-gray-600 cursor-pointer"
           onClick={() => {
-            if (!isBuilding) handleBuild(flow);
+            handleBuild(flow);
           }}
         >
           <button>
