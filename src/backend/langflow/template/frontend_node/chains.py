@@ -197,7 +197,7 @@ class CombineDocsChainNode(FrontendNode):
             ),
         ],
     )
-    description: str = """Construct a chain from combined documents."""
+    description: str = """Load question answering chain."""
     base_classes: list[str] = ["BaseCombineDocumentsChain", "function"]
 
     def to_dict(self):
