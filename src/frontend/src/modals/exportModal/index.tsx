@@ -84,6 +84,8 @@ export default function ExportModal() {
               if (checked) downloadFlow(flows.find((f) => f.id === tabId));
               else
                 downloadFlow(removeApiKeys(flows.find((f) => f.id === tabId)));
+
+              closePopUp();
             }}
             type="submit"
           >
