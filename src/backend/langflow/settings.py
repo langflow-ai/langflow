@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     utilities: List[str] = []
     dev: bool = False
     database_url: str = "sqlite:///./langflow.db"
-    save_api_keys: bool = True
+    remove_api_keys: bool = False
 
     class Config:
         validate_assignment = True
@@ -48,7 +48,6 @@ class Settings(BaseSettings):
         self.textsplitters = new_settings.textsplitters or []
         self.utilities = new_settings.utilities or []
         self.dev = dev
-        self.save_api_keys = new_settings.save_api_keys
 
     def update_settings(self, **kwargs):
         for key, value in kwargs.items():
