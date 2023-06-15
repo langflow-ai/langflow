@@ -1,42 +1,10 @@
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "../../components/ui/tabs";
-import ExtraSidebar from "../../components/ExtraSidebarComponent";
-import { ReactFlowProvider } from "reactflow";
-import FlowPage from "../FlowPage";
 import { useContext, useEffect, useState } from "react";
-import {
-  SunIcon,
-  MoonIcon,
-  BellIcon,
-  GithubIcon,
-  Download,
-  Upload,
-  Plus,
-  Home,
-  Users2,
-  GitFork,
-} from "lucide-react";
+import { GithubIcon, Users2, GitFork } from "lucide-react";
 import { TabsContext } from "../../contexts/tabsContext";
-import AlertDropdown from "../../alerts/alertDropDown";
 import { alertContext } from "../../contexts/alertContext";
-import { darkContext } from "../../contexts/darkContext";
-import { PopUpContext } from "../../contexts/popUpContext";
-import { typesContext } from "../../contexts/typesContext";
 import { Button } from "../../components/ui/button";
-import { FaGithub } from "react-icons/fa";
 
-import _ from "lodash";
-
-import {
-  getExamples,
-  updateFlowInDatabase,
-  uploadFlowsToDatabase,
-} from "../../controllers/API";
-import { MenuBar } from "../../components/headerComponent/components/menuBar";
+import { getExamples } from "../../controllers/API";
 import { FlowType } from "../../types/flow";
 import { CardComponent } from "../../components/cardComponent";
 import { useNavigate } from "react-router-dom";

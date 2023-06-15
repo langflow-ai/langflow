@@ -1,6 +1,7 @@
 import { FlowType } from "../flow";
 
 export type TabsContextType = {
+  save: () => void;
   tabId: string;
   setTabId: (index: string) => void;
   flows: Array<FlowType>;
@@ -16,7 +17,7 @@ export type TabsContextType = {
   //disable CopyPaste
   disableCopyPaste: boolean;
   setDisableCopyPaste: (value: boolean) => void;
-  getNodeId: () => string;
+  getNodeId: (nodeType: string) => string;
   paste: (
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }

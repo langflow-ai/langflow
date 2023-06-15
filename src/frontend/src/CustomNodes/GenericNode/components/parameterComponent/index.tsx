@@ -25,6 +25,7 @@ import React from "react";
 import { nodeColors } from "../../../../utils";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import { PopUpContext } from "../../../../contexts/popUpContext";
+import ToggleShadComponent from "../../../../components/toggleShadComponent";
 
 export default function ParameterComponent({
   left,
@@ -39,7 +40,6 @@ export default function ParameterComponent({
 }: ParameterComponentType) {
   const ref = useRef(null);
   const refHtml = useRef(null);
-  const refData = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   const { closePopUp } = useContext(PopUpContext);
@@ -64,11 +64,11 @@ export default function ParameterComponent({
   const { reactFlowInstance } = useContext(typesContext);
   let disabled =
     reactFlowInstance?.getEdges().some((e) => e.targetHandle === id) ?? false;
-
   const [myData, setMyData] = useState(useContext(typesContext).data);
 
   useEffect(() => {
     const groupedObj = groupByFamily(myData, tooltipTitle);
+
     refHtml.current = groupedObj.map((item, i) => (
       <span
         key={i}
@@ -108,169 +108,166 @@ export default function ParameterComponent({
   }, [tooltipTitle]);
 
   return (
-    <>
-      <div
-        ref={ref}
-        className="w-full flex flex-wrap justify-between items-center bg-muted dark:bg-gray-800 dark:text-white mt-1 px-5 py-2"
-      >
-        <>
-          <div
-            className={"text-sm truncate w-full " + (left ? "" : "text-end")}
+    <div
+      ref={ref}
+      className="w-full flex flex-wrap justify-between items-center bg-muted dark:bg-gray-800 dark:text-white mt-1 px-5 py-2"
+    >
+      <>
+        <div className={"text-sm truncate w-full " + (left ? "" : "text-end")}>
+          {title}
+          <span className="text-red-600">{required ? " *" : ""}</span>
+        </div>
+        {left &&
+        (type === "str" ||
+          type === "bool" ||
+          type === "float" ||
+          type === "code" ||
+          type === "prompt" ||
+          type === "file" ||
+          type === "int") ? (
+          <></>
+        ) : (
+          <ShadTooltip
+            delayDuration={0}
+            content={refHtml.current}
+            side={left ? "left" : "right"}
+            open={refHtml?.current?.length > 0}
           >
-            {title}
-            <span className="text-red-600">{required ? " *" : ""}</span>
-          </div>
-          {left &&
-          (type === "str" ||
-            type === "bool" ||
-            type === "float" ||
-            type === "code" ||
-            type === "prompt" ||
-            type === "file" ||
-            type === "int") ? (
-            <></>
-          ) : (
-            <ShadTooltip
-              delayDuration={0}
-              content={refHtml.current}
-              side={left ? "left" : "right"}
-              open={refHtml?.current?.length > 0}
-            >
-              <Handle
-                type={left ? "target" : "source"}
-                position={left ? Position.Left : Position.Right}
-                id={id}
-                isValidConnection={(connection) =>
-                  isValidConnection(connection, reactFlowInstance)
-                }
-                className={classNames(
-                  left ? "-ml-0.5 " : "-mr-0.5 ",
-                  "w-3 h-3 rounded-full border-2 bg-white dark:bg-gray-800"
-                )}
-                style={{
-                  borderColor: color,
-                  top: position,
-                }}
-              ></Handle>
-            </ShadTooltip>
-          )}
-
-          {left === true &&
-          type === "str" &&
-          !data.node.template[name].options ? (
-            <div className="mt-2 w-full">
-              {data.node.template[name].list ? (
-                <InputListComponent
-                  disabled={disabled}
-                  value={
-                    !data.node.template[name].value ||
-                    data.node.template[name].value === ""
-                      ? [""]
-                      : data.node.template[name].value
-                  }
-                  onChange={(t: string[]) => {
-                    data.node.template[name].value = t;
-                  }}
-                />
-              ) : data.node.template[name].multiline ? (
-                <TextAreaComponent
-                  disabled={disabled}
-                  value={data.node.template[name].value ?? ""}
-                  onChange={(t: string) => {
-                    data.node.template[name].value = t;
-                  }}
-                />
-              ) : (
-                <InputComponent
-                  disabled={disabled}
-                  disableCopyPaste={true}
-                  password={data.node.template[name].password ?? false}
-                  value={data.node.template[name].value ?? ""}
-                  onChange={(t) => {
-                    data.node.template[name].value = t;
-                  }}
-                />
+            <Handle
+              type={left ? "target" : "source"}
+              position={left ? Position.Left : Position.Right}
+              id={id}
+              isValidConnection={(connection) =>
+                isValidConnection(connection, reactFlowInstance)
+              }
+              className={classNames(
+                left ? "-ml-0.5 " : "-mr-0.5 ",
+                "w-3 h-3 rounded-full border-2 bg-white dark:bg-gray-800"
               )}
-            </div>
-          ) : left === true && type === "bool" ? (
-            <div className="mt-2">
-              <ToggleComponent
+              style={{
+                borderColor: color,
+                top: position,
+              }}
+            ></Handle>
+          </ShadTooltip>
+        )}
+
+        {left === true &&
+        type === "str" &&
+        !data.node.template[name].options ? (
+          <div className="mt-2 w-full">
+            {data.node.template[name].list ? (
+              <InputListComponent
                 disabled={disabled}
-                enabled={enabled}
-                setEnabled={(t) => {
-                  data.node.template[name].value = t;
-                  setEnabled(t);
-                }}
-              />
-            </div>
-          ) : left === true && type === "float" ? (
-            <div className="mt-2 w-full">
-              <FloatComponent
-                disabled={disabled}
-                disableCopyPaste={true}
-                value={data.node.template[name].value ?? ""}
-                onChange={(t) => {
-                  data.node.template[name].value = t;
-                }}
-              />
-            </div>
-          ) : left === true &&
-            type === "str" &&
-            data.node.template[name].options ? (
-            <div className="w-full">
-              <Dropdown
-                options={data.node.template[name].options}
-                onSelect={(newValue) =>
-                  (data.node.template[name].value = newValue)
+                value={
+                  !data.node.template[name].value ||
+                  data.node.template[name].value === ""
+                    ? [""]
+                    : data.node.template[name].value
                 }
-                value={data.node.template[name].value ?? "Choose an option"}
-              ></Dropdown>
-            </div>
-          ) : left === true && type === "code" ? (
-            <CodeAreaComponent
-              disabled={disabled}
-              value={data.node.template[name].value ?? ""}
-              onChange={(t: string) => {
-                data.node.template[name].value = t;
-              }}
-            />
-          ) : left === true && type === "file" ? (
-            <InputFileComponent
-              disabled={disabled}
-              value={data.node.template[name].value ?? ""}
-              onChange={(t: string) => {
-                data.node.template[name].value = t;
-              }}
-              fileTypes={data.node.template[name].fileTypes}
-              suffixes={data.node.template[name].suffixes}
-              onFileChange={(t: string) => {
-                data.node.template[name].content = t;
-              }}
-            ></InputFileComponent>
-          ) : left === true && type === "int" ? (
-            <div className="mt-2 w-full">
-              <IntComponent
+                onChange={(t: string[]) => {
+                  data.node.template[name].value = t;
+                }}
+              />
+            ) : data.node.template[name].multiline ? (
+              <TextAreaComponent
+                disabled={disabled}
+                value={data.node.template[name].value ?? ""}
+                onChange={(t: string) => {
+                  data.node.template[name].value = t;
+                }}
+              />
+            ) : (
+              <InputComponent
                 disabled={disabled}
                 disableCopyPaste={true}
+                password={data.node.template[name].password ?? false}
                 value={data.node.template[name].value ?? ""}
                 onChange={(t) => {
                   data.node.template[name].value = t;
                 }}
               />
-            </div>
-          ) : left === true && type === "prompt" ? (
-            <PromptAreaComponent
+            )}
+          </div>
+        ) : left === true && type === "bool" ? (
+          <div className="mt-2">
+            <ToggleShadComponent
               disabled={disabled}
+              enabled={enabled}
+              setEnabled={(t) => {
+                data.node.template[name].value = t;
+                setEnabled(t);
+              }}
+              size="large"
+            />
+          </div>
+        ) : left === true && type === "float" ? (
+          <div className="mt-2 w-full">
+            <FloatComponent
+              disabled={disabled}
+              disableCopyPaste={true}
               value={data.node.template[name].value ?? ""}
-              onChange={(t: string) => {
+              onChange={(t) => {
                 data.node.template[name].value = t;
               }}
             />
-          ) : (
-            <></>
-          )}
-        </>
-      </div>
-    </>
+          </div>
+        ) : left === true &&
+          type === "str" &&
+          data.node.template[name].options ? (
+          <div className="w-full">
+            <Dropdown
+              options={data.node.template[name].options}
+              onSelect={(newValue) =>
+                (data.node.template[name].value = newValue)
+              }
+              value={data.node.template[name].value ?? "Choose an option"}
+            ></Dropdown>
+          </div>
+        ) : left === true && type === "code" ? (
+          <CodeAreaComponent
+            disabled={disabled}
+            value={data.node.template[name].value ?? ""}
+            onChange={(t: string) => {
+              data.node.template[name].value = t;
+            }}
+          />
+        ) : left === true && type === "file" ? (
+          <InputFileComponent
+            disabled={disabled}
+            value={data.node.template[name].value ?? ""}
+            onChange={(t: string) => {
+              data.node.template[name].value = t;
+            }}
+            fileTypes={data.node.template[name].fileTypes}
+            suffixes={data.node.template[name].suffixes}
+            onFileChange={(t: string) => {
+              data.node.template[name].content = t;
+            }}
+          ></InputFileComponent>
+        ) : left === true && type === "int" ? (
+          <div className="mt-2 w-full">
+            <IntComponent
+              disabled={disabled}
+              disableCopyPaste={true}
+              value={data.node.template[name].value ?? ""}
+              onChange={(t) => {
+                data.node.template[name].value = t;
+              }}
+            />
+          </div>
+        ) : left === true && type === "prompt" ? (
+          <PromptAreaComponent
+            disabled={disabled}
+            value={data.node.template[name].value ?? ""}
+            onChange={(t: string) => {
+              data.node.template[name].value = t;
+            }}
+          />
+        ) : (
+          <></>
+        )}
+      </>
+    </div>
   );
 }

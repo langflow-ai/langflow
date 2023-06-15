@@ -2,10 +2,24 @@ from typing import Optional
 
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
+from langflow.template.frontend_node.constants import QA_CHAIN_TYPES
 from langflow.template.template.base import Template
 
 
 class ChainFrontendNode(FrontendNode):
+    def add_extra_fields(self) -> None:
+        if self.template.type_name == "ConversationalRetrievalChain":
+            # add memory
+            self.template.add_field(
+                TemplateField(
+                    field_type="BaseChatMemory",
+                    required=False,
+                    show=True,
+                    name="memory",
+                    advanced=False,
+                )
+            )
+
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         FrontendNode.format_field(field, name)
@@ -155,3 +169,41 @@ class MidJourneyPromptChainNode(FrontendNode):
         "ConversationChain",
         "MidJourneyPromptChain",
     ]
+
+
+class CombineDocsChainNode(FrontendNode):
+    name: str = "CombineDocsChain"
+    template: Template = Template(
+        type_name="load_qa_chain",
+        fields=[
+            TemplateField(
+                field_type="str",
+                required=True,
+                is_list=True,
+                show=True,
+                multiline=False,
+                options=QA_CHAIN_TYPES,
+                value=QA_CHAIN_TYPES[0],
+                name="chain_type",
+                advanced=False,
+            ),
+            TemplateField(
+                field_type="BaseLanguageModel",
+                required=True,
+                show=True,
+                name="llm",
+                display_name="LLM",
+                advanced=False,
+            ),
+        ],
+    )
+    description: str = """Construct a zero shot agent from an LLM and tools."""
+    base_classes: list[str] = ["BaseCombineDocumentsChain", "function"]
+
+    def to_dict(self):
+        return super().to_dict()
+
+    @staticmethod
+    def format_field(field: TemplateField, name: Optional[str] = None) -> None:
+        # do nothing and don't return anything
+        pass

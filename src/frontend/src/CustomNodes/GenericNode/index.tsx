@@ -1,17 +1,4 @@
 import {
-  BugAntIcon,
-  Cog6ToothIcon,
-  InformationCircleIcon,
-  TrashIcon,
-} from "@heroicons/react/24/outline";
-
-import {
-  CheckCircleIcon,
-  EllipsisHorizontalCircleIcon,
-  ExclamationCircleIcon,
-} from "@heroicons/react/24/solid";
-
-import {
   classNames,
   nodeColors,
   nodeIcons,
@@ -33,6 +20,7 @@ import { NodeToolbar } from "reactflow";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 
 import ShadTooltip from "../../components/ShadTooltipComponent";
+import { postValidateNode } from "../../controllers/API";
 export default function GenericNode({
   data,
   selected,
@@ -62,17 +50,13 @@ export default function GenericNode({
   const validateNode = useCallback(
     debounce(async () => {
       try {
-        const response = await fetch(`/validate/node/${data.id}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(reactFlowInstance.toObject()),
-        });
+        const response = await postValidateNode(
+          data.id,
+          reactFlowInstance.toObject()
+        );
 
         if (response.status === 200) {
-          let jsonResponse = await response.json();
-          let jsonResponseParsed = await JSON.parse(jsonResponse);
+          let jsonResponseParsed = await JSON.parse(response.data);
           setValidationStatus(jsonResponseParsed);
         }
       } catch (error) {
@@ -150,11 +134,10 @@ export default function GenericNode({
                     "Validating..."
                   ) : (
                     <div className="max-h-96 overflow-auto">
-                      {validationStatus.params
-                        .split("\n")
-                        .map((line, index) => (
-                          <div key={index}>{line}</div>
-                        ))}
+                      {validationStatus.params ||
+                        ""
+                          .split("\n")
+                          .map((line, index) => <div key={index}>{line}</div>)}
                     </div>
                   )
                 }
@@ -191,7 +174,7 @@ export default function GenericNode({
         </div>
 
         <div className="h-full w-full py-5 text-gray-800">
-          <div className="w-full px-5 pb-3 text-sm text-gray-500 dark:text-gray-300">
+          <div className="w-full px-5 pb-3 text-sm text-muted-foreground">
             {data.node.description}
           </div>
 

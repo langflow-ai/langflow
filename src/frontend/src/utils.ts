@@ -16,14 +16,13 @@ import {
   Squares2X2Icon,
   Bars3CenterLeftIcon,
 } from "@heroicons/react/24/outline";
-import { Connection, Edge, Node, ReactFlowInstance, addEdge } from "reactflow";
-import { FlowType, NodeType } from "./types/flow";
-import { APITemplateType, TemplateVariableType } from "./types/api";
+import { Connection, Edge, Node, ReactFlowInstance } from "reactflow";
+import { FlowType, NodeDataType, NodeType } from "./types/flow";
+import { APITemplateType } from "./types/api";
 import _ from "lodash";
 import { ChromaIcon } from "./icons/ChromaIcon";
 import { AnthropicIcon } from "./icons/Anthropic";
 import { AirbyteIcon } from "./icons/Airbyte";
-import { AzIcon } from "./icons/AzLogo";
 import { BingIcon } from "./icons/Bing";
 import { CohereIcon } from "./icons/Cohere";
 import { EvernoteIcon } from "./icons/Evernote";
@@ -37,17 +36,9 @@ import { MetaIcon } from "./icons/Meta";
 import { MidjorneyIcon } from "./icons/Midjorney";
 import { NotionIcon } from "./icons/Notion";
 import { OpenAiIcon } from "./icons/OpenAi";
-import { PowerPointIcon } from "./icons/PowerPoint";
 import { QDrantIcon } from "./icons/QDrant";
-import { ReadTheDocsIcon } from "./icons/ReadTheDocs";
 import { SearxIcon } from "./icons/Searx";
 import { SlackIcon } from "./icons/Slack";
-import { WeaviateIcon } from "./icons/Weaviate";
-import { WikipediaIcon } from "./icons/Wikipedia";
-import { WolframIcon } from "./icons/Wolfram";
-import { WordIcon } from "./icons/Word";
-import { SerperIcon } from "./icons/Serper";
-import { v4 as uuidv4 } from "uuid";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -634,9 +625,9 @@ export function checkUpperWords(str: string) {
 export function updateIds(newFlow, getNodeId) {
   let idsMap = {};
 
-  newFlow.nodes.forEach((n) => {
+  newFlow.nodes.forEach((n: NodeType) => {
     // Generate a unique node ID
-    let newId = getNodeId();
+    let newId = getNodeId(n.data.type);
     idsMap[n.id] = newId;
     n.id = newId;
     n.data.id = newId;
@@ -719,4 +710,11 @@ export function groupByFamily(data, baseClasses) {
   }, []);
 
   return groupedObj;
+}
+
+export function buildTweaks(flow) {
+  return flow.data.nodes.reduce((acc, node) => {
+    acc[node.data.id] = {};
+    return acc;
+  }, {});
 }

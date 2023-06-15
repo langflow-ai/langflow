@@ -16,6 +16,10 @@ chains:
   - MidJourneyPromptChain
   - TimeTravelGuideChain
   - SQLDatabaseChain
+  - RetrievalQA
+  - RetrievalQAWithSourcesChain
+  - ConversationalRetrievalChain
+  - CombineDocsChain
 documentloaders:
   - AirbyteJSONLoader
   - CoNLLULoader
@@ -53,7 +57,7 @@ llms:
   # - AzureOpenAI
   # - AzureChatOpenAI
   - ChatOpenAI
-  - LlamaCpp
+  - LlamaCpp 
   - CTransformers
   - Cohere
   - Anthropic
@@ -69,7 +73,7 @@ prompts:
   - ZeroShotPrompt
 textsplitters:
   - CharacterTextSplitter
-  # - RecursiveCharacterTextSplitter
+  - RecursiveCharacterTextSplitter
   # - LatexTextSplitter
   # - PythonCodeTextSplitter
 toolkits:

@@ -127,6 +127,7 @@ export default function Page({ flow }: { flow: FlowType }) {
     setEdges(flow?.data?.edges ?? []);
     if (reactFlowInstance) {
       setViewport(flow?.data?.viewport ?? { x: 1, y: 0, zoom: 0.5 });
+      reactFlowInstance.fitView();
     }
   }, [flow, reactFlowInstance, setEdges, setNodes, setViewport]);
   //set extra sidebar
@@ -213,7 +214,8 @@ export default function Page({ flow }: { flow: FlowType }) {
       });
 
       // Generate a unique node ID
-      let newId = getNodeId();
+      let { type } = data;
+      let newId = getNodeId(type);
       let newNode: NodeType;
 
       if (data.type !== "groupNode") {

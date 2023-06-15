@@ -1,9 +1,4 @@
-import {
-  Bars2Icon,
-  PencilSquareIcon,
-  Square2StackIcon,
-  TrashIcon,
-} from "@heroicons/react/24/outline";
+import { Bars2Icon } from "@heroicons/react/24/outline";
 import DisclosureComponent from "../DisclosureComponent";
 import {
   classNames,
@@ -11,26 +6,27 @@ import {
   nodeIcons,
   nodeNames,
 } from "../../../../utils";
-import { useContext, useEffect, useState, useRef } from "react";
+import { useContext, useState } from "react";
 import { typesContext } from "../../../../contexts/typesContext";
 import { APIClassType, APIObjectType } from "../../../../types/api";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
-import { Code, Code2, FileDown, FileUp, Import, Save } from "lucide-react";
+import { Code2, FileDown, FileUp, Save } from "lucide-react";
 import { PopUpContext } from "../../../../contexts/popUpContext";
 import ImportModal from "../../../../modals/importModal";
 import ExportModal from "../../../../modals/exportModal";
 import ApiModal from "../../../../modals/ApiModal";
 import { TabsContext } from "../../../../contexts/tabsContext";
-import { Separator } from "../../../../components/ui/separator";
 import { alertContext } from "../../../../contexts/alertContext";
 import { updateFlowInDatabase } from "../../../../controllers/API";
 import { INPUT_STYLE } from "../../../../constants";
+import { Input } from "../../../../components/ui/input";
+import { Separator } from "../../../../components/ui/separator";
 
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);
   const { openPopUp } = useContext(PopUpContext);
-  const { flows, tabId } = useContext(TabsContext);
+  const { flows, tabId, uploadFlow } = useContext(TabsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
@@ -82,7 +78,8 @@ export default function ExtraSidebar() {
           <button
             className="hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center rounded-md bg-white px-2 py-2 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
             onClick={() => {
-              openPopUp(<ImportModal />);
+              // openPopUp(<ImportModal />);
+              uploadFlow();
             }}
           >
             <FileUp className="w-5 h-5 dark:text-gray-300"></FileUp>
@@ -132,7 +129,7 @@ export default function ExtraSidebar() {
           type="text"
           name="search"
           id="search"
-          placeholder="Search nodes"
+          placeholder="Search Nodes"
           className={
             INPUT_STYLE +
             "border-1 dark:border-slate-600 dark:border-0.5 dark:ring-0 focus-visible:dark:ring-0 focus-visible:dark:ring-offset-1 rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"

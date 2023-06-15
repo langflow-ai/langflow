@@ -12,7 +12,7 @@ import { updateIds, updateTemplate } from "../utils";
 import { alertContext } from "./alertContext";
 import { typesContext } from "./typesContext";
 import { APITemplateType } from "../types/api";
-import { v4 as uuidv4 } from "uuid";
+import ShortUniqueId from "short-unique-id";
 import { addEdge } from "reactflow";
 import {
   readFlowsFromDatabase,
@@ -23,14 +23,17 @@ import {
 } from "../controllers/API";
 import _ from "lodash";
 
+const uid = new ShortUniqueId({ length: 5 });
+
 const TabsContextInitialValue: TabsContextType = {
+  save: () => {},
   tabId: "",
   setTabId: (index: string) => {},
   flows: [],
   removeFlow: (id: string) => {},
   addFlow: async (flowData?: any) => "",
   updateFlow: (newFlow: FlowType) => {},
-  incrementNodeId: () => uuidv4(),
+  incrementNodeId: () => uid(),
   downloadFlow: (flow: FlowType) => {},
   downloadFlows: () => {},
   uploadFlows: () => {},
@@ -41,7 +44,7 @@ const TabsContextInitialValue: TabsContextType = {
   lastCopiedSelection: null,
   setLastCopiedSelection: (selection: any) => {},
 
-  getNodeId: () => "",
+  getNodeId: (nodeType: string) => "",
   paste: (
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }
@@ -54,16 +57,44 @@ export const TabsContext = createContext<TabsContextType>(
 
 export function TabsProvider({ children }: { children: ReactNode }) {
   const { setErrorData, setNoticeData } = useContext(alertContext);
+
   const [tabId, setTabId] = useState("");
-  const [flows, setFlows] = useState([]);
-  const [id, setId] = useState(uuidv4());
+
+  const [flows, setFlows] = useState<Array<FlowType>>([]);
+  const [id, setId] = useState(uid());
   const { templates, reactFlowInstance } = useContext(typesContext);
   const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
 
-  const newNodeId = useRef(uuidv4());
+  const newNodeId = useRef(uid());
   function incrementNodeId() {
-    newNodeId.current = uuidv4();
+    newNodeId.current = uid();
     return newNodeId.current;
+  }
+
+  function save() {
+    // added clone deep to avoid mutating the original object
+    let Saveflows = _.cloneDeep(flows);
+    if (Saveflows.length !== 0) {
+      Saveflows.forEach((flow) => {
+        if (flow.data && flow.data?.nodes)
+          flow.data?.nodes.forEach((node) => {
+            // console.log(node.data.type);
+            //looking for file fields to prevent saving the content and breaking the flow for exceeding the the data limite for local storage
+            Object.keys(node.data.node.template).forEach((key) => {
+              // console.log(node.data.node.template[key].type);
+              if (node.data.node.template[key].type === "file") {
+                // console.log(node.data.node.template[key]);
+                node.data.node.template[key].content = null;
+                node.data.node.template[key].value = "";
+              }
+            });
+          });
+      });
+      window.localStorage.setItem(
+        "tabsData",
+        JSON.stringify({ tabId, flows: Saveflows, id })
+      );
+    }
   }
 
   // function loadCookie(cookie: string) {
@@ -206,10 +237,11 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
 
   function hardReset() {
-    newNodeId.current = uuidv4();
+    newNodeId.current = uid();
     setTabId("");
+
     setFlows([]);
-    setId(uuidv4());
+    setId(uid());
   }
 
   /**
@@ -249,8 +281,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  function getNodeId() {
-    return `dndnode_` + incrementNodeId();
+  function getNodeId(nodeType: string) {
+    return nodeType + "-" + incrementNodeId();
   }
 
   /**
@@ -262,6 +294,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     // create a file input
     const input = document.createElement("input");
     input.type = "file";
+    input.accept = ".json";
     // add a change event listener to the file input
     input.onchange = (e: Event) => {
       // check if the file type is application/json
@@ -343,9 +376,9 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       ? { x: position.paneX + position.x, y: position.paneY + position.y }
       : reactFlowInstance.project({ x: position.x, y: position.y });
 
-    selectionInstance.nodes.forEach((n) => {
+    selectionInstance.nodes.forEach((n: NodeType) => {
       // Generate a unique node ID
-      let newId = getNodeId();
+      let newId = getNodeId(n.data.type);
       idsMap[n.id] = newId;
 
       // Create a new node object
@@ -500,7 +533,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   const createNewFlow = (flowData, flow) => ({
     description: flowData.description,
     name: flow?.name ?? "New Flow",
-    id: uuidv4(),
     data: flowData.data,
   });
 
@@ -540,6 +572,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         tabId,
         setTabId,
         flows,
+        save,
         incrementNodeId,
         removeFlow,
         addFlow,

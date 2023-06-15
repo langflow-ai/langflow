@@ -51,7 +51,6 @@ build_and_run:
 	rm -rf dist
 	make build && poetry run pip install dist/*.tar.gz && poetry run langflow
 
-
 build_frontend:
 	cd src/frontend && CI='' npm run build
 	cp -r src/frontend/build src/backend/langflow/frontend

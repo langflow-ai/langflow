@@ -43,7 +43,7 @@ export default function PromptAreaModal({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-gray-500 dark:bg-gray-600 dark:bg-opacity-75 bg-opacity-75 transition-opacity" />
+          <div className="fixed inset-0 bg-ring dark:bg-gray-600 dark:bg-opacity-75 bg-opacity-75 transition-opacity" />
         </Transition.Child>
 
         <div className="fixed inset-0 z-10 overflow-y-auto">
@@ -87,7 +87,7 @@ export default function PromptAreaModal({
                       </Dialog.Title>
                     </div>
                   </div>
-                  <div className="h-full w-full bg-gray-200 overflow-auto dark:bg-gray-900 p-4 gap-4 flex flex-row justify-center items-center">
+                  <div className="h-full w-full bg-accent overflow-auto dark:bg-gray-900 p-4 gap-4 flex flex-row justify-center items-center">
                     <div className="flex h-full w-full">
                       <div className="overflow-hidden px-4 py-5 sm:p-6 w-full h-full rounded-lg bg-white dark:bg-gray-800 shadow">
                         <textarea
