@@ -280,7 +280,6 @@ export default function ChatModal({
     if (ref.current) ref.current.scrollIntoView({ behavior: "smooth" });
   }, [chatHistory]);
 
-
   const ref = useRef(null);
 
   useEffect(() => {

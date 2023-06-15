@@ -60,7 +60,7 @@ export default function BuildTrigger({
     let finished = false;
     const apiUrl = `/api/v1/build/stream/${flowId}`;
     const eventSource = new EventSource(apiUrl);
-    try{
+    try {
       eventSource.onmessage = (event) => {
         // If the event is parseable, return
         if (!event.data) {
@@ -70,14 +70,14 @@ export default function BuildTrigger({
         // if the event is the end of the stream, close the connection
         if (parsedData.end_of_stream) {
           eventSource.close();
-  
+
           return;
         }
         // Otherwise, process the data
         const isValid = processStreamResult(parsedData);
         validationResults.push(isValid);
       };
-  
+
       eventSource.onerror = (error) => {
         console.error("EventSource failed:", error);
         eventSource.close();
@@ -89,9 +89,8 @@ export default function BuildTrigger({
       }
       // Step 4: Return true if all nodes are valid, false otherwise
       return validationResults.every((result) => result);
-    }
-    catch(e){
-      console.log(e)
+    } catch (e) {
+      console.log(e);
       eventSource.close();
       return false;
     }
