@@ -16,6 +16,7 @@ import { Button } from "../../components/ui/button";
 import { SETTINGS_DIALOG_SUBTITLE } from "../../constants";
 import { updateFlowInDatabase } from "../../controllers/API";
 import EditFlowSettings from "../../components/EditFlowSettingsComponent";
+import { Settings2 } from "lucide-react";
 
 export default function FlowSettingsModal() {
   const [open, setOpen] = useState(true);
@@ -51,7 +52,8 @@ export default function FlowSettingsModal() {
       <DialogContent className="lg:max-w-[600px] h-[390px]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
-            <span className="pr-2">Settings</span>
+            <span className="pr-2">Settings </span>
+            <Settings2 className="w-4 h-4 mr-2 dark:text-gray-300" />
           </DialogTitle>
           <DialogDescription>{SETTINGS_DIALOG_SUBTITLE}</DialogDescription>
         </DialogHeader>
