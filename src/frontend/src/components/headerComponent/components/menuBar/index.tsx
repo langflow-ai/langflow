@@ -47,23 +47,13 @@ export const MenuBar = ({ flows, tabId }) => {
       <Link to="/">
         <ChevronLeft className="w-4" />
       </Link>
-      <Button variant="primary" size="sm">
-        {/* <RenameLabel
-          value={current_flow.name}
-          setValue={(value) => {
-            if (value !== "") {
-              let newFlow = _.cloneDeep(current_flow);
-              newFlow.name = value;
-              updateFlow(newFlow);
-            }
-          }}
-          rename={rename}
-          setRename={setRename}
-        /> */}
+      <div className="flex items-center font-medium text-sm rounded-md py-1 px-1.5 gap-0.5">
         <DropdownMenu>
-          <DropdownMenuTrigger className="gap-2 flex items-center">
-            {current_flow.name}
-            <ChevronDown className="w-4 h-4" />
+          <DropdownMenuTrigger>
+            <Button className="gap-2 flex items-center" variant="primary">
+              {current_flow.name}
+              <ChevronDown className="w-4 h-4" />
+            </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-44">
             <DropdownMenuLabel>Edit</DropdownMenuLabel>
@@ -119,7 +109,7 @@ export const MenuBar = ({ flows, tabId }) => {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </Button>
+      </div>
     </div>
   );
 };

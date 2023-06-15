@@ -644,7 +644,7 @@ export function checkUpperWords(str: string) {
 export function updateIds(newFlow, getNodeId) {
   let idsMap = {};
 
-  newFlow.nodes.forEach((n:NodeType) => {
+  newFlow.nodes.forEach((n: NodeType) => {
     // Generate a unique node ID
     let newId = getNodeId(n.data.type);
     idsMap[n.id] = newId;

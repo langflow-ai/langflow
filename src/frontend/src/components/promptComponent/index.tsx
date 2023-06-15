@@ -1,8 +1,6 @@
 import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
 import { useContext, useEffect, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
-import CodeAreaModal from "../../modals/codeAreaModal";
-import TextAreaModal from "../../modals/textAreaModal";
 import { TextAreaComponentType } from "../../types/components";
 import GenericModal from "../../modals/genericModal";
 import { TypeModal } from "../../utils";
@@ -22,6 +20,11 @@ export default function PromptAreaComponent({
       onChange("");
     }
   }, [disabled, onChange]);
+
+  useEffect(() => {
+    setMyValue(value);
+  }, [value]);
+
   return (
     <div
       className={

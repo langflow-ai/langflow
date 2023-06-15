@@ -21,6 +21,7 @@ import { alertContext } from "../../../../contexts/alertContext";
 import { updateFlowInDatabase } from "../../../../controllers/API";
 import { INPUT_STYLE } from "../../../../constants";
 import { Input } from "../../../../components/ui/input";
+import { Separator } from "../../../../components/ui/separator";
 
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);
@@ -71,14 +72,14 @@ export default function ExtraSidebar() {
   }
 
   return (
-    <div className="flex flex-col overflow-hidden scrollbar-hide h-full border-r">
+    <div className="flex flex-col overflow-hidden scrollbar-hide h-full border-r w-[200px]">
       <div className="mt-2 mb-2 w-full flex gap-2 justify-between px-2 items-center">
         <ShadTooltip delayDuration={1000} content="Import" side="top">
           <button
             className="hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center rounded-md bg-white px-2 py-2 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
             onClick={() => {
               // openPopUp(<ImportModal />);
-              uploadFlow()
+              uploadFlow();
             }}
           >
             <FileUp className="w-5 h-5 dark:text-gray-300"></FileUp>
@@ -122,9 +123,9 @@ export default function ExtraSidebar() {
           </button>
         </ShadTooltip>
       </div>
-      {/* <Separator /> */}
-      <div className="relative mt-2 flex items-center mb-2 mx-2">
-        <Input
+      <Separator />
+      <div className="relative mt-2 flex items-center mb-2 mx-auto">
+        <input
           type="text"
           name="search"
           id="search"
