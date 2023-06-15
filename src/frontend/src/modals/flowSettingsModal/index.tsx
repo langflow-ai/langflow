@@ -35,6 +35,14 @@ export default function FlowSettingsModal() {
   }
 
   function handleSaveFlow(flow) {
+    if (name !== "") {
+      let newFlow = flows.find((f) => f.id === tabId);
+      if (newFlow) {
+        newFlow.name = name;
+        newFlow.description = description;
+        updateFlow(newFlow);
+      }
+    }
     try {
       updateFlowInDatabase(flow);
       // updateFlowStyleInDataBase(flow);
@@ -73,6 +81,7 @@ export default function FlowSettingsModal() {
             onClick={() => {
               handleSaveFlow(flows.find((f) => f.id === tabId));
               setSuccessData({ title: "Changes saved successfully" });
+              closePopUp();
             }}
             type="submit"
           >

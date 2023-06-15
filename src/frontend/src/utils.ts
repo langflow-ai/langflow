@@ -41,6 +41,7 @@ import { SearxIcon } from "./icons/Searx";
 import { SlackIcon } from "./icons/Slack";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { WeaviateIcon } from "./icons/Weaviate";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -174,7 +175,7 @@ export const nodeIcons: {
   // ReadTheDocsLoader: ReadTheDocsIcon, // does not work
   Searx: SearxIcon,
   SlackDirectoryLoader: SlackIcon,
-  // Weaviate: WeaviateIcon,
+  // Weaviate: WeaviateIcon, // does not work
   // WikipediaAPIWrapper: WikipediaIcon,
   // WolframAlphaQueryRun: WolframIcon,
   // WolframAlphaAPIWrapper: WolframIcon,
