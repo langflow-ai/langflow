@@ -1,11 +1,10 @@
-import { Context, useEffect, useRef, useState, useContext } from "react";
-import ReactFlow, { useNodes } from "reactflow";
-import { ChatMessageType, ChatType } from "../../types/chat";
+import { useEffect, useRef, useState } from "react";
+import { useNodes } from "reactflow";
+import { ChatType } from "../../types/chat";
 import ChatTrigger from "./chatTrigger";
 import BuildTrigger from "./buildTrigger";
 import ChatModal from "../../modals/chatModal";
 
-import _, { set } from "lodash";
 import { getBuildStatus } from "../../controllers/API";
 import { NodeType } from "../../types/flow";
 
@@ -53,7 +52,6 @@ export default function Chat({ flow }: ChatType) {
       JSON.stringify(prevNodes) !== JSON.stringify(currentNodes)
     ) {
       setIsBuilt(false);
-      console.log("Nodes changed");
     }
 
     prevNodesRef.current = currentNodes;
