@@ -46,6 +46,12 @@ export default function BuildTrigger({
       const allNodesValid = await streamNodeData(flow);
       await enforceMinimumLoadingTime(startTime, minimumLoadingTime);
       setIsBuilt(allNodesValid);
+      if(!allNodesValid) {
+        setErrorData({
+          title: "Oops! Looks like you missed something",
+          list: ["Check nodes and retry. Hover over 🔴 node for status."],
+        });
+      }
     } catch (error) {
       console.error("Error:", error);
     } finally {
