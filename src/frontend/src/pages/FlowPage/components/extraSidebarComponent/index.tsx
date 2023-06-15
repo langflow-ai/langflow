@@ -72,7 +72,7 @@ export default function ExtraSidebar() {
   }
 
   return (
-    <div className="flex flex-col overflow-hidden scrollbar-hide h-full border-r">
+    <div className="w-52 flex flex-col overflow-hidden scrollbar-hide h-full border-r">
       <div className="mt-2 mb-2 w-full flex gap-2 justify-between px-2 items-center">
         <ShadTooltip delayDuration={1000} content="Import" side="top">
           <button
@@ -132,7 +132,7 @@ export default function ExtraSidebar() {
           placeholder="Search Nodes"
           className={
             INPUT_STYLE +
-            "border-1 dark:border-slate-600 dark:border-0.5 dark:ring-0 focus-visible:dark:ring-0 focus-visible:dark:ring-offset-1 rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            "w-full border-1 dark:border-slate-600 dark:border-0.5 dark:ring-0 focus-visible:dark:ring-0 focus-visible:dark:ring-offset-1 rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
           }
           onChange={(e) => {
             handleSearchInput(e.target.value);
@@ -189,7 +189,7 @@ export default function ExtraSidebar() {
                             }}
                           >
                             <div className="flex w-full justify-between text-sm px-3 py-1 bg-white dark:bg-gray-800 items-center border-dashed border-gray-400 dark:border-gray-600 border-l-0 rounded-md rounded-l-none border">
-                              <span className="text-black dark:text-white w-3/4 pr-1 truncate text-xs">
+                              <span className="text-black dark:text-white w-full pr-1 truncate text-xs">
                                 {t}
                               </span>
                               <Bars2Icon className="w-4 h-6  text-gray-400 dark:text-gray-600" />
