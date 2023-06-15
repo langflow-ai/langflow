@@ -133,7 +133,7 @@ export default function ExtraSidebar() {
           >
             <Save
               className={
-                "w-5 h-5" + (isPending ? " text-muted-foreground" : " ")
+                "w-5 h-5" + (isPending ? " " : " text-muted-foreground")
               }
             ></Save>
           </button>
