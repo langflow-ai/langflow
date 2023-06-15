@@ -10,6 +10,7 @@ from langflow.graph.vertex.types import (
 )
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
+from langflow.utils.logger import logger
 
 
 class Graph:
@@ -30,7 +31,7 @@ class Graph:
         Creates a graph from a payload.
 
         Args:
-            payload (Dict): The payload to create the graph from.
+            payload (Dict): The payload to create the graph from.˜`
 
         Returns:
             Graph: The created graph.
