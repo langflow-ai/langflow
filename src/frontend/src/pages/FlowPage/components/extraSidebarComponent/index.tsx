@@ -24,7 +24,7 @@ import { Separator } from "../../../../components/ui/separator";
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);
   const { openPopUp } = useContext(PopUpContext);
-  const { flows, tabId, uploadFlow, updateFlow, tabsState, setTabsState } =
+  const { flows, tabId, uploadFlow, tabsState, saveFlow } =
     useContext(TabsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
@@ -59,27 +59,6 @@ export default function ExtraSidebar() {
       });
       return ret;
     });
-  }
-
-  async function handleSaveFlow(flow) {
-    try {
-      const updatedFlow = await updateFlowInDatabase(flow);
-      if (updatedFlow) {
-        updateFlow(updatedFlow);
-        setTabsState((prev) => {
-          console.log(prev);
-          return {
-            ...prev,
-            [tabId]: {
-              isPending: false,
-            },
-          };
-        });
-      }
-      // updateFlowStyleInDataBase(flow);
-    } catch (err) {
-      setErrorData(err);
-    }
   }
 
   return (
@@ -126,7 +105,7 @@ export default function ExtraSidebar() {
           <button
             className="hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center transition-all shadow-sm duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
             onClick={(event) => {
-              handleSaveFlow(flows.find((f) => f.id === tabId));
+              saveFlow(flows.find((f) => f.id === tabId));
               setSuccessData({ title: "Changes saved successfully" });
             }}
             disabled={!isPending}

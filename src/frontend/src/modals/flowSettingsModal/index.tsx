@@ -22,7 +22,7 @@ export default function FlowSettingsModal() {
   const { closePopUp } = useContext(PopUpContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const ref = useRef();
-  const { flows, tabId, updateFlow, setTabsState } = useContext(TabsContext);
+  const { flows, tabId, updateFlow, setTabsState, saveFlow } = useContext(TabsContext);
   const maxLength = 50;
   function setModalOpen(x: boolean) {
     setOpen(x);
@@ -33,25 +33,6 @@ export default function FlowSettingsModal() {
     }
   }
 
-  async function handleSaveFlow(flow) {
-    try {
-      const updatedFlow = await updateFlowInDatabase(flow);
-      if (updatedFlow) {
-        updateFlow(updatedFlow);
-        setTabsState((prev) => {
-          return {
-            ...prev,
-            [tabId]: {
-              isPending: false,
-            },
-          };
-        });
-      }
-      // updateFlowStyleInDataBase(flow);
-    } catch (err) {
-      setErrorData(err);
-    }
-  }
 
   const [name, setName] = useState(flows.find((f) => f.id === tabId).name);
   const [description, setDescription] = useState(
@@ -82,7 +63,7 @@ export default function FlowSettingsModal() {
         <DialogFooter>
           <Button
             onClick={() => {
-              handleSaveFlow(flows.find((f) => f.id === tabId));
+              saveFlow(flows.find((f) => f.id === tabId));
               setSuccessData({ title: "Changes saved successfully" });
               closePopUp();
             }}
