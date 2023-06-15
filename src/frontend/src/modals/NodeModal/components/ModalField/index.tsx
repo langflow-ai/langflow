@@ -70,7 +70,6 @@ export default function ModalField({
               }
               onChange={(t: string[]) => {
                 data.node.template[name].value = t;
-                
               }}
             />
           ) : data.node.template[name].multiline ? (
@@ -79,7 +78,6 @@ export default function ModalField({
               value={data.node.template[name].value ?? ""}
               onChange={(t: string) => {
                 data.node.template[name].value = t;
-                
               }}
             />
           ) : (
@@ -89,7 +87,6 @@ export default function ModalField({
               value={data.node.template[name].value ?? ""}
               onChange={(t) => {
                 data.node.template[name].value = t;
-                
               }}
             />
           )}
@@ -103,7 +100,6 @@ export default function ModalField({
             setEnabled={(t) => {
               data.node.template[name].value = t;
               setEnabled(t);
-              
             }}
           />
         </div>
@@ -114,7 +110,6 @@ export default function ModalField({
             value={data.node.template[name].value ?? ""}
             onChange={(t) => {
               data.node.template[name].value = t;
-              
             }}
           />
         </div>
@@ -133,7 +128,6 @@ export default function ModalField({
             value={data.node.template[name].value ?? ""}
             onChange={(t) => {
               data.node.template[name].value = t;
-              
             }}
           />
         </div>
@@ -149,7 +143,6 @@ export default function ModalField({
             suffixes={data.node.template[name].suffixes}
             onFileChange={(t: string) => {
               data.node.template[name].content = t;
-              
             }}
           ></InputFileComponent>
         </div>
@@ -160,7 +153,6 @@ export default function ModalField({
             value={data.node.template[name].value ?? ""}
             onChange={(t: string) => {
               data.node.template[name].value = t;
-              
             }}
           />
         </div>
@@ -171,7 +163,6 @@ export default function ModalField({
             value={data.node.template[name].value ?? ""}
             onChange={(t: string) => {
               data.node.template[name].value = t;
-              
             }}
           />
         </div>

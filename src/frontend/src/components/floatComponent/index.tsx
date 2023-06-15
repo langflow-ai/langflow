@@ -27,7 +27,7 @@ export default function FloatComponent({
   useEffect(() => {
     setMyValue(value);
   }, [value]);
-  
+
   return (
     <div
       className={

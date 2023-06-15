@@ -549,7 +549,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         uploadFlows,
         uploadFlow,
         getNodeId,
-        paste
+        paste,
       }}
     >
       {children}

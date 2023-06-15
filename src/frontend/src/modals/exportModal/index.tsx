@@ -20,6 +20,7 @@ import EditFlowSettings from "../../components/nameInputComponent";
 import { Label } from "../../components/ui/label";
 import { Input } from "../../components/ui/input";
 import { Textarea } from "../../components/ui/textarea";
+import { Download } from "lucide-react";
 
 export default function ExportModal() {
   const [open, setOpen] = useState(true);
@@ -48,7 +49,7 @@ export default function ExportModal() {
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Export</span>
-            <ArrowDownTrayIcon
+            <Download
               className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
               aria-hidden="true"
             />
