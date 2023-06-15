@@ -34,16 +34,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
       setIsMaxLength(false);
     }
 
-    if (value !== "") {
-      let newFlow = flows.find((f) => f.id === tabId);
-      if (newFlow) {
-        newFlow.name = value;
-        setName(value);
-        updateFlow(newFlow);
-      }
-    } else {
-      setName(value);
-    }
+    setName(value)
   };
 
   const handleDescriptionChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
