@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Type, Union
-
+from langchain.chains.base import Chain
 from pydantic import BaseModel
 
 from langflow.template.field.base import TemplateField
@@ -81,5 +81,24 @@ class LangChainTypeCreator(BaseModel, ABC):
             )
 
         signature.add_extra_fields()
+        signature.add_extra_base_classes()
 
         return signature
+
+
+class CustomChain(Chain, ABC):
+    """Custom chain"""
+
+    @staticmethod
+    def function_name():
+        return "CustomChain"
+
+    @classmethod
+    def initialize(cls, *args, **kwargs):
+        pass
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def run(self, *args, **kwargs):
+        return super().run(*args, **kwargs)
