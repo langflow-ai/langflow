@@ -179,7 +179,7 @@ def process_tweaks(graph_data: Dict, tweaks: Dict):
     # the dict of tweaks contains the name of a certain parameter and the value to be tweaked
 
     # We need to process the graph data to add the tweaks
-    if "data" not in graph_data or "nodes" in graph_data["data"]:
+    if "data" not in graph_data and "nodes" in graph_data:
         nodes = graph_data["nodes"]
     else:
         nodes = graph_data["data"]["nodes"]
