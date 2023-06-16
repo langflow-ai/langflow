@@ -4,6 +4,7 @@ import { TabsContext } from "../../contexts/tabsContext";
 import { Button } from "../../components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { CardComponent } from "../../components/cardComponent";
+import { USER_PROJECTS_HEADER } from "../../constants";
 export default function HomePage() {
   const { flows, setTabId, downloadFlows, uploadFlows, addFlow, removeFlow } =
     useContext(TabsContext);
@@ -16,7 +17,7 @@ export default function HomePage() {
       <div className="w-full flex justify-between py-12 pb-2 px-6">
         <span className="text-2xl flex items-center justify-center gap-2 font-semibold">
           <Home className="w-6" />
-          My Collection
+          {USER_PROJECTS_HEADER}
         </span>
         <div className="flex gap-2">
           <Button

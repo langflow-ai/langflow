@@ -1,5 +1,5 @@
-import { SunIcon, MoonIcon, BellIcon, Home, Users2 } from "lucide-react";
-import { useContext, useState, useEffect } from "react";
+import { BellIcon, Home, Users2 } from "lucide-react";
+import { useContext } from "react";
 import { FaGithub } from "react-icons/fa";
 import { Button } from "../ui/button";
 import { TabsContext } from "../../contexts/tabsContext";
@@ -10,6 +10,7 @@ import { PopUpContext } from "../../contexts/popUpContext";
 import { typesContext } from "../../contexts/typesContext";
 import MenuBar from "./components/menuBar";
 import { Link, useLocation, useParams } from "react-router-dom";
+import { USER_PROJECTS_HEADER } from "../../constants";
 
 export default function Header() {
   const { flows, addFlow, tabId } = useContext(TabsContext);
@@ -39,7 +40,7 @@ export default function Header() {
             size="sm"
           >
             <Home className="w-4 h-4" />
-            <div className="flex-1">My Projects</div>
+            <div className="flex-1">{USER_PROJECTS_HEADER}</div>
           </Button>
         </Link>
         <Link to="/community">

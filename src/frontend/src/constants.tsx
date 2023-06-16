@@ -399,3 +399,10 @@ export const NOUNS: string[] = [
   "yalow",
   "yonath",
 ];
+
+/**
+ * Header text for user projects
+ * @constant
+ *
+ */
+export const USER_PROJECTS_HEADER = "My Collection";
