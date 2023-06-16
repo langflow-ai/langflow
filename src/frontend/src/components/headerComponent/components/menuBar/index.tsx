@@ -98,8 +98,8 @@ export const MenuBar = ({ flows, tabId }) => {
               Redo
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuLabel>Projects</DropdownMenuLabel>
-            <DropdownMenuRadioGroup
+            {/* <DropdownMenuLabel>Projects</DropdownMenuLabel> */}
+            {/* <DropdownMenuRadioGroup className="max-h-full overflow-scroll"
               value={tabId}
               onValueChange={(value) => {
                 setTabId(value);
@@ -120,7 +120,7 @@ export const MenuBar = ({ flows, tabId }) => {
                   </Link>
                 );
               })}
-            </DropdownMenuRadioGroup>
+            </DropdownMenuRadioGroup> */}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
