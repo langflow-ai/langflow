@@ -1,5 +1,6 @@
 import sys
 import time
+from fastapi import FastAPI
 import httpx
 from multiprocess import Process, cpu_count  # type: ignore
 import platform
@@ -145,18 +146,16 @@ def serve(
     update_settings(
         config, dev=dev, database_url=database_url, remove_api_keys=remove_api_keys
     )
-    app = create_app()
     # get the directory of the current file
     if not path:
         frontend_path = Path(__file__).parent
         static_files_dir = frontend_path / "frontend"
     else:
         static_files_dir = Path(path)
-    app.mount(
-        "/",
-        StaticFiles(directory=static_files_dir, html=True),
-        name="static",
-    )
+
+    app = create_app(static_files_dir)
+    setup_static_files(app, static_files_dir)
+
     options = {
         "bind": f"{host}:{port}",
         "workers": get_number_of_workers(workers),
@@ -178,6 +177,21 @@ def serve(
     print_banner(host, port)
     if open_browser:
         webbrowser.open(f"http://{host}:{port}")
+
+
+def setup_static_files(app: FastAPI, static_files_dir: str):
+    """
+    Setup the static files directory.
+
+    Args:
+        app (FastAPI): FastAPI app.
+        path (str): Path to the static files directory.
+    """
+    app.mount(
+        "/",
+        StaticFiles(directory=static_files_dir, html=True),
+        name="static",
+    )
 
 
 def print_banner(host, port):

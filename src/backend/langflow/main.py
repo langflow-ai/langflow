@@ -1,11 +1,12 @@
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from langflow.api import router
 from langflow.database.base import create_db_and_tables
 
 
-def create_app():
+def create_app(static_path: str = "static"):
     """Create the FastAPI app and include the router."""
     app = FastAPI()
 
@@ -16,6 +17,10 @@ def create_app():
     @app.get("/health")
     def get_health():
         return {"status": "OK"}
+
+    @app.exception_handler(404)
+    async def custom_404_handler(request, __):
+        return FileResponse(f"{static_path}/index.html")
 
     app.add_middleware(
         CORSMiddleware,
