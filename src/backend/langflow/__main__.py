@@ -6,7 +6,7 @@ from multiprocess import Process, cpu_count  # type: ignore
 import platform
 from pathlib import Path
 from typing import Optional
-
+import socket
 from rich.panel import Panel
 from rich import box
 from rich import print as rprint
@@ -168,9 +168,13 @@ def serve(
     )
     webapp_process.start()
     status_code = 0
+    # check if port is being used
+    if is_port_in_use(port, host):
+        port = get_free_port(port)
     while status_code != 200:
         try:
-            status_code = httpx.get(f"http://{host}:{port}").status_code
+            status_code = httpx.get(f"http://{host}:{port}/health").status_code
+
         except Exception:
             time.sleep(1)
 
@@ -179,7 +183,7 @@ def serve(
         webbrowser.open(f"http://{host}:{port}")
 
 
-def setup_static_files(app: FastAPI, static_files_dir: str):
+def setup_static_files(app: FastAPI, static_files_dir: Path):
     """
     Setup the static files directory.
 
@@ -192,6 +196,36 @@ def setup_static_files(app: FastAPI, static_files_dir: str):
         StaticFiles(directory=static_files_dir, html=True),
         name="static",
     )
+
+
+def is_port_in_use(port, host="localhost"):
+    """
+    Check if a port is in use.
+
+    Args:
+        port (int): The port number to check.
+        host (str): The host to check the port on. Defaults to 'localhost'.
+
+    Returns:
+        bool: True if the port is in use, False otherwise.
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex((host, port)) == 0
+
+
+def get_free_port(port):
+    """
+    Given a used port, find a free port.
+
+    Args:
+        port (int): The port number to check.
+
+    Returns:
+        int: A free port number.
+    """
+    while is_port_in_use(port):
+        port += 1
+    return port
 
 
 def print_banner(host, port):
