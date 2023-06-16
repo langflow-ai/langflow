@@ -172,7 +172,7 @@ def load_flow_from_json(path: str, build=True):
     return graph
 
 
-def process_tweaks(graph_data: dict, tweaks: dict):
+def process_tweaks(graph_data: Dict, tweaks: Dict):
     """This function is used to tweak the graph data using the node id and the tweaks dict"""
     # the tweaks dict is a dict of dicts
     # the key is the node id and the value is a dict of the tweaks
