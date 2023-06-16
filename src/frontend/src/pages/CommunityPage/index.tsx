@@ -44,7 +44,7 @@ export default function CommunityPage() {
           Community Examples
         </span>
         <div className="flex gap-2">
-          <a href="https://github.com/logspace-ai/langflow_examples">
+          <a href="https://github.com/logspace-ai/langflow_examples" target="_blank" rel="noreferrer">
             <Button variant="primary">
               <GithubIcon className="w-4 mr-2" />
               Add Your Example
