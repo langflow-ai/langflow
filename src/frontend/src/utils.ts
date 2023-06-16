@@ -493,7 +493,7 @@ export function removeApiKeys(flow: FlowType): FlowType {
   let cleanFLow = _.cloneDeep(flow);
   cleanFLow.data.nodes.forEach((node) => {
     for (const key in node.data.node.template) {
-      if (key.includes("api")) {
+      if (node.data.node.template[key].password!==undefined) {
         node.data.node.template[key].value = "";
       }
     }
