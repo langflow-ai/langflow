@@ -66,7 +66,7 @@ export const getPythonApiCode = (flow: FlowType): string => {
 
 BASE_API_URL = "${window.location.protocol}//${
     window.location.host
-  }/ap1/v1/predict"
+  }/api/v1/predict"
 FLOW_ID = "${flowId}"
 # You can tweak the flow by adding a tweaks dictionary
 # e.g {"OpenAI-XXXXX": {"model_name": "gpt-4"}}
