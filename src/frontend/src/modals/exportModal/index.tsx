@@ -34,7 +34,7 @@ export default function ExportModal() {
       }, 300);
     }
   }
-  const [checked, setChecked] = useState(true);
+  const [checked, setChecked] = useState(false);
   const [name, setName] = useState(flows.find((f) => f.id === tabId).name);
   const [description, setDescription] = useState(
     flows.find((f) => f.id === tabId).description
