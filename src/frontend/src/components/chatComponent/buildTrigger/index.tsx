@@ -48,7 +48,7 @@ export default function BuildTrigger({
       if(!allNodesValid) {
         setErrorData({
           title: "Oops! Looks like you missed something",
-          list: ["Check nodes and retry. Hover over 🔴 node for status."],
+          list: ["Check components and retry. Hover over component status icon 🔴 to inspect."],
         });
       }
     } catch (error) {
