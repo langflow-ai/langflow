@@ -51,7 +51,8 @@ export function TypesProvider({ children }: { children: ReactNode }) {
           );
           // Set the types by reducing over the keys of the result data and updating the accumulator.
           setTypes(
-            Object.keys(result.data).reduce((acc, curr) => {
+            // Reverse the keys so the tool world does not overlap
+            Object.keys(result.data).reverse().reduce((acc, curr) => {
               Object.keys(result.data[curr]).forEach((c: keyof APIKindType) => {
                 acc[c] = curr;
                 // Add the base classes to the accumulator as well.
