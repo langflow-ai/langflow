@@ -346,7 +346,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
    */
   function removeFlow(id: string) {
     const index = flows.findIndex((flow) => flow.id === id);
-    console.log(index);
     if (index >= 0) {
       deleteFlowFromDatabase(id).then(() => {
         setFlows(flows.filter((flow) => flow.id !== id));
