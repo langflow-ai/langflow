@@ -136,7 +136,7 @@ export default function BuildTrigger({
     >
      <div className={`fixed right-4` + (isBuilt ? " bottom-20" : " bottom-4")}>
         <div
-          className="flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full shadow-md hover:shadow-sm shadow-[#00000063] hover:shadow-[#00000063]
+          className="flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full shadow-md shadow-[#0000002a] hover:shadow-[#00000032]
            bg-[#E2E7EE] dark:border-gray-600 cursor-pointer"
           onClick={() => {
             handleBuild(flow);
@@ -148,7 +148,7 @@ export default function BuildTrigger({
                 // Render your loading animation here when isBuilding is true
                 <Loading strokeWidth={1.5} style={{ color: "white" }} />
               ) : (
-                <Zap className="sh-6 w-6 fill-[#884cb1] stroke-1 stroke-[#884cb1]"/>
+                <Zap className="sh-6 w-6 fill-orange-400 stroke-1 stroke-orange-400"/>
               )}
             </div>
           </button>

@@ -1,5 +1,6 @@
 import { Transition } from "@headlessui/react";
 import { MessagesSquare } from "lucide-react";
+
 import { alertContext } from "../../../contexts/alertContext";
 import { useContext } from "react";
 
@@ -31,15 +32,14 @@ export default function ChatTrigger({ open, setOpen, isBuilt }) {
 
 <div className="absolute bottom-4 right-3">
         <div
-          className="
-          rounded-full shadow-md hover:shadow-sm shadow-[#00000063] hover:shadow-[#00000063]
-          flex justify-center items-center w-12 h-12 bg-blue-500 dark:border-gray-600 cursor-pointer"
+          className="flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full shadow-md shadow-[#0000002a] hover:shadow-[#00000032]
+          bg-[#E2E7EE] dark:border-gray-600 cursor-pointer"
           onClick={handleClick}
         >
           <button>
             <div className="flex gap-3">
               <MessagesSquare
-                className="h-6 w-6  text-blue-100 fill-blue-100"
+                className="pth-6 w-6 fill-[#5c8be1] stroke-1 stroke-[#5c8be1]"
                 style={{ color: "white" }}
                 strokeWidth={1.5}
               />
