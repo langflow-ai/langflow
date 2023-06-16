@@ -252,7 +252,11 @@ class VectorStoreRouterAgent(CustomAgentExecutor):
     ):
         """Construct a vector store router agent from an LLM and tools."""
 
-        tools = vectorstoreroutertoolkit.get_tools()
+        tools = (
+            vectorstoreroutertoolkit
+            if isinstance(vectorstoreroutertoolkit, list)
+            else vectorstoreroutertoolkit.get_tools()
+        )
         prompt = ZeroShotAgent.create_prompt(tools, prefix=VECTORSTORE_ROUTER_PREFIX)
         llm_chain = LLMChain(
             llm=llm,
