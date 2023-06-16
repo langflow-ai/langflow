@@ -1,39 +1,18 @@
-import {
-  BugAntIcon,
-  Cog6ToothIcon,
-  InformationCircleIcon,
-  TrashIcon,
-} from "@heroicons/react/24/outline";
-
-import {
-  CheckCircleIcon,
-  EllipsisHorizontalCircleIcon,
-  ExclamationCircleIcon,
-} from "@heroicons/react/24/solid";
-
-import {
-  classNames,
-  nodeColors,
-  nodeIcons,
-  toNormalCase,
-  toTitleCase,
-} from "../../utils";
+import { classNames, nodeColors, nodeIcons, toTitleCase } from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
 import { typesContext } from "../../contexts/typesContext";
-import { useContext, useState, useEffect, useRef, Fragment } from "react";
+import { useContext, useState, useEffect, useRef } from "react";
 import { NodeDataType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import NodeModal from "../../modals/NodeModal";
-import { useCallback } from "react";
-import { TabsContext } from "../../contexts/tabsContext";
-import { debounce } from "../../utils";
 import Tooltip from "../../components/TooltipComponent";
 import { NodeToolbar } from "reactflow";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 
 import ShadTooltip from "../../components/ShadTooltipComponent";
-import { postValidateNode } from "../../controllers/API";
+import { useSSE } from "../../contexts/SSEContext";
+
 export default function GenericNode({
   data,
   selected,
@@ -44,46 +23,30 @@ export default function GenericNode({
   const { setErrorData } = useContext(alertContext);
   const showError = useRef(true);
   const { types, deleteNode } = useContext(typesContext);
-  const { openPopUp } = useContext(PopUpContext);
+
+  const { closePopUp, openPopUp } = useContext(PopUpContext);
 
   const Icon = nodeIcons[data.type] || nodeIcons[types[data.type]];
   const [validationStatus, setValidationStatus] = useState(null);
   // State for outline color
-  const [isValid, setIsValid] = useState(false);
-  const { save } = useContext(TabsContext);
-  const { reactFlowInstance } = useContext(typesContext);
-  const [params, setParams] = useState([]);
+  const { sseData, isBuilding } = useSSE();
 
+  // useEffect(() => {
+  //   if (reactFlowInstance) {
+  //     setParams(Object.values(reactFlowInstance.toObject()));
+  //   }
+  // }, [save]);
+
+  // New useEffect to watch for changes in sseData and update validation status
   useEffect(() => {
-    if (reactFlowInstance) {
-      setParams(Object.values(reactFlowInstance.toObject()));
+    const relevantData = sseData[data.id];
+    if (relevantData) {
+      // Extract validation information from relevantData and update the validationStatus state
+      setValidationStatus(relevantData);
+    } else {
+      setValidationStatus(null);
     }
-  }, [save]);
-
-  const validateNode = useCallback(
-    debounce(async () => {
-      try {
-        const response = await postValidateNode(
-          data.id,
-          reactFlowInstance.toObject()
-        );
-
-        if (response.status === 200) {
-          let jsonResponseParsed = await JSON.parse(response.data);
-          setValidationStatus(jsonResponseParsed);
-        }
-      } catch (error) {
-        // console.error("Error validating node:", error);
-        setValidationStatus("error");
-      }
-    }, 1000), // Adjust the debounce delay (500ms) as needed
-    [reactFlowInstance, data.id]
-  );
-  useEffect(() => {
-    if (params.length > 0) {
-      validateNode();
-    }
-  }, [params, validateNode]);
+  }, [sseData, data.id]);
 
   if (!Icon) {
     if (showError.current) {
@@ -98,6 +61,8 @@ export default function GenericNode({
     return;
   }
 
+  useEffect(() => {}, [closePopUp, data.node.template]);
+
   return (
     <>
       <NodeToolbar>
@@ -110,11 +75,11 @@ export default function GenericNode({
 
       <div
         className={classNames(
-          selected ? "border border-blue-500" : "border dark:border-gray-700",
+          selected ? "border border-ring" : "border dark:border-gray-700",
           "prompt-node relative flex w-96 flex-col justify-center rounded-lg bg-white dark:bg-gray-900"
         )}
       >
-        <div className="flex w-full items-center justify-between gap-8 rounded-t-lg border-b bg-gray-50 p-4 dark:border-b-gray-700 dark:bg-gray-800 dark:text-white ">
+        <div className="flex w-full items-center justify-between gap-8 rounded-t-lg border-b bg-muted p-4 dark:border-b-gray-700 dark:bg-gray-800 dark:text-white ">
           <div className="flex w-full items-center gap-2 truncate text-lg">
             <Icon
               className="h-10 w-10 rounded p-1"
@@ -124,7 +89,7 @@ export default function GenericNode({
             />
             <div className="ml-2 truncate">
               <ShadTooltip delayDuration={1500} content={data.type}>
-                <div className="ml-2 truncate">{data.type}</div>
+                <div className="ml-2 truncate text-gray-800">{data.type}</div>
               </ShadTooltip>
             </div>
           </div>
@@ -172,7 +137,7 @@ export default function GenericNode({
                   ></div>
                   <div
                     className={classNames(
-                      !validationStatus
+                      !validationStatus || isBuilding
                         ? "w-4 h-4 rounded-full  bg-yellow-500 opacity-100"
                         : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
                       "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
@@ -184,8 +149,8 @@ export default function GenericNode({
           </div>
         </div>
 
-        <div className="h-full w-full py-5">
-          <div className="w-full px-5 pb-3 text-sm text-gray-500 dark:text-gray-300">
+        <div className="h-full w-full py-5 text-gray-800">
+          <div className="w-full px-5 pb-3 text-sm text-muted-foreground">
             {data.node.description}
           </div>
 

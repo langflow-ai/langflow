@@ -43,7 +43,7 @@ export default function PromptAreaModal({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-gray-500 dark:bg-gray-600 dark:bg-opacity-75 bg-opacity-75 transition-opacity" />
+          <div className="fixed inset-0 bg-ring dark:bg-gray-600 dark:bg-opacity-75 bg-opacity-75 transition-opacity" />
         </Transition.Child>
 
         <div className="fixed inset-0 z-10 overflow-y-auto">
@@ -87,7 +87,7 @@ export default function PromptAreaModal({
                       </Dialog.Title>
                     </div>
                   </div>
-                  <div className="h-full w-full bg-gray-200 overflow-auto dark:bg-gray-900 p-4 gap-4 flex flex-row justify-center items-center">
+                  <div className="h-full w-full bg-accent overflow-auto dark:bg-gray-900 p-4 gap-4 flex flex-row justify-center items-center">
                     <div className="flex h-full w-full">
                       <div className="overflow-hidden px-4 py-5 sm:p-6 w-full h-full rounded-lg bg-white dark:bg-gray-800 shadow">
                         <textarea
@@ -105,7 +105,7 @@ export default function PromptAreaModal({
                   <div className="bg-gray-200 dark:bg-gray-900 w-full pb-3 flex flex-row-reverse px-4">
                     <button
                       type="button"
-                      className="inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm"
+                      className="inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-ring focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:ring-offset-1 sm:ml-3 sm:w-auto sm:text-sm"
                       onClick={() => {
                         checkPrompt(myValue)
                           .then((apiReturn) => {
