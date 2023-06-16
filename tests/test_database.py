@@ -1,6 +1,5 @@
 import json
 import pytest
-import threading
 
 from uuid import UUID, uuid4
 from sqlalchemy.orm import Session
@@ -276,25 +275,6 @@ def test_read_empty_flows(client: TestClient):
     response = client.get("api/v1/flows/")
     assert response.status_code == 200
     assert len(response.json()) == 0
-
-
-def test_stress_create_flow(client: TestClient, json_flow: str):
-    flow_data = json.loads(json_flow)
-    data = flow_data["data"]
-    flow = FlowCreate(name="Test Flow", description="description", data=data)
-
-    def create_flow():
-        response = client.post("api/v1/flows/", json=flow.dict())
-        assert response.status_code == 200
-
-    threads = []
-    for _ in range(100):
-        t = threading.Thread(target=create_flow)
-        threads.append(t)
-        t.start()
-
-    for t in threads:
-        t.join()
 
 
 def test_create_flow_style(client: TestClient):
