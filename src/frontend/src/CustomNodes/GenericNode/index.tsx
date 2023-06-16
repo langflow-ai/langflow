@@ -29,7 +29,7 @@ export default function GenericNode({
   const Icon = nodeIcons[data.type] || nodeIcons[types[data.type]];
   const [validationStatus, setValidationStatus] = useState(null);
   // State for outline color
-  const { sseData,isBuilding } = useSSE();
+  const { sseData, isBuilding } = useSSE();
 
   // useEffect(() => {
   //   if (reactFlowInstance) {

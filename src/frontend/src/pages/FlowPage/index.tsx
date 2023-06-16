@@ -11,14 +11,14 @@ export default function FlowPage() {
     setTabId(id);
   }, [id]);
 
-    // Initialize state variable for the version
-    const [version, setVersion] = useState("");
-    useEffect(() => {
-      getVersion().then((data) => {
-        setVersion(data.version);
-      });
-    }, []);
-    
+  // Initialize state variable for the version
+  const [version, setVersion] = useState("");
+  useEffect(() => {
+    getVersion().then((data) => {
+      setVersion(data.version);
+    });
+  }, []);
+
   return (
     <div className="h-full w-full overflow-hidden">
       {flows.length > 0 &&
