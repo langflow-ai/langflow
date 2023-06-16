@@ -69,7 +69,6 @@ export default function Page({ flow }: { flow: FlowType }) {
         !disableCopyPaste
       ) {
         event.preventDefault();
-        console.log(_.cloneDeep(lastSelection));
         setLastCopiedSelection(_.cloneDeep(lastSelection));
       }
       if (
@@ -370,6 +369,9 @@ export default function Page({ flow }: { flow: FlowType }) {
                   }}
                   onPaneMouseLeave={() => {
                     setDisableCopyPaste(true);
+                  }}
+                  onPaneMouseEnter={()=>{
+                    setDisableCopyPaste(false);
                   }}
                   onNodesChange={onNodesChangeMod}
                   onEdgesChange={onEdgesChangeMod}
