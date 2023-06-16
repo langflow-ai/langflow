@@ -302,7 +302,7 @@ class InitializeAgent(CustomAgentExecutor):
 CUSTOM_AGENTS = {
     "JsonAgent": JsonAgent,
     "CSVAgent": CSVAgent,
-    "initialize_agent": InitializeAgent,
+    "AgentInitializer": InitializeAgent,
     "VectorStoreAgent": VectorStoreAgent,
     "VectorStoreRouterAgent": VectorStoreRouterAgent,
     "SQLAgent": SQLAgent,
