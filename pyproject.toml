@@ -1,11 +1,12 @@
 [tool.poetry]
 name = "langflow"
-version = "0.0.88"
+version = "0.1.0"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
+    "Cristhian Zanforlin <cristhian.lousa@gmail.com>",
     "Gabriel Almeida <gabriel@logspace.ai>",
-    "Ibis Prevedello <ibiscp@gmail.com>",
+    "Gustavo Schaedler <gustavopoa@gmail.com>",
     "Lucas Eduoli <lucaseduoli@gmail.com>",
     "Otávio Anovazzi <otavio2204@gmail.com>",
 ]
@@ -29,7 +30,7 @@ google-search-results = "^2.4.1"
 google-api-python-client = "^2.79.0"
 typer = "^0.7.0"
 gunicorn = "^20.1.0"
-langchain = "^0.0.200"
+langchain = "^0.0.202"
 openai = "^0.27.8"
 types-pyyaml = "^6.0.12.8"
 pandas = "^1.5.3"
