@@ -16,7 +16,7 @@ from cachetools import LRUCache
 
 router = APIRouter(tags=["Chat"])
 chat_manager = ChatManager()
-flow_data_store = LRUCache(maxsize=10)
+flow_data_store: LRUCache = LRUCache(maxsize=10)
 
 
 @router.websocket("/chat/{client_id}")
