@@ -1,4 +1,5 @@
 import ast
+import contextlib
 import importlib
 import types
 from typing import Dict
@@ -147,11 +148,8 @@ def create_function(code, function_name):
     code_obj = compile(
         ast.Module(body=[function_code], type_ignores=[]), "<string>", "exec"
     )
-    try:
+    with contextlib.suppress(Exception):
         exec(code_obj, exec_globals, locals())
-    except Exception:
-        pass
-
     exec_globals[function_name] = locals()[function_name]
 
     # Return a function that imports necessary modules and calls the target function
