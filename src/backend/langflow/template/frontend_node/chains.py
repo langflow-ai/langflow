@@ -33,6 +33,14 @@ class ChainFrontendNode(FrontendNode):
             field.show = True
             field.advanced = True
 
+        # We should think of a way to deal with this later
+        # if field.field_type == "PromptTemplate":
+        #     field.field_type = "str"
+        #     field.multiline = True
+        #     field.show = True
+        #     field.advanced = False
+        #     field.value = field.value.template
+
         # Separated for possible future changes
         if field.name == "prompt" and field.value is None:
             field.required = True
@@ -126,7 +134,7 @@ class TimeTravelGuideChainNode(FrontendNode):
             ),
         ],
     )
-    description: str = "Time travel guide chain to be used in the flow."
+    description: str = "Time travel guide chain."
     base_classes: list[str] = [
         "LLMChain",
         "BaseCustomChain",
@@ -197,7 +205,7 @@ class CombineDocsChainNode(FrontendNode):
             ),
         ],
     )
-    description: str = """Construct a zero shot agent from an LLM and tools."""
+    description: str = """Load question answering chain."""
     base_classes: list[str] = ["BaseCombineDocumentsChain", "function"]
 
     def to_dict(self):

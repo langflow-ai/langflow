@@ -1,6 +1,6 @@
-from typing import Any, Dict, List, Union
-
-from pydantic import BaseModel, validator
+from typing import Any, Dict, List, Optional, Union
+from langflow.database.models.flow import FlowCreate, FlowRead
+from pydantic import BaseModel, Field, validator
 
 
 class GraphData(BaseModel):
@@ -23,13 +23,30 @@ class PredictRequest(BaseModel):
     """Predict request schema."""
 
     message: str
-    exported_flow: ExportedFlow
+    tweaks: Optional[Dict[str, Dict[str, str]]] = Field(default_factory=dict)
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "message": "Hello, how are you?",
+                "tweaks": {
+                    "dndnode_986363f0-4677-4035-9f38-74b94af5dd78": {
+                        "name": "A tool name",
+                        "description": "A tool description",
+                    },
+                    "dndnode_986363f0-4677-4035-9f38-74b94af57378": {
+                        "template": "A {template}",
+                    },
+                },
+            }
+        }
 
 
 class PredictResponse(BaseModel):
     """Predict response schema."""
 
     result: str
+    intermediate_steps: str = ""
 
 
 class ChatMessage(BaseModel):
@@ -68,3 +85,19 @@ class FileResponse(ChatMessage):
         if v not in ["image", "csv"]:
             raise ValueError("data_type must be image or csv")
         return v
+
+
+class FlowListCreate(BaseModel):
+    flows: List[FlowCreate]
+
+
+class FlowListRead(BaseModel):
+    flows: List[FlowRead]
+
+
+class InitResponse(BaseModel):
+    flowId: str
+
+
+class BuiltResponse(BaseModel):
+    built: bool

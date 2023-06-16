@@ -1,14 +1,11 @@
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
-import Tooltip from "../../../../components/TooltipComponent";
 import {
   classNames,
   groupByFamily,
   isValidConnection,
-  toFirstUpperCase,
 } from "../../../../utils";
 import { useContext, useEffect, useRef, useState } from "react";
 import InputComponent from "../../../../components/inputComponent";
-import ToggleComponent from "../../../../components/toggleComponent";
 import InputListComponent from "../../../../components/inputListComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import { typesContext } from "../../../../contexts/typesContext";
@@ -24,6 +21,8 @@ import { nodeNames, nodeIcons } from "../../../../utils";
 import React from "react";
 import { nodeColors } from "../../../../utils";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
+import { PopUpContext } from "../../../../contexts/popUpContext";
+import ToggleShadComponent from "../../../../components/toggleShadComponent";
 
 export default function ParameterComponent({
   left,
@@ -40,6 +39,9 @@ export default function ParameterComponent({
   const refHtml = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
+  const { closePopUp } = useContext(PopUpContext);
+  const { setTabsState, tabId } = useContext(TabsContext);
+
   useEffect(() => {
     if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
       setPosition(ref.current.offsetTop + ref.current.clientHeight / 2);
@@ -54,11 +56,26 @@ export default function ParameterComponent({
   const [enabled, setEnabled] = useState(
     data.node.template[name]?.value ?? false
   );
+
+  useEffect(() => {}, [closePopUp, data.node.template]);
+
   const { reactFlowInstance } = useContext(typesContext);
   let disabled =
     reactFlowInstance?.getEdges().some((e) => e.targetHandle === id) ?? false;
-  const { save } = useContext(TabsContext);
   const [myData, setMyData] = useState(useContext(typesContext).data);
+
+  const handleOnNewValue = (newValue: any) => {
+    data.node.template[name].value = newValue;
+    // Set state to pending
+    setTabsState((prev) => {
+      return {
+        ...prev,
+        [tabId]: {
+          isPending: true,
+        },
+      };
+    });
+  };
 
   useEffect(() => {
     const groupedObj = groupByFamily(myData, tooltipTitle);
@@ -104,7 +121,7 @@ export default function ParameterComponent({
   return (
     <div
       ref={ref}
-      className="w-full flex flex-wrap justify-between items-center bg-gray-50 dark:bg-gray-800 dark:text-white mt-1 px-5 py-2"
+      className="w-full flex flex-wrap justify-between items-center bg-muted dark:bg-gray-800 dark:text-white mt-1 px-5 py-2"
     >
       <>
         <div className={"text-sm truncate w-full " + (left ? "" : "text-end")}>
@@ -125,6 +142,7 @@ export default function ParameterComponent({
             delayDuration={0}
             content={refHtml.current}
             side={left ? "left" : "right"}
+            open={refHtml?.current?.length > 0}
           >
             <Handle
               type={left ? "target" : "source"}
@@ -158,19 +176,13 @@ export default function ParameterComponent({
                     ? [""]
                     : data.node.template[name].value
                 }
-                onChange={(t: string[]) => {
-                  data.node.template[name].value = t;
-                  save();
-                }}
+                onChange={handleOnNewValue}
               />
             ) : data.node.template[name].multiline ? (
               <TextAreaComponent
                 disabled={disabled}
                 value={data.node.template[name].value ?? ""}
-                onChange={(t: string) => {
-                  data.node.template[name].value = t;
-                  save();
-                }}
+                onChange={handleOnNewValue}
               />
             ) : (
               <InputComponent
@@ -178,84 +190,72 @@ export default function ParameterComponent({
                 disableCopyPaste={true}
                 password={data.node.template[name].password ?? false}
                 value={data.node.template[name].value ?? ""}
-                onChange={(t) => {
-                  data.node.template[name].value = t;
-                  save();
-                }}
+                onChange={handleOnNewValue}
               />
             )}
           </div>
         ) : left === true && type === "bool" ? (
           <div className="mt-2">
-            <ToggleComponent
+            <ToggleShadComponent
               disabled={disabled}
               enabled={enabled}
               setEnabled={(t) => {
-                data.node.template[name].value = t;
+                handleOnNewValue(t);
                 setEnabled(t);
-                save();
               }}
+              size="large"
             />
           </div>
         ) : left === true && type === "float" ? (
-          <FloatComponent
-            disabled={disabled}
-            disableCopyPaste={true}
-            value={data.node.template[name].value ?? ""}
-            onChange={(t) => {
-              data.node.template[name].value = t;
-              save();
-            }}
-          />
+          <div className="mt-2 w-full">
+            <FloatComponent
+              disabled={disabled}
+              disableCopyPaste={true}
+              value={data.node.template[name].value ?? ""}
+              onChange={handleOnNewValue}
+            />
+          </div>
         ) : left === true &&
           type === "str" &&
           data.node.template[name].options ? (
-          <Dropdown
-            options={data.node.template[name].options}
-            onSelect={(newValue) => (data.node.template[name].value = newValue)}
-            value={data.node.template[name].value ?? "Choose an option"}
-          ></Dropdown>
+          <div className="w-full">
+            <Dropdown
+              options={data.node.template[name].options}
+              onSelect={handleOnNewValue}
+              value={data.node.template[name].value ?? "Choose an option"}
+            ></Dropdown>
+          </div>
         ) : left === true && type === "code" ? (
           <CodeAreaComponent
             disabled={disabled}
             value={data.node.template[name].value ?? ""}
-            onChange={(t: string) => {
-              data.node.template[name].value = t;
-              save();
-            }}
+            onChange={handleOnNewValue}
           />
         ) : left === true && type === "file" ? (
           <InputFileComponent
             disabled={disabled}
             value={data.node.template[name].value ?? ""}
-            onChange={(t: string) => {
-              data.node.template[name].value = t;
-            }}
+            onChange={handleOnNewValue}
             fileTypes={data.node.template[name].fileTypes}
             suffixes={data.node.template[name].suffixes}
             onFileChange={(t: string) => {
               data.node.template[name].content = t;
-              save();
             }}
           ></InputFileComponent>
         ) : left === true && type === "int" ? (
-          <IntComponent
-            disabled={disabled}
-            disableCopyPaste={true}
-            value={data.node.template[name].value ?? ""}
-            onChange={(t) => {
-              data.node.template[name].value = t;
-              save();
-            }}
-          />
+          <div className="mt-2 w-full">
+            <IntComponent
+              disabled={disabled}
+              disableCopyPaste={true}
+              value={data.node.template[name].value ?? ""}
+              onChange={handleOnNewValue}
+            />
+          </div>
         ) : left === true && type === "prompt" ? (
           <PromptAreaComponent
             disabled={disabled}
             value={data.node.template[name].value ?? ""}
-            onChange={(t: string) => {
-              data.node.template[name].value = t;
-              save();
-            }}
+            onChange={handleOnNewValue}
           />
         ) : (
           <></>

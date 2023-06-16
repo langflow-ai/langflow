@@ -7,7 +7,6 @@ import {
   WrenchScrewdriverIcon,
   WrenchIcon,
   ComputerDesktopIcon,
-  Bars3CenterLeftIcon,
   GiftIcon,
   PaperClipIcon,
   QuestionMarkCircleIcon,
@@ -15,15 +14,15 @@ import {
   ScissorsIcon,
   CircleStackIcon,
   Squares2X2Icon,
+  Bars3CenterLeftIcon,
 } from "@heroicons/react/24/outline";
-import { Connection, Edge, Node, ReactFlowInstance, addEdge } from "reactflow";
+import { Connection, Edge, Node, ReactFlowInstance } from "reactflow";
 import { FlowType, NodeType } from "./types/flow";
-import { APITemplateType, TemplateVariableType } from "./types/api";
+import { APITemplateType } from "./types/api";
 import _ from "lodash";
 import { ChromaIcon } from "./icons/ChromaIcon";
 import { AnthropicIcon } from "./icons/Anthropic";
 import { AirbyteIcon } from "./icons/Airbyte";
-import { AzIcon } from "./icons/AzLogo";
 import { BingIcon } from "./icons/Bing";
 import { CohereIcon } from "./icons/Cohere";
 import { EvernoteIcon } from "./icons/Evernote";
@@ -37,29 +36,18 @@ import { MetaIcon } from "./icons/Meta";
 import { MidjorneyIcon } from "./icons/Midjorney";
 import { NotionIcon } from "./icons/Notion";
 import { OpenAiIcon } from "./icons/OpenAi";
-import { PowerPointIcon } from "./icons/PowerPoint";
 import { QDrantIcon } from "./icons/QDrant";
-import { ReadTheDocsIcon } from "./icons/ReadTheDocs";
 import { SearxIcon } from "./icons/Searx";
 import { SlackIcon } from "./icons/Slack";
-import { WeaviateIcon } from "./icons/Weaviate";
-import { WikipediaIcon } from "./icons/Wikipedia";
-import { WolframIcon } from "./icons/Wolfram";
-import { WordIcon } from "./icons/Word";
-import { SerperIcon } from "./icons/Serper";
-import { v4 as uuidv4 } from "uuid";
-import { clsx, type ClassValue } from "clsx";
+import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "./constants";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
 }
 
-export const limitScrollFieldsModal = 7;
+export const limitScrollFieldsModal = 10;
 
 export enum TypeModal {
   TEXT = 1,
@@ -187,7 +175,7 @@ export const nodeIcons: {
   // ReadTheDocsLoader: ReadTheDocsIcon, // does not work
   Searx: SearxIcon,
   SlackDirectoryLoader: SlackIcon,
-  // Weaviate: WeaviateIcon,
+  // Weaviate: WeaviateIcon, // does not work
   // WikipediaAPIWrapper: WikipediaIcon,
   // WolframAlphaQueryRun: WolframIcon,
   // WolframAlphaAPIWrapper: WolframIcon,
@@ -209,6 +197,23 @@ export const nodeIcons: {
   utilities: Squares2X2Icon,
   unknown: QuestionMarkCircleIcon,
 };
+
+export const gradients = [
+  "bg-gradient-to-br from-gray-800 via-rose-700 to-violet-900",
+  "bg-gradient-to-br from-green-200 via-green-300 to-blue-500",
+  "bg-gradient-to-br from-yellow-200 via-yellow-400 to-yellow-700",
+  "bg-gradient-to-br from-green-200 via-green-400 to-purple-700",
+  "bg-gradient-to-br from-blue-100 via-blue-300 to-blue-500",
+  "bg-gradient-to-br from-purple-400 to-yellow-400",
+  "bg-gradient-to-br from-red-800 via-yellow-600 to-yellow-500",
+  "bg-gradient-to-br from-blue-300 via-green-200 to-yellow-300",
+  "bg-gradient-to-br from-blue-700 via-blue-800 to-gray-900",
+  "bg-gradient-to-br from-green-300 to-purple-400",
+  "bg-gradient-to-br from-yellow-200 via-pink-200 to-pink-400",
+  "bg-gradient-to-br from-green-500 to-green-700",
+  "bg-gradient-to-br from-rose-400 via-fuchsia-500 to-indigo-500",
+  "bg-gradient-to-br from-sky-400 to-blue-500",
+];
 
 export const bgColors = {
   white: "bg-white",
@@ -352,6 +357,10 @@ export function measureTextWidth(text: string, fontSize: number) {
   return wordWidth;
 }
 
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
 export function measureTextHeight(
   text: string,
   width: number,
@@ -482,9 +491,10 @@ export function isValidConnection(
 
 export function removeApiKeys(flow: FlowType): FlowType {
   let cleanFLow = _.cloneDeep(flow);
+  console.log(cleanFLow);
   cleanFLow.data.nodes.forEach((node) => {
     for (const key in node.data.node.template) {
-      if (key.includes("api")) {
+      if (node.data.node.template[key].password) {
         node.data.node.template[key].value = "";
       }
     }
@@ -617,9 +627,9 @@ export function checkUpperWords(str: string) {
 export function updateIds(newFlow, getNodeId) {
   let idsMap = {};
 
-  newFlow.nodes.forEach((n) => {
+  newFlow.nodes.forEach((n: NodeType) => {
     // Generate a unique node ID
-    let newId = getNodeId();
+    let newId = getNodeId(n.data.type);
     idsMap[n.id] = newId;
     n.id = newId;
     n.data.id = newId;
@@ -702,4 +712,103 @@ export function groupByFamily(data, baseClasses) {
   }, []);
 
   return groupedObj;
+}
+
+export function buildTweaks(flow) {
+  return flow.data.nodes.reduce((acc, node) => {
+    acc[node.data.id] = {};
+    return acc;
+  }, {});
+}
+export function validateNode(
+  n: NodeType,
+  reactFlowInstance: ReactFlowInstance
+): Array<string> {
+  if (!n.data?.node?.template || !Object.keys(n.data.node.template)) {
+    return [
+      "We've noticed a potential issue with a node in the flow. Please review it and, if necessary, submit a bug report with your exported flow file. Thank you for your help!",
+    ];
+  }
+
+  const {
+    type,
+    node: { template },
+  } = n.data;
+
+  return Object.keys(template).reduce(
+    (errors: Array<string>, t) =>
+      errors.concat(
+        template[t].required &&
+          template[t].show &&
+          (template[t].value === undefined ||
+            template[t].value === null ||
+            template[t].value === "") &&
+          !reactFlowInstance
+            .getEdges()
+            .some(
+              (e) =>
+                e.targetHandle.split("|")[1] === t &&
+                e.targetHandle.split("|")[2] === n.id
+            )
+          ? [
+              `${type} is missing ${
+                template.display_name
+                  ? template.display_name
+                  : toNormalCase(template[t].name)
+              }.`,
+            ]
+          : []
+      ),
+    [] as string[]
+  );
+}
+
+export function validateNodes(reactFlowInstance: ReactFlowInstance) {
+  if (reactFlowInstance.getNodes().length === 0) {
+    return [
+      "No nodes found in the flow. Please add at least one node to the flow.",
+    ];
+  }
+  return reactFlowInstance
+    .getNodes()
+    .flatMap((n: NodeType) => validateNode(n, reactFlowInstance));
+}
+
+export function getRandomElement<T>(array: T[]): T {
+  return array[Math.floor(Math.random() * array.length)];
+}
+export function getRandomDescription(): string {
+  return getRandomElement(DESCRIPTIONS);
+}
+
+export function getRandomName(
+  retry: number = 0,
+  noSpace: boolean = false,
+  maxRetries: number = 3
+): string {
+  const left: string[] = ADJECTIVES;
+  const right: string[] = NOUNS;
+
+  const lv = getRandomElement(left);
+  const rv = getRandomElement(right);
+
+  // Condition to avoid "boring wozniak"
+  if (lv === "boring" && rv === "wozniak") {
+    if (retry < maxRetries) {
+      return getRandomName(retry + 1, noSpace, maxRetries);
+    } else {
+      console.warn("Max retries reached, returning as is");
+    }
+  }
+
+  // Append a suffix if retrying and noSpace is true
+  if (retry > 0 && noSpace) {
+    const retrySuffix = Math.floor(Math.random() * 10);
+    return `${lv}_${rv}${retrySuffix}`;
+  }
+
+  // Construct the final name
+  let final_name = noSpace ? `${lv}_${rv}` : `${lv} ${rv}`;
+  // Return title case final name
+  return toTitleCase(final_name);
 }

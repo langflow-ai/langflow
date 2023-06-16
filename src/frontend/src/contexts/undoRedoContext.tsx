@@ -1,7 +1,19 @@
-import { useCallback, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { Edge, Node, useReactFlow } from "reactflow";
-import { TabsContext } from "../../../contexts/tabsContext";
 import { cloneDeep } from "lodash";
+import { TabsContext } from "./tabsContext";
+
+type undoRedoContextType = {
+  undo: () => void;
+  redo: () => void;
+  takeSnapshot: () => void;
+};
 
 type UseUndoRedoOptions = {
   maxHistorySize: number;
@@ -21,27 +33,34 @@ type HistoryItem = {
   edges: Edge[];
 };
 
+const initialValue = {
+  undo: () => {},
+  redo: () => {},
+  takeSnapshot: () => {},
+};
+
 const defaultOptions: UseUndoRedoOptions = {
   maxHistorySize: 100,
   enableShortcuts: true,
 };
 
-// https://redux.js.org/usage/implementing-undo-history
-export const useUndoRedo: UseUndoRedo = ({
-  maxHistorySize = defaultOptions.maxHistorySize,
-  enableShortcuts = defaultOptions.enableShortcuts,
-} = defaultOptions) => {
-  // the past and future arrays store the states that we can jump to
-  const { tabIndex, flows } = useContext(TabsContext);
+export const undoRedoContext = createContext<undoRedoContextType>(initialValue);
+
+export function UndoRedoProvider({ children }) {
+  const { tabId, flows } = useContext(TabsContext);
 
   const [past, setPast] = useState<HistoryItem[][]>(flows.map(() => []));
   const [future, setFuture] = useState<HistoryItem[][]>(flows.map(() => []));
+  const [tabIndex, setTabIndex] = useState(
+    flows.findIndex((f) => f.id === tabId)
+  );
 
   useEffect(() => {
     // whenever the flows variable changes, we need to add one array to the past and future states
     setPast((old) => flows.map((f, i) => (old[i] ? old[i] : [])));
     setFuture((old) => flows.map((f, i) => (old[i] ? old[i] : [])));
-  }, [flows]);
+    setTabIndex(flows.findIndex((f) => f.id === tabId));
+  }, [flows, tabId]);
 
   const { setNodes, setEdges, getNodes, getEdges } = useReactFlow();
 
@@ -50,7 +69,7 @@ export const useUndoRedo: UseUndoRedo = ({
     setPast((old) => {
       let newPast = cloneDeep(old);
       newPast[tabIndex] = old[tabIndex].slice(
-        old[tabIndex].length - maxHistorySize + 1,
+        old[tabIndex].length - defaultOptions.maxHistorySize + 1,
         old[tabIndex].length
       );
       newPast[tabIndex].push({ nodes: getNodes(), edges: getEdges() });
@@ -63,16 +82,7 @@ export const useUndoRedo: UseUndoRedo = ({
       newFuture[tabIndex] = [];
       return newFuture;
     });
-  }, [
-    getNodes,
-    getEdges,
-    past,
-    future,
-    tabIndex,
-    setPast,
-    setFuture,
-    maxHistorySize,
-  ]);
+  }, [getNodes, getEdges, past, future, flows, tabId, setPast, setFuture]);
 
   const undo = useCallback(() => {
     // get the last state that we want to go back to
@@ -141,7 +151,7 @@ export const useUndoRedo: UseUndoRedo = ({
 
   useEffect(() => {
     // this effect is used to attach the global event handlers
-    if (!enableShortcuts) {
+    if (!defaultOptions.enableShortcuts) {
       return;
     }
 
@@ -165,15 +175,16 @@ export const useUndoRedo: UseUndoRedo = ({
     return () => {
       document.removeEventListener("keydown", keyDownHandler);
     };
-  }, [undo, redo, enableShortcuts]);
-
-  return {
-    undo,
-    redo,
-    takeSnapshot,
-    canUndo: !!past.length,
-    canRedo: !!future.length,
-  };
-};
-
-export default useUndoRedo;
+  }, [undo, redo]);
+  return (
+    <undoRedoContext.Provider
+      value={{
+        undo,
+        redo,
+        takeSnapshot,
+      }}
+    >
+      {children}
+    </undoRedoContext.Provider>
+  );
+}

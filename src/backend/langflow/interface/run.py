@@ -1,20 +1,6 @@
-from langflow.cache.base import compute_dict_hash, load_cache, memoize_dict
+from langflow.cache.utils import memoize_dict
 from langflow.graph import Graph
 from langflow.utils.logger import logger
-
-
-def load_langchain_object(data_graph, is_first_message=False):
-    """
-    Load langchain object from cache if it exists, otherwise build it.
-    """
-    computed_hash = compute_dict_hash(data_graph)
-    if is_first_message:
-        langchain_object = build_langchain_object(data_graph)
-    else:
-        logger.debug("Loading langchain object from cache")
-        langchain_object = load_cache(computed_hash)
-
-    return computed_hash, langchain_object
 
 
 @memoize_dict(maxsize=10)

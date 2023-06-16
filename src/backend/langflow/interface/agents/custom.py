@@ -120,7 +120,7 @@ class CSVAgent(CustomAgentExecutor):
 
 
 class VectorStoreAgent(CustomAgentExecutor):
-    """Vector Store agent"""
+    """Vector store agent"""
 
     @staticmethod
     def function_name():
@@ -175,7 +175,7 @@ class SQLAgent(CustomAgentExecutor):
     def from_toolkit_and_llm(
         cls, llm: BaseLanguageModel, database_uri: str, **kwargs: Any
     ):
-        """Construct a sql agent from an LLM and tools."""
+        """Construct an SQL agent from an LLM and tools."""
         db = SQLDatabase.from_uri(database_uri)
         toolkit = SQLDatabaseToolkit(db=db, llm=llm)
 
@@ -252,7 +252,11 @@ class VectorStoreRouterAgent(CustomAgentExecutor):
     ):
         """Construct a vector store router agent from an LLM and tools."""
 
-        tools = vectorstoreroutertoolkit.get_tools()
+        tools = (
+            vectorstoreroutertoolkit
+            if isinstance(vectorstoreroutertoolkit, list)
+            else vectorstoreroutertoolkit.get_tools()
+        )
         prompt = ZeroShotAgent.create_prompt(tools, prefix=VECTORSTORE_ROUTER_PREFIX)
         llm_chain = LLMChain(
             llm=llm,
@@ -302,7 +306,7 @@ class InitializeAgent(CustomAgentExecutor):
 CUSTOM_AGENTS = {
     "JsonAgent": JsonAgent,
     "CSVAgent": CSVAgent,
-    "initialize_agent": InitializeAgent,
+    "AgentInitializer": InitializeAgent,
     "VectorStoreAgent": VectorStoreAgent,
     "VectorStoreRouterAgent": VectorStoreRouterAgent,
     "SQLAgent": SQLAgent,

@@ -6,17 +6,30 @@ import {
   nodeIcons,
   nodeNames,
 } from "../../../../utils";
-import { useContext, useEffect, useState, useRef } from "react";
+import { useContext, useState } from "react";
 import { typesContext } from "../../../../contexts/typesContext";
 import { APIClassType, APIObjectType } from "../../../../types/api";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
+import { Code2, FileDown, FileUp, Save } from "lucide-react";
+import { PopUpContext } from "../../../../contexts/popUpContext";
+import ExportModal from "../../../../modals/exportModal";
+import ApiModal from "../../../../modals/ApiModal";
+import { TabsContext } from "../../../../contexts/tabsContext";
+import { alertContext } from "../../../../contexts/alertContext";
+import { updateFlowInDatabase } from "../../../../controllers/API";
+import { INPUT_STYLE } from "../../../../constants";
+import { Separator } from "../../../../components/ui/separator";
 
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);
+  const { openPopUp } = useContext(PopUpContext);
+  const { flows, tabId, uploadFlow, tabsState, saveFlow } =
+    useContext(TabsContext);
+  const { setSuccessData, setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
-
+  const isPending = tabsState[tabId]?.isPending;
   function onDragStart(
     event: React.DragEvent<any>,
     data: { type: string; node?: APIClassType }
@@ -49,14 +62,73 @@ export default function ExtraSidebar() {
   }
 
   return (
-    <>
+    <div className="w-52 flex flex-col overflow-hidden scrollbar-hide h-full border-r">
+      <div className="mt-2 mb-2 w-full flex gap-2 justify-between px-2 items-center">
+        <ShadTooltip delayDuration={1000} content="Import" side="top">
+          <button
+            className="hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center rounded-md bg-white px-2 py-2 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+            onClick={() => {
+              // openPopUp(<ImportModal />);
+              uploadFlow();
+            }}
+          >
+            <FileUp className="w-5 h-5 dark:text-gray-300"></FileUp>
+          </button>
+        </ShadTooltip>
+
+        <ShadTooltip delayDuration={1000} content="Export" side="top">
+          <button
+            className={classNames(
+              "hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
+            )}
+            onClick={(event) => {
+              openPopUp(<ExportModal />);
+            }}
+          >
+            <FileDown className="w-5 h-5  dark:text-gray-300"></FileDown>
+          </button>
+        </ShadTooltip>
+        <ShadTooltip delayDuration={1000} content="Code" side="top">
+          <button
+            className={classNames(
+              "hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
+            )}
+            onClick={(event) => {
+              openPopUp(<ApiModal flow={flows.find((f) => f.id === tabId)} />);
+            }}
+          >
+            <Code2 className="w-5 h-5  dark:text-gray-300"></Code2>
+          </button>
+        </ShadTooltip>
+
+        <ShadTooltip delayDuration={1000} content="Save" side="top">
+          <button
+            className="hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center transition-all shadow-sm duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
+            onClick={(event) => {
+              saveFlow(flows.find((f) => f.id === tabId));
+              setSuccessData({ title: "Changes saved successfully" });
+            }}
+            disabled={!isPending}
+          >
+            <Save
+              className={
+                "w-5 h-5" + (isPending ? " " : " text-muted-foreground")
+              }
+            ></Save>
+          </button>
+        </ShadTooltip>
+      </div>
+      <Separator />
       <div className="relative mt-2 flex items-center mb-2 mx-2">
         <input
           type="text"
           name="search"
           id="search"
-          placeholder="Search nodes"
-          className="dark:text-white focus:outline-none block w-full rounded-md py-1.5 ps-3 pr-9 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 sm:text-sm sm:leading-6 dark:ring-0 dark:bg-[#2d3747] dark:focus:outline-none"
+          placeholder="Search"
+          className={
+            INPUT_STYLE +
+            "w-full border-1 dark:border-slate-600 dark:border-0.5 dark:ring-0 focus-visible:dark:ring-0 focus-visible:dark:ring-offset-1 rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+          }
           onChange={(e) => {
             handleSearchInput(e.target.value);
             setSearch(e.target.value);
@@ -67,7 +139,7 @@ export default function ExtraSidebar() {
         </div>
       </div>
 
-      <div className="mt-1 w-full">
+      <div className="w-full overflow-auto scrollbar-hide">
         {Object.keys(dataFilter)
           .sort()
           .map((d: keyof APIObjectType, i) =>
@@ -112,7 +184,7 @@ export default function ExtraSidebar() {
                             }}
                           >
                             <div className="flex w-full justify-between text-sm px-3 py-1 bg-white dark:bg-gray-800 items-center border-dashed border-gray-400 dark:border-gray-600 border-l-0 rounded-md rounded-l-none border">
-                              <span className="text-black dark:text-white w-36 pr-1 truncate text-xs">
+                              <span className="text-black dark:text-white w-full pr-1 truncate text-xs">
                                 {t}
                               </span>
                               <Bars2Icon className="w-4 h-6  text-gray-400 dark:text-gray-600" />
@@ -128,6 +200,6 @@ export default function ExtraSidebar() {
             )
           )}
       </div>
-    </>
+    </div>
   );
 }

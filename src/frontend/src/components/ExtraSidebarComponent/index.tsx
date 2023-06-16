@@ -21,10 +21,7 @@ export default function ExtraSidebar() {
           isStackedOpen ? "w-52" : "w-0 "
         } flex-shrink-0 flex overflow-hidden flex-col border-r dark:border-r-gray-700 transition-all duration-500`}
       >
-        <div className="w-52 dark:bg-gray-800 border dark:border-gray-700  overflow-y-auto scrollbar-hide h-full flex flex-col items-start">
-          <div className="flex px-4 justify-between align-middle w-full">
-            <span className="text-gray-900 dark:text-white py-[2px] font-medium "></span>
-          </div>
+        <div className="w-52 dark:bg-gray-800 border dark:border-gray-700  overflow-y-auto scrollbar-hide h-full flex flex-col items-start bg-white">
           <div className="flex flex-grow flex-col w-full">
             {extraNavigation.options ? (
               <div className="p-4">
@@ -36,8 +33,8 @@ export default function ExtraSidebar() {
                           to={item.href}
                           className={classNames(
                             item.href.split("/")[2] === current[4]
-                              ? "bg-gray-100 text-gray-900"
-                              : "bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+                              ? "bg-muted text-gray-900"
+                              : "bg-white text-gray-600 hover:bg-muted hover:text-gray-900",
                             "group w-full flex items-center pl-2 py-2 text-sm font-medium rounded-md"
                           )}
                         >
@@ -63,9 +60,9 @@ export default function ExtraSidebar() {
                             <Disclosure.Button
                               className={classNames(
                                 item.href.split("/")[2] === current[4]
-                                  ? "bg-gray-100 text-gray-900"
-                                  : "bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900",
-                                "group w-full flex items-center pl-2 pr-1 py-2 text-left text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                  ? "bg-muted text-gray-900"
+                                  : "bg-white text-gray-600 hover:bg-muted hover:text-gray-900",
+                                "group w-full flex items-center pl-2 pr-1 py-2 text-left text-sm font-medium rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500"
                               )}
                             >
                               <item.icon
@@ -96,8 +93,8 @@ export default function ExtraSidebar() {
                                   to={subItem.href}
                                   className={classNames(
                                     subItem.href.split("/")[3] === current[5]
-                                      ? "bg-gray-100 text-gray-900"
-                                      : "bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+                                      ? "bg-muted text-gray-900"
+                                      : "bg-white text-gray-600 hover:bg-muted hover:text-gray-900",
                                     "group flex w-full items-center rounded-md py-2 pl-11 pr-2 text-sm font-medium"
                                   )}
                                 >

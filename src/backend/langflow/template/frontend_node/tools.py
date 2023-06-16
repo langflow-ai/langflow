@@ -52,7 +52,7 @@ class ToolNode(FrontendNode):
             ),
         ],
     )
-    description: str = "Tool to be used in the flow."
+    description: str = "Converts a chain, agent or function into a tool."
     base_classes: list[str] = ["Tool"]
 
     def to_dict(self):

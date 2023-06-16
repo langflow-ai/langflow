@@ -1,11 +1,6 @@
-import {
-  ForwardRefExoticComponent,
-  ReactElement,
-  ReactFragment,
-  ReactNode,
-  SVGProps,
-} from "react";
+import { ForwardRefExoticComponent, ReactElement, ReactNode } from "react";
 import { NodeDataType } from "../flow/index";
+import { typesContextType } from "../typesContext";
 export type InputComponentType = {
   value: string;
   disabled?: boolean;
@@ -13,17 +8,21 @@ export type InputComponentType = {
   password: boolean;
   disableCopyPaste?: boolean;
   editNode?: boolean;
+  onChangePass?: (value: boolean | boolean) => void;
+  showPass?: boolean;
 };
 export type ToggleComponentType = {
   enabled: boolean;
   setEnabled: (state: boolean) => void;
   disabled: boolean;
+  size: "small" | "medium" | "large";
 };
 export type DropDownComponentType = {
   value: string;
   options: string[];
   onSelect: (value: string) => void;
   editNode?: boolean;
+  numberOfOptions?: number;
 };
 export type ParameterComponentType = {
   data: NodeDataType;
@@ -35,11 +34,13 @@ export type ParameterComponentType = {
   required?: boolean;
   name?: string;
   tooltipTitle: string;
+  dataContext?: typesContextType;
 };
 export type InputListComponentType = {
   value: string[];
   onChange: (value: string[]) => void;
   disabled: boolean;
+  editNode?: boolean;
 };
 
 export type TextAreaComponentType = {
