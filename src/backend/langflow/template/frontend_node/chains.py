@@ -33,6 +33,14 @@ class ChainFrontendNode(FrontendNode):
             field.show = True
             field.advanced = True
 
+        # We should think of a way to deal with this later
+        # if field.field_type == "PromptTemplate":
+        #     field.field_type = "str"
+        #     field.multiline = True
+        #     field.show = True
+        #     field.advanced = False
+        #     field.value = field.value.template
+
         # Separated for possible future changes
         if field.name == "prompt" and field.value is None:
             field.required = True
