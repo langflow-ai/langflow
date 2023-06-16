@@ -6,9 +6,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from langflow.api import router
 from langflow.database.base import create_db_and_tables
+from pathlib import Path
 
 
-def create_app(static_path: str = "static"):
+def create_app(static_path: Path = Path("src/frontend")):
     """Create the FastAPI app and include the router."""
     app = FastAPI()
 
