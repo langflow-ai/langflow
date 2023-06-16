@@ -2385,14 +2385,14 @@ test = ["ipykernel", "pre-commit", "pytest", "pytest-cov", "pytest-timeout"]
 
 [[package]]
 name = "langchain"
-version = "0.0.200"
+version = "0.0.202"
 description = "Building applications with LLMs through composability"
 category = "main"
 optional = false
 python-versions = ">=3.8.1,<4.0"
 files = [
-    {file = "langchain-0.0.200-py3-none-any.whl", hash = "sha256:f1567c52991e375ab1e41354587c54a931cf84e8e1a6427b380320825ec9390e"},
-    {file = "langchain-0.0.200.tar.gz", hash = "sha256:31c535deb45049d17aea3370de4ac5e21452ffb8b5e1a73a7ec477600b9e3b74"},
+    {file = "langchain-0.0.202-py3-none-any.whl", hash = "sha256:63ef3dba8df4326579aea30e8a209d8cb6cd199b8bd91f4eaf470c3f79ed5a57"},
+    {file = "langchain-0.0.202.tar.gz", hash = "sha256:25f61952afe6c47e9eb4be8d6f23edf14a7a2dfa0ab74512f809a49bf34ef8e4"},
 ]
 
 [package.dependencies]
@@ -6426,4 +6426,4 @@ deploy = ["langchain-serve"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "701aef468eb1b5c85068dd62bd36a81b0e4a9af9ce5697a0d683cb60121424f0"
+content-hash = "c9284c917f124a3bd4bc4ea9f63932d4c91c6c558ee04c871aaab6b82b77bd2c"
