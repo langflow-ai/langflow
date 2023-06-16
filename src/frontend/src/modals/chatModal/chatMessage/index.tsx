@@ -12,6 +12,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { CodeBlock } from "./codeBlock";
 import Convert from "ansi-to-html";
+import { User, User2 } from "lucide-react";
 
 export default function ChatMessage({
   chat,
@@ -32,15 +33,18 @@ export default function ChatMessage({
   return (
     <div
       className={classNames(
-        "w-full py-2 pl-2 flex",
+        "w-full py-2 pl-2 flex rounded-lg",
         chat.isSend
           ? "bg-background dark:bg-gray-900 "
-          : "bg-input  dark:bg-gray-800"
+          : "bg-input  dark:bg-gray-800",
+        lastMessage ? "mb-14" : ""
+      
+        
       )}
     >
       <div
         className={classNames(
-          "rounded-full overflow-hidden w-8 h-8 flex items-center my-3 justify-center"
+          "rounded-full overflow-hidden w-8 h-8 flex items-center my-3 justify-center "
         )}
       >
         {!chat.isSend && (
@@ -62,11 +66,11 @@ export default function ChatMessage({
           </div>
         )}
         {chat.isSend && (
-          <UserIcon className="w-6 h-6 -mb-1 text-gray-800 dark:text-gray-200" />
+          <User className="fill-black" />
         )}
       </div>
       {!chat.isSend ? (
-        <div className="w-full text-start flex items-center">
+        <div className="w-full text-start flex items-center ">
           <div className="w-full relative text-start inline-block text-gray-600 dark:text-gray-300 text-sm font-normal">
             {hidden && chat.thought && chat.thought !== "" && (
               <div
@@ -87,7 +91,7 @@ export default function ChatMessage({
               ></div>
             )}
             {chat.thought && chat.thought !== "" && !hidden && <br></br>}
-            <div className="w-full px-4 pb-3 pt-3 pr-8">
+            <div className="w-full px-4 pb-2 pt-3 pr-8">
               <div className="dark:text-white w-full">
                 <div className="w-full">
                   <ReactMarkdown
@@ -154,7 +158,7 @@ export default function ChatMessage({
         <div className="w-full flex items-center">
           <div className="text-start inline-block px-3 text-sm text-gray-600 dark:text-white">
             <span
-              className="text-gray-600 dark:text-gray-200"
+              className="text-gray-600 dark:text-gray-200 break-all"
               dangerouslySetInnerHTML={{
                 __html: message.replace(/\n/g, "<br>"),
               }}

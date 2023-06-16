@@ -1,4 +1,3 @@
-import { Dialog, Transition } from "@headlessui/react";
 import { ChatBubbleOvalLeftEllipsisIcon } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useEffect, useRef, useState } from "react";
 import { FlowType } from "../../types/flow";
@@ -11,8 +10,17 @@ import { HiX } from "react-icons/hi";
 import { sendAllProps } from "../../types/api";
 import { ChatMessageType } from "../../types/chat";
 import ChatInput from "./chatInput";
-
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../../components/ui/dialog";
 import _ from "lodash";
+import { Eraser } from "lucide-react";
 
 export default function ChatModal({
   flow,
@@ -315,55 +323,26 @@ export default function ChatModal({
   function setModalOpen(x: boolean) {
     setOpen(x);
   }
-  return (
-    <Transition.Root show={open} appear={open} as={Fragment}>
-      <Dialog
-        as="div"
-        className="relative z-10"
-        onClose={setModalOpen}
-        initialFocus={ref}
-      >
-        <Transition.Child
-          as={Fragment}
-          enter="ease-out duration-300"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="ease-in duration-200"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0 bg-black backdrop-blur-sm dark:bg-gray-600 dark:bg-opacity-80 bg-opacity-80 transition-opacity" />
-        </Transition.Child>
 
-        <div className="fixed inset-0 z-10 overflow-y-auto">
-          <div className="flex h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-            <Transition.Child
-              as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-              enterTo="opacity-100 translate-y-0 sm:scale-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100 translate-y-0 sm:scale-100"
-              leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-            >
-              <Dialog.Panel className=" drop-shadow-2xl relative flex flex-col justify-between transform h-[95%] overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all w-[690px]">
-                <div className="relative w-full p-4">
-                  <button
+  return (
+
+
+    <Dialog open={open} onOpenChange={setModalOpen}>
+      <DialogTrigger></DialogTrigger>
+      <DialogContent className="focus-visible:outline-none lg:max-w-[800px] lg:h-[95%] pt-10">
+
+<div className={chatHistory.length == 0 ? "absolute right-1 z-30 h-0" : "absolute right-1 z-30 h-full"}>
+<button
                     onClick={() => clearChat()}
-                    className="absolute top-2 right-10 hover:text-red-500 text-gray-600 dark:text-gray-300 dark:hover:text-red-500 z-30"
+                    className="absolute top-4 right-10 hover:text-red-500 text-gray-600 dark:text-gray-300 dark:hover:text-red-500 z-30"
                   >
-                    <FaEraser className="w-4 h-4" />
+                    <Eraser className="w-4 h-4" />
                   </button>
-                  <button
-                    onClick={() => setModalOpen(false)}
-                    className="absolute top-1.5 right-2 hover:text-red-500 text-gray-600 dark:text-gray-300 dark:hover:text-red-500 z-30"
-                  >
-                    <HiX className="w-5 h-5" />
-                  </button>
-                </div>
+</div>
+
                 <div
                   ref={messagesRef}
-                  className="w-full h-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center overflow-scroll scrollbar-hide"
+                  className="w-full h-full bg-white dark:bg-gray-800 flex-col flex items-center overflow-scroll scrollbar-hide"
                 >
                   {chatHistory.length > 0 ? (
                     chatHistory.map((c, i) => (
@@ -396,7 +375,10 @@ export default function ChatModal({
                   )}
                   <div ref={ref}></div>
                 </div>
-                <div className="w-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center justify-between p-3">
+
+
+        <DialogFooter className="absolute bottom-3 w-full">
+        <div className="w-full bg-white dark:bg-gray-800 flex-col flex items-center justify-between p-3">
                   <div className="relative w-full  mt-1 rounded-md shadow-sm">
                     <ChatInput
                       chatValue={chatValue}
@@ -407,11 +389,11 @@ export default function ChatModal({
                     />
                   </div>
                 </div>
-              </Dialog.Panel>
-            </Transition.Child>
-          </div>
-        </div>
-      </Dialog>
-    </Transition.Root>
+
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+
   );
 }
