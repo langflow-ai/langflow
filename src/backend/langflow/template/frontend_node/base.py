@@ -14,6 +14,7 @@ class FrontendNode(BaseModel):
     description: str
     base_classes: List[str]
     name: str = ""
+    display_name: str = ""
 
     def to_dict(self) -> dict:
         return {
@@ -21,7 +22,8 @@ class FrontendNode(BaseModel):
                 "template": self.template.to_dict(self.format_field),
                 "description": self.description,
                 "base_classes": self.base_classes,
-            }
+                "display_name": self.display_name or self.name,
+            },
         }
 
     def add_extra_fields(self) -> None:
@@ -120,14 +122,30 @@ class FrontendNode(BaseModel):
     ) -> None:
         """Handles specific field values for certain fields."""
         if key == "headers":
-            field.value = """{'Authorization':
-            'Bearer <token>'}"""
-        if name == "OpenAI" and key == "model_name":
-            field.options = constants.OPENAI_MODELS
+            field.value = """{'Authorization': 'Bearer <token>'}"""
+        FrontendNode._handle_model_specific_field_values(field, key, name)
+        FrontendNode._handle_api_key_specific_field_values(field, key, name)
+
+    @staticmethod
+    def _handle_model_specific_field_values(
+        field: TemplateField, key: str, name: Optional[str] = None
+    ) -> None:
+        """Handles specific field values related to models."""
+        model_dict = {
+            "OpenAI": constants.OPENAI_MODELS,
+            "ChatOpenAI": constants.CHAT_OPENAI_MODELS,
+            "Anthropic": constants.ANTHROPIC_MODELS,
+            "ChatAnthropic": constants.ANTHROPIC_MODELS,
+        }
+        if name in model_dict and key == "model_name":
+            field.options = model_dict[name]
             field.is_list = True
-        elif name == "ChatOpenAI" and key == "model_name":
-            field.options = constants.CHAT_OPENAI_MODELS
-            field.is_list = True
+
+    @staticmethod
+    def _handle_api_key_specific_field_values(
+        field: TemplateField, key: str, name: Optional[str] = None
+    ) -> None:
+        """Handles specific field values related to API keys."""
         if "api_key" in key and "OpenAI" in str(name):
             field.display_name = "OpenAI API Key"
             field.required = False

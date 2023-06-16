@@ -3,7 +3,7 @@ from langflow.settings import settings
 
 
 def test_llms_settings(client: TestClient):
-    response = client.get("/all")
+    response = client.get("api/v1/all")
     assert response.status_code == 200
     json_response = response.json()
     llms = json_response["llms"]
@@ -11,7 +11,7 @@ def test_llms_settings(client: TestClient):
 
 
 # def test_hugging_face_hub(client: TestClient):
-#     response = client.get("/all")
+#     response = client.get("api/v1/all")
 #     assert response.status_code == 200
 #     json_response = response.json()
 #     language_models = json_response["llms"]
@@ -103,7 +103,7 @@ def test_llms_settings(client: TestClient):
 
 
 def test_openai(client: TestClient):
-    response = client.get("/all")
+    response = client.get("api/v1/all")
     assert response.status_code == 200
     json_response = response.json()
     language_models = json_response["llms"]
@@ -333,7 +333,7 @@ def test_openai(client: TestClient):
 
 
 def test_chat_open_ai(client: TestClient):
-    response = client.get("/all")
+    response = client.get("api/v1/all")
     assert response.status_code == 200
     json_response = response.json()
     language_models = json_response["llms"]
@@ -371,7 +371,16 @@ def test_chat_open_ai(client: TestClient):
         "multiline": False,
         "value": "gpt-3.5-turbo",
         "password": False,
-        "options": ["gpt-3.5-turbo", "gpt-4", "gpt-4-32k"],
+        "options": [
+            "gpt-3.5-turbo-0613",
+            "gpt-3.5-turbo",
+            "gpt-3.5-turbo-16k-0613",
+            "gpt-3.5-turbo-16k",
+            "gpt-4-0613",
+            "gpt-4-32k-0613",
+            "gpt-4",
+            "gpt-4-32k",
+        ],
         "name": "model_name",
         "type": "str",
         "list": True,
@@ -478,7 +487,83 @@ def test_chat_open_ai(client: TestClient):
         == "Wrapper around OpenAI Chat large language models."  # noqa E501
     )
     assert set(model["base_classes"]) == {
+        "Serializable",
         "BaseChatModel",
         "ChatOpenAI",
         "BaseLanguageModel",
     }
+
+
+# Commenting this out for now, as it requires to activate the nodes
+# def test_azure_open_ai(client: TestClient):
+#     response = client.get("/all")
+#     assert response.status_code == 200
+#     json_response = response.json()
+#     language_models = json_response["llms"]
+
+#     model = language_models["AzureOpenAI"]
+#     template = model["template"]
+
+#     assert template["model_name"]["show"] is False
+#     assert template["deployment_name"] == {
+#         "required": False,
+#         "placeholder": "",
+#         "show": True,
+#         "multiline": False,
+#         "value": "",
+#         "password": False,
+#         "name": "deployment_name",
+#         "advanced": False,
+#         "type": "str",
+#         "list": False,
+#     }
+
+
+# def test_azure_chat_open_ai(client: TestClient):
+#     response = client.get("/all")
+#     assert response.status_code == 200
+#     json_response = response.json()
+#     language_models = json_response["llms"]
+
+#     model = language_models["AzureChatOpenAI"]
+#     template = model["template"]
+
+#     assert template["model_name"]["show"] is False
+#     assert template["deployment_name"] == {
+#         "required": False,
+#         "placeholder": "",
+#         "show": True,
+#         "multiline": False,
+#         "value": "",
+#         "password": False,
+#         "name": "deployment_name",
+#         "advanced": False,
+#         "type": "str",
+#         "list": False,
+#     }
+#     assert template["openai_api_type"] == {
+#         "required": False,
+#         "placeholder": "",
+#         "show": False,
+#         "multiline": False,
+#         "value": "azure",
+#         "password": False,
+#         "name": "openai_api_type",
+#         "display_name": "OpenAI API Type",
+#         "advanced": False,
+#         "type": "str",
+#         "list": False,
+#     }
+#     assert template["openai_api_version"] == {
+#         "required": False,
+#         "placeholder": "",
+#         "show": True,
+#         "multiline": False,
+#         "value": "2023-03-15-preview",
+#         "password": False,
+#         "name": "openai_api_version",
+#         "display_name": "OpenAI API Version",
+#         "advanced": False,
+#         "type": "str",
+#         "list": False,
+#     }

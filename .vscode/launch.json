@@ -1,7 +1,7 @@
 {
   "configurations": [
     {
-      "name": "Python: FastAPI",
+      "name": "Debug Backend",
       "type": "python",
       "request": "launch",
       "module": "uvicorn",
@@ -14,7 +14,7 @@
         "debug"
       ],
       "jinja": true,
-      "justMyCode": false
+      "justMyCode": true
     },
     {
       "name": "Python: Remote Attach",
@@ -30,6 +30,13 @@
           "remoteRoot": "."
         }
       ]
+    },
+    {
+      "name": "Debug Frontend",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:3000/",
+      "webRoot": "${workspaceRoot}/src/frontend"
     }
   ]
 }

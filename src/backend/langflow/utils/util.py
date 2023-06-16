@@ -302,7 +302,9 @@ def format_dict(d, name: Optional[str] = None):
         elif name == "ChatOpenAI" and key == "model_name":
             value["options"] = constants.CHAT_OPENAI_MODELS
             value["list"] = True
-
+        elif (name == "Anthropic" or name == "ChatAnthropic") and key == "model_name":
+            value["options"] = constants.ANTHROPIC_MODELS
+            value["list"] = True
     return d
 
 

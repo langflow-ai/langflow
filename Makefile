@@ -43,7 +43,13 @@ install_backend:
 	poetry install
 
 backend:
+	make install_backend
 	poetry run uvicorn langflow.main:app --port 7860 --reload --log-level debug
+
+build_and_run:
+	echo 'Removing dist folder'
+	rm -rf dist
+	make build && poetry run pip install dist/*.tar.gz && poetry run langflow
 
 build_frontend:
 	cd src/frontend && CI='' npm run build

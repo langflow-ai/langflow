@@ -1,21 +1,18 @@
 import { Dialog, Transition } from "@headlessui/react";
-import {
-  ChatBubbleOvalLeftEllipsisIcon,
-  XMarkIcon,
-} from "@heroicons/react/24/outline";
+import { ChatBubbleOvalLeftEllipsisIcon } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useEffect, useRef, useState } from "react";
-import { FlowType, NodeType } from "../../types/flow";
+import { FlowType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
-import { toNormalCase } from "../../utils";
+import { validateNodes } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import ChatMessage from "./chatMessage";
-import { FaEraser } from "react-icons/fa";
-import { HiX } from "react-icons/hi";
+import { Eraser } from "lucide-react";
+import { X } from "lucide-react";
 import { sendAllProps } from "../../types/api";
-import { ChatMessageType, ChatType } from "../../types/chat";
+import { ChatMessageType } from "../../types/chat";
 import ChatInput from "./chatInput";
 
-import _, { set } from "lodash";
+import _ from "lodash";
 
 export default function ChatModal({
   flow,
@@ -114,6 +111,17 @@ export default function ChatModal({
     }
   }
 
+  function getWebSocketUrl(chatId, isDevelopment = false) {
+    const isSecureProtocol = window.location.protocol === "https:";
+    const webSocketProtocol = isSecureProtocol ? "wss" : "ws";
+    const host = isDevelopment ? "localhost:7860" : window.location.host;
+    const chatEndpoint = `/api/v1/chat/${chatId}`;
+
+    return `${
+      isDevelopment ? "ws" : webSocketProtocol
+    }://${host}${chatEndpoint}`;
+  }
+
   function handleWsMessage(data: any) {
     if (Array.isArray(data)) {
       //set chat history
@@ -180,12 +188,10 @@ export default function ChatModal({
 
   function connectWS() {
     try {
-      const urlWs =
+      const urlWs = getWebSocketUrl(
+        id.current,
         process.env.NODE_ENV === "development"
-          ? `ws://localhost:7860/chat/${id.current}`
-          : `${window.location.protocol === "https:" ? "wss" : "ws"}://${
-              window.location.host
-            }/chat/${id.current}`;
+      );
       const newWs = new WebSocket(urlWs);
       newWs.onopen = () => {
         console.log("WebSocket connection established!");
@@ -264,54 +270,6 @@ export default function ChatModal({
     if (ref.current) ref.current.scrollIntoView({ behavior: "smooth" });
   }, [chatHistory]);
 
-  function validateNode(n: NodeType): Array<string> {
-    if (!n.data?.node?.template || !Object.keys(n.data.node.template)) {
-      setNoticeData({
-        title:
-          "We've noticed a potential issue with a node in the flow. Please review it and, if necessary, submit a bug report with your exported flow file. Thank you for your help!",
-      });
-      return [];
-    }
-
-    const {
-      type,
-      node: { template },
-    } = n.data;
-
-    return Object.keys(template).reduce(
-      (errors: Array<string>, t) =>
-        errors.concat(
-          template[t].required &&
-            template[t].show &&
-            (template[t].value === undefined ||
-              template[t].value === null ||
-              template[t].value === "") &&
-            !reactFlowInstance
-              .getEdges()
-              .some(
-                (e) =>
-                  e.targetHandle.split("|")[1] === t &&
-                  e.targetHandle.split("|")[2] === n.id
-              )
-            ? [
-                `${type} is missing ${
-                  template.display_name
-                    ? template.display_name
-                    : toNormalCase(template[t].name)
-                }.`,
-              ]
-            : []
-        ),
-      [] as string[]
-    );
-  }
-
-  function validateNodes() {
-    return reactFlowInstance
-      .getNodes()
-      .flatMap((n: NodeType) => validateNode(n));
-  }
-
   const ref = useRef(null);
 
   useEffect(() => {
@@ -322,7 +280,7 @@ export default function ChatModal({
 
   function sendMessage() {
     if (chatValue !== "") {
-      let nodeValidationErrors = validateNodes();
+      let nodeValidationErrors = validateNodes(reactFlowInstance);
       if (nodeValidationErrors.length === 0) {
         setLockChat(true);
         let message = chatValue;
@@ -394,13 +352,13 @@ export default function ChatModal({
                     onClick={() => clearChat()}
                     className="absolute top-2 right-10 hover:text-red-500 text-gray-600 dark:text-gray-300 dark:hover:text-red-500 z-30"
                   >
-                    <FaEraser className="w-4 h-4" />
+                    <Eraser className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setModalOpen(false)}
                     className="absolute top-1.5 right-2 hover:text-red-500 text-gray-600 dark:text-gray-300 dark:hover:text-red-500 z-30"
                   >
-                    <HiX className="w-5 h-5" />
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
                 <div
@@ -409,7 +367,12 @@ export default function ChatModal({
                 >
                   {chatHistory.length > 0 ? (
                     chatHistory.map((c, i) => (
-                      <ChatMessage lockChat={lockChat} chat={c} key={i} />
+                      <ChatMessage
+                        lockChat={lockChat}
+                        chat={c}
+                        lastMessage={chatHistory.length - 1 == i ? true : false}
+                        key={i}
+                      />
                     ))
                   ) : (
                     <div className="flex flex-col h-full text-center justify-center w-full items-center align-middle">
@@ -420,7 +383,7 @@ export default function ChatModal({
                         </span>
                       </span>
                       <br />
-                      <div className="bg-gray-100 dark:bg-gray-900 rounded-md w-2/4 px-6 py-8 border border-gray-200 dark:border-gray-700">
+                      <div className="bg-muted dark:bg-gray-900 rounded-md w-2/4 px-6 py-8 border border-gray-200 dark:border-gray-700">
                         <span className="text-base text-gray-500">
                           Start a conversation and click the agent’s thoughts{" "}
                           <span>
