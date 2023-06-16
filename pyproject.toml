@@ -62,6 +62,7 @@ anthropic = "^0.2.9"
 orjson = "^3.9.0"
 multiprocess = "^0.70.14"
 cachetools = "^5.3.1"
+types-cachetools = "^5.3.0.5"
 
 
 [tool.poetry.group.dev.dependencies]
