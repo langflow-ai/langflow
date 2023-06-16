@@ -120,7 +120,7 @@ def test_initialize_agent(client: TestClient):
     json_response = response.json()
     agents = json_response["agents"]
 
-    initialize_agent = agents["initialize_agent"]
+    initialize_agent = agents["AgentInitializer"]
     assert initialize_agent["base_classes"] == ["AgentExecutor", "function"]
     template = initialize_agent["template"]
 
@@ -136,6 +136,7 @@ def test_initialize_agent(client: TestClient):
             "react-docstore",
             "self-ask-with-search",
             "conversational-react-description",
+            "openai-functions",
         ],
         "name": "agent",
         "type": "str",

@@ -12,10 +12,11 @@ from langflow.api.v1.schemas import BuiltResponse, InitResponse
 from langflow.chat.manager import ChatManager
 from langflow.graph.graph.base import Graph
 from langflow.utils.logger import logger
+from cachetools import LRUCache
 
 router = APIRouter(tags=["Chat"])
 chat_manager = ChatManager()
-flow_data_store = {}
+flow_data_store = LRUCache(maxsize=10)
 
 
 @router.websocket("/chat/{client_id}")
@@ -38,7 +39,8 @@ async def init_build(graph_data: dict):
 
     try:
         flow_id = graph_data.get("id")
-
+        if flow_id is None:
+            raise ValueError("No ID provided")
         flow_data_store[flow_id] = graph_data
 
         return InitResponse(flowId=flow_id)
