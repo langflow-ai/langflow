@@ -19,17 +19,8 @@ export default function ChatTrigger({ open, setOpen, isBuilt }) {
   }
 
   return (
-    <Transition
-      show={!open}
-      appear={true}
-      enter="transition ease-out duration-300"
-      enterFrom="translate-y-96"
-      enterTo="translate-y-0"
-      leave="transition ease-in duration-300"
-      leaveFrom="translate-y-0"
-      leaveTo="translate-y-96"
-    >
-      <div className="absolute bottom-10 right-3">
+
+      <div className="absolute bottom-10 right-4">
         <div
           className="flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full shadow-md shadow-[#0000002a] hover:shadow-[#00000032]
           bg-[#E2E7EE] dark:border-gray-600 cursor-pointer"
@@ -46,6 +37,5 @@ export default function ChatTrigger({ open, setOpen, isBuilt }) {
           </button>
         </div>
       </div>
-    </Transition>
   );
 }
