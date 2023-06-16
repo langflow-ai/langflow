@@ -82,7 +82,7 @@ const NodeToolbarComponent = (props) => {
             </ShadTooltip>
           )}
 
-          {/*
+          
           <Menu as="div" className="relative inline-block text-left z-100">
             <button className="hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2 ring-1 ring-inset ring-gray-300 hover:bg-muted focus:z-10 rounded-r-md">
               <div>
@@ -173,7 +173,7 @@ const NodeToolbarComponent = (props) => {
                 </Menu.Items>
               </Transition>
             </button>
-          </Menu> */}
+          </Menu>
         </span>
       </div>
     </>

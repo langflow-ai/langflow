@@ -148,3 +148,25 @@ export const EXPORT_CODE_DIALOG =
  */
 export const INPUT_STYLE =
   " focus:ring-1 focus:ring-offset-1 focus:ring-ring focus:outline-none ";
+
+
+/**
+ * The base text for subtitle of code dialog
+ * @constant
+ */
+export const COLUMN_DIV_STYLE =
+  " w-full h-full flex overflow-auto flex-col bg-muted px-16 ";
+
+/**
+ * The base text for subtitle of code dialog
+ * @constant
+ */
+export const NAV_DISPLAY_STYLE =
+  " w-full flex justify-between py-12 pb-2 px-6 ";
+
+/**
+ * The base text for subtitle of code dialog
+ * @constant
+ */
+export const BUTTON_DIV_STYLE =
+  " flex gap-2 ";
