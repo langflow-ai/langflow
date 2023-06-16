@@ -27,7 +27,6 @@ class BaseCache(abc.ABC):
             key: The key of the item.
             value: The value to cache.
         """
-        pass
 
     @abc.abstractmethod
     def delete(self, key):
