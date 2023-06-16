@@ -1,10 +1,4 @@
-import {
-  ForwardRefExoticComponent,
-  ReactElement,
-  ReactFragment,
-  ReactNode,
-  SVGProps,
-} from "react";
+import { ForwardRefExoticComponent, ReactElement, ReactNode } from "react";
 import { NodeDataType } from "../flow/index";
 import { typesContextType } from "../typesContext";
 export type InputComponentType = {
