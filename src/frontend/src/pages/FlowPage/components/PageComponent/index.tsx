@@ -46,7 +46,7 @@ export default function Page({ flow }: { flow: FlowType }) {
     tabsState,
     saveFlow,
     setTabsState,
-    tabId
+    tabId,
   } = useContext(TabsContext);
   const { types, reactFlowInstance, setReactFlowInstance, templates } =
     useContext(typesContext);
@@ -156,7 +156,7 @@ export default function Page({ flow }: { flow: FlowType }) {
         };
       });
     },
-    [onEdgesChange, setNodes,setTabsState,tabId]
+    [onEdgesChange, setNodes, setTabsState, tabId]
   );
 
   const onNodesChangeMod = useCallback(
@@ -171,7 +171,7 @@ export default function Page({ flow }: { flow: FlowType }) {
         };
       });
     },
-    [onNodesChange,setTabsState,tabId]
+    [onNodesChange, setTabsState, tabId]
   );
 
   const onConnect = useCallback(
@@ -277,14 +277,14 @@ export default function Page({ flow }: { flow: FlowType }) {
     // Specify dependencies for useCallback
     [getNodeId, reactFlowInstance, setErrorData, setNodes, takeSnapshot]
   );
-  
+
   useEffect(() => {
     return () => {
-      if(tabsState && tabsState[flow.id]?.isPending) {
-        saveFlow(flow)
+      if (tabsState && tabsState[flow.id]?.isPending) {
+        saveFlow(flow);
       }
-    }
-  },[])
+    };
+  }, []);
 
   const onDelete = useCallback(
     (mynodes) => {
@@ -370,7 +370,7 @@ export default function Page({ flow }: { flow: FlowType }) {
                   onPaneMouseLeave={() => {
                     setDisableCopyPaste(true);
                   }}
-                  onPaneMouseEnter={()=>{
+                  onPaneMouseEnter={() => {
                     setDisableCopyPaste(false);
                   }}
                   onNodesChange={onNodesChangeMod}

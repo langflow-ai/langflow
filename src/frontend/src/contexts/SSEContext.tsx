@@ -31,7 +31,9 @@ export function SSEProvider({ children }) {
   }, []);
 
   return (
-    <SSEContext.Provider value={{ sseData, updateSSEData,isBuilding,setIsBuilding }}>
+    <SSEContext.Provider
+      value={{ sseData, updateSSEData, isBuilding, setIsBuilding }}
+    >
       {children}
     </SSEContext.Provider>
   );
