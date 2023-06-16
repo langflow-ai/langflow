@@ -15,11 +15,7 @@ def test_init_build(client):
 
 def test_stream_build(client):
     client.post(
-        "api/v1/build/init",
-        json={
-            "id": "stream_test",
-            "data": {"key": "value"}
-        }
+        "api/v1/build/init", json={"id": "stream_test", "data": {"key": "value"}}
     )
 
     # Test the stream
