@@ -38,8 +38,6 @@ export default function ChatMessage({
           ? "bg-background dark:bg-gray-900 "
           : "bg-input  dark:bg-gray-800",
         lastMessage ? "mb-14" : ""
-      
-        
       )}
     >
       <div
@@ -65,9 +63,7 @@ export default function ChatMessage({
             />
           </div>
         )}
-        {chat.isSend && (
-          <User className="fill-black" />
-        )}
+        {chat.isSend && <User className="fill-black" />}
       </div>
       {!chat.isSend ? (
         <div className="w-full text-start flex items-center ">

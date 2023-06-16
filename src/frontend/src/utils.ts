@@ -213,7 +213,6 @@ export const gradients = [
   "bg-gradient-to-br from-green-500 to-green-700",
   "bg-gradient-to-br from-rose-400 via-fuchsia-500 to-indigo-500",
   "bg-gradient-to-br from-sky-400 to-blue-500",
-
 ];
 
 export const bgColors = {

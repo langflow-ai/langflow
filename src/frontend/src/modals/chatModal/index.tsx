@@ -325,75 +325,74 @@ export default function ChatModal({
   }
 
   return (
-
-
     <Dialog open={open} onOpenChange={setModalOpen}>
       <DialogTrigger></DialogTrigger>
       <DialogContent className="focus-visible:outline-none lg:max-w-[800px] lg:h-[95%] pt-10">
+        <div
+          className={
+            chatHistory.length == 0
+              ? "absolute right-1 z-30 h-0"
+              : "absolute right-1 z-30 h-full"
+          }
+        >
+          <button
+            onClick={() => clearChat()}
+            className="absolute top-4 right-10 hover:text-red-500 text-gray-600 dark:text-gray-300 dark:hover:text-red-500 z-30"
+          >
+            <Eraser className="w-4 h-4" />
+          </button>
+        </div>
 
-<div className={chatHistory.length == 0 ? "absolute right-1 z-30 h-0" : "absolute right-1 z-30 h-full"}>
-<button
-                    onClick={() => clearChat()}
-                    className="absolute top-4 right-10 hover:text-red-500 text-gray-600 dark:text-gray-300 dark:hover:text-red-500 z-30"
-                  >
-                    <Eraser className="w-4 h-4" />
-                  </button>
-</div>
-
-                <div
-                  ref={messagesRef}
-                  className="w-full h-full bg-white dark:bg-gray-800 flex-col flex items-center overflow-scroll scrollbar-hide"
-                >
-                  {chatHistory.length > 0 ? (
-                    chatHistory.map((c, i) => (
-                      <ChatMessage
-                        lockChat={lockChat}
-                        chat={c}
-                        lastMessage={chatHistory.length - 1 == i ? true : false}
-                        key={i}
-                      />
-                    ))
-                  ) : (
-                    <div className="flex flex-col h-full text-center justify-center w-full items-center align-middle">
-                      <span>
-                        👋{" "}
-                        <span className="text-gray-600 dark:text-gray-300 text-lg">
-                          LangFlow Chat
-                        </span>
-                      </span>
-                      <br />
-                      <div className="bg-muted dark:bg-gray-900 rounded-md w-2/4 px-6 py-8 border border-gray-200 dark:border-gray-700">
-                        <span className="text-base text-gray-500">
-                          Start a conversation and click the agent’s thoughts{" "}
-                          <span>
-                            <ChatBubbleOvalLeftEllipsisIcon className="w-6 h-6 inline animate-bounce " />
-                          </span>{" "}
-                          to inspect the chaining process.
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                  <div ref={ref}></div>
-                </div>
-
+        <div
+          ref={messagesRef}
+          className="w-full h-full bg-white dark:bg-gray-800 flex-col flex items-center overflow-scroll scrollbar-hide"
+        >
+          {chatHistory.length > 0 ? (
+            chatHistory.map((c, i) => (
+              <ChatMessage
+                lockChat={lockChat}
+                chat={c}
+                lastMessage={chatHistory.length - 1 == i ? true : false}
+                key={i}
+              />
+            ))
+          ) : (
+            <div className="flex flex-col h-full text-center justify-center w-full items-center align-middle">
+              <span>
+                👋{" "}
+                <span className="text-gray-600 dark:text-gray-300 text-lg">
+                  LangFlow Chat
+                </span>
+              </span>
+              <br />
+              <div className="bg-muted dark:bg-gray-900 rounded-md w-2/4 px-6 py-8 border border-gray-200 dark:border-gray-700">
+                <span className="text-base text-gray-500">
+                  Start a conversation and click the agent’s thoughts{" "}
+                  <span>
+                    <ChatBubbleOvalLeftEllipsisIcon className="w-6 h-6 inline animate-bounce " />
+                  </span>{" "}
+                  to inspect the chaining process.
+                </span>
+              </div>
+            </div>
+          )}
+          <div ref={ref}></div>
+        </div>
 
         <DialogFooter className="absolute bottom-3 w-full">
-        <div className="w-full bg-white dark:bg-gray-800 flex-col flex items-center justify-between p-3">
-                  <div className="relative w-full  mt-1 rounded-md shadow-sm">
-                    <ChatInput
-                      chatValue={chatValue}
-                      lockChat={lockChat}
-                      sendMessage={sendMessage}
-                      setChatValue={setChatValue}
-                      inputRef={ref}
-                    />
-                  </div>
-                </div>
-
+          <div className="w-full bg-white dark:bg-gray-800 flex-col flex items-center justify-between p-3">
+            <div className="relative w-full  mt-1 rounded-md shadow-sm">
+              <ChatInput
+                chatValue={chatValue}
+                lockChat={lockChat}
+                sendMessage={sendMessage}
+                setChatValue={setChatValue}
+                inputRef={ref}
+              />
+            </div>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-
-
   );
 }

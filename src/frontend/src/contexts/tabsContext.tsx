@@ -40,7 +40,7 @@ const TabsContextInitialValue: TabsContextType = {
   uploadFlows: () => {},
   uploadFlow: () => {},
   hardReset: () => {},
-  saveFlow: async (flow:FlowType) => {},
+  saveFlow: async (flow: FlowType) => {},
   disableCopyPaste: false,
   setDisableCopyPaste: (state: boolean) => {},
   lastCopiedSelection: null,
@@ -564,10 +564,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
 
   async function saveFlow(newFlow: FlowType) {
-    try{
+    try {
       // updates flow in db
       const updatedFlow = await updateFlowInDatabase(newFlow);
-      if (updatedFlow){
+      if (updatedFlow) {
         // updates flow in state
         setFlows((prevState) => {
           const newFlows = [...prevState];
@@ -589,8 +589,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           };
         });
       }
-    }
-    catch(err){
+    } catch (err) {
       setErrorData(err);
     }
   }

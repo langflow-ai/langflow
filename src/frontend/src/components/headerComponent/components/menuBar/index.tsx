@@ -99,8 +99,14 @@ export const MenuBar = ({ flows, tabId }) => {
             >
               {flows.map((flow, idx) => {
                 return (
-                  <Link to={"/flow/" + flow.id} className="flex w-full items-center">
-                    <DropdownMenuRadioItem value={flow.id} className="flex-1 w-full inline-block truncate break-words mr-2">
+                  <Link
+                    to={"/flow/" + flow.id}
+                    className="flex w-full items-center"
+                  >
+                    <DropdownMenuRadioItem
+                      value={flow.id}
+                      className="flex-1 w-full inline-block truncate break-words mr-2"
+                    >
                       {flow.name}
                     </DropdownMenuRadioItem>
                   </Link>
