@@ -3,7 +3,6 @@ from langflow.processing.process import process_graph_cached, process_tweaks
 from langflow.utils.logger import logger
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.security import HTTPBearer
 
 from langflow.api.v1.schemas import (
     PredictRequest,
@@ -16,20 +15,6 @@ from sqlmodel import Session
 
 # build router
 router = APIRouter(tags=["Base"])
-
-security = HTTPBearer()
-
-
-def get_flow_from_token(
-    bearer: HTTPBearer = Depends(security), session: Session = Depends(get_session)
-) -> str:
-    # Extract the token, which is the flow_id in this case
-    flow_id = bearer.credentials
-    # Check if the flow_id exists in the database
-    flow = session.get(Flow, flow_id)
-    if flow is None:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    return flow
 
 
 @router.get("/all")
@@ -51,6 +36,9 @@ async def predict_flow(
         flow = session.get(Flow, flow_id)
         if flow is None:
             raise ValueError(f"Flow {flow_id} not found")
+
+        if flow.data is None:
+            raise ValueError(f"Flow {flow_id} has no data")
         graph_data = flow.data
         if predict_request.tweaks:
             graph_data = process_tweaks(graph_data, predict_request.tweaks)
