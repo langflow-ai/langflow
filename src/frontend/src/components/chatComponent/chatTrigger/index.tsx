@@ -18,18 +18,18 @@ export default function ChatTrigger({ open, setOpen, isBuilt }) {
   }
 
   return (
-    <Transition
+<Transition
       show={!open}
       appear={true}
       enter="transition ease-out duration-300"
-      enterFrom="translate-x-96"
+      enterFrom="translate-y-96"
       enterTo="translate-y-0"
       leave="transition ease-in duration-300"
-      leaveFrom="translate-x-0"
-      leaveTo="translate-x-96"
-    >
+      leaveFrom="translate-y-0"
+      leaveTo="translate-y-96"
+>
 
-      <div className="absolute right-[100px] bottom-[620px]">
+<div className="absolute bottom-4 right-3">
         <div
           className="
           rounded-full shadow-md hover:shadow-sm shadow-[#00000063] hover:shadow-[#00000063]
