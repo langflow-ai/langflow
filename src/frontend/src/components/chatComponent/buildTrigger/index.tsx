@@ -20,9 +20,8 @@ export default function BuildTrigger({
   setIsBuilt: any;
   isBuilt: boolean;
 }) {
-  const [isBuilding, setIsBuilding] = useState(false);
 
-  const { updateSSEData } = useSSE();
+  const { updateSSEData,isBuilding,setIsBuilding } = useSSE();
   const { reactFlowInstance } = useContext(typesContext);
   const { setErrorData } = useContext(alertContext);
 
