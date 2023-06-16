@@ -62,7 +62,7 @@ anthropic = "^0.2.9"
 multiprocess = "^0.70.14"
 
 
-[tool.poetry.group.dev.dependencies]
+[tool.poetry.dev-dependencies]
 black = "^23.1.0"
 ipykernel = "^6.21.2"
 mypy = "^1.1.1"
