@@ -9,7 +9,7 @@ def test_init_build(client):
     response = client.post(
         "api/v1/build/init", json={"id": "test", "data": {"key": "value"}}
     )
-    assert response.status_code == 200
+    assert response.status_code == 201
     assert response.json() == {"flowId": "test"}
 
 

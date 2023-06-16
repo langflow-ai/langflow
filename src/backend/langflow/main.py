@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,7 +22,11 @@ def create_app(static_path: str = "static"):
 
     @app.exception_handler(404)
     async def custom_404_handler(request, __):
-        return FileResponse(f"{static_path}/index.html")
+        path = f"{static_path}/index.html"
+
+        if not os.path.isfile(path):
+            raise RuntimeError(f"File at path {path} does not exist.")
+        return FileResponse(path)
 
     app.add_middleware(
         CORSMiddleware,
