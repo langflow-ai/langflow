@@ -286,7 +286,7 @@ def test_stress_create_flow(client: TestClient, json_flow: str):
         assert response.status_code == 200
 
     threads = []
-    for i in range(100):
+    for _ in range(100):
         t = threading.Thread(target=create_flow)
         threads.append(t)
         t.start()
