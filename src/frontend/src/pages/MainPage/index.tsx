@@ -1,24 +1,26 @@
 import { useContext, useEffect } from "react";
-import { Download, Upload, Plus, Home, ExternalLink } from "lucide-react";
-import { TabsContext } from "../../contexts/tabsContext";
-import { Button } from "../../components/ui/button";
-import { Link, useNavigate } from "react-router-dom";
-import { CardComponent } from "../../components/cardComponent";
-export default function HomePage() {
-  const { flows, setTabId, downloadFlows, uploadFlows, addFlow, removeFlow } =
+import { COLUMN_DIV_STYLE, NAV_DISPLAY_STYLE } from "../../constants";
+
+  import { Download, Upload, Plus, Home, ExternalLink } from "lucide-react";
+  import { TabsContext } from "../../contexts/tabsContext";
+  import { Button } from "../../components/ui/button";
+  import { Link, useNavigate } from "react-router-dom";
+  import { CardComponent } from "../../components/cardComponent";
+  export default function HomePage() {
+    const { flows, setTabId, downloadFlows, uploadFlows, addFlow, removeFlow } =
     useContext(TabsContext);
-  useEffect(() => {
-    setTabId("");
-  }, []);
-  const navigate = useNavigate();
+    useEffect(() => {
+      setTabId("");
+    }, []);
+    const navigate = useNavigate();
   return (
-    <div className="w-full h-full flex overflow-auto flex-col bg-muted px-16">
-      <div className="w-full flex justify-between py-12 pb-2 px-6">
-        <span className="text-2xl flex items-center justify-center gap-2 font-semibold">
-          <Home className="w-6" />
+    <div className={`${ COLUMN_DIV_STYLE }`} >
+      <div className={`${ NAV_DISPLAY_STYLE }`}>
+        <span className=" text-2xl flex items-center justify-center gap-2 font-semibold ">
+          <Home className=" w-6 " />
           My Projects
         </span>
-        <div className="flex gap-2">
+        <div className="hi flex gap-2">
           <Button
             variant="primary"
             onClick={() => {
