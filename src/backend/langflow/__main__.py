@@ -12,7 +12,7 @@ from rich import box
 from rich import print as rprint
 import typer
 from fastapi.staticfiles import StaticFiles
-
+from fastapi.responses import FileResponse
 from langflow.main import create_app
 from langflow.settings import settings
 from langflow.utils.logger import configure, logger
@@ -121,20 +121,6 @@ def serve(
 ):
     """
     Run the Langflow server.
-
-    Args:
-        host (str): Host to bind the server to.
-        workers (int): Number of worker processes.
-        timeout (int): Worker timeout in seconds.
-        port (int): Port to listen on.
-        config (str): Path to the configuration file.
-        env_file (Path): Path to the .env file containing environment variables.
-        log_level (str): Logging level.
-        log_file (Path): Path to the log file.
-        jcloud (bool): Deploy on Jina AI Cloud.
-        dev (bool): Run in development mode (may contain bugs).
-        path (str): Path to the frontend directory containing build files. This is for development purposes only.
-        open_browser (bool): Open the browser after starting the server.
     """
 
     if jcloud:
@@ -153,8 +139,11 @@ def serve(
     else:
         static_files_dir = Path(path)
 
-    app = create_app(static_files_dir)
+    app = create_app()
     setup_static_files(app, static_files_dir)
+    # check if port is being used
+    if is_port_in_use(port, host):
+        port = get_free_port(port)
 
     options = {
         "bind": f"{host}:{port}",
@@ -168,9 +157,6 @@ def serve(
     )
     webapp_process.start()
     status_code = 0
-    # check if port is being used
-    if is_port_in_use(port, host):
-        port = get_free_port(port)
     while status_code != 200:
         try:
             status_code = httpx.get(f"http://{host}:{port}/health").status_code
@@ -196,6 +182,14 @@ def setup_static_files(app: FastAPI, static_files_dir: Path):
         StaticFiles(directory=static_files_dir, html=True),
         name="static",
     )
+
+    @app.exception_handler(404)
+    async def custom_404_handler(request, __):
+        path = static_files_dir / "index.html"
+
+        if not path.exists():
+            raise RuntimeError(f"File at path {path} does not exist.")
+        return FileResponse(path)
 
 
 def is_port_in_use(port, host="localhost"):
@@ -232,7 +226,7 @@ def print_banner(host, port):
     # console = Console()
 
     word = "LangFlow"
-    colors = ["#690080", "#660099", "#4d00b3", "#3300cc", "#1a00e6", "#0000ff"]
+    colors = ["#3300cc"]
 
     styled_word = ""
 
