@@ -327,7 +327,7 @@ export default function ChatModal({
   return (
     <Dialog open={open} onOpenChange={setModalOpen}>
       <DialogTrigger></DialogTrigger>
-      <DialogContent className="focus-visible:outline-none lg:max-w-[800px] lg:h-[95%] pt-10">
+      <DialogContent className="focus-visible:outline-none lg:max-w-[770px] lg:h-[95%] pt-10">
         <div
           className={
             chatHistory.length == 0
