@@ -379,7 +379,7 @@ def test_chat_open_ai(client: TestClient):
             "gpt-4-0613",
             "gpt-4-32k-0613",
             "gpt-4",
-            "gpt-4-32k"
+            "gpt-4-32k",
         ],
         "name": "model_name",
         "type": "str",

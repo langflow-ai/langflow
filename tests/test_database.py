@@ -57,8 +57,7 @@ def test_read_flows(client: TestClient, json_flow: str):
     assert response.json()["name"] == flow.name
     assert response.json()["data"] == flow.data
 
-    flow_style = FlowStyleCreate(
-        color="red", emoji="👍", flow_id=response.json()["id"])
+    flow_style = FlowStyleCreate(color="red", emoji="👍", flow_id=response.json()["id"])
     response = client.post(
         "api/v1/flow_styles/", json=jsonable_encoder(flow_style.dict())
     )
@@ -121,10 +120,7 @@ def test_update_flow(client: TestClient, json_flow: str):
     data = flow["data"]
 
     flow = FlowCreate(name="Test Flow", description="description", data=data)
-    response = client.post(
-        "api/v1/flows/",
-        json=flow.dict()
-    )
+    response = client.post("api/v1/flows/", json=flow.dict())
 
     flow_id = response.json()["id"]
     updated_flow = FlowUpdate(
@@ -132,10 +128,7 @@ def test_update_flow(client: TestClient, json_flow: str):
         description="updated description",
         data=data,
     )
-    response = client.patch(
-        f"api/v1/flows/{flow_id}",
-        json=updated_flow.dict()
-    )
+    response = client.patch(f"api/v1/flows/{flow_id}", json=updated_flow.dict())
 
     assert response.status_code == 200
     assert response.json()["name"] == updated_flow.name
@@ -252,12 +245,10 @@ def test_get_nonexistent_flow(client: TestClient):
 def test_update_flow_idempotency(client: TestClient, json_flow: str):
     flow_data = json.loads(json_flow)
     data = flow_data["data"]
-    flow_data = FlowCreate(
-        name="Test Flow", description="description", data=data)
+    flow_data = FlowCreate(name="Test Flow", description="description", data=data)
     response = client.post("api/v1/flows/", json=flow_data.dict())
     flow_id = response.json()["id"]
-    updated_flow = FlowCreate(
-        name="Updated Flow", description="description", data=data)
+    updated_flow = FlowCreate(name="Updated Flow", description="description", data=data)
     response1 = client.put(f"api/v1/flows/{flow_id}", json=updated_flow.dict())
     response2 = client.put(f"api/v1/flows/{flow_id}", json=updated_flow.dict())
     assert response1.json() == response2.json()
@@ -321,8 +312,7 @@ def test_create_flow_style(client: TestClient):
 def test_read_flow_styles(client: TestClient):
     response = client.get("api/v1/flow_styles/")
     assert response.status_code == 200
-    flow_styles = [FlowStyleRead(**flow_style)
-                   for flow_style in response.json()]
+    flow_styles = [FlowStyleRead(**flow_style) for flow_style in response.json()]
     assert not flow_styles
     # Create test data
     flow_style = FlowStyleCreate(color="red", emoji="🔴")
@@ -331,8 +321,7 @@ def test_read_flow_styles(client: TestClient):
     # Check response data
     response = client.get("api/v1/flow_styles/")
     assert response.status_code == 200
-    flow_styles = [FlowStyleRead(**flow_style)
-                   for flow_style in response.json()]
+    flow_styles = [FlowStyleRead(**flow_style) for flow_style in response.json()]
     assert len(flow_styles) == 1
     assert flow_styles[0].color == flow_style.color
     assert flow_styles[0].emoji == flow_style.emoji

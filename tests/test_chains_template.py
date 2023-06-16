@@ -106,7 +106,7 @@ def test_llm_chain(client: TestClient):
         "Serializable",
         "function",
         "LLMChain",
-        "Chain"
+        "Chain",
     }
 
     template = chain["template"]
@@ -170,7 +170,7 @@ def test_llm_checker_chain(client: TestClient):
         "Serializable",
         "function",
         "LLMCheckerChain",
-        "Chain"
+        "Chain",
     }
 
     template = chain["template"]
@@ -188,9 +188,7 @@ def test_llm_checker_chain(client: TestClient):
     assert template["_type"] == "LLMCheckerChain"
 
     # Test the description object
-    assert (
-        chain["description"] == ""
-    )
+    assert chain["description"] == ""
 
 
 def test_llm_math_chain(client: TestClient):
@@ -205,7 +203,7 @@ def test_llm_math_chain(client: TestClient):
         "function",
         "Serializable",
         "LLMMathChain",
-        "Chain"
+        "Chain",
     }
 
     template = chain["template"]
