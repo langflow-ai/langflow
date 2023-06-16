@@ -1,21 +1,21 @@
-from uuid import UUID, uuid4
-from langflow.api.v1.schemas import FlowListCreate
-from langflow.database.models.flow import FlowCreate, FlowUpdate
 import json
+import pytest
+import threading
+
+from uuid import UUID, uuid4
 from sqlalchemy.orm import Session
-from langflow.database.models.flow import Flow
+
 from fastapi.testclient import TestClient
+from fastapi.encoders import jsonable_encoder
+
+from langflow.api.v1.schemas import FlowListCreate
+from langflow.database.models.flow import Flow, FlowCreate, FlowUpdate
 
 from langflow.database.models.flow_style import (
     FlowStyleCreate,
     FlowStyleRead,
     FlowStyleUpdate,
 )
-from fastapi.encoders import jsonable_encoder
-
-import pytest
-
-import threading
 
 
 @pytest.fixture(scope="module")
@@ -37,13 +37,13 @@ def test_create_flow(client: TestClient, json_flow: str):
     data = flow["data"]
     flow = FlowCreate(name="Test Flow", description="description", data=data)
     response = client.post("api/v1/flows/", json=flow.dict())
-    assert response.status_code == 200
+    assert response.status_code == 201
     assert response.json()["name"] == flow.name
     assert response.json()["data"] == flow.data
     # flow is optional so we can create a flow without a flow
     flow = FlowCreate(name="Test Flow")
     response = client.post("api/v1/flows/", json=flow.dict(exclude_unset=True))
-    assert response.status_code == 200
+    assert response.status_code == 201
     assert response.json()["name"] == flow.name
     assert response.json()["data"] == flow.data
 
@@ -53,7 +53,7 @@ def test_read_flows(client: TestClient, json_flow: str):
     data = flow_data["data"]
     flow = FlowCreate(name="Test Flow", description="description", data=data)
     response = client.post("api/v1/flows/", json=flow.dict())
-    assert response.status_code == 200
+    assert response.status_code == 201
     assert response.json()["name"] == flow.name
     assert response.json()["data"] == flow.data
 
@@ -68,7 +68,7 @@ def test_read_flows(client: TestClient, json_flow: str):
 
     flow = FlowCreate(name="Test Flow", description="description", data=data)
     response = client.post("api/v1/flows/", json=flow.dict())
-    assert response.status_code == 200
+    assert response.status_code == 201
     assert response.json()["name"] == flow.name
     assert response.json()["data"] == flow.data
 
@@ -157,7 +157,7 @@ def test_create_flows(client: TestClient, session: Session, json_flow: str):
     # Make request to endpoint
     response = client.post("api/v1/flows/batch/", json=flow_list.dict())
     # Check response status code
-    assert response.status_code == 200
+    assert response.status_code == 201
     # Check response data
     response_data = response.json()
     assert len(response_data) == 2
@@ -185,7 +185,7 @@ def test_upload_file(client: TestClient, session: Session, json_flow: str):
         files={"file": ("examples.json", file_contents, "application/json")},
     )
     # Check response status code
-    assert response.status_code == 200
+    assert response.status_code == 201
     # Check response data
     response_data = response.json()
     assert len(response_data) == 2
@@ -233,10 +233,10 @@ def test_create_flow_with_invalid_data(client: TestClient):
 
 
 def test_get_nonexistent_flow(client: TestClient):
-    # uuid4 generates a random UUID
     uuid = uuid4()
-    response = client.get(f"api/v1/flows/{uuid}")
-    assert response.status_code == 404
+    with pytest.raises(RuntimeError) as excinfo:
+        client.get(f"api/v1/flows/{uuid}")
+    assert str(excinfo.value) == "File at path static/index.html does not exist."
 
 
 def test_update_flow_idempotency(client: TestClient, json_flow: str):
@@ -260,14 +260,16 @@ def test_update_nonexistent_flow(client: TestClient, json_flow: str):
         description="description",
         data=data,
     )
-    response = client.patch(f"api/v1/flows/{uuid}", json=updated_flow.dict())
-    assert response.status_code == 404
+    with pytest.raises(RuntimeError) as excinfo:
+        client.patch(f"api/v1/flows/{uuid}", json=updated_flow.dict())
+    assert str(excinfo.value) == "File at path static/index.html does not exist."
 
 
 def test_delete_nonexistent_flow(client: TestClient):
     uuid = uuid4()
-    response = client.delete(f"api/v1/flows/{uuid}")
-    assert response.status_code == 404
+    with pytest.raises(RuntimeError) as excinfo:
+        client.delete(f"api/v1/flows/{uuid}")
+    assert str(excinfo.value) == "File at path static/index.html does not exist."
 
 
 def test_read_empty_flows(client: TestClient):

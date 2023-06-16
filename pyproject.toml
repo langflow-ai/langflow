@@ -61,6 +61,7 @@ faiss-cpu = "^1.7.4"
 anthropic = "^0.2.9"
 orjson = "^3.9.0"
 multiprocess = "^0.70.14"
+cachetools = "^5.3.1"
 
 
 [tool.poetry.group.dev.dependencies]
