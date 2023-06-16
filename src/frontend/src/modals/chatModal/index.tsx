@@ -6,8 +6,8 @@ import { alertContext } from "../../contexts/alertContext";
 import { validateNodes } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import ChatMessage from "./chatMessage";
-import { FaEraser } from "react-icons/fa";
-import { HiX } from "react-icons/hi";
+import { Eraser } from "lucide-react";
+import {X} from "lucide-react"
 import { sendAllProps } from "../../types/api";
 import { ChatMessageType } from "../../types/chat";
 import ChatInput from "./chatInput";
@@ -352,13 +352,13 @@ export default function ChatModal({
                     onClick={() => clearChat()}
                     className="absolute top-2 right-10 hover:text-red-500 text-gray-600 dark:text-gray-300 dark:hover:text-red-500 z-30"
                   >
-                    <FaEraser className="w-4 h-4" />
+                    <Eraser className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setModalOpen(false)}
                     className="absolute top-1.5 right-2 hover:text-red-500 text-gray-600 dark:text-gray-300 dark:hover:text-red-500 z-30"
                   >
-                    <HiX className="w-5 h-5" />
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
                 <div
