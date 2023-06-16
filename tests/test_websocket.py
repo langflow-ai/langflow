@@ -14,7 +14,13 @@ def test_init_build(client):
 
 
 def test_stream_build(client):
-    client.post("/build/init", json={"id": "stream_test", "data": {"key": "value"}})
+    client.post(
+        "api/v1/build/init",
+        json={
+            "id": "stream_test",
+            "data": {"key": "value"}
+        }
+    )
 
     # Test the stream
     response = client.get("api/v1/build/stream/stream_test")
@@ -34,8 +40,8 @@ def test_websocket_endpoint(client):
 
 def test_websocket_endpoint_after_build(client, basic_graph_data):
     # Assuming your websocket_endpoint uses chat_manager which caches data from stream_build
-    client.post("/build/init", json=basic_graph_data)
-    client.get("/build/stream/websocket_test")
+    client.post("api/v1/build/init", json=basic_graph_data)
+    client.get("api/v1/build/stream/websocket_test")
 
     # There should be more to test here, but it depends on the inner workings of your websocket handler
     # and how your chat_manager and other classes behave. The following is just an example structure.
