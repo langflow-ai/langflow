@@ -1,4 +1,3 @@
-from abc import ABC
 from typing import Any, List, Optional
 
 from langchain import LLMChain
@@ -33,24 +32,7 @@ from langchain.memory.chat_memory import BaseChatMemory
 from langchain.sql_database import SQLDatabase
 from langchain.tools.python.tool import PythonAstREPLTool
 from langchain.tools.sql_database.prompt import QUERY_CHECKER
-
-
-class CustomAgentExecutor(AgentExecutor, ABC):
-    """Custom agent executor"""
-
-    @staticmethod
-    def function_name():
-        return "CustomAgentExecutor"
-
-    @classmethod
-    def initialize(cls, *args, **kwargs):
-        pass
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def run(self, *args, **kwargs):
-        return super().run(*args, **kwargs)
+from langflow.interface.base import CustomAgentExecutor
 
 
 class JsonAgent(CustomAgentExecutor):
@@ -69,7 +51,7 @@ class JsonAgent(CustomAgentExecutor):
 
     @classmethod
     def from_toolkit_and_llm(cls, toolkit: JsonToolkit, llm: BaseLanguageModel):
-        tools = toolkit.get_tools()
+        tools = toolkit if isinstance(toolkit, list) else toolkit.get_tools()
         tool_names = {tool.name for tool in tools}
         prompt = ZeroShotAgent.create_prompt(
             tools,
@@ -142,7 +124,7 @@ class CSVAgent(CustomAgentExecutor):
 
 
 class VectorStoreAgent(CustomAgentExecutor):
-    """Vector Store agent"""
+    """Vector store agent"""
 
     @staticmethod
     def function_name():
@@ -199,7 +181,7 @@ class SQLAgent(CustomAgentExecutor):
     def from_toolkit_and_llm(
         cls, llm: BaseLanguageModel, database_uri: str, **kwargs: Any
     ):
-        """Construct a sql agent from an LLM and tools."""
+        """Construct an SQL agent from an LLM and tools."""
         db = SQLDatabase.from_uri(database_uri)
         toolkit = SQLDatabaseToolkit(db=db, llm=llm)
 
@@ -278,7 +260,11 @@ class VectorStoreRouterAgent(CustomAgentExecutor):
     ):
         """Construct a vector store router agent from an LLM and tools."""
 
-        tools = vectorstoreroutertoolkit.get_tools()
+        tools = (
+            vectorstoreroutertoolkit
+            if isinstance(vectorstoreroutertoolkit, list)
+            else vectorstoreroutertoolkit.get_tools()
+        )
         prompt = ZeroShotAgent.create_prompt(tools, prefix=VECTORSTORE_ROUTER_PREFIX)
         llm_chain = LLMChain(
             llm=llm,

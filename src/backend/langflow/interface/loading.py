@@ -20,7 +20,7 @@ from langchain.llms.loading import load_llm_from_config
 from pydantic import ValidationError
 
 from langflow.interface.custom_lists import CUSTOM_NODES
-from langflow.interface.importing.utils import import_by_type
+from langflow.interface.importing.utils import get_function, import_by_type
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.chains.base import chain_creator
 from langflow.interface.types import get_type_list
@@ -114,6 +114,10 @@ def instantiate_tool(node_type, class_object, params):
     if node_type == "JsonSpec":
         params["dict_"] = load_file_into_dict(params.pop("path"))
         return class_object(**params)
+    elif node_type == "PythonFunctionTool":
+        params["func"] = get_function(params.get("code"))
+        return class_object(**params)
+    # For backward compatibility
     elif node_type == "PythonFunction":
         function_string = params["code"]
         if isinstance(function_string, str):
@@ -126,8 +130,11 @@ def instantiate_tool(node_type, class_object, params):
 
 def instantiate_toolkit(node_type, class_object, params):
     loaded_toolkit = class_object(**params)
-    if toolkits_creator.has_create_function(node_type):
-        return load_toolkits_executor(node_type, loaded_toolkit, params)
+    # Commenting this out for now to use toolkits as normal tools
+    # if toolkits_creator.has_create_function(node_type):
+    #     return load_toolkits_executor(node_type, loaded_toolkit, params)
+    if isinstance(loaded_toolkit, BaseToolkit):
+        return loaded_toolkit.get_tools()
     return loaded_toolkit
 
 
@@ -151,7 +158,6 @@ def instantiate_vectorstore(class_object, params):
             "The source you provided did not load correctly or was empty."
             "This may cause an error in the vectorstore."
         )
-
     # Chroma requires all metadata values to not be None
     if class_object.__name__ == "Chroma":
         for doc in params["documents"]:

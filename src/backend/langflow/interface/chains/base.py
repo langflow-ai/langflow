@@ -20,7 +20,10 @@ class ChainCreator(LangChainTypeCreator):
         return ChainFrontendNode
 
     #! We need to find a better solution for this
-    from_method_nodes = {"ConversationalRetrievalChain": "from_llm"}
+    from_method_nodes = {
+        "ConversationalRetrievalChain": "from_llm",
+        "LLMCheckerChain": "from_llm",
+    }
 
     @property
     def type_to_loader_dict(self) -> Dict:

@@ -2,7 +2,6 @@ import inspect
 from typing import Any
 
 from langchain import (
-    chains,
     document_loaders,
     embeddings,
     llms,
@@ -11,7 +10,8 @@ from langchain import (
     text_splitter,
 )
 from langchain.agents import agent_toolkits
-from langchain.chat_models import ChatOpenAI
+from langchain.chat_models import AzureChatOpenAI, ChatOpenAI
+from langchain.chat_models import ChatAnthropic
 
 from langflow.interface.importing.utils import import_class
 from langflow.interface.agents.custom import CUSTOM_AGENTS
@@ -19,13 +19,10 @@ from langflow.interface.chains.custom import CUSTOM_CHAINS
 
 # LLMs
 llm_type_to_cls_dict = llms.type_to_cls_dict
+llm_type_to_cls_dict["anthropic-chat"] = ChatAnthropic  # type: ignore
+llm_type_to_cls_dict["azure-chat"] = AzureChatOpenAI  # type: ignore
 llm_type_to_cls_dict["openai-chat"] = ChatOpenAI  # type: ignore
 
-# Chains
-chain_type_to_cls_dict: dict[str, Any] = {
-    chain_name: import_class(f"langchain.chains.{chain_name}")
-    for chain_name in chains.__all__
-}
 
 # Toolkits
 toolkit_type_to_loader_dict: dict[str, Any] = {

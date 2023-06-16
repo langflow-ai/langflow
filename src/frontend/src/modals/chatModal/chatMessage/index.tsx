@@ -16,9 +16,11 @@ import Convert from "ansi-to-html";
 export default function ChatMessage({
   chat,
   lockChat,
+  lastMessage,
 }: {
   chat: ChatMessageType;
   lockChat: boolean;
+  lastMessage: boolean;
 }) {
   const convert = new Convert({ newline: true });
   const [message, setMessage] = useState("");
@@ -32,8 +34,8 @@ export default function ChatMessage({
       className={classNames(
         "w-full py-2 pl-2 flex",
         chat.isSend
-          ? "bg-white dark:bg-gray-900 "
-          : "bg-gray-200  dark:bg-gray-800"
+          ? "bg-background dark:bg-gray-900 "
+          : "bg-input  dark:bg-gray-800"
       )}
     >
       <div
@@ -48,7 +50,7 @@ export default function ChatMessage({
                 "absolute transition-opacity duration-500 scale-150 " +
                 (lockChat ? "opacity-100" : "opacity-0")
               }
-              src={AiIcon}
+              src={lastMessage ? AiIcon : AiIconStill}
             />
             <img
               className={
@@ -78,7 +80,7 @@ export default function ChatMessage({
               <div
                 onClick={() => setHidden((prev) => !prev)}
                 className=" text-start inline-block rounded-md text-gray-600 dark:text-gray-200 h-full border border-gray-300 dark:border-gray-500
-								bg-gray-100 dark:bg-gray-800 w-[95%] pb-3 pt-3 px-2 ml-3 cursor-pointer scrollbar-hide overflow-scroll"
+								bg-muted dark:bg-gray-800 w-[95%] pb-3 pt-3 px-2 ml-3 cursor-pointer scrollbar-hide overflow-scroll"
                 dangerouslySetInnerHTML={{
                   __html: convert.toHtml(chat.thought),
                 }}

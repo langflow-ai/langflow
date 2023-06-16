@@ -12,17 +12,44 @@ class LLMFrontendNode(FrontendNode):
                 field.name.title().replace("Openai", "OpenAI").replace("_", " ")
             ).replace("Api", "API")
 
+        if "key" not in field.name.lower() and "token" not in field.name.lower():
+            field.password = False
+
+    @staticmethod
+    def format_azure_field(field: TemplateField):
+        if field.name == "model_name":
+            field.show = False  # Azure uses deployment_name instead of model_name.
+        elif field.name == "openai_api_type":
+            field.show = False
+            field.password = False
+            field.value = "azure"
+        elif field.name == "openai_api_version":
+            field.password = False
+
+    @staticmethod
+    def format_llama_field(field: TemplateField):
+        field.show = True
+        field.advanced = not field.required
+
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         display_names_dict = {
             "huggingfacehub_api_token": "HuggingFace Hub API Token",
         }
         FrontendNode.format_field(field, name)
+        LLMFrontendNode.format_openai_field(field)
+        if name and "azure" in name.lower():
+            LLMFrontendNode.format_azure_field(field)
+        if name and "llama" in name.lower():
+            LLMFrontendNode.format_llama_field(field)
         SHOW_FIELDS = ["repo_id"]
         if field.name in SHOW_FIELDS:
             field.show = True
 
-        if "api" in field.name and ("key" in field.name or "token" in field.name):
+        if "api" in field.name and (
+            "key" in field.name
+            or ("token" in field.name and "tokens" not in field.name)
+        ):
             field.password = True
             field.show = True
             # Required should be False to support
@@ -44,8 +71,12 @@ class LLMFrontendNode(FrontendNode):
             field.field_type = "code"
             field.advanced = True
             field.show = True
-        elif field.name in ["model_name", "temperature", "model_file", "model_type"]:
+        elif field.name in [
+            "model_name",
+            "temperature",
+            "model_file",
+            "model_type",
+            "deployment_name",
+        ]:
             field.advanced = False
             field.show = True
-
-        LLMFrontendNode.format_openai_field(field)
