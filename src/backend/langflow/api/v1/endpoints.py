@@ -41,8 +41,10 @@ async def predict_flow(
             raise ValueError(f"Flow {flow_id} has no data")
         graph_data = flow.data
         if predict_request.tweaks:
-            graph_data = process_tweaks(graph_data, predict_request.tweaks)
-
+            try:
+                graph_data = process_tweaks(graph_data, predict_request.tweaks)
+            except Exception as exc:
+                logger.error(f"Error processing tweaks: {exc}")
         response = process_graph_cached(graph_data, predict_request.message)
         return PredictResponse(
             result=response.get("result", ""),
