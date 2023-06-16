@@ -3,7 +3,7 @@ agents:
   - ZeroShotAgent
   - JsonAgent
   - CSVAgent
-  - initialize_agent
+  - AgentInitializer
   - VectorStoreAgent
   - VectorStoreRouterAgent
   - SQLAgent
