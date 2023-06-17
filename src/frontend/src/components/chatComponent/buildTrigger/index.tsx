@@ -8,6 +8,7 @@ import { useSSE } from "../../../contexts/SSEContext";
 import { typesContext } from "../../../contexts/typesContext";
 import { alertContext } from "../../../contexts/alertContext";
 import { postBuildInit } from "../../../controllers/API";
+import ShadTooltip from "../../ShadTooltipComponent";
 
 export default function BuildTrigger({
   open,
@@ -135,24 +136,30 @@ export default function BuildTrigger({
       leaveTo="translate-y-96"
     >
       <div className={`fixed right-4` + (isBuilt ? " bottom-20" : " bottom-4")}>
-        <div
-          className="flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full shadow-md hover:shadow-sm shadow-[#00000063] hover:shadow-[#00000063]
-           bg-[#E2E7EE] dark:border-gray-600 cursor-pointer"
-          onClick={() => {
-            handleBuild(flow);
-          }}
+        <ShadTooltip
+          delayDuration={500}
+          content="Build Flow"
+          side="left"
         >
-          <button>
-            <div className="flex gap-3 items-center">
-              {isBuilding ? (
-                // Render your loading animation here when isBuilding is true
-                <Loading strokeWidth={1.5} style={{ color: "white" }} />
-              ) : (
-                <Zap className="sh-6 w-6 fill-[#dc735b] stroke-1 stroke-[#dc735b]"/>
-              )}
-            </div>
-          </button>
-        </div>
+          <div
+            className="flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full shadow-md hover:shadow-sm shadow-[#00000063] hover:shadow-[#00000063]
+            bg-[#E2E7EE] dark:border-gray-600 cursor-pointer"
+            onClick={() => {
+              handleBuild(flow);
+            }}
+          >
+            <button>
+              <div className="flex gap-3 items-center">
+                {isBuilding ? (
+                  // Render your loading animation here when isBuilding is true
+                  <Loading strokeWidth={1.5} style={{ color: "#dc735b" }} />
+                ) : (
+                  <Zap className="sh-6 w-6 fill-[#dc735b] stroke-1 stroke-[#dc735b]"/>
+                )}
+              </div>
+            </button>
+          </div>
+        </ShadTooltip>
       </div>
     </Transition>
   );
