@@ -1,5 +1,5 @@
 import { useContext, useEffect } from "react";
-import { COLUMN_DIV_STYLE, NAV_DISPLAY_STYLE } from "../../constants";
+import { COLUMN_DIV_STYLE, NAV_DISPLAY_STYLE, BUTTON_DIV_STYLE } from "../../constants";
 
   import { Download, Upload, Plus, Home, ExternalLink } from "lucide-react";
   import { TabsContext } from "../../contexts/tabsContext";
@@ -20,7 +20,7 @@ import { COLUMN_DIV_STYLE, NAV_DISPLAY_STYLE } from "../../constants";
           <Home className=" w-6 " />
           My Projects
         </span>
-        <div className="hi flex gap-2">
+        <div className={`${ BUTTON_DIV_STYLE }`}>
           <Button
             variant="primary"
             onClick={() => {

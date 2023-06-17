@@ -158,13 +158,13 @@ export default function ExtraSidebar() {
                     .map((t: string, k) => (
                       <ShadTooltip
                         content={t}
-                        delayDuration={1500}
+                        delayDuration={500}
                         side="right"
                       >
                         <div key={k} data-tooltip-id={t}>
                           <div
                             draggable
-                            className={" cursor-grab border-l-8 rounded-l-md"}
+                            className={"cursor-grab border-l-8 rounded-l-md"}
                             style={{
                               borderLeftColor:
                                 nodeColors[d] ?? nodeColors.unknown,
