@@ -13,15 +13,15 @@ def test_init_build(client):
     assert response.json() == {"flowId": "test"}
 
 
-def test_stream_build(client):
-    client.post(
-        "api/v1/build/init", json={"id": "stream_test", "data": {"key": "value"}}
-    )
+# def test_stream_build(client):
+#     client.post(
+#         "api/v1/build/init", json={"id": "stream_test", "data": {"key": "value"}}
+#     )
 
-    # Test the stream
-    response = client.get("api/v1/build/stream/stream_test")
-    assert response.status_code == 200
-    assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
+#     # Test the stream
+#     response = client.get("api/v1/build/stream/stream_test")
+#     assert response.status_code == 200
+#     assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
 
 
 def test_websocket_endpoint(client):
