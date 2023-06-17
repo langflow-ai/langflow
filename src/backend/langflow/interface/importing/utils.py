@@ -9,6 +9,7 @@ from langchain.base_language import BaseLanguageModel
 from langchain.chains.base import Chain
 from langchain.chat_models.base import BaseChatModel
 from langchain.tools import BaseTool
+from langflow.utils import validate
 
 
 def import_module(module_path: str) -> Any:
@@ -147,3 +148,10 @@ def import_utility(utility: str) -> Any:
     if utility == "SQLDatabase":
         return import_class(f"langchain.sql_database.{utility}")
     return import_class(f"langchain.utilities.{utility}")
+
+
+def get_function(code):
+    """Get the function"""
+    function_name = validate.extract_function_name(code)
+
+    return validate.create_function(code, function_name)

@@ -37,7 +37,7 @@ class SQLAgentNode(FrontendNode):
             ),
         ],
     )
-    description: str = """Construct a sql agent from an LLM and tools."""
+    description: str = """Construct an SQL agent from an LLM and tools."""
     base_classes: list[str] = ["AgentExecutor"]
 
     def to_dict(self):
@@ -146,7 +146,7 @@ class CSVAgentNode(FrontendNode):
             ),
         ],
     )
-    description: str = """Construct a json agent from a CSV and tools."""
+    description: str = """Construct a CSV agent from a CSV and tools."""
     base_classes: list[str] = ["AgentExecutor"]
 
     def to_dict(self):
@@ -154,9 +154,10 @@ class CSVAgentNode(FrontendNode):
 
 
 class InitializeAgentNode(FrontendNode):
-    name: str = "initialize_agent"
+    name: str = "AgentInitializer"
+    display_name: str = "AgentInitializer"
     template: Template = Template(
-        type_name="initailize_agent",
+        type_name="initialize_agent",
         fields=[
             TemplateField(
                 field_type="str",
@@ -194,7 +195,7 @@ class InitializeAgentNode(FrontendNode):
             ),
         ],
     )
-    description: str = """Construct a json agent from an LLM and tools."""
+    description: str = """Construct a zero shot agent from an LLM and tools."""
     base_classes: list[str] = ["AgentExecutor", "function"]
 
     def to_dict(self):

@@ -2,6 +2,7 @@ import base64
 import json
 import os
 from io import BytesIO
+import re
 
 import yaml
 from langchain.base_language import BaseLanguageModel
@@ -44,7 +45,16 @@ def try_setting_streaming_options(langchain_object, websocket):
         langchain_object.llm_chain, "llm"
     ):
         llm = langchain_object.llm_chain.llm
-    if isinstance(llm, BaseLanguageModel) and hasattr(llm, "streaming"):
-        llm.streaming = True
+
+    if isinstance(llm, BaseLanguageModel):
+        if hasattr(llm, "streaming") and isinstance(llm.streaming, bool):
+            llm.streaming = True
+        elif hasattr(llm, "stream") and isinstance(llm.stream, bool):
+            llm.stream = True
 
     return langchain_object
+
+
+def extract_input_variables_from_prompt(prompt: str) -> list[str]:
+    """Extract input variables from prompt."""
+    return re.findall(r"{(.*?)}", prompt)
