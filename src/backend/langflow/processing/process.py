@@ -109,23 +109,13 @@ def get_result_and_thought(langchain_object, message: str):
     return result, thought
 
 
-def load_or_build_langchain_object(data_graph, is_first_message=False):
-    """
-    Load langchain object from cache if it exists, otherwise build it.
-    """
-    if is_first_message:
-        build_langchain_object_with_caching.clear_cache()
-    return build_langchain_object_with_caching(data_graph)
-
-
 def process_graph_cached(data_graph: Dict[str, Any], message: str):
     """
     Process graph by extracting input variables and replacing ZeroShotPrompt
     with PromptTemplate,then run the graph and return the result and thought.
     """
     # Load langchain object
-    is_first_message = len(data_graph.get("chatHistory", [])) == 0
-    langchain_object = load_or_build_langchain_object(data_graph, is_first_message)
+    langchain_object = build_langchain_object_with_caching(data_graph)
     logger.debug("Loaded langchain object")
 
     if langchain_object is None:
