@@ -53,8 +53,7 @@ import { COLUMN_DIV_STYLE, NAV_DISPLAY_STYLE } from "../../constants";
         </div>
       </div>
       <span className="flex pb-14 px-6 text-muted-foreground w-[60%]">
-        Manage your personal projects. Download or upload your complete project
-        collection.
+        Manage your personal projects. Download or upload your collection.
       </span>
       <div className="w-full p-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {flows.map((flow, idx) => (

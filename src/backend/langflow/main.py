@@ -7,6 +7,7 @@ from langflow.database.base import create_db_and_tables
 
 def create_app():
     """Create the FastAPI app and include the router."""
+
     app = FastAPI()
 
     origins = [

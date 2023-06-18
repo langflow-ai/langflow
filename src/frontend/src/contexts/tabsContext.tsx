@@ -8,7 +8,12 @@ import {
 } from "react";
 import { FlowType, NodeType } from "../types/flow";
 import { TabsContextType, TabsState } from "../types/tabs";
-import { updateIds, updateTemplate } from "../utils";
+import {
+  updateIds,
+  updateTemplate,
+  getRandomDescription,
+  getRandomName,
+} from "../utils";
 import { alertContext } from "./alertContext";
 import { typesContext } from "./typesContext";
 import { APITemplateType } from "../types/api";
@@ -40,7 +45,7 @@ const TabsContextInitialValue: TabsContextType = {
   uploadFlows: () => {},
   uploadFlow: () => {},
   hardReset: () => {},
-  saveFlow: async (flow:FlowType) => {},
+  saveFlow: async (flow: FlowType) => {},
   disableCopyPaste: false,
   setDisableCopyPaste: (state: boolean) => {},
   lastCopiedSelection: null,
@@ -346,7 +351,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
    */
   function removeFlow(id: string) {
     const index = flows.findIndex((flow) => flow.id === id);
-    console.log(index);
     if (index >= 0) {
       deleteFlowFromDatabase(id).then(() => {
         setFlows(flows.filter((flow) => flow.id !== id));
@@ -454,7 +458,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     if (newProject) {
       let flowData = extractDataFromFlow(flow);
       if (flowData.description == "") {
-        flowData.description = "This is a new flow.";
+        flowData.description = getRandomDescription();
       }
 
       // Create a new flow with a default name if no flow is provided.
@@ -536,7 +540,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
   const createNewFlow = (flowData, flow) => ({
     description: flowData.description,
-    name: flow?.name ?? "New Flow",
+    name: flow?.name ?? getRandomName(),
     data: flowData.data,
     id: "",
   });
@@ -565,10 +569,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
 
   async function saveFlow(newFlow: FlowType) {
-    try{
+    try {
       // updates flow in db
       const updatedFlow = await updateFlowInDatabase(newFlow);
-      if (updatedFlow){
+      if (updatedFlow) {
         // updates flow in state
         setFlows((prevState) => {
           const newFlows = [...prevState];
@@ -590,8 +594,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           };
         });
       }
-    }
-    catch(err){
+    } catch (err) {
       setErrorData(err);
     }
   }

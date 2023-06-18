@@ -124,7 +124,7 @@ export default function ExtraSidebar() {
           type="text"
           name="search"
           id="search"
-          placeholder="Search Nodes"
+          placeholder="Search"
           className={
             INPUT_STYLE +
             "w-full border-1 dark:border-slate-600 dark:border-0.5 dark:ring-0 focus-visible:dark:ring-0 focus-visible:dark:ring-offset-1 rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"

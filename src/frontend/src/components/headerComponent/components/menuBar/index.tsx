@@ -64,7 +64,15 @@ export const MenuBar = ({ flows, tabId }) => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-44">
-            <DropdownMenuLabel>Edit</DropdownMenuLabel>
+            <DropdownMenuLabel>Options</DropdownMenuLabel>
+            <DropdownMenuItem
+              onClick={() => {
+                handleAddFlow();
+              }}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              New
+            </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
                 openPopUp(<FlowSettingsModal />);
@@ -90,8 +98,8 @@ export const MenuBar = ({ flows, tabId }) => {
               Redo
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuLabel>Projects</DropdownMenuLabel>
-            <DropdownMenuRadioGroup
+            {/* <DropdownMenuLabel>Projects</DropdownMenuLabel> */}
+            {/* <DropdownMenuRadioGroup className="max-h-full overflow-scroll"
               value={tabId}
               onValueChange={(value) => {
                 setTabId(value);
@@ -99,22 +107,20 @@ export const MenuBar = ({ flows, tabId }) => {
             >
               {flows.map((flow, idx) => {
                 return (
-                  <Link to={"/flow/" + flow.id} className="flex w-full items-center">
-                    <DropdownMenuRadioItem value={flow.id} className="flex-1 w-full inline-block truncate break-words mr-2">
+                  <Link
+                    to={"/flow/" + flow.id}
+                    className="flex w-full items-center"
+                  >
+                    <DropdownMenuRadioItem
+                      value={flow.id}
+                      className="flex-1 w-full inline-block truncate break-words mr-2"
+                    >
                       {flow.name}
                     </DropdownMenuRadioItem>
                   </Link>
                 );
               })}
-            </DropdownMenuRadioGroup>
-            <DropdownMenuItem
-              onClick={() => {
-                handleAddFlow();
-              }}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              New Project
-            </DropdownMenuItem>
+            </DropdownMenuRadioGroup> */}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

@@ -41,7 +41,7 @@ import { SearxIcon } from "./icons/Searx";
 import { SlackIcon } from "./icons/Slack";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { WeaviateIcon } from "./icons/Weaviate";
+import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "./constants";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -508,9 +508,10 @@ export function isValidConnection(
 
 export function removeApiKeys(flow: FlowType): FlowType {
   let cleanFLow = _.cloneDeep(flow);
+  console.log(cleanFLow);
   cleanFLow.data.nodes.forEach((node) => {
     for (const key in node.data.node.template) {
-      if (key.includes("api")) {
+      if (node.data.node.template[key].password) {
         node.data.node.template[key].value = "";
       }
     }
@@ -788,4 +789,43 @@ export function validateNodes(reactFlowInstance: ReactFlowInstance) {
   return reactFlowInstance
     .getNodes()
     .flatMap((n: NodeType) => validateNode(n, reactFlowInstance));
+}
+
+export function getRandomElement<T>(array: T[]): T {
+  return array[Math.floor(Math.random() * array.length)];
+}
+export function getRandomDescription(): string {
+  return getRandomElement(DESCRIPTIONS);
+}
+
+export function getRandomName(
+  retry: number = 0,
+  noSpace: boolean = false,
+  maxRetries: number = 3
+): string {
+  const left: string[] = ADJECTIVES;
+  const right: string[] = NOUNS;
+
+  const lv = getRandomElement(left);
+  const rv = getRandomElement(right);
+
+  // Condition to avoid "boring wozniak"
+  if (lv === "boring" && rv === "wozniak") {
+    if (retry < maxRetries) {
+      return getRandomName(retry + 1, noSpace, maxRetries);
+    } else {
+      console.warn("Max retries reached, returning as is");
+    }
+  }
+
+  // Append a suffix if retrying and noSpace is true
+  if (retry > 0 && noSpace) {
+    const retrySuffix = Math.floor(Math.random() * 10);
+    return `${lv}_${rv}${retrySuffix}`;
+  }
+
+  // Construct the final name
+  let final_name = noSpace ? `${lv}_${rv}` : `${lv} ${rv}`;
+  // Return title case final name
+  return toTitleCase(final_name);
 }
