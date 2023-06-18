@@ -2,12 +2,9 @@
 
 # ⛓️ LangFlow
 
-~ A User Interface For [LangChain](https://github.com/hwchase17/langchain) ~
-
+~ An effortless way to experiment and prototype [LangChain](https://github.com/hwchase17/langchain) pipelines ~
 
 <p>
-<a href="https://discord.gg/FUhJnnJ9"><img alt="Discord Server" src="https://dcbadge.vercel.app/api/server/FUhJnnJ9?compact=true&style=flat"/></a>
-<a href="https://huggingface.co/spaces/Logspace/LangFlow"><img src="https://huggingface.co/datasets/huggingface/badges/raw/main/open-in-hf-spaces-sm.svg" alt="HuggingFace Spaces"></a>
 <img alt="GitHub Contributors" src="https://img.shields.io/github/contributors/logspace-ai/langflow" />
 <img alt="GitHub Last Commit" src="https://img.shields.io/github/last-commit/logspace-ai/langflow" />
 <img alt="" src="https://img.shields.io/github/repo-size/logspace-ai/langflow" />
@@ -16,10 +13,17 @@
 <img alt="Github License" src="https://img.shields.io/github/license/logspace-ai/langflow" />
 </p>
 
+<p>
+<a href="https://discord.gg/FUhJnnJ9"><img alt="Discord Server" src="https://dcbadge.vercel.app/api/server/FUhJnnJ9?compact=true&style=flat"/></a>
+<a href="https://huggingface.co/spaces/Logspace/LangFlow"><img src="https://huggingface.co/datasets/huggingface/badges/raw/main/open-in-hf-spaces-sm.svg" alt="HuggingFace Spaces"></a>
+</p>
+
 <a href="https://github.com/logspace-ai/langflow">
     <img width="100%" src="https://github.com/logspace-ai/langflow/blob/main/img/langflow-demo.gif?raw=true"></a>
 
-LangFlow is a GUI for [LangChain](https://github.com/hwchase17/langchain), designed with [react-flow](https://github.com/wbkd/react-flow) to provide an effortless way to experiment and prototype flows with drag-and-drop components and a chat box.
+
+<p>
+</p>
 
 ## 📦 Installation
 ### <b>Locally</b>
