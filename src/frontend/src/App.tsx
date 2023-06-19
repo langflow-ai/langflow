@@ -12,6 +12,8 @@ import { locationContext } from "./contexts/locationContext";
 import { ErrorBoundary } from "react-error-boundary";
 import CrashErrorComponent from "./components/CrashErrorComponent";
 import { TabsContext } from "./contexts/tabsContext";
+import Header from "./components/headerComponent";
+import Router from "./routes";
 
 export default function App() {
   let { setCurrent, setShowSideBar, setIsStackedOpen } =

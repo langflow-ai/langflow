@@ -11,6 +11,7 @@ import { ChatMessageType } from "../../types/chat";
 import ChatInput from "./chatInput";
 
 import _ from "lodash";
+import { Eraser, X } from "lucide-react";
 
 export default function ChatModal({
   flow,
