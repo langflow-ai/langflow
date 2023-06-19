@@ -1,13 +1,7 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
-from langflow.api import router
-from langflow.database.base import create_db_and_tables
-
 from datetime import datetime, timedelta
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -109,70 +103,41 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     return user
 
 
-async def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):
+async def get_current_active_user(
+    current_user: Annotated[User, Depends(get_current_user)]
+):
     if current_user.disabled:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
 
-def create_app():
-    """Create the FastAPI app and include the router."""
-    app = FastAPI()
-
-    origins = [
-        "*",
-    ]
-    
-    @app.post("/token", response_model=Token)
-    async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
-        user = authenticate_user(fake_users_db, form_data.username, form_data.password)
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect username or password",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(
-            data={"sub": user.username}, 
-            expires_delta=access_token_expires
+@app.post("/token", response_model=Token)
+async def login_for_access_token(
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
+):
+    user = authenticate_user(fake_users_db, form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-        return {"access_token": access_token, "token_type": "bearer"}
-
-
-    @app.get("/users/me/", response_model=User)
-    async def read_users_me(
-        current_user: Annotated[User, Depends(get_current_active_user)]
-    ):
-        return current_user
-
-
-    @app.get("/users/me/items/")
-    async def read_own_items(
-        current_user: Annotated[User, Depends(get_current_active_user)]
-    ):
-        return [{"item_id": "Foo", "owner": current_user.username}]
-
-    @app.get("/health")
-    def get_health():
-        return {"status": "OK"}
-
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
     )
-
-    app.include_router(router)
-    app.on_event("startup")(create_db_and_tables)
-    return app
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
-app = create_app()
+@app.get("/users/me/", response_model=User)
+async def read_users_me(
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    return current_user
 
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=7860)
+@app.get("/users/me/items/")
+async def read_own_items(
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    return [{"item_id": "Foo", "owner": current_user.username}]
