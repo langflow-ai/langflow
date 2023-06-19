@@ -2,6 +2,8 @@ import { useContext, useEffect, useState } from "react";
 import { InputComponentType } from "../../types/components";
 import { classNames } from "../../utils";
 import { TabsContext } from "../../contexts/tabsContext";
+import { PopUpContext } from "../../contexts/popUpContext";
+import { INPUT_STYLE } from "../../constants";
 
 export default function InputComponent({
   value,
@@ -14,12 +16,18 @@ export default function InputComponent({
   const [myValue, setMyValue] = useState(value ?? "");
   const [pwdVisible, setPwdVisible] = useState(false);
   const { setDisableCopyPaste } = useContext(TabsContext);
+  const { closePopUp } = useContext(PopUpContext);
+
   useEffect(() => {
     if (disabled) {
       setMyValue("");
       onChange("");
     }
   }, [disabled, onChange]);
+
+  useEffect(() => {
+    setMyValue(value ?? "");
+  }, [closePopUp]);
 
   return (
     <div
@@ -38,12 +46,13 @@ export default function InputComponent({
           if (disableCopyPaste) setDisableCopyPaste(false);
         }}
         className={classNames(
-          "block w-full pr-12 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm  sm:text-sm",
+          "block w-full pr-12 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm focus:placeholder-transparent",
           disabled ? " bg-gray-200 dark:bg-gray-700" : "",
           password && !pwdVisible && myValue !== "" ? "password" : "",
           editNode
-            ? "placeholder:text-center border-0 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm focus:outline-none focus:ring-1 focus:ring-inset focus:ring-gray-200 text-center"
-            : "focus:border-indigo-500 focus:ring-indigo-500",
+            ? "border-1 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm text-center" +
+                INPUT_STYLE
+            : "ring-offset-gray-200" + INPUT_STYLE,
           password && editNode ? "pr-8" : "pr-3"
         )}
         placeholder={password && editNode ? "Key" : "Type something..."}
@@ -71,7 +80,11 @@ export default function InputComponent({
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
-                className="w-5 h-5"
+                className={classNames(
+                  editNode
+                    ? "w-5 h-5 absolute bottom-0.5 right-2"
+                    : "w-5 h-5 absolute bottom-2 right-3"
+                )}
               >
                 <path
                   strokeLinecap="round"
@@ -86,7 +99,11 @@ export default function InputComponent({
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
-                className="w-5 h-5"
+                className={classNames(
+                  editNode
+                    ? "w-5 h-5 absolute bottom-0.5 right-2"
+                    : "w-5 h-5 absolute bottom-2 right-3"
+                )}
               >
                 <path
                   strokeLinecap="round"

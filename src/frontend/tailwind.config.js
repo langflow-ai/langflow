@@ -1,5 +1,5 @@
 /** @type {import('tailwindcss').Config} */
-const { fontFamily } = require("tailwindcss/defaultTheme")
+const { fontFamily } = require("tailwindcss/defaultTheme");
 
 import plugin from "tailwindcss/plugin";
 
@@ -75,7 +75,7 @@ module.exports = {
     },
   },
   plugins: [require("tailwindcss-animate")],
-}
+};
 
 module.exports = {
   content: ["./index.html", "./src/**/*.{js,ts,tsx,jsx}"],
@@ -151,7 +151,7 @@ module.exports = {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "pulse-green": "pulseGreen 1s linear",
-        'spin-once': 'spin 1s linear 0.7'
+        "spin-once": "spin 1s linear 0.7",
       },
       borderColor: {
         "red-outline": "rgba(255, 0, 0, 0.8)",
@@ -181,10 +181,19 @@ module.exports = {
           },
         },
         ".truncate-multiline": {
-          "display": "-webkit-box",
-          "-webkit-line-clamp": "3", /* Change this number to the number of lines you want to show */
+          display: "-webkit-box",
+          "-webkit-line-clamp":
+            "3" /* Change this number to the number of lines you want to show */,
           "-webkit-box-orient": "vertical",
-          "overflow": "hidden",
+          overflow: "hidden",
+          "text-overflow": "ellipsis",
+        },
+        ".truncate-doubleline": {
+          display: "-webkit-box",
+          "-webkit-line-clamp":
+            "2" /* Change this number to the number of lines you want to show */,
+          "-webkit-box-orient": "vertical",
+          overflow: "hidden",
           "text-overflow": "ellipsis",
         },
 
