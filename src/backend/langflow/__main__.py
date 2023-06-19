@@ -152,6 +152,17 @@ def serve(
         "timeout": timeout,
     }
 
+    if platform.system() in ["Windows"]:
+        # Run using uvicorn on MacOS and Windows
+        # Windows doesn't support gunicorn
+        # MacOS requires an env variable to be set to use gunicorn
+        run_on_windows(host, port, log_level, options, app)
+    else:
+        # Run using gunicorn on Linux
+        run_on_mac_or_linux(host, port, log_level, options, app, open_browser)
+
+
+def run_on_mac_or_linux(host, port, log_level, options, app, open_browser=True):
     webapp_process = Process(
         target=run_langflow, args=(host, port, log_level, options, app)
     )
@@ -167,6 +178,14 @@ def serve(
     print_banner(host, port)
     if open_browser:
         webbrowser.open(f"http://{host}:{port}")
+
+
+def run_on_windows(host, port, log_level, options, app):
+    """
+    Run the Langflow server on Windows.
+    """
+    print_banner(host, port)
+    run_langflow(host, port, log_level, options, app)
 
 
 def setup_static_files(app: FastAPI, static_files_dir: Path):

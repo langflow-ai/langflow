@@ -909,14 +909,14 @@ test-randomorder = ["pytest-randomly"]
 
 [[package]]
 name = "ctransformers"
-version = "0.2.8"
+version = "0.2.9"
 description = "Python bindings for the Transformer models implemented in C/C++ using GGML library."
 category = "main"
 optional = false
 python-versions = "*"
 files = [
-    {file = "ctransformers-0.2.8-py3-none-any.whl", hash = "sha256:9804640364c13d93d58bfb6a9a1fa90d34b6438955d842c68ab05e5f8f15e023"},
-    {file = "ctransformers-0.2.8.tar.gz", hash = "sha256:81c0436d8b5315211496566294d51e7bbd07cf6e4305608262eab04603b74b65"},
+    {file = "ctransformers-0.2.9-py3-none-any.whl", hash = "sha256:ff0183ccf2bf157102cffacea13476cb78b8a2ffc2e1fdd46b57f8682a8da8ac"},
+    {file = "ctransformers-0.2.9.tar.gz", hash = "sha256:2165c512ee153f763c3d4ab133d666f86460010330d6bc75c0a6db6310ec9fc8"},
 ]
 
 [package.dependencies]
@@ -2444,14 +2444,14 @@ test = ["psutil", "pytest", "pytest-asyncio"]
 
 [[package]]
 name = "langchainplus-sdk"
-version = "0.0.10"
+version = "0.0.11"
 description = "Client library to connect to the LangChainPlus LLM Tracing and Evaluation Platform."
 category = "main"
 optional = false
 python-versions = ">=3.8.1,<4.0"
 files = [
-    {file = "langchainplus_sdk-0.0.10-py3-none-any.whl", hash = "sha256:6ea4013a92a4c33a61d22deb49620577c592a79ee44038b2c751032a71cbc7b6"},
-    {file = "langchainplus_sdk-0.0.10.tar.gz", hash = "sha256:4f810b38df74a99d01e5723e653da02f05df3ee922971cccabc365d00c33dbf6"},
+    {file = "langchainplus_sdk-0.0.11-py3-none-any.whl", hash = "sha256:fbe3482ffe253e439ec8386a2904594a875b590e29e4adcbd938452a69a6c7c6"},
+    {file = "langchainplus_sdk-0.0.11.tar.gz", hash = "sha256:e50679309a31d9526f467aa13d4dbcfba0dc00a295cea72ffcc9972865ecac1b"},
 ]
 
 [package.dependencies]
@@ -4265,14 +4265,14 @@ files = [
 
 [[package]]
 name = "pyparsing"
-version = "3.0.9"
+version = "3.1.0"
 description = "pyparsing module - Classes and methods to define and execute parsing grammars"
 category = "main"
 optional = false
 python-versions = ">=3.6.8"
 files = [
-    {file = "pyparsing-3.0.9-py3-none-any.whl", hash = "sha256:5026bae9a10eeaefb61dab2f09052b9f4307d44aee4eda64b309723d8d206bbc"},
-    {file = "pyparsing-3.0.9.tar.gz", hash = "sha256:2b020ecf7d21b687f219b71ecad3631f644a47f01403fa1d1036b0c6416d70fb"},
+    {file = "pyparsing-3.1.0-py3-none-any.whl", hash = "sha256:d554a96d1a7d3ddaf7183104485bc19fd80543ad6ac5bdb6426719d766fb06c1"},
+    {file = "pyparsing-3.1.0.tar.gz", hash = "sha256:edb662d6fe322d6e990b1594b5feaeadf806803359e3d4d42f11e295e588f0ea"},
 ]
 
 [package.extras]
@@ -5036,14 +5036,14 @@ files = [
 
 [[package]]
 name = "setuptools"
-version = "67.8.0"
+version = "68.0.0"
 description = "Easily download, build, install, upgrade, and uninstall Python packages"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "setuptools-67.8.0-py3-none-any.whl", hash = "sha256:5df61bf30bb10c6f756eb19e7c9f3b473051f48db77fddbe06ff2ca307df9a6f"},
-    {file = "setuptools-67.8.0.tar.gz", hash = "sha256:62642358adc77ffa87233bc4d2354c4b2682d214048f500964dbe760ccedf102"},
+    {file = "setuptools-68.0.0-py3-none-any.whl", hash = "sha256:11e52c67415a381d10d6b462ced9cfb97066179f0e871399e006c4ab101fc85f"},
+    {file = "setuptools-68.0.0.tar.gz", hash = "sha256:baf1fdb41c6da4cd2eae722e135500da913332ab3f2f5c7d33af9b492acb5235"},
 ]
 
 [package.extras]
