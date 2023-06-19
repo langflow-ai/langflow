@@ -48,7 +48,7 @@ def post_validate_node(node_id: str, data: dict):
         # validate node
         node = graph.get_vertex(node_id)
         if node is None:
-            raise ValueError(f"Node {node_id} not found")
+            raise ValueError(f"Vertex {node_id} not found")
         if not isinstance(node, VectorStoreVertex):
             node.build()
         return json.dumps({"valid": True, "params": str(node._built_object_repr())})

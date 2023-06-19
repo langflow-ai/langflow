@@ -2,7 +2,7 @@
 from copy import deepcopy
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from langflow.cache.base import memoize_dict
+from langflow.cache.utils import memoize_dict
 from langflow.graph import Vertex
 from langflow.graph import Graph
 from langflow.graph.vertex.types import ConnectorVertex
@@ -49,8 +49,8 @@ class GraphMap:
     #     # str(result) is a temporary solution
     #     return str(result), "\n".join(self.intermediate_steps)
 
-    def process(self, input_data: str, **kwargs) -> Tuple[str, str]:
-        message = Message(input_data)
+    def process(self, input_data: str, **kwargs):
+        message = Message(text=input_data)
         for vertex in self.sorted_vertices:
             for edge in vertex.edges:
                 edge.fulfill(message)

@@ -87,7 +87,7 @@ async def stream_build(flow_id: str):
 
             logger.debug("Building langchain object")
             graph = Graph.from_payload(graph_data)
-            number_of_nodes = len(graph.nodes)
+            number_of_nodes = len(graph.vertices)
             for i, vertex in enumerate(graph.generator_build(), 1):
                 try:
                     log_dict = {
@@ -116,7 +116,7 @@ async def stream_build(flow_id: str):
 
             chat_manager.set_cache(flow_id, graph.build())
         except Exception as exc:
-            logger.error("Error while building the flow: %s", exc)
+            logger.exception("Error while building the flow: %s", exc)
             yield f"error: {json.dumps({'error': str(exc)})}\n\n"
         finally:
             yield f"data: {final_response}\n\n"
