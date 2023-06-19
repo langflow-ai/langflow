@@ -133,7 +133,7 @@ def process_graph_cached(data_graph: Dict[str, Any], message: str):
 
 
 def load_flow_from_json(
-    input: Union[str, dict], tweaks: Optional[dict] = None, build=True
+    input: Union[Path, str, dict], tweaks: Optional[dict] = None, build=True
 ):
     """
     Load flow from a JSON file or a JSON object.
