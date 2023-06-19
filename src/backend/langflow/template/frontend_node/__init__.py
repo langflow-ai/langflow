@@ -9,8 +9,9 @@ from langflow.template.frontend_node.agents import (
 )
 from langflow.template.frontend_node.chains import (
     MidJourneyPromptChainNode,
-    SeriesCharacterChainNode,
     TimeTravelGuideChainNode,
+    CombineDocsChainNode,
+    SeriesCharacterChainNode,
 )
 from langflow.template.frontend_node.connectors import (
     ConnectorFunctionFrontendNode,
@@ -36,6 +37,7 @@ __all__ = [
     "SQLDatabaseNode",
     "VectorStoreAgentNode",
     "VectorStoreRouterAgentNode",
+    "CombineDocsChainNode",
     "SeriesCharacterChainNode",
     "TimeTravelGuideChainNode",
     "MidJourneyPromptChainNode",
