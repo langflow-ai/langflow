@@ -1,5 +1,6 @@
 import contextlib
 import io
+from pathlib import Path
 from langchain.schema import AgentAction
 import json
 from langflow.interface.run import (
@@ -10,8 +11,7 @@ from langflow.interface.run import (
 from langflow.utils.logger import logger
 from langflow.graph import Graph
 
-
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 
 def fix_memory_inputs(langchain_object):
@@ -20,22 +20,23 @@ def fix_memory_inputs(langchain_object):
     object's input variables. If so, it does nothing. Otherwise, it gets a possible new memory key using the
     get_memory_key function and updates the memory keys using the update_memory_keys function.
     """
-    if hasattr(langchain_object, "memory") and langchain_object.memory is not None:
-        try:
-            if langchain_object.memory.memory_key in langchain_object.input_variables:
-                return
-        except AttributeError:
-            input_variables = (
-                langchain_object.prompt.input_variables
-                if hasattr(langchain_object, "prompt")
-                else langchain_object.input_keys
-            )
-            if langchain_object.memory.memory_key in input_variables:
-                return
+    if not hasattr(langchain_object, "memory") or langchain_object.memory is None:
+        return
+    try:
+        if langchain_object.memory.memory_key in langchain_object.input_variables:
+            return
+    except AttributeError:
+        input_variables = (
+            langchain_object.prompt.input_variables
+            if hasattr(langchain_object, "prompt")
+            else langchain_object.input_keys
+        )
+        if langchain_object.memory.memory_key in input_variables:
+            return
 
-        possible_new_mem_key = get_memory_key(langchain_object)
-        if possible_new_mem_key is not None:
-            update_memory_keys(langchain_object, possible_new_mem_key)
+    possible_new_mem_key = get_memory_key(langchain_object)
+    if possible_new_mem_key is not None:
+        update_memory_keys(langchain_object, possible_new_mem_key)
 
 
 def format_actions(actions: List[Tuple[AgentAction, str]]) -> str:
@@ -131,57 +132,108 @@ def process_graph_cached(data_graph: Dict[str, Any], message: str):
     return {"result": str(result), "thought": thought.strip()}
 
 
-def load_flow_from_json(path: str, build=True):
-    """Load flow from json file"""
-    # This is done to avoid circular imports
+def load_flow_from_json(
+    input: Union[Path, str, dict], tweaks: Optional[dict] = None, build=True
+):
+    """
+    Load flow from a JSON file or a JSON object.
 
-    with open(path, "r", encoding="utf-8") as f:
-        flow_graph = json.load(f)
-    data_graph = flow_graph["data"]
-    nodes = data_graph["nodes"]
-    # Substitute ZeroShotPrompt with PromptTemplate
-    # nodes = replace_zero_shot_prompt_with_prompt_template(nodes)
-    # Add input variables
-    # nodes = payload.extract_input_variables(nodes)
+    :param input: JSON file path or JSON object
+    :param tweaks: Optional tweaks to be processed
+    :param build: If True, build the graph, otherwise return the graph object
+    :return: Langchain object or Graph object depending on the build parameter
+    """
+    # If input is a file path, load JSON from the file
+    if isinstance(input, (str, Path)):
+        with open(input, "r", encoding="utf-8") as f:
+            flow_graph = json.load(f)
+    # If input is a dictionary, assume it's a JSON object
+    elif isinstance(input, dict):
+        flow_graph = input
+    else:
+        raise TypeError(
+            "Input must be either a file path (str) or a JSON object (dict)"
+        )
 
-    # Nodes, edges and root node
-    edges = data_graph["edges"]
+    graph_data = flow_graph["data"]
+    if tweaks is not None:
+        graph_data = process_tweaks(graph_data, tweaks)
+    nodes = graph_data["nodes"]
+    edges = graph_data["edges"]
     graph = Graph(nodes, edges)
+
     if build:
         langchain_object = graph.build()
+
         if hasattr(langchain_object, "verbose"):
             langchain_object.verbose = True
 
         if hasattr(langchain_object, "return_intermediate_steps"):
-            # https://github.com/hwchase17/langchain/issues/2068
             # Deactivating until we have a frontend solution
             # to display intermediate steps
             langchain_object.return_intermediate_steps = False
+
         fix_memory_inputs(langchain_object)
         return langchain_object
+
     return graph
 
 
-def process_tweaks(graph_data: Dict, tweaks: Dict):
-    """This function is used to tweak the graph data using the node id and the tweaks dict"""
-    # the tweaks dict is a dict of dicts
-    # the key is the node id and the value is a dict of the tweaks
-    # the dict of tweaks contains the name of a certain parameter and the value to be tweaked
+def validate_input(
+    graph_data: Dict[str, Any], tweaks: Dict[str, Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    if not isinstance(graph_data, dict) or not isinstance(tweaks, dict):
+        raise ValueError("graph_data and tweaks should be dictionaries")
 
-    # We need to process the graph data to add the tweaks
-    if "data" not in graph_data and "nodes" in graph_data:
-        nodes = graph_data["nodes"]
-    else:
-        nodes = graph_data["data"]["nodes"]
+    nodes = graph_data.get("data", {}).get("nodes") or graph_data.get("nodes")
+
+    if not isinstance(nodes, list):
+        raise ValueError(
+            "graph_data should contain a list of nodes under 'data' key or directly under 'nodes' key"
+        )
+
+    return nodes
+
+
+def apply_tweaks(node: Dict[str, Any], node_tweaks: Dict[str, Any]) -> None:
+    template_data = node.get("data", {}).get("node", {}).get("template")
+
+    if not isinstance(template_data, dict):
+        logger.warning(
+            f"Template data for node {node.get('id')} should be a dictionary"
+        )
+        return
+
+    for tweak_name, tweak_value in node_tweaks.items():
+        if tweak_name and tweak_value and tweak_name in template_data:
+            template_data[tweak_name]["value"] = tweak_value
+
+
+def process_tweaks(
+    graph_data: Dict[str, Any], tweaks: Dict[str, Dict[str, Any]]
+) -> Dict[str, Any]:
+    """
+    This function is used to tweak the graph data using the node id and the tweaks dict.
+
+    :param graph_data: The dictionary containing the graph data. It must contain a 'data' key with
+                       'nodes' as its child or directly contain 'nodes' key. Each node should have an 'id' and 'data'.
+    :param tweaks: A dictionary where the key is the node id and the value is a dictionary of the tweaks.
+                   The inner dictionary contains the name of a certain parameter as the key and the value to be tweaked.
+
+    :return: The modified graph_data dictionary.
+
+    :raises ValueError: If the input is not in the expected format.
+    """
+    nodes = validate_input(graph_data, tweaks)
+
     for node in nodes:
-        node_id = node["id"]
-        if node_id in tweaks:
-            node_tweaks = tweaks[node_id]
-            template_data = node["data"]["node"]["template"]
-            for tweak_name, tweake_value in node_tweaks.items():
-                if tweak_name in template_data:
-                    template_data[tweak_name]["value"] = tweake_value
-                    print(
-                        f"Something changed in node {node_id} with tweak {tweak_name} and value {tweake_value}"
-                    )
+        if isinstance(node, dict) and isinstance(node.get("id"), str):
+            node_id = node["id"]
+            if node_tweaks := tweaks.get(node_id):
+                apply_tweaks(node, node_tweaks)
+        else:
+            logger.warning(
+                "Each node should be a dictionary with an 'id' key of type str"
+            )
+
     return graph_data
