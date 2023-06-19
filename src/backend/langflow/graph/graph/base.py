@@ -59,9 +59,7 @@ class Graph:
         if "data" in payload:
             payload = payload["data"]
         try:
-            nodes = payload["nodes"]
-            edges = payload["edges"]
-            return cls(vertices=nodes, edges=edges)
+            return cls(graph_data=payload)
         except KeyError as exc:
             raise ValueError(
                 f"Invalid payload. Expected keys 'nodes' and 'edges'. Found {list(payload.keys())}"
@@ -202,7 +200,7 @@ class Graph:
         logger.info("Sorted vertices: %s", sorted_vertices)
         yield from sorted_vertices
 
-    def get_node_neighbors(self, vertex: Vertex) -> Dict[Vertex, int]:
+    def get_vertex_neighbors(self, vertex: Vertex) -> Dict[Vertex, int]:
         """Returns the neighbors of a node."""
         neighbors: Dict[Vertex, int] = {}
         for edge in self.edges:
@@ -290,9 +288,9 @@ class Graph:
 
         # Set the ID of the subgraph root vertex to the flow vertex ID
         subgraph_root = payload.get_root_vertex(subgraph)
-        old_id = subgraph_root.id
         if subgraph_root is None:
             raise ValueError("No root vertex found")
+        old_id = subgraph_root.id
         subgraph_root.id = flow_vertex["id"]
 
         # Get all edges in the subgraph graph that have the subgraph root as the source or target
