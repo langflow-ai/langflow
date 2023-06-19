@@ -121,9 +121,10 @@ export const getCurlCode = (flow: FlowType): string => {
  */
 export const getPythonCode = (flow: FlowType): string => {
   const flowName = flow.name;
+  const tweaks = buildTweaks(flow);
   return `from langflow import load_flow_from_json
-
-flow = load_flow_from_json("${flowName}.json")
+TWEAKS = ${JSON.stringify(tweaks, null, 2)}
+flow = load_flow_from_json("${flowName}.json", tweaks=TWEAKS)
 # Now you can use it like any chain
 flow("Hey, have you heard of LangFlow?")`;
 };
