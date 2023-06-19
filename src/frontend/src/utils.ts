@@ -1,4 +1,3 @@
-import { NodeDataType } from "./types/flow/index";
 import {
   RocketLaunchIcon,
   LinkIcon,
@@ -17,6 +16,7 @@ import {
   Squares2X2Icon,
   PencilSquareIcon,
   Square3Stack3DIcon,
+  Bars3CenterLeftIcon,
 } from "@heroicons/react/24/outline";
 import {
   Connection,
@@ -28,7 +28,7 @@ import {
   XYPosition,
 } from "reactflow";
 import { FlowType, NodeType } from "./types/flow";
-import { APITemplateType } from "./types/api";
+import { APITemplateType, TemplateVariableType } from "./types/api";
 import _ from "lodash";
 import { ChromaIcon } from "./icons/ChromaIcon";
 import { AnthropicIcon } from "./icons/Anthropic";
@@ -646,7 +646,6 @@ export function generateFlow(
   );
   newFlowData.nodes = selection.nodes;
 
-  // console.log(newFlowData);
   const newFlow: FlowType = {
     data: newFlowData,
     name: name,
@@ -801,55 +800,6 @@ export function updateFlowPosition(NewPosition: XYPosition, flow: FlowType) {
     node.position.x += deltaPosition.x;
     node.position.y += deltaPosition.y;
   });
-}
-
-export function validateNode(n: NodeType, selection: OnSelectionChangeParams) {
-  // case group node
-  if (n.type === "groupNode") {
-    if (selection.edges.some((edge) => edge.target === n.id)) {
-      return [];
-    } else {
-      return ["Error on group node"];
-    }
-  }
-
-  // case custom node
-  if (
-    !(n.data as NodeDataType)?.node?.template ||
-    !Object.keys((n.data as NodeDataType).node.template)
-  ) {
-    return [
-      "There is a inconsistente flow in the node, please check your flow",
-    ];
-  }
-
-  const {
-    type,
-    node: { template },
-  } = n.data as NodeDataType;
-
-  return Object.keys(template).reduce(
-    (errors: Array<string>, t) =>
-      errors.concat(
-        template[t].required &&
-          template[t].show &&
-          (!template[t].value || template[t].value === "") &&
-          !selection.edges.some(
-            (e) =>
-              e.targetHandle.split("|")[1] === t &&
-              e.targetHandle.split("|")[2] === n.id
-          )
-          ? [
-              `${type} is missing ${
-                template.display_name
-                  ? template.display_name
-                  : toNormalCase(template[t].name)
-              }.`,
-            ]
-          : []
-      ),
-    [] as string[]
-  );
 }
 
 export function validateSelection(
@@ -1240,6 +1190,105 @@ export function groupByFamily(data, baseClasses) {
   return groupedObj;
 }
 
+export function buildTweaks(flow) {
+  return flow.data.nodes.reduce((acc, node) => {
+    acc[node.data.id] = {};
+    return acc;
+  }, {});
+}
+export function validateNode(
+  n: NodeType,
+  reactFlowInstance: ReactFlowInstance
+): Array<string> {
+  if (!n.data?.node?.template || !Object.keys(n.data.node.template)) {
+    return [
+      "We've noticed a potential issue with a node in the flow. Please review it and, if necessary, submit a bug report with your exported flow file. Thank you for your help!",
+    ];
+  }
+
+  const {
+    type,
+    node: { template },
+  } = n.data;
+
+  return Object.keys(template).reduce(
+    (errors: Array<string>, t) =>
+      errors.concat(
+        template[t].required &&
+          template[t].show &&
+          (template[t].value === undefined ||
+            template[t].value === null ||
+            template[t].value === "") &&
+          !reactFlowInstance
+            .getEdges()
+            .some(
+              (e) =>
+                e.targetHandle.split("|")[1] === t &&
+                e.targetHandle.split("|")[2] === n.id
+            )
+          ? [
+              `${type} is missing ${
+                template.display_name
+                  ? template.display_name
+                  : toNormalCase(template[t].name)
+              }.`,
+            ]
+          : []
+      ),
+    [] as string[]
+  );
+}
+
+export function validateNodes(reactFlowInstance: ReactFlowInstance) {
+  if (reactFlowInstance.getNodes().length === 0) {
+    return [
+      "No nodes found in the flow. Please add at least one node to the flow.",
+    ];
+  }
+  return reactFlowInstance
+    .getNodes()
+    .flatMap((n: NodeType) => validateNode(n, reactFlowInstance));
+}
+
+export function getRandomElement<T>(array: T[]): T {
+  return array[Math.floor(Math.random() * array.length)];
+}
+export function getRandomDescription(): string {
+  return getRandomElement(DESCRIPTIONS);
+}
+
+export function getRandomName(
+  retry: number = 0,
+  noSpace: boolean = false,
+  maxRetries: number = 3
+): string {
+  const left: string[] = ADJECTIVES;
+  const right: string[] = NOUNS;
+
+  const lv = getRandomElement(left);
+  const rv = getRandomElement(right);
+
+  // Condition to avoid "boring wozniak"
+  if (lv === "boring" && rv === "wozniak") {
+    if (retry < maxRetries) {
+      return getRandomName(retry + 1, noSpace, maxRetries);
+    } else {
+      console.warn("Max retries reached, returning as is");
+    }
+  }
+
+  // Append a suffix if retrying and noSpace is true
+  if (retry > 0 && noSpace) {
+    const retrySuffix = Math.floor(Math.random() * 10);
+    return `${lv}_${rv}${retrySuffix}`;
+  }
+
+  // Construct the final name
+  let final_name = noSpace ? `${lv}_${rv}` : `${lv} ${rv}`;
+  // Return title case final name
+  return toTitleCase(final_name);
+}
+
 export function connectedInputNodesOnHandle(
   nodeId: string,
   handleId: string,
@@ -1284,4 +1333,8 @@ function checkDuplicatedNames(
   const names = connectedNodes.map((n) => n.name);
   const duplicatedNames = names.filter((n, i) => names.indexOf(n) !== i);
   return duplicatedNames;
+}
+
+function uuidv4(): string {
+  throw new Error("Function not implemented.");
 }

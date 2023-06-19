@@ -32,6 +32,13 @@ export default function GenericNode({
   // State for outline color
   const { sseData, isBuilding } = useSSE();
 
+  // useEffect(() => {
+  //   if (reactFlowInstance) {
+  //     setParams(Object.values(reactFlowInstance.toObject()));
+  //   }
+  // }, [save]);
+
+  // New useEffect to watch for changes in sseData and update validation status
   useEffect(() => {
     const relevantData = sseData[data.id];
     if (relevantData) {
@@ -150,12 +157,12 @@ export default function GenericNode({
             {data.node.description}
           </div>
 
-          <>
-            {Object.keys(data.node.template)
-              .filter((field_name) => field_name.charAt(0) !== "_")
-              .map((field_name: string, idx) => (
-                <div key={idx}>
-                  {/* {idx === 0 ? (
+        <>
+          {Object.keys(data.node.template)
+            .filter((field_name) => field_name.charAt(0) !== "_")
+            .map((field_name: string, idx) => (
+              <div key={idx}>
+                {/* {idx === 0 ? (
 									<div
 										className={classNames(
 											"px-5 py-2 mt-2 dark:text-white text-center",
@@ -251,6 +258,7 @@ export default function GenericNode({
           </>
         </div>
       </div>
+    </div>
     </>
   );
 }

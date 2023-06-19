@@ -1,4 +1,4 @@
-import { InputHTMLAttributes, useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { InputComponentType } from "../../types/components";
 import { classNames } from "../../utils";
 import { TabsContext } from "../../contexts/tabsContext";
@@ -11,10 +11,10 @@ export default function InputComponent({
   disableCopyPaste = false,
   disabled,
   password,
+  editNode = false,
   autoFocus = false,
   onBlur,
   onFocus,
-  editNode = false,
 }: InputComponentType) {
   const [myValue, setMyValue] = useState(value ?? "");
   const [pwdVisible, setPwdVisible] = useState(false);

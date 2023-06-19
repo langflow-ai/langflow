@@ -100,8 +100,7 @@ export default function App() {
 
   return (
     //need parent component with width and height
-    <div className="flex h-full flex-col">
-      <div className="flex shrink grow-0 basis-auto"></div>
+    <div className="h-full flex flex-col">
       <ErrorBoundary
         onReset={() => {
           window.localStorage.removeItem("tabsData");
@@ -111,16 +110,8 @@ export default function App() {
         }}
         FallbackComponent={CrashErrorComponent}
       >
-        <div className="flex min-h-0 flex-1 shrink grow basis-auto overflow-hidden">
-          <ExtraSidebar />
-          {/* Main area */}
-          <main className="flex min-w-0 flex-1 border-t border-gray-200 dark:border-gray-700">
-            {/* Primary column */}
-            <div className="h-full w-full">
-              <TabsManagerComponent></TabsManagerComponent>
-            </div>
-          </main>
-        </div>
+        <Header />
+        <Router />
       </ErrorBoundary>
       <div></div>
       <div
@@ -156,14 +147,6 @@ export default function App() {
           </div>
         ))}
       </div>
-      <a
-        target={"_blank"}
-        href="https://logspace.ai/"
-        className="absolute bottom-2 left-7 flex h-6 cursor-pointer flex-col items-center justify-start overflow-hidden rounded-lg bg-gray-800 px-2 text-center font-sans text-xs tracking-wide text-gray-300 transition-all duration-500 ease-in-out hover:h-12 dark:bg-gray-100 dark:text-gray-800"
-      >
-        {version && <div className="mt-1">⛓️ LangFlow v{version}</div>}
-        <div className={version ? "mt-2" : "mt-1"}>Created by Logspace</div>
-      </a>
     </div>
   );
 }

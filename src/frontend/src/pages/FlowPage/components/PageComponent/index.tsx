@@ -25,10 +25,11 @@ import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { APIClassType } from "../../../../types/api";
 import { FlowType, NodeType } from "../../../../types/flow";
-import { isValidConnection } from "../../../../utils";
+import { generateFlow, generateNodeFromFlow, isValidConnection, validateSelection } from "../../../../utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import ExtraSidebar from "../extraSidebarComponent";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
+import SelectionMenu from "../SelectionMenuComponent";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -353,7 +354,7 @@ export default function Page({ flow }: { flow: FlowType }) {
         <div className="w-full h-full">
           <div className="w-full h-full" ref={reactFlowWrapper}>
             {Object.keys(templates).length > 0 &&
-            Object.keys(types).length > 0 ? (
+              Object.keys(types).length > 0 ? (
               <div className="w-full h-full">
                 <ReactFlow
                   nodes={nodes}
@@ -403,6 +404,44 @@ export default function Page({ flow }: { flow: FlowType }) {
                   <Controls className="[&>button]:text-black  [&>button]:dark:bg-gray-800 hover:[&>button]:dark:bg-gray-700 [&>button]:dark:text-gray-400 [&>button]:dark:fill-gray-400 [&>button]:dark:border-gray-600"></Controls>
                 </ReactFlow>
                 <Chat flow={flow} reactFlowInstance={reactFlowInstance} />
+                <SelectionMenu
+                  onClick={() => {
+                    if (validateSelection(lastSelection).length === 0) {
+                      const { newFlow } = generateFlow(
+                        lastSelection,
+                        reactFlowInstance,
+                        "new component"
+                      );
+                      const newGroupNode = generateNodeFromFlow(newFlow);
+                      setNodes((oldNodes) => [
+                        ...oldNodes.filter(
+                          (oldNode) =>
+                            !lastSelection.nodes.some(
+                              (selectionNode) => selectionNode.id === oldNode.id
+                            )
+                        ),
+                        newGroupNode,
+                      ]);
+                      setEdges((oldEdges) =>
+                        oldEdges.filter(
+                          (oldEdge) =>
+                            !lastSelection.nodes.some(
+                              (selectionNode) =>
+                                selectionNode.id === oldEdge.target ||
+                                selectionNode.id === oldEdge.source
+                            )
+                        )
+                      );
+                    } else {
+                      setErrorData({
+                        title: "Invalid selection",
+                        list: validateSelection(lastSelection),
+                      });
+                    }
+                  }}
+                  isVisible={selectionMenuVisible}
+                  nodes={lastSelection?.nodes}
+                />
               </div>
             ) : (
               <></>

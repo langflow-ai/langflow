@@ -1,7 +1,9 @@
 import { useUpdateNodeInternals } from "reactflow";
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { ParameterComponentType } from "../../../../types/components";
 import HandleComponent from "./components/handleComponent";
+import { PopUpContext } from "../../../../contexts/popUpContext";
+import { TabsContext } from "../../../../contexts/tabsContext";
 
 export default function ParameterComponent({
   left,
@@ -36,7 +38,7 @@ export default function ParameterComponent({
     <div
       ref={ref}
       className={
-        "mt-1 flex w-full flex-wrap items-center bg-gray-50 px-5 py-2 dark:bg-gray-800 dark:text-white" +
+        "mt-1 flex w-full flex-wrap items-center bg-muted px-5 py-2 dark:bg-gray-800 dark:text-white" +
         (left ? " justify-between" : " justify-end")
       }
     >

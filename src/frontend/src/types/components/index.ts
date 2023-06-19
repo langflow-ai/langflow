@@ -1,20 +1,18 @@
-import {
-  FocusEventHandler,
-  ForwardRefExoticComponent,
-  ReactElement,
-  ReactNode,
-} from "react";
+import { FocusEventHandler, ForwardRefExoticComponent, ReactElement, ReactNode } from "react";
 import { FlowType, NodeDataType } from "../flow/index";
+import { typesContextType } from "../typesContext";
 export type InputComponentType = {
   value: string;
   disabled?: boolean;
   onChange: (value: string) => void;
   password: boolean;
   disableCopyPaste?: boolean;
-  editNode?: boolean;
   onFocus?: FocusEventHandler<HTMLInputElement>;
   onBlur?: FocusEventHandler<HTMLInputElement>;
   autoFocus?: boolean;
+  editNode?: boolean;
+  onChangePass?: (value: boolean | boolean) => void;
+  showPass?: boolean;
 };
 export type ToggleComponentType = {
   enabled: boolean;

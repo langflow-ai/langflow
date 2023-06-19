@@ -1,9 +1,9 @@
 import { Dialog, Transition } from "@headlessui/react";
 import { ChatBubbleOvalLeftEllipsisIcon } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useEffect, useRef, useState } from "react";
-import { FlowType, NodeDataType, NodeType } from "../../types/flow";
+import { FlowType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
-import { processFLow, toNormalCase } from "../../utils";
+import { processFLow, validateNodes } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import ChatMessage from "./chatMessage";
 import { sendAllProps } from "../../types/api";
@@ -268,57 +268,6 @@ export default function ChatModal({
     if (ref.current) ref.current.scrollIntoView({ behavior: "smooth" });
   }, [chatHistory]);
 
-  function validateNode(n: NodeType): Array<string> {
-    if (
-      !(n.data as NodeDataType)?.node?.template ||
-      !Object.keys((n.data as NodeDataType).node.template)
-    ) {
-      setNoticeData({
-        title:
-          "We've noticed a potential issue with a node in the flow. Please review it and, if necessary, submit a bug report with your exported flow file. Thank you for your help!",
-      });
-      return [];
-    }
-
-    const {
-      type,
-      node: { template },
-    } = n.data as NodeDataType;
-
-    return Object.keys(template).reduce(
-      (errors: Array<string>, t) =>
-        errors.concat(
-          template[t].required &&
-            template[t].show &&
-            (template[t].value === undefined ||
-              template[t].value === null ||
-              template[t].value === "") &&
-            !reactFlowInstance
-              .getEdges()
-              .some(
-                (e) =>
-                  e.targetHandle.split("|")[1] === t &&
-                  e.targetHandle.split("|")[2] === n.id
-              )
-            ? [
-                `${type} is missing ${
-                  template.display_name
-                    ? template.display_name
-                    : toNormalCase(template[t].name)
-                }.`,
-              ]
-            : []
-        ),
-      [] as string[]
-    );
-  }
-
-  function validateNodes() {
-    return reactFlowInstance
-      .getNodes()
-      .flatMap((n: NodeType) => validateNode(n));
-  }
-
   const ref = useRef(null);
 
   useEffect(() => {
@@ -402,13 +351,13 @@ export default function ChatModal({
                     onClick={() => clearChat()}
                     className="absolute right-10 top-2 z-30 text-gray-600 hover:text-red-500 dark:text-gray-300 dark:hover:text-red-500"
                   >
-                    <FaEraser className="h-4 w-4" />
+                    <Eraser className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setModalOpen(false)}
                     className="absolute right-2 top-1.5 z-30 text-gray-600 hover:text-red-500 dark:text-gray-300 dark:hover:text-red-500"
                   >
-                    <HiX className="h-5 w-5" />
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
                 <div
@@ -433,7 +382,7 @@ export default function ChatModal({
                         </span>
                       </span>
                       <br />
-                      <div className="w-2/4 rounded-md border border-gray-200 bg-gray-100 px-6 py-8 dark:border-gray-700 dark:bg-gray-900">
+                      <div className="bg-muted dark:bg-gray-900 rounded-md w-2/4 px-6 py-8 border border-gray-200 dark:border-gray-700">
                         <span className="text-base text-gray-500">
                           Start a conversation and click the agent’s thoughts{" "}
                           <span>

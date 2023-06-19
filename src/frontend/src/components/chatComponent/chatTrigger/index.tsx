@@ -1,5 +1,5 @@
 import { Transition } from "@headlessui/react";
-
+import { MessagesSquare } from "lucide-react";
 import { alertContext } from "../../../contexts/alertContext";
 import { useContext } from "react";
 
@@ -35,9 +35,9 @@ export default function ChatTrigger({ open, setOpen, isBuilt }) {
           onClick={handleClick}
         >
           <button>
-            <div className="flex gap-3  items-center">
-              <ChatBubbleBottomCenterTextIcon
-                className="mt-1 h-6 w-6"
+            <div className="flex gap-3">
+              <MessagesSquare
+                className="pth-6 w-6 fill-[#5c8be1] stroke-1 stroke-[#5c8be1]"
                 style={{ color: "white" }}
                 strokeWidth={1.5}
               />

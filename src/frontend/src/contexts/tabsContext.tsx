@@ -1,17 +1,18 @@
 import {
-    createContext,
-    useEffect,
-    useState,
-    useRef,
-    ReactNode,
-    useContext,
+  createContext,
+  useEffect,
+  useState,
+  useRef,
+  ReactNode,
+  useContext,
 } from "react";
 import { FlowType, NodeType } from "../types/flow";
 import { TabsContextType, TabsState } from "../types/tabs";
 import {
-    updateTemplate,
-    getRandomDescription,
-    getRandomName
+  updateIds,
+  updateTemplate,
+  getRandomDescription,
+  getRandomName,
 } from "../utils";
 import { alertContext } from "./alertContext";
 import { typesContext } from "./typesContext";
@@ -19,12 +20,12 @@ import { APITemplateType } from "../types/api";
 import ShortUniqueId from "short-unique-id";
 import { addEdge } from "reactflow";
 import {
-    readFlowsFromDatabase,
-    deleteFlowFromDatabase,
-    saveFlowToDatabase,
-    downloadFlowsFromDatabase,
-    uploadFlowsToDatabase,
-    updateFlowInDatabase,
+  readFlowsFromDatabase,
+  deleteFlowFromDatabase,
+  saveFlowToDatabase,
+  downloadFlowsFromDatabase,
+  uploadFlowsToDatabase,
+  updateFlowInDatabase,
 } from "../controllers/API";
 import _ from "lodash";
 
@@ -118,42 +119,49 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   //           edge.style = { stroke: "#555555" };
   //         });
 
-          flow.data.nodes.forEach((node) => {
-            const template = templates[node.data.type];
-            if (!template) {
-              setErrorData({ title: `Unknown node type: ${node.data.type}` });
-              return;
-            }
-            if (
-            node.type !== "groupNode" &&
-            templates &&
-            templates[node.data.type] &&
-            Object.keys(templates[node.data.type]["template"]).length > 0
-          ) {
-              node.data.node.base_classes =
-              templates[node.data.type]["base_classes"];
-              flow.data.edges.forEach((edge) => {
-                if (edge.source === node.id) {
-                  edge.sourceHandle = edge.sourceHandle
-                    .split("|")
-                    .slice(0, 2)
-                    .concat(template["base_classes"])
-                    .join("|");
-                }
-              });
-              node.data.node.description = template["description"];
-              node.data.node.template = updateTemplate(
-                template["template"] as unknown as APITemplateType,
-                node.data.node.template as APITemplateType
-              );
-            }
-          });
-        });
-        setTabIndex(cookieObject.tabIndex);
-        setFlows(cookieObject.flows);
-        setId(cookieObject.id);
-      } catch (e) {
-        console.log(e);
+  //         flow.data.nodes.forEach((node) => {
+  //           const template = templates[node.data.type];
+  //           if (!template) {
+  //             setErrorData({ title: `Unknown node type: ${node.data.type}` });
+  //             return;
+  //           }
+  //           if (Object.keys(template["template"]).length > 0) {
+  //             node.data.node.base_classes = template["base_classes"];
+  //             flow.data.edges.forEach((edge) => {
+  //               if (edge.source === node.id) {
+  //                 edge.sourceHandle = edge.sourceHandle
+  //                   .split("|")
+  //                   .slice(0, 2)
+  //                   .concat(template["base_classes"])
+  //                   .join("|");
+  //               }
+  //             });
+  //             node.data.node.description = template["description"];
+  //             node.data.node.template = updateTemplate(
+  //               template["template"] as unknown as APITemplateType,
+  //               node.data.node.template as APITemplateType
+  //             );
+  //           }
+  //         });
+  //       });
+  //       setTabIndex(cookieObject.tabIndex);
+  //       setFlows(cookieObject.flows);
+  //       setId(cookieObject.id);
+  //     } catch (e) {
+  //       console.log(e);
+  //     }
+  //   }
+  // }
+
+  function refreshFlows() {
+    getTabsDataFromDB().then((DbData) => {
+      if (DbData && Object.keys(templates).length > 0) {
+        try {
+          processDBData(DbData);
+          updateStateWithDbData(DbData);
+        } catch (e) {
+          console.error(e);
+        }
       }
     });
   }
@@ -197,7 +205,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         setErrorData({ title: `Unknown node type: ${node.data.type}` });
         return;
       }
-      if (Object.keys(template["template"]).length > 0) {
+      if (
+        Object.keys(template["template"]).length > 0 &&
+        node.type !== "groupNode"
+      ) {
         updateNodeBaseClasses(node, template);
         updateNodeEdges(flow, node, template);
         updateNodeDescription(node, template);
@@ -484,45 +495,9 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     const description = flow?.description ? flow.description : "";
 
     if (data) {
-      data.edges.forEach((edge) => {
-        edge.style = { stroke: "inherit" };
-        edge.className =
-          edge.targetHandle.split("|")[0] === "Text"
-            ? "stroke-gray-800 dark:stroke-gray-300"
-            : "stroke-gray-900 dark:stroke-gray-200";
-        edge.animated = edge.targetHandle.split("|")[0] === "Text";
-      });
-      data.nodes.forEach((node) => {
-        const template = templates[node.data.type];
-        if (!template) {
-          setErrorData({ title: `Unknown node type: ${node.data.type}` });
-          return;
-        }
-        if (
-          node.type !== "groupNode" &&
-          templates &&
-          templates[node.data.type] &&
-          Object.keys(templates[node.data.type]["template"]).length > 0
-        ) {
-          node.data.node.base_classes =
-            templates[node.data.type]["base_classes"];
-          flow.data.edges.forEach((edge) => {
-            if (edge.source === node.id) {
-              edge.sourceHandle = edge.sourceHandle
-                .split("|")
-                .slice(0, 2)
-                .concat(template["base_classes"])
-                .join("|");
-            }
-          });
-          node.data.node.description = template["description"];
-          node.data.node.template = updateTemplate(
-            template["template"] as unknown as APITemplateType,
-            node.data.node.template as APITemplateType
-          );
-        }
-      });
-      // updateIds(data, getNodeId);
+      updateEdges(data.edges);
+      updateNodes(data.nodes, data.edges);
+      updateIds(data, getNodeId); // Assuming updateIds is defined elsewhere
     }
 
     return { data, description };
@@ -546,7 +521,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         setErrorData({ title: `Unknown node type: ${node.data.type}` });
         return;
       }
-      if (Object.keys(template["template"]).length > 0) {
+      if (
+        Object.keys(template["template"]).length > 0 &&
+        node.type !== "groupNode"
+      ) {
         node.data.node.base_classes = template["base_classes"];
         edges.forEach((edge) => {
           if (edge.source === node.id) {
