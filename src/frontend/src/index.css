@@ -34,6 +34,14 @@
 	  --ring: 215 20.2% 65.1%; /* hsl(215 20% 65%) */
 
     --radius: 0.5rem;
+
+    --build: 11, 65% 61%; /* hsl(11, 65%, 61%) */
+
+    --build-background: #E2E7EE; /* hsl(215, 26%, 91%) */
+
+    --round-btn-shadow: #00000063;
+
+    --hover-btn-background: #242f47;
   }
 
 	.dark {
@@ -67,6 +75,8 @@
 	  --ring: 216 34% 17%; /* hsl(216 34% 17%) */
 
     --radius: 0.5rem;
+
+    --build-trigger: 11, 65% 61%; /* hsl(11, 65%, 61%) */
   }
 }
 
@@ -91,6 +101,10 @@
   --destructive-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
   --ring: 215 20.2% 65.1%; /* hsl(215 20% 65%) */
   --radius: 0.5rem;
+  --build-trigger: 	#dc735b; /* hsl(11, 65%, 61%) */
+  --build-background: #E2E7EE; /*	hsl(215, 26%, 91%) */
+  --round-btn-shadow: #00000063;
+  --hover-btn-background: #242f47;
 }
 
 .dark {

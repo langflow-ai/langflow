@@ -16,6 +16,9 @@ module.exports = {
     },
     extend: {
       colors: {
+        'btn-shadow': "var(--round-btn-shadow)",
+        buildBackground: "var(--build-background)",
+        build: "var(--build-trigger)",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -91,6 +94,10 @@ module.exports = {
     },
     extend: {
       colors: {
+        'btn-hover-bg': "var(--hover-btn-background)",
+        'btn-shadow': "var(--round-btn-shadow)",
+        buildBackground: "var(--build-background)",
+        build: "var(--build-trigger)",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
