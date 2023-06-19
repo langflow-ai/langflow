@@ -11,6 +11,8 @@ const initialValue = {
   sseData: {},
   isBuilding: false,
   setIsBuilding: (isBuilding: boolean) => {},
+  setStatus : (status: number) => {},
+  status: 0,
 };
 
 const SSEContext = createContext(initialValue);
@@ -22,6 +24,7 @@ export function useSSE() {
 export function SSEProvider({ children }) {
   const [sseData, setSSEData] = useState({});
   const [isBuilding, setIsBuilding] = useState(false);
+  const [status, setStatus] = useState(0);
 
   const updateSSEData = useCallback((newData: any) => {
     setSSEData((prevData) => ({
@@ -32,7 +35,7 @@ export function SSEProvider({ children }) {
 
   return (
     <SSEContext.Provider
-      value={{ sseData, updateSSEData, isBuilding, setIsBuilding }}
+      value={{ setStatus,status,sseData, updateSSEData, isBuilding, setIsBuilding }}
     >
       {children}
     </SSEContext.Provider>
