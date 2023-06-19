@@ -1,6 +1,10 @@
+import contextlib
+import io
+from typing import List, Optional, Tuple
 from langflow.cache.utils import memoize_dict
 from langflow.graph import Graph
 from langflow.utils.logger import logger
+from langchain.schema import AgentAction
 
 
 @memoize_dict(maxsize=10)
@@ -18,18 +22,13 @@ def build_graph(data_graph):
     return Graph(graph_data=data_graph)
 
 
-def build_langchain_object(data_graph):
+def build_langchain_object(graph_data):
     """
     Build langchain object from data_graph.
     """
 
     logger.debug("Building langchain object")
-    nodes = data_graph["nodes"]
-    # Add input variables
-    # nodes = payload.extract_input_variables(nodes)
-    # Nodes, edges and root node
-    edges = data_graph["edges"]
-    graph = Graph(nodes, edges)
+    graph = Graph.from_payload(payload=graph_data)
 
     return graph.build()
 
