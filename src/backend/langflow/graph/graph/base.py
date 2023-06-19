@@ -11,6 +11,7 @@ from langflow.graph.vertex.types import (
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
 from langflow.utils.logger import logger
+from langchain.chains.base import Chain
 
 
 class Graph:
@@ -99,7 +100,7 @@ class Graph:
         ]
         return connected_nodes
 
-    def build(self) -> List[Vertex]:
+    def build(self) -> Chain:
         """Builds the graph."""
         # Get root node
         root_node = payload.get_root_node(self)
