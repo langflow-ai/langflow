@@ -9,7 +9,9 @@ from ..models.token import TokenData
 from ..models.user import get_user, fake_users_db, User
 
 
-SECRET_KEY = "your_secret_key"
+# to get a string like this run:
+# openssl rand -hex 32
+SECRET_KEY = "698619adad2d916f1f32d264540976964b3c0d3828e0870a65add5800a8cc6b9"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -37,6 +39,7 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
 
 def authenticate_user(fake_db, username: str, password: str):
     user = get_user(fake_db, username)
+    
     if not user:
         return False
     if not verify_password(password, user.hashed_password):
@@ -50,14 +53,16 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
         token_data = TokenData(username=username)
-    except JWTError:
-        raise credentials_exception
+    except JWTError as e:
+        raise credentials_exception from e
+
     user = get_user(fake_users_db, username=token_data.username)
     if user is None:
         raise credentials_exception

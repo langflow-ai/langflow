@@ -13,12 +13,19 @@ class UserInDB(User):
 
 
 fake_users_db = {
-    "johndoe": {
-        "username": "johndoe",
-        "full_name": "John Doe",
-        "email": "johndoe@example.com",
-        "hashed_password": "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",
+    "gustavo": {
+        "username": "gustavo",
+        "full_name": "Gustavo Schaedler",
+        "email": "gustavopoa@gmail.com",
+        "hashed_password": "$2b$12$f4R8IHUaVxVchhpWrwhckeJXnPalW1vUbJzcvb1KeovJcuMwE861K", #secret
         "disabled": False,
+    },
+    "gustavo_disabled": {
+        "username": "gustavo_disabled",
+        "full_name": "Gustavo Disabled",
+        "email": "gustavo_disabled@gmail.com",
+        "hashed_password": "$2b$12$f4R8IHUaVxVchhpWrwhckeJXnPalW1vUbJzcvb1KeovJcuMwE861K", #secret
+        "disabled": True,
     }
 }
 
