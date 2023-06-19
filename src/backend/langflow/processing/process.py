@@ -109,23 +109,13 @@ def get_result_and_thought(langchain_object, message: str):
     return result, thought
 
 
-def load_or_build_langchain_object(data_graph, is_first_message=False):
-    """
-    Load langchain object from cache if it exists, otherwise build it.
-    """
-    if is_first_message:
-        build_langchain_object_with_caching.clear_cache()
-    return build_langchain_object_with_caching(data_graph)
-
-
 def process_graph_cached(data_graph: Dict[str, Any], message: str):
     """
     Process graph by extracting input variables and replacing ZeroShotPrompt
     with PromptTemplate,then run the graph and return the result and thought.
     """
     # Load langchain object
-    is_first_message = len(data_graph.get("chatHistory", [])) == 0
-    langchain_object = load_or_build_langchain_object(data_graph, is_first_message)
+    langchain_object = build_langchain_object_with_caching(data_graph)
     logger.debug("Loaded langchain object")
 
     if langchain_object is None:
@@ -170,3 +160,28 @@ def load_flow_from_json(path: str, build=True):
         fix_memory_inputs(langchain_object)
         return langchain_object
     return graph
+
+
+def process_tweaks(graph_data: Dict, tweaks: Dict):
+    """This function is used to tweak the graph data using the node id and the tweaks dict"""
+    # the tweaks dict is a dict of dicts
+    # the key is the node id and the value is a dict of the tweaks
+    # the dict of tweaks contains the name of a certain parameter and the value to be tweaked
+
+    # We need to process the graph data to add the tweaks
+    if "data" not in graph_data and "nodes" in graph_data:
+        nodes = graph_data["nodes"]
+    else:
+        nodes = graph_data["data"]["nodes"]
+    for node in nodes:
+        node_id = node["id"]
+        if node_id in tweaks:
+            node_tweaks = tweaks[node_id]
+            template_data = node["data"]["node"]["template"]
+            for tweak_name, tweake_value in node_tweaks.items():
+                if tweak_name in template_data:
+                    template_data[tweak_name]["value"] = tweake_value
+                    print(
+                        f"Something changed in node {node_id} with tweak {tweak_name} and value {tweake_value}"
+                    )
+    return graph_data

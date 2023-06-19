@@ -18,6 +18,9 @@ export default function ParameterComponent({
   const ref = useRef<HTMLDivElement | null>(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
+  const { closePopUp } = useContext(PopUpContext);
+  const { setTabsState, tabId } = useContext(TabsContext);
+
   useEffect(() => {
     if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
       setPosition(ref.current.offsetTop + ref.current.clientHeight / 2);
@@ -33,7 +36,7 @@ export default function ParameterComponent({
     <div
       ref={ref}
       className={
-        "mt-1 flex w-full flex-wrap items-center bg-gray-50 px-5 py-2 dark:bg-gray-800 dark:text-white" +
+        "mt-1 flex w-full flex-wrap items-center bg-muted px-5 py-2 dark:bg-gray-800 dark:text-white" +
         (left ? " justify-between" : " justify-end")
       }
     >

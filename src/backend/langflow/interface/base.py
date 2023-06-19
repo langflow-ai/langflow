@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, List, Optional, Type, Union
-
-from pydantic import BaseModel, validator
+from typing import Any, Dict, List, Optional, Type, Union
+from langchain.chains.base import Chain
+from langchain.agents import AgentExecutor
+from pydantic import BaseModel
 
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
@@ -106,10 +107,43 @@ class BaseStrCode(BaseModel):
 
         return v
 
-    def get_function(self):
-        """Get the function"""
-        if self.code:
-            function_name = validate.extract_function_name(self.code)
+        signature.add_extra_fields()
+        signature.add_extra_base_classes()
 
-            return validate.create_function(self.code, function_name)
-        return self.func
+        return signature
+
+
+class CustomChain(Chain, ABC):
+    """Custom chain"""
+
+    @staticmethod
+    def function_name():
+        return "CustomChain"
+
+    @classmethod
+    def initialize(cls, *args, **kwargs):
+        pass
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def run(self, *args, **kwargs):
+        return super().run(*args, **kwargs)
+
+
+class CustomAgentExecutor(AgentExecutor, ABC):
+    """Custom chain"""
+
+    @staticmethod
+    def function_name():
+        return "CustomChain"
+
+    @classmethod
+    def initialize(cls, *args, **kwargs):
+        pass
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def run(self, *args, **kwargs):
+        return super().run(*args, **kwargs)

@@ -1,7 +1,82 @@
 /** @type {import('tailwindcss').Config} */
-const { fontFamily } = require("tailwindcss/defaultTheme")
+const { fontFamily } = require("tailwindcss/defaultTheme");
 
 import plugin from "tailwindcss/plugin";
+
+module.exports = {
+  darkMode: ["class"],
+  content: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}"],
+  theme: {
+    container: {
+      center: true,
+      padding: "2rem",
+      screens: {
+        "2xl": "1400px",
+      },
+    },
+    extend: {
+      colors: {
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+      },
+      borderRadius: {
+        lg: `var(--radius)`,
+        md: `calc(var(--radius) - 2px)`,
+        sm: "calc(var(--radius) - 4px)",
+      },
+      fontFamily: {
+        sans: ["var(--font-sans)", ...fontFamily.sans],
+      },
+      keyframes: {
+        "accordion-down": {
+          from: { height: 0 },
+          to: { height: "var(--radix-accordion-content-height)" },
+        },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: 0 },
+        },
+      },
+      animation: {
+        "accordion-down": "accordion-down 0.2s ease-out",
+        "accordion-up": "accordion-up 0.2s ease-out",
+      },
+    },
+  },
+  plugins: [require("tailwindcss-animate")],
+};
+
 module.exports = {
   content: ["./index.html", "./src/**/*.{js,ts,tsx,jsx}"],
   darkMode: "class",
@@ -76,7 +151,7 @@ module.exports = {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "pulse-green": "pulseGreen 1s linear",
-        'spin-once': 'spin 1s linear 0.7'
+        "spin-once": "spin 1s linear 0.7",
       },
       borderColor: {
         "red-outline": "rgba(255, 0, 0, 0.8)",
@@ -89,6 +164,7 @@ module.exports = {
     },
   },
   plugins: [
+    require("tailwindcss-animate"),
     require("@tailwindcss/forms")({
       strategy: "class", // only generate classes
     }),
@@ -105,10 +181,19 @@ module.exports = {
           },
         },
         ".truncate-multiline": {
-          "display": "-webkit-box",
-          "-webkit-line-clamp": "3", /* Change this number to the number of lines you want to show */
+          display: "-webkit-box",
+          "-webkit-line-clamp":
+            "3" /* Change this number to the number of lines you want to show */,
           "-webkit-box-orient": "vertical",
-          "overflow": "hidden",
+          overflow: "hidden",
+          "text-overflow": "ellipsis",
+        },
+        ".truncate-doubleline": {
+          display: "-webkit-box",
+          "-webkit-line-clamp":
+            "2" /* Change this number to the number of lines you want to show */,
+          "-webkit-box-orient": "vertical",
+          overflow: "hidden",
           "text-overflow": "ellipsis",
         },
 

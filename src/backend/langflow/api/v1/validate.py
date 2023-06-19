@@ -15,7 +15,7 @@ from langflow.utils.logger import logger
 from langflow.utils.validate import validate_code
 
 # build router
-router = APIRouter(prefix="/validate", tags=["validate"])
+router = APIRouter(prefix="/validate", tags=["Validate"])
 
 
 @router.post("/code", status_code=200, response_model=CodeValidationResponse)

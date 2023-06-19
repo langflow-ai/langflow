@@ -52,7 +52,7 @@ class ToolNode(FrontendNode):
             ),
         ],
     )
-    description: str = "Tool to be used in the flow."
+    description: str = "Converts a chain, agent or function into a tool."
     base_classes: list[str] = ["Tool"]
 
     def to_dict(self):
@@ -108,7 +108,7 @@ class PythonFunctionToolNode(FrontendNode):
 class PythonFunctionNode(FrontendNode):
     name: str = "PythonFunction"
     template: Template = Template(
-        type_name="python_function",
+        type_name="PythonFunction",
         fields=[
             TemplateField(
                 field_type="code",

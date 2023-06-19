@@ -352,7 +352,7 @@
                                 "type": "str",
                                 "list": false
                             },
-                            "_type": "zero_shot"
+                            "_type": "ZeroShotPrompt"
                         },
                         "description": "Prompt template for Zero Shot Agent.",
                         "base_classes": [

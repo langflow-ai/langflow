@@ -2,30 +2,29 @@ from langflow.template import frontend_node
 
 # These should always be instantiated
 CUSTOM_NODES = {
-    "prompts": {"ZeroShotPrompt": frontend_node.ZeroShotPromptNode()},
+    "prompts": {
+        "ZeroShotPrompt": frontend_node.prompts.ZeroShotPromptNode(),
+    },
     "tools": {
         "PythonFunctionTool": frontend_node.PythonFunctionToolNode(),
         "Tool": frontend_node.ToolNode(),
     },
     "agents": {
-        "JsonAgent": frontend_node.JsonAgentNode(),
-        "CSVAgent": frontend_node.CSVAgentNode(),
-        "initialize_agent": frontend_node.InitializeAgentNode(),
-        "VectorStoreAgent": frontend_node.VectorStoreAgentNode(),
-        "VectorStoreRouterAgent": frontend_node.VectorStoreRouterAgentNode(),
-        "SQLAgent": frontend_node.SQLAgentNode(),
+        "JsonAgent": frontend_node.agents.JsonAgentNode(),
+        "CSVAgent": frontend_node.agents.CSVAgentNode(),
+        "AgentInitializer": frontend_node.agents.InitializeAgentNode(),
+        "VectorStoreAgent": frontend_node.agents.VectorStoreAgentNode(),
+        "VectorStoreRouterAgent": frontend_node.agents.VectorStoreRouterAgentNode(),
+        "SQLAgent": frontend_node.agents.SQLAgentNode(),
     },
     "utilities": {
         "SQLDatabase": frontend_node.SQLDatabaseNode(),
     },
     "chains": {
-        "SeriesCharacterChain": frontend_node.SeriesCharacterChainNode(),
-        "TimeTravelGuideChain": frontend_node.TimeTravelGuideChainNode(),
-        "MidJourneyPromptChain": frontend_node.MidJourneyPromptChainNode(),
-    },
-    "connectors": {
-        "ConnectorFunction": frontend_node.ConnectorFunctionFrontendNode(),
-        "DallE2Generator": frontend_node.DallE2GeneratorFrontendNode(),
+        "SeriesCharacterChain": frontend_node.chains.SeriesCharacterChainNode(),
+        "TimeTravelGuideChain": frontend_node.chains.TimeTravelGuideChainNode(),
+        "MidJourneyPromptChain": frontend_node.chains.MidJourneyPromptChainNode(),
+        "load_qa_chain": frontend_node.chains.CombineDocsChainNode(),
     },
 }
 

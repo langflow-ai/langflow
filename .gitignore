@@ -241,6 +241,7 @@ dmypy.json
 
 # Poetry
 .testenv/*
+langflow.db
 
 # cache
 qdrant_*

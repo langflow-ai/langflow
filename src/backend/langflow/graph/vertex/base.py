@@ -1,6 +1,4 @@
-# Path: src/backend/langflow/graph/vertex/base.py
-from langflow.cache import base as cache_utils
-from langflow.graph.edge.contract import ContractEdge
+from langflow.cache import utils as cache_utils
 from langflow.graph.vertex.constants import DIRECT_TYPES
 from langflow.interface import loading
 from langflow.interface.listing import ALL_TYPES_DICT
@@ -54,8 +52,11 @@ class Vertex:
 
         template_dict = self.data["node"]["template"]
         self.vertex_type = (
-            self.data["type"] if "Tool" not in self.output else template_dict["_type"]
+            self.data["type"]
+            if "Tool" not in self.output or template_dict["_type"].islower()
+            else template_dict["_type"]
         )
+
         if self.base_type is None:
             for base_type, value in ALL_TYPES_DICT.items():
                 if self.vertex_type in value:

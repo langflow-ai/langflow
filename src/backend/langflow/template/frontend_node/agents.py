@@ -43,7 +43,7 @@ class SQLAgentNode(AgentFrontendNode):
             ),
         ],
     )
-    description: str = """Construct a sql agent from an LLM and tools."""
+    description: str = """Construct an SQL agent from an LLM and tools."""
     base_classes: list[str] = ["AgentExecutor"]
 
     def to_dict(self):
@@ -159,10 +159,11 @@ class CSVAgentNode(AgentFrontendNode):
         return super().to_dict()
 
 
-class InitializeAgentNode(AgentFrontendNode):
-    name: str = "initialize_agent"
+class InitializeAgentNode(FrontendNode):
+    name: str = "AgentInitializer"
+    display_name: str = "AgentInitializer"
     template: Template = Template(
-        type_name="initailize_agent",
+        type_name="initialize_agent",
         fields=[
             TemplateField(
                 field_type="str",

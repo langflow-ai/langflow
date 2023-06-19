@@ -5,22 +5,31 @@ import { LocationProvider } from "./locationContext";
 import PopUpProvider from "./popUpContext";
 import { TabsProvider } from "./tabsContext";
 import { TypesProvider } from "./typesContext";
+import { ReactFlowProvider } from "reactflow";
+import { UndoRedoProvider } from "./undoRedoContext";
+import { SSEProvider } from "./SSEContext";
 
 export default function ContextWrapper({ children }: { children: ReactNode }) {
   //element to wrap all context
   return (
     <>
-      <DarkProvider>
-        <TypesProvider>
-          <LocationProvider>
-            <AlertProvider>
-              <TabsProvider>
-                <PopUpProvider>{children}</PopUpProvider>
-              </TabsProvider>
-            </AlertProvider>
-          </LocationProvider>
-        </TypesProvider>
-      </DarkProvider>
+      <ReactFlowProvider>
+        <DarkProvider>
+          <TypesProvider>
+            <LocationProvider>
+              <AlertProvider>
+                <SSEProvider>
+                  <TabsProvider>
+                    <UndoRedoProvider>
+                      <PopUpProvider>{children}</PopUpProvider>
+                    </UndoRedoProvider>
+                  </TabsProvider>
+                </SSEProvider>
+              </AlertProvider>
+            </LocationProvider>
+          </TypesProvider>
+        </DarkProvider>
+      </ReactFlowProvider>
     </>
   );
 }

@@ -77,7 +77,7 @@ class PromptTemplateNode(PromptFrontendNode):
 class ZeroShotPromptNode(PromptFrontendNode):
     name: str = "ZeroShotPrompt"
     template: Template = Template(
-        type_name="zero_shot",
+        type_name="ZeroShotPrompt",
         fields=[
             TemplateField(
                 field_type="str",
