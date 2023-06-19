@@ -82,7 +82,7 @@ export default function Header() {
               </div>
             </a>
             <a
-              href="https://twitter.com/logspace_ai¼"
+              href="https://twitter.com/logspace_ai"
               target="_blank"
               rel="noreferrer"
               className="text-muted-foreground"
