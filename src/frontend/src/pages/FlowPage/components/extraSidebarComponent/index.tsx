@@ -66,7 +66,7 @@ export default function ExtraSidebar() {
       <div className="mt-2 mb-2 w-full flex gap-2 justify-between px-2 items-center">
         <ShadTooltip delayDuration={1000} content="Import" side="top">
           <button
-            className="hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center rounded-md bg-white px-2 py-2 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+            className="hover:dark:hover:bg-btn-hover-bg text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center rounded-md bg-white px-2 py-2 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
             onClick={() => {
               // openPopUp(<ImportModal />);
               uploadFlow();
@@ -79,7 +79,7 @@ export default function ExtraSidebar() {
         <ShadTooltip delayDuration={1000} content="Export" side="top">
           <button
             className={classNames(
-              "hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
+              "hover:dark:hover:bg-btn-hover-bg text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
             )}
             onClick={(event) => {
               openPopUp(<ExportModal />);
@@ -91,7 +91,7 @@ export default function ExtraSidebar() {
         <ShadTooltip delayDuration={1000} content="Code" side="top">
           <button
             className={classNames(
-              "hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
+              "hover:dark:hover:bg-btn-hover-bg text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
             )}
             onClick={(event) => {
               openPopUp(<ApiModal flow={flows.find((f) => f.id === tabId)} />);
@@ -103,7 +103,7 @@ export default function ExtraSidebar() {
 
         <ShadTooltip delayDuration={1000} content="Save" side="top">
           <button
-            className="hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center transition-all shadow-sm duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
+            className="hover:dark:hover:bg-btn-hover-bg text-gray-700 w-full justify-center transition-all shadow-sm duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
             onClick={(event) => {
               saveFlow(flows.find((f) => f.id === tabId));
               setSuccessData({ title: "Changes saved successfully" });
