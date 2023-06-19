@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from typing import Dict, Generator, List, Optional, Tuple, Type, Union
 
 from langflow.graph import Edge, Vertex
 from langflow.graph.edge.contract import ContractEdge
@@ -11,6 +11,8 @@ from langflow.graph.vertex.types import (
 from langflow.graph.vertex.types import ConnectorVertex
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
+from langflow.utils.logger import logger
+from langchain.chains.base import Chain
 
 
 class Graph:
@@ -24,9 +26,9 @@ class Graph:
         self.has_connectors = False
 
         if graph_data:
-            _vertices = graph_data["nodes"]
+            _nodes = graph_data["nodes"]
             _edges = graph_data["edges"]
-            self._nodes = _vertices
+            self._nodes = _nodes
             self._edges = _edges
             self.vertices = []
             self.edges = []
@@ -49,7 +51,7 @@ class Graph:
         Creates a graph from a payload.
 
         Args:
-            payload (Dict): The payload to create the graph from.
+            payload (Dict): The payload to create the graph from.˜`
 
         Returns:
             Graph: The created graph.
@@ -59,7 +61,7 @@ class Graph:
         try:
             nodes = payload["nodes"]
             edges = payload["edges"]
-            return cls(nodes, edges)
+            return cls(vertices=nodes, edges=edges)
         except KeyError as exc:
             raise ValueError(
                 f"Invalid payload. Expected keys 'nodes' and 'edges'. Found {list(payload.keys())}"
@@ -151,18 +153,57 @@ class Graph:
         ]
         return connected_vertices
 
-    def build(self) -> Any:
-        # Get root vertex
-        root_vertex = payload.get_root_vertex(self)
-        if root_vertex is None:
-            raise ValueError("No root vertex found")
-        return root_vertex.build()
+    def build(self) -> Chain:
+        """Builds the graph."""
+        # Get root node
+        root_node = payload.get_root_vertex(self)
+        if root_node is None:
+            raise ValueError("No root node found")
+        return root_node.build()
 
-    @property
-    def root_vertex(self) -> Union[None, Vertex]:
-        return payload.get_root_vertex(self)
+    def topological_sort(self) -> List[Vertex]:
+        """
+        Performs a topological sort of the vertices in the graph.
 
-    def get_vertex_neighbors(self, vertex: Vertex) -> Dict[Vertex, int]:
+        Returns:
+            List[Vertex]: A list of vertices in topological order.
+
+        Raises:
+            ValueError: If the graph contains a cycle.
+        """
+        # States: 0 = unvisited, 1 = visiting, 2 = visited
+        state = {node: 0 for node in self.vertices}
+        sorted_vertices = []
+
+        def dfs(node):
+            if state[node] == 1:
+                # We have a cycle
+                raise ValueError(
+                    "Graph contains a cycle, cannot perform topological sort"
+                )
+            if state[node] == 0:
+                state[node] = 1
+                for edge in node.edges:
+                    if edge.source == node:
+                        dfs(edge.target)
+                state[node] = 2
+                sorted_vertices.append(node)
+
+        # Visit each node
+        for node in self.vertices:
+            if state[node] == 0:
+                dfs(node)
+
+        return list(reversed(sorted_vertices))
+
+    def generator_build(self) -> Generator:
+        """Builds each vertex in the graph and yields it."""
+        sorted_vertices = self.topological_sort()
+        logger.info("Sorted vertices: %s", sorted_vertices)
+        yield from sorted_vertices
+
+    def get_node_neighbors(self, vertex: Vertex) -> Dict[Vertex, int]:
+        """Returns the neighbors of a node."""
         neighbors: Dict[Vertex, int] = {}
         for edge in self.edges:
             if edge.source == vertex:
@@ -248,7 +289,7 @@ class Graph:
         subgraph = Graph(graph_data=subgraph_data)
 
         # Set the ID of the subgraph root vertex to the flow vertex ID
-        subgraph_root = subgraph.root_vertex
+        subgraph_root = payload.get_root_vertex(subgraph)
         old_id = subgraph_root.id
         if subgraph_root is None:
             raise ValueError("No root vertex found")

@@ -16,6 +16,13 @@ from langflow.interface.utils import pil_to_base64, try_setting_streaming_option
 from langflow.utils.logger import logger
 
 
+import asyncio
+import json
+from typing import Any, Dict, List
+
+from langflow.cache.flow import InMemoryCache
+
+
 class ChatHistory(Subject):
     def __init__(self):
         super().__init__()
@@ -49,6 +56,7 @@ class ChatManager:
         self.chat_history = ChatHistory()
         self.cache_manager = cache_manager
         self.cache_manager.attach(self.update)
+        self.in_memory_cache = InMemoryCache()
 
     def on_chat_history_update(self):
         """Send the last chat message to the client."""
@@ -102,24 +110,30 @@ class ChatManager:
         websocket = self.active_connections[client_id]
         await websocket.send_json(message.dict())
 
-    async def process_message(self, client_id: str, payload: Dict):
+    async def close_connection(self, client_id: str, code: int, reason: str):
+        if websocket := self.active_connections[client_id]:
+            await websocket.close(code=code, reason=reason)
+            self.disconnect(client_id)
+
+    async def process_message(
+        self, client_id: str, payload: Dict, langchain_object: Any
+    ):
         # Process the graph data and chat message
         chat_message = payload.pop("message", "")
         chat_message = ChatMessage(message=chat_message)
         self.chat_history.add_message(client_id, chat_message)
 
-        graph_data = payload
+        # graph_data = payload
         start_resp = ChatResponse(message=None, type="start", intermediate_steps="")
         await self.send_json(client_id, start_resp)
 
-        is_first_message = len(self.chat_history.get_history(client_id=client_id)) <= 1
+        # is_first_message = len(self.chat_history.get_history(client_id=client_id)) <= 1
         # Generate result and thought
         try:
             logger.debug("Generating result and thought")
 
             result, intermediate_steps = await process_graph(
-                graph_data=graph_data,
-                is_first_message=is_first_message,
+                langchain_object=langchain_object,
                 chat_message=chat_message,
                 websocket=self.active_connections[client_id],
             )
@@ -152,6 +166,14 @@ class ChatManager:
         await self.send_json(client_id, response)
         self.chat_history.add_message(client_id, response)
 
+    def set_cache(self, client_id: str, langchain_object: Any) -> bool:
+        """
+        Set the cache for a client.
+        """
+
+        self.in_memory_cache.set(client_id, langchain_object)
+        return client_id in self.in_memory_cache
+
     async def handle_websocket(self, client_id: str, websocket: WebSocket):
         await self.connect(client_id, websocket)
 
@@ -172,24 +194,26 @@ class ChatManager:
                     continue
 
                 with self.cache_manager.set_client_id(client_id):
-                    await self.process_message(client_id, payload)
+                    langchain_object = self.in_memory_cache.get(client_id)
+                    await self.process_message(client_id, payload, langchain_object)
 
         except Exception as e:
             # Handle any exceptions that might occur
-            logger.exception(e)
-            # send a message to the client
-            await self.active_connections[client_id].close(
-                code=status.WS_1011_INTERNAL_ERROR, reason=str(e)[:120]
+            logger.error(e)
+            await self.close_connection(
+                client_id=client_id,
+                code=status.WS_1011_INTERNAL_ERROR,
+                reason=str(e)[:120],
             )
-            self.disconnect(client_id)
         finally:
             try:
-                connection = self.active_connections.get(client_id)
-                if connection:
-                    await connection.close(code=1000, reason="Client disconnected")
-                    self.disconnect(client_id)
+                await self.close_connection(
+                    client_id=client_id,
+                    code=status.WS_1000_NORMAL_CLOSURE,
+                    reason="Client disconnected",
+                )
             except Exception as e:
-                logger.exception(e)
+                logger.error(e)
             self.disconnect(client_id)
 
 

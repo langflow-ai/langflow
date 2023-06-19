@@ -3,7 +3,6 @@ import {
   ForwardRefExoticComponent,
   ReactElement,
   ReactNode,
-  SVGProps,
 } from "react";
 import { FlowType, NodeDataType } from "../flow/index";
 export type InputComponentType = {
@@ -21,12 +20,14 @@ export type ToggleComponentType = {
   enabled: boolean;
   setEnabled: (state: boolean) => void;
   disabled: boolean;
+  size: "small" | "medium" | "large";
 };
 export type DropDownComponentType = {
   value: string;
   options: string[];
   onSelect: (value: string) => void;
   editNode?: boolean;
+  numberOfOptions?: number;
 };
 export type ParameterComponentType = {
   data: NodeDataType;
@@ -39,6 +40,7 @@ export type ParameterComponentType = {
   handleDisabled?: boolean;
   name?: string;
   tooltipTitle: string;
+  dataContext?: typesContextType;
 };
 export type InputParameterComponentType = {
   data: NodeDataType;
@@ -70,6 +72,7 @@ export type InputListComponentType = {
   value: string[];
   onChange: (value: string[]) => void;
   disabled: boolean;
+  editNode?: boolean;
 };
 
 export type TextAreaComponentType = {

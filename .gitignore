@@ -248,3 +248,4 @@ qdrant_*
 # db
 *.db
 *.sqlite3
+langflow.db

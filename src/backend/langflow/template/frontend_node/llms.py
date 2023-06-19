@@ -12,6 +12,9 @@ class LLMFrontendNode(FrontendNode):
                 field.name.title().replace("Openai", "OpenAI").replace("_", " ")
             ).replace("Api", "API")
 
+        if "key" not in field.name.lower() and "token" not in field.name.lower():
+            field.password = False
+
     @staticmethod
     def format_azure_field(field: TemplateField):
         if field.name == "model_name":
@@ -22,7 +25,6 @@ class LLMFrontendNode(FrontendNode):
             field.value = "azure"
         elif field.name == "openai_api_version":
             field.password = False
-            field.value = "2023-03-15-preview"
 
     @staticmethod
     def format_llama_field(field: TemplateField):
@@ -44,7 +46,10 @@ class LLMFrontendNode(FrontendNode):
         if field.name in SHOW_FIELDS:
             field.show = True
 
-        if "api" in field.name and ("key" in field.name or "token" in field.name):
+        if "api" in field.name and (
+            "key" in field.name
+            or ("token" in field.name and "tokens" not in field.name)
+        ):
             field.password = True
             field.show = True
             # Required should be False to support

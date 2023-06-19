@@ -142,6 +142,7 @@ def test_initialize_agent(client: TestClient):
             "react-docstore",
             "self-ask-with-search",
             "conversational-react-description",
+            "openai-functions",
         ],
         "name": "agent",
         "type": "str",

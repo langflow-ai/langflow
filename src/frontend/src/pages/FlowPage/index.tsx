@@ -1,43 +1,11 @@
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
-import ReactFlow, {
-  Background,
-  Controls,
-  addEdge,
-  useEdgesState,
-  useNodesState,
-  useReactFlow,
-  updateEdge,
-  EdgeChange,
-  Connection,
-  Edge,
-  useKeyPress,
-  NodeDragHandler,
-  OnEdgesDelete,
-  OnNodesDelete,
-  SelectionDragHandler,
-  useOnViewportChange,
-  OnSelectionChangeParams,
-  OnNodesChange,
-} from "reactflow";
-import _ from "lodash";
-import { locationContext } from "../../contexts/locationContext";
-import ExtraSidebar from "./components/extraSidebarComponent";
-import Chat from "../../components/chatComponent";
-import GenericNode from "../../CustomNodes/GenericNode";
-import { alertContext } from "../../contexts/alertContext";
+import { useContext, useEffect, useState } from "react";
 import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
 import ConnectionLineComponent from "./components/ConnectionLineComponent";
-import { FlowType, NodeType } from "../../types/flow";
-import { APIClassType } from "../../types/api";
+import { FlowType } from "../../types/flow";
 import {
-  filterFlow,
-  generateFlow,
-  generateNodeFromFlow,
-  getMiddlePoint,
-  isValidConnection,
-  updateRemovedEdges,
-  validateSelection,
+    generateFlow,
+    generateNodeFromFlow, validateSelection
 } from "../../utils";
 import useUndoRedo from "./hooks/useUndoRedo";
 import SelectionMenu from "./components/SelectionMenuComponent";
@@ -68,8 +36,12 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
   const [lastSelection, setLastSelection] =
     useState<OnSelectionChangeParams>(null);
 
+export default function FlowPage() {
+  const { flows, tabId, setTabId } = useContext(TabsContext);
+  const { id } = useParams();
   useEffect(() => {
-    // this effect is used to attach the global event handlers
+    setTabId(id);
+  }, [id]);
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (
@@ -122,197 +94,10 @@ export default function FlowPage({ flow }: { flow: FlowType }) {
   const { setViewport } = useReactFlow();
   const edgeUpdateSuccessful = useRef(true);
   useEffect(() => {
-    if (reactFlowInstance && flow) {
-      flow.data = reactFlowInstance.toObject();
-      updateFlow(flow);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodes, edges]);
-  //update flow when tabs change
-  useEffect(() => {
-    setNodes(flow?.data?.nodes ?? []);
-    setEdges(flow?.data?.edges ?? []);
-    if (reactFlowInstance) {
-      setViewport(flow?.data?.viewport ?? { x: 1, y: 0, zoom: 0.5 });
-    }
-  }, [flow, reactFlowInstance, setEdges, setNodes, setViewport]);
-  //set extra sidebar
-  useEffect(() => {
-    setExtraComponent(<ExtraSidebar />);
-    setExtraNavigation({ title: "Components" });
-  }, [setExtraComponent, setExtraNavigation]);
-
-  const onEdgesChangeMod = useCallback(
-    (s: EdgeChange[]) => {
-      onEdgesChange(s);
-      setNodes((x) => {
-        let newX = _.cloneDeep(x);
-        return newX;
-      });
-    },
-    [onEdgesChange, setNodes]
-  );
-
-  const onConnect = useCallback(
-    (params: Connection) => {
-      takeSnapshot();
-      setEdges((eds) =>
-        addEdge(
-          {
-            ...params,
-            style: { stroke: "inherit" },
-            className:
-              params.targetHandle.split("|")[0] === "Text"
-                ? "stroke-gray-800 dark:stroke-gray-300"
-                : "stroke-gray-900 dark:stroke-gray-200",
-            animated: params.targetHandle.split("|")[0] === "Text",
-          },
-          eds
-        )
-      );
-      setNodes((x) => {
-        let newX = _.cloneDeep(x);
-        return newX;
-      });
-    },
-    [setEdges, setNodes, takeSnapshot]
-  );
-
-  const onNodeDragStart: NodeDragHandler = useCallback(() => {
-    // 👇 make dragging a node undoable
-    takeSnapshot();
-    // 👉 you can place your event handlers here
-  }, [takeSnapshot]);
-
-  const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
-    // 👇 make dragging a selection undoable
-    takeSnapshot();
-  }, [takeSnapshot]);
-
-  const onEdgesDelete: OnEdgesDelete = useCallback(() => {
-    // 👇 make deleting edges undoable
-    takeSnapshot();
-  }, [takeSnapshot]);
-
-  const onDragOver = useCallback((event: React.DragEvent) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
+    getVersion().then((data) => {
+      setVersion(data.version);
+    });
   }, []);
-
-  const onDrop = useCallback(
-    (event: React.DragEvent) => {
-      event.preventDefault();
-      takeSnapshot();
-
-      // Get the current bounds of the ReactFlow wrapper element
-      const reactflowBounds = reactFlowWrapper.current.getBoundingClientRect();
-
-      // Extract the data from the drag event and parse it as a JSON object
-      let data: { type: string; node?: APIClassType } = JSON.parse(
-        event.dataTransfer.getData("json")
-      );
-
-      // If data type is not "chatInput" or if there are no "chatInputNode" nodes present in the ReactFlow instance, create a new node
-      // Calculate the position where the node should be created
-      const position = reactFlowInstance.project({
-        x: event.clientX - reactflowBounds.left,
-        y: event.clientY - reactflowBounds.top,
-      });
-
-      // Generate a unique node ID
-      let newId = getNodeId();
-      let newNode: NodeType;
-
-      if (data.type !== "groupNode") {
-        // Create a new node object
-        newNode = {
-          id: newId,
-          type: "genericNode",
-          position,
-          data: {
-            ...data,
-            id: newId,
-            value: null,
-          },
-        };
-      } else {
-        // Create a new node object
-        newNode = {
-          id: newId,
-          type: "genericNode",
-          position,
-          data: {
-            ...data,
-            id: newId,
-            value: null,
-          },
-        };
-
-        // Add the new node to the list of nodes in state
-      }
-      setNodes((nds) => nds.concat(newNode));
-    },
-    // Specify dependencies for useCallback
-    [getNodeId, reactFlowInstance, setErrorData, setNodes, takeSnapshot]
-  );
-
-  const onDelete = useCallback(
-    (mynodes) => {
-      takeSnapshot();
-      setEdges(
-        edges.filter(
-          (ns) => !mynodes.some((n) => ns.source === n.id || ns.target === n.id)
-        )
-      );
-    },
-    [takeSnapshot, edges, setEdges]
-  );
-
-  const onEdgeUpdateStart = useCallback(() => {
-    edgeUpdateSuccessful.current = false;
-  }, []);
-
-  const onEdgeUpdate = useCallback(
-    (oldEdge: Edge, newConnection: Connection) => {
-      if (isValidConnection(newConnection, reactFlowInstance)) {
-        edgeUpdateSuccessful.current = true;
-        setEdges((els) => updateEdge(oldEdge, newConnection, els));
-      }
-    },
-    []
-  );
-
-  const onEdgeUpdateEnd = useCallback((_, edge) => {
-    if (!edgeUpdateSuccessful.current) {
-      setEdges((eds) => eds.filter((e) => e.id !== edge.id));
-    }
-
-    edgeUpdateSuccessful.current = true;
-  }, []);
-
-  const [selectionEnded, setSelectionEnded] = useState(false);
-
-  const onSelectionEnd = useCallback(() => {
-    setSelectionEnded(true);
-  }, []);
-  const onSelectionStart = useCallback(() => {
-    setSelectionEnded(false);
-  }, []);
-
-  // Workaround to show the menu only after the selection has ended.
-  useEffect(() => {
-    if (selectionEnded && lastSelection && lastSelection.nodes.length > 1) {
-      setSelectionMenuVisible(true);
-    } else {
-      setSelectionMenuVisible(false);
-    }
-  }, [selectionEnded, lastSelection]);
-
-  const onSelectionChange = useCallback((flow) => {
-    setLastSelection(flow);
-  }, []);
-
-  const { setDisableCopyPaste } = useContext(TabsContext);
 
   return (
     <div className="h-full w-full" ref={reactFlowWrapper}>

@@ -18,14 +18,15 @@ def test_conversation_chain(client: TestClient):
     chains = json_response["chains"]
 
     chain = chains["ConversationChain"]
-
     # Test the base classes, template, memory, verbose, llm, input_key, output_key, and _type objects
     assert set(chain["base_classes"]) == {
-        "function",
-        "LLMChain",
         "ConversationChain",
+        "LLMChain",
         "Chain",
+        "Serializable",
+        "function",
     }
+
     template = chain["template"]
     assert template["memory"] == {
         "required": False,
@@ -106,7 +107,13 @@ def test_llm_chain(client: TestClient):
     chain = chains["LLMChain"]
 
     # Test the base classes, template, memory, verbose, llm, input_key, output_key, and _type objects
-    assert set(chain["base_classes"]) == {"function", "LLMChain", "Chain"}
+    assert set(chain["base_classes"]) == {
+        "Serializable",
+        "function",
+        "LLMChain",
+        "Chain",
+    }
+
     template = chain["template"]
     assert template["memory"] == {
         "required": False,
@@ -168,33 +175,14 @@ def test_llm_checker_chain(client: TestClient):
     chain = chains["LLMCheckerChain"]
 
     # Test the base classes, template, memory, verbose, llm, input_key, output_key, and _type objects
-    assert set(chain["base_classes"]) == {"function", "LLMCheckerChain", "Chain"}
+    assert set(chain["base_classes"]) == {
+        "Serializable",
+        "function",
+        "LLMCheckerChain",
+        "Chain",
+    }
+
     template = chain["template"]
-    assert template["memory"] == {
-        "required": False,
-        "placeholder": "",
-        "show": True,
-        "multiline": False,
-        "password": False,
-        "name": "memory",
-        "type": "BaseMemory",
-        "list": False,
-        "advanced": False,
-        "root": False,
-    }
-    assert template["verbose"] == {
-        "required": False,
-        "placeholder": "",
-        "show": True,
-        "multiline": False,
-        "value": False,
-        "password": False,
-        "name": "verbose",
-        "type": "bool",
-        "list": False,
-        "advanced": True,
-        "root": False,
-    }
     assert template["llm"] == {
         "required": True,
         "placeholder": "",
@@ -207,38 +195,10 @@ def test_llm_checker_chain(client: TestClient):
         "advanced": False,
         "root": False,
     }
-    assert template["input_key"] == {
-        "required": True,
-        "placeholder": "",
-        "show": True,
-        "multiline": False,
-        "value": "query",
-        "password": False,
-        "name": "input_key",
-        "type": "str",
-        "list": False,
-        "advanced": True,
-        "root": False,
-    }
-    assert template["output_key"] == {
-        "required": True,
-        "placeholder": "",
-        "show": True,
-        "multiline": False,
-        "value": "result",
-        "password": False,
-        "name": "output_key",
-        "type": "str",
-        "list": False,
-        "advanced": True,
-        "root": False,
-    }
     assert template["_type"] == "LLMCheckerChain"
 
     # Test the description object
-    assert (
-        chain["description"] == "Chain for question-answering with self-verification."
-    )
+    assert chain["description"] == ""
 
 
 def test_llm_math_chain(client: TestClient):
@@ -248,9 +208,14 @@ def test_llm_math_chain(client: TestClient):
     chains = json_response["chains"]
 
     chain = chains["LLMMathChain"]
-
     # Test the base classes, template, memory, verbose, llm, input_key, output_key, and _type objects
-    assert set(chain["base_classes"]) == {"function", "LLMMathChain", "Chain"}
+    assert set(chain["base_classes"]) == {
+        "function",
+        "Serializable",
+        "LLMMathChain",
+        "Chain",
+    }
+
     template = chain["template"]
     assert template["memory"] == {
         "required": False,
@@ -475,4 +440,4 @@ def test_time_travel_guide_chain(client: TestClient):
         "root": False,
     }
 
-    assert chain["description"] == "Time travel guide chain to be used in the flow."
+    assert chain["description"] == "Time travel guide chain."

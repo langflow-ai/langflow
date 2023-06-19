@@ -7,14 +7,11 @@ import _ from "lodash";
 import ErrorAlert from "./alerts/error";
 import NoticeAlert from "./alerts/notice";
 import SuccessAlert from "./alerts/success";
-import ExtraSidebar from "./components/ExtraSidebarComponent";
 import { alertContext } from "./contexts/alertContext";
 import { locationContext } from "./contexts/locationContext";
-import TabsManagerComponent from "./pages/FlowPage/components/tabsManagerComponent";
 import { ErrorBoundary } from "react-error-boundary";
 import CrashErrorComponent from "./components/CrashErrorComponent";
 import { TabsContext } from "./contexts/tabsContext";
-import { getVersion } from "./controllers/API";
 
 export default function App() {
   let { setCurrent, setShowSideBar, setIsStackedOpen } =
@@ -47,13 +44,6 @@ export default function App() {
     }>
   >([]);
 
-  // Initialize state variable for the version
-  const [version, setVersion] = useState("");
-  useEffect(() => {
-    getVersion().then((response) => {
-      setVersion(response.data.version);
-    });
-  }, []);
   // Use effect hook to update alertsList when a new alert is added
   useEffect(() => {
     // If there is an error alert open with data, add it to the alertsList

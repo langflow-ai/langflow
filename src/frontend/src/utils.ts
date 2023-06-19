@@ -8,7 +8,6 @@ import {
   WrenchScrewdriverIcon,
   WrenchIcon,
   ComputerDesktopIcon,
-  Bars3CenterLeftIcon,
   GiftIcon,
   PaperClipIcon,
   QuestionMarkCircleIcon,
@@ -27,15 +26,13 @@ import {
   ReactFlowInstance,
   ReactFlowJsonObject,
   XYPosition,
-  addEdge,
 } from "reactflow";
 import { FlowType, NodeType } from "./types/flow";
-import { APITemplateType, TemplateVariableType } from "./types/api";
+import { APITemplateType } from "./types/api";
 import _ from "lodash";
 import { ChromaIcon } from "./icons/ChromaIcon";
 import { AnthropicIcon } from "./icons/Anthropic";
 import { AirbyteIcon } from "./icons/Airbyte";
-import { AzIcon } from "./icons/AzLogo";
 import { BingIcon } from "./icons/Bing";
 import { CohereIcon } from "./icons/Cohere";
 import { EvernoteIcon } from "./icons/Evernote";
@@ -49,29 +46,17 @@ import { MetaIcon } from "./icons/Meta";
 import { MidjorneyIcon } from "./icons/Midjorney";
 import { NotionIcon } from "./icons/Notion";
 import { OpenAiIcon } from "./icons/OpenAi";
-import { PowerPointIcon } from "./icons/PowerPoint";
 import { QDrantIcon } from "./icons/QDrant";
-import { ReadTheDocsIcon } from "./icons/ReadTheDocs";
 import { SearxIcon } from "./icons/Searx";
 import { SlackIcon } from "./icons/Slack";
-import { WeaviateIcon } from "./icons/Weaviate";
-import { WikipediaIcon } from "./icons/Wikipedia";
-import { WolframIcon } from "./icons/Wolfram";
-import { WordIcon } from "./icons/Word";
-import { SerperIcon } from "./icons/Serper";
-import { v4 as uuidv4 } from "uuid";
-import { clsx, type ClassValue } from "clsx";
+import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
 }
 
-export const limitScrollFieldsModal = 7;
+export const limitScrollFieldsModal = 10;
 
 export enum TypeModal {
   TEXT = 1,
@@ -203,7 +188,7 @@ export const nodeIcons: {
   // ReadTheDocsLoader: ReadTheDocsIcon, // does not work
   Searx: SearxIcon,
   SlackDirectoryLoader: SlackIcon,
-  // Weaviate: WeaviateIcon,
+  // Weaviate: WeaviateIcon, // does not work
   // WikipediaAPIWrapper: WikipediaIcon,
   // WolframAlphaQueryRun: WolframIcon,
   // WolframAlphaAPIWrapper: WolframIcon,
@@ -227,6 +212,23 @@ export const nodeIcons: {
   unknown: QuestionMarkCircleIcon,
   custom: PencilSquareIcon,
 };
+
+export const gradients = [
+  "bg-gradient-to-br from-gray-800 via-rose-700 to-violet-900",
+  "bg-gradient-to-br from-green-200 via-green-300 to-blue-500",
+  "bg-gradient-to-br from-yellow-200 via-yellow-400 to-yellow-700",
+  "bg-gradient-to-br from-green-200 via-green-400 to-purple-700",
+  "bg-gradient-to-br from-blue-100 via-blue-300 to-blue-500",
+  "bg-gradient-to-br from-purple-400 to-yellow-400",
+  "bg-gradient-to-br from-red-800 via-yellow-600 to-yellow-500",
+  "bg-gradient-to-br from-blue-300 via-green-200 to-yellow-300",
+  "bg-gradient-to-br from-blue-700 via-blue-800 to-gray-900",
+  "bg-gradient-to-br from-green-300 to-purple-400",
+  "bg-gradient-to-br from-yellow-200 via-pink-200 to-pink-400",
+  "bg-gradient-to-br from-green-500 to-green-700",
+  "bg-gradient-to-br from-rose-400 via-fuchsia-500 to-indigo-500",
+  "bg-gradient-to-br from-sky-400 to-blue-500",
+];
 
 export const bgColors = {
   white: "bg-white",
@@ -370,6 +372,10 @@ export function measureTextWidth(text: string, fontSize: number) {
   return wordWidth;
 }
 
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
 export function measureTextHeight(
   text: string,
   width: number,
@@ -511,9 +517,10 @@ export function isValidConnection(
 
 export function removeApiKeys(flow: FlowType): FlowType {
   let cleanFLow = _.cloneDeep(flow);
+  console.log(cleanFLow);
   cleanFLow.data.nodes.forEach((node) => {
     for (const key in node.data.node.template) {
-      if (key.includes("api")) {
+      if (node.data.node.template[key].password) {
         node.data.node.template[key].value = "";
       }
     }
@@ -1146,9 +1153,9 @@ export function checkUpperWords(str: string) {
 export function updateIds(newFlow, getNodeId) {
   let idsMap = {};
 
-  newFlow.nodes.forEach((n) => {
+  newFlow.nodes.forEach((n: NodeType) => {
     // Generate a unique node ID
-    let newId = getNodeId();
+    let newId = getNodeId(n.data.type);
     idsMap[n.id] = newId;
     n.id = newId;
     n.data.id = newId;
@@ -1233,35 +1240,48 @@ export function groupByFamily(data, baseClasses) {
   return groupedObj;
 }
 
-export function connectedInputNodesOnHandle(nodeId:string,handleId:string,{nodes,edges}:{nodes:NodeType[],edges:Edge[]}){
-  const connectedNodes:Array<{name:string,id:string,isGroup:boolean}>=[]
+export function connectedInputNodesOnHandle(
+  nodeId: string,
+  handleId: string,
+  { nodes, edges }: { nodes: NodeType[]; edges: Edge[] }
+) {
+  const connectedNodes: Array<{ name: string; id: string; isGroup: boolean }> =
+    [];
   // return the nodes connected to the input handle of the node
   const TargetEdges = edges.filter((e) => e.target === nodeId);
   TargetEdges.forEach((edge) => {
-    if(edge.targetHandle===handleId){
+    if (edge.targetHandle === handleId) {
       const sourceNode = nodes.find((n) => n.id === edge.source);
-      if(sourceNode){
-        if(sourceNode.type==="groupNode"){
-          let lastNode = findLastNode(sourceNode.data.node.flow.data)
-            while(lastNode && lastNode.type==="groupNode")
-            {
-              lastNode = findLastNode(lastNode.data.node.flow.data)
-            }
-            if(lastNode){
-              connectedNodes.push({name:sourceNode.data.node.flow.name,id:lastNode.id,isGroup:true})
-            }
-        }
-        else{
-          connectedNodes.push({name:sourceNode.data.type,id:sourceNode.id,isGroup:false})
+      if (sourceNode) {
+        if (sourceNode.type === "groupNode") {
+          let lastNode = findLastNode(sourceNode.data.node.flow.data);
+          while (lastNode && lastNode.type === "groupNode") {
+            lastNode = findLastNode(lastNode.data.node.flow.data);
+          }
+          if (lastNode) {
+            connectedNodes.push({
+              name: sourceNode.data.node.flow.name,
+              id: lastNode.id,
+              isGroup: true,
+            });
+          }
+        } else {
+          connectedNodes.push({
+            name: sourceNode.data.type,
+            id: sourceNode.id,
+            isGroup: false,
+          });
         }
       }
     }
-  })
-  return connectedNodes
+  });
+  return connectedNodes;
 }
 
-function checkDuplicatedNames(connectedNodes:Array<{name:string,id:string,isGroup:boolean}>){
-  const names = connectedNodes.map((n)=>n.name)
-  const duplicatedNames = names.filter((n,i)=>names.indexOf(n)!==i)
-  return duplicatedNames
+function checkDuplicatedNames(
+  connectedNodes: Array<{ name: string; id: string; isGroup: boolean }>
+) {
+  const names = connectedNodes.map((n) => n.name);
+  const duplicatedNames = names.filter((n, i) => names.indexOf(n) !== i);
+  return duplicatedNames;
 }

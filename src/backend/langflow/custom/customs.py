@@ -21,10 +21,10 @@ CUSTOM_NODES = {
         "SQLDatabase": frontend_node.SQLDatabaseNode(),
     },
     "chains": {
-        "SeriesCharacterChain": frontend_node.chains.SeriesCharacterChainNode(),
-        "TimeTravelGuideChain": frontend_node.chains.TimeTravelGuideChainNode(),
-        "MidJourneyPromptChain": frontend_node.chains.MidJourneyPromptChainNode(),
-        "load_qa_chain": frontend_node.chains.CombineDocsChainNode(),
+        "SeriesCharacterChain": frontend_node.SeriesCharacterChainNode(),
+        "TimeTravelGuideChain": frontend_node.TimeTravelGuideChainNode(),
+        "MidJourneyPromptChain": frontend_node.MidJourneyPromptChainNode(),
+        "load_qa_chain": frontend_node.CombineDocsChainNode(),
     },
     "connectors": {
         "ConnectorFunction": frontend_node.ConnectorFunctionFrontendNode(),
