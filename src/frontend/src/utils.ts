@@ -30,7 +30,7 @@ import {
   addEdge,
 } from "reactflow";
 import { FlowType, NodeType } from "./types/flow";
-import { APITemplateType } from "./types/api";
+import { APITemplateType, TemplateVariableType } from "./types/api";
 import _ from "lodash";
 import { ChromaIcon } from "./icons/ChromaIcon";
 import { AnthropicIcon } from "./icons/Anthropic";
@@ -649,7 +649,6 @@ export function generateFlow(
   );
   newFlowData.nodes = selection.nodes;
 
-  // console.log(newFlowData);
   const newFlow: FlowType = {
     data: newFlowData,
     name: name,
@@ -804,55 +803,6 @@ export function updateFlowPosition(NewPosition: XYPosition, flow: FlowType) {
     node.position.x += deltaPosition.x;
     node.position.y += deltaPosition.y;
   });
-}
-
-export function validateNode(n: NodeType, selection: OnSelectionChangeParams) {
-  // case group node
-  if (n.type === "groupNode") {
-    if (selection.edges.some((edge) => edge.target === n.id)) {
-      return [];
-    } else {
-      return ["Error on group node"];
-    }
-  }
-
-  // case custom node
-  if (
-    !(n.data as NodeDataType)?.node?.template ||
-    !Object.keys((n.data as NodeDataType).node.template)
-  ) {
-    return [
-      "There is a inconsistente flow in the node, please check your flow",
-    ];
-  }
-
-  const {
-    type,
-    node: { template },
-  } = n.data as NodeDataType;
-
-  return Object.keys(template).reduce(
-    (errors: Array<string>, t) =>
-      errors.concat(
-        template[t].required &&
-          template[t].show &&
-          (!template[t].value || template[t].value === "") &&
-          !selection.edges.some(
-            (e) =>
-              e.targetHandle.split("|")[1] === t &&
-              e.targetHandle.split("|")[2] === n.id
-          )
-          ? [
-              `${type} is missing ${
-                template.display_name
-                  ? template.display_name
-                  : toNormalCase(template[t].name)
-              }.`,
-            ]
-          : []
-      ),
-    [] as string[]
-  );
 }
 
 export function validateSelection(
@@ -1373,4 +1323,8 @@ function checkDuplicatedNames(connectedNodes:Array<{name:string,id:string,isGrou
   const names = connectedNodes.map((n)=>n.name)
   const duplicatedNames = names.filter((n,i)=>names.indexOf(n)!==i)
   return duplicatedNames
+}
+
+function uuidv4(): string {
+  throw new Error("Function not implemented.");
 }

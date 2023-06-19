@@ -257,5 +257,6 @@ export default function GenericNode({
         </>
       </div>
     </div>
+    </>
   );
 }

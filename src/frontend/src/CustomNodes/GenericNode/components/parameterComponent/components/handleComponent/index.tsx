@@ -44,6 +44,21 @@ export default function HandleComponent({
   const { save } = useContext(TabsContext);
   const [myData, setMyData] = useState(useContext(typesContext).data);
   const refHtml = useRef(null);
+  const { setTabsState, tabId } = useContext(TabsContext);
+
+  const handleOnNewValue = (newValue: any) => {
+    data.node.template[name].value = newValue;
+    // Set state to pending
+    setTabsState((prev) => {
+      return {
+        ...prev,
+        [tabId]: {
+          isPending: true,
+        },
+      };
+    });
+  };
+
 
   useEffect(() => {
     const groupedObj = groupByFamily(myData, tooltipTitle);
@@ -153,29 +168,20 @@ export default function HandleComponent({
                     ? [""]
                     : data.node.template[name].value
                 }
-                onChange={(t: string[]) => {
-                  data.node.template[name].value = t;
-                  save();
-                }}
+                onChange={handleOnNewValue}
               />
             ) : data.node.template[name].multiline ? (
               <TextAreaComponent
                 disabled={disabled}
                 value={data.node.template[name].value ?? ""}
-                onChange={(t: string) => {
-                  data.node.template[name].value = t;
-                  save();
-                }}
+                onChange={handleOnNewValue}
               />
             ) : (
               <InputComponent
                 disabled={disabled}
                 password={data.node.template[name].password ?? false}
                 value={data.node.template[name].value ?? ""}
-                onChange={(t) => {
-                  data.node.template[name].value = t;
-                  save();
-                }}
+                onChange={handleOnNewValue}
               />
             )}
           </div>
@@ -185,20 +191,17 @@ export default function HandleComponent({
               disabled={disabled}
               enabled={enabled}
               setEnabled={(t) => {
-                data.node.template[name].value = t;
+                handleOnNewValue(t);
                 setEnabled(t);
-                save();
               }}
+              size="medium"
             />
           </div>
         ) : left === true && type === "float" ? (
           <FloatComponent
             disabled={disabled}
             value={data.node.template[name].value ?? ""}
-            onChange={(t) => {
-              data.node.template[name].value = t;
-              save();
-            }}
+            onChange={handleOnNewValue}
           />
         ) : left === true &&
           type === "str" &&
@@ -212,18 +215,13 @@ export default function HandleComponent({
           <CodeAreaComponent
             disabled={disabled}
             value={data.node.template[name].value ?? ""}
-            onChange={(t: string) => {
-              data.node.template[name].value = t;
-              save();
-            }}
+            onChange={handleOnNewValue}
           />
         ) : left === true && type === "file" ? (
           <InputFileComponent
             disabled={disabled}
             value={data.node.template[name].value ?? ""}
-            onChange={(t: string) => {
-              data.node.template[name].value = t;
-            }}
+            onChange={handleOnNewValue}
             fileTypes={data.node.template[name].fileTypes}
             suffixes={data.node.template[name].suffixes}
             onFileChange={(t: string) => {
@@ -235,19 +233,13 @@ export default function HandleComponent({
           <IntComponent
             disabled={disabled}
             value={data.node.template[name].value ?? ""}
-            onChange={(t) => {
-              data.node.template[name].value = t;
-              save();
-            }}
+            onChange={handleOnNewValue}
           />
         ) : left === true && type === "prompt" ? (
           <PromptAreaComponent
             disabled={disabled}
             value={data.node.template[name].value ?? ""}
-            onChange={(t: string) => {
-              data.node.template[name].value = t;
-              save();
-            }}
+            onChange={handleOnNewValue}
           />
         ) : (
           <></>

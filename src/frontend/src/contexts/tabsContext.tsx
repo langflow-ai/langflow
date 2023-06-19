@@ -207,7 +207,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         setErrorData({ title: `Unknown node type: ${node.data.type}` });
         return;
       }
-      if (Object.keys(template["template"]).length > 0) {
+      if (Object.keys(template["template"]).length > 0 && node.type !== "groupNode") {
         updateNodeBaseClasses(node, template);
         updateNodeEdges(flow, node, template);
         updateNodeDescription(node, template);
@@ -520,7 +520,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         setErrorData({ title: `Unknown node type: ${node.data.type}` });
         return;
       }
-      if (Object.keys(template["template"]).length > 0) {
+      if (Object.keys(template["template"]).length > 0 &&  node.type !== "groupNode") {
         node.data.node.base_classes = template["base_classes"];
         edges.forEach((edge) => {
           if (edge.source === node.id) {

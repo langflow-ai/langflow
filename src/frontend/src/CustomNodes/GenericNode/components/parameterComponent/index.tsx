@@ -1,7 +1,9 @@
 import { useUpdateNodeInternals } from "reactflow";
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { ParameterComponentType } from "../../../../types/components";
 import HandleComponent from "./components/handleComponent";
+import { PopUpContext } from "../../../../contexts/popUpContext";
+import { TabsContext } from "../../../../contexts/tabsContext";
 
 export default function ParameterComponent({
   left,
