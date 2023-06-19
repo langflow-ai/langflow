@@ -191,11 +191,11 @@ class Vertex:
         except Exception as exc:
             logger.exception(exc)
             raise ValueError(
-                f"Error building node {self.vertex_type}: {str(exc)}"
+                f"Error building Vertex {self.vertex_type}: {str(exc)}"
             ) from exc
 
         if self._built_object is None:
-            raise ValueError(f"Node type {self.vertex_type} not found")
+            raise ValueError(f"Vertex type {self.vertex_type} not found")
 
         self._built = True
 
@@ -215,7 +215,7 @@ class Vertex:
         self.edges.append(edge)
 
     def __repr__(self) -> str:
-        return f"Node(id={self.id}, data={self.data})"
+        return f"Vertex(id={self.id}, data={self.data})"
 
     def __eq__(self, __o: object) -> bool:
         return self.id == __o.id if isinstance(__o, Vertex) else False
