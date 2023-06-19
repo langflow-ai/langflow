@@ -18,6 +18,23 @@ export async function getAll(): Promise<AxiosResponse<APIObjectType>> {
   return await axios.get(`/api/v1/all`);
 }
 
+const GITHUB_API_URL = "https://api.github.com";
+const GITHUB_PERSONAL_ACCESS_TOKEN = "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";
+
+axios.defaults.headers.common[
+  "Authorization"
+] = `token ${GITHUB_PERSONAL_ACCESS_TOKEN}`;
+
+export async function getRepoStars(owner, repo) {
+  try {
+    const response = await axios.get(`${GITHUB_API_URL}/repos/${owner}/${repo}`);
+    return response.data.stargazers_count;
+  } catch (error) {
+    console.error("Error fetching repository data:", error);
+    return null;
+  }
+}
+
 /**
  * Sends data to the API for prediction.
  *
