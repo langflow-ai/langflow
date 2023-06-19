@@ -3,7 +3,7 @@ from langflow.template import frontend_node
 # These should always be instantiated
 CUSTOM_NODES = {
     "prompts": {
-        "ZeroShotPrompt": frontend_node.prompts.ZeroShotPromptNode(),
+        "ZeroShotPrompt": frontend_node.ZeroShotPromptNode(),
     },
     "tools": {
         "PythonFunctionTool": frontend_node.PythonFunctionToolNode(),
@@ -12,7 +12,7 @@ CUSTOM_NODES = {
     "agents": {
         "JsonAgent": frontend_node.JsonAgentNode(),
         "CSVAgent": frontend_node.CSVAgentNode(),
-        "initialize_agent": frontend_node.InitializeAgentNode(),
+        "AgentInitializer": frontend_node.InitializeAgentNode(),
         "VectorStoreAgent": frontend_node.VectorStoreAgentNode(),
         "VectorStoreRouterAgent": frontend_node.VectorStoreRouterAgentNode(),
         "SQLAgent": frontend_node.SQLAgentNode(),
