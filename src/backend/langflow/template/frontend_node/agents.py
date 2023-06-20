@@ -160,7 +160,7 @@ class CSVAgentNode(AgentFrontendNode):
         return super().to_dict()
 
 
-class InitializeAgentNode(FrontendNode):
+class InitializeAgentNode(AgentFrontendNode):
     name: str = "AgentInitializer"
     display_name: str = "AgentInitializer"
     template: Template = Template(
