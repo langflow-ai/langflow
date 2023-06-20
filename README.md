@@ -184,10 +184,8 @@ flow("Hey, have you heard of LangFlow?")
 We welcome contributions from developers of all levels to our open-source project on GitHub. If you'd like to contribute, please check our [contributing guidelines](./CONTRIBUTING.md) and help make LangFlow more accessible.
 
 
-Join our **Discord** server to ask questions, make suggestions and showcase your projects! 🦾
-<p>
-</p>
-<a href="https://discord.gg/FUhJnnJ9"><img alt="Discord Server" src="https://dcbadge.vercel.app/api/server/FUhJnnJ9?compact=true&style=flat"/></a>
+Join our [Discord](https://discord.gg/FUhJnnJ9) server to ask questions, make suggestions and showcase your projects! 🦾
+
 <p>
 </p>
 
