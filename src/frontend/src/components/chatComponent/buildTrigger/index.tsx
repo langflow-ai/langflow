@@ -13,6 +13,7 @@ import {
   progressContext,
   useProgress,
 } from "../../../contexts/ProgressContext";
+import RadialProgressComponent from "../../RadialProgress";
 
 export default function BuildTrigger({
   open,
@@ -30,6 +31,8 @@ export default function BuildTrigger({
   const { reactFlowInstance } = useContext(typesContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [isIconTouched, setIsIconTouched] = useState(false);
+  const { progress } = useContext(progressContext);
+  const eventClick = isBuilding ? "pointer-events-none" : "";
 
   async function handleBuild(flow: FlowType) {
     try {
@@ -65,7 +68,6 @@ export default function BuildTrigger({
       setIsBuilding(false);
     }
   }
-
   async function streamNodeData(flow: FlowType) {
     // Step 1: Make a POST request to send the flow data and receive a unique session ID
     const response = await postBuildInit(flow);
@@ -158,15 +160,8 @@ export default function BuildTrigger({
       leaveTo="translate-y-96"
     >
       <div className={`fixed right-4` + (isBuilt ? " bottom-20" : " bottom-4")}>
-        <div className="mb-2">
-          {isIconTouched && isBuilding && (
-            <ProgressBarComponent></ProgressBarComponent>
-          )}
-        </div>
-
         <div
-          className="flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full shadow-md shadow-[#0000002a] hover:shadow-[#00000032]
-           bg-[#E2E7EE] dark:border-gray-600 cursor-pointer"
+          className={`${eventClick} flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full shadow-md shadow-[#0000002a] hover:shadow-[#00000032] bg-[#E2E7EE] dark:border-gray-600 cursor-pointer`}
           onClick={() => {
             handleBuild(flow);
           }}
@@ -175,9 +170,13 @@ export default function BuildTrigger({
         >
           <button>
             <div className="flex gap-3 items-center">
-              {isBuilding ? (
+              {isBuilding && progress < 1 ? (
                 // Render your loading animation here when isBuilding is true
-                <Loading strokeWidth={1.5} style={{ color: "white" }} />
+                <RadialProgressComponent
+                  color={"text-orange-400"}
+                ></RadialProgressComponent>
+              ) : isBuilding ? (
+                <Loading strokeWidth={1.5} style={{ color: "#fb923c" }} />
               ) : (
                 <Zap className="sh-6 w-6 fill-orange-400 stroke-1 stroke-orange-400" />
               )}

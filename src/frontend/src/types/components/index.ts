@@ -104,3 +104,8 @@ export type ProgressBarType = {
   value?: number;
   max?: number;
 };
+
+export type RadialProgressType = {
+  value?: number;
+  color?: string;
+};
