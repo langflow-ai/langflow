@@ -3,8 +3,10 @@ import io
 from pathlib import Path
 from langchain.schema import AgentAction
 import json
+from langflow.cache.utils import memoize_dict
 from langflow.interface.run import (
-    build_langchain_object_with_caching,
+    fix_memory_inputs,
+    format_actions,
     get_memory_key,
     update_memory_keys,
 )
@@ -110,6 +112,18 @@ def get_result_and_thought(langchain_object, message: str):
     return result, thought
 
 
+@memoize_dict(maxsize=10)
+def build_langchain_object_with_caching(data_graph):
+    """
+    Build langchain object from data_graph.
+    """
+    from langflow.graph import Graph
+
+    logger.debug("Building langchain object")
+    graph = Graph.from_payload(data_graph)
+    return graph.build()
+
+
 def process_graph_cached(data_graph: Dict[str, Any], message: str):
     """
     Process graph by extracting input variables and replacing ZeroShotPrompt
@@ -158,9 +172,7 @@ def load_flow_from_json(
     graph_data = flow_graph["data"]
     if tweaks is not None:
         graph_data = process_tweaks(graph_data, tweaks)
-    nodes = graph_data["nodes"]
-    edges = graph_data["edges"]
-    graph = Graph(nodes, edges)
+    graph = Graph(graph_data=graph_data)
 
     if build:
         langchain_object = graph.build()
