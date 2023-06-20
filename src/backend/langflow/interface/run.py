@@ -1,36 +1,9 @@
 import contextlib
 import io
-from typing import List, Optional, Tuple
-from langflow.cache.utils import memoize_dict
-from langflow.graph import Graph
+from typing import List, Tuple
+
 from langflow.utils.logger import logger
 from langchain.schema import AgentAction
-
-
-@memoize_dict(maxsize=10)
-def build_langchain_object_with_caching(data_graph):
-    """
-    Build langchain object from data_graph.
-    """
-
-    logger.debug("Building langchain object")
-    graph = Graph.from_payload(data_graph)
-    return graph.build()
-
-
-def build_graph(data_graph):
-    return Graph(graph_data=data_graph)
-
-
-def build_langchain_object(graph_data):
-    """
-    Build langchain object from data_graph.
-    """
-
-    logger.debug("Building langchain object")
-    graph = Graph.from_payload(payload=graph_data)
-
-    return graph.build()
 
 
 def get_memory_key(langchain_object):
@@ -93,56 +66,6 @@ def fix_memory_inputs(langchain_object):
     possible_new_mem_key = get_memory_key(langchain_object)
     if possible_new_mem_key is not None:
         update_memory_keys(langchain_object, possible_new_mem_key)
-
-
-async def get_result_and_steps(
-    langchain_object, message: str, callbacks: Optional[List] = None
-):
-    """Get result and thought from extracted json"""
-
-    try:
-        if hasattr(langchain_object, "verbose"):
-            langchain_object.verbose = True
-        chat_input = None
-        memory_key = ""
-        if hasattr(langchain_object, "memory") and langchain_object.memory is not None:
-            memory_key = langchain_object.memory.memory_key
-
-        if hasattr(langchain_object, "input_keys"):
-            for key in langchain_object.input_keys:
-                if key not in [memory_key, "chat_history"]:
-                    chat_input = {key: message}
-        else:
-            chat_input = message  # type: ignore
-
-        if hasattr(langchain_object, "return_intermediate_steps"):
-            # https://github.com/hwchase17/langchain/issues/2068
-            # Deactivating until we have a frontend solution
-            # to display intermediate steps
-            langchain_object.return_intermediate_steps = True
-
-        fix_memory_inputs(langchain_object)
-
-        try:
-            output = await langchain_object.acall(chat_input, callbacks=callbacks)
-        except Exception as exc:
-            # make the error message more informative
-            logger.debug(f"Error: {str(exc)}")
-            output = langchain_object(chat_input, callbacks=callbacks)
-
-        intermediate_steps = (
-            output.get("intermediate_steps", []) if isinstance(output, dict) else []
-        )
-
-        result = (
-            output.get(langchain_object.output_keys[0])
-            if isinstance(output, dict)
-            else output
-        )
-        thought = format_actions(intermediate_steps) if intermediate_steps else ""
-    except Exception as exc:
-        raise ValueError(f"Error: {str(exc)}") from exc
-    return result, thought
 
 
 def get_result_and_thought(langchain_object, message: str):

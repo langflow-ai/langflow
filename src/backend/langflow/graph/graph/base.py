@@ -151,13 +151,13 @@ class Graph:
         ]
         return connected_vertices
 
-    def build(self) -> Chain:
+    async def build(self) -> Chain:
         """Builds the graph."""
         # Get root node
         root_node = payload.get_root_vertex(self)
         if root_node is None:
             raise ValueError("No root node found")
-        return root_node.build()
+        return await root_node.build()
 
     def topological_sort(self) -> List[Vertex]:
         """

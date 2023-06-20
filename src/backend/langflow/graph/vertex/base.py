@@ -1,12 +1,11 @@
 # Path: src/backend/langflow/graph/vertex/base.py
 from langflow.cache import base as cache_utils
-from langflow.graph.edge.contract import ContractEdge
 from langflow.graph.vertex.constants import DIRECT_TYPES
 from langflow.interface import loading
 from langflow.interface.listing import ALL_TYPES_DICT
 from langflow.utils.logger import logger
 from langflow.utils.util import sync_to_async
-
+from langflow.graph.edge.contract import ContractEdge
 
 import contextlib
 import inspect
@@ -16,7 +15,7 @@ from typing import Any, Dict, List, Optional
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from langflow.graph.edge.base import Edge
+    pass
 
 
 class Vertex:
@@ -93,7 +92,7 @@ class Vertex:
             warnings.warn(f"Value for {key} in {self.vertex_type} is None. ")
         if value.get("type") == "int":
             with contextlib.suppress(TypeError, ValueError):
-                new_value = int(new_value)
+                new_value = int(new_value)  # type: ignore
         return new_value
 
     def _get_edge_params(self, key: str, value: Dict) -> Any:
@@ -118,7 +117,7 @@ class Vertex:
         file_name = value.get("value")
         content = value.get("content")
         type_to_load = value.get("suffixes")
-        return cache_utils.save_binary_file(
+        return cache_utils.save_binary_file(  # type: ignore
             content=content, file_name=file_name, accepted_types=type_to_load
         )
 
@@ -185,7 +184,7 @@ class Vertex:
         try:
             self._built_object = loading.instantiate_class(
                 node_type=self.vertex_type,
-                base_type=self.base_type,
+                base_type=self.base_type,  # type: ignore
                 params=self.params,
             )
         except Exception as exc:
@@ -199,19 +198,19 @@ class Vertex:
 
         self._built = True
 
-    def build(self, force: bool = False) -> Any:
+    async def build(self, force: bool = False) -> Any:
         if not self._built or force:
             self._build()
-            self.fulfill_contracts()
+            await self.fulfill_contracts()
 
         return self._built_object
 
-    def fulfill_contracts(self):
+    async def fulfill_contracts(self):
         for edge in self.edges:
             if edge.source == self:
-                edge.fulfill()
+                await edge.fulfill()
 
-    def add_edge(self, edge: "Edge") -> None:
+    def add_edge(self, edge: "ContractEdge") -> None:
         self.edges.append(edge)
 
     def __repr__(self) -> str:

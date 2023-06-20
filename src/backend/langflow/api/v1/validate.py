@@ -41,7 +41,7 @@ def post_validate_prompt(prompt: Prompt):
 
 # validate node
 @router.post("/node/{node_id}", status_code=200)
-def post_validate_node(node_id: str, data: dict):
+async def post_validate_node(node_id: str, data: dict):
     try:
         # build graph
         graph = Graph.from_payload(data)
@@ -50,7 +50,7 @@ def post_validate_node(node_id: str, data: dict):
         if node is None:
             raise ValueError(f"Vertex {node_id} not found")
         if not isinstance(node, VectorStoreVertex):
-            node.build()
+            await node.build()
         return json.dumps({"valid": True, "params": str(node._built_object_repr())})
     except Exception as e:
         logger.exception(e)

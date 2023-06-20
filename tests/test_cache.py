@@ -2,7 +2,7 @@ import json
 from langflow.graph import Graph
 
 import pytest
-from langflow.interface.run import (
+from langflow.processing.process import (
     build_langchain_object_with_caching,
 )
 
