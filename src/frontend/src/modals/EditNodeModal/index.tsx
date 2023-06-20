@@ -33,6 +33,7 @@ import {
 } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
+import AdvancedToogle from "./components/advancedToogle";
 
 export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const [open, setOpen] = useState(true);
@@ -279,16 +280,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                             )}
                           </TableCell>
                           <TableCell className="p-0 text-right">
-                            <div className="items-center text-center">
-                              <ToggleShadComponent
-                                enabled={!data.node.template[n].advanced}
-                                setEnabled={(e) =>
-                                  changeAdvanced(data.node.template[n])
-                                }
-                                disabled={false}
-                                size="small"
-                              />
-                            </div>
+                            <AdvancedToogle param={data.node.template[n]}/>
                           </TableCell>
                         </TableRow>
                       ))}

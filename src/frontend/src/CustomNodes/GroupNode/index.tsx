@@ -37,6 +37,7 @@ export default function GroupNode({
   yPos: number;
 }) {
   const [isValid, setIsValid] = useState(true);
+  const {closePopUp} = useContext(PopUpContext)
   const { reactFlowInstance, deleteNode, types } = useContext(typesContext);
   const { setDisableCopyPaste } = useContext(TabsContext);
   const Icon = nodeIcons["custom"];
@@ -59,6 +60,7 @@ export default function GroupNode({
       updateNodeInternals(data.id);
     }
   }, [data.id, ref, updateNodeInternals, ref.current]);
+  useEffect(() => {}, [closePopUp, data.node.template]);
 
   useEffect(() => {
     updateNodeInternals(data.id);
