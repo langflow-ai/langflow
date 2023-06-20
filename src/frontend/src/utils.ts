@@ -27,9 +27,9 @@ import {
   ReactFlowJsonObject,
   XYPosition,
 } from "reactflow";
-import { FlowType, NodeType } from "./types/flow";
+import { FlowType, NodeDataType, NodeType } from "./types/flow";
 import { APITemplateType, TemplateVariableType } from "./types/api";
-import _ from "lodash";
+import _, { template } from "lodash";
 import { ChromaIcon } from "./icons/ChromaIcon";
 import { AnthropicIcon } from "./icons/Anthropic";
 import { AirbyteIcon } from "./icons/Airbyte";
@@ -683,7 +683,7 @@ export function generateNodeFromFlow(flow: FlowType): NodeType {
   const outputNode = _.cloneDeep(findLastNode(flow.data));
   // console.log(flow)
   const position = getMiddlePoint(nodes);
-  let data = flow;
+  let data = _.cloneDeep(flow);
   const newGroupNode: NodeType = {
     data: {
       id: data.id,
@@ -712,17 +712,18 @@ export function concatFlows(
   ReactFlowInstance.addEdges(edges);
 }
 export function expandGroupNode(
-  flow: FlowType,
+  groupNode: NodeDataType,
   ReactFlowInstance: ReactFlowInstance,
-  template: APITemplateType
 ) {
+  const {template} = groupNode.node
+  const {flow} = groupNode.node;
   const gNodes = _.cloneDeep(flow.data.nodes);
   const gEdges = flow.data.edges;
   //redirect edges to correct proxy node
   let updatedEdges: Edge[] = [];
   ReactFlowInstance.getEdges().forEach((edge) => {
     let newEdge = _.cloneDeep(edge);
-    if (newEdge.target === flow.id) {
+    if (newEdge.target === groupNode.id) {
       if (newEdge.targetHandle.split("|").length > 3) {
         let type = newEdge.targetHandle.split("|")[0];
         let field = newEdge.targetHandle.split("|")[4];
@@ -749,7 +750,7 @@ export function expandGroupNode(
         }
       }
     }
-    if (newEdge.source === flow.id) {
+    if (newEdge.source === groupNode.id) {
       const lastNode = _.cloneDeep(findLastNode(flow.data));
       newEdge.source = lastNode.id;
       let sourceHandle = newEdge.sourceHandle.split("|");
@@ -779,12 +780,12 @@ export function expandGroupNode(
   });
 
   const nodes = [
-    ...ReactFlowInstance.getNodes().filter((n) => n.id !== flow.id),
+    ...ReactFlowInstance.getNodes().filter((n) => n.id !== groupNode.id),
     ...gNodes,
   ];
   const edges = [
     ...ReactFlowInstance.getEdges().filter(
-      (e) => e.target !== flow.id && e.source !== flow.id
+      (e) => e.target !== groupNode.id && e.source !== groupNode.id
     ),
     ...gEdges,
     ...updatedEdges,
@@ -976,18 +977,18 @@ export function updateRemovedEdges(groupNode: NodeType, oldEdges: Edge[]) {
 }
 
 export function ungroupNode(
-  flow: FlowType,
+  groupNode:NodeDataType,
   BaseFlow: ReactFlowJsonObject,
-  template: APITemplateType
 ) {
-  console.log(template);
+  const {template} = groupNode.node
+  const {flow} = groupNode.node;
   const gNodes: NodeType[] = flow.data.nodes;
   const gEdges = flow.data.edges;
   //redirect edges to correct proxy node
   let updatedEdges: Edge[] = [];
   BaseFlow.edges.forEach((edge) => {
     let newEdge = _.cloneDeep(edge);
-    if (newEdge.target === flow.id) {
+    if (newEdge.target === groupNode.id) {
       if (newEdge.targetHandle.split("|").length > 3) {
         let type = newEdge.targetHandle.split("|")[0];
         let field = newEdge.targetHandle.split("|")[4];
@@ -1014,7 +1015,7 @@ export function ungroupNode(
         }
       }
     }
-    if (newEdge.source === flow.id) {
+    if (newEdge.source === groupNode.id) {
       const lastNode = _.cloneDeep(findLastNode(flow.data));
       newEdge.source = lastNode.id;
       let sourceHandle = newEdge.sourceHandle.split("|");
@@ -1042,10 +1043,10 @@ export function ungroupNode(
     }
   });
 
-  const nodes = [...BaseFlow.nodes.filter((n) => n.id !== flow.id), ...gNodes];
+  const nodes = [...BaseFlow.nodes.filter((n) => n.id !== groupNode.id), ...gNodes];
   const edges = [
     ...BaseFlow.edges.filter(
-      (e) => e.target !== flow.id && e.source !== flow.id
+      (e) => e.target !== groupNode.id && e.source !== groupNode.id
     ),
     ...gEdges,
     ...updatedEdges,
@@ -1059,7 +1060,7 @@ export function processFLow(FlowObject: ReactFlowJsonObject) {
   clonedFLow.nodes.forEach((node: NodeType) => {
     if (node.type === "groupNode") {
       processFLow(node.data.node.flow.data);
-      ungroupNode(node.data.node.flow, clonedFLow, node.data.node.template);
+      ungroupNode(node.data, clonedFLow);
     }
   });
   console.log(clonedFLow);

@@ -7,7 +7,7 @@ import EditNodeModal from "../../../../modals/EditNodeModal";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import { NodeToolbarComponentType } from "../../../../types/components";
 
-const NodeToolbarComponent = ({ data, openPopUp, deleteNode, isGroup, ungroup, position }: NodeToolbarComponentType) => {
+const NodeToolbarComponent = ({ data, openPopUp, deleteNode, isGroup, position }: NodeToolbarComponentType) => {
   const [nodeLength, setNodeLength] = useState(
     Object.keys(data.node.template).filter(
       (t) =>
@@ -88,9 +88,8 @@ const NodeToolbarComponent = ({ data, openPopUp, deleteNode, isGroup, ungroup, p
               <button onClick={() => {
                 updateFlowPosition(position, data.node.flow);
                 expandGroupNode(
-                  data.node.flow,
+                  data,
                   reactFlowInstance,
-                  data.node.template
                 )
               }} className="hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-muted focus:z-10 rounded-r-md">
                 <Expand className="w-4 h-4 dark:text-gray-300"></Expand>

@@ -149,7 +149,6 @@ export type NodeToolbarComponentType = {
   openPopUp: (element:JSX.Element)=>void;
   deleteNode: (id: string) => void;
   isGroup?: boolean;
-  ungroup?: () => void;
   position?:{x:number,y:number};
 
 }
