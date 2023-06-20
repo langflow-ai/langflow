@@ -1,7 +1,6 @@
 from typing import Optional
 
 from langflow.template.field.base import TemplateField
-from langflow.template.field.fields import RootField
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.frontend_node.constants import QA_CHAIN_TYPES
 from langflow.template.template.base import Template
@@ -9,6 +8,7 @@ from langflow.template.template.base import Template
 
 class ChainFrontendNode(FrontendNode):
     def add_extra_fields(self) -> None:
+        super().add_extra_fields()
         if self.template.type_name == "ConversationalRetrievalChain":
             # add memory
             self.template.add_field(

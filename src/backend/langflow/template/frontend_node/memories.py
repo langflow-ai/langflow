@@ -7,6 +7,7 @@ from langflow.template.frontend_node.base import FrontendNode
 class MemoryFrontendNode(FrontendNode):
     #! Needs testing
     def add_extra_fields(self) -> None:
+        super().add_extra_fields()
         # add return_messages field
         self.template.add_field(
             TemplateField(

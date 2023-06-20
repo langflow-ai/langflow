@@ -50,6 +50,7 @@ class DocumentLoaderFrontNode(FrontendNode):
     }
 
     def add_extra_fields(self) -> None:
+        super().add_extra_fields()
         name = None
         if self.template.type_name in self.file_path_templates:
             self.template.add_field(self.file_path_templates[self.template.type_name])

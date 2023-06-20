@@ -16,6 +16,7 @@ NON_CHAT_AGENTS = {
 
 class AgentFrontendNode(FrontendNode):
     def add_extra_fields(self) -> None:
+        super().add_extra_fields()
         self.template.set_root_field(RootField(field_type="Text"))
 
 
