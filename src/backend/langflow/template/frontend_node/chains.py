@@ -1,6 +1,7 @@
 from typing import Optional
 
 from langflow.template.field.base import TemplateField
+from langflow.template.field.fields import RootField
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.frontend_node.constants import QA_CHAIN_TYPES
 from langflow.template.template.base import Template
@@ -8,6 +9,7 @@ from langflow.template.template.base import Template
 
 class ChainFrontendNode(FrontendNode):
     def add_extra_fields(self) -> None:
+        self.template.set_root_field(RootField(field_type="Text"))
         super().add_extra_fields()
         if self.template.type_name == "ConversationalRetrievalChain":
             # add memory
@@ -180,7 +182,7 @@ class MidJourneyPromptChainNode(ChainFrontendNode):
     ]
 
 
-class CombineDocsChainNode(FrontendNode):
+class CombineDocsChainNode(ChainFrontendNode):
     name: str = "CombineDocsChain"
     template: Template = Template(
         type_name="load_qa_chain",
