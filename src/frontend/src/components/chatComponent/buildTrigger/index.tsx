@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { Transition } from "@headlessui/react";
 import { Zap } from "lucide-react";
 import { validateNodes } from "../../../utils";
@@ -8,6 +8,11 @@ import { useSSE } from "../../../contexts/SSEContext";
 import { typesContext } from "../../../contexts/typesContext";
 import { alertContext } from "../../../contexts/alertContext";
 import { postBuildInit } from "../../../controllers/API";
+import ProgressBarComponent from "../../ProgressBarComponent";
+import {
+  progressContext,
+  useProgress,
+} from "../../../contexts/ProgressContext";
 
 export default function BuildTrigger({
   open,
@@ -20,9 +25,11 @@ export default function BuildTrigger({
   setIsBuilt: any;
   isBuilt: boolean;
 }) {
-  const { updateSSEData, isBuilding, setIsBuilding } = useSSE();
+  const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
+  const { setProgress } = useContext(progressContext);
   const { reactFlowInstance } = useContext(typesContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
+  const [isIconTouched, setIsIconTouched] = useState(false);
 
   async function handleBuild(flow: FlowType) {
     try {
@@ -63,7 +70,7 @@ export default function BuildTrigger({
     // Step 1: Make a POST request to send the flow data and receive a unique session ID
     const response = await postBuildInit(flow);
     const { flowId } = response.data;
-
+    let loadProgress = [];
     // Step 2: Use the session ID to establish an SSE connection using EventSource
     let validationResults = [];
     let finished = false;
@@ -79,13 +86,15 @@ export default function BuildTrigger({
       // if the event is the end of the stream, close the connection
       if (parsedData.end_of_stream) {
         eventSource.close();
-
         return;
       } else if (parsedData.log) {
         // If the event is a log, log it
         // TODO: implement the progress
         setSuccessData({ title: parsedData.log });
         setSuccessData({ title: parsedData.progress });
+        setProgress(parsedData.progress);
+
+        loadProgress.push(parsedData.progress);
       } else {
         // Otherwise, process the data
         const isValid = processStreamResult(parsedData);
@@ -129,6 +138,14 @@ export default function BuildTrigger({
     }
   }
 
+  const handleMouseEnter = () => {
+    setIsIconTouched(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsIconTouched(false);
+  };
+
   return (
     <Transition
       show={!open}
@@ -141,12 +158,20 @@ export default function BuildTrigger({
       leaveTo="translate-y-96"
     >
       <div className={`fixed right-4` + (isBuilt ? " bottom-20" : " bottom-4")}>
+        <div className="mb-2">
+          {isIconTouched && isBuilding && (
+            <ProgressBarComponent></ProgressBarComponent>
+          )}
+        </div>
+
         <div
           className="flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full shadow-md shadow-[#0000002a] hover:shadow-[#00000032]
            bg-[#E2E7EE] dark:border-gray-600 cursor-pointer"
           onClick={() => {
             handleBuild(flow);
           }}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
         >
           <button>
             <div className="flex gap-3 items-center">
