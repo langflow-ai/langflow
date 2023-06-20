@@ -85,7 +85,7 @@ export default function ImportModal() {
                     }}
                   >
                     <ArrowLeftIcon
-                      className="h-5 w-5 text-gray-800 ml-1 dark:text-white"
+                      className="h-5 w-5 text-dark-gray ml-1 dark:text-white"
                       aria-hidden="true"
                     />
                   </button>
@@ -97,7 +97,7 @@ export default function ImportModal() {
               {showExamples ? "Select an example" : "Import"}
             </span>
             <ArrowUpTrayIcon
-              className="h-5 w-5 text-gray-800 ml-1 dark:text-white"
+              className="h-5 w-5 text-dark-gray ml-1 dark:text-white"
               aria-hidden="true"
             />
           </DialogTitle>
@@ -106,7 +106,7 @@ export default function ImportModal() {
 
         <div
           className={classNames(
-            "h-full w-full dark:bg-gray-900 overflow-y-auto scrollbar-hide",
+            "h-full w-full dark:bg-high-dark-gray overflow-y-auto scrollbar-hide",
             showExamples && !loadingExamples
               ? "flex flex-row start justify-center items-start flex-wrap overflow-auto mx-auto"
               : "flex flex-row justify-center items-center"
@@ -116,7 +116,7 @@ export default function ImportModal() {
             <div className="flex h-full w-full justify-evenly items-center">
               <ButtonBox
                 size="big"
-                bgColor="bg-emerald-500 dark:bg-emerald-500/75"
+                bgColor="bg-medium-emerald dark:bg-medium-emerald/75"
                 description="Prebuilt Examples"
                 icon={
                   <DocumentDuplicateIcon className="h-10 w-10 flex-shrink-0" />
@@ -125,12 +125,12 @@ export default function ImportModal() {
                   setShowExamples(true);
                   handleExamples();
                 }}
-                textColor="text-emerald-500 dark:text-emerald-500/75"
+                textColor="text-medium-emerald dark:text-medium-emerald/75"
                 title="Examples"
               ></ButtonBox>
               <ButtonBox
                 size="big"
-                bgColor="bg-blue-500 dark:bg-blue-500/75"
+                bgColor="bg-almost-dark-blue dark:bg-almost-dark-blue/75"
                 description="Import from Local"
                 icon={
                   <ComputerDesktopIcon className="h-10 w-10 flex-shrink-0" />
@@ -139,7 +139,7 @@ export default function ImportModal() {
                   uploadFlow();
                   setModalOpen(false);
                 }}
-                textColor="text-blue-500 dark:text-blue-500/75"
+                textColor="text-almost-dark-blue dark:text-almost-dark-blue/75"
                 title="Local File"
               ></ButtonBox>
             </div>
@@ -157,7 +157,7 @@ export default function ImportModal() {
                   {" "}
                   <ButtonBox
                     size="small"
-                    bgColor="bg-emerald-500 dark:bg-emerald-500/75"
+                    bgColor="bg-medium-emerald dark:bg-medium-emerald/75"
                     description={example.description ?? "Prebuilt Examples"}
                     icon={
                       <DocumentDuplicateIcon className="h-6 w-6 flex-shrink-0" />
@@ -166,7 +166,7 @@ export default function ImportModal() {
                       addFlow(example, false);
                       setModalOpen(false);
                     }}
-                    textColor="text-emerald-500 dark:text-emerald-500/75"
+                    textColor="text-medium-emerald dark:text-medium-emerald/75"
                     title={example.name}
                   ></ButtonBox>
                 </div>
@@ -179,7 +179,7 @@ export default function ImportModal() {
             <a
               href="https://github.com/logspace-ai/langflow_examples"
               target="_blank"
-              className="flex items-center justify-center text-gray-600 dark:text-gray-300"
+              className="flex items-center justify-center text-medium-dark-gray dark:text-medium-low-gray"
               rel="noreferrer"
             >
               <svg

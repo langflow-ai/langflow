@@ -90,10 +90,10 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
           <DialogDescription>
             {data.node?.description}
             <div className="flex pt-4">
-              <VariableIcon className="w-5 h-5 pe-1 text-gray-700 stroke-2 dark:text-slate-200">
+              <VariableIcon className="w-5 h-5 pe-1 text-almost-dark-gray stroke-2 dark:text-high-light-slate">
                 &nbsp;
               </VariableIcon>
-              <span className="text-sm font-semibold text-gray-800 dark:text-white">
+              <span className="text-sm font-semibold text-dark-gray dark:text-white">
                 Parameters
               </span>
             </div>
@@ -103,7 +103,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
         <div className="flex w-full max-h-[350px] h-fit">
           <div
             className={classNames(
-              "w-full rounded-lg bg-white dark:bg-gray-800 border-[1px] border-gray-200",
+              "w-full rounded-lg bg-white dark:bg-dark-gray border-[1px] border-light-gray",
               nodeLength > limitScrollFieldsModal
                 ? "overflow-scroll overflow-x-hidden custom-scroll"
                 : "overflow-hidden"
@@ -112,7 +112,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
             {nodeLength > 0 && (
               <div className="flex flex-col gap-5 h-fit">
                 <Table className="table-fixed bg-muted outline-1">
-                  <TableHeader className="border-gray-200 text-gray-500 text-xs font-medium h-10">
+                  <TableHeader className="border-light-gray text-medium-gray text-xs font-medium h-10">
                     <TableRow className="dark:border-b-muted">
                       <TableHead className="h-7 text-center">PARAM</TableHead>
                       <TableHead className="p-0 h-7 text-center">
@@ -137,12 +137,12 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                       )
                       .map((n, i) => (
                         <TableRow key={i} className="h-10 dark:border-b-muted">
-                          <TableCell className="p-0 text-center text-gray-900 dark:text-gray-300 text-sm">
+                          <TableCell className="p-0 text-center text-high-dark-gray dark:text-medium-low-gray text-sm">
                             {data.node.template[n].name
                               ? data.node.template[n].name
                               : data.node.template[n].display_name}
                           </TableCell>
-                          <TableCell className="p-0 text-center text-gray-900 text-xs w-[300px] dark:text-gray-300">
+                          <TableCell className="p-0 text-center text-high-dark-gray text-xs w-[300px] dark:text-medium-low-gray">
                             {data.node.template[n].type === "str" &&
                             !data.node.template[n].options ? (
                               <div className="mx-auto">

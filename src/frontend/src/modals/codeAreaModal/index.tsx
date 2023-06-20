@@ -52,7 +52,7 @@ export default function CodeAreaModal({
           <DialogTitle className="flex items-center">
             <span className="pr-2">Edit Code</span>
             <CommandLineIcon
-              className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
+              className="h-6 w-6 text-dark-gray pl-1 dark:text-white"
               aria-hidden="true"
             />
           </DialogTitle>
@@ -73,7 +73,7 @@ export default function CodeAreaModal({
             onChange={(value) => {
               setCode(value);
             }}
-            className="w-full rounded-lg h-[300px] custom-scroll border-[1px] border-gray-300 dark:border-gray-600"
+            className="w-full rounded-lg h-[300px] custom-scroll border-[1px] border-medium-low-gray dark:border-medium-dark-gray"
           />
         </div>
 

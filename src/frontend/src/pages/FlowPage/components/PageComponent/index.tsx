@@ -185,8 +185,8 @@ export default function Page({ flow }: { flow: FlowType }) {
             style: { stroke: "inherit" },
             className:
               params.targetHandle.split("|")[0] === "Text"
-                ? "stroke-gray-800 dark:stroke-gray-300"
-                : "stroke-gray-900 dark:stroke-gray-200",
+                ? "stroke-dark-gray dark:stroke-medium-low-gray"
+                : "stroke-high-dark-gray dark:stroke-light-gray",
             animated: params.targetHandle.split("|")[0] === "Text",
           },
           eds
@@ -397,8 +397,8 @@ export default function Page({ flow }: { flow: FlowType }) {
                   selectNodesOnDrag={false}
                   className="theme-attribution"
                 >
-                  <Background className="dark:bg-gray-900" />
-                  <Controls className="[&>button]:text-black  [&>button]:dark:bg-gray-800 hover:[&>button]:dark:bg-gray-700 [&>button]:dark:text-gray-400 [&>button]:dark:fill-gray-400 [&>button]:dark:border-gray-600"></Controls>
+                  <Background className="dark:bg-high-dark-gray" />
+                  <Controls className="[&>button]:text-black  [&>button]:dark:bg-dark-gray hover:[&>button]:dark:bg-almost-dark-gray [&>button]:dark:text-almost-medium-gray [&>button]:dark:fill-almost-medium-gray [&>button]:dark:border-medium-dark-gray"></Controls>
                 </ReactFlow>
                 <Chat flow={flow} reactFlowInstance={reactFlowInstance} />
               </div>

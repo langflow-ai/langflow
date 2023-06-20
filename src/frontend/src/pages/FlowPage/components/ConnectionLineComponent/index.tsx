@@ -13,7 +13,7 @@ const ConnectionLineComponent = ({
         fill="none"
         stroke="#222"
         strokeWidth={1.5}
-        className="animated dark:stroke-gray-400"
+        className="animated dark:stroke-almost-medium-gray"
         d={`M${fromX},${fromY} C ${fromX} ${toY} ${fromX} ${toY} ${toX},${toY}`}
         style={connectionLineStyle}
       />
@@ -23,7 +23,7 @@ const ConnectionLineComponent = ({
         fill="#fff"
         r={3}
         stroke="#222"
-        className="dark:stroke-gray-400 dark:fill-gray-800"
+        className="dark:stroke-almost-medium-gray dark:fill-dark-gray"
         strokeWidth={1.5}
       />
     </g>

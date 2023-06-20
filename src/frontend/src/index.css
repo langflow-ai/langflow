@@ -42,6 +42,53 @@
     --round-btn-shadow: #00000063;
 
     --hover-btn-background: #242f47;
+
+    --light-gray: #e5e7eb; /* tailwind gray 200 */
+    --medium-low-gray: #d1d5db; /* tailwind gray 300 */
+    --almost-medium-gray: #9ca3af; /* tailwind gray 400 */
+    --medium-gray: #6b7280; /* tailwind gray 500 */
+    --medium-dark-gray: #4b5563; /* tailwind gray 600 */
+    --almost-dark-gray: #374151; /* tailwind gray 700 */
+    --dark-gray: #1f2937; /* tailwind gray 800 */
+    --high-dark-gray: #111827; /* tailwind gray 900 */
+    --high-light-gray: #f9fafb; /* tailwind gray 50 */
+
+    --medium-red: #ef4444; /* tailwind red 500 */
+    --almost-medium-red: #dc2626; /* tailwind red 600 */
+    --light-red: #fef2f2; /* tailwind red 50 */
+    --dark-red: #7f1d1d; /* tailwind red 900 */
+    --medium-light-red: #f87171; /* tailwind red 400 */
+    --almost-dark-red: #991b1b; /* tailwind red 800 */
+    --medium-dark-red: #b91c1c; /* tailwind red 700 */
+
+    --light-blue: #eff6ff; /* tailwind blue 50 */
+    --almost-light-blue: #dbeafe;  /* tailwind blue 100 */
+    --dark-blue: #1e3a8a; /* tailwind blue 900 */
+    --medium-blue: #60a5fa; /* tailwind blue 400 */
+    --medium-dark-blue: #1d4ed8; /* tailwind blue 700 */
+    --almost-dark-blue: #3b82f6; /* tailwind blue 500 */
+    --medium-light-blue: #dbeafe; /* tailwind blue 100 */
+    --almost-medium-blue: #2563eb; /* tailwind blue 600 */
+
+    --light-green: #f0fdf4; /* tailwind green 50 */
+    --dark-green: #14532d; /* tailwind green 900 */
+    --medium-green: #4ade80; /* tailwind green 400 */
+    --medium-dark-green: #166534; /* tailwind green 800 */
+    --almost-medium-green: #22c55e; /* tailwind green 500 */
+
+    --light-slate: #cbd5e1; /* tailwind slate 300 */
+    --medium-slate: #475569; /* tailwind slate 600 */
+    --high-light-slate: #e2e8f0; /* tailwind slate 200 */
+
+    --medium-indigo: #6366f1; /* tailwind indigo 500 */
+    --medium-high-indigo: #4f46e5; /* tailwind indigo 600 */
+    --high-indigo: #4338ca; /* tailwind indigo 700 */
+
+    --medium-yellow: #eab308; /* tailwind yellow 500 */
+
+    --medium-emerald: #10b981; /* tailwind emerald 500 */
+
+    --white: #ffffff; /* tailwind white */
   }
 
 	.dark {
@@ -105,7 +152,44 @@
   --build-background: #E2E7EE; /*	hsl(215, 26%, 91%) */
   --round-btn-shadow: #00000063;
   --hover-btn-background: #242f47;
-
+  --dark-gray: #1f2937; /* tailwind gray 800 */
+  --light-gray: #e5e7eb; /* tailwind gray 200 */
+  --high-dark-gray: #111827; /* tailwind gray 900 */
+  --medium-gray: #6b7280; /* tailwind gray 500 */
+  --medium-low-gray: #d1d5db /* tailwind gray 300 */
+  --medium-dark-gray: #4b5563; /* tailwind gray 600 */
+  --almost-dark-gray: #374151; /* tailwind gray 700 */
+  --almost-medium-gray: #9ca3af; /* tailwind gray 400 */
+  --medium-red: #ef4444; /* tailwind red 500 */
+  --light-red: #fef2f2; /* tailwind red 50 */
+  --dark-red: #7f1d1d; /* tailwind red 900 */
+  --medium-light-red: #f87171; /* tailwind red 400 */
+  --almost-dark-red: #991b1b; /* tailwind red 800 */
+  --medium-dark-red: #b91c1c; /* tailwind red 700 */
+  --almost-medium-red: #dc2626; /* tailwind red 600 */
+  --light-blue: #eff6ff; /* tailwind blue 50 */
+  --dark-blue: #1e3a8a; /* tailwind blue 900 */
+  --medium-blue: #60a5fa; /* tailwind blue 400 */
+  --medium-dark-blue: #1d4ed8; /* tailwind blue 700 */
+  --almost-dark-blue: #3b82f6; /* tailwind blue 500 */
+  --medium-light-blue: #dbeafe; /* tailwind blue 100 */
+  --almost-medium-blue: #2563eb; /* tailwind blue 600 */
+  --almost-light-blue: #dbeafe;  /* tailwind blue 100 */
+  --light-green: #f0fdf4; /* tailwind green 50 */
+  --dark-green: #14532d; /* tailwind green 900 */
+  --medium-green: #4ade80; /* tailwind green 400 */
+  --medium-dark-green: #166534; /* tailwind green 800 */
+  --almost-medium-green: #22c55e; /* tailwind green 500 */
+  --light-slate: #cbd5e1; /* tailwind slate 300 */
+  --medium-slate: #475569; /* tailwind slate 600 */
+  --high-light-slate: #e2e8f0; /* tailwind slate 200 */
+  --medium-indigo: #6366f1; /* tailwind indigo 500 */
+  --medium-yellow: #eab308; /* tailwind yellow 500 */
+  --medium-emerald: #10b981; /* tailwind emerald 500 */
+  --medium-high-indigo: #4f46e5; /* tailwind indigo 600 */
+  --high-indigo: #4338ca; /* tailwind indigo 700 */
+  --high-light-gray: #f9fafb; /* tailwind gray 50 */
+  --white: #ffffff; /* tailwind white */
 }
 
 .dark {

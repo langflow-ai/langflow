@@ -31,9 +31,9 @@ export default function Dropdown({
               <Listbox.Button
                 className={
                   editNode
-                    ? "relative pr-8 placeholder:text-center block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md shadow-sm sm:text-sm border-gray-300 border-1" +
+                    ? "relative pr-8 placeholder:text-center block w-full pt-0.5 pb-0.5 form-input dark:bg-high-dark-gray dark:text-medium-low-gray dark:border-medium-dark-gray rounded-md shadow-sm sm:text-sm border-medium-low-gray border-1" +
                       INPUT_STYLE
-                    : "ring-1 ring-slate-300 dark:ring-slate-600 w-full py-2 pl-3 pr-10 text-left dark:focus:ring-offset-2 dark:focus:ring-offset-gray-900 dark:focus:ring-1 dark:focus:ring-gray-600 dark:focus-visible:ring-gray-900 dark:focus-visible:ring-offset-2 focus-visible:outline-none dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm" +
+                    : "ring-1 ring-light-slate dark:ring-medium-slate w-full py-2 pl-3 pr-10 text-left dark:focus:ring-offset-2 dark:focus:ring-offset-high-dark-gray dark:focus:ring-1 dark:focus:ring-medium-dark-gray dark:focus-visible:ring-high-dark-gray dark:focus-visible:ring-offset-2 focus-visible:outline-none dark:bg-high-dark-gray dark:text-medium-low-gray dark:border-medium-dark-gray rounded-md border-medium-low-gray shadow-sm sm:text-sm" +
                       INPUT_STYLE
                 }
               >
@@ -44,7 +44,7 @@ export default function Dropdown({
                   }
                 >
                   <ChevronUpDownIcon
-                    className="h-5 w-5 text-gray-400"
+                    className="h-5 w-5 text-almost-medium-gray"
                     aria-hidden="true"
                   />
                 </span>
@@ -70,11 +70,11 @@ export default function Dropdown({
                       className={({ active }) =>
                         classNames(
                           active
-                            ? " bg-accent dark:bg-white dark:text-gray-500"
+                            ? " bg-accent dark:bg-white dark:text-medium-gray"
                             : "",
                           editNode
-                            ? "relative cursor-default select-none py-0.5 pl-3 pr-12 dark:text-gray-300 dark:bg-gray-800"
-                            : "relative cursor-default select-none py-2 pl-3 pr-9 dark:text-gray-300 dark:bg-gray-800"
+                            ? "relative cursor-default select-none py-0.5 pl-3 pr-12 dark:text-medium-low-gray dark:bg-dark-gray"
+                            : "relative cursor-default select-none py-2 pl-3 pr-9 dark:text-medium-low-gray dark:bg-dark-gray"
                         )
                       }
                       value={option}

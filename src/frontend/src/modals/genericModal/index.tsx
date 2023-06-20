@@ -55,7 +55,7 @@ export default function GenericModal({
           <DialogTitle className="flex items-center">
             <span className="pr-2">{myModalTitle}</span>
             <DocumentTextIcon
-              className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
+              className="h-6 w-6 text-dark-gray pl-1 dark:text-white"
               aria-hidden="true"
             />
           </DialogTitle>
@@ -78,7 +78,7 @@ export default function GenericModal({
         <div className="flex h-full w-full mt-2">
           <Textarea
             ref={ref}
-            className="form-input h-[300px] w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white focus-visible:ring-1"
+            className="form-input h-[300px] w-full rounded-lg border-medium-low-gray dark:border-almost-dark-gray dark:bg-high-dark-gray dark:text-white focus-visible:ring-1"
             value={myValue}
             onChange={(e) => {
               setMyValue(e.target.value);

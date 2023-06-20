@@ -78,11 +78,11 @@ export default function InputFileComponent({
           onClick={handleButtonClick}
           className={
             editNode
-              ? "truncate placeholder:text-center text-gray-500 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm border-1" +
+              ? "truncate placeholder:text-center text-medium-gray block w-full pt-0.5 pb-0.5 form-input dark:bg-high-dark-gray dark:text-medium-low-gray dark:border-medium-dark-gray rounded-md border-medium-low-gray shadow-sm sm:text-sm border-1" +
                 INPUT_STYLE
-              : "truncate block w-full text-gray-500 dark:text-gray-300 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 shadow-sm sm:text-sm" +
+              : "truncate block w-full text-medium-gray dark:text-medium-low-gray px-3 py-2 rounded-md border border-medium-low-gray dark:border-almost-dark-gray shadow-sm sm:text-sm" +
                 INPUT_STYLE +
-                (disabled ? " bg-gray-200" : "")
+                (disabled ? " bg-light-gray" : "")
           }
         >
           {myValue !== "" ? myValue : "No file"}

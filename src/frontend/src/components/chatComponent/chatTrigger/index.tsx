@@ -36,13 +36,13 @@ export default function ChatTrigger({ open, setOpen, isBuilt }) {
           side="left"
         >
           <div
-            className="border flex justify-center items-center py-1 px-3 w-12 h-12 rounded-full bg-blue-500 dark:border-gray-600 cursor-pointer"
+            className="border flex justify-center items-center py-1 px-3 w-12 h-12 rounded-full bg-almost-dark-blue dark:border-medium-dark-gray cursor-pointer"
             onClick={handleClick}
           >
             <button>
               <div className="flex gap-3">
                 <MessagesSquare
-                  className="h-6 w-6  text-blue-100 fill-blue-100"
+                  className="h-6 w-6  text-medium-light-blue fill-medium-light-blue"
                   style={{ color: "white" }}
                   strokeWidth={1.5}
                 />

@@ -60,7 +60,7 @@ export default function Header() {
           <Button
             asChild
             variant="outline"
-            className="text-gray-600 dark:text-gray-300 "
+            className="text-medium-dark-gray dark:text-medium-low-gray "
           >
             <a
               href="https://github.com/logspace-ai/langflow"
@@ -85,7 +85,7 @@ export default function Header() {
             )}
           </button> */}
           <button
-            className="text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200 relative"
+            className="text-medium-dark-gray hover:text-medium-gray dark:text-medium-low-gray dark:hover:text-light-gray relative"
             onClick={(event: React.MouseEvent<HTMLElement>) => {
               setNotificationCenter(false);
               const { top, left } = (

@@ -34,8 +34,8 @@ export default function ChatMessage({
       className={classNames(
         "w-full py-2 pl-2 flex",
         chat.isSend
-          ? "bg-background dark:bg-gray-900 "
-          : "bg-input  dark:bg-gray-800"
+          ? "bg-background dark:bg-high-dark-gray "
+          : "bg-input  dark:bg-dark-gray"
       )}
     >
       <div
@@ -62,12 +62,12 @@ export default function ChatMessage({
           </div>
         )}
         {chat.isSend && (
-          <UserIcon className="w-6 h-6 -mb-1 text-gray-800 dark:text-gray-200" />
+          <UserIcon className="w-6 h-6 -mb-1 text-dark-gray dark:text-light-gray" />
         )}
       </div>
       {!chat.isSend ? (
         <div className="w-full text-start flex items-center">
-          <div className="w-full relative text-start inline-block text-gray-600 dark:text-gray-300 text-sm font-normal">
+          <div className="w-full relative text-start inline-block text-medium-dark-gray dark:text-medium-low-gray text-sm font-normal">
             {hidden && chat.thought && chat.thought !== "" && (
               <div
                 onClick={() => setHidden((prev) => !prev)}
@@ -79,8 +79,8 @@ export default function ChatMessage({
             {chat.thought && chat.thought !== "" && !hidden && (
               <div
                 onClick={() => setHidden((prev) => !prev)}
-                className=" text-start inline-block rounded-md text-gray-600 dark:text-gray-200 h-full border border-gray-300 dark:border-gray-500
-								bg-muted dark:bg-gray-800 w-[95%] pb-3 pt-3 px-2 ml-3 cursor-pointer scrollbar-hide overflow-scroll"
+                className=" text-start inline-block rounded-md text-medium-dark-gray dark:text-light-gray h-full border border-medium-low-gray dark:border-medium-gray
+								bg-muted dark:bg-dark-gray w-[95%] pb-3 pt-3 px-2 ml-3 cursor-pointer scrollbar-hide overflow-scroll"
                 dangerouslySetInnerHTML={{
                   __html: convert.toHtml(chat.thought),
                 }}
@@ -93,7 +93,7 @@ export default function ChatMessage({
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm, remarkMath]}
                     rehypePlugins={[rehypeMathjax]}
-                    className="markdown prose dark:prose-invert text-gray-600 dark:text-gray-200"
+                    className="markdown prose dark:prose-invert text-medium-dark-gray dark:text-light-gray"
                     components={{
                       code({ node, inline, className, children, ...props }) {
                         if (children.length) {
@@ -152,9 +152,9 @@ export default function ChatMessage({
         </div>
       ) : (
         <div className="w-full flex items-center">
-          <div className="text-start inline-block px-3 text-sm text-gray-600 dark:text-white">
+          <div className="text-start inline-block px-3 text-sm text-medium-dark-gray dark:text-white">
             <span
-              className="text-gray-600 dark:text-gray-200"
+              className="text-medium-dark-gray dark:text-light-gray"
               dangerouslySetInnerHTML={{
                 __html: message.replace(/\n/g, "<br>"),
               }}
