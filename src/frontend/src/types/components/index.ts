@@ -143,3 +143,13 @@ export type FlowHandleType = {
   required?: boolean;
   tooltipTitle: string;
 };
+
+export type NodeToolbarComponentType = {
+  data: NodeDataType;
+  openPopUp: (element:JSX.Element)=>void;
+  deleteNode: (id: string) => void;
+  isGroup?: boolean;
+  ungroup?: () => void;
+  position?:{x:number,y:number};
+
+}

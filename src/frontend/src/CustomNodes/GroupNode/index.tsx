@@ -72,6 +72,8 @@ export default function GroupNode({
           data={data}
           openPopUp={openPopUp}
           deleteNode={deleteNode}
+          isGroup={true}
+          position={{ x:xPos, y:yPos }}
         ></NodeToolbarComponent>
       </NodeToolbar>
       <div
@@ -137,37 +139,6 @@ export default function GroupNode({
                     />
                   </div> */}
             </div>
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={() => {
-                updateFlowPosition({ x: xPos, y: yPos }, data.node.flow);
-                expandGroupNode(
-                  data.node.flow,
-                  reactFlowInstance,
-                  data.node.template
-                );
-              }}
-            >
-              <ArrowsPointingOutIcon className="h-6 w-6 hover:text-blue-500 dark:text-gray-300 dark:hover:text-blue-500" />
-            </button>
-            <button
-              className="relative"
-              onClick={(event) => {
-                event.preventDefault();
-                openPopUp(<NodeModal data={data} />);
-              }}
-            >
-              <div className=" absolute -right-1 -top-2 text-red-600">
-                {Object.keys(data.node.template).some(
-                  (t) =>
-                    data.node.template[t].advanced &&
-                    data.node.template[t].required
-                )
-                  ? " *"
-                  : ""}
-              </div>
-            </button>
           </div>
         </div>
         <div className="h-full w-full py-5">

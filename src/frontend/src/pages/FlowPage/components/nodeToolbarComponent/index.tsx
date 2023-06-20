@@ -1,25 +1,26 @@
 import { useContext, useState } from "react";
-import { Settings2, Copy, Trash2 } from "lucide-react";
-import { classNames } from "../../../../utils";
+import { Settings2, Copy, Trash2, Expand } from "lucide-react";
+import { classNames, expandGroupNode, updateFlowPosition } from "../../../../utils";
 import { TabsContext } from "../../../../contexts/tabsContext";
-import { useReactFlow } from "reactflow";
+import { NodeToolbarProps, useReactFlow } from "reactflow";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
+import { NodeToolbarComponentType } from "../../../../types/components";
 
-const NodeToolbarComponent = (props) => {
+const NodeToolbarComponent = ({ data, openPopUp, deleteNode, isGroup, ungroup, position }: NodeToolbarComponentType) => {
   const [nodeLength, setNodeLength] = useState(
-    Object.keys(props.data.node.template).filter(
+    Object.keys(data.node.template).filter(
       (t) =>
         t.charAt(0) !== "_" &&
-        props.data.node.template[t].show &&
-        (props.data.node.template[t].type === "str" ||
-          props.data.node.template[t].type === "bool" ||
-          props.data.node.template[t].type === "float" ||
-          props.data.node.template[t].type === "code" ||
-          props.data.node.template[t].type === "prompt" ||
-          props.data.node.template[t].type === "file" ||
-          props.data.node.template[t].type === "Any" ||
-          props.data.node.template[t].type === "int")
+        data.node.template[t].show &&
+        (data.node.template[t].type === "str" ||
+          data.node.template[t].type === "bool" ||
+          data.node.template[t].type === "float" ||
+          data.node.template[t].type === "code" ||
+          data.node.template[t].type === "prompt" ||
+          data.node.template[t].type === "file" ||
+          data.node.template[t].type === "Any" ||
+          data.node.template[t].type === "int")
     ).length
   );
 
@@ -33,7 +34,7 @@ const NodeToolbarComponent = (props) => {
             <button
               className="hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative inline-flex items-center rounded-l-md bg-white px-2 py-2 ring-1 ring-inset ring-gray-300 hover:bg-muted focus:z-10"
               onClick={() => {
-                props.deleteNode(props.data.id);
+                deleteNode(data.id);
               }}
             >
               <Trash2 className="w-4 h-4 dark:text-gray-300"></Trash2>
@@ -49,17 +50,17 @@ const NodeToolbarComponent = (props) => {
               )}
               onClick={(event) => {
                 event.preventDefault();
-                // console.log(reactFlowInstance.getNode(props.data.id));
+                // console.log(reactFlowInstance.getNode(data.id));
                 paste(
                   {
-                    nodes: [reactFlowInstance.getNode(props.data.id)],
+                    nodes: [reactFlowInstance.getNode(data.id)],
                     edges: [],
                   },
                   {
                     x: 50,
                     y: 10,
-                    paneX: reactFlowInstance.getNode(props.data.id).position.x,
-                    paneY: reactFlowInstance.getNode(props.data.id).position.y,
+                    paneX: reactFlowInstance.getNode(data.id).position.x,
+                    paneY: reactFlowInstance.getNode(data.id).position.y,
                   }
                 );
               }}
@@ -71,13 +72,28 @@ const NodeToolbarComponent = (props) => {
           {nodeLength > 0 && (
             <ShadTooltip delayDuration={1000} content="Edit" side="top">
               <button
-                className="hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-muted focus:z-10 rounded-r-md"
-                onClick={(event) => {
+                className={classNames("hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-muted focus:z-10",
+                isGroup?"":" rounded-r-md"
+                )} onClick={(event) => {
                   event.preventDefault();
-                  props.openPopUp(<EditNodeModal data={props.data} />);
+                  openPopUp(<EditNodeModal data={data} />);
                 }}
               >
                 <Settings2 className="w-4 h-4 dark:text-gray-300"></Settings2>
+              </button>
+            </ShadTooltip>
+          )}
+          {isGroup && (
+            <ShadTooltip delayDuration={1000} content="Ungroup" side="top">
+              <button onClick={() => {
+                updateFlowPosition(position, data.node.flow);
+                expandGroupNode(
+                  data.node.flow,
+                  reactFlowInstance,
+                  data.node.template
+                )
+              }} className="hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-muted focus:z-10 rounded-r-md">
+                <Expand className="w-4 h-4 dark:text-gray-300"></Expand>
               </button>
             </ShadTooltip>
           )}
@@ -111,7 +127,7 @@ const NodeToolbarComponent = (props) => {
                           onClick={(event) => {
                             event.preventDefault();
                             props.openPopUp(
-                              <EditNodeModal data={props.data} />
+                              <EditNodeModal data={data} />
                             );
                           }}
                           className={classNames(
@@ -135,21 +151,21 @@ const NodeToolbarComponent = (props) => {
                           onClick={(event) => {
                             event.preventDefault();
                             console.log(
-                              reactFlowInstance.getNode(props.data.id)
+                              reactFlowInstance.getNode(data.id)
                             );
                             paste(
                               {
                                 nodes: [
-                                  reactFlowInstance.getNode(props.data.id),
+                                  reactFlowInstance.getNode(data.id),
                                 ],
                                 edges: [],
                               },
                               {
                                 x: 50,
                                 y: 10,
-                                paneX: reactFlowInstance.getNode(props.data.id)
+                                paneX: reactFlowInstance.getNode(data.id)
                                   .position.x,
-                                paneY: reactFlowInstance.getNode(props.data.id)
+                                paneY: reactFlowInstance.getNode(data.id)
                                   .position.y,
                               }
                             );
