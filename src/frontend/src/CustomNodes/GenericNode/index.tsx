@@ -75,11 +75,11 @@ export default function GenericNode({
 
       <div
         className={classNames(
-          selected ? "border border-ring" : "border dark:border-gray-700",
-          "prompt-node relative flex w-96 flex-col justify-center rounded-lg bg-white dark:bg-gray-900"
+          selected ? "border border-ring" : "border dark:border-almost-dark-gray",
+          "prompt-node relative flex w-96 flex-col justify-center rounded-lg bg-white dark:bg-high-dark-gray"
         )}
       >
-        <div className="flex w-full items-center justify-between gap-8 rounded-t-lg border-b bg-muted p-4 dark:border-b-gray-700 dark:bg-gray-800 dark:text-white ">
+        <div className="flex w-full items-center justify-between gap-8 rounded-t-lg border-b bg-muted p-4 dark:border-b-almost-dark-gray dark:bg-dark-gray dark:text-white ">
           <div className="flex w-full items-center gap-2 truncate text-lg">
             <Icon
               className="h-10 w-10 rounded p-1"
@@ -89,7 +89,7 @@ export default function GenericNode({
             />
             <div className="ml-2 truncate">
               <ShadTooltip delayDuration={1500} content={data.type}>
-                <div className="ml-2 truncate text-gray-800">{data.type}</div>
+                <div className="ml-2 truncate text-dark-gray">{data.type}</div>
               </ShadTooltip>
             </div>
           </div>
@@ -122,25 +122,25 @@ export default function GenericNode({
                   <div
                     className={classNames(
                       validationStatus && validationStatus.valid
-                        ? "w-4 h-4 rounded-full bg-green-500 opacity-100"
-                        : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
+                        ? "w-4 h-4 rounded-full bg-almost-medium-green opacity-100"
+                        : "w-4 h-4 rounded-full bg-medium-gray opacity-0 hidden animate-spin",
+                      "absolute w-4 hover:text-medium-gray hover:dark:text-medium-low-gray transition-all ease-in-out duration-200"
                     )}
                   ></div>
                   <div
                     className={classNames(
                       validationStatus && !validationStatus.valid
-                        ? "w-4 h-4 rounded-full  bg-red-500 opacity-100"
-                        : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
+                        ? "w-4 h-4 rounded-full  bg-medium-red opacity-100"
+                        : "w-4 h-4 rounded-full bg-medium-gray opacity-0 hidden animate-spin",
+                      "absolute w-4 hover:text-medium-gray hover:dark:text-medium-low-gray transition-all ease-in-out duration-200"
                     )}
                   ></div>
                   <div
                     className={classNames(
                       !validationStatus
-                        ? "w-4 h-4 rounded-full  bg-yellow-500 opacity-100"
-                        : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
+                        ? "w-4 h-4 rounded-full  bg-medium-yellow opacity-100"
+                        : "w-4 h-4 rounded-full bg-medium-gray opacity-0 hidden animate-spin",
+                      "absolute w-4 hover:text-medium-gray hover:dark:text-medium-low-gray transition-all ease-in-out duration-200"
                     )}
                   ></div>
                 </div>
@@ -149,7 +149,7 @@ export default function GenericNode({
           </div>
         </div>
 
-        <div className="h-full w-full py-5 text-gray-800">
+        <div className="h-full w-full py-5 text-dark-gray">
           <div className="w-full px-5 pb-3 text-sm text-muted-foreground">
             {data.node.description}
           </div>

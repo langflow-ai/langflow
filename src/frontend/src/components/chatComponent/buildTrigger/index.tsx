@@ -143,7 +143,7 @@ export default function BuildTrigger({
         >
           <div
             className="flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full shadow-md hover:shadow-sm shadow-btn-shadow hover:shadow-btn-shadow
-            bg-buildBackground dark:border-gray-600 cursor-pointer"
+            bg-buildBackground dark:border-medium-dark-gray cursor-pointer"
             onClick={() => {
               handleBuild(flow);
             }}

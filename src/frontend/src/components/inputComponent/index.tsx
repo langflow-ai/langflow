@@ -46,13 +46,13 @@ export default function InputComponent({
           if (disableCopyPaste) setDisableCopyPaste(false);
         }}
         className={classNames(
-          "block w-full pr-12 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm focus:placeholder-transparent",
-          disabled ? " bg-gray-200 dark:bg-gray-700" : "",
+          "block w-full pr-12 form-input dark:bg-high-dark-gray dark:text-medium-low-gray dark:border-medium-dark-gray rounded-md border-medium-low-gray shadow-sm sm:text-sm focus:placeholder-transparent",
+          disabled ? " bg-light-gray dark:bg-almost-dark-gray" : "",
           password && !pwdVisible && myValue !== "" ? "password" : "",
           editNode
-            ? "border-1 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm text-center" +
+            ? "border-1 block w-full pt-0.5 pb-0.5 form-input dark:bg-high-dark-gray dark:text-medium-low-gray dark:border-medium-dark-gray rounded-md border-medium-low-gray shadow-sm sm:text-sm text-center" +
                 INPUT_STYLE
-            : "ring-offset-gray-200" + INPUT_STYLE,
+            : "ring-offset-light-gray" + INPUT_STYLE,
           password && editNode ? "pr-8" : "pr-3"
         )}
         placeholder={password && editNode ? "Key" : "Type something..."}
@@ -65,8 +65,8 @@ export default function InputComponent({
         <button
           className={classNames(
             editNode
-              ? "absolute inset-y-0 right-0 pr-2 items-center text-gray-600"
-              : "absolute inset-y-0 right-0 items-center px-4 text-gray-600"
+              ? "absolute inset-y-0 right-0 pr-2 items-center text-medium-dark-gray"
+              : "absolute inset-y-0 right-0 items-center px-4 text-medium-dark-gray"
           )}
           onClick={() => {
             setPwdVisible(!pwdVisible);

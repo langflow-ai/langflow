@@ -66,44 +66,44 @@ export default function ExtraSidebar() {
       <div className="mt-2 mb-2 w-full flex gap-2 justify-between px-2 items-center">
         <ShadTooltip delayDuration={1000} content="Import" side="top">
           <button
-            className="hover:dark:hover:bg-btn-hover-bg text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center rounded-md bg-white px-2 py-2 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+            className="hover:dark:hover:bg-btn-hover-bg text-almost-dark-gray w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-dark-gray dark:text-medium-low-gray  relative inline-flex items-center rounded-md bg-white px-2 py-2 ring-1 ring-inset ring-medium-low-gray hover:bg-high-light-gray"
             onClick={() => {
               // openPopUp(<ImportModal />);
               uploadFlow();
             }}
           >
-            <FileUp className="w-5 h-5 dark:text-gray-300"></FileUp>
+            <FileUp className="w-5 h-5 dark:text-medium-low-gray"></FileUp>
           </button>
         </ShadTooltip>
 
         <ShadTooltip delayDuration={1000} content="Export" side="top">
           <button
             className={classNames(
-              "hover:dark:hover:bg-btn-hover-bg text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
+              "hover:dark:hover:bg-btn-hover-bg text-almost-dark-gray w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-dark-gray dark:text-medium-low-gray  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-medium-low-gray hover:bg-high-light-gray rounded-md"
             )}
             onClick={(event) => {
               openPopUp(<ExportModal />);
             }}
           >
-            <FileDown className="w-5 h-5  dark:text-gray-300"></FileDown>
+            <FileDown className="w-5 h-5  dark:text-medium-low-gray"></FileDown>
           </button>
         </ShadTooltip>
         <ShadTooltip delayDuration={1000} content="Code" side="top">
           <button
             className={classNames(
-              "hover:dark:hover:bg-btn-hover-bg text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
+              "hover:dark:hover:bg-btn-hover-bg text-almost-dark-gray w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-dark-gray dark:text-medium-low-gray  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-medium-low-gray hover:bg-high-light-gray rounded-md"
             )}
             onClick={(event) => {
               openPopUp(<ApiModal flow={flows.find((f) => f.id === tabId)} />);
             }}
           >
-            <Code2 className="w-5 h-5  dark:text-gray-300"></Code2>
+            <Code2 className="w-5 h-5  dark:text-medium-low-gray"></Code2>
           </button>
         </ShadTooltip>
 
         <ShadTooltip delayDuration={1000} content="Save" side="top">
           <button
-            className="hover:dark:hover:bg-btn-hover-bg text-gray-700 w-full justify-center transition-all shadow-sm duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
+            className="hover:dark:hover:bg-btn-hover-bg text-almost-dark-gray w-full justify-center transition-all shadow-sm duration-500 ease-in-out dark:bg-dark-gray dark:text-medium-low-gray  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-medium-low-gray hover:bg-gray-50 rounded-md"
             onClick={(event) => {
               saveFlow(flows.find((f) => f.id === tabId));
               setSuccessData({ title: "Changes saved successfully" });
@@ -127,7 +127,7 @@ export default function ExtraSidebar() {
           placeholder="Search Nodes"
           className={
             INPUT_STYLE +
-            "w-full border-1 dark:border-slate-600 dark:border-0.5 dark:ring-0 focus-visible:dark:ring-0 focus-visible:dark:ring-offset-1 rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            "w-full border-1 dark:border-medium-slate dark:border-0.5 dark:ring-0 focus-visible:dark:ring-0 focus-visible:dark:ring-offset-1 rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
           }
           onChange={(e) => {
             handleSearchInput(e.target.value);
@@ -183,11 +183,11 @@ export default function ExtraSidebar() {
                               );
                             }}
                           >
-                            <div className="flex w-full justify-between text-sm px-3 py-1 bg-white dark:bg-gray-800 items-center border-dashed border-gray-400 dark:border-gray-600 border-l-0 rounded-md rounded-l-none border">
+                            <div className="flex w-full justify-between text-sm px-3 py-1 bg-white dark:bg-dark-gray items-center border-dashed border-almost-medium-gray dark:border-medium-dark-gray border-l-0 rounded-md rounded-l-none border">
                               <span className="text-black dark:text-white w-full pr-1 truncate text-xs">
                                 {t}
                               </span>
-                              <Bars2Icon className="w-4 h-6  text-gray-400 dark:text-gray-600" />
+                              <Bars2Icon className="w-4 h-6  text-almost-medium-gray dark:text-medium-dark-gray" />
                             </div>
                           </div>
                         </div>
