@@ -30,9 +30,11 @@ import ConnectionLineComponent from "../ConnectionLineComponent";
 import ExtraSidebar from "../extraSidebarComponent";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import SelectionMenu from "../SelectionMenuComponent";
+import GroupNode from "../../../../CustomNodes/GroupNode";
 
 const nodeTypes = {
   genericNode: GenericNode,
+  groupNode: GroupNode,
 };
 
 export default function Page({ flow }: { flow: FlowType }) {

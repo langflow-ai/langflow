@@ -51,6 +51,9 @@ import { SearxIcon } from "./icons/Searx";
 import { SlackIcon } from "./icons/Slack";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "./constants";
+import ShortUniqueId from "short-unique-id";
+const uid = new ShortUniqueId({ length: 5 });
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -650,7 +653,7 @@ export function generateFlow(
     data: newFlowData,
     name: name,
     description: "",
-    id: uuidv4(),
+    id: uid(),
   };
   // filter edges that are not connected to selected nodes on both ends
   // using O(n²) aproach because the number of edges is small
@@ -1333,8 +1336,4 @@ function checkDuplicatedNames(
   const names = connectedNodes.map((n) => n.name);
   const duplicatedNames = names.filter((n, i) => names.indexOf(n) !== i);
   return duplicatedNames;
-}
-
-function uuidv4(): string {
-  throw new Error("Function not implemented.");
 }
