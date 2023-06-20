@@ -1,13 +1,14 @@
 # Path: src/backend/langflow/graph/graph_map.py
 from copy import deepcopy
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 
 from langflow.cache.utils import memoize_dict
 from langflow.graph import Vertex
 from langflow.graph import Graph
 from langflow.graph.vertex.types import ConnectorVertex
 from collections import deque
-from langflow.graph.schema import Message
+from langflow.graph.schema import GraphInput, ResultPair
+from langflow.utils.logger import logger
 
 
 class GraphMap:
@@ -19,6 +20,12 @@ class GraphMap:
         self.intermediate_steps: List[str] = []
         self.node_cache: Dict[Union[Vertex, "ConnectorVertex"], Any] = {}
         self.last_node: Optional[Union[Vertex, "ConnectorVertex"]] = None
+
+    def generator_build(self) -> Generator:
+        """Builds each vertex in the graph and yields it."""
+        sorted_vertices = self.topological_sort(self.graph)
+        logger.info("Sorted vertices: %s", sorted_vertices)
+        yield from self.sorted_vertices
 
     # async def process(self, input: str, **kwargs) -> Tuple[str, str]:
     #     result = input
@@ -49,11 +56,13 @@ class GraphMap:
     #     # str(result) is a temporary solution
     #     return str(result), "\n".join(self.intermediate_steps)
 
-    def process(self, input_data: str, **kwargs):
-        message = Message(text=input_data)
+    async def process(self, input_data: str, **kwargs):
+        graph_input = GraphInput(
+            result_pairs=[ResultPair(result=input_data, extra=None)]
+        )
         for vertex in self.sorted_vertices:
             for edge in vertex.edges:
-                edge.fulfill(message)
+                await edge.fulfill(graph_input, **kwargs)
 
     @memoize_dict(maxsize=20)
     @staticmethod
@@ -84,6 +93,7 @@ class GraphMap:
             sorted_vertices.append(node)
 
             # Decrement the in-degrees of the neighboring vertices.
+
             for edge in node.edges:
                 if edge.source == node:
                     indegree_map[edge.target] -= 1
