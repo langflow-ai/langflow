@@ -4,6 +4,7 @@ from langflow.template.frontend_node.base import FrontendNode
 
 class TextSplittersFrontendNode(FrontendNode):
     def add_extra_fields(self) -> None:
+        super().add_extra_fields()
         self.template.add_field(
             TemplateField(
                 field_type="BaseLoader",

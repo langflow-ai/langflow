@@ -14,6 +14,7 @@ from langflow.template.template.base import Template
 
 class PromptFrontendNode(FrontendNode):
     def add_extra_fields(self) -> None:
+        super().add_extra_fields()
         # add input_variables field if not ZeroShotPromptNode
         # if self.name != "ZeroShotPromptNode":
         self.template.add_field(

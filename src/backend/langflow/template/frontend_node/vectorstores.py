@@ -6,6 +6,7 @@ from langflow.template.frontend_node.base import FrontendNode
 
 class VectorStoreFrontendNode(FrontendNode):
     def add_extra_fields(self) -> None:
+        super().add_extra_fields()
         if self.template.type_name == "Weaviate":
             extra_field = TemplateField(
                 name="weaviate_url",
