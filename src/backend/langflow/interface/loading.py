@@ -53,8 +53,8 @@ def convert_params_to_sets(params):
 
 def convert_kwargs(params):
     # if *kwargs are passed as a string, convert to dict
-    # first find any key that has kwargs in it
-    kwargs_keys = [key for key in params.keys() if "kwargs" in key]
+    # first find any key that has kwargs or config in it
+    kwargs_keys = [key for key in params.keys() if "kwargs" in key or "config" in key]
     for key in kwargs_keys:
         if isinstance(params[key], str):
             params[key] = json.loads(params[key])
@@ -82,8 +82,14 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
         return instantiate_utility(node_type, class_object, params)
     elif base_type == "chains":
         return instantiate_chains(node_type, class_object, params)
+    elif base_type == "llms":
+        return instantiate_llm(node_type, class_object, params)
     else:
         return class_object(**params)
+
+
+def instantiate_llm(node_type, class_object, params):
+    return class_object(**params)
 
 
 def instantiate_chains(node_type, class_object, params):
