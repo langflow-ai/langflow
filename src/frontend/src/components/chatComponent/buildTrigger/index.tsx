@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useState } from "react";
 import { Transition } from "@headlessui/react";
 import { Zap } from "lucide-react";
 import { validateNodes } from "../../../utils";
@@ -8,7 +8,6 @@ import { useSSE } from "../../../contexts/SSEContext";
 import { typesContext } from "../../../contexts/typesContext";
 import { alertContext } from "../../../contexts/alertContext";
 import { postBuildInit } from "../../../controllers/API";
-import ProgressBarComponent from "../../ProgressBarComponent";
 
 import RadialProgressComponent from "../../RadialProgress";
 
@@ -100,6 +99,11 @@ export default function BuildTrigger({
     eventSource.onerror = (error) => {
       console.error("EventSource failed:", error);
       eventSource.close();
+      if (error.data) {
+        const parsedData = JSON.parse(error.data);
+        setErrorData({ title: parsedData.error });
+        setIsBuilding(false);
+      }
     };
     // Step 3: Wait for the stream to finish
     while (!finished) {
