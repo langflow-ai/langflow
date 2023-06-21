@@ -2,10 +2,9 @@
 
 # ⛓️ LangFlow
 
-~ A User Interface For [LangChain](https://github.com/hwchase17/langchain) ~
+~ An effortless way to experiment and prototype [LangChain](https://github.com/hwchase17/langchain) pipelines ~
 
 <p>
-<a href="https://huggingface.co/spaces/Logspace/LangFlow"><img src="https://huggingface.co/datasets/huggingface/badges/raw/main/open-in-hf-spaces-sm.svg" alt="HuggingFace Spaces"></a>
 <img alt="GitHub Contributors" src="https://img.shields.io/github/contributors/logspace-ai/langflow" />
 <img alt="GitHub Last Commit" src="https://img.shields.io/github/last-commit/logspace-ai/langflow" />
 <img alt="" src="https://img.shields.io/github/repo-size/logspace-ai/langflow" />
@@ -14,10 +13,17 @@
 <img alt="Github License" src="https://img.shields.io/github/license/logspace-ai/langflow" />
 </p>
 
+<p>
+<a href="https://discord.gg/FUhJnnJ9"><img alt="Discord Server" src="https://dcbadge.vercel.app/api/server/FUhJnnJ9?compact=true&style=flat"/></a>
+<a href="https://huggingface.co/spaces/Logspace/LangFlow"><img src="https://huggingface.co/datasets/huggingface/badges/raw/main/open-in-hf-spaces-sm.svg" alt="HuggingFace Spaces"></a>
+</p>
+
 <a href="https://github.com/logspace-ai/langflow">
     <img width="100%" src="https://github.com/logspace-ai/langflow/blob/main/img/langflow-demo.gif?raw=true"></a>
 
-LangFlow is a GUI for [LangChain](https://github.com/hwchase17/langchain), designed with [react-flow](https://github.com/wbkd/react-flow) to provide an effortless way to experiment and prototype flows with drag-and-drop components and a chat box.
+
+<p>
+</p>
 
 ## 📦 Installation
 ### <b>Locally</b>
@@ -50,11 +56,11 @@ Alternatively, click the **"Open in Cloud Shell"** button below to launch Google
 
 Langflow integrates with langchain-serve to provide a one-command deployment to Jina AI Cloud.
 
-Start by installing `langchain-serve` with 
+Start by installing `langchain-serve` with
 
 ```bash
 pip install -U langchain-serve
-``` 
+```
 
 Then, run:
 
@@ -109,24 +115,38 @@ You can use Langflow directly on your browser, or use the API endpoints on Jina 
   <summary>Show API usage (with python)</summary>
 
   ```python
-  import json
-  import requests
+import requests
 
-  FLOW_PATH = "Time_traveller.json"
+BASE_API_URL = "https://langflow-e3dd8820ec.wolf.jina.ai/api/v1/predict"
+FLOW_ID = "864c4f98-2e59-468b-8e13-79cd8da07468"
+# You can tweak the flow by adding a tweaks dictionary
+# e.g {"OpenAI-XXXXX": {"model_name": "gpt-4"}}
+TWEAKS = {
+  "ChatOpenAI-g4jEr": {},
+  "ConversationChain-UidfJ": {}
+}
 
-  # HOST = 'http://localhost:7860'
-  HOST = 'https://langflow-f1ed20e309.wolf.jina.ai'
-  API_URL = f'{HOST}/predict'
+def run_flow(message: str, flow_id: str, tweaks: dict = None) -> dict:
+    """
+    Run a flow with a given message and optional tweaks.
 
-  def predict(message):
-      with open(FLOW_PATH, "r") as f:
-          json_data = json.load(f)
-      payload = {'exported_flow': json_data, 'message': message}
-      response = requests.post(API_URL, json=payload)
-      return response.json()
+    :param message: The message to send to the flow
+    :param flow_id: The ID of the flow to run
+    :param tweaks: Optional tweaks to customize the flow
+    :return: The JSON response from the flow
+    """
+    api_url = f"{BASE_API_URL}/{flow_id}"
 
+    payload = {"message": message}
 
-  predict('Take me to 1920s Bangalore')
+    if tweaks:
+        payload["tweaks"] = tweaks
+
+    response = requests.post(api_url, json=payload)
+    return response.json()
+
+# Setup any tweaks you want to apply to the flow
+print(run_flow("Your message", flow_id=FLOW_ID, tweaks=TWEAKS))
   ```
 
   ```json
@@ -163,6 +183,11 @@ flow("Hey, have you heard of LangFlow?")
 
 We welcome contributions from developers of all levels to our open-source project on GitHub. If you'd like to contribute, please check our [contributing guidelines](./CONTRIBUTING.md) and help make LangFlow more accessible.
 
+
+Join our [Discord](https://discord.com/invite/EqksyE2EX9) server to ask questions, make suggestions and showcase your projects! 🦾
+
+<p>
+</p>
 
 [![Star History Chart](https://api.star-history.com/svg?repos=logspace-ai/langflow&type=Timeline)](https://star-history.com/#logspace-ai/langflow&Date)
 

@@ -42,24 +42,27 @@ class ToolkitCreator(LangChainTypeCreator):
 
     def get_signature(self, name: str) -> Optional[Dict]:
         try:
-            return build_template_from_class(name, self.type_to_loader_dict)
+            template = build_template_from_class(name, self.type_to_loader_dict)
+            # add Tool to base_classes
+            if "toolkit" in name.lower() and template:
+                template["base_classes"].append("Tool")
+            return template
         except ValueError as exc:
-            raise ValueError("Prompt not found") from exc
+            raise ValueError("Toolkit not found") from exc
         except AttributeError as exc:
-            logger.error(f"Prompt {name} not loaded: {exc}")
+            logger.error(f"Toolkit {name} not loaded: {exc}")
             return None
 
     def to_list(self) -> List[str]:
         return list(self.type_to_loader_dict.keys())
 
     def get_create_function(self, name: str) -> Callable:
-        if loader_name := self.create_functions.get(name, None):
-            # import loader
+        if loader_name := self.create_functions.get(name):
             return import_module(
                 f"from langchain.agents.agent_toolkits import {loader_name[0]}"
             )
         else:
-            raise ValueError("Loader not found")
+            raise ValueError("Toolkit not found")
 
     def has_create_function(self, name: str) -> bool:
         # check if the function list is not empty

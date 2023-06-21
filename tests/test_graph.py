@@ -1,18 +1,22 @@
 from typing import Type, Union
+from langflow.graph.edge.base import Edge
+from langflow.graph.vertex.base import Vertex
 
 import pytest
 from langchain.chains.base import Chain
 from langchain.llms.fake import FakeListLLM
-from langflow.graph import Edge, Graph, Node
-from langflow.graph.nodes import (
-    AgentNode,
-    ChainNode,
-    LLMNode,
-    PromptNode,
-    ToolNode,
-    WrapperNode,
+from langflow.graph import Graph
+from langflow.graph.vertex.types import (
+    AgentVertex,
+    ChainVertex,
+    FileToolVertex,
+    LLMVertex,
+    PromptVertex,
+    ToolkitVertex,
+    ToolVertex,
+    WrapperVertex,
 )
-from langflow.interface.run import get_result_and_thought
+from langflow.processing.process import get_result_and_thought
 from langflow.utils.payload import get_root_node
 
 # Test cases for the graph module
@@ -21,7 +25,7 @@ from langflow.utils.payload import get_root_node
 # BASIC_EXAMPLE_PATH, COMPLEX_EXAMPLE_PATH, OPENAPI_EXAMPLE_PATH
 
 
-def get_node_by_type(graph, node_type: Type[Node]) -> Union[Node, None]:
+def get_node_by_type(graph, node_type: Type[Vertex]) -> Union[Vertex, None]:
     """Get a node by type"""
     return next((node for node in graph.nodes if isinstance(node, node_type)), None)
 
@@ -31,7 +35,7 @@ def test_graph_structure(basic_graph):
     assert len(basic_graph.nodes) > 0
     assert len(basic_graph.edges) > 0
     for node in basic_graph.nodes:
-        assert isinstance(node, Node)
+        assert isinstance(node, Vertex)
     for edge in basic_graph.edges:
         assert isinstance(edge, Edge)
         assert edge.source in basic_graph.nodes
@@ -154,14 +158,16 @@ def test_get_node_neighbors_complex(complex_graph):
     tool_neighbors = complex_graph.get_nodes_with_target(tool)
     assert tool_neighbors is not None
     # Check if there is a PythonFunction in the tool's neighbors
-    assert any("PythonFunction" in neighbor.data["type"] for neighbor in tool_neighbors)
+    assert any(
+        "PythonFunctionTool" in neighbor.data["type"] for neighbor in tool_neighbors
+    )
 
 
 def test_get_node(basic_graph):
     """Test getting a single node"""
     node_id = basic_graph.nodes[0].id
     node = basic_graph.get_node(node_id)
-    assert isinstance(node, Node)
+    assert isinstance(node, Vertex)
     assert node.id == node_id
 
 
@@ -170,7 +176,7 @@ def test_build_nodes(basic_graph):
 
     assert len(basic_graph.nodes) == len(basic_graph._nodes)
     for node in basic_graph.nodes:
-        assert isinstance(node, Node)
+        assert isinstance(node, Vertex)
 
 
 def test_build_edges(basic_graph):
@@ -178,8 +184,8 @@ def test_build_edges(basic_graph):
     assert len(basic_graph.edges) == len(basic_graph._edges)
     for edge in basic_graph.edges:
         assert isinstance(edge, Edge)
-        assert isinstance(edge.source, Node)
-        assert isinstance(edge.target, Node)
+        assert isinstance(edge.source, Vertex)
+        assert isinstance(edge.target, Vertex)
 
 
 def test_get_root_node(basic_graph, complex_graph):
@@ -187,13 +193,13 @@ def test_get_root_node(basic_graph, complex_graph):
     assert isinstance(basic_graph, Graph)
     root = get_root_node(basic_graph)
     assert root is not None
-    assert isinstance(root, Node)
+    assert isinstance(root, Vertex)
     assert root.data["type"] == "TimeTravelGuideChain"
     # For complex example, the root node is a ZeroShotAgent too
     assert isinstance(complex_graph, Graph)
     root = get_root_node(complex_graph)
     assert root is not None
-    assert isinstance(root, Node)
+    assert isinstance(root, Vertex)
     assert root.data["type"] == "ZeroShotAgent"
 
 
@@ -235,11 +241,10 @@ def test_build_params(basic_graph):
     assert "memory" in root.params
 
 
-def test_build(basic_graph, complex_graph, openapi_graph):
+def test_build(basic_graph, complex_graph):
     """Test Node's build method"""
     assert_agent_was_built(basic_graph)
     assert_agent_was_built(complex_graph)
-    # assert_agent_was_built(openapi_graph)
 
 
 def assert_agent_was_built(graph):
@@ -253,14 +258,14 @@ def assert_agent_was_built(graph):
 
 
 def test_agent_node_build(complex_graph):
-    agent_node = get_node_by_type(complex_graph, AgentNode)
+    agent_node = get_node_by_type(complex_graph, AgentVertex)
     assert agent_node is not None
     built_object = agent_node.build()
     assert built_object is not None
 
 
 def test_tool_node_build(complex_graph):
-    tool_node = get_node_by_type(complex_graph, ToolNode)
+    tool_node = get_node_by_type(complex_graph, ToolVertex)
     assert tool_node is not None
     built_object = tool_node.build()
     assert built_object is not None
@@ -268,7 +273,7 @@ def test_tool_node_build(complex_graph):
 
 
 def test_chain_node_build(complex_graph):
-    chain_node = get_node_by_type(complex_graph, ChainNode)
+    chain_node = get_node_by_type(complex_graph, ChainVertex)
     assert chain_node is not None
     built_object = chain_node.build()
     assert built_object is not None
@@ -276,7 +281,7 @@ def test_chain_node_build(complex_graph):
 
 
 def test_prompt_node_build(complex_graph):
-    prompt_node = get_node_by_type(complex_graph, PromptNode)
+    prompt_node = get_node_by_type(complex_graph, PromptVertex)
     assert prompt_node is not None
     built_object = prompt_node.build()
     assert built_object is not None
@@ -284,31 +289,31 @@ def test_prompt_node_build(complex_graph):
 
 
 def test_llm_node_build(basic_graph):
-    llm_node = get_node_by_type(basic_graph, LLMNode)
+    llm_node = get_node_by_type(basic_graph, LLMVertex)
     assert llm_node is not None
     built_object = llm_node.build()
     assert built_object is not None
     # Add any further assertions specific to the LLMNode's build() method
 
 
-# def test_toolkit_node_build(openapi_graph):
-#     toolkit_node = get_node_by_type(openapi_graph, ToolkitNode)
-#     assert toolkit_node is not None
-#     built_object = toolkit_node.build()
-#     assert built_object is not None
-# Add any further assertions specific to the ToolkitNode's build() method
+def test_toolkit_node_build(openapi_graph):
+    toolkit_node = get_node_by_type(openapi_graph, ToolkitVertex)
+    assert toolkit_node is not None
+    built_object = toolkit_node.build()
+    assert built_object is not None
+    # Add any further assertions specific to the ToolkitNode's build() method
 
 
-# def test_file_tool_node_build(openapi_graph):
-#     file_tool_node = get_node_by_type(openapi_graph, FileToolNode)
-#     assert file_tool_node is not None
-#     built_object = file_tool_node.build()
-#     assert built_object is not None
-# Add any further assertions specific to the FileToolNode's build() method
+def test_file_tool_node_build(openapi_graph):
+    file_tool_node = get_node_by_type(openapi_graph, FileToolVertex)
+    assert file_tool_node is not None
+    built_object = file_tool_node.build()
+    assert built_object is not None
+    # Add any further assertions specific to the FileToolNode's build() method
 
 
 def test_wrapper_node_build(openapi_graph):
-    wrapper_node = get_node_by_type(openapi_graph, WrapperNode)
+    wrapper_node = get_node_by_type(openapi_graph, WrapperVertex)
     assert wrapper_node is not None
     built_object = wrapper_node.build()
     assert built_object is not None
@@ -323,7 +328,7 @@ def test_get_result_and_thought(basic_graph):
     message = "Hello"
     # Find the node that is an LLMNode and change the
     # _built_object to a FakeListLLM
-    llm_node = get_node_by_type(basic_graph, LLMNode)
+    llm_node = get_node_by_type(basic_graph, LLMVertex)
     assert llm_node is not None
     llm_node._built_object = FakeListLLM(responses=responses)
     llm_node._built = True

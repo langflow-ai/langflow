@@ -197,7 +197,7 @@
                     "y": 136.29836646158452
                 },
                 "data": {
-                    "type": "PythonFunction",
+                    "type": "PythonFunctionTool",
                     "node": {
                         "template": {
                             "code": {
@@ -207,6 +207,26 @@
                                 "multiline": true,
                                 "value": "\ndef upper_case(text: str) -> str:\n    return text.upper()\n",
                                 "name": "code",
+                                "type": "str",
+                                "list": false
+                            },
+                            "description": {
+                                "required": true,
+                                "placeholder": "",
+                                "show": true,
+                                "multiline": true,
+                                "value": "My description",
+                                "name": "description",
+                                "type": "str",
+                                "list": false
+                            },
+                            "name": {
+                                "required": true,
+                                "placeholder": "",
+                                "show": true,
+                                "multiline": true,
+                                "value": "My Tool",
+                                "name": "name",
                                 "type": "str",
                                 "list": false
                             },
@@ -332,7 +352,7 @@
                                 "type": "str",
                                 "list": false
                             },
-                            "_type": "zero_shot"
+                            "_type": "ZeroShotPrompt"
                         },
                         "description": "Prompt template for Zero Shot Agent.",
                         "base_classes": [

@@ -241,3 +241,4 @@ dmypy.json
 
 # Poetry
 .testenv/*
+langflow.db

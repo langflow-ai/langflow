@@ -37,7 +37,7 @@ export default function FileCard({ fileName, content, fileType }) {
         />
         {isHovered && (
           <div
-            className={`absolute top-0 right-0 bg-gray-100 text-gray-700 rounded-bl-lg px-1 text-sm font-bold dark:bg-gray-700 dark:text-gray-300`}
+            className={`absolute top-0 right-0 bg-muted text-gray-700 rounded-bl-lg px-1 text-sm font-bold dark:bg-gray-700 dark:text-gray-300`}
           >
             <button
               className="text-gray-500 py-1 px-2 dark:bg-gray-700 dark:text-gray-300"
@@ -54,7 +54,7 @@ export default function FileCard({ fileName, content, fileType }) {
   return (
     <button
       onClick={handleDownload}
-      className="bg-gray-100 shadow rounded w-1/2 text-gray-700 hover:drop-shadow-lg px-2 py-2 flex justify-between items-center border border-gray-300"
+      className="bg-muted shadow rounded w-1/2 text-gray-700 hover:drop-shadow-lg px-2 py-2 flex justify-between items-center border border-gray-300"
     >
       <div className="flex gap-2 text-current items-center w-full mr-2">
         {" "}
