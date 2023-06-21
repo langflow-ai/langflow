@@ -160,13 +160,19 @@ def instantiate_vectorstore(class_object, params):
         )
     # Chroma requires all metadata values to not be None
     if class_object.__name__ == "Chroma":
+        persist = params.pop("persist", False)
         for doc in params["documents"]:
             if doc.metadata is None:
                 doc.metadata = {}
             for key, value in doc.metadata.items():
                 if value is None:
                     doc.metadata[key] = ""
-    return class_object.from_documents(**params)
+        vector_store = class_object.from_documents(**params)
+        if persist:
+            vector_store.persist()
+    else:
+        vector_store = class_object.from_documents(**params)
+    return vector_store
 
 
 def instantiate_documentloader(class_object, params):
