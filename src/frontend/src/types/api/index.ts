@@ -46,3 +46,7 @@ export type BuildStatusTypeAPI = {
 export type InitTypeAPI = {
   flowId: string;
 };
+
+export type UploadFileTypeAPI = {
+  file_path: string;
+};
