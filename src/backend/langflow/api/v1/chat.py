@@ -118,14 +118,14 @@ async def stream_build(flow_id: str):
                     "progress": round(i / number_of_nodes, 2),
                 }
 
-                yield str(StreamData(event="node", data=response))
+                yield str(StreamData(event="message", data=response))
 
             chat_manager.set_cache(flow_id, graph.build())
         except Exception as exc:
             logger.error("Error while building the flow: %s", exc)
             yield str(StreamData(event="error", data={"error": str(exc)}))
         finally:
-            yield str(StreamData(event="end", data=final_response))
+            yield str(StreamData(event="message", data=final_response))
 
     try:
         return StreamingResponse(event_stream(flow_id), media_type="text/event-stream")
