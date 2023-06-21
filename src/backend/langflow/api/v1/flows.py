@@ -61,7 +61,7 @@ def update_flow(
     if not db_flow:
         raise HTTPException(status_code=404, detail="Flow not found")
     flow_data = flow.dict(exclude_unset=True)
-    if not settings.remove_api_keys:
+    if settings.remove_api_keys:
         flow_data = remove_api_keys(flow_data)
     for key, value in flow_data.items():
         setattr(db_flow, key, value)
