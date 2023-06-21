@@ -106,3 +106,9 @@ export type ShadTooltipType = {
   side: string;
   open?: boolean;
 };
+
+export type TipType = {
+  delayDuration: number;
+  content: string;
+  side: string;
+};

@@ -23,6 +23,7 @@ import { nodeColors } from "../../../../utils";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import { PopUpContext } from "../../../../contexts/popUpContext";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
+import TipComponent from "../../../../components/TipComponent";
 
 export default function ParameterComponent({
   left,
@@ -124,10 +125,20 @@ export default function ParameterComponent({
       className="w-full flex flex-wrap justify-between items-center bg-muted dark:bg-gray-800 dark:text-white mt-1 px-5 py-2"
     >
       <>
-        <div className={"text-sm truncate w-full " + (left ? "" : "text-end")}>
+        <div className={"text-sm truncate w-full flex " + (left ? "" : "text-end")}>
           {title}
           <span className="text-red-600">{required ? " *" : ""}</span>
+    <div className="pl-1 pt-0.5">
+    <TipComponent
+          content={title}
+          side={"right"}
+          delayDuration={1000}
+        ></TipComponent>
+    </div>
+
         </div>
+
+
         
         {left &&
         (type === "str" ||
