@@ -83,7 +83,7 @@ export default function BuildTrigger({
       // if the event is the end of the stream, close the connection
       if (parsedData.end_of_stream) {
         eventSource.close();
-        
+
         return;
       } else if (parsedData.log) {
         // If the event is a log, log it
