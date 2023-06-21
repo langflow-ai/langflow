@@ -1,4 +1,4 @@
-import { BellIcon, Home, Users2 } from "lucide-react";
+import { BellIcon, Home, MoonIcon, SunIcon, Users2 } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
 import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
 import { Button } from "../ui/button";
@@ -12,6 +12,7 @@ import MenuBar from "./components/menuBar";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { USER_PROJECTS_HEADER } from "../../constants";
 import { getRepoStars } from "../../controllers/API";
+import { Separator } from "../ui/separator";
 
 export default function Header() {
   const { flows, addFlow, tabId } = useContext(TabsContext);
@@ -73,7 +74,7 @@ export default function Header() {
               href="https://github.com/logspace-ai/langflow"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background text-gray-600 dark:text-gray-300 border border-input hover:bg-accent hover:text-accent-foreground h-9 px-3 pr-0 rounded-md"
+              className="inline-flex shadow-sm items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background text-gray-600 dark:text-gray-300 border border-input hover:bg-accent hover:text-accent-foreground h-9 px-3 pr-0 rounded-md"
             >
               <FaGithub className="h-5 w-5 mr-2" />
               Star
@@ -97,7 +98,8 @@ export default function Header() {
             >
               <FaDiscord className="h-5 w-5" />
             </a>
-          {/* <button
+            <Separator orientation="vertical" />
+          <button
             className="text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
             onClick={() => {
               setDark(!dark);
@@ -108,7 +110,7 @@ export default function Header() {
             ) : (
               <MoonIcon className="h-5 w-5" />
             )}
-          </button> */}
+          </button>
           <button
             className="text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200 relative"
             onClick={(event: React.MouseEvent<HTMLElement>) => {

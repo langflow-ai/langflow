@@ -87,10 +87,16 @@ async def stream_build(flow_id: str):
 
             logger.debug("Building langchain object")
             graph = Graph.from_payload(graph_data)
-            for node in graph.generator_build():
+            number_of_nodes = len(graph.nodes)
+            for i, vertex in enumerate(graph.generator_build(), 1):
                 try:
-                    node.build()
-                    params = node._built_object_repr()
+                    log_dict = {
+                        "log": f"Building node {vertex.vertex_type}",
+                        "progress": round(i / number_of_nodes, 2),
+                    }
+                    yield f"data: {json.dumps(log_dict)}\n\n"
+                    vertex.build()
+                    params = vertex._built_object_repr()
                     valid = True
                     logger.debug(
                         f"Building node {params[:50]}{'...' if len(params) > 50 else ''}"
@@ -103,7 +109,7 @@ async def stream_build(flow_id: str):
                     {
                         "valid": valid,
                         "params": params,
-                        "id": node.id,
+                        "id": vertex.id,
                     }
                 )
                 yield f"data: {response}\n\n"
