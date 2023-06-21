@@ -69,16 +69,6 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
 
   useEffect(() => {}, [closePopUp, data.node.template]);
 
-  function changeAdvanced(node): void {
-    Object.keys(data.node.template).filter((n, i) => {
-      if (n === node.name) {
-        data.node.template[n].advanced = !data.node.template[n].advanced;
-      }
-      return true;
-    });
-    setNodeValue(!nodeValue);
-  }
-
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger></DialogTrigger>
