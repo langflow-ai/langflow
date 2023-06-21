@@ -7,13 +7,14 @@ import _ from "lodash";
 import ErrorAlert from "./alerts/error";
 import NoticeAlert from "./alerts/notice";
 import SuccessAlert from "./alerts/success";
-import ExtraSidebar from "./components/ExtraSidebarComponent";
 import { alertContext } from "./contexts/alertContext";
 import { locationContext } from "./contexts/locationContext";
-import TabsManagerComponent from "./pages/FlowPage/components/tabsManagerComponent";
 import { ErrorBoundary } from "react-error-boundary";
 import CrashErrorComponent from "./components/CrashErrorComponent";
 import { TabsContext } from "./contexts/tabsContext";
+import { getVersion } from "./controllers/API";
+import Router from "./routes";
+import Header from "./components/headerComponent";
 
 export default function App() {
   let { setCurrent, setShowSideBar, setIsStackedOpen } =
@@ -46,15 +47,6 @@ export default function App() {
     }>
   >([]);
 
-  // Initialize state variable for the version
-  const [version, setVersion] = useState("");
-  useEffect(() => {
-    fetch("/version")
-      .then((res) => res.json())
-      .then((data) => {
-        setVersion(data.version);
-      });
-  }, []);
   // Use effect hook to update alertsList when a new alert is added
   useEffect(() => {
     // If there is an error alert open with data, add it to the alertsList
@@ -112,7 +104,6 @@ export default function App() {
   return (
     //need parent component with width and height
     <div className="h-full flex flex-col">
-      <div className="flex grow-0 shrink basis-auto"></div>
       <ErrorBoundary
         onReset={() => {
           window.localStorage.removeItem("tabsData");
@@ -122,19 +113,14 @@ export default function App() {
         }}
         FallbackComponent={CrashErrorComponent}
       >
-        <div className="flex grow shrink basis-auto min-h-0 flex-1 overflow-hidden">
-          <ExtraSidebar />
-          {/* Main area */}
-          <main className="min-w-0 flex-1 border-t border-gray-200 dark:border-gray-700 flex">
-            {/* Primary column */}
-            <div className="w-full h-full">
-              <TabsManagerComponent></TabsManagerComponent>
-            </div>
-          </main>
-        </div>
+        <Header />
+        <Router />
       </ErrorBoundary>
       <div></div>
-      <div className="flex z-40 flex-col-reverse fixed bottom-5 left-5">
+      <div
+        className="flex flex-col-reverse fixed bottom-5 left-5"
+        style={{ zIndex: 999 }}
+      >
         {alertsList.map((alert) => (
           <div key={alert.id}>
             {alert.type === "error" ? (
@@ -164,14 +150,6 @@ export default function App() {
           </div>
         ))}
       </div>
-      <a
-        target={"_blank"}
-        href="https://logspace.ai/"
-        className="absolute left-7 bottom-2 flex h-6 cursor-pointer flex-col items-center justify-start overflow-hidden rounded-lg bg-gray-800 px-2 text-center font-sans text-xs tracking-wide text-gray-300 transition-all duration-500 ease-in-out hover:h-12 dark:bg-gray-100 dark:text-gray-800"
-      >
-        {version && <div className="mt-1">⛓️ LangFlow v{version}</div>}
-        <div className="mt-2">Created by Logspace</div>
-      </a>
     </div>
   );
 }

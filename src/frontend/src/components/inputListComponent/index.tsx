@@ -4,11 +4,12 @@ import { InputListComponentType } from "../../types/components";
 import { TabsContext } from "../../contexts/tabsContext";
 
 import _ from "lodash";
-
+import { INPUT_STYLE } from "../../constants";
 export default function InputListComponent({
   value,
   onChange,
   disabled,
+  editNode = false,
 }: InputListComponentType) {
   const [inputList, setInputList] = useState(value ?? [""]);
   useEffect(() => {
@@ -21,7 +22,7 @@ export default function InputListComponent({
     <div
       className={
         (disabled ? "pointer-events-none cursor-not-allowed" : "") +
-        "flex flex-col gap-3"
+        "flex flex-col gap-3 py-2"
       }
     >
       {inputList.map((i, idx) => (
@@ -30,8 +31,12 @@ export default function InputListComponent({
             type="text"
             value={i}
             className={
-              "block w-full form-input rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" +
-              (disabled ? " bg-gray-200" : "")
+              editNode
+                ? "border-[1px]  truncate cursor-pointer text-center placeholder:text-center text-gray-500 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm" +
+                  INPUT_STYLE
+                : "block w-full form-input rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500 sm:text-sm" +
+                  (disabled ? " bg-gray-200" : "") +
+                  "focus:placeholder-transparent"
             }
             placeholder="Type something..."
             onChange={(e) => {
@@ -54,7 +59,7 @@ export default function InputListComponent({
                 onChange(inputList);
               }}
             >
-              <PlusIcon className="w-4 h-4 hover:text-blue-600" />
+              <PlusIcon className={"w-4 h-4 hover:text-ring"} />
             </button>
           ) : (
             <button

@@ -1,10 +1,9 @@
 import json
+from langflow.graph import Graph
 
 import pytest
 from langflow.interface.run import (
-    build_graph,
     build_langchain_object_with_caching,
-    load_or_build_langchain_object,
 )
 
 
@@ -41,18 +40,6 @@ def langchain_objects_are_equal(obj1, obj2):
     return str(obj1) == str(obj2)
 
 
-# Test load_or_build_langchain_object
-def test_load_or_build_langchain_object_first_message_true(basic_data_graph):
-    build_langchain_object_with_caching.clear_cache()
-    graph = load_or_build_langchain_object(basic_data_graph, is_first_message=True)
-    assert graph is not None
-
-
-def test_load_or_build_langchain_object_first_message_false(basic_data_graph):
-    graph = load_or_build_langchain_object(basic_data_graph, is_first_message=False)
-    assert graph is not None
-
-
 # Test build_langchain_object_with_caching
 def test_build_langchain_object_with_caching(basic_data_graph):
     build_langchain_object_with_caching.clear_cache()
@@ -62,7 +49,7 @@ def test_build_langchain_object_with_caching(basic_data_graph):
 
 # Test build_graph
 def test_build_graph(basic_data_graph):
-    graph = build_graph(basic_data_graph)
+    graph = Graph.from_payload(basic_data_graph)
     assert graph is not None
     assert len(graph.nodes) == len(basic_data_graph["nodes"])
     assert len(graph.edges) == len(basic_data_graph["edges"])

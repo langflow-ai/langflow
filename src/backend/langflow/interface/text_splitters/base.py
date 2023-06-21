@@ -1,6 +1,7 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Type
 
 from langflow.interface.base import LangChainTypeCreator
+from langflow.template.frontend_node.textsplitters import TextSplittersFrontendNode
 from langflow.interface.custom_lists import textsplitter_type_to_cls_dict
 from langflow.settings import settings
 from langflow.utils.logger import logger
@@ -11,53 +12,17 @@ class TextSplitterCreator(LangChainTypeCreator):
     type_name: str = "textsplitters"
 
     @property
+    def frontend_node_class(self) -> Type[TextSplittersFrontendNode]:
+        return TextSplittersFrontendNode
+
+    @property
     def type_to_loader_dict(self) -> Dict:
         return textsplitter_type_to_cls_dict
 
     def get_signature(self, name: str) -> Optional[Dict]:
         """Get the signature of a text splitter."""
         try:
-            signature = build_template_from_class(name, textsplitter_type_to_cls_dict)
-
-            signature["template"]["documents"] = {
-                "type": "BaseLoader",
-                "required": True,
-                "show": True,
-                "name": "documents",
-            }
-            if name == "RecursiveCharacterTextSplitter":
-                separator_name = "separators"
-            else:
-                separator_name = "separator"
-
-            signature["template"][separator_name] = {
-                "type": "str",
-                "required": True,
-                "show": True,
-                "value": ".",
-                "name": separator_name,
-                "display_name": separator_name.title(),
-            }
-
-            signature["template"]["chunk_size"] = {
-                "type": "int",
-                "required": True,
-                "show": True,
-                "value": 1000,
-                "name": "chunk_size",
-                "display_name": "Chunk Size",
-            }
-
-            signature["template"]["chunk_overlap"] = {
-                "type": "int",
-                "required": True,
-                "show": True,
-                "value": 200,
-                "name": "chunk_overlap",
-                "display_name": "Chunk Overlap",
-            }
-
-            return signature
+            return build_template_from_class(name, textsplitter_type_to_cls_dict)
         except ValueError as exc:
             raise ValueError(f"Text Splitter {name} not found") from exc
         except AttributeError as exc:

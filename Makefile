@@ -43,7 +43,18 @@ install_backend:
 	poetry install
 
 backend:
-	poetry run uvicorn langflow.main:app --port 7860 --reload --log-level debug
+	make install_backend
+	poetry run uvicorn src.backend.langflow.main:app --port 7860 --reload --log-level debug
+
+build_and_run:
+	echo 'Removing dist folder'
+	rm -rf dist
+	make build && poetry run pip install dist/*.tar.gz && poetry run langflow
+
+build_and_install:
+	echo 'Removing dist folder'
+	rm -rf dist
+	make build && poetry run pip install dist/*.tar.gz
 
 build_frontend:
 	cd src/frontend && CI='' npm run build
@@ -59,7 +70,7 @@ lcserve_push:
 	make build_frontend
 	@version=$$(poetry version --short); \
 	lc-serve push --app langflow.lcserve:app --app-dir . \
-		--image-name langflow --image-tag $${version} --verbose
+		--image-name langflow --image-tag $${version} --verbose --public
 
 lcserve_deploy:
 	@:$(if $(uses),,$(error `uses` is not set. Please run `make uses=... lcserve_deploy`))

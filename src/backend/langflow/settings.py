@@ -20,10 +20,13 @@ class Settings(BaseSettings):
     textsplitters: List[str] = []
     utilities: List[str] = []
     dev: bool = False
+    database_url: str = "sqlite:///./langflow.db"
+    remove_api_keys: bool = False
 
     class Config:
         validate_assignment = True
         extra = "ignore"
+        env_prefix = "LANGFLOW_"
 
     @root_validator(allow_reuse=True)
     def validate_lists(cls, values):
@@ -45,6 +48,11 @@ class Settings(BaseSettings):
         self.textsplitters = new_settings.textsplitters or []
         self.utilities = new_settings.utilities or []
         self.dev = dev
+
+    def update_settings(self, **kwargs):
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
 
 
 def save_settings_to_yaml(settings: Settings, file_path: str):
