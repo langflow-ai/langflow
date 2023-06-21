@@ -83,6 +83,7 @@ export default function BuildTrigger({
       // if the event is the end of the stream, close the connection
       if (parsedData.end_of_stream) {
         eventSource.close();
+        
         return;
       } else if (parsedData.log) {
         // If the event is a log, log it
@@ -162,7 +163,7 @@ export default function BuildTrigger({
         >
           <button>
             <div className="flex gap-3 items-center">
-              {isBuilding && myValue * 100 < 100 ? (
+              {isBuilding && myValue < 1 ? (
                 // Render your loading animation here when isBuilding is true
                 <RadialProgressComponent
                   color={"text-orange-400"}

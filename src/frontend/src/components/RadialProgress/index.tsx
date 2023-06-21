@@ -6,7 +6,7 @@ export default function RadialProgressComponent({
   color,
 }: RadialProgressType) {
   const style = {
-    "--value": value,
+    "--value": value * 100,
     "--size": "1.5rem",
     "--thickness": "2px",
   } as React.CSSProperties;
