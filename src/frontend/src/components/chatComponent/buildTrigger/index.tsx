@@ -1,4 +1,4 @@
-import { useState, useContext } from "react";
+import { useContext } from "react";
 import { Transition } from "@headlessui/react";
 import { Zap } from "lucide-react";
 import { validateNodes } from "../../../utils";
@@ -22,7 +22,7 @@ export default function BuildTrigger({
 }) {
   const { updateSSEData, isBuilding, setIsBuilding } = useSSE();
   const { reactFlowInstance } = useContext(typesContext);
-  const { setErrorData } = useContext(alertContext);
+  const { setErrorData, setSuccessData } = useContext(alertContext);
 
   async function handleBuild(flow: FlowType) {
     try {
@@ -81,10 +81,16 @@ export default function BuildTrigger({
         eventSource.close();
 
         return;
+      } else if (parsedData.log) {
+        // If the event is a log, log it
+        // TODO: implement the progress
+        setSuccessData({ title: parsedData.log });
+        setSuccessData({ title: parsedData.progress });
+      } else {
+        // Otherwise, process the data
+        const isValid = processStreamResult(parsedData);
+        validationResults.push(isValid);
       }
-      // Otherwise, process the data
-      const isValid = processStreamResult(parsedData);
-      validationResults.push(isValid);
     };
 
     eventSource.onerror = (error) => {
