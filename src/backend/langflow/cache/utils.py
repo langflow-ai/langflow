@@ -134,9 +134,18 @@ def save_binary_file(content: str, file_name: str, accepted_types: list[str]) ->
     return file_path
 
 
-
 @create_cache_folder
 def save_uploaded_file(file, file_name):
+    """
+    Save an uploaded file to the specified folder.
+
+    Args:
+        file: The uploaded file object.
+        file_name: The name of the file, including its extension.
+
+    Returns:
+        The path to the saved file.
+    """
     cache_path = Path(tempfile.gettempdir()) / PREFIX
     file_path = cache_path / file_name
 
@@ -146,22 +155,3 @@ def save_uploaded_file(file, file_name):
             new_file.write(chunk)
 
     return file_path
-
-
-@create_cache_folder
-def save_cache(hash_val: str, chat_data, clean_old_cache_files: bool):
-    cache_path = Path(tempfile.gettempdir()) / PREFIX / f"{hash_val}.dill"
-    with cache_path.open("wb") as cache_file:
-        dill.dump(chat_data, cache_file)
-
-    if clean_old_cache_files:
-        clear_old_cache_files()
-
-
-@create_cache_folder
-def load_cache(hash_val):
-    cache_path = Path(tempfile.gettempdir()) / PREFIX / f"{hash_val}.dill"
-    if cache_path.exists():
-        with cache_path.open("rb") as cache_file:
-            return dill.load(cache_file)
-    return None
