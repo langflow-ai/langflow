@@ -95,7 +95,7 @@ export default function BuildTrigger({
       }
     };
 
-    eventSource.onerror = (error) => {
+    eventSource.onerror = (error: any) => {
       console.error("EventSource failed:", error);
       eventSource.close();
       if (error.data) {
