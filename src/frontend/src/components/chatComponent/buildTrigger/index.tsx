@@ -86,12 +86,11 @@ export default function BuildTrigger({
         return;
       } else if (parsedData.log) {
         // If the event is a log, log it
-        // TODO: implement the progress
         setSuccessData({ title: parsedData.log });
-        setProgress(parsedData.progress);
       } else {
         // Otherwise, process the data
         const isValid = processStreamResult(parsedData);
+        setProgress(parsedData.progress);
         validationResults.push(isValid);
       }
     };
