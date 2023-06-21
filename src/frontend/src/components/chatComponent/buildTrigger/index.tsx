@@ -28,7 +28,7 @@ export default function BuildTrigger({
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [isIconTouched, setIsIconTouched] = useState(false);
   const eventClick = isBuilding ? "pointer-events-none" : "";
-  const [myValue, setMyValue] = useState(0);
+  const [progress, setProgress] = useState(0);
 
   async function handleBuild(flow: FlowType) {
     try {
@@ -89,7 +89,7 @@ export default function BuildTrigger({
         // If the event is a log, log it
         // TODO: implement the progress
         setSuccessData({ title: parsedData.log });
-        setMyValue(parsedData.progress);
+        setProgress(parsedData.progress);
       } else {
         // Otherwise, process the data
         const isValid = processStreamResult(parsedData);
@@ -163,11 +163,11 @@ export default function BuildTrigger({
         >
           <button>
             <div className="flex gap-3 items-center">
-              {isBuilding && myValue < 1 ? (
+              {isBuilding && progress < 1 ? (
                 // Render your loading animation here when isBuilding is true
                 <RadialProgressComponent
                   color={"text-orange-400"}
-                  value={myValue}
+                  value={progress}
                 ></RadialProgressComponent>
               ) : isBuilding ? (
                 <Loading strokeWidth={1.5} style={{ color: "#fb923c" }} />
