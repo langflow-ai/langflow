@@ -81,12 +81,12 @@ class DocumentLoaderFrontNode(FrontendNode):
             )
             if self.template.type_name in {"DirectoryLoader"}:
                 self.template.add_field(
-                TemplateField(
-                    field_type="str",
-                    required=True,
-                    show=True,
-                    name="glob",
-                    value="**/*.txt",
-                    display_name="glob",
+                    TemplateField(
+                        field_type="str",
+                        required=True,
+                        show=True,
+                        name="glob",
+                        value="**/*.txt",
+                        display_name="glob",
+                    )
                 )
-            )
