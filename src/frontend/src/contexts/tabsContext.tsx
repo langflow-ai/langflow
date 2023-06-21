@@ -385,9 +385,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       : reactFlowInstance.project({ x: position.x, y: position.y });
 
     newNodes.forEach((n: NodeType) => {
-      console.log(n);
       // Generate a unique node ID
-      let newId = getNodeId(n.data.type);
+      let newId = n.type == "groupNode" ? (new ShortUniqueId({ length: 5 }))() : getNodeId(n.data.type);
       idsMap[n.id] = newId;
 
       // Create a new node object
@@ -404,6 +403,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         },
       };
 
+      // Calls the function recursively if it is a group node, updating the ids of the flow inside it.
       if(n.type == "groupNode"){
         newNode.data.node.flow.id = newId;
         let returnValue = updateIdsPaste([], [], newNode.data.node.flow.data.nodes, newNode.data.node.flow.data.edges, position);
