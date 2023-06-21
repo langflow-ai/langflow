@@ -9,10 +9,7 @@ import { typesContext } from "../../../contexts/typesContext";
 import { alertContext } from "../../../contexts/alertContext";
 import { postBuildInit } from "../../../controllers/API";
 import ProgressBarComponent from "../../ProgressBarComponent";
-import {
-  progressContext,
-  useProgress,
-} from "../../../contexts/ProgressContext";
+
 import RadialProgressComponent from "../../RadialProgress";
 
 export default function BuildTrigger({
@@ -27,12 +24,11 @@ export default function BuildTrigger({
   isBuilt: boolean;
 }) {
   const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
-  const { setProgress } = useContext(progressContext);
   const { reactFlowInstance } = useContext(typesContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [isIconTouched, setIsIconTouched] = useState(false);
-  const { progress } = useContext(progressContext);
   const eventClick = isBuilding ? "pointer-events-none" : "";
+  const [myValue, setMyValue] = useState(0);
 
   async function handleBuild(flow: FlowType) {
     try {
@@ -72,7 +68,6 @@ export default function BuildTrigger({
     // Step 1: Make a POST request to send the flow data and receive a unique session ID
     const response = await postBuildInit(flow);
     const { flowId } = response.data;
-    let loadProgress = [];
     // Step 2: Use the session ID to establish an SSE connection using EventSource
     let validationResults = [];
     let finished = false;
@@ -93,10 +88,7 @@ export default function BuildTrigger({
         // If the event is a log, log it
         // TODO: implement the progress
         setSuccessData({ title: parsedData.log });
-        setSuccessData({ title: parsedData.progress });
-        setProgress(parsedData.progress);
-
-        loadProgress.push(parsedData.progress);
+        setMyValue(parsedData.progress);
       } else {
         // Otherwise, process the data
         const isValid = processStreamResult(parsedData);
@@ -170,10 +162,11 @@ export default function BuildTrigger({
         >
           <button>
             <div className="flex gap-3 items-center">
-              {isBuilding && progress < 1 ? (
+              {isBuilding && myValue * 100 < 100 ? (
                 // Render your loading animation here when isBuilding is true
                 <RadialProgressComponent
                   color={"text-orange-400"}
+                  value={myValue}
                 ></RadialProgressComponent>
               ) : isBuilding ? (
                 <Loading strokeWidth={1.5} style={{ color: "#fb923c" }} />
