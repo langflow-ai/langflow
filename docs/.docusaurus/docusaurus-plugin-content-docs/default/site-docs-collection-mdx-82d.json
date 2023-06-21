@@ -1,0 +1,23 @@
+{
+  "unversionedId": "collection",
+  "id": "collection",
+  "title": "Collection",
+  "description": "A collection is a snapshot of the flows available in the database. You can download your entire collection for local storage and upload it anytime for future use.",
+  "source": "@site/docs/collection.mdx",
+  "sourceDirName": ".",
+  "slug": "/collection",
+  "permalink": "/collection",
+  "draft": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Features",
+    "permalink": "/features"
+  },
+  "next": {
+    "title": "Conversation Chain",
+    "permalink": "/conversation-chain"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "unversionedId": "gcp-deployment",
+  "id": "gcp-deployment",
+  "title": "Deploy on Google Cloud Platform",
+  "description": "Run Langflow from a New Google Cloud Project",
+  "source": "@site/docs/gcp-deployment.md",
+  "sourceDirName": ".",
+  "slug": "/gcp-deployment",
+  "permalink": "/gcp-deployment",
+  "draft": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "📚 How to Upload Examples?",
+    "permalink": "/how-upload-examples"
+  },
+  "next": {
+    "title": "Deploy on Jina AI Cloud",
+    "permalink": "/jina-deployment"
+  }
+}

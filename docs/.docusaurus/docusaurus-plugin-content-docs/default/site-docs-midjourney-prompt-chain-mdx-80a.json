@@ -1,0 +1,23 @@
+{
+  "unversionedId": "midjourney-prompt-chain",
+  "id": "midjourney-prompt-chain",
+  "title": "MidJourney Prompt Chain",
+  "description": "The MidJourneyPromptChain can be used to generate imaginative and detailed MidJourney prompts.",
+  "source": "@site/docs/midjourney-prompt-chain.mdx",
+  "sourceDirName": ".",
+  "slug": "/midjourney-prompt-chain",
+  "permalink": "/midjourney-prompt-chain",
+  "draft": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Buffer Memory",
+    "permalink": "/buffer-memory"
+  },
+  "next": {
+    "title": "CSV Loader",
+    "permalink": "/csv-loader"
+  }
+}

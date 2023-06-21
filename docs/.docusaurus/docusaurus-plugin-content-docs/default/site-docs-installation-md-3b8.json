@@ -1,0 +1,23 @@
+{
+  "unversionedId": "installation",
+  "id": "installation",
+  "title": "📦 How to install?",
+  "description": "Installation",
+  "source": "@site/docs/installation.md",
+  "sourceDirName": ".",
+  "slug": "/installation",
+  "permalink": "/installation",
+  "draft": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "👋 Welcome to LangFlow",
+    "permalink": "/"
+  },
+  "next": {
+    "title": "🤗 HuggingFace Spaces",
+    "permalink": "/hugging-face-spaces"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "unversionedId": "components",
+  "id": "components",
+  "title": "Component",
+  "description": "Components are the building blocks of the flows. They are made of inputs, outputs, and parameters that define their functionality, providing a convenient and straightforward way to compose LLM-based applications. Learn more about components and how they work in the LangChain documentation section.",
+  "source": "@site/docs/components.mdx",
+  "sourceDirName": ".",
+  "slug": "/components",
+  "permalink": "/components",
+  "draft": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "🤖 Creating Flows",
+    "permalink": "/creating-flows"
+  },
+  "next": {
+    "title": "Features",
+    "permalink": "/features"
+  }
+}

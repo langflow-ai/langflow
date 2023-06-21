@@ -1,0 +1,128 @@
+{
+  "docusaurus-plugin-content-docs": {
+    "default": {
+      "path": "/",
+      "versions": [
+        {
+          "name": "current",
+          "label": "Next",
+          "isLast": true,
+          "path": "/",
+          "mainDocId": "index",
+          "docs": [
+            {
+              "id": "buffer-memory",
+              "path": "/buffer-memory",
+              "sidebar": "docs"
+            },
+            {
+              "id": "collection",
+              "path": "/collection",
+              "sidebar": "docs"
+            },
+            {
+              "id": "community",
+              "path": "/community",
+              "sidebar": "docs"
+            },
+            {
+              "id": "components",
+              "path": "/components",
+              "sidebar": "docs"
+            },
+            {
+              "id": "conversation-chain",
+              "path": "/conversation-chain",
+              "sidebar": "docs"
+            },
+            {
+              "id": "creating-flows",
+              "path": "/creating-flows",
+              "sidebar": "docs"
+            },
+            {
+              "id": "csv-loader",
+              "path": "/csv-loader",
+              "sidebar": "docs"
+            },
+            {
+              "id": "features",
+              "path": "/features",
+              "sidebar": "docs"
+            },
+            {
+              "id": "gcp-deployment",
+              "path": "/gcp-deployment",
+              "sidebar": "docs"
+            },
+            {
+              "id": "github-issues",
+              "path": "/github-issues",
+              "sidebar": "docs"
+            },
+            {
+              "id": "how-contribute",
+              "path": "/how-contribute",
+              "sidebar": "docs"
+            },
+            {
+              "id": "how-upload-examples",
+              "path": "/how-upload-examples",
+              "sidebar": "docs"
+            },
+            {
+              "id": "hugging-face-spaces",
+              "path": "/hugging-face-spaces",
+              "sidebar": "docs"
+            },
+            {
+              "id": "index",
+              "path": "/",
+              "sidebar": "docs"
+            },
+            {
+              "id": "installation",
+              "path": "/installation",
+              "sidebar": "docs"
+            },
+            {
+              "id": "jina-deployment",
+              "path": "/jina-deployment",
+              "sidebar": "docs"
+            },
+            {
+              "id": "midjourney-prompt-chain",
+              "path": "/midjourney-prompt-chain",
+              "sidebar": "docs"
+            },
+            {
+              "id": "multiple-vectorstores",
+              "path": "/multiple-vectorstores",
+              "sidebar": "docs"
+            },
+            {
+              "id": "python-function",
+              "path": "/python-function",
+              "sidebar": "docs"
+            },
+            {
+              "id": "serp-api-tool",
+              "path": "/serp-api-tool",
+              "sidebar": "docs"
+            }
+          ],
+          "draftIds": [],
+          "sidebars": {
+            "docs": {
+              "link": {
+                "path": "/",
+                "label": "index"
+              }
+            }
+          }
+        }
+      ],
+      "breadcrumbs": true
+    }
+  }
+}
