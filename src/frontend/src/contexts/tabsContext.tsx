@@ -397,11 +397,9 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           x: insidePosition.x + n.position.x - minimumX,
           y: insidePosition.y + n.position.y - minimumY,
         },
-        data: {
-          ...n.data,
-          id: newId,
-        },
+        data: _.cloneDeep(n.data)
       };
+      newNode.data.id = newId;
 
       // Calls the function recursively if it is a group node, updating the ids of the flow inside it.
       if(n.type == "groupNode"){
@@ -409,6 +407,11 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         let returnValue = updateIdsPaste([], [], newNode.data.node.flow.data.nodes, newNode.data.node.flow.data.edges, position);
         newNode.data.node.flow.data.nodes = returnValue.nodes;
         newNode.data.node.flow.data.edges = returnValue.edges;
+        const newObj = {};
+          for (const [key, value] of Object.entries(newNode.data.node.template)) {
+            newObj[value.proxy.field + '_' + returnValue.idsMap[value.proxy.id]] = {...value, proxy:{...value.proxy, id: returnValue.idsMap[value.proxy.id]}};
+          }
+        newNode.data.node.template = newObj;
       }
 
 
@@ -456,7 +459,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         edges.map((e) => ({ ...e, selected: false }))
       );
     });
-    return {nodes, edges};
+    return {nodes, edges, idsMap};
   }
 
   /**
