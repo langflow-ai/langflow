@@ -41,6 +41,7 @@ class DocumentLoaderFrontNode(FrontendNode):
         "UnstructuredPowerPointLoader": build_template(
             suffixes=[".pptx", ".ppt"], fileTypes=["pptx", "ppt"]
         ),
+        "SlackDirectoryLoader": build_template(suffixes=[".zip"], fileTypes=["zip"]),
         "SRTLoader": build_template(suffixes=[".srt"], fileTypes=["srt"]),
         "TelegramChatLoader": build_template(suffixes=[".json"], fileTypes=["json"]),
         "TextLoader": build_template(suffixes=[".txt"], fileTypes=["txt"]),
@@ -51,6 +52,7 @@ class DocumentLoaderFrontNode(FrontendNode):
 
     def add_extra_fields(self) -> None:
         name = None
+        display_name = "Web Page"
         if self.template.type_name in self.file_path_templates:
             self.template.add_field(self.file_path_templates[self.template.type_name])
         elif self.template.type_name in {
@@ -64,8 +66,12 @@ class DocumentLoaderFrontNode(FrontendNode):
             name = "web_path"
         elif self.template.type_name in {"GitbookLoader"}:
             name = "web_page"
-        elif self.template.type_name in {"ReadTheDocsLoader"}:
+        elif self.template.type_name in {
+            "NotionDirectoryLoader",
+            "ReadTheDocsLoader",
+        }:
             name = "path"
+            display_name = "Local directory"
         if name:
             self.template.add_field(
                 TemplateField(
@@ -74,6 +80,6 @@ class DocumentLoaderFrontNode(FrontendNode):
                     show=True,
                     name=name,
                     value="",
-                    display_name="Web Page",
+                    display_name=display_name,
                 )
             )
