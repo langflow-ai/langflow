@@ -4,6 +4,7 @@ import { alertContext } from "../../contexts/alertContext";
 import { FileComponentType } from "../../types/components";
 import { TabsContext } from "../../contexts/tabsContext";
 import { INPUT_STYLE } from "../../constants";
+import { uploadFile } from "../../controllers/API";
 
 export default function InputFileComponent({
   value,
@@ -53,16 +54,9 @@ export default function InputFileComponent({
 
       // Check if the file type is correct
       if (file && checkFileType(file.name)) {
-        // Prepare the file for upload
-        const formData = new FormData();
-        formData.append("file", file);
-
         // Upload the file
-        fetch(`/upload/${id}`, {
-          method: "POST",
-          body: formData,
-        })
-          .then((response) => response.json())
+        uploadFile(file, id)
+          .then((res) => res.data)
           .then((data) => {
             console.log("File uploaded successfully");
             // Get the file name from the response
