@@ -62,7 +62,7 @@ class BaseCache(abc.ABC):
 
         Args:
             key: The key of the item to retrieve.
-
+        """
 
     @abc.abstractmethod
     def __setitem__(self, key, value):

@@ -1,4 +1,3 @@
-from langflow.cache import utils as cache_utils
 from langflow.graph.vertex.constants import DIRECT_TYPES
 from langflow.interface import loading
 from langflow.interface.listing import ALL_TYPES_DICT
