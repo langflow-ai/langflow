@@ -3,6 +3,7 @@ import {
   PromptTypeAPI,
   errorsTypeAPI,
   InitTypeAPI,
+  UploadFileTypeAPI,
 } from "./../../types/api/index";
 import { APIObjectType, sendAllProps } from "../../types/api/index";
 import axios, { AxiosResponse } from "axios";
@@ -22,7 +23,9 @@ const GITHUB_API_URL = "https://api.github.com";
 
 export async function getRepoStars(owner, repo) {
   try {
-    const response = await axios.get(`${GITHUB_API_URL}/repos/${owner}/${repo}`);
+    const response = await axios.get(
+      `${GITHUB_API_URL}/repos/${owner}/${repo}`
+    );
     return response.data.stargazers_count;
   } catch (error) {
     console.error("Error fetching repository data:", error);
@@ -316,4 +319,22 @@ export async function postBuildInit(
   flow: FlowType
 ): Promise<AxiosResponse<InitTypeAPI>> {
   return await axios.post(`/api/v1/build/init`, flow);
+}
+
+// fetch(`/upload/${id}`, {
+//   method: "POST",
+//   body: formData,
+// });
+/**
+ * Uploads a file to the server.
+ * @param {File} file - The file to upload.
+ * @param {string} id - The ID of the flow to upload the file to.
+ */
+export async function uploadFile(
+  file: File,
+  id: string
+): Promise<AxiosResponse<UploadFileTypeAPI>> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return await axios.post(`/api/v1/upload/${id}`, formData);
 }
