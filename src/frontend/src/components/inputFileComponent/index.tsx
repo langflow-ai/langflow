@@ -17,8 +17,7 @@ export default function InputFileComponent({
 }: FileComponentType) {
   const [myValue, setMyValue] = useState(value);
   const { setErrorData } = useContext(alertContext);
-  const { flows, tabIndex } = useContext(TabsContext);
-  const { id } = flows[tabIndex];
+  const { tabId } = useContext(TabsContext);
   useEffect(() => {
     if (disabled) {
       setMyValue("");
@@ -55,7 +54,7 @@ export default function InputFileComponent({
       // Check if the file type is correct
       if (file && checkFileType(file.name)) {
         // Upload the file
-        uploadFile(file, id)
+        uploadFile(file, tabId)
           .then((res) => res.data)
           .then((data) => {
             console.log("File uploaded successfully");
