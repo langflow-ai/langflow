@@ -1,0 +1,23 @@
+{
+  "unversionedId": "hugging-face-spaces",
+  "id": "hugging-face-spaces",
+  "title": "🤗 HuggingFace Spaces",
+  "description": "A fully featured version of LangFlow can be accessed via HuggingFace spaces with no installation required.",
+  "source": "@site/docs/hugging-face-spaces.mdx",
+  "sourceDirName": ".",
+  "slug": "/hugging-face-spaces",
+  "permalink": "/hugging-face-spaces",
+  "draft": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "📦 How to install?",
+    "permalink": "/installation"
+  },
+  "next": {
+    "title": "🤖 Creating Flows",
+    "permalink": "/creating-flows"
+  }
+}

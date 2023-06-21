@@ -1,0 +1,633 @@
+{
+  "docusaurus-plugin-content-docs": {
+    "default": {
+      "loadedVersions": [
+        {
+          "versionName": "current",
+          "label": "Next",
+          "banner": null,
+          "badge": false,
+          "noIndex": false,
+          "className": "docs-version-current",
+          "path": "/",
+          "tagsPath": "/tags",
+          "isLast": true,
+          "routePriority": -1,
+          "sidebarFilePath": "/home/carlos/repo/logspace/langflow/docs/sidebars.js",
+          "contentPath": "/home/carlos/repo/logspace/langflow/docs/docs",
+          "contentPathLocalized": "/home/carlos/repo/logspace/langflow/docs/i18n/en/docusaurus-plugin-content-docs/current",
+          "docs": [
+            {
+              "unversionedId": "buffer-memory",
+              "id": "buffer-memory",
+              "title": "Buffer Memory",
+              "description": "For certain applications, retaining past interactions is crucial. For that, chains and agents may accept a memory component as one of their input parameters. The ConversationBufferMemory component is one of them. It stores messages and extracts them into variables.",
+              "source": "@site/docs/buffer-memory.mdx",
+              "sourceDirName": ".",
+              "slug": "/buffer-memory",
+              "permalink": "/buffer-memory",
+              "draft": false,
+              "tags": [],
+              "version": "current",
+              "frontMatter": {},
+              "sidebar": "docs",
+              "previous": {
+                "title": "Conversation Chain",
+                "permalink": "/conversation-chain"
+              },
+              "next": {
+                "title": "MidJourney Prompt Chain",
+                "permalink": "/midjourney-prompt-chain"
+              }
+            },
+            {
+              "unversionedId": "collection",
+              "id": "collection",
+              "title": "Collection",
+              "description": "A collection is a snapshot of the flows available in the database. You can download your entire collection for local storage and upload it anytime for future use.",
+              "source": "@site/docs/collection.mdx",
+              "sourceDirName": ".",
+              "slug": "/collection",
+              "permalink": "/collection",
+              "draft": false,
+              "tags": [],
+              "version": "current",
+              "frontMatter": {},
+              "sidebar": "docs",
+              "previous": {
+                "title": "Features",
+                "permalink": "/features"
+              },
+              "next": {
+                "title": "Conversation Chain",
+                "permalink": "/conversation-chain"
+              }
+            },
+            {
+              "unversionedId": "community",
+              "id": "community",
+              "title": "Community",
+              "description": "🤖 Join LangFlow Discord server",
+              "source": "@site/docs/community.md",
+              "sourceDirName": ".",
+              "slug": "/community",
+              "permalink": "/community",
+              "draft": false,
+              "tags": [],
+              "version": "current",
+              "frontMatter": {},
+              "sidebar": "docs",
+              "previous": {
+                "title": "GitHub Issues",
+                "permalink": "/github-issues"
+              }
+            },
+            {
+              "unversionedId": "components",
+              "id": "components",
+              "title": "Component",
+              "description": "Components are the building blocks of the flows. They are made of inputs, outputs, and parameters that define their functionality, providing a convenient and straightforward way to compose LLM-based applications. Learn more about components and how they work in the LangChain documentation section.",
+              "source": "@site/docs/components.mdx",
+              "sourceDirName": ".",
+              "slug": "/components",
+              "permalink": "/components",
+              "draft": false,
+              "tags": [],
+              "version": "current",
+              "frontMatter": {},
+              "sidebar": "docs",
+              "previous": {
+                "title": "🤖 Creating Flows",
+                "permalink": "/creating-flows"
+              },
+              "next": {
+                "title": "Features",
+                "permalink": "/features"
+              }
+            },
+            {
+              "unversionedId": "conversation-chain",
+              "id": "conversation-chain",
+              "title": "Conversation Chain",
+              "description": "This example shows how to instantiate a simple ConversationChain component using a Language Model (LLM). Once the Node Status turns green 🟢, the chat will be ready to take in user messages. Here, we used ChatOpenAI to act as the required LLM input, but you can use any LLM for this purpose.",
+              "source": "@site/docs/conversation-chain.mdx",
+              "sourceDirName": ".",
+              "slug": "/conversation-chain",
+              "permalink": "/conversation-chain",
+              "draft": false,
+              "tags": [],
+              "version": "current",
+              "frontMatter": {},
+              "sidebar": "docs",
+              "previous": {
+                "title": "Collection",
+                "permalink": "/collection"
+              },
+              "next": {
+                "title": "Buffer Memory",
+                "permalink": "/buffer-memory"
+              }
+            },
+            {
+              "unversionedId": "creating-flows",
+              "id": "creating-flows",
+              "title": "🤖 Creating Flows",
+              "description": "Compose",
+              "source": "@site/docs/creating-flows.mdx",
+              "sourceDirName": ".",
+              "slug": "/creating-flows",
+              "permalink": "/creating-flows",
+              "draft": false,
+              "tags": [],
+              "version": "current",
+              "frontMatter": {},
+              "sidebar": "docs",
+              "previous": {
+                "title": "🤗 HuggingFace Spaces",
+                "permalink": "/hugging-face-spaces"
+              },
+              "next": {
+                "title": "Component",
+                "permalink": "/components"
+              }
+            },
+            {
+              "unversionedId": "csv-loader",
+              "id": "csv-loader",
+              "title": "CSV Loader",
+              "description": "The VectoStoreAgent component retrieves information from one or more vector stores. This example shows a VectoStoreAgent connected to a CSV file through the Chroma vector store. Process description:",
+              "source": "@site/docs/csv-loader.mdx",
+              "sourceDirName": ".",
+              "slug": "/csv-loader",
+              "permalink": "/csv-loader",
+              "draft": false,
+              "tags": [],
+              "version": "current",
+              "frontMatter": {},
+              "sidebar": "docs",
+              "previous": {
+                "title": "MidJourney Prompt Chain",
+                "permalink": "/midjourney-prompt-chain"
+              },
+              "next": {
+                "title": "Serp API Tool",
+                "permalink": "/serp-api-tool"
+              }
+            },
+            {
+              "unversionedId": "features",
+              "id": "features",
+              "title": "Features",
+              "description": "When you click for New Project, you will see on the top left corner of the screen, some options such as Import, Export, Code and Save, as displayed in the image below:",
+              "source": "@site/docs/features.mdx",
+              "sourceDirName": ".",
+              "slug": "/features",
+              "permalink": "/features",
+              "draft": false,
+              "tags": [],
+              "version": "current",
+              "frontMatter": {},
+              "sidebar": "docs",
+              "previous": {
+                "title": "Component",
+                "permalink": "/components"
+              },
+              "next": {
+                "title": "Collection",
+                "permalink": "/collection"
+              }
+            },
+            {
+              "unversionedId": "gcp-deployment",
+              "id": "gcp-deployment",
+              "title": "Deploy on Google Cloud Platform",
+              "description": "Run Langflow from a New Google Cloud Project",
+              "source": "@site/docs/gcp-deployment.md",
+              "sourceDirName": ".",
+              "slug": "/gcp-deployment",
+              "permalink": "/gcp-deployment",
+              "draft": false,
+              "tags": [],
+              "version": "current",
+              "frontMatter": {},
+              "sidebar": "docs",
+              "previous": {
+                "title": "📚 How to Upload Examples?",
+                "permalink": "/how-upload-examples"
+              },
+              "next": {
+                "title": "Deploy on Jina AI Cloud",
+                "permalink": "/jina-deployment"
+              }
+            },
+            {
+              "unversionedId": "github-issues",
+              "id": "github-issues",
+              "title": "GitHub Issues",
+              "description": "Our issues page is kept up to date",
+              "source": "@site/docs/github-issues.md",
+              "sourceDirName": ".",
+              "slug": "/github-issues",
+              "permalink": "/github-issues",
+              "draft": false,
+              "tags": [],
+              "version": "current",
+              "frontMatter": {},
+              "sidebar": "docs",
+              "previous": {
+                "title": "How to contribute?",
+                "permalink": "/how-contribute"
+              },
+              "next": {
+                "title": "Community",
+                "permalink": "/community"
+              }
+            },
+            {
+              "unversionedId": "how-contribute",
+              "id": "how-contribute",
+              "title": "How to contribute?",
+              "description": "Hello there! We welcome contributions from developers of all levels to our open-source project on GitHub. If you'd like to contribute, please check our contributing guidelines and help make LangFlow more accessible.",
+              "source": "@site/docs/how-contribute.md",
+              "sourceDirName": ".",
+              "slug": "/how-contribute",
+              "permalink": "/how-contribute",
+              "draft": false,
+              "tags": [],
+              "version": "current",
+              "frontMatter": {},
+              "sidebar": "docs",
+              "previous": {
+                "title": "Deploy on Jina AI Cloud",
+                "permalink": "/jina-deployment"
+              },
+              "next": {
+                "title": "GitHub Issues",
+                "permalink": "/github-issues"
+              }
+            },
+            {
+              "unversionedId": "how-upload-examples",
+              "id": "how-upload-examples",
+              "title": "📚 How to Upload Examples?",
+              "description": "We welcome all examples that can help our community learn and explore LangFlow's capabilities.",
+              "source": "@site/docs/how-upload-examples.mdx",
+              "sourceDirName": ".",
+              "slug": "/how-upload-examples",
+              "permalink": "/how-upload-examples",
+              "draft": false,
+              "tags": [],
+              "version": "current",
+              "frontMatter": {},
+              "sidebar": "docs",
+              "previous": {
+                "title": "Python Function",
+                "permalink": "/python-function"
+              },
+              "next": {
+                "title": "Deploy on Google Cloud Platform",
+                "permalink": "/gcp-deployment"
+              }
+            },
+            {
+              "unversionedId": "hugging-face-spaces",
+              "id": "hugging-face-spaces",
+              "title": "🤗 HuggingFace Spaces",
+              "description": "A fully featured version of LangFlow can be accessed via HuggingFace spaces with no installation required.",
+              "source": "@site/docs/hugging-face-spaces.mdx",
+              "sourceDirName": ".",
+              "slug": "/hugging-face-spaces",
+              "permalink": "/hugging-face-spaces",
+              "draft": false,
+              "tags": [],
+              "version": "current",
+              "frontMatter": {},
+              "sidebar": "docs",
+              "previous": {
+                "title": "📦 How to install?",
+                "permalink": "/installation"
+              },
+              "next": {
+                "title": "🤖 Creating Flows",
+                "permalink": "/creating-flows"
+              }
+            },
+            {
+              "unversionedId": "index",
+              "id": "index",
+              "title": "👋 Welcome to LangFlow",
+              "description": "LangFlow is an easy way to prototype LangChain flows. The drag-and-drop feature allows quick and effortless experimentation, while the built-in chat interface facilitates real-time interaction. It provides options to edit prompt parameters, create chains and agents, track thought processes, and export flows.",
+              "source": "@site/docs/index.mdx",
+              "sourceDirName": ".",
+              "slug": "/",
+              "permalink": "/",
+              "draft": false,
+              "tags": [],
+              "version": "current",
+              "frontMatter": {},
+              "sidebar": "docs",
+              "next": {
+                "title": "📦 How to install?",
+                "permalink": "/installation"
+              }
+            },
+            {
+              "unversionedId": "installation",
+              "id": "installation",
+              "title": "📦 How to install?",
+              "description": "Installation",
+              "source": "@site/docs/installation.md",
+              "sourceDirName": ".",
+              "slug": "/installation",
+              "permalink": "/installation",
+              "draft": false,
+              "tags": [],
+              "version": "current",
+              "frontMatter": {},
+              "sidebar": "docs",
+              "previous": {
+                "title": "👋 Welcome to LangFlow",
+                "permalink": "/"
+              },
+              "next": {
+                "title": "🤗 HuggingFace Spaces",
+                "permalink": "/hugging-face-spaces"
+              }
+            },
+            {
+              "unversionedId": "jina-deployment",
+              "id": "jina-deployment",
+              "title": "Deploy on Jina AI Cloud",
+              "description": "Langflow integrates with langchain-serve to provide a one-command deployment to Jina AI Cloud.",
+              "source": "@site/docs/jina-deployment.md",
+              "sourceDirName": ".",
+              "slug": "/jina-deployment",
+              "permalink": "/jina-deployment",
+              "draft": false,
+              "tags": [],
+              "version": "current",
+              "frontMatter": {},
+              "sidebar": "docs",
+              "previous": {
+                "title": "Deploy on Google Cloud Platform",
+                "permalink": "/gcp-deployment"
+              },
+              "next": {
+                "title": "How to contribute?",
+                "permalink": "/how-contribute"
+              }
+            },
+            {
+              "unversionedId": "midjourney-prompt-chain",
+              "id": "midjourney-prompt-chain",
+              "title": "MidJourney Prompt Chain",
+              "description": "The MidJourneyPromptChain can be used to generate imaginative and detailed MidJourney prompts.",
+              "source": "@site/docs/midjourney-prompt-chain.mdx",
+              "sourceDirName": ".",
+              "slug": "/midjourney-prompt-chain",
+              "permalink": "/midjourney-prompt-chain",
+              "draft": false,
+              "tags": [],
+              "version": "current",
+              "frontMatter": {},
+              "sidebar": "docs",
+              "previous": {
+                "title": "Buffer Memory",
+                "permalink": "/buffer-memory"
+              },
+              "next": {
+                "title": "CSV Loader",
+                "permalink": "/csv-loader"
+              }
+            },
+            {
+              "unversionedId": "multiple-vectorstores",
+              "id": "multiple-vectorstores",
+              "title": "Multiple Vector Stores",
+              "description": "The example below shows an agent operating with two vector stores built upon different data sources.",
+              "source": "@site/docs/multiple-vectorstores.mdx",
+              "sourceDirName": ".",
+              "slug": "/multiple-vectorstores",
+              "permalink": "/multiple-vectorstores",
+              "draft": false,
+              "tags": [],
+              "version": "current",
+              "frontMatter": {},
+              "sidebar": "docs",
+              "previous": {
+                "title": "Serp API Tool",
+                "permalink": "/serp-api-tool"
+              },
+              "next": {
+                "title": "Python Function",
+                "permalink": "/python-function"
+              }
+            },
+            {
+              "unversionedId": "python-function",
+              "id": "python-function",
+              "title": "Python Function",
+              "description": "LangFlow allows you to create a customized tool using the PythonFunction connected to a Tool component. In this example, Regex is used in Python to validate a pattern.",
+              "source": "@site/docs/python-function.mdx",
+              "sourceDirName": ".",
+              "slug": "/python-function",
+              "permalink": "/python-function",
+              "draft": false,
+              "tags": [],
+              "version": "current",
+              "frontMatter": {},
+              "sidebar": "docs",
+              "previous": {
+                "title": "Multiple Vector Stores",
+                "permalink": "/multiple-vectorstores"
+              },
+              "next": {
+                "title": "📚 How to Upload Examples?",
+                "permalink": "/how-upload-examples"
+              }
+            },
+            {
+              "unversionedId": "serp-api-tool",
+              "id": "serp-api-tool",
+              "title": "Serp API Tool",
+              "description": "The Serp API (Search Engine Results Page) allows developers to scrape results from search engines such as Google, Bing and Yahoo, and can be used as in LangFlow through the Search component.",
+              "source": "@site/docs/serp-api-tool.mdx",
+              "sourceDirName": ".",
+              "slug": "/serp-api-tool",
+              "permalink": "/serp-api-tool",
+              "draft": false,
+              "tags": [],
+              "version": "current",
+              "frontMatter": {},
+              "sidebar": "docs",
+              "previous": {
+                "title": "CSV Loader",
+                "permalink": "/csv-loader"
+              },
+              "next": {
+                "title": "Multiple Vector Stores",
+                "permalink": "/multiple-vectorstores"
+              }
+            }
+          ],
+          "drafts": [],
+          "sidebars": {
+            "docs": [
+              {
+                "type": "category",
+                "label": "Getting Started",
+                "collapsed": false,
+                "items": [
+                  {
+                    "type": "doc",
+                    "id": "index"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "installation"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "hugging-face-spaces"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "creating-flows"
+                  }
+                ],
+                "collapsible": true
+              },
+              {
+                "type": "category",
+                "label": "Guidelines",
+                "collapsed": false,
+                "items": [
+                  {
+                    "type": "doc",
+                    "id": "components"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "features"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "collection"
+                  }
+                ],
+                "collapsible": true
+              },
+              {
+                "type": "category",
+                "label": "Examples",
+                "collapsed": false,
+                "items": [
+                  {
+                    "type": "doc",
+                    "id": "conversation-chain"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "buffer-memory"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "midjourney-prompt-chain"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "csv-loader"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "serp-api-tool"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "multiple-vectorstores"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "python-function"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "how-upload-examples"
+                  }
+                ],
+                "collapsible": true
+              },
+              {
+                "type": "category",
+                "label": "Deployment",
+                "collapsed": false,
+                "items": [
+                  {
+                    "type": "doc",
+                    "id": "gcp-deployment"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "jina-deployment"
+                  }
+                ],
+                "collapsible": true
+              },
+              {
+                "type": "category",
+                "label": "Contributing",
+                "collapsed": false,
+                "items": [
+                  {
+                    "type": "doc",
+                    "id": "how-contribute"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "github-issues"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "community"
+                  }
+                ],
+                "collapsible": true
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "docusaurus-plugin-content-blog": {
+    "default": {
+      "blogSidebarTitle": "Recent posts",
+      "blogPosts": [],
+      "blogListPaginated": [],
+      "blogTags": {},
+      "blogTagsListPath": "/blog/tags",
+      "blogTagsPaginated": []
+    }
+  },
+  "docusaurus-plugin-content-pages": {
+    "default": [
+      {
+        "type": "mdx",
+        "permalink": "/markdown-page",
+        "source": "@site/src/pages/markdown-page.md",
+        "title": "Markdown page example",
+        "description": "You don't need React to write simple standalone pages.",
+        "frontMatter": {
+          "title": "Markdown page example"
+        }
+      }
+    ]
+  },
+  "docusaurus-plugin-debug": {},
+  "docusaurus-theme-classic": {},
+  "docusaurus-node-polyfills": {},
+  "docusaurus-plugin-image-zoom": {},
+  "docusaurus-tailwindcss": {},
+  "docusaurus-bootstrap-plugin": {},
+  "docusaurus-mdx-fallback-plugin": {}
+}
