@@ -49,4 +49,5 @@ export type InitTypeAPI = {
 
 export type UploadFileTypeAPI = {
   file_path: string;
+  flowId: string;
 };

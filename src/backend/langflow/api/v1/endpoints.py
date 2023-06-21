@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from langflow.api.v1.schemas import (
     PredictRequest,
     PredictResponse,
+    UploadFileResponse,
 )
 
 from langflow.interface.types import build_langchain_types_dict
@@ -57,13 +58,16 @@ async def predict_flow(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.post("/upload/{client_id}", response_model=dict, status_code=201)
-async def create_upload_file(file: UploadFile, client_id: str):
+@router.post("/upload/{flow_id}", response_model=UploadFileResponse, status_code=201)
+async def create_upload_file(file: UploadFile, flow_id: str):
     # Cache file
     try:
-        file_path = save_uploaded_file(file.file, file_name=client_id)
+        file_path = save_uploaded_file(file.file, file_name=flow_id)
 
-        return {"file_path": file_path}
+        return UploadFileResponse(
+            flowId=flow_id,
+            file_path=file_path,
+        )
     except Exception as exc:
         logger.error(f"Error saving file: {exc}")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
