@@ -128,6 +128,7 @@ export default function ParameterComponent({
           {title}
           <span className="text-red-600">{required ? " *" : ""}</span>
         </div>
+        
         {left &&
         (type === "str" ||
           type === "bool" ||

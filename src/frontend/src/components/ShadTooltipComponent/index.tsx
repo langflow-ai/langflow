@@ -1,3 +1,5 @@
+import { ShadTooltipType } from "../../types/components";
+import { NodeType } from "../../types/flow";
 import {
   Tooltip,
   TooltipContent,
@@ -5,22 +7,20 @@ import {
   TooltipTrigger,
 } from "../ui/tooltip";
 
-const ShadTooltip = (props) => {
+export default function ShadTooltip({ children, delayDuration = 1000, content, side, open }: ShadTooltipType) {
   return (
     <TooltipProvider>
-      <Tooltip delayDuration={props.delayDuration}>
-        <TooltipTrigger asChild>{props.children}</TooltipTrigger>
+      <Tooltip delayDuration={delayDuration}>
+        <TooltipTrigger asChild>{children}</TooltipTrigger>
 
         <TooltipContent
-          side={props.side}
+          side={side}
           avoidCollisions={false}
           sticky="always"
         >
-          {props.content}
+          {content}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
 };
-
-export default ShadTooltip;

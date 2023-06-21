@@ -98,3 +98,11 @@ export type TooltipComponentType = {
     | "top-start"
     | "top";
 };
+
+export type ShadTooltipType = {
+  children: ReactElement;
+  delayDuration: number;
+  content: string;
+  side: string;
+  open?: boolean;
+};
