@@ -1,3 +1,4 @@
+from langflow.cache.utils import save_uploaded_file
 from langflow.database.models.flow import Flow
 from langflow.processing.process import process_graph_cached, process_tweaks
 from langflow.utils.logger import logger
@@ -55,12 +56,17 @@ async def predict_flow(
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-@router.post("/upload/{client_id}")
+
+@router.post("/upload/{client_id}", response_model=dict, status_code=201)
 async def create_upload_file(file: UploadFile, client_id: str):
     # Cache file
-    file_path = save_uploaded_file(file.file, file_name=client_id)
+    try:
+        file_path = save_uploaded_file(file.file, file_name=client_id)
 
-    return {"file_path": file_path}
+        return {"file_path": file_path}
+    except Exception as exc:
+        logger.error(f"Error saving file: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 # get endpoint to return version of langflow
@@ -69,4 +75,3 @@ def get_version():
     from langflow import __version__
 
     return {"version": __version__}
-
