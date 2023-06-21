@@ -70,35 +70,35 @@ export default function Header() {
       </div>
       <div className="flex justify-end px-2 w-96">
         <div className="ml-auto mr-2 flex gap-5 items-center">
-            <a
-              href="https://github.com/logspace-ai/langflow"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex shadow-sm items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background text-gray-600 dark:text-gray-300 border border-input hover:bg-accent hover:text-accent-foreground h-9 px-3 pr-0 rounded-md"
-            >
-              <FaGithub className="h-5 w-5 mr-2" />
-              Star
-              <div className="ml-2 flex text-sm bg-background rounded-md rounded-l-none border px-2 h-9 -mr-px items-center justify-center">
-                {stars}
-              </div>
-            </a>
-            <a
-              href="https://twitter.com/logspace_ai"
-              target="_blank"
-              rel="noreferrer"
-              className="text-muted-foreground"
-            >
-              <FaTwitter className="h-5 w-5" />
-            </a>
-            <a
-              href="https://discord.gg/EqksyE2EX9"
-              target="_blank"
-              rel="noreferrer"
-              className="text-muted-foreground"
-            >
-              <FaDiscord className="h-5 w-5" />
-            </a>
-            <Separator orientation="vertical" />
+          <a
+            href="https://github.com/logspace-ai/langflow"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex shadow-sm items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background text-gray-600 dark:text-gray-300 border border-input hover:bg-accent hover:text-accent-foreground h-9 px-3 pr-0 rounded-md"
+          >
+            <FaGithub className="h-5 w-5 mr-2" />
+            Star
+            <div className="ml-2 flex text-sm bg-background rounded-md rounded-l-none border px-2 h-9 -mr-px items-center justify-center">
+              {stars}
+            </div>
+          </a>
+          <a
+            href="https://twitter.com/logspace_ai"
+            target="_blank"
+            rel="noreferrer"
+            className="text-muted-foreground"
+          >
+            <FaTwitter className="h-5 w-5" />
+          </a>
+          <a
+            href="https://discord.gg/EqksyE2EX9"
+            target="_blank"
+            rel="noreferrer"
+            className="text-muted-foreground"
+          >
+            <FaDiscord className="h-5 w-5" />
+          </a>
+          <Separator orientation="vertical" />
           <button
             className="text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
             onClick={() => {

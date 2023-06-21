@@ -48,6 +48,7 @@ documentloaders:
   - ReadTheDocsLoader
   - SlackDirectoryLoader
   - NotionDirectoryLoader
+  - DirectoryLoader
 embeddings:
   - OpenAIEmbeddings
   - HuggingFaceEmbeddings
