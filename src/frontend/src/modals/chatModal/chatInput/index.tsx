@@ -14,10 +14,7 @@ export default function ChatInput({
     if (!lockChat && inputRef.current) {
       inputRef.current.focus();
     }
-  },[
-    lockChat,inputRef
-  ])
-
+  }, [lockChat, inputRef]);
 
   useEffect(() => {
     if (inputRef.current) {

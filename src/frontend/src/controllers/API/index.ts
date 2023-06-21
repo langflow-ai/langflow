@@ -22,7 +22,9 @@ const GITHUB_API_URL = "https://api.github.com";
 
 export async function getRepoStars(owner, repo) {
   try {
-    const response = await axios.get(`${GITHUB_API_URL}/repos/${owner}/${repo}`);
+    const response = await axios.get(
+      `${GITHUB_API_URL}/repos/${owner}/${repo}`
+    );
     return response.data.stargazers_count;
   } catch (error) {
     console.error("Error fetching repository data:", error);
