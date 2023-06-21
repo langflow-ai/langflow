@@ -75,7 +75,7 @@ async def stream_build(flow_id: str):
         try:
             if flow_id not in flow_data_store:
                 error_message = "Invalid session ID"
-                yield f"data: {json.dumps({'error': error_message})}\n\n"
+                yield f"error: {json.dumps({'error': error_message})}\n\n"
                 return
 
             graph_data = flow_data_store[flow_id].get("data")
@@ -86,7 +86,15 @@ async def stream_build(flow_id: str):
                 return
 
             logger.debug("Building langchain object")
-            graph = Graph.from_payload(graph_data)
+            try:
+                # Some error could happen when building the graph
+                graph = Graph.from_payload(graph_data)
+            except Exception as exc:
+                logger.error(exc)
+                error_message = str(exc)
+                yield f"error: {json.dumps({'error': error_message})}\n\n"
+                return
+
             number_of_nodes = len(graph.nodes)
             for i, vertex in enumerate(graph.generator_build(), 1):
                 try:
