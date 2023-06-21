@@ -6,6 +6,7 @@ class User(BaseModel):
     email: str | None = None
     full_name: str | None = None
     disabled: bool | None = None
+    is_admin: bool | None = False
 
 
 class UserInDB(User):
@@ -19,6 +20,7 @@ fake_users_db = {
         "email": "gustavopoa@gmail.com",
         "hashed_password": "$2b$12$f4R8IHUaVxVchhpWrwhckeJXnPalW1vUbJzcvb1KeovJcuMwE861K", #secret
         "disabled": False,
+        "is_admin": True,
     },
     "gustavo_disabled": {
         "username": "gustavo_disabled",
@@ -26,6 +28,7 @@ fake_users_db = {
         "email": "gustavo_disabled@gmail.com",
         "hashed_password": "$2b$12$f4R8IHUaVxVchhpWrwhckeJXnPalW1vUbJzcvb1KeovJcuMwE861K", #secret
         "disabled": True,
+        "is_admin": False,
     }
 }
 
