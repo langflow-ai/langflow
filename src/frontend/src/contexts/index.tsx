@@ -8,7 +8,6 @@ import { TypesProvider } from "./typesContext";
 import { ReactFlowProvider } from "reactflow";
 import { UndoRedoProvider } from "./undoRedoContext";
 import { SSEProvider } from "./SSEContext";
-import { ProgressProvider } from "./ProgressContext";
 
 export default function ContextWrapper({ children }: { children: ReactNode }) {
   //element to wrap all context
@@ -22,9 +21,7 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
                 <SSEProvider>
                   <TabsProvider>
                     <UndoRedoProvider>
-                      <ProgressProvider>
-                        <PopUpProvider>{children}</PopUpProvider>
-                      </ProgressProvider>
+                      <PopUpProvider>{children}</PopUpProvider>
                     </UndoRedoProvider>
                   </TabsProvider>
                 </SSEProvider>
