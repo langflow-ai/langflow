@@ -165,8 +165,7 @@ def save_uploaded_file(file, folder_name):
 
     # Use the hex digest of the hash as the file name
     hex_dig = sha256_hash.hexdigest()
-    file_extension = Path(file.filename).suffix
-    file_name = f"{hex_dig}{file_extension}"
+    file_name = hex_dig
 
     # Reset the file cursor to the beginning of the file
     file.seek(0)
