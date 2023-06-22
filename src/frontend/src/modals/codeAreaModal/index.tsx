@@ -23,18 +23,18 @@ import {
 import { Button } from "../../components/ui/button";
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants";
 import Loading from "../../components/ui/loading";
-import { APITemplateType } from "../../types/api";
+import { APIClassType, APITemplateType } from "../../types/api";
 
 export default function CodeAreaModal({
   value,
   setValue,
-  template,
-  setTemplate
+  nodeClass,
+  setNodeClass
 }: {
   setValue: (value: string) => void;
   value: string;
-  template: APITemplateType,
-  setTemplate: (template: APITemplateType) => void;
+  nodeClass: APIClassType,
+  setNodeClass: (Class: APIClassType) => void;
 }) {
   const [open, setOpen] = useState(true);
   const [code, setCode] = useState(value);
@@ -93,11 +93,11 @@ export default function CodeAreaModal({
         })
       }
       );
-    UpdateTemplate('code',template).then((apiReturn) => {
+    UpdateTemplate('code',nodeClass).then((apiReturn) => {
       const data = apiReturn.data;
-      if (data.template) {
-        console.log('updated')
-        setTemplate(data.template);
+      if (data) {
+        console.log(data)   
+        setNodeClass(data);
         setModalOpen(false);
       }
     })
