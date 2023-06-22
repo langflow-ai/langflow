@@ -39,6 +39,7 @@ import { OpenAiIcon } from "./icons/OpenAi";
 import { QDrantIcon } from "./icons/QDrant";
 import { SearxIcon } from "./icons/Searx";
 import { SlackIcon } from "./icons/Slack";
+import { PineconeIcon } from "./icons/Pinecone";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "./constants";
@@ -170,6 +171,7 @@ export const nodeIcons: {
   ChatOpenAI: OpenAiIcon,
   OpenAI: OpenAiIcon,
   OpenAIEmbeddings: OpenAiIcon,
+  Pinecone: PineconeIcon,
   // UnstructuredPowerPointLoader: PowerPointIcon, // word and powerpoint have differente styles
   Qdrant: QDrantIcon,
   // ReadTheDocsLoader: ReadTheDocsIcon, // does not work
