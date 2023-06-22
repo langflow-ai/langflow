@@ -1,5 +1,3 @@
-import contextlib
-import io
 from pathlib import Path
 from langchain.schema import AgentAction
 import json
@@ -10,7 +8,8 @@ from langflow.interface.run import (
 )
 from langflow.utils.logger import logger
 from langflow.graph import Graph
-
+from langchain.chains.base import Chain
+from langchain.vectorstores.base import VectorStore
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 
@@ -55,69 +54,42 @@ def format_actions(actions: List[Tuple[AgentAction, str]]) -> str:
     return "\n".join(output)
 
 
-def get_result_and_thought(langchain_object, message: str):
+def get_result_and_thought(langchain_object, inputs: dict):
     """Get result and thought from extracted json"""
     try:
         if hasattr(langchain_object, "verbose"):
             langchain_object.verbose = True
-        chat_input = None
-        memory_key = ""
-        if hasattr(langchain_object, "memory") and langchain_object.memory is not None:
-            memory_key = langchain_object.memory.memory_key
-
-        if hasattr(langchain_object, "input_keys"):
-            for key in langchain_object.input_keys:
-                if key not in [memory_key, "chat_history"]:
-                    chat_input = {key: message}
-        else:
-            chat_input = message  # type: ignore
 
         if hasattr(langchain_object, "return_intermediate_steps"):
-            # https://github.com/hwchase17/langchain/issues/2068
-            # Deactivating until we have a frontend solution
-            # to display intermediate steps
-            langchain_object.return_intermediate_steps = False
+            langchain_object.return_intermediate_steps = True
 
         fix_memory_inputs(langchain_object)
 
-        with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
-            try:
-                # if hasattr(langchain_object, "acall"):
-                #     output = await langchain_object.acall(chat_input)
-                # else:
-                output = langchain_object(chat_input)
-            except ValueError as exc:
-                # make the error message more informative
-                logger.debug(f"Error: {str(exc)}")
-                output = langchain_object.run(chat_input)
-
-            intermediate_steps = (
-                output.get("intermediate_steps", []) if isinstance(output, dict) else []
-            )
-
-            result = (
-                output.get(langchain_object.output_keys[0])
-                if isinstance(output, dict)
-                else output
-            )
-            if intermediate_steps:
-                thought = format_actions(intermediate_steps)
-            else:
-                thought = output_buffer.getvalue()
+        try:
+            output = langchain_object(inputs, return_only_outputs=True)
+        except ValueError as exc:
+            # make the error message more informative
+            logger.debug(f"Error: {str(exc)}")
+            output = langchain_object.run(inputs)
 
     except Exception as exc:
         raise ValueError(f"Error: {str(exc)}") from exc
-    return result, thought
+    return output
 
 
-def process_graph_cached(data_graph: Dict[str, Any], message: str):
+def get_input_str_if_only_one_input(inputs: dict) -> Optional[str]:
+    """Get input string if only one input is provided"""
+    return list(inputs.values())[0] if len(inputs) == 1 else None
+
+
+def process_graph_cached(data_graph: Dict[str, Any], inputs: Union[dict, str]):
     """
     Process graph by extracting input variables and replacing ZeroShotPrompt
     with PromptTemplate,then run the graph and return the result and thought.
     """
     # Load langchain object
     langchain_object = build_langchain_object_with_caching(data_graph)
-    logger.debug("Loaded langchain object")
+    logger.debug("Loaded LangChain object")
 
     if langchain_object is None:
         # Raise user facing error
@@ -126,10 +98,14 @@ def process_graph_cached(data_graph: Dict[str, Any], message: str):
         )
 
     # Generate result and thought
-    logger.debug("Generating result and thought")
-    result, thought = get_result_and_thought(langchain_object, message)
-    logger.debug("Generated result and thought")
-    return {"result": str(result), "thought": thought.strip()}
+    if isinstance(langchain_object, Chain):
+        logger.debug("Generating result and thought")
+        result = get_result_and_thought(langchain_object, inputs)
+        logger.debug("Generated result and thought")
+    elif isinstance(langchain_object, VectorStore):
+        class_name = langchain_object.__class__.__name__
+        result = {"message": f"Processed {class_name} successfully"}
+    return result
 
 
 def load_flow_from_json(
