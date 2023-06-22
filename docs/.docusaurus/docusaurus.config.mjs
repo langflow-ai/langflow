@@ -7,11 +7,11 @@ export default {
   "title": "LangFlow Documentation",
   "tagline": "LangFlow is a GUI for LangChain, designed with react-flow",
   "favicon": "img/favicon.ico",
-  "url": "https://langflow-docs.com",
+  "url": "https://langflow-docs.github.io",
   "baseUrl": "/",
   "onBrokenLinks": "throw",
   "onBrokenMarkdownLinks": "warn",
-  "organizationName": "carlosrcoelho",
+  "organizationName": "logspace-ai",
   "projectName": "langflow",
   "deploymentBranch": "gh pages",
   "trailingSlash": false,
@@ -92,7 +92,7 @@ export default {
     "colorMode": {
       "defaultMode": "light",
       "disableSwitch": true,
-      "respectPrefersColorScheme": true
+      "respectPrefersColorScheme": false
     },
     "announcementBar": {
       "content": "⭐️ If you like ⛓️LangFlow, star it on <a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://github.com/logspace-ai/langflow\">GitHub</a>! ⭐️",
