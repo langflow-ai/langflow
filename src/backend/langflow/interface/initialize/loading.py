@@ -17,6 +17,11 @@ from langchain.base_language import BaseLanguageModel
 from langchain.callbacks.base import BaseCallbackManager
 from langchain.chains.loading import load_chain_from_config
 from langchain.llms.loading import load_llm_from_config
+from langflow.interface.initialize.vector_store import (
+    initialize_chroma,
+    initialize_pinecone,
+    initialize_qdrant,
+)
 from pydantic import ValidationError
 
 from langflow.interface.custom_lists import CUSTOM_NODES
@@ -153,30 +158,38 @@ def instantiate_embedding(class_object, params):
 
 
 def instantiate_vectorstore(class_object, params):
-    if len(params.get("documents", [])) == 0:
-        raise ValueError(
-            "The source you provided did not load correctly or was empty."
-            "This may cause an error in the vectorstore."
-        )
+    # could be documents or texts
+    if class_object.__name__ == "Pinecone":
+        return initialize_pinecone(class_object, params)
     # Chroma requires all metadata values to not be None
     if class_object.__name__ == "Chroma":
-        persist = params.pop("persist", False)
-        for doc in params["documents"]:
-            if doc.metadata is None:
-                doc.metadata = {}
-            for key, value in doc.metadata.items():
-                if value is None:
-                    doc.metadata[key] = ""
-        vector_store = class_object.from_documents(**params)
-        if persist:
-            vector_store.persist()
+        return initialize_chroma(class_object, params)
+
+    if class_object.__name__ == "Qdrant":
+        return initialize_qdrant(class_object, params)
     else:
+        if "texts" in params:
+            params["documents"] = params.pop("texts")
+
         vector_store = class_object.from_documents(**params)
     return vector_store
 
 
 def instantiate_documentloader(class_object, params):
-    return class_object(**params).load()
+    metadata = params.pop("metadata", None)
+    docs = class_object(**params).load()
+    if metadata:
+        if isinstance(metadata, str):
+            try:
+                metadata = json.loads(metadata)
+            except json.JSONDecodeError as exc:
+                raise ValueError(
+                    "The metadata you provided is not a valid JSON string."
+                ) from exc
+
+        for doc in docs:
+            doc.metadata = metadata
+    return docs
 
 
 def instantiate_textsplitter(class_object, params):
