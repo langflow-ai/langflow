@@ -215,15 +215,7 @@ template_node = {
             "list": "false"
         },
         "_type": "ChatOpenAI"
-    },
-    "description": "Wrapper around OpenAI Chat large language models.",
-    "base_classes": [
-        "BaseChatModel",
-        "Serializable",
-        "BaseLanguageModel",
-        "ChatOpenAI"
-    ],
-    "display_name": "ChatOpenAI"
+    }
 }
 
 
