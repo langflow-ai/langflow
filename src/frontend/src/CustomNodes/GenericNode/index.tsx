@@ -6,7 +6,7 @@ import {
 } from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
 import { typesContext } from "../../contexts/typesContext";
-import { useContext, useState, useEffect, useRef } from "react";
+import { useContext, useState, useEffect, useRef, ForwardRefExoticComponent, ComponentType, SVGProps, ReactNode } from "react";
 import { NodeDataType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
 import { PopUpContext } from "../../contexts/popUpContext";
@@ -31,7 +31,7 @@ export default function GenericNode({
   const { types, deleteNode } = useContext(typesContext);
 
   const { closePopUp, openPopUp } = useContext(PopUpContext);
-
+  // any to avoid type conflict
   const Icon: any =
     nodeIconsLucide[data.type] || nodeIconsLucide[types[data.type]];
   const [validationStatus, setValidationStatus] = useState(null);
