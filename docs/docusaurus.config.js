@@ -7,11 +7,11 @@ const lightCodeTheme = require('prism-react-renderer/themes/github');
     title: 'LangFlow Documentation',
     tagline: 'LangFlow is a GUI for LangChain, designed with react-flow',
     favicon: 'img/favicon.ico',
-    url: 'https://langflow-docs.com',
+    url: 'https://langflow-docs.github.io',
     baseUrl: '/',
     onBrokenLinks: 'throw',
     onBrokenMarkdownLinks: 'warn',
-    organizationName: 'carlosrcoelho',
+    organizationName: 'logspace-ai',
     projectName: 'langflow',
     deploymentBranch: 'gh pages',
     trailingSlash: false,
@@ -100,7 +100,7 @@ const lightCodeTheme = require('prism-react-renderer/themes/github');
         colorMode: {
           defaultMode: 'light',
           disableSwitch: true,
-          respectPrefersColorScheme: true,
+          respectPrefersColorScheme: false,
         },
         announcementBar: {
           content:
