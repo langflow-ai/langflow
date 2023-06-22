@@ -34,7 +34,7 @@
           },
           {
             "type": "link",
-            "label": "🤖 Creating Flows",
+            "label": "🎨 Creating Flows",
             "href": "/creating-flows",
             "docId": "creating-flows"
           }
@@ -204,7 +204,7 @@
     },
     "creating-flows": {
       "id": "creating-flows",
-      "title": "🤖 Creating Flows",
+      "title": "🎨 Creating Flows",
       "description": "Compose",
       "sidebar": "docs"
     },

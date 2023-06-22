@@ -33,13 +33,13 @@ LangFlow can run locally by cloning the repository and installing the dependenci
 
 Before you start, make sure you have the following installed:
 
-- Poetry
+- Poetry (>=1.4)
 - Node.js
 
 Then install the dependencies and start the development server for the backend:
 
 ```bash
-poetry install
+make install_backend
 make backend
 ```
 
