@@ -20,34 +20,48 @@ class ExportedFlow(BaseModel):
     data: GraphData
 
 
-class PredictRequest(BaseModel):
-    """Predict request schema."""
+class InputRequest(BaseModel):
+    input: dict
 
-    message: str
+
+class TweaksRequest(BaseModel):
     tweaks: Optional[Dict[str, Dict[str, str]]] = Field(default_factory=dict)
 
-    class Config:
-        schema_extra = {
-            "example": {
-                "message": "Hello, how are you?",
-                "tweaks": {
-                    "dndnode_986363f0-4677-4035-9f38-74b94af5dd78": {
-                        "name": "A tool name",
-                        "description": "A tool description",
-                    },
-                    "dndnode_986363f0-4677-4035-9f38-74b94af57378": {
-                        "template": "A {template}",
-                    },
-                },
-            }
-        }
+
+# class PredictRequest(BaseModel):
+#     """Predict request schema."""
+
+#     input: dict
+#     tweaks: Optional[Dict[str, Dict[str, str]]] = Field(default_factory=dict)
+
+#     class Config:
+#         schema_extra = {
+#             "example": {
+#                 "input": {
+#                     "question": "A question to process",
+#                     "chat_history": ["A chat history", "Another chat history"],
+#                 },
+#                 "tweaks": {
+#                     "Tool-Aclk2": {
+#                         "name": "A tool name",
+#                         "description": "A tool description",
+#                     },
+#                     "NodeName-2kclS": {
+#                         "template": "A {template}",
+#                     },
+#                 },
+#             }
+#         }
 
 
-class PredictResponse(BaseModel):
-    """Predict response schema."""
+class UpdateTemplateRequest(BaseModel):
+    template: dict
 
-    result: str
-    intermediate_steps: str = ""
+
+class ProcessResponse(BaseModel):
+    """Process response schema."""
+
+    result: dict
 
 
 class ChatMessage(BaseModel):
