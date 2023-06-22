@@ -98,3 +98,14 @@ export type TooltipComponentType = {
     | "top-start"
     | "top";
 };
+
+export type ProgressBarType = {
+  children?: ReactElement;
+  value?: number;
+  max?: number;
+};
+
+export type RadialProgressType = {
+  value?: number;
+  color?: string;
+};
