@@ -97,7 +97,7 @@
               "frontMatter": {},
               "sidebar": "docs",
               "previous": {
-                "title": "🤖 Creating Flows",
+                "title": "🎨 Creating Flows",
                 "permalink": "/creating-flows"
               },
               "next": {
@@ -131,7 +131,7 @@
             {
               "unversionedId": "creating-flows",
               "id": "creating-flows",
-              "title": "🤖 Creating Flows",
+              "title": "🎨 Creating Flows",
               "description": "Compose",
               "source": "@site/docs/creating-flows.mdx",
               "sourceDirName": ".",
@@ -308,7 +308,7 @@
                 "permalink": "/installation"
               },
               "next": {
-                "title": "🤖 Creating Flows",
+                "title": "🎨 Creating Flows",
                 "permalink": "/creating-flows"
               }
             },
