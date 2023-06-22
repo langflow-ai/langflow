@@ -1,6 +1,7 @@
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import {
   classNames,
+  getRandomKeyByssmm,
   groupByFamily,
   isValidConnection,
 } from "../../../../utils";
@@ -79,10 +80,10 @@ export default function ParameterComponent({
 
   useEffect(() => {
     const groupedObj = groupByFamily(myData, tooltipTitle);
-
+    
     refHtml.current = groupedObj.map((item, i) => (
       <span
-        key={i}
+        key={getRandomKeyByssmm()}
         className={classNames(
           i > 0 ? "items-center flex mt-3" : "items-center flex"
         )}
@@ -102,20 +103,19 @@ export default function ParameterComponent({
             -&nbsp;
             {item.type.split(", ").length > 2
               ? item.type.split(", ").map((el, i) => (
-                  <>
-                    <span key={i}>
-                      {i == item.type.split(", ").length - 1
-                        ? el
-                        : (el += `, `)}
+                  <React.Fragment key={el + i}>
+                    <span>
+                      {i === item.type.split(", ").length - 1 ? el : (el += `, `)}
                     </span>
-                    {i % 2 == 0 && i > 0 && <br></br>}
-                  </>
+                    {i % 2 === 0 && i > 0 && <br />}
+                  </React.Fragment>
                 ))
               : item.type}
           </span>
         </span>
       </span>
     ));
+    
   }, [tooltipTitle]);
 
   return (
