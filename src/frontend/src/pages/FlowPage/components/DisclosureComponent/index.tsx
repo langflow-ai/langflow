@@ -1,6 +1,7 @@
 import { ChevronRightIcon } from "@heroicons/react/24/solid";
 import { Disclosure } from "@headlessui/react";
 import { DisclosureComponentType } from "../../../../types/components";
+import { ChevronRight } from "lucide-react";
 
 export default function DisclosureComponent({
   button: { title, Icon, buttons = [] },
@@ -26,7 +27,7 @@ export default function DisclosureComponent({
                   </button>
                 ))}
                 <div>
-                  <ChevronRightIcon
+                <ChevronRight
                     className={`${
                       open || openDisc ? "rotate-90 transform" : ""
                     } h-4 w-4 text-gray-800 dark:text-white`}

@@ -9,7 +9,6 @@ import {
 import { useContext, useState } from "react";
 import { typesContext } from "../../../../contexts/typesContext";
 import { APIClassType, APIObjectType } from "../../../../types/api";
-import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import { Code2, FileDown, FileUp, Save, Search } from "lucide-react";
 import { PopUpContext } from "../../../../contexts/popUpContext";
