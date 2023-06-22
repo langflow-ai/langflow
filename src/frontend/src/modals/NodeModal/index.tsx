@@ -27,7 +27,7 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
       }, 300);
     }
   }
-  const Icon = nodeIcons[types[data.type]];
+  const Icon: any = nodeIcons[types[data.type]];
   return (
     <Transition.Root show={open} appear={true} as={Fragment}>
       <Dialog

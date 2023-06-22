@@ -1,4 +1,10 @@
-import { ForwardRefExoticComponent, ReactElement, ReactNode } from "react";
+import {
+  ComponentType,
+  ForwardRefExoticComponent,
+  ReactElement,
+  ReactNode,
+  SVGProps,
+} from "react";
 import { NodeDataType } from "../flow/index";
 import { typesContextType } from "../typesContext";
 export type InputComponentType = {
@@ -65,7 +71,7 @@ export type DisclosureComponentType = {
   openDisc: boolean;
   button: {
     title: string;
-    Icon: ForwardRefExoticComponent<React.SVGProps<SVGSVGElement>>;
+    Icon: any;
     buttons?: {
       Icon: ReactElement;
       title: string;

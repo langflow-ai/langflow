@@ -1,4 +1,9 @@
-import { classNames, nodeColors, nodeIcons, toTitleCase } from "../../utils";
+import {
+  classNames,
+  nodeColors,
+  nodeIconsLucide,
+  toTitleCase,
+} from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
 import { typesContext } from "../../contexts/typesContext";
 import { useContext, useState, useEffect, useRef } from "react";
@@ -12,6 +17,7 @@ import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarCom
 
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import { useSSE } from "../../contexts/SSEContext";
+import { ReactElement } from "react-markdown/lib/react-markdown";
 
 export default function GenericNode({
   data,
@@ -26,7 +32,8 @@ export default function GenericNode({
 
   const { closePopUp, openPopUp } = useContext(PopUpContext);
 
-  const Icon = nodeIcons[data.type] || nodeIcons[types[data.type]];
+  const Icon: any =
+    nodeIconsLucide[data.type] || nodeIconsLucide[types[data.type]];
   const [validationStatus, setValidationStatus] = useState(null);
   // State for outline color
   const { sseData, isBuilding } = useSSE();

@@ -3,7 +3,7 @@ import DisclosureComponent from "../DisclosureComponent";
 import {
   classNames,
   nodeColors,
-  nodeIcons,
+  nodeIconsLucide,
   nodeNames,
 } from "../../../../utils";
 import { useContext, useState } from "react";
@@ -11,7 +11,7 @@ import { typesContext } from "../../../../contexts/typesContext";
 import { APIClassType, APIObjectType } from "../../../../types/api";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
-import { Code2, FileDown, FileUp, Save } from "lucide-react";
+import { Code2, FileDown, FileUp, Save, Search } from "lucide-react";
 import { PopUpContext } from "../../../../contexts/popUpContext";
 import ExportModal from "../../../../modals/exportModal";
 import ApiModal from "../../../../modals/ApiModal";
@@ -135,7 +135,7 @@ export default function ExtraSidebar() {
           }}
         />
         <div className="absolute inset-y-0 right-0 flex py-1.5 pr-3 items-center">
-          <MagnifyingGlassIcon className="h-5 w-5 dark:text-white"></MagnifyingGlassIcon>
+          <Search size={20} color="#000000" />
         </div>
       </div>
 
@@ -149,7 +149,7 @@ export default function ExtraSidebar() {
                 key={i}
                 button={{
                   title: nodeNames[d] ?? nodeNames.unknown,
-                  Icon: nodeIcons[d] ?? nodeIcons.unknown,
+                  Icon: nodeIconsLucide[d] ?? nodeIconsLucide.unknown,
                 }}
               >
                 <div className="p-2 flex flex-col gap-2">
