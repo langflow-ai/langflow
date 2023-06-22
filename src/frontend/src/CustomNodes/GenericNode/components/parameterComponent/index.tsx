@@ -3,6 +3,7 @@ import {
   classNames,
   groupByFamily,
   isValidConnection,
+  nodeIconsLucide,
 } from "../../../../utils";
 import { useContext, useEffect, useRef, useState } from "react";
 import InputComponent from "../../../../components/inputComponent";
@@ -17,7 +18,7 @@ import InputFileComponent from "../../../../components/inputFileComponent";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import IntComponent from "../../../../components/intComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
-import { nodeNames, nodeIcons } from "../../../../utils";
+import { nodeNames } from "../../../../utils";
 import React from "react";
 import { nodeColors } from "../../../../utils";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
@@ -88,12 +89,12 @@ export default function ParameterComponent({
         )}
       >
         <div
-          className="h-5 w-5"
+          className="h-6 w-6"
           style={{
             color: nodeColors[item.family],
           }}
         >
-          {React.createElement(nodeIcons[item.family])}
+          {React.createElement(nodeIconsLucide[item.family])}
         </div>
         <span className="ps-2 text-gray-950">
           {nodeNames[item.family] ?? ""}{" "}
