@@ -170,44 +170,6 @@ body {
 .resized-image {
   width: 400px;
 }
-  
-/* .zoomable-image {
-cursor: zoom-in;
-}
-.zoom-image {
-  transition: transform 0.2s ease-in-out;
-}
-
-.zoom-image:hover {
-  transform: scale(1.2);
-}
-.zoom-image {
-  width: 100%;
-  transition: transform 0.2s ease-in-out;
-} */
-
-/* .zoomable-image {
-  cursor: pointer;
-  transition: transform 0.2s ease-in-out;
-} */
-
-/* .zoomable-image.fullscreen {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 9999;
-  background-color: rgba(0, 0, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.zoomable-image img {
-  max-width: 100%;
-  max-height: 100%;
-} */
 
 /* Reduce width on mobile for Mendable Search */
 @media (max-width: 767px) {
