@@ -18,7 +18,18 @@ class VectorStoreFrontendNode(FrontendNode):
                 multiline=False,
                 value="http://localhost:8080",
             )
-            extra_fields.append(extra_field)
+            # Add client_kwargs field
+            extra_field2 = TemplateField(
+                name="client_kwargs",
+                field_type="code",
+                required=False,
+                placeholder="",
+                show=True,
+                advanced=True,
+                multiline=False,
+                value="{}",
+            )
+            extra_fields.extend((extra_field, extra_field2))
 
         elif self.template.type_name == "Chroma":
             # New bool field for persist parameter
@@ -55,6 +66,29 @@ class VectorStoreFrontendNode(FrontendNode):
                 value="",
             )
             extra_fields.extend((extra_field, extra_field2))
+        elif self.template.type_name == "FAISS":
+            extra_field = TemplateField(
+                name="folder_path",
+                field_type="str",
+                required=False,
+                placeholder="",
+                show=True,
+                advanced=True,
+                multiline=False,
+                display_name="Local Path",
+                value="",
+            )
+            extra_field2 = TemplateField(
+                name="index_name",
+                field_type="str",
+                required=False,
+                show=True,
+                advanced=False,
+                value="",
+                display_name="Index Name",
+            )
+            extra_fields.extend((extra_field, extra_field2))
+
         if extra_fields:
             for field in extra_fields:
                 self.template.add_field(field)
@@ -76,6 +110,7 @@ class VectorStoreFrontendNode(FrontendNode):
             "weaviate_url",
             "index_name",
             "namespace",
+            "folder_path",
         ]
         advanced_fields = [
             "n_dim",
@@ -94,6 +129,7 @@ class VectorStoreFrontendNode(FrontendNode):
             "grpc_port",
             "pinecone_api_key",
             "pinecone_env",
+            "client_kwargs",
         ]
 
         # Check and set field attributes
