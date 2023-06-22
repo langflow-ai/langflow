@@ -28,32 +28,6 @@ class TweaksRequest(BaseModel):
     tweaks: Optional[Dict[str, Dict[str, str]]] = Field(default_factory=dict)
 
 
-# class PredictRequest(BaseModel):
-#     """Predict request schema."""
-
-#     input: dict
-#     tweaks: Optional[Dict[str, Dict[str, str]]] = Field(default_factory=dict)
-
-#     class Config:
-#         schema_extra = {
-#             "example": {
-#                 "input": {
-#                     "question": "A question to process",
-#                     "chat_history": ["A chat history", "Another chat history"],
-#                 },
-#                 "tweaks": {
-#                     "Tool-Aclk2": {
-#                         "name": "A tool name",
-#                         "description": "A tool description",
-#                     },
-#                     "NodeName-2kclS": {
-#                         "template": "A {template}",
-#                     },
-#                 },
-#             }
-#         }
-
-
 class UpdateTemplateRequest(BaseModel):
     template: dict
 
