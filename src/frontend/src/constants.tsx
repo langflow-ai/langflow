@@ -83,7 +83,7 @@ def run_flow(message: str, flow_id: str, tweaks: dict = None) -> dict:
     """
     api_url = f"{BASE_API_URL}/{flow_id}"
 
-    payload = {"message": message}
+    payload = {"inputs": {"input": message}}
 
     if tweaks:
         payload["tweaks"] = tweaks
@@ -108,7 +108,7 @@ export const getCurlCode = (flow: FlowType): string => {
     window.location.host
   }/api/v1/process/${flowId} \\
   -H 'Content-Type: application/json' \\
-  -d '{"message": "Your message", "tweaks": ${JSON.stringify(
+  -d '{"inputs": {"input": message}, "tweaks": ${JSON.stringify(
     tweaks,
     null,
     2
