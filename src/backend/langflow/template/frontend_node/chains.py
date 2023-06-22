@@ -19,6 +19,18 @@ class ChainFrontendNode(FrontendNode):
                     advanced=False,
                 )
             )
+            # add return_source_documents
+            self.template.add_field(
+                TemplateField(
+                    field_type="bool",
+                    required=False,
+                    show=True,
+                    name="return_source_documents",
+                    advanced=False,
+                    value=True,
+                    display_name="Return source documents",
+                )
+            )
 
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
@@ -58,6 +70,12 @@ class ChainFrontendNode(FrontendNode):
             field.required = True
             field.show = True
             field.advanced = False
+
+        if field.name == "return_source_documents":
+            field.required = False
+            field.show = True
+            field.advanced = True
+            field.value = True
 
 
 class SeriesCharacterChainNode(FrontendNode):
