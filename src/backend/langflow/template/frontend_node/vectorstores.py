@@ -6,7 +6,7 @@ from langflow.template.frontend_node.base import FrontendNode
 
 class VectorStoreFrontendNode(FrontendNode):
     def add_extra_fields(self) -> None:
-        extra_field = None
+        extra_fields = []
         if self.template.type_name == "Weaviate":
             extra_field = TemplateField(
                 name="weaviate_url",
@@ -18,6 +18,7 @@ class VectorStoreFrontendNode(FrontendNode):
                 multiline=False,
                 value="http://localhost:8080",
             )
+            extra_fields.append(extra_field)
 
         elif self.template.type_name == "Chroma":
             # New bool field for persist parameter
@@ -30,8 +31,33 @@ class VectorStoreFrontendNode(FrontendNode):
                 value=True,
                 display_name="Persist",
             )
-        if extra_field is not None:
-            self.template.add_field(extra_field)
+            extra_fields.append(extra_field)
+        elif self.template.type_name == "Pinecone":
+            # add pinecone_api_key and pinecone_env
+            extra_field = TemplateField(
+                name="pinecone_api_key",
+                field_type="str",
+                required=False,
+                placeholder="",
+                show=True,
+                advanced=True,
+                multiline=False,
+                value="",
+            )
+            extra_field2 = TemplateField(
+                name="pinecone_env",
+                field_type="str",
+                required=False,
+                placeholder="",
+                show=True,
+                advanced=True,
+                multiline=False,
+                value="",
+            )
+            extra_fields.extend((extra_field, extra_field2))
+        if extra_fields:
+            for field in extra_fields:
+                self.template.add_field(field)
 
     def add_extra_base_classes(self) -> None:
         self.base_classes.append("BaseRetriever")
@@ -47,6 +73,9 @@ class VectorStoreFrontendNode(FrontendNode):
             "location",
             "persist_directory",
             "persist",
+            "weaviate_url",
+            "index_name",
+            "namespace",
         ]
         advanced_fields = [
             "n_dim",
@@ -63,14 +92,15 @@ class VectorStoreFrontendNode(FrontendNode):
             "https",
             "prefer_grpc",
             "grpc_port",
+            "pinecone_api_key",
+            "pinecone_env",
         ]
 
         # Check and set field attributes
         if field.name == "texts":
-            field.name = "documents"
             field.field_type = "TextSplitter"
-            field.display_name = "Text Splitter"
-            field.required = True
+            field.display_name = "Documents"
+            field.required = False
             field.show = True
             field.advanced = False
 
@@ -98,3 +128,6 @@ class VectorStoreFrontendNode(FrontendNode):
             field.advanced = True
             if "key" in field.name:
                 field.password = False
+
+        elif field.name == "text_key":
+            field.show = False
