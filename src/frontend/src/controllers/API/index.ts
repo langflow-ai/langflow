@@ -5,6 +5,7 @@ import {
   InitTypeAPI,
   TemplateVariableType,
   APITemplateType,
+  APIClassType,
 } from "./../../types/api/index";
 import { APIObjectType, sendAllProps } from "../../types/api/index";
 import axios, { AxiosResponse } from "axios";
@@ -322,6 +323,6 @@ export async function postBuildInit(
   return await axios.post(`/api/v1/build/init`, flow);
 }
 
-export async function UpdateTemplate(type:string, template:APITemplateType):Promise<AxiosResponse<{template:APITemplateType}>>{
+export async function UpdateTemplate(type:string, nodeClass:APIClassType):Promise<AxiosResponse<APIClassType>>{
   return await axios.get(`/dynamic_node`);
 }
