@@ -49,6 +49,7 @@ documentloaders:
   - SlackDirectoryLoader
   - NotionDirectoryLoader
   - DirectoryLoader
+  - GitLoader
 embeddings:
   - OpenAIEmbeddings
   - HuggingFaceEmbeddings
@@ -58,7 +59,7 @@ llms:
   # - AzureOpenAI
   # - AzureChatOpenAI
   - ChatOpenAI
-  - LlamaCpp 
+  - LlamaCpp
   - CTransformers
   - Cohere
   - Anthropic
@@ -130,6 +131,7 @@ vectorstores:
   - Qdrant
   - Weaviate
   - FAISS
+  - Pinecone
 wrappers:
   - RequestsWrapper
   # - ChatPromptTemplate
