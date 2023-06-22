@@ -98,7 +98,7 @@ export default function Header() {
           >
             <FaDiscord className="h-5 w-5" />
           </a>
-          <Separator orientation="vertical" />
+          {/* <Separator orientation="vertical" />
           <button
             className="text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
             onClick={() => {
@@ -110,7 +110,7 @@ export default function Header() {
             ) : (
               <MoonIcon className="h-5 w-5" />
             )}
-          </button>
+          </button> */}
           <button
             className="text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200 relative"
             onClick={(event: React.MouseEvent<HTMLElement>) => {
