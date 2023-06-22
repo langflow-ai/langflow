@@ -18,7 +18,7 @@ import { alertContext } from "./alertContext";
 import { typesContext } from "./typesContext";
 import { APITemplateType } from "../types/api";
 import ShortUniqueId from "short-unique-id";
-import { addEdge } from "reactflow";
+import { Edge, addEdge } from "reactflow";
 import {
   readFlowsFromDatabase,
   deleteFlowFromDatabase,
@@ -360,21 +360,18 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       });
     }
   }
-  /**
-   * Add a new flow to the list of flows.
-   * @param flow Optional flow to add.
-   */
 
-  function paste(
-    selectionInstance,
-    position: { x: number; y: number; paneX?: number; paneY?: number }
-  ) {
+  /**
+   * Update Nodes and Edges ids
+   * @param nodes List of nodes to update
+   * @param edges List of edges to update
+   */
+  function updateIdsPaste(nodes: Array<NodeType>, edges: Array<Edge>, newNodes: Array<NodeType>, newEdges: Array<Edge>, position: { x: number; y: number; paneX?: number; paneY?: number }){
     let minimumX = Infinity;
     let minimumY = Infinity;
     let idsMap = {};
-    let nodes = reactFlowInstance.getNodes();
-    let edges = reactFlowInstance.getEdges();
-    selectionInstance.nodes.forEach((n) => {
+    
+    newNodes.forEach((n) => {
       if (n.position.y < minimumY) {
         minimumY = n.position.y;
       }
@@ -387,33 +384,44 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       ? { x: position.paneX + position.x, y: position.paneY + position.y }
       : reactFlowInstance.project({ x: position.x, y: position.y });
 
-    selectionInstance.nodes.forEach((n: NodeType) => {
+    newNodes.forEach((n: NodeType) => {
       // Generate a unique node ID
-      let newId = getNodeId(n.data.type);
+      let newId = n.type == "groupNode" ? (new ShortUniqueId({ length: 5 }))() : getNodeId(n.data.type);
       idsMap[n.id] = newId;
 
       // Create a new node object
       const newNode: NodeType = {
         id: newId,
-        type: "genericNode",
+        type: n.type,
         position: {
           x: insidePosition.x + n.position.x - minimumX,
           y: insidePosition.y + n.position.y - minimumY,
         },
-        data: {
-          ...n.data,
-          id: newId,
-        },
+        data: _.cloneDeep(n.data)
       };
+      newNode.data.id = newId;
+
+      // Calls the function recursively if it is a group node, updating the ids of the flow inside it.
+      if(n.type == "groupNode"){
+        newNode.data.node.flow.id = newId;
+        let returnValue = updateIdsPaste([], [], newNode.data.node.flow.data.nodes, newNode.data.node.flow.data.edges, position);
+        newNode.data.node.flow.data.nodes = returnValue.nodes;
+        newNode.data.node.flow.data.edges = returnValue.edges;
+        const newObj = {};
+          for (const [key, value] of Object.entries(newNode.data.node.template)) {
+            newObj[value.proxy.field + '_' + returnValue.idsMap[value.proxy.id]] = {...value, proxy:{...value.proxy, id: returnValue.idsMap[value.proxy.id]}};
+          }
+        newNode.data.node.template = newObj;
+      }
+
 
       // Add the new node to the list of nodes in state
       nodes = nodes
         .map((e) => ({ ...e, selected: false }))
         .concat({ ...newNode, selected: false });
     });
-    reactFlowInstance.setNodes(nodes);
 
-    selectionInstance.edges.forEach((e) => {
+    newEdges.forEach((e) => {
       let source = idsMap[e.source];
       let target = idsMap[e.target];
       let sourceHandleSplitted = e.sourceHandle.split("|");
@@ -451,6 +459,27 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         edges.map((e) => ({ ...e, selected: false }))
       );
     });
+    return {nodes, edges, idsMap};
+  }
+
+  /**
+   * Add a new flow to the list of flows.
+   * @param flow Optional flow to add.
+   */
+
+  function paste(
+    selectionInstance,
+    position: { x: number; y: number; paneX?: number; paneY?: number }
+  ) {
+    let nodes = reactFlowInstance.getNodes();
+    let edges = reactFlowInstance.getEdges();
+
+    let returnValue = updateIdsPaste(nodes, edges, selectionInstance.nodes, selectionInstance.edges, position);
+
+    nodes = returnValue.nodes;
+    edges = returnValue.edges;
+
+    reactFlowInstance.setNodes(nodes);
     reactFlowInstance.setEdges(edges);
   }
 
