@@ -6,6 +6,18 @@ from langflow.database.base import create_db_and_tables
 
 template_node = {
     "template": {
+        "code": {
+            "required": True,
+            "placeholder": "",
+            "show": True,
+            "multiline": True,
+            "value": "\ndef my_user_python_function(text: str) -> str:\n    \"\"\"This is a default python function that returns the input text\"\"\"\n    return text.upper()\n",
+            "password": False,
+            "name": "code",
+            "advanced": False,
+            "type": "code",
+            "list": False
+        },
         "lc_kwargs": {
             "required": False,
             "placeholder": "",
