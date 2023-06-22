@@ -1,5 +1,6 @@
+import json
 from typing import Type
-from langchain.vectorstores import Pinecone, Qdrant, Chroma
+from langchain.vectorstores import Pinecone, Qdrant, Chroma, FAISS, Weaviate
 
 
 def docs_in_params(params: dict) -> bool:
@@ -8,6 +9,45 @@ def docs_in_params(params: dict) -> bool:
     return ("documents" in params and params["documents"]) or (
         "texts" in params and params["texts"]
     )
+
+
+def initialize_weaviate(class_object: Type[Weaviate], params: dict):
+    """Initialize weaviate and return the class object"""
+    if not docs_in_params(params):
+        import weaviate
+
+        client_kwargs_json = params.get("client_kwargs", "{}")
+        client_kwargs = json.loads(client_kwargs_json)
+        client_params = {
+            "url": params.get("weaviate_url"),
+        }
+        client_params.update(client_kwargs)
+        weaviate_client = weaviate.Client(**client_params)
+
+        new_params = {
+            "client": weaviate_client,
+            "index_name": params.get("index_name"),
+            "text_key": params.get("text_key"),
+        }
+        weaviate = class_object(**new_params)
+    # If there are docs in the params, create a new index
+    if "texts" in params:
+        params["documents"] = params.pop("texts")
+
+    return class_object.from_documents(**params)
+
+
+def initialize_faiss(class_object: Type[FAISS], params: dict):
+    """Initialize faiss and return the class object"""
+
+    if not docs_in_params(params):
+        return class_object.load_local
+
+    save_local = params.get("save_local")
+    faiss_index = class_object(**params)
+    if save_local:
+        faiss_index.save_local(folder_path=save_local)
+    return faiss_index
 
 
 def initialize_pinecone(class_object: Type[Pinecone], params: dict):
