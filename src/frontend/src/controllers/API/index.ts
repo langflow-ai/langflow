@@ -3,6 +3,8 @@ import {
   PromptTypeAPI,
   errorsTypeAPI,
   InitTypeAPI,
+  TemplateVariableType,
+  APITemplateType,
 } from "./../../types/api/index";
 import { APIObjectType, sendAllProps } from "../../types/api/index";
 import axios, { AxiosResponse } from "axios";
@@ -318,4 +320,8 @@ export async function postBuildInit(
   flow: FlowType
 ): Promise<AxiosResponse<InitTypeAPI>> {
   return await axios.post(`/api/v1/build/init`, flow);
+}
+
+export async function UpdateTemplate(type:string, template:APITemplateType):Promise<AxiosResponse<APITemplateType>>{
+  return await axios.post(`/api/v1/UpdateTemplate`);
 }
