@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from langflow.database.models.flow import FlowCreate, FlowRead
 from pydantic import BaseModel, Field, validator
+import json
 
 
 class GraphData(BaseModel):
@@ -97,3 +98,9 @@ class UploadFileResponse(BaseModel):
 
     flowId: str
     file_path: Path
+class StreamData(BaseModel):
+    event: str
+    data: dict
+
+    def __str__(self) -> str:
+        return f"event: {self.event}\ndata: {json.dumps(self.data)}\n\n"
