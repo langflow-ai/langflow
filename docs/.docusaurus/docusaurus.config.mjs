@@ -32,11 +32,11 @@ export default {
       {
         "docs": {
           "routeBasePath": "/",
-          "sidebarPath": "/home/carlos/repo/logspace/langflow/docs/sidebars.js",
+          "sidebarPath": "/Users/rodrigonader/Repositories/logspace/langflow/docs/sidebars.js",
           "path": "docs"
         },
         "theme": {
-          "customCss": "/home/carlos/repo/logspace/langflow/docs/src/css/custom.css"
+          "customCss": "/Users/rodrigonader/Repositories/logspace/langflow/docs/src/css/custom.css"
         }
       }
     ]

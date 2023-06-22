@@ -13,9 +13,9 @@
           "tagsPath": "/tags",
           "isLast": true,
           "routePriority": -1,
-          "sidebarFilePath": "/home/carlos/repo/logspace/langflow/docs/sidebars.js",
-          "contentPath": "/home/carlos/repo/logspace/langflow/docs/docs",
-          "contentPathLocalized": "/home/carlos/repo/logspace/langflow/docs/i18n/en/docusaurus-plugin-content-docs/current",
+          "sidebarFilePath": "/Users/rodrigonader/Repositories/logspace/langflow/docs/sidebars.js",
+          "contentPath": "/Users/rodrigonader/Repositories/logspace/langflow/docs/docs",
+          "contentPathLocalized": "/Users/rodrigonader/Repositories/logspace/langflow/docs/i18n/en/docusaurus-plugin-content-docs/current",
           "docs": [
             {
               "unversionedId": "buffer-memory",
@@ -247,7 +247,7 @@
               "unversionedId": "how-contribute",
               "id": "how-contribute",
               "title": "How to contribute?",
-              "description": "Hello there! We welcome contributions from developers of all levels to our open-source project on GitHub. If you'd like to contribute, please check our contributing guidelines and help make LangFlow more accessible.",
+              "description": "👋 Hello there! We welcome contributions from developers of all levels to our open-source project on GitHub. If you'd like to contribute, please check our contributing guidelines and help make LangFlow more accessible.",
               "source": "@site/docs/how-contribute.md",
               "sourceDirName": ".",
               "slug": "/how-contribute",
