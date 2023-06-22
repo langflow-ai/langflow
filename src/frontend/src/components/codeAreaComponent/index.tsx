@@ -3,7 +3,7 @@ import { useContext, useEffect, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import CodeAreaModal from "../../modals/codeAreaModal";
 import TextAreaModal from "../../modals/textAreaModal";
-import { TextAreaComponentType } from "../../types/components";
+import { CodeAreaComponentType, TextAreaComponentType } from "../../types/components";
 import { INPUT_STYLE } from "../../constants";
 
 export default function CodeAreaComponent({
@@ -11,7 +11,9 @@ export default function CodeAreaComponent({
   onChange,
   disabled,
   editNode = false,
-}: TextAreaComponentType) {
+  template,
+  setTemplate,
+}: CodeAreaComponentType) {
   const [myValue, setMyValue] = useState(value);
   const { openPopUp } = useContext(PopUpContext);
   useEffect(() => {
@@ -37,6 +39,8 @@ export default function CodeAreaComponent({
             openPopUp(
               <CodeAreaModal
                 value={myValue}
+                template={template}
+                setTemplate={setTemplate}
                 setValue={(t: string) => {
                   setMyValue(t);
                   onChange(t);
@@ -59,7 +63,9 @@ export default function CodeAreaComponent({
           onClick={() => {
             openPopUp(
               <CodeAreaModal
+              setTemplate={setTemplate}
                 value={myValue}
+                template={template}
                 setValue={(t: string) => {
                   setMyValue(t);
                   onChange(t);

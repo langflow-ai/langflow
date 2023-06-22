@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import svgr from "vite-plugin-svgr";
-const apiRoutes = ["^/api/v1/", "/health"];
+const apiRoutes = ["^/api/v1/", "/health","/dynamic_node"];
 
 // Use environment variable to determine the target.
 const target = process.env.VITE_PROXY_TARGET || "http://127.0.0.1:7860";
