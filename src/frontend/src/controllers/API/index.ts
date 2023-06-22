@@ -49,13 +49,6 @@ export async function postValidateCode(
   return await axios.post("/api/v1/validate/code", { code });
 }
 
-export async function postValidateNode(
-  nodeId: string,
-  data: any
-): Promise<AxiosResponse<string>> {
-  return await axios.post(`/api/v1/validate/node/${nodeId}`, { data });
-}
-
 /**
  * Checks the prompt for the code block by sending it to an API endpoint.
  *
