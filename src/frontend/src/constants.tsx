@@ -66,7 +66,7 @@ export const getPythonApiCode = (flow: FlowType): string => {
 
 BASE_API_URL = "${window.location.protocol}//${
     window.location.host
-  }/api/v1/predict"
+  }/api/v1/process"
 FLOW_ID = "${flowId}"
 # You can tweak the flow by adding a tweaks dictionary
 # e.g {"OpenAI-XXXXX": {"model_name": "gpt-4"}}
@@ -106,7 +106,7 @@ export const getCurlCode = (flow: FlowType): string => {
   return `curl -X POST \\
   ${window.location.protocol}//${
     window.location.host
-  }/api/v1/predict/${flowId} \\
+  }/api/v1/process/${flowId} \\
   -H 'Content-Type: application/json' \\
   -d '{"message": "Your message", "tweaks": ${JSON.stringify(
     tweaks,
