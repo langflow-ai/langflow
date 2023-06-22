@@ -235,7 +235,7 @@
     "how-contribute": {
       "id": "how-contribute",
       "title": "How to contribute?",
-      "description": "Hello there! We welcome contributions from developers of all levels to our open-source project on GitHub. If you'd like to contribute, please check our contributing guidelines and help make LangFlow more accessible.",
+      "description": "👋 Hello there! We welcome contributions from developers of all levels to our open-source project on GitHub. If you'd like to contribute, please check our contributing guidelines and help make LangFlow more accessible.",
       "sidebar": "docs"
     },
     "how-upload-examples": {
