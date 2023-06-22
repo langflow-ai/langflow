@@ -223,7 +223,7 @@
     "gcp-deployment": {
       "id": "gcp-deployment",
       "title": "Deploy on Google Cloud Platform",
-      "description": "Run Langflow from a New Google Cloud Project",
+      "description": "Run LangFlow from a New Google Cloud Project",
       "sidebar": "docs"
     },
     "github-issues": {
@@ -265,7 +265,7 @@
     "jina-deployment": {
       "id": "jina-deployment",
       "title": "Deploy on Jina AI Cloud",
-      "description": "Langflow integrates with langchain-serve to provide a one-command deployment to Jina AI Cloud.",
+      "description": "LangFlow integrates with langchain-serve to provide a one-command deployment to Jina AI Cloud.",
       "sidebar": "docs"
     },
     "midjourney-prompt-chain": {
