@@ -10,8 +10,24 @@ To contribute to this project, please follow a ["fork and pull request"](https:/
 Please do not try to push directly to this repo unless you are a maintainer.
 
 ---
+## Local development
 
-## Run Locally
+You can develop LangFlow using docker compose, or locally.
+
+We provide a .vscode/launch.json file for debugging the backend in VSCode, which is a lot faster than using docker compose.
+
+Setting up hooks:
+```bash
+make init
+```
+
+This will install the pre-commit hooks, which will run `make format` on every commit.
+
+It is advised to run `make lint` before pushing to the repository.
+
+---
+
+## Run locally
 
 LangFlow can run locally by cloning the repository and installing the dependencies. We recommend using a virtual environment to isolate the dependencies from your system.
 

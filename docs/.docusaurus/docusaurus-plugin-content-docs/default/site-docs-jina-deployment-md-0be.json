@@ -2,7 +2,7 @@
   "unversionedId": "jina-deployment",
   "id": "jina-deployment",
   "title": "Deploy on Jina AI Cloud",
-  "description": "Langflow integrates with langchain-serve to provide a one-command deployment to Jina AI Cloud.",
+  "description": "LangFlow integrates with langchain-serve to provide a one-command deployment to Jina AI Cloud.",
   "source": "@site/docs/jina-deployment.md",
   "sourceDirName": ".",
   "slug": "/jina-deployment",
