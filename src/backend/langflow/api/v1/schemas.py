@@ -98,6 +98,8 @@ class UploadFileResponse(BaseModel):
 
     flowId: str
     file_path: Path
+
+
 class StreamData(BaseModel):
     event: str
     data: dict
