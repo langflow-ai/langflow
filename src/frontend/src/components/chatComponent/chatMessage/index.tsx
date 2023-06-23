@@ -17,7 +17,7 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
         <div className="w-full text-start">
           <div
             style={{ backgroundColor: nodeColors["chat"] }}
-            className=" relative text-start inline-block text-white rounded-xl overflow-hidden w-fit max-w-[280px] text-sm font-normal rounded-tl-none"
+            className=" relative text-start inline-block text-background rounded-xl overflow-hidden w-fit max-w-[280px] text-sm font-normal rounded-tl-none"
           >
             {hidden && chat.thought && chat.thought !== "" && (
               <div
@@ -48,7 +48,7 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
         </div>
       ) : (
         <div className="w-full text-end">
-          <div className="text-start inline-block rounded-xl p-3 overflow-hidden w-fit max-w-[280px] px-5 text-sm text-black dark:text-white dark:bg-almost-dark-gray bg-light-gray font-normal rounded-tr-none">
+          <div className="text-start inline-block rounded-xl p-3 overflow-hidden w-fit max-w-[280px] px-5 text-sm text-black dark:text-background dark:bg-foreground bg-input font-normal rounded-tr-none">
             {chat.message}
           </div>
         </div>

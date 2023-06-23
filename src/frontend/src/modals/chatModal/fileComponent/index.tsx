@@ -37,10 +37,10 @@ export default function FileCard({ fileName, content, fileType }) {
         />
         {isHovered && (
           <div
-            className={`absolute top-0 right-0 bg-muted text-almost-dark-gray rounded-bl-lg px-1 text-sm font-bold dark:bg-almost-dark-gray dark:text-medium-low-gray`}
+            className={`absolute top-0 right-0 bg-muted text-foreground rounded-bl-lg px-1 text-sm font-bold dark:bg-foreground dark:text-medium-low-gray`}
           >
             <button
-              className="text-medium-gray py-1 px-2 dark:bg-almost-dark-gray dark:text-medium-low-gray"
+              className="text-ring py-1 px-2 dark:bg-foreground dark:text-medium-low-gray"
               onClick={handleDownload}
             >
               <CloudArrowDownIcon className="hover:scale-110 w-5 h-5 text-current"></CloudArrowDownIcon>
@@ -54,7 +54,7 @@ export default function FileCard({ fileName, content, fileType }) {
   return (
     <button
       onClick={handleDownload}
-      className="bg-muted shadow rounded w-1/2 text-almost-dark-gray hover:drop-shadow-lg px-2 py-2 flex justify-between items-center border border-medium-low-gray"
+      className="bg-muted shadow rounded w-1/2 text-foreground hover:drop-shadow-lg px-2 py-2 flex justify-between items-center border border-ring"
     >
       <div className="flex gap-2 text-current items-center w-full mr-2">
         {" "}
@@ -70,7 +70,7 @@ export default function FileCard({ fileName, content, fileType }) {
         <div className="flex flex-col items-start">
           {" "}
           <div className="truncate text-sm text-current">{fileName}</div>
-          <div className="truncate text-xs  text-medium-gray">{fileType}</div>
+          <div className="truncate text-xs  text-ring">{fileType}</div>
         </div>
         <CloudArrowDownIcon className="w-6 h-6 text-current ml-auto" />
       </div>

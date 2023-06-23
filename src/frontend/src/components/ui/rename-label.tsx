@@ -57,7 +57,7 @@ export default function RenameLabel(props) {
           ref={inputRef}
           onInput={resizeInput}
           className={cn(
-            "px-2 bg-transparent focus:border-none active:outline hover:outline focus:outline outline-medium-low-gray rounded-md",
+            "px-2 bg-transparent focus:border-none active:outline hover:outline focus:outline outline-ring rounded-md",
             props.className
           )}
           onBlur={() => {

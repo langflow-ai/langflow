@@ -85,7 +85,7 @@ export default function ImportModal() {
                     }}
                   >
                     <ArrowLeftIcon
-                      className="h-5 w-5 text-dark-gray ml-1 dark:text-white"
+                      className="h-5 w-5 text-foreground ml-1 dark:text-background"
                       aria-hidden="true"
                     />
                   </button>
@@ -97,7 +97,7 @@ export default function ImportModal() {
               {showExamples ? "Select an example" : "Import"}
             </span>
             <ArrowUpTrayIcon
-              className="h-5 w-5 text-dark-gray ml-1 dark:text-white"
+              className="h-5 w-5 text-foreground ml-1 dark:text-background"
               aria-hidden="true"
             />
           </DialogTitle>
@@ -106,7 +106,7 @@ export default function ImportModal() {
 
         <div
           className={classNames(
-            "h-full w-full dark:bg-high-dark-gray overflow-y-auto scrollbar-hide",
+            "h-full w-full dark:bg-foreground overflow-y-auto scrollbar-hide",
             showExamples && !loadingExamples
               ? "flex flex-row start justify-center items-start flex-wrap overflow-auto mx-auto"
               : "flex flex-row justify-center items-center"
@@ -179,7 +179,7 @@ export default function ImportModal() {
             <a
               href="https://github.com/logspace-ai/langflow_examples"
               target="_blank"
-              className="flex items-center justify-center text-medium-dark-gray dark:text-medium-low-gray"
+              className="flex items-center justify-center text-muted-foreground dark:text-medium-low-gray"
               rel="noreferrer"
             >
               <svg

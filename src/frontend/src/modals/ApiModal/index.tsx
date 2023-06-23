@@ -89,7 +89,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
           <DialogTitle className="flex items-center">
             <span className="pr-2">Code</span>
             <CodeBracketSquareIcon
-              className="h-6 w-6 text-dark-gray pl-1 dark:text-white"
+              className="h-6 w-6 text-foreground pl-1 dark:text-background"
               aria-hidden="true"
             />
           </DialogTitle>
@@ -109,7 +109,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
             </TabsList>
             <div className="float-right">
               <button
-                className="flex gap-1.5 items-center rounded bg-none p-1 text-xs text-medium-gray dark:text-medium-low-gray"
+                className="flex gap-1.5 items-center rounded bg-none p-1 text-xs text-ring dark:text-medium-low-gray"
                 onClick={copyToClipboard}
               >
                 {isCopied ? <Check size={18} /> : <Clipboard size={15} />}

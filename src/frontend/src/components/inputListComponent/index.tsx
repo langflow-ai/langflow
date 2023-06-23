@@ -32,10 +32,10 @@ export default function InputListComponent({
             value={i}
             className={
               editNode
-                ? "border-[1px]  truncate cursor-pointer text-center placeholder:text-center text-medium-gray block w-full pt-0.5 pb-0.5 form-input dark:bg-high-dark-gray dark:text-medium-low-gray dark:border-medium-dark-gray rounded-md border-medium-low-gray shadow-sm sm:text-sm" +
+                ? "border-[1px]  truncate cursor-pointer text-center placeholder:text-center text-ring block w-full pt-0.5 pb-0.5 form-input dark:bg-foreground dark:text-medium-low-gray dark:border-muted-foreground rounded-md border-ring shadow-sm sm:text-sm" +
                   INPUT_STYLE
-                : "block w-full form-input rounded-md border-medium-low-gray shadow-sm focus:border-medium-gray focus:ring-medium-gray sm:text-sm" +
-                  (disabled ? " bg-light-gray" : "") +
+                : "block w-full form-input rounded-md border-ring shadow-sm focus:border-ring focus:ring-ring sm:text-sm" +
+                  (disabled ? " bg-input" : "") +
                   "focus:placeholder-transparent"
             }
             placeholder="Type something..."
@@ -72,7 +72,7 @@ export default function InputListComponent({
                 onChange(inputList);
               }}
             >
-              <XMarkIcon className="w-4 h-4 hover:text-almost-medium-red" />
+              <XMarkIcon className="w-4 h-4 hover:text-destructive" />
             </button>
           )}
         </div>

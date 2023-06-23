@@ -46,12 +46,12 @@ export default function NoticeAlert({
             />
           </div>
           <div className="ml-3 flex-1 md:flex md:justify-between">
-            <p className="text-sm text-medium-dark-blue dark:text-white/80">{title}</p>
+            <p className="text-sm text-ring dark:text-background/80">{title}</p>
             <p className="mt-3 text-sm md:mt-0 md:ml-6">
               {link !== "" ? (
                 <Link
                   to={link}
-                  className="whitespace-nowrap font-medium text-medium-dark-blue dark:text-light-blue hover:dark:text-blue-10 hover:text-ring"
+                  className="whitespace-nowrap font-medium text-ring dark:text-light-blue hover:dark:text-blue-10 hover:text-ring"
                 >
                   Details
                 </Link>

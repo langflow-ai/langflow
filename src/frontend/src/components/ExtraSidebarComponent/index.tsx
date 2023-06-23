@@ -19,9 +19,9 @@ export default function ExtraSidebar() {
       <aside
         className={` ${
           isStackedOpen ? "w-52" : "w-0 "
-        } flex-shrink-0 flex overflow-hidden flex-col border-r dark:border-r-almost-dark-gray transition-all duration-500`}
+        } flex-shrink-0 flex overflow-hidden flex-col border-r dark:border-r-foreground transition-all duration-500`}
       >
-        <div className="w-52 dark:bg-dark-gray border dark:border-almost-dark-gray  overflow-y-auto scrollbar-hide h-full flex flex-col items-start bg-white">
+        <div className="w-52 dark:bg-foreground border dark:border-foreground  overflow-y-auto scrollbar-hide h-full flex flex-col items-start bg-background">
           <div className="flex flex-grow flex-col w-full">
             {extraNavigation.options ? (
               <div className="p-4">
@@ -33,16 +33,16 @@ export default function ExtraSidebar() {
                           to={item.href}
                           className={classNames(
                             item.href.split("/")[2] === current[4]
-                              ? "bg-muted text-high-dark-gray"
-                              : "bg-white text-medium-dark-gray hover:bg-muted hover:text-high-dark-gray",
+                              ? "bg-muted text-foreground"
+                              : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
                             "group w-full flex items-center pl-2 py-2 text-sm font-medium rounded-md"
                           )}
                         >
                           <item.icon
                             className={classNames(
                               item.href.split("/")[2] === current[4]
-                                ? "text-medium-gray"
-                                : "text-almost-medium-gray group-hover:text-medium-gray",
+                                ? "text-ring"
+                                : "text-ring group-hover:text-ring",
                               "mr-3 flex-shrink-0 h-6 w-6"
                             )}
                           />
@@ -60,22 +60,22 @@ export default function ExtraSidebar() {
                             <Disclosure.Button
                               className={classNames(
                                 item.href.split("/")[2] === current[4]
-                                  ? "bg-muted text-high-dark-gray"
-                                  : "bg-white text-medium-dark-gray hover:bg-muted hover:text-high-dark-gray",
-                                "group w-full flex items-center pl-2 pr-1 py-2 text-left text-sm font-medium rounded-md focus:outline-none focus:ring-1 focus:ring-medium-indigo"
+                                  ? "bg-muted text-foreground"
+                                  : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
+                                "group w-full flex items-center pl-2 pr-1 py-2 text-left text-sm font-medium rounded-md focus:outline-none focus:ring-1 focus:ring-ring"
                               )}
                             >
                               <item.icon
-                                className="mr-3 h-6 w-6 flex-shrink-0 text-almost-medium-gray group-hover:text-medium-gray"
+                                className="mr-3 h-6 w-6 flex-shrink-0 text-ring group-hover:text-ring"
                                 aria-hidden="true"
                               />
                               <span className="flex-1">{item.name}</span>
                               <svg
                                 className={classNames(
                                   open
-                                    ? "text-almost-medium-gray rotate-90"
-                                    : "text-medium-low-gray",
-                                  "ml-3 h-5 w-5 flex-shrink-0 transition-rotate duration-150 ease-in-out group-hover:text-almost-medium-gray"
+                                    ? "text-ring rotate-90"
+                                    : "text-ring",
+                                  "ml-3 h-5 w-5 flex-shrink-0 transition-rotate duration-150 ease-in-out group-hover:text-ring"
                                 )}
                                 viewBox="0 0 20 20"
                                 aria-hidden="true"
@@ -93,8 +93,8 @@ export default function ExtraSidebar() {
                                   to={subItem.href}
                                   className={classNames(
                                     subItem.href.split("/")[3] === current[5]
-                                      ? "bg-muted text-high-dark-gray"
-                                      : "bg-white text-medium-dark-gray hover:bg-muted hover:text-high-dark-gray",
+                                      ? "bg-muted text-foreground"
+                                      : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
                                     "group flex w-full items-center rounded-md py-2 pl-11 pr-2 text-sm font-medium"
                                   )}
                                 >

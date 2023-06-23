@@ -21,7 +21,7 @@ export default function ToggleComponent({
           setEnabled(x);
         }}
         className={classNames(
-          enabled ? "bg-primary" : "bg-light-gray",
+          enabled ? "bg-primary" : "bg-input",
           "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-1 focus:ring-primary focus:ring-offset-1"
         )}
       >
@@ -31,8 +31,8 @@ export default function ToggleComponent({
             enabled ? "translate-x-5" : "translate-x-0",
             "pointer-events-none relative inline-block h-5 w-5 transform rounded-full  shadow ring-0 transition duration-200 ease-in-out",
             disabled
-              ? "bg-light-gray dark:bg-medium-dark-gray"
-              : "bg-white dark:bg-dark-gray"
+              ? "bg-input dark:bg-muted-foreground"
+              : "bg-background dark:bg-foreground"
           )}
         >
           <span
