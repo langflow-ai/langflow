@@ -233,7 +233,7 @@ def load_agent_executor(agent_class: type[agent_module.Agent], params, **kwargs)
     if not isinstance(allowed_tools, (list, set)) and isinstance(
         allowed_tools, BaseTool
     ):
-        allowed_tools: Sequence[BaseTool] = [allowed_tools]
+        allowed_tools = [allowed_tools]
     tool_names = [tool.name for tool in allowed_tools]
     # Agent class requires an output_parser but Agent classes
     # have a default output_parser.
