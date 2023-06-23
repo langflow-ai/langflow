@@ -132,6 +132,7 @@ vectorstores:
   - Weaviate
   - FAISS
   - Pinecone
+  - SupabaseVectorStore
 wrappers:
   - RequestsWrapper
   # - ChatPromptTemplate
