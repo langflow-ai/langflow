@@ -26,6 +26,7 @@ class DocumentLoaderFrontNode(FrontendNode):
         "UnstructuredEmailLoader": build_file_field(
             suffixes=[".eml"], fileTypes=["eml"]
         ),
+        "SlackDirectoryLoader": build_file_field(suffixes=[".zip"], fileTypes=["zip"]),
         "EverNoteLoader": build_file_field(suffixes=[".xml"], fileTypes=["xml"]),
         "FacebookChatLoader": build_file_field(suffixes=[".json"], fileTypes=["json"]),
         "GutenbergLoader": build_file_field(suffixes=[".txt"], fileTypes=["txt"]),
@@ -118,6 +119,7 @@ class DocumentLoaderFrontNode(FrontendNode):
         elif self.template.type_name in {
             "DirectoryLoader",
             "ReadTheDocsLoader",
+            "NotionDirectoryLoader",
         }:
             name = "path"
             display_name = "Local directory"
