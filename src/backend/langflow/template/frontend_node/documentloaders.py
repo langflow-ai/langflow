@@ -55,7 +55,54 @@ class DocumentLoaderFrontNode(FrontendNode):
     def add_extra_fields(self) -> None:
         name = None
         display_name = "Web Page"
-        if self.template.type_name in self.file_path_templates:
+        if self.template.type_name in {"GitLoader"}:
+            # Add fields repo_path, clone_url, branch and file_filter
+            self.template.add_field(
+                TemplateField(
+                    field_type="str",
+                    required=True,
+                    show=True,
+                    name="repo_path",
+                    value="",
+                    display_name="Path to repository",
+                    advanced=False,
+                )
+            )
+            self.template.add_field(
+                TemplateField(
+                    field_type="str",
+                    required=False,
+                    show=True,
+                    name="clone_url",
+                    value="",
+                    display_name="Clone URL",
+                    advanced=False,
+                )
+            )
+            self.template.add_field(
+                TemplateField(
+                    field_type="str",
+                    required=True,
+                    show=True,
+                    name="branch",
+                    value="",
+                    display_name="Branch",
+                    advanced=False,
+                )
+            )
+            self.template.add_field(
+                TemplateField(
+                    field_type="str",
+                    required=False,
+                    show=True,
+                    name="file_filter",
+                    value="",
+                    display_name="File extensions (comma-separated)",
+                    advanced=False,
+                )
+            )
+
+        elif self.template.type_name in self.file_path_templates:
             self.template.add_field(self.file_path_templates[self.template.type_name])
         elif self.template.type_name in {
             "WebBaseLoader",
@@ -68,7 +115,10 @@ class DocumentLoaderFrontNode(FrontendNode):
             name = "web_path"
         elif self.template.type_name in {"GitbookLoader"}:
             name = "web_page"
-        elif self.template.type_name in {"DirectoryLoader", "ReadTheDocsLoader"}:
+        elif self.template.type_name in {
+            "DirectoryLoader",
+            "ReadTheDocsLoader",
+        }:
             name = "path"
             display_name = "Local directory"
         if name:
@@ -112,3 +162,4 @@ class DocumentLoaderFrontNode(FrontendNode):
         if field.name == "metadata":
             field.show = True
             field.advanced = False
+        field.show = True
