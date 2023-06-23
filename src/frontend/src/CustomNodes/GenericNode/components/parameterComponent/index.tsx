@@ -80,7 +80,7 @@ export default function ParameterComponent({
 
   useEffect(() => {
     const groupedObj = groupByFamily(myData, tooltipTitle);
-    
+
     refHtml.current = groupedObj.map((item, i) => (
       <span
         key={getRandomKeyByssmm()}
@@ -105,7 +105,9 @@ export default function ParameterComponent({
               ? item.type.split(", ").map((el, i) => (
                   <React.Fragment key={el + i}>
                     <span>
-                      {i === item.type.split(", ").length - 1 ? el : (el += `, `)}
+                      {i === item.type.split(", ").length - 1
+                        ? el
+                        : (el += `, `)}
                     </span>
                     {i % 2 === 0 && i > 0 && <br />}
                   </React.Fragment>
@@ -115,7 +117,6 @@ export default function ParameterComponent({
         </span>
       </span>
     ));
-    
   }, [tooltipTitle]);
 
   return (
