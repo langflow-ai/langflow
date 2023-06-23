@@ -6,7 +6,7 @@
   "source": "@site/docs/creating-flows.mdx",
   "sourceDirName": ".",
   "slug": "/creating-flows",
-  "permalink": "/creating-flows",
+  "permalink": "/langflow/creating-flows",
   "draft": false,
   "tags": [],
   "version": "current",
@@ -14,10 +14,10 @@
   "sidebar": "docs",
   "previous": {
     "title": "🤗 HuggingFace Spaces",
-    "permalink": "/hugging-face-spaces"
+    "permalink": "/langflow/hugging-face-spaces"
   },
   "next": {
     "title": "Component",
-    "permalink": "/components"
+    "permalink": "/langflow/components"
   }
 }

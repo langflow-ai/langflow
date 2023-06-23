@@ -6,7 +6,7 @@
   "source": "@site/docs/gcp-deployment.md",
   "sourceDirName": ".",
   "slug": "/gcp-deployment",
-  "permalink": "/gcp-deployment",
+  "permalink": "/langflow/gcp-deployment",
   "draft": false,
   "tags": [],
   "version": "current",
@@ -14,10 +14,10 @@
   "sidebar": "docs",
   "previous": {
     "title": "📚 How to Upload Examples?",
-    "permalink": "/how-upload-examples"
+    "permalink": "/langflow/how-upload-examples"
   },
   "next": {
     "title": "Deploy on Jina AI Cloud",
-    "permalink": "/jina-deployment"
+    "permalink": "/langflow/jina-deployment"
   }
 }

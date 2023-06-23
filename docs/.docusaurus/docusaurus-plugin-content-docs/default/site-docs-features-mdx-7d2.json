@@ -6,7 +6,7 @@
   "source": "@site/docs/features.mdx",
   "sourceDirName": ".",
   "slug": "/features",
-  "permalink": "/features",
+  "permalink": "/langflow/features",
   "draft": false,
   "tags": [],
   "version": "current",
@@ -14,10 +14,10 @@
   "sidebar": "docs",
   "previous": {
     "title": "Component",
-    "permalink": "/components"
+    "permalink": "/langflow/components"
   },
   "next": {
     "title": "Collection",
-    "permalink": "/collection"
+    "permalink": "/langflow/collection"
   }
 }

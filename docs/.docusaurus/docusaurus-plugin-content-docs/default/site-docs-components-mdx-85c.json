@@ -6,7 +6,7 @@
   "source": "@site/docs/components.mdx",
   "sourceDirName": ".",
   "slug": "/components",
-  "permalink": "/components",
+  "permalink": "/langflow/components",
   "draft": false,
   "tags": [],
   "version": "current",
@@ -14,10 +14,10 @@
   "sidebar": "docs",
   "previous": {
     "title": "🎨 Creating Flows",
-    "permalink": "/creating-flows"
+    "permalink": "/langflow/creating-flows"
   },
   "next": {
     "title": "Features",
-    "permalink": "/features"
+    "permalink": "/langflow/features"
   }
 }

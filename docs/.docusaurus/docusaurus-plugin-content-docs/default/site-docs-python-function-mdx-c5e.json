@@ -6,7 +6,7 @@
   "source": "@site/docs/python-function.mdx",
   "sourceDirName": ".",
   "slug": "/python-function",
-  "permalink": "/python-function",
+  "permalink": "/langflow/python-function",
   "draft": false,
   "tags": [],
   "version": "current",
@@ -14,10 +14,10 @@
   "sidebar": "docs",
   "previous": {
     "title": "Multiple Vector Stores",
-    "permalink": "/multiple-vectorstores"
+    "permalink": "/langflow/multiple-vectorstores"
   },
   "next": {
     "title": "📚 How to Upload Examples?",
-    "permalink": "/how-upload-examples"
+    "permalink": "/langflow/how-upload-examples"
   }
 }

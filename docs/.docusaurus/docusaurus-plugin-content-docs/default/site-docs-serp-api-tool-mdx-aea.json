@@ -6,7 +6,7 @@
   "source": "@site/docs/serp-api-tool.mdx",
   "sourceDirName": ".",
   "slug": "/serp-api-tool",
-  "permalink": "/serp-api-tool",
+  "permalink": "/langflow/serp-api-tool",
   "draft": false,
   "tags": [],
   "version": "current",
@@ -14,10 +14,10 @@
   "sidebar": "docs",
   "previous": {
     "title": "CSV Loader",
-    "permalink": "/csv-loader"
+    "permalink": "/langflow/csv-loader"
   },
   "next": {
     "title": "Multiple Vector Stores",
-    "permalink": "/multiple-vectorstores"
+    "permalink": "/langflow/multiple-vectorstores"
   }
 }

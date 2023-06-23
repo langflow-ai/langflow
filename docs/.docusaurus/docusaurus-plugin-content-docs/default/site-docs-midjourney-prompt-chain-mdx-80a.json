@@ -6,7 +6,7 @@
   "source": "@site/docs/midjourney-prompt-chain.mdx",
   "sourceDirName": ".",
   "slug": "/midjourney-prompt-chain",
-  "permalink": "/midjourney-prompt-chain",
+  "permalink": "/langflow/midjourney-prompt-chain",
   "draft": false,
   "tags": [],
   "version": "current",
@@ -14,10 +14,10 @@
   "sidebar": "docs",
   "previous": {
     "title": "Buffer Memory",
-    "permalink": "/buffer-memory"
+    "permalink": "/langflow/buffer-memory"
   },
   "next": {
     "title": "CSV Loader",
-    "permalink": "/csv-loader"
+    "permalink": "/langflow/csv-loader"
   }
 }
