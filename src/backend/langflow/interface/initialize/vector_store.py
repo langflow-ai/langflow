@@ -33,8 +33,11 @@ def initialize_supabase(class_object: Type[SupabaseVectorStore], params: dict):
     supabase: Client = create_client(**client_kwargs)
     if not docs_in_params(params):
         return class_object(client=supabase, **params)
+    # If there are docs in the params, create a new index
+    if "texts" in params:
+        params["documents"] = params.pop("texts")
 
-    return class_object.from_documents(**params)
+    return class_object.from_documents(client=supabase, **params)
 
 
 def initialize_weaviate(class_object: Type[Weaviate], params: dict):
