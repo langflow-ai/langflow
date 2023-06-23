@@ -45,7 +45,7 @@ def initialize_supabase(class_object: Type[SupabaseVectorStore], params: dict):
 def initialize_weaviate(class_object: Type[Weaviate], params: dict):
     """Initialize weaviate and return the class object"""
     if not docs_in_params(params):
-        import weaviate
+        import weaviate  # type: ignore
 
         client_kwargs_json = params.get("client_kwargs", "{}")
         client_kwargs = json.loads(client_kwargs_json)
@@ -84,7 +84,7 @@ def initialize_faiss(class_object: Type[FAISS], params: dict):
 def initialize_pinecone(class_object: Type[Pinecone], params: dict):
     """Initialize pinecone and return the class object"""
 
-    import pinecone
+    import pinecone  # type: ignore
 
     pinecone_api_key = params.get("pinecone_api_key")
     pinecone_env = params.get("pinecone_env")
