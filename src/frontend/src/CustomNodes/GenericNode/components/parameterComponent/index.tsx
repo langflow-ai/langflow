@@ -41,7 +41,7 @@ export default function ParameterComponent({
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   const { closePopUp } = useContext(PopUpContext);
-  const { setTabsState, tabId } = useContext(TabsContext);
+  const { setTabsState, tabId, save } = useContext(TabsContext);
 
   useEffect(() => {
     if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
