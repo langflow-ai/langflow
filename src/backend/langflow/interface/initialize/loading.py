@@ -159,6 +159,19 @@ def instantiate_vectorstore(class_object, params):
 
 
 def instantiate_documentloader(class_object, params):
+
+
+    if "file_filter" in params:
+        # file_filter will be a string but we need a function
+        # that will be used to filter the files using file_filter
+        # like lambda x: x.endswith(".txt") but as we don't know
+        # anything besides the string, we will simply check if the string is
+        # in x and if it is, we will return True
+        file_filter = params.pop("file_filter", None)
+        extensions = file_filter.split(",")
+        params["file_filter"] = lambda x: any(
+            extension.strip() in x for extension in extensions
+        )
     metadata = params.pop("metadata", None)
     docs = class_object(**params).load()
     if metadata:
@@ -172,6 +185,7 @@ def instantiate_documentloader(class_object, params):
 
         for doc in docs:
             doc.metadata = metadata
+
     return docs
 
 
