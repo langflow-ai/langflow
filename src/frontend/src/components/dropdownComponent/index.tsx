@@ -43,11 +43,10 @@ export default function Dropdown({
                     "pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
                   }
                 >
-                  <ChevronsUpDown 
-                                      className="h-5 w-5 text-gray-400"
-                                      aria-hidden="true"
+                  <ChevronsUpDown
+                    className="h-5 w-5 text-gray-400"
+                    aria-hidden="true"
                   />
-
                 </span>
               </Listbox.Button>
 
@@ -98,15 +97,14 @@ export default function Dropdown({
                                 "absolute inset-y-0 right-0 flex items-center pr-4"
                               )}
                             >
-                              <Check 
-                                                              className={
-                                                                active
-                                                                  ? "h-5 w-5 dark:text-black text-black"
-                                                                  : "h-5 w-5 dark:text-white text-black"
-                                                              }
-                                                              aria-hidden="true"
+                              <Check
+                                className={
+                                  active
+                                    ? "h-5 w-5 dark:text-black text-black"
+                                    : "h-5 w-5 dark:text-white text-black"
+                                }
+                                aria-hidden="true"
                               />
-
                             </span>
                           ) : null}
                         </>

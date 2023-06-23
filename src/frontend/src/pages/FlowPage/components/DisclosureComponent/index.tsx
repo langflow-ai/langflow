@@ -26,7 +26,7 @@ export default function DisclosureComponent({
                   </button>
                 ))}
                 <div>
-                <ChevronRight
+                  <ChevronRight
                     className={`${
                       open || openDisc ? "rotate-90 transform" : ""
                     } h-4 w-4 text-gray-800 dark:text-white`}

@@ -88,9 +88,7 @@ export default function InputFileComponent({
           {myValue !== "" ? myValue : "No file"}
         </span>
         <button onClick={handleButtonClick}>
-          {!editNode && (
-            <FileSearch2 className="w-8 h-8  hover:text-ring" />
-          )}
+          {!editNode && <FileSearch2 className="w-8 h-8  hover:text-ring" />}
         </button>
       </div>
     </div>

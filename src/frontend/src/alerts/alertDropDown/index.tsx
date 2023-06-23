@@ -4,7 +4,7 @@ import SingleAlert from "./components/singleAlertComponent";
 import { AlertDropdownType } from "../../types/alerts";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { useOnClickOutside } from "../hooks/useOnClickOutside";
-import { X, Trash2  } from "lucide-react";
+import { X, Trash2 } from "lucide-react";
 
 export default function AlertDropdown({}: AlertDropdownType) {
   const { closePopUp } = useContext(PopUpContext);
@@ -36,7 +36,7 @@ export default function AlertDropdown({}: AlertDropdownType) {
               setTimeout(clearNotificationList, 100);
             }}
           >
-            <Trash2 className="w-[1.1rem] h-[1.1rem]"/>
+            <Trash2 className="w-[1.1rem] h-[1.1rem]" />
           </button>
           <button
             className="text-gray-800 hover:text-red-500 dark:text-gray-200 dark:hover:text-red-500"

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { ChatMessageType } from "../../../types/chat";
 import { nodeColors } from "../../../utils";

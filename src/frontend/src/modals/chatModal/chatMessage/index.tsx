@@ -72,9 +72,7 @@ export default function ChatMessage({
                 onClick={() => setHidden((prev) => !prev)}
                 className="absolute -top-1 -left-2 cursor-pointer"
               >
-                <MessageCircle 
-                className="w-5 h-5 animate-bounce dark:text-white"
-                />
+                <MessageCircle className="w-5 h-5 animate-bounce dark:text-white" />
               </div>
             )}
             {chat.thought && chat.thought !== "" && !hidden && (
