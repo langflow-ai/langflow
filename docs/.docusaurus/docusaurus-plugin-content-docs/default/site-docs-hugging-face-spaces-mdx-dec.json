@@ -6,7 +6,7 @@
   "source": "@site/docs/hugging-face-spaces.mdx",
   "sourceDirName": ".",
   "slug": "/hugging-face-spaces",
-  "permalink": "/hugging-face-spaces",
+  "permalink": "/langflow/hugging-face-spaces",
   "draft": false,
   "tags": [],
   "version": "current",
@@ -14,10 +14,10 @@
   "sidebar": "docs",
   "previous": {
     "title": "📦 How to install?",
-    "permalink": "/installation"
+    "permalink": "/langflow/installation"
   },
   "next": {
     "title": "🎨 Creating Flows",
-    "permalink": "/creating-flows"
+    "permalink": "/langflow/creating-flows"
   }
 }

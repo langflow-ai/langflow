@@ -1,113 +1,113 @@
 {
   "docusaurus-plugin-content-docs": {
     "default": {
-      "path": "/",
+      "path": "/langflow/",
       "versions": [
         {
           "name": "current",
           "label": "Next",
           "isLast": true,
-          "path": "/",
+          "path": "/langflow/",
           "mainDocId": "index",
           "docs": [
             {
               "id": "buffer-memory",
-              "path": "/buffer-memory",
+              "path": "/langflow/buffer-memory",
               "sidebar": "docs"
             },
             {
               "id": "collection",
-              "path": "/collection",
+              "path": "/langflow/collection",
               "sidebar": "docs"
             },
             {
               "id": "community",
-              "path": "/community",
+              "path": "/langflow/community",
               "sidebar": "docs"
             },
             {
               "id": "components",
-              "path": "/components",
+              "path": "/langflow/components",
               "sidebar": "docs"
             },
             {
               "id": "conversation-chain",
-              "path": "/conversation-chain",
+              "path": "/langflow/conversation-chain",
               "sidebar": "docs"
             },
             {
               "id": "creating-flows",
-              "path": "/creating-flows",
+              "path": "/langflow/creating-flows",
               "sidebar": "docs"
             },
             {
               "id": "csv-loader",
-              "path": "/csv-loader",
+              "path": "/langflow/csv-loader",
               "sidebar": "docs"
             },
             {
               "id": "features",
-              "path": "/features",
+              "path": "/langflow/features",
               "sidebar": "docs"
             },
             {
               "id": "gcp-deployment",
-              "path": "/gcp-deployment",
+              "path": "/langflow/gcp-deployment",
               "sidebar": "docs"
             },
             {
               "id": "github-issues",
-              "path": "/github-issues",
+              "path": "/langflow/github-issues",
               "sidebar": "docs"
             },
             {
               "id": "how-contribute",
-              "path": "/how-contribute",
+              "path": "/langflow/how-contribute",
               "sidebar": "docs"
             },
             {
               "id": "how-upload-examples",
-              "path": "/how-upload-examples",
+              "path": "/langflow/how-upload-examples",
               "sidebar": "docs"
             },
             {
               "id": "hugging-face-spaces",
-              "path": "/hugging-face-spaces",
+              "path": "/langflow/hugging-face-spaces",
               "sidebar": "docs"
             },
             {
               "id": "index",
-              "path": "/",
+              "path": "/langflow/",
               "sidebar": "docs"
             },
             {
               "id": "installation",
-              "path": "/installation",
+              "path": "/langflow/installation",
               "sidebar": "docs"
             },
             {
               "id": "jina-deployment",
-              "path": "/jina-deployment",
+              "path": "/langflow/jina-deployment",
               "sidebar": "docs"
             },
             {
               "id": "midjourney-prompt-chain",
-              "path": "/midjourney-prompt-chain",
+              "path": "/langflow/midjourney-prompt-chain",
               "sidebar": "docs"
             },
             {
               "id": "multiple-vectorstores",
-              "path": "/multiple-vectorstores",
+              "path": "/langflow/multiple-vectorstores",
               "sidebar": "docs"
             },
             {
               "id": "python-function",
-              "path": "/python-function",
+              "path": "/langflow/python-function",
               "sidebar": "docs"
             },
             {
               "id": "serp-api-tool",
-              "path": "/serp-api-tool",
+              "path": "/langflow/serp-api-tool",
               "sidebar": "docs"
             }
           ],
@@ -115,7 +115,7 @@
           "sidebars": {
             "docs": {
               "link": {
-                "path": "/",
+                "path": "/langflow/",
                 "label": "index"
               }
             }

@@ -6,7 +6,7 @@
   "source": "@site/docs/collection.mdx",
   "sourceDirName": ".",
   "slug": "/collection",
-  "permalink": "/collection",
+  "permalink": "/langflow/collection",
   "draft": false,
   "tags": [],
   "version": "current",
@@ -14,10 +14,10 @@
   "sidebar": "docs",
   "previous": {
     "title": "Features",
-    "permalink": "/features"
+    "permalink": "/langflow/features"
   },
   "next": {
     "title": "Conversation Chain",
-    "permalink": "/conversation-chain"
+    "permalink": "/langflow/conversation-chain"
   }
 }

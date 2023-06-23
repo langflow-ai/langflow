@@ -6,7 +6,7 @@
   "source": "@site/docs/jina-deployment.md",
   "sourceDirName": ".",
   "slug": "/jina-deployment",
-  "permalink": "/jina-deployment",
+  "permalink": "/langflow/jina-deployment",
   "draft": false,
   "tags": [],
   "version": "current",
@@ -14,10 +14,10 @@
   "sidebar": "docs",
   "previous": {
     "title": "Deploy on Google Cloud Platform",
-    "permalink": "/gcp-deployment"
+    "permalink": "/langflow/gcp-deployment"
   },
   "next": {
     "title": "How to contribute?",
-    "permalink": "/how-contribute"
+    "permalink": "/langflow/how-contribute"
   }
 }

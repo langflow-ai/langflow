@@ -6,7 +6,7 @@
   "source": "@site/docs/multiple-vectorstores.mdx",
   "sourceDirName": ".",
   "slug": "/multiple-vectorstores",
-  "permalink": "/multiple-vectorstores",
+  "permalink": "/langflow/multiple-vectorstores",
   "draft": false,
   "tags": [],
   "version": "current",
@@ -14,10 +14,10 @@
   "sidebar": "docs",
   "previous": {
     "title": "Serp API Tool",
-    "permalink": "/serp-api-tool"
+    "permalink": "/langflow/serp-api-tool"
   },
   "next": {
     "title": "Python Function",
-    "permalink": "/python-function"
+    "permalink": "/langflow/python-function"
   }
 }

@@ -6,7 +6,7 @@
   "source": "@site/docs/installation.md",
   "sourceDirName": ".",
   "slug": "/installation",
-  "permalink": "/installation",
+  "permalink": "/langflow/installation",
   "draft": false,
   "tags": [],
   "version": "current",
@@ -14,10 +14,10 @@
   "sidebar": "docs",
   "previous": {
     "title": "👋 Welcome to LangFlow",
-    "permalink": "/"
+    "permalink": "/langflow/"
   },
   "next": {
     "title": "🤗 HuggingFace Spaces",
-    "permalink": "/hugging-face-spaces"
+    "permalink": "/langflow/hugging-face-spaces"
   }
 }
