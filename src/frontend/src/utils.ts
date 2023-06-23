@@ -43,6 +43,7 @@ import { PineconeIcon } from "./icons/Pinecone";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "./constants";
+import { SupabaseIcon } from "./icons/supabase";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -172,6 +173,7 @@ export const nodeIcons: {
   OpenAI: OpenAiIcon,
   OpenAIEmbeddings: OpenAiIcon,
   Pinecone: PineconeIcon,
+  SupabaseVectorStore: SupabaseIcon,
   // UnstructuredPowerPointLoader: PowerPointIcon, // word and powerpoint have differente styles
   Qdrant: QDrantIcon,
   // ReadTheDocsLoader: ReadTheDocsIcon, // does not work
