@@ -62,7 +62,7 @@ export default function GenericNode({
   }
 
   useEffect(() => {}, [closePopUp, data.node.template]);
-
+  console.log({data})
   return (
     <>
       <NodeToolbar>
