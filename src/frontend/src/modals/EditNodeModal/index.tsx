@@ -79,8 +79,8 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
   }
 
   return (
-    <Dialog open={true} onOpenChange={setModalOpen}>
-      <DialogTrigger></DialogTrigger>
+    <Dialog open={true} onOpenChange={setModalOpen} >
+      <DialogTrigger asChild></DialogTrigger>
       <DialogContent className="lg:max-w-[700px] ">
         <DialogHeader>
           <DialogTitle className="flex items-center">
