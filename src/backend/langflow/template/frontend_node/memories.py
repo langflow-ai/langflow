@@ -62,3 +62,5 @@ class MemoryFrontendNode(FrontendNode):
             field.show = True
             field.advanced = True
             field.value = ""
+        if field.name == "memory_key":
+            field.value = "chat_history"
