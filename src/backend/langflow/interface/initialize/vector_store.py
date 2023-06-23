@@ -1,6 +1,13 @@
 import json
 from typing import Type
-from langchain.vectorstores import Pinecone, Qdrant, Chroma, FAISS, Weaviate
+from langchain.vectorstores import (
+    Pinecone,
+    Qdrant,
+    Chroma,
+    FAISS,
+    Weaviate,
+    SupabaseVectorStore,
+)
 
 
 def docs_in_params(params: dict) -> bool:
@@ -9,6 +16,25 @@ def docs_in_params(params: dict) -> bool:
     return ("documents" in params and params["documents"]) or (
         "texts" in params and params["texts"]
     )
+
+
+def initialize_supabase(class_object: Type[SupabaseVectorStore], params: dict):
+    """Initialize supabase and return the class object"""
+    from supabase.client import Client, create_client
+
+    if "supabase_url" not in params or "supabase_service_key" not in params:
+        raise ValueError("Supabase url and service key must be provided in the params")
+
+    client_kwargs = {
+        "supabase_url": params["supabase_url"],
+        "supabase_key": params["supabase_service_key"],
+    }
+
+    supabase: Client = create_client(**client_kwargs)
+    if not docs_in_params(params):
+        return class_object(client=supabase, **params)
+
+    return class_object.from_documents(**params)
 
 
 def initialize_weaviate(class_object: Type[Weaviate], params: dict):
