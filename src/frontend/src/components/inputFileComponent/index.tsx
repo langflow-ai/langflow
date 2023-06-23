@@ -1,8 +1,8 @@
-import { DocumentMagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { useContext, useEffect, useState } from "react";
 import { alertContext } from "../../contexts/alertContext";
 import { FileComponentType } from "../../types/components";
 import { INPUT_STYLE } from "../../constants";
+import { FileSearch2 } from "lucide-react";
 
 export default function InputFileComponent({
   value,
@@ -89,7 +89,7 @@ export default function InputFileComponent({
         </span>
         <button onClick={handleButtonClick}>
           {!editNode && (
-            <DocumentMagnifyingGlassIcon className="w-8 h-8  hover:text-ring" />
+            <FileSearch2 className="w-8 h-8  hover:text-ring" />
           )}
         </button>
       </div>

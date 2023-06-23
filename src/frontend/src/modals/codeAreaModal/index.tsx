@@ -1,4 +1,3 @@
-import { XMarkIcon, CommandLineIcon } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import AceEditor from "react-ace";
@@ -22,6 +21,7 @@ import {
 } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants";
+import { TerminalSquare } from "lucide-react";
 
 export default function CodeAreaModal({
   value,
@@ -51,10 +51,11 @@ export default function CodeAreaModal({
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Edit Code</span>
-            <CommandLineIcon
-              className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
-              aria-hidden="true"
+            <TerminalSquare
+                          className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
+                          aria-hidden="true"
             />
+
           </DialogTitle>
           <DialogDescription>{CODE_PROMPT_DIALOG_SUBTITLE}</DialogDescription>
         </DialogHeader>

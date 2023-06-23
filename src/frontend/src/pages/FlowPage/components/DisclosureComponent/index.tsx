@@ -1,4 +1,3 @@
-import { ChevronRightIcon } from "@heroicons/react/24/solid";
 import { Disclosure } from "@headlessui/react";
 import { DisclosureComponentType } from "../../../../types/components";
 import { ChevronRight } from "lucide-react";

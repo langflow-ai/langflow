@@ -1,5 +1,4 @@
 import { Dialog, Transition } from "@headlessui/react";
-import { XMarkIcon } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { NodeDataType } from "../../types/flow";
@@ -13,6 +12,7 @@ import {
 } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import ModalField from "./components/ModalField";
+import { X } from "lucide-react";
 
 export default function NodeModal({ data }: { data: NodeDataType }) {
   const [open, setOpen] = useState(true);
@@ -70,7 +70,7 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
                     }}
                   >
                     <span className="sr-only">Close</span>
-                    <XMarkIcon className="h-6 w-6" aria-hidden="true" />
+                    <X className="h-6 w-6" aria-hidden="true" />
                   </button>
                 </div>
                 <div className="h-full w-full flex flex-col justify-center items-center">

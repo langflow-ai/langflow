@@ -1,13 +1,11 @@
 import { Dialog, Transition } from "@headlessui/react";
-import { ChatBubbleOvalLeftEllipsisIcon } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useEffect, useRef, useState } from "react";
 import { FlowType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
 import { validateNodes } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import ChatMessage from "./chatMessage";
-import { Eraser } from "lucide-react";
-import { X } from "lucide-react";
+import { X, MessagesSquare, Eraser } from "lucide-react";
 import { sendAllProps } from "../../types/api";
 import { ChatMessageType } from "../../types/chat";
 import ChatInput from "./chatInput";
@@ -387,7 +385,7 @@ export default function ChatModal({
                         <span className="text-base text-gray-500">
                           Start a conversation and click the agent’s thoughts{" "}
                           <span>
-                            <ChatBubbleOvalLeftEllipsisIcon className="w-6 h-6 inline animate-bounce " />
+                          <MessagesSquare className="w-5 h-5 inline animate-bounce mx-1 "/>
                           </span>{" "}
                           to inspect the chaining process.
                         </span>
