@@ -6,15 +6,8 @@ from langchain.agents import agent as agent_module
 from langchain.agents.agent import AgentExecutor
 from langchain.agents.agent_toolkits.base import BaseToolkit
 from langchain.agents.tools import BaseTool
-from langflow.interface.initialize.vector_store import (
-    initialize_chroma,
-    initialize_faiss,
-    initialize_mongodb,
-    initialize_pinecone,
-    initialize_qdrant,
-    initialize_supabase,
-    initialize_weaviate,
-)
+from langflow.interface.initialize.vector_store import vecstore_initializer
+
 from pydantic import ValidationError
 
 from langflow.interface.custom_lists import CUSTOM_NODES
@@ -151,29 +144,11 @@ def instantiate_embedding(class_object, params):
 
 def instantiate_vectorstore(class_object, params):
     search_kwargs = params.pop("search_kwargs", {})
-    # could be documents or texts
-    if class_object.__name__ == "Pinecone":
-        vecstore = initialize_pinecone(class_object, params)
-    # Chroma requires all metadata values to not be None
-    elif class_object.__name__ == "Chroma":
-        vecstore = initialize_chroma(class_object, params)
-
-    elif class_object.__name__ == "Qdrant":
-        vecstore = initialize_qdrant(class_object, params)
-
-    elif class_object.__name__ == "Weaviate":
-        vecstore = initialize_weaviate(class_object, params)
-    elif class_object.__name__ == "FAISS":
-        vecstore = initialize_faiss(class_object, params)
-    elif class_object.__name__ == "SupabaseVectorStore":
-        vecstore = initialize_supabase(class_object, params)
-    elif class_object.__name__ == "MongoDBAtlasVectorSearch":
-        vecstore = initialize_mongodb(class_object, params)
-
+    if initializer := vecstore_initializer.get(class_object.__name__):
+        vecstore = initializer(class_object, params)
     else:
         if "texts" in params:
             params["documents"] = params.pop("texts")
-
         vecstore = class_object.from_documents(**params)
 
     # ! This might not work. Need to test
