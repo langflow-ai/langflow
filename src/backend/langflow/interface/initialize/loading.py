@@ -9,6 +9,7 @@ from langchain.agents.tools import BaseTool
 from langflow.interface.initialize.vector_store import (
     initialize_chroma,
     initialize_faiss,
+    initialize_mongodb,
     initialize_pinecone,
     initialize_qdrant,
     initialize_supabase,
@@ -149,29 +150,37 @@ def instantiate_embedding(class_object, params):
 
 
 def instantiate_vectorstore(class_object, params):
+    search_kwargs = params.pop("search_kwargs", {})
     # could be documents or texts
     if class_object.__name__ == "Pinecone":
-        return initialize_pinecone(class_object, params)
+        vecstore = initialize_pinecone(class_object, params)
     # Chroma requires all metadata values to not be None
     elif class_object.__name__ == "Chroma":
-        return initialize_chroma(class_object, params)
+        vecstore = initialize_chroma(class_object, params)
 
     elif class_object.__name__ == "Qdrant":
-        return initialize_qdrant(class_object, params)
+        vecstore = initialize_qdrant(class_object, params)
 
     elif class_object.__name__ == "Weaviate":
-        return initialize_weaviate(class_object, params)
+        vecstore = initialize_weaviate(class_object, params)
     elif class_object.__name__ == "FAISS":
-        return initialize_faiss(class_object, params)
+        vecstore = initialize_faiss(class_object, params)
     elif class_object.__name__ == "SupabaseVectorStore":
-        return initialize_supabase(class_object, params)
+        vecstore = initialize_supabase(class_object, params)
+    elif class_object.__name__ == "MongoDBAtlasVectorSearch":
+        vecstore = initialize_mongodb(class_object, params)
 
     else:
         if "texts" in params:
             params["documents"] = params.pop("texts")
 
-        vector_store = class_object.from_documents(**params)
-    return vector_store
+        vecstore = class_object.from_documents(**params)
+
+    # ! This might not work. Need to test
+    if search_kwargs and hasattr(vecstore, "as_retriever"):
+        vecstore = vecstore.as_retriever(search_kwargs=search_kwargs)
+
+    return vecstore
 
 
 def instantiate_documentloader(class_object, params):
