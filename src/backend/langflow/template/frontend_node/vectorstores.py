@@ -88,6 +88,50 @@ class VectorStoreFrontendNode(FrontendNode):
                 display_name="Index Name",
             )
             extra_fields.extend((extra_field, extra_field2))
+        elif self.template.type_name == "SupabaseVectorStore":
+            # Add table_name and query_name
+            extra_field = TemplateField(
+                name="table_name",
+                field_type="str",
+                required=False,
+                placeholder="",
+                show=True,
+                advanced=True,
+                multiline=False,
+                value="",
+            )
+            extra_field2 = TemplateField(
+                name="query_name",
+                field_type="str",
+                required=False,
+                placeholder="",
+                show=True,
+                advanced=True,
+                multiline=False,
+                value="",
+            )
+            # Add supabase_url and supabase_service_key
+            extra_field3 = TemplateField(
+                name="supabase_url",
+                field_type="str",
+                required=False,
+                placeholder="",
+                show=True,
+                advanced=True,
+                multiline=False,
+                value="",
+            )
+            extra_field4 = TemplateField(
+                name="supabase_service_key",
+                field_type="str",
+                required=False,
+                placeholder="",
+                show=True,
+                advanced=True,
+                multiline=False,
+                value="",
+            )
+            extra_fields.extend((extra_field, extra_field2, extra_field3, extra_field4))
 
         if extra_fields:
             for field in extra_fields:
@@ -111,6 +155,10 @@ class VectorStoreFrontendNode(FrontendNode):
             "index_name",
             "namespace",
             "folder_path",
+            "table_name",
+            "query_name",
+            "supabase_url",
+            "supabase_service_key",
         ]
         advanced_fields = [
             "n_dim",
