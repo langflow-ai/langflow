@@ -147,9 +147,8 @@ class VectorStoreFrontendNode(FrontendNode):
             extra_fields.extend((extra_field, extra_field2, extra_field3, extra_field4))
 
         elif self.template.type_name == "MongoDBAtlasVectorSearch":
-            # add "mongodb_atlas_cluster_uri",
-            # "collection_name",
-            # "db_name",
+            self.display_name = "MongoDB Atlas"
+
             extra_field = TemplateField(
                 name="mongodb_atlas_cluster_uri",
                 field_type="str",
@@ -183,7 +182,18 @@ class VectorStoreFrontendNode(FrontendNode):
                 display_name="Database Name",
                 value="",
             )
-            extra_fields.extend((extra_field, extra_field2, extra_field3))
+            extra_field4 = TemplateField(
+                name="index_name",
+                field_type="str",
+                required=False,
+                placeholder="",
+                show=True,
+                advanced=True,
+                multiline=False,
+                display_name="Index Name",
+                value="",
+            )
+            extra_fields.extend((extra_field, extra_field2, extra_field3, extra_field4))
 
         if extra_fields:
             for field in extra_fields:

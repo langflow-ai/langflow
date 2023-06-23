@@ -23,16 +23,23 @@ def docs_in_params(params: dict) -> bool:
 def initialize_mongodb(class_object: Type[MongoDBAtlasVectorSearch], params: dict):
     """Initialize mongodb and return the class object"""
 
-    MONGODB_ATLAS_CLUSTER_URI = params.get("mongodb_atlas_cluster_uri")
+    MONGODB_ATLAS_CLUSTER_URI = params.pop("mongodb_atlas_cluster_uri")
     if not MONGODB_ATLAS_CLUSTER_URI:
         raise ValueError("Mongodb atlas cluster uri must be provided in the params")
     from pymongo import MongoClient
+    import certifi
 
-    client = MongoClient(MONGODB_ATLAS_CLUSTER_URI)
-    db_name = "lanchain_db"
-    collection_name = "langchain_col"
+    client = MongoClient(MONGODB_ATLAS_CLUSTER_URI, tlsCAFile=certifi.where())
+    db_name = params.pop("db_name", None)
+    collection_name = params.pop("collection_name", None)
+    if not db_name or not collection_name:
+        raise ValueError("db_name and collection_name must be provided in the params")
+
+    index_name = params.pop("index_name", None)
+    if not index_name:
+        raise ValueError("index_name must be provided in the params")
+
     collection = client[db_name][collection_name]
-    index_name = "langchain_demo"
     if not docs_in_params(params):
         # __init__ requires collection, embedding and index_name
         init_args = {
