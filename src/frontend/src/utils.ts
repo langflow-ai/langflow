@@ -407,9 +407,7 @@ export function toFirstUpperCase(str: string) {
 }
 
 export function snakeToSpaces(str: string) {
-  let result = str.split("_").join(" ");
-
-  return result;
+  return str.split("_").join(" ");
 }
 
 export function toNormalCase(str: string) {
@@ -453,10 +451,7 @@ export function roundNumber(x: number, decimals: number) {
 export function getConnectedNodes(edge: Edge, nodes: Array<Node>): Array<Node> {
   const sourceId = edge.source;
   const targetId = edge.target;
-  const connectedNodes = nodes.filter(
-    (node) => node.id === targetId || node.id === sourceId
-  );
-  return connectedNodes;
+  return nodes.filter((node) => node.id === targetId || node.id === sourceId);
 }
 
 export function isValidConnection(
@@ -703,7 +698,7 @@ export function groupByFamily(data, baseClasses) {
     return foundIndex === index;
   });
 
-  let groupedObj = groupedBy.reduce((result, item) => {
+  return groupedBy.reduce((result, item) => {
     const existingGroup = result.find((group) => group.family === item.family);
 
     if (existingGroup) {
@@ -714,8 +709,6 @@ export function groupByFamily(data, baseClasses) {
 
     return result;
   }, []);
-
-  return groupedObj;
 }
 
 export function buildTweaks(flow) {
