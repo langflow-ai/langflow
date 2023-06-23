@@ -238,6 +238,7 @@ def test_build_params(basic_graph):
     root = get_root_node(basic_graph)
     # Root node is a TimeTravelGuideChain
     # which requires an llm and memory
+    assert root is not None
     assert isinstance(root.params, dict)
     assert "llm" in root.params
     assert "memory" in root.params
