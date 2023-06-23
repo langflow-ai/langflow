@@ -144,10 +144,10 @@
 
   --success-background: #f0fdf4; /* tailwind green 50 USED IN SUCCESS MSG light-green*/ 
   --success-foreground: #14532d; /* tailwind green 900 USED IN SUCCESS MSG dark-green */
-
-  /* --high-indigo: #4338ca;  tailwind indigo 700 
-  --medium-indigo: #6366f1;  tailwind indigo 500 
-  --medium-dark-blue:#1d4ed8;  tailwind blue 700 Change in component (--ring)
+  --high-indigo: #4338ca;  /*tailwind indigo 700*/ 
+  --medium-indigo: #6366f1;  /* tailwind indigo 500 */
+  --medium-dark-blue:#1d4ed8; /* tailwind blue 700 Change in component (--ring)*/
+  /*
   --medium-high-indigo: #4f46e5;  tailwind indigo 600 
   --medium-emerald: #10b981;  tailwind emerald 500 Unused
   --medium-dark-green: #166534;  tailwind green 800 Unused
