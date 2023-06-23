@@ -60,7 +60,7 @@ def initialize_weaviate(class_object: Type[Weaviate], params: dict):
             "index_name": params.get("index_name"),
             "text_key": params.get("text_key"),
         }
-        weaviate = class_object(**new_params)
+        return class_object(**new_params)
     # If there are docs in the params, create a new index
     if "texts" in params:
         params["documents"] = params.pop("texts")
@@ -86,18 +86,18 @@ def initialize_pinecone(class_object: Type[Pinecone], params: dict):
 
     import pinecone
 
-    PINECONE_API_KEY = params.get("pinecone_api_key")
-    PINECONE_ENV = params.get("pinecone_env")
+    pinecone_api_key = params.get("pinecone_api_key")
+    pinecone_env = params.get("pinecone_env")
 
-    if PINECONE_API_KEY is None or PINECONE_ENV is None:
+    if pinecone_api_key is None or pinecone_env is None:
         raise ValueError(
             "Pinecone API key and environment must be provided in the params"
         )
 
     # initialize pinecone
     pinecone.init(
-        api_key=PINECONE_API_KEY,  # find at app.pinecone.io
-        environment=PINECONE_ENV,  # next to api key in console
+        api_key=pinecone_api_key,  # find at app.pinecone.io
+        environment=pinecone_env,  # next to api key in console
     )
 
     # If there are no docs in the params, return an existing index
