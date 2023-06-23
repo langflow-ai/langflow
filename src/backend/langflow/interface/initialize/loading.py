@@ -159,8 +159,6 @@ def instantiate_vectorstore(class_object, params):
 
 
 def instantiate_documentloader(class_object, params):
-
-
     if "file_filter" in params:
         # file_filter will be a string but we need a function
         # that will be used to filter the files using file_filter
