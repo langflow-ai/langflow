@@ -20,12 +20,10 @@ class Template(BaseModel):
                 format_field_func(field, name)
 
     def sort_fields(self):
-        # sort fields so that fields that have .field_type in DIRECT_TYPES are first
-        self.fields.sort(
-            key=lambda x: DIRECT_TYPES.index(x.field_type)
-            if x.field_type in DIRECT_TYPES
-            else 100
-        )
+        # first sort alphabetically
+        # then sort fields so that fields that have .field_type in DIRECT_TYPES are first
+        self.fields.sort(key=lambda x: x.name)
+        self.fields.sort(key=lambda x: x.field_type in DIRECT_TYPES, reverse=False)
 
     def to_dict(self, format_field_func=None):
         self.process_fields(self.type_name, format_field_func)
