@@ -72,7 +72,7 @@ class ChainFrontendNode(FrontendNode):
             field.show = True
             field.advanced = False
         if field.name == "memory":
-            field.required = False
+            # field.required = False
             field.show = True
             field.advanced = False
         if field.name == "verbose":
