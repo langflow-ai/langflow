@@ -1,4 +1,4 @@
-from langflow.graph.vertex.constants import DIRECT_TYPES
+from langflow.utils.constants import DIRECT_TYPES
 from langflow.interface.initialize import loading
 from langflow.interface.listing import ALL_TYPES_DICT
 from langflow.utils.logger import logger
