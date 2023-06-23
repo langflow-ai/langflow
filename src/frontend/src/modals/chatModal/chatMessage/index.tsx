@@ -34,8 +34,8 @@ export default function ChatMessage({
       className={classNames(
         "w-full py-2 pl-2 flex",
         chat.isSend
-          ? "bg-background dark:bg-high-dark-gray "
-          : "bg-input  dark:bg-dark-gray"
+          ? "bg-background dark:bg-foreground "
+          : "bg-input  dark:bg-foreground"
       )}
     >
       <div
@@ -62,25 +62,25 @@ export default function ChatMessage({
           </div>
         )}
         {chat.isSend && (
-          <UserIcon className="w-6 h-6 -mb-1 text-dark-gray dark:text-light-gray" />
+          <UserIcon className="w-6 h-6 -mb-1 text-foreground dark:text-light-gray" />
         )}
       </div>
       {!chat.isSend ? (
         <div className="w-full text-start flex items-center">
-          <div className="w-full relative text-start inline-block text-medium-dark-gray dark:text-medium-low-gray text-sm font-normal">
+          <div className="w-full relative text-start inline-block text-muted-foreground dark:text-medium-low-gray text-sm font-normal">
             {hidden && chat.thought && chat.thought !== "" && (
               <div
                 onClick={() => setHidden((prev) => !prev)}
                 className="absolute -top-1 -left-2 cursor-pointer"
               >
-                <ChatBubbleOvalLeftEllipsisIcon className="w-5 h-5 animate-bounce dark:text-white" />
+                <ChatBubbleOvalLeftEllipsisIcon className="w-5 h-5 animate-bounce dark:text-background" />
               </div>
             )}
             {chat.thought && chat.thought !== "" && !hidden && (
               <div
                 onClick={() => setHidden((prev) => !prev)}
-                className=" text-start inline-block rounded-md text-medium-dark-gray dark:text-light-gray h-full border border-medium-low-gray dark:border-medium-gray
-								bg-muted dark:bg-dark-gray w-[95%] pb-3 pt-3 px-2 ml-3 cursor-pointer scrollbar-hide overflow-scroll"
+                className=" text-start inline-block rounded-md text-muted-foreground dark:text-light-gray h-full border border-ring dark:border-ring
+								bg-muted dark:bg-foreground w-[95%] pb-3 pt-3 px-2 ml-3 cursor-pointer scrollbar-hide overflow-scroll"
                 dangerouslySetInnerHTML={{
                   __html: convert.toHtml(chat.thought),
                 }}
@@ -88,12 +88,12 @@ export default function ChatMessage({
             )}
             {chat.thought && chat.thought !== "" && !hidden && <br></br>}
             <div className="w-full px-4 pb-3 pt-3 pr-8">
-              <div className="dark:text-white w-full">
+              <div className="dark:text-background w-full">
                 <div className="w-full">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm, remarkMath]}
                     rehypePlugins={[rehypeMathjax]}
-                    className="markdown prose dark:prose-invert text-medium-dark-gray dark:text-light-gray"
+                    className="markdown prose dark:prose-invert text-muted-foreground dark:text-light-gray"
                     components={{
                       code({ node, inline, className, children, ...props }) {
                         if (children.length) {
@@ -152,9 +152,9 @@ export default function ChatMessage({
         </div>
       ) : (
         <div className="w-full flex items-center">
-          <div className="text-start inline-block px-3 text-sm text-medium-dark-gray dark:text-white">
+          <div className="text-start inline-block px-3 text-sm text-muted-foreground dark:text-background">
             <span
-              className="text-medium-dark-gray dark:text-light-gray"
+              className="text-muted-foreground dark:text-light-gray"
               dangerouslySetInnerHTML={{
                 __html: message.replace(/\n/g, "<br>"),
               }}

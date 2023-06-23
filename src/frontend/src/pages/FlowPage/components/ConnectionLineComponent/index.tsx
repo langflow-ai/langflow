@@ -23,7 +23,7 @@ const ConnectionLineComponent = ({
         fill="#fff"
         r={3}
         stroke="#222"
-        className="dark:stroke-almost-medium-gray dark:fill-dark-gray"
+        className="dark:stroke-almost-medium-gray dark:fill-foreground"
         strokeWidth={1.5}
       />
     </g>

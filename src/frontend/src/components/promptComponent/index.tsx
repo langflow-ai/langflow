@@ -49,10 +49,10 @@ export default function PromptAreaComponent({
           }}
           className={
             editNode
-              ? "cursor-pointer truncate placeholder:text-center text-medium-gray border-1 block w-full pt-0.5 pb-0.5 form-input dark:bg-high-dark-gray dark:text-medium-low-gray dark:border-medium-dark-gray rounded-md border-medium-low-gray shadow-sm sm:text-sm" +
+              ? "cursor-pointer truncate placeholder:text-center text-ring border-1 block w-full pt-0.5 pb-0.5 form-input dark:bg-foreground dark:text-medium-low-gray dark:border-muted-foreground rounded-md border-ring shadow-sm sm:text-sm" +
                 INPUT_STYLE
-              : "truncate block w-full text-medium-gray px-3 py-2 rounded-md border border-medium-low-gray dark:border-almost-dark-gray shadow-sm sm:text-sm" +
-                (disabled ? " bg-light-gray" : "")
+              : "truncate block w-full text-ring px-3 py-2 rounded-md border border-ring dark:border-foreground shadow-sm sm:text-sm" +
+                (disabled ? " bg-input" : "")
           }
         >
           {myValue !== "" ? myValue : "Type your prompt here"}

@@ -332,7 +332,7 @@ export default function ChatModal({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black backdrop-blur-sm dark:bg-medium-dark-gray dark:bg-opacity-80 bg-opacity-80 transition-opacity" />
+          <div className="fixed inset-0 bg-black backdrop-blur-sm dark:bg-muted-foreground dark:bg-opacity-80 bg-opacity-80 transition-opacity" />
         </Transition.Child>
 
         <div className="fixed inset-0 z-10 overflow-y-auto">
@@ -346,24 +346,24 @@ export default function ChatModal({
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className=" drop-shadow-2xl relative flex flex-col justify-between transform h-[95%] overflow-hidden rounded-lg bg-white dark:bg-dark-gray text-left shadow-xl transition-all w-[690px]">
+              <Dialog.Panel className=" drop-shadow-2xl relative flex flex-col justify-between transform h-[95%] overflow-hidden rounded-lg bg-background dark:bg-foreground text-left shadow-xl transition-all w-[690px]">
                 <div className="relative w-full p-4">
                   <button
                     onClick={() => clearChat()}
-                    className="absolute top-2 right-10 hover:text-medium-red text-medium-dark-gray dark:text-medium-low-gray dark:hover:text-medium-red z-30"
+                    className="absolute top-2 right-10 hover:text-status-red text-muted-foreground dark:text-medium-low-gray dark:hover:text-status-red z-30"
                   >
                     <FaEraser className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setModalOpen(false)}
-                    className="absolute top-1.5 right-2 hover:text-medium-red text-medium-dark-gray dark:text-medium-low-gray dark:hover:text-medium-red z-30"
+                    className="absolute top-1.5 right-2 hover:text-status-red text-muted-foreground dark:text-medium-low-gray dark:hover:text-status-red z-30"
                   >
                     <HiX className="w-5 h-5" />
                   </button>
                 </div>
                 <div
                   ref={messagesRef}
-                  className="w-full h-full bg-white dark:bg-dark-gray border-t dark:border-t-medium-dark-gray flex-col flex items-center overflow-scroll scrollbar-hide"
+                  className="w-full h-full bg-background dark:bg-foreground border-t dark:border-t-muted-foreground flex-col flex items-center overflow-scroll scrollbar-hide"
                 >
                   {chatHistory.length > 0 ? (
                     chatHistory.map((c, i) => (
@@ -378,13 +378,13 @@ export default function ChatModal({
                     <div className="flex flex-col h-full text-center justify-center w-full items-center align-middle">
                       <span>
                         👋{" "}
-                        <span className="text-medium-dark-gray dark:text-medium-low-gray text-lg">
+                        <span className="text-muted-foreground dark:text-medium-low-gray text-lg">
                           LangFlow Chat
                         </span>
                       </span>
                       <br />
-                      <div className="bg-muted dark:bg-high-dark-gray rounded-md w-2/4 px-6 py-8 border border-light-gray dark:border-almost-dark-gray">
-                        <span className="text-base text-medium-gray">
+                      <div className="bg-muted dark:bg-foreground rounded-md w-2/4 px-6 py-8 border border-input dark:border-foreground">
+                        <span className="text-base text-ring">
                           Start a conversation and click the agent’s thoughts{" "}
                           <span>
                             <ChatBubbleOvalLeftEllipsisIcon className="w-6 h-6 inline animate-bounce " />
@@ -396,7 +396,7 @@ export default function ChatModal({
                   )}
                   <div ref={ref}></div>
                 </div>
-                <div className="w-full bg-white dark:bg-dark-gray border-t dark:border-t-medium-dark-gray flex-col flex items-center justify-between p-3">
+                <div className="w-full bg-background dark:bg-foreground border-t dark:border-t-muted-foreground flex-col flex items-center justify-between p-3">
                   <div className="relative w-full  mt-1 rounded-md shadow-sm">
                     <ChatInput
                       chatValue={chatValue}

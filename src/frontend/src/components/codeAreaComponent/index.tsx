@@ -46,11 +46,11 @@ export default function CodeAreaComponent({
           }}
           className={
             editNode
-              ? "truncate cursor-pointer placeholder:text-center text-medium-gray block w-full pt-0.5 pb-0.5 form-input dark:bg-high-dark-gray dark:medium-low-gray dark:border-medium-dark-gray rounded-md border-medium-low-gray border-1 shadow-sm sm:text-sm" +
+              ? "truncate cursor-pointer placeholder:text-center text-ring block w-full pt-0.5 pb-0.5 form-input dark:bg-foreground dark:medium-low-gray dark:border-muted-foreground rounded-md border-ring border-1 shadow-sm sm:text-sm" +
                 INPUT_STYLE
-              : "truncate block w-full text-medium-gray px-3 py-2 rounded-md border border-medium-low-gray dark:border-almost-dark-gray shadow-sm sm:text-sm" +
+              : "truncate block w-full text-ring px-3 py-2 rounded-md border border-ring dark:border-foreground shadow-sm sm:text-sm" +
                 INPUT_STYLE +
-                (disabled ? " bg-light-gray" : "")
+                (disabled ? " bg-input" : "")
           }
         >
           {myValue !== "" ? myValue : "Type something..."}

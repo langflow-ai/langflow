@@ -40,7 +40,7 @@ export default function SingleAlert({
             />
           </div>
           <div className="ml-3">
-            <h3 className="text-sm break-words font-medium text-red-800 dark:text-white/80">
+            <h3 className="text-sm break-words font-medium text-red-800 dark:text-background/80">
               {dropItem.title}
             </h3>
             {dropItem.list ? (
@@ -87,7 +87,7 @@ export default function SingleAlert({
             />
           </div>
           <div className="ml-3 flex-1 md:flex md:justify-between">
-            <p className="text-sm text-blue-700 dark:text-white/80">
+            <p className="text-sm text-blue-700 dark:text-background/80">
               {dropItem.title}
             </p>
             <p className="mt-3 text-sm md:mt-0 md:ml-6">
@@ -133,7 +133,7 @@ export default function SingleAlert({
             />
           </div>
           <div className="ml-3">
-            <p className="text-sm font-medium text-green-800 dark:bg-white/80">
+            <p className="text-sm font-medium text-green-800 dark:bg-background/80">
               {dropItem.title}
             </p>
           </div>
