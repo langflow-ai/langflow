@@ -27,7 +27,7 @@ def get_all():
 @router.post("/process/{flow_id}", response_model=ProcessResponse)
 async def process_flow(
     flow_id: str,
-    inputs: dict,
+    inputs: Optional[dict] = None,
     tweaks: Optional[dict] = None,
     session: Session = Depends(get_session),
 ):

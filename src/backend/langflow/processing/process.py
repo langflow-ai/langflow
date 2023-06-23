@@ -82,7 +82,7 @@ def get_input_str_if_only_one_input(inputs: dict) -> Optional[str]:
     return list(inputs.values())[0] if len(inputs) == 1 else None
 
 
-def process_graph_cached(data_graph: Dict[str, Any], inputs: dict):
+def process_graph_cached(data_graph: Dict[str, Any], inputs: Optional[dict] = None):
     """
     Process graph by extracting input variables and replacing ZeroShotPrompt
     with PromptTemplate,then run the graph and return the result and thought.
@@ -99,6 +99,8 @@ def process_graph_cached(data_graph: Dict[str, Any], inputs: dict):
 
     # Generate result and thought
     if isinstance(langchain_object, Chain):
+        if inputs is None:
+            raise ValueError("Inputs must be provided for a Chain")
         logger.debug("Generating result and thought")
         result = get_result_and_thought(langchain_object, inputs)
         logger.debug("Generated result and thought")
