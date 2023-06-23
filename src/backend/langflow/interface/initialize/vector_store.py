@@ -7,7 +7,9 @@ from langchain.vectorstores import (
     FAISS,
     Weaviate,
     SupabaseVectorStore,
+    MongoDBAtlasVectorSearch,
 )
+import os
 
 
 def docs_in_params(params: dict) -> bool:
@@ -16,6 +18,38 @@ def docs_in_params(params: dict) -> bool:
     return ("documents" in params and params["documents"]) or (
         "texts" in params and params["texts"]
     )
+
+
+def initialize_mongodb(class_object: Type[MongoDBAtlasVectorSearch], params: dict):
+    """Initialize mongodb and return the class object"""
+
+    MONGODB_ATLAS_CLUSTER_URI = params.get("mongodb_atlas_cluster_uri")
+    if not MONGODB_ATLAS_CLUSTER_URI:
+        raise ValueError("Mongodb atlas cluster uri must be provided in the params")
+    from pymongo import MongoClient
+
+    client = MongoClient(MONGODB_ATLAS_CLUSTER_URI)
+    db_name = "lanchain_db"
+    collection_name = "langchain_col"
+    collection = client[db_name][collection_name]
+    index_name = "langchain_demo"
+    if not docs_in_params(params):
+        # __init__ requires collection, embedding and index_name
+        init_args = {
+            "collection": collection,
+            "index_name": index_name,
+            "embedding": params.get("embedding"),
+        }
+
+        return class_object(**init_args)
+
+    if "texts" in params:
+        params["documents"] = params.pop("texts")
+
+    params["collection"] = collection
+    params["index_name"] = index_name
+
+    return class_object.from_documents(**params)
 
 
 def initialize_supabase(class_object: Type[SupabaseVectorStore], params: dict):
@@ -88,6 +122,12 @@ def initialize_pinecone(class_object: Type[Pinecone], params: dict):
 
     pinecone_api_key = params.get("pinecone_api_key")
     pinecone_env = params.get("pinecone_env")
+
+    if pinecone_api_key is None or pinecone_env is None:
+        if os.getenv("PINECONE_API_KEY") is not None:
+            pinecone_api_key = os.getenv("PINECONE_API_KEY")
+        if os.getenv("PINECONE_ENV") is not None:
+            pinecone_env = os.getenv("PINECONE_ENV")
 
     if pinecone_api_key is None or pinecone_env is None:
         raise ValueError(
