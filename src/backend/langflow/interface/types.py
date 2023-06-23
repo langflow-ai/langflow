@@ -52,3 +52,28 @@ def build_langchain_types_dict():  # sourcery skip: dict-assign-update-to-union
         if created_types[creator.type_name].values():
             all_types.update(created_types)
     return all_types
+
+
+# sourcery skip: dict-assign-update-to-union
+def build_langchain_types_dict_by_creator(creator: str):
+    """Build a dictionary of all langchain types"""
+
+    all_types = {}
+
+    creators = [
+        chain_creator,
+        agent_creator,
+        prompt_creator,
+        llm_creator,
+        memory_creator,
+        tool_creator,
+        toolkits_creator,
+        wrapper_creator,
+        embedding_creator,
+        vectorstore_creator,
+        documentloader_creator,
+        textsplitter_creator,
+        utility_creator,
+    ]
+
+    return chain_creator.to_dict()['chains']['ConversationChain']

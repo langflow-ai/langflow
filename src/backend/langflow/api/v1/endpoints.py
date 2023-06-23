@@ -7,9 +7,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from langflow.api.v1.schemas import (
     PredictRequest,
     PredictResponse,
+    CustomComponentResponse,
 )
 
-from langflow.interface.types import build_langchain_types_dict
+from langflow.interface.types import (
+    build_langchain_types_dict,
+    build_langchain_types_dict_by_creator
+)
 from langflow.database.base import get_session
 from sqlmodel import Session
 
@@ -62,3 +66,9 @@ def get_version():
     from langflow import __version__
 
     return {"version": __version__}
+
+
+# @router.post("/custom_component", response_model=CustomComponentResponse, status_code=200)
+@router.post("/custom_component", status_code=200)
+def custom_component(code: dict):
+    return build_langchain_types_dict_by_creator("a")
