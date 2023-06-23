@@ -54,7 +54,7 @@ def format_actions(actions: List[Tuple[AgentAction, str]]) -> str:
     return "\n".join(output)
 
 
-def get_result_and_thought(langchain_object, inputs: dict):
+def get_result_and_thought(langchain_object: Any, inputs: dict):
     """Get result and thought from extracted json"""
     try:
         if hasattr(langchain_object, "verbose"):
@@ -82,7 +82,7 @@ def get_input_str_if_only_one_input(inputs: dict) -> Optional[str]:
     return list(inputs.values())[0] if len(inputs) == 1 else None
 
 
-def process_graph_cached(data_graph: Dict[str, Any], inputs: Union[dict, str]):
+def process_graph_cached(data_graph: Dict[str, Any], inputs: dict):
     """
     Process graph by extracting input variables and replacing ZeroShotPrompt
     with PromptTemplate,then run the graph and return the result and thought.
