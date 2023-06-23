@@ -122,6 +122,11 @@ def initialize_chroma(class_object: Type[Chroma], params: dict):
     """Initialize a ChromaDB object from the params"""
     persist = params.pop("persist", False)
     if not docs_in_params(params):
+        params.pop("documents", None)
+        params.pop("texts", None)
+        params["embedding_function"] = params.pop("embedding")
+        chromadb = class_object(**params)
+    else:
         if "texts" in params:
             params["documents"] = params.pop("texts")
         for doc in params["documents"]:
@@ -131,8 +136,6 @@ def initialize_chroma(class_object: Type[Chroma], params: dict):
                 if value is None:
                     doc.metadata[key] = ""
         chromadb = class_object.from_documents(**params)
-    else:
-        chromadb = class_object(**params)
     if persist:
         chromadb.persist()
     return chromadb
