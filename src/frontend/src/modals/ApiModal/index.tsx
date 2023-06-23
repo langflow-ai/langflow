@@ -1,4 +1,3 @@
-import { CodeBracketSquareIcon } from "@heroicons/react/24/outline";
 import { useContext, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import "ace-builds/src-noconflict/mode-python";
@@ -26,7 +25,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "../../components/ui/tabs";
-import { Check, Clipboard } from "lucide-react";
+import { Check, Clipboard, Code2 } from "lucide-react";
 
 export default function ApiModal({ flow }: { flow: FlowType }) {
   const [open, setOpen] = useState(true);
@@ -88,7 +87,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Code</span>
-            <CodeBracketSquareIcon
+            <Code2
               className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
               aria-hidden="true"
             />

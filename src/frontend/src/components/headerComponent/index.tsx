@@ -13,6 +13,7 @@ import { Link, useLocation, useParams } from "react-router-dom";
 import { USER_PROJECTS_HEADER } from "../../constants";
 import { getRepoStars } from "../../controllers/API";
 import { Separator } from "../ui/separator";
+import { Bell } from "lucide-react";
 
 export default function Header() {
   const { flows, addFlow, tabId } = useContext(TabsContext);
@@ -134,7 +135,7 @@ export default function Header() {
             {notificationCenter && (
               <div className="absolute w-1.5 h-1.5 rounded-full bg-destructive right-[3px]"></div>
             )}
-            <BellIcon className="h-5 w-5" aria-hidden="true" />
+            <Bell className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
       </div>

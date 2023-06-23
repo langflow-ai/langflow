@@ -1,9 +1,9 @@
 import { Listbox, Transition } from "@headlessui/react";
-import { ChevronUpDownIcon, CheckIcon } from "@heroicons/react/24/outline";
 import { Fragment, useEffect, useState } from "react";
 import { DropDownComponentType } from "../../types/components";
 import { classNames } from "../../utils";
 import { INPUT_STYLE } from "../../constants";
+import { ChevronsUpDown, Check } from "lucide-react";
 
 export default function Dropdown({
   value,
@@ -15,9 +15,9 @@ export default function Dropdown({
   let [internalValue, setInternalValue] = useState(
     value === "" || !value ? "Choose an option" : value
   );
-  useEffect(()=>{
-    setInternalValue(value === "" || !value ? "Choose an option" : value)
-  },[value])
+  useEffect(() => {
+    setInternalValue(value === "" || !value ? "Choose an option" : value);
+  }, [value]);
 
   return (
     <>
@@ -46,7 +46,7 @@ export default function Dropdown({
                     "pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
                   }
                 >
-                  <ChevronUpDownIcon
+                  <ChevronsUpDown
                     className="h-5 w-5 text-gray-400"
                     aria-hidden="true"
                   />
@@ -100,7 +100,7 @@ export default function Dropdown({
                                 "absolute inset-y-0 right-0 flex items-center pr-4"
                               )}
                             >
-                              <CheckIcon
+                              <Check
                                 className={
                                   active
                                     ? "h-5 w-5 dark:text-black text-black"

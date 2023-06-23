@@ -1,9 +1,9 @@
-import { DocumentMagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { useContext, useEffect, useState } from "react";
 import { alertContext } from "../../contexts/alertContext";
 import { FileComponentType } from "../../types/components";
 import { TabsContext } from "../../contexts/tabsContext";
 import { INPUT_STYLE } from "../../constants";
+import { FileSearch2 } from "lucide-react";
 import { uploadFile } from "../../controllers/API";
 
 export default function InputFileComponent({
@@ -114,7 +114,7 @@ export default function InputFileComponent({
         </span>
         <button onClick={handleButtonClick}>
           {!editNode && !loading && (
-            <DocumentMagnifyingGlassIcon className="w-8 h-8  hover:text-ring" />
+            <FileSearch2 className="w-6 h-6 hover:text-ring" />
           )}
           {!editNode && loading && (
             <span className="loading loading-spinner loading-sm pl-3 h-8 pointer-events-none"></span>
