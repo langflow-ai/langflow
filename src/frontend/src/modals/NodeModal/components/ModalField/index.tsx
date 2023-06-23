@@ -101,6 +101,7 @@ export default function ModalField({
               data.node.template[name].value = t;
               setEnabled(t);
             }}
+            size="small"
           />
         </div>
       ) : type === "float" ? (

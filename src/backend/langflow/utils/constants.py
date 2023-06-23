@@ -36,3 +36,4 @@ def python_function(text: str) -> str:
     \"\"\"This is a default python function that returns the input text\"\"\"
     return text
 """
+DIRECT_TYPES = ["str", "bool", "code", "int", "float", "Any", "prompt"]
