@@ -15,9 +15,9 @@ export default function Dropdown({
   let [internalValue, setInternalValue] = useState(
     value === "" || !value ? "Choose an option" : value
   );
-  useEffect(()=>{
-    setInternalValue(value === "" || !value ? "Choose an option" : value)
-  },[value])
+  useEffect(() => {
+    setInternalValue(value === "" || !value ? "Choose an option" : value);
+  }, [value]);
 
   return (
     <>
