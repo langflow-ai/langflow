@@ -60,7 +60,7 @@ class MemoryFrontendNode(FrontendNode):
         if field.name in ["input_key", "output_key"]:
             field.required = False
             field.show = True
-            field.advanced = True
+            field.advanced = False
             field.value = ""
         if field.name == "memory_key":
             field.value = "chat_history"
