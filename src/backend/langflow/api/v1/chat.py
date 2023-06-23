@@ -39,6 +39,11 @@ async def init_build(graph_data: dict):
 
     try:
         flow_id = graph_data.get("id")
+        # Delete from cache if already exists
+        if flow_id in chat_manager.in_memory_cache:
+            with chat_manager.in_memory_cache._lock:
+                chat_manager.in_memory_cache.delete(flow_id)
+                logger.debug(f"Deleted flow {flow_id} from cache")
         if flow_id is None:
             raise ValueError("No ID provided")
         flow_data_store[flow_id] = graph_data
