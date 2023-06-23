@@ -13,7 +13,7 @@ class ChainFrontendNode(FrontendNode):
             self.template.add_field(
                 TemplateField(
                     field_type="BaseChatMemory",
-                    required=False,
+                    required=True,
                     show=True,
                     name="memory",
                     advanced=False,
@@ -29,6 +29,19 @@ class ChainFrontendNode(FrontendNode):
                     advanced=False,
                     value=True,
                     display_name="Return source documents",
+                )
+            )
+            self.template.add_field(
+                TemplateField(
+                    field_type="str",
+                    required=True,
+                    is_list=True,
+                    show=True,
+                    multiline=False,
+                    options=QA_CHAIN_TYPES,
+                    value=QA_CHAIN_TYPES[0],
+                    name="chain_type",
+                    advanced=False,
                 )
             )
 
