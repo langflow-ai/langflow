@@ -1,10 +1,11 @@
-import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
 import { useContext, useEffect, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TextAreaComponentType } from "../../types/components";
 import GenericModal from "../../modals/genericModal";
 import { TypeModal } from "../../utils";
 import { INPUT_STYLE } from "../../constants";
+import { ExternalLink } from "lucide-react";
+
 export default function TextAreaComponent({
   value,
   onChange,
@@ -76,7 +77,7 @@ export default function TextAreaComponent({
           }}
         >
           {!editNode && (
-            <ArrowTopRightOnSquareIcon className="w-6 h-6 hover:text-ring dark:text-gray-300" />
+            <ExternalLink className="w-6 h-6 hover:text-ring dark:text-gray-300" />
           )}
         </button>
       </div>

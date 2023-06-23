@@ -1,10 +1,11 @@
-import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useContext, useEffect, useState } from "react";
 import { InputListComponentType } from "../../types/components";
 import { TabsContext } from "../../contexts/tabsContext";
 
 import _ from "lodash";
 import { INPUT_STYLE } from "../../constants";
+import { X, Plus } from "lucide-react";
+
 export default function InputListComponent({
   value,
   onChange,
@@ -59,7 +60,7 @@ export default function InputListComponent({
                 onChange(inputList);
               }}
             >
-              <PlusIcon className={"w-4 h-4 hover:text-ring"} />
+              <Plus className={"w-4 h-4 hover:text-ring"} />
             </button>
           ) : (
             <button
@@ -72,7 +73,7 @@ export default function InputListComponent({
                 onChange(inputList);
               }}
             >
-              <XMarkIcon className="w-4 h-4 hover:text-red-600" />
+              <X className="w-4 h-4 hover:text-red-600" />
             </button>
           )}
         </div>

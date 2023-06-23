@@ -1,7 +1,5 @@
-import React, { ReactNode, useEffect, useRef, useState } from "react";
-import { DocumentDuplicateIcon } from "@heroicons/react/solid";
+import React, { ReactNode } from "react";
 import { classNames } from "../../../utils";
-import Tooltip from "../../../components/TooltipComponent";
 
 export default function ButtonBox({
   onClick,
