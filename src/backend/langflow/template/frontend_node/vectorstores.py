@@ -89,6 +89,7 @@ class VectorStoreFrontendNode(FrontendNode):
             )
             extra_fields.extend((extra_field, extra_field2))
         elif self.template.type_name == "SupabaseVectorStore":
+            self.display_name = "Supabase"
             # Add table_name and query_name
             extra_field = TemplateField(
                 name="table_name",
