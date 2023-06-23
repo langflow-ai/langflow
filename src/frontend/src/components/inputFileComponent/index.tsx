@@ -114,15 +114,12 @@ export default function InputFileComponent({
           {myValue !== "" ? myValue : "No file"}
         </span>
         <button onClick={handleButtonClick}>
-          {(!editNode && !loading) && (
+          {!editNode && !loading && (
             <DocumentMagnifyingGlassIcon className="w-8 h-8  hover:text-ring" />
           )}
-          {
-            (!editNode && loading) && (
-              <span className="loading loading-spinner loading-sm pl-3 w-8 h-8 pointer-events-none"></span>
-            )
-          }
-
+          {!editNode && loading && (
+            <span className="loading loading-spinner loading-sm pl-3 w-8 h-8 pointer-events-none"></span>
+          )}
         </button>
       </div>
     </div>
