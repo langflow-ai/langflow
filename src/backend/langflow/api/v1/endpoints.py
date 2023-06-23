@@ -24,6 +24,8 @@ def get_all():
     return build_langchain_types_dict()
 
 
+# For backwards compatibility we will keep the old endpoint
+@router.post("/predict/{flow_id}", response_model=ProcessResponse)
 @router.post("/process/{flow_id}", response_model=ProcessResponse)
 async def process_flow(
     flow_id: str,
