@@ -1,5 +1,5 @@
 import json
-from typing import Type
+from typing import Any, Callable, Dict, Type
 from langchain.vectorstores import (
     Pinecone,
     Qdrant,
@@ -9,6 +9,7 @@ from langchain.vectorstores import (
     SupabaseVectorStore,
     MongoDBAtlasVectorSearch,
 )
+
 import os
 
 
@@ -29,7 +30,9 @@ def initialize_mongodb(class_object: Type[MongoDBAtlasVectorSearch], params: dic
     from pymongo import MongoClient
     import certifi
 
-    client = MongoClient(MONGODB_ATLAS_CLUSTER_URI, tlsCAFile=certifi.where())
+    client: MongoClient = MongoClient(
+        MONGODB_ATLAS_CLUSTER_URI, tlsCAFile=certifi.where()
+    )
     db_name = params.pop("db_name", None)
     collection_name = params.pop("collection_name", None)
     if not db_name or not collection_name:
@@ -207,3 +210,14 @@ def initialize_qdrant(class_object: Type[Qdrant], params: dict):
         return class_object(client=client, **lc_params)
 
     return class_object.from_documents(**params)
+
+
+vecstore_initializer: Dict[str, Callable[[Type[Any], dict], Any]] = {
+    "Pinecone": initialize_pinecone,
+    "Chroma": initialize_chroma,
+    "Qdrant": initialize_qdrant,
+    "Weaviate": initialize_weaviate,
+    "FAISS": initialize_faiss,
+    "SupabaseVectorStore": initialize_supabase,
+    "MongoDBAtlasVectorSearch": initialize_mongodb,
+}
