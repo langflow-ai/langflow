@@ -7,7 +7,7 @@ export default {
   "title": "LangFlow Documentation",
   "tagline": "LangFlow is a GUI for LangChain, designed with react-flow",
   "favicon": "img/favicon.ico",
-  "url": "https://langflow.docs.com",
+  "url": "https://logspace-ai.github.io",
   "baseUrl": "/langflow/",
   "onBrokenLinks": "throw",
   "onBrokenMarkdownLinks": "warn",

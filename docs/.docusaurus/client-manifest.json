@@ -196,9 +196,9 @@
     "179": {
       "js": [
         {
-          "file": "assets/js/main.b17c975c.js",
-          "hash": "01d6ec9076123f8f",
-          "publicPath": "/langflow/assets/js/main.b17c975c.js"
+          "file": "assets/js/main.e41346d6.js",
+          "hash": "03fdef61036b577c",
+          "publicPath": "/langflow/assets/js/main.e41346d6.js"
         }
       ]
     },
@@ -233,7 +233,7 @@
       "js": [
         {
           "file": "assets/js/runtime~main.1bae3f3f.js",
-          "hash": "0bff6d647f2d56ef",
+          "hash": "33fbb03316509309",
           "publicPath": "/langflow/assets/js/runtime~main.1bae3f3f.js"
         }
       ]
