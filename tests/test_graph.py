@@ -336,7 +336,7 @@ def test_get_result_and_thought(basic_graph):
     responses = [
         "Final Answer: I am a response",
     ]
-    message = "Hello"
+    message = {"input": "Hello"}
     # Find the node that is an LLMNode and change the
     # _built_object to a FakeListLLM
     llm_node = get_node_by_type(basic_graph, LLMVertex)
@@ -349,8 +349,5 @@ def test_get_result_and_thought(basic_graph):
     # now build again and check if FakeListLLM was used
 
     # Get the result and thought
-    result, thought = get_result_and_thought(langchain_object, message)
-    # The result should be a str
-    assert isinstance(result, str)
-    # The thought should be a Thought
-    assert isinstance(thought, str)
+    result = get_result_and_thought(langchain_object, message)
+    assert isinstance(result, dict)
