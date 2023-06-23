@@ -137,6 +137,7 @@ def test_initialize_agent(client: TestClient):
             "self-ask-with-search",
             "conversational-react-description",
             "openai-functions",
+            "openai-multi-functions",
         ],
         "name": "agent",
         "type": "str",
