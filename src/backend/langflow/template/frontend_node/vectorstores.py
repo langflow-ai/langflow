@@ -7,6 +7,18 @@ from langflow.template.frontend_node.base import FrontendNode
 class VectorStoreFrontendNode(FrontendNode):
     def add_extra_fields(self) -> None:
         extra_fields: List[TemplateField] = []
+        # Add search_kwargs field
+        extra_field = TemplateField(
+            name="search_kwargs",
+            field_type="code",
+            required=False,
+            placeholder="",
+            show=True,
+            advanced=True,
+            multiline=False,
+            value="{}",
+        )
+        extra_fields.append(extra_field)
         if self.template.type_name == "Weaviate":
             extra_field = TemplateField(
                 name="weaviate_url",
@@ -134,6 +146,45 @@ class VectorStoreFrontendNode(FrontendNode):
             )
             extra_fields.extend((extra_field, extra_field2, extra_field3, extra_field4))
 
+        elif self.template.type_name == "MongoDBAtlasVectorSearch":
+            # add "mongodb_atlas_cluster_uri",
+            # "collection_name",
+            # "db_name",
+            extra_field = TemplateField(
+                name="mongodb_atlas_cluster_uri",
+                field_type="str",
+                required=False,
+                placeholder="",
+                show=True,
+                advanced=True,
+                multiline=False,
+                display_name="MongoDB Atlas Cluster URI",
+                value="",
+            )
+            extra_field2 = TemplateField(
+                name="collection_name",
+                field_type="str",
+                required=False,
+                placeholder="",
+                show=True,
+                advanced=True,
+                multiline=False,
+                display_name="Collection Name",
+                value="",
+            )
+            extra_field3 = TemplateField(
+                name="db_name",
+                field_type="str",
+                required=False,
+                placeholder="",
+                show=True,
+                advanced=True,
+                multiline=False,
+                display_name="Database Name",
+                value="",
+            )
+            extra_fields.extend((extra_field, extra_field2, extra_field3))
+
         if extra_fields:
             for field in extra_fields:
                 self.template.add_field(field)
@@ -160,6 +211,9 @@ class VectorStoreFrontendNode(FrontendNode):
             "query_name",
             "supabase_url",
             "supabase_service_key",
+            "mongodb_atlas_cluster_uri",
+            "collection_name",
+            "db_name",
         ]
         advanced_fields = [
             "n_dim",
@@ -179,10 +233,15 @@ class VectorStoreFrontendNode(FrontendNode):
             "pinecone_api_key",
             "pinecone_env",
             "client_kwargs",
+            "search_kwargs",
         ]
 
         # Check and set field attributes
         if field.name == "texts":
+            # if field.name is "texts" it has to be replaced
+            # when instantiating the vectorstores
+            field.name = "documents"
+
             field.field_type = "TextSplitter"
             field.display_name = "Documents"
             field.required = False
