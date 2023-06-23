@@ -39,9 +39,12 @@ import { OpenAiIcon } from "./icons/OpenAi";
 import { QDrantIcon } from "./icons/QDrant";
 import { SearxIcon } from "./icons/Searx";
 import { SlackIcon } from "./icons/Slack";
+import { PineconeIcon } from "./icons/Pinecone";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "./constants";
+import { SupabaseIcon } from "./icons/supabase";
+import { MongoDBIcon } from "./icons/MongoDB";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -170,6 +173,9 @@ export const nodeIcons: {
   ChatOpenAI: OpenAiIcon,
   OpenAI: OpenAiIcon,
   OpenAIEmbeddings: OpenAiIcon,
+  Pinecone: PineconeIcon,
+  SupabaseVectorStore: SupabaseIcon,
+  MongoDBAtlasVectorSearch: MongoDBIcon,
   // UnstructuredPowerPointLoader: PowerPointIcon, // word and powerpoint have differente styles
   Qdrant: QDrantIcon,
   // ReadTheDocsLoader: ReadTheDocsIcon, // does not work
@@ -403,9 +409,7 @@ export function toFirstUpperCase(str: string) {
 }
 
 export function snakeToSpaces(str: string) {
-  let result = str.split("_").join(" ");
-
-  return result;
+  return str.split("_").join(" ");
 }
 
 export function toNormalCase(str: string) {
@@ -449,10 +453,7 @@ export function roundNumber(x: number, decimals: number) {
 export function getConnectedNodes(edge: Edge, nodes: Array<Node>): Array<Node> {
   const sourceId = edge.source;
   const targetId = edge.target;
-  const connectedNodes = nodes.filter(
-    (node) => node.id === targetId || node.id === sourceId
-  );
-  return connectedNodes;
+  return nodes.filter((node) => node.id === targetId || node.id === sourceId);
 }
 
 export function isValidConnection(
@@ -699,7 +700,7 @@ export function groupByFamily(data, baseClasses) {
     return foundIndex === index;
   });
 
-  let groupedObj = groupedBy.reduce((result, item) => {
+  return groupedBy.reduce((result, item) => {
     const existingGroup = result.find((group) => group.family === item.family);
 
     if (existingGroup) {
@@ -710,8 +711,6 @@ export function groupByFamily(data, baseClasses) {
 
     return result;
   }, []);
-
-  return groupedObj;
 }
 
 export function buildTweaks(flow) {
@@ -752,9 +751,7 @@ export function validateNode(
             )
           ? [
               `${type} is missing ${
-                template.display_name
-                  ? template.display_name
-                  : toNormalCase(template[t].name)
+                template.display_name || toNormalCase(template[t].name)
               }.`,
             ]
           : []

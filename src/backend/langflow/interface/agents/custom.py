@@ -192,7 +192,7 @@ class SQLAgent(CustomAgentExecutor):
         from langchain.tools.sql_database.tool import (
             InfoSQLDatabaseTool,
             ListSQLDatabaseTool,
-            QueryCheckerTool,
+            QuerySQLCheckerTool,
             QuerySQLDataBaseTool,
         )
 
@@ -207,7 +207,7 @@ class SQLAgent(CustomAgentExecutor):
             QuerySQLDataBaseTool(db=db),  # type: ignore
             InfoSQLDatabaseTool(db=db),  # type: ignore
             ListSQLDatabaseTool(db=db),  # type: ignore
-            QueryCheckerTool(db=db, llm_chain=llmchain, llm=llm),  # type: ignore
+            QuerySQLCheckerTool(db=db, llm_chain=llmchain, llm=llm),  # type: ignore
         ]
 
         prefix = SQL_PREFIX.format(dialect=toolkit.dialect, top_k=10)

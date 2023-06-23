@@ -13,9 +13,34 @@ class ChainFrontendNode(FrontendNode):
             self.template.add_field(
                 TemplateField(
                     field_type="BaseChatMemory",
-                    required=False,
+                    required=True,
                     show=True,
                     name="memory",
+                    advanced=False,
+                )
+            )
+            # add return_source_documents
+            self.template.add_field(
+                TemplateField(
+                    field_type="bool",
+                    required=False,
+                    show=True,
+                    name="return_source_documents",
+                    advanced=False,
+                    value=True,
+                    display_name="Return source documents",
+                )
+            )
+            self.template.add_field(
+                TemplateField(
+                    field_type="str",
+                    required=True,
+                    is_list=True,
+                    show=True,
+                    multiline=False,
+                    options=QA_CHAIN_TYPES,
+                    value=QA_CHAIN_TYPES[0],
+                    name="chain_type",
                     advanced=False,
                 )
             )
@@ -58,6 +83,12 @@ class ChainFrontendNode(FrontendNode):
             field.required = True
             field.show = True
             field.advanced = False
+
+        if field.name == "return_source_documents":
+            field.required = False
+            field.show = True
+            field.advanced = True
+            field.value = True
 
 
 class SeriesCharacterChainNode(FrontendNode):
