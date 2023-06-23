@@ -1,6 +1,7 @@
 import { ForwardRefExoticComponent, ReactElement, ReactNode } from "react";
 import { NodeDataType } from "../flow/index";
 import { typesContextType } from "../typesContext";
+import { APITemplateType } from "../api";
 export type InputComponentType = {
   value: string;
   disabled?: boolean;
@@ -48,6 +49,15 @@ export type TextAreaComponentType = {
   onChange: (value: string[] | string) => void;
   value: string;
   editNode?: boolean;
+};
+
+export type CodeAreaComponentType = {
+  disabled: boolean;
+  onChange: (value: string[] | string) => void;
+  value: string;
+  editNode?: boolean;
+  template: APITemplateType;
+  setTemplate: (value: APITemplateType) => void;
 };
 
 export type FileComponentType = {
