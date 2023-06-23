@@ -749,9 +749,7 @@ export function validateNode(
             )
           ? [
               `${type} is missing ${
-                template.display_name
-                  ? template.display_name
-                  : toNormalCase(template[t].name)
+                template.display_name || toNormalCase(template[t].name)
               }.`,
             ]
           : []
