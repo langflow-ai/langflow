@@ -160,6 +160,7 @@ export default function ExtraSidebar() {
                         content={t}
                         delayDuration={1500}
                         side="right"
+                        key={i}
                       >
                         <div key={k} data-tooltip-id={t}>
                           <div

@@ -53,7 +53,7 @@ export const MenuBar = ({ flows, tabId }) => {
       </Link>
       <div className="flex items-center font-medium text-sm rounded-md py-1 px-1.5 gap-0.5">
         <DropdownMenu>
-          <DropdownMenuTrigger>
+          <DropdownMenuTrigger asChild>
             <Button
               className="gap-2 flex items-center max-w-[200px]"
               variant="primary"
