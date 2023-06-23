@@ -5,7 +5,6 @@ import { FileComponentType } from "../../types/components";
 import { TabsContext } from "../../contexts/tabsContext";
 import { INPUT_STYLE } from "../../constants";
 import { uploadFile } from "../../controllers/API";
-import RadialProgressComponent from "../RadialProgress";
 
 export default function InputFileComponent({
   value,
@@ -118,7 +117,7 @@ export default function InputFileComponent({
             <DocumentMagnifyingGlassIcon className="w-8 h-8  hover:text-ring" />
           )}
           {!editNode && loading && (
-            <span className="loading loading-spinner loading-sm pl-3 w-8 h-8 pointer-events-none"></span>
+            <span className="loading loading-spinner loading-sm pl-3 h-8 pointer-events-none"></span>
           )}
         </button>
       </div>
