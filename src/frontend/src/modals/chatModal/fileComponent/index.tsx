@@ -43,7 +43,7 @@ export default function FileCard({ fileName, content, fileType }) {
               className="text-gray-500 py-1 px-2 dark:bg-gray-700 dark:text-gray-300"
               onClick={handleDownload}
             >
-            <DownloadCloud className="hover:scale-110 w-5 h-5 text-current"/>
+              <DownloadCloud className="hover:scale-110 w-5 h-5 text-current" />
             </button>
           </div>
         )}
@@ -72,7 +72,7 @@ export default function FileCard({ fileName, content, fileType }) {
           <div className="truncate text-sm text-current">{fileName}</div>
           <div className="truncate text-xs  text-gray-500">{fileType}</div>
         </div>
-        <DownloadCloud className="w-6 h-6 text-current ml-auto"/>
+        <DownloadCloud className="w-6 h-6 text-current ml-auto" />
       </div>
     </button>
   );

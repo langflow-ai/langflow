@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Transition } from "@headlessui/react";
 import { useState } from "react";
@@ -30,11 +29,10 @@ export default function SingleAlert({
           key={dropItem.id}
         >
           <div className="flex-shrink-0">
-          <XCircle 
-                        className="h-5 w-5 text-red-400 dark:text-red-50"
-                        aria-hidden="true"
-          />
-
+            <XCircle
+              className="h-5 w-5 text-red-400 dark:text-red-50"
+              aria-hidden="true"
+            />
           </div>
           <div className="ml-3">
             <h3 className="text-sm break-words font-medium text-red-800 dark:text-white/80">
@@ -78,11 +76,10 @@ export default function SingleAlert({
           key={dropItem.id}
         >
           <div className="flex-shrink-0">
-          <Info
-                        className="h-5 w-5 text-blue-400 dark:text-blue-50"
-                        aria-hidden="true"
-          />
-
+            <Info
+              className="h-5 w-5 text-blue-400 dark:text-blue-50"
+              aria-hidden="true"
+            />
           </div>
           <div className="ml-3 flex-1 md:flex md:justify-between">
             <p className="text-sm text-blue-700 dark:text-white/80">
@@ -125,11 +122,10 @@ export default function SingleAlert({
           key={dropItem.id}
         >
           <div className="flex-shrink-0">
-          <CheckCircle2
-                        className="h-5 w-5 text-green-400 dark:text-green-50"
-                        aria-hidden="true"
-          />
-
+            <CheckCircle2
+              className="h-5 w-5 text-green-400 dark:text-green-50"
+              aria-hidden="true"
+            />
           </div>
           <div className="ml-3">
             <p className="text-sm font-medium text-green-800 dark:bg-white/80">

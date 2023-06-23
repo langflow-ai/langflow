@@ -385,7 +385,7 @@ export default function ChatModal({
                         <span className="text-base text-gray-500">
                           Start a conversation and click the agent’s thoughts{" "}
                           <span>
-                          <MessagesSquare className="w-5 h-5 inline animate-bounce mx-1 "/>
+                            <MessagesSquare className="w-5 h-5 inline animate-bounce mx-1 " />
                           </span>{" "}
                           to inspect the chaining process.
                         </span>
