@@ -7,17 +7,14 @@ export default {
   "title": "LangFlow Documentation",
   "tagline": "LangFlow is a GUI for LangChain, designed with react-flow",
   "favicon": "img/favicon.ico",
-  "url": "https://langflow-docs.github.io",
+  "url": "https://langflow.docs.com",
   "baseUrl": "/",
   "onBrokenLinks": "throw",
   "onBrokenMarkdownLinks": "warn",
   "organizationName": "logspace-ai",
   "projectName": "langflow",
-  "deploymentBranch": "gh pages",
   "trailingSlash": false,
-  "customFields": {
-    "mendableAnonKey": "b7f52734-297c-41dc-8737-edbd13196394"
-  },
+  "customFields": {},
   "i18n": {
     "defaultLocale": "en",
     "locales": [
