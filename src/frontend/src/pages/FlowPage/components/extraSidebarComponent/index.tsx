@@ -144,7 +144,7 @@ export default function ExtraSidebar() {
             Object.keys(dataFilter[d]).length > 0 ? (
               <DisclosureComponent
                 openDisc={search.length == 0 ? false : true}
-                key={i}
+                key={nodeNames[d]}
                 button={{
                   title: nodeNames[d] ?? nodeNames.unknown,
                   Icon: nodeIconsLucide[d] ?? nodeIconsLucide.unknown,
@@ -155,9 +155,10 @@ export default function ExtraSidebar() {
                     .sort()
                     .map((t: string, k) => (
                       <ShadTooltip
-                        content={t}
+                        content={data[d][t].display_name}
                         delayDuration={1500}
                         side="right"
+                        key={data[d][t].display_name}
                       >
                         <div key={k} data-tooltip-id={t}>
                           <div
@@ -183,7 +184,7 @@ export default function ExtraSidebar() {
                           >
                             <div className="flex w-full justify-between text-sm px-3 py-1 bg-white dark:bg-gray-800 items-center border-dashed border-gray-400 dark:border-gray-600 border-l-0 rounded-md rounded-l-none border">
                               <span className="text-black dark:text-white w-full pr-1 truncate text-xs">
-                                {t}
+                                {data[d][t].display_name}
                               </span>
                               <Menu className="w-4 h-6  text-gray-400 dark:text-gray-600" />
                             </div>
