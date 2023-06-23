@@ -369,7 +369,7 @@ def test_chat_open_ai(client: TestClient):
         "placeholder": "",
         "show": True,
         "multiline": False,
-        "value": "gpt-3.5-turbo",
+        "value": "gpt-3.5-turbo-0613",
         "password": False,
         "options": [
             "gpt-3.5-turbo-0613",
