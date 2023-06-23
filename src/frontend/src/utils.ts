@@ -44,6 +44,7 @@ import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "./constants";
 import { SupabaseIcon } from "./icons/supabase";
+import { MongoDBIcon } from "./icons/MongoDB";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -174,6 +175,7 @@ export const nodeIcons: {
   OpenAIEmbeddings: OpenAiIcon,
   Pinecone: PineconeIcon,
   SupabaseVectorStore: SupabaseIcon,
+  MongoDBAtlasVectorSearch: MongoDBIcon,
   // UnstructuredPowerPointLoader: PowerPointIcon, // word and powerpoint have differente styles
   Qdrant: QDrantIcon,
   // ReadTheDocsLoader: ReadTheDocsIcon, // does not work
