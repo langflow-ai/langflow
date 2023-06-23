@@ -971,5 +971,5 @@ export function getRandomKeyByssmm(): string {
   const now = new Date();
   const seconds = String(now.getSeconds()).padStart(2, "0");
   const milliseconds = String(now.getMilliseconds()).padStart(3, "0");
-  return seconds + milliseconds;
+  return seconds + milliseconds + Math.abs(Math.floor(Math.random() * 10001));
 }

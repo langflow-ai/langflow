@@ -19,6 +19,11 @@ export default function InputListComponent({
       onChange([""]);
     }
   }, [disabled, onChange]);
+
+  useEffect(() => {
+    setInputList(value);
+  }, [value]);
+
   return (
     <div
       className={
