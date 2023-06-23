@@ -146,7 +146,7 @@ export default function ExtraSidebar() {
             Object.keys(dataFilter[d]).length > 0 ? (
               <DisclosureComponent
                 openDisc={search.length == 0 ? false : true}
-                key={i}
+                key={nodeNames[d]}
                 button={{
                   title: nodeNames[d] ?? nodeNames.unknown,
                   Icon: nodeIcons[d] ?? nodeIcons.unknown,
@@ -160,7 +160,7 @@ export default function ExtraSidebar() {
                         content={data[d][t].display_name}
                         delayDuration={1500}
                         side="right"
-                        key={i}
+                        key={data[d][t].display_name}
                       >
                         <div key={k} data-tooltip-id={t}>
                           <div
