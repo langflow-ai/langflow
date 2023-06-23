@@ -810,9 +810,9 @@ export function getRandomName(
   return toTitleCase(final_name);
 }
 
-export function getRandomKeyByssmm(): string{
+export function getRandomKeyByssmm(): string {
   const now = new Date();
-  const seconds = String(now.getSeconds()).padStart(2, '0');
-  const milliseconds = String(now.getMilliseconds()).padStart(3, '0');
+  const seconds = String(now.getSeconds()).padStart(2, "0");
+  const milliseconds = String(now.getMilliseconds()).padStart(3, "0");
   return seconds + milliseconds;
 }
