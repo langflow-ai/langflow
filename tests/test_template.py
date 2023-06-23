@@ -82,6 +82,7 @@ def test_build_template_from_class():
 
     # Test valid input
     result = build_template_from_class("Child", type_to_cls_dict)
+    assert result is not None
     assert "template" in result
     assert "description" in result
     assert "base_classes" in result
