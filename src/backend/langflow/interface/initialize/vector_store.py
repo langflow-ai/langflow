@@ -24,18 +24,20 @@ def initialize_supabase(class_object: Type[SupabaseVectorStore], params: dict):
 
     if "supabase_url" not in params or "supabase_service_key" not in params:
         raise ValueError("Supabase url and service key must be provided in the params")
+    if "texts" in params:
+        params["documents"] = params.pop("texts")
 
     client_kwargs = {
-        "supabase_url": params["supabase_url"],
-        "supabase_key": params["supabase_service_key"],
+        "supabase_url": params.pop("supabase_url"),
+        "supabase_key": params.pop("supabase_service_key"),
     }
 
     supabase: Client = create_client(**client_kwargs)
     if not docs_in_params(params):
+        params.pop("documents", None)
+        params.pop("texts", None)
         return class_object(client=supabase, **params)
     # If there are docs in the params, create a new index
-    if "texts" in params:
-        params["documents"] = params.pop("texts")
 
     return class_object.from_documents(client=supabase, **params)
 
