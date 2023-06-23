@@ -1362,14 +1362,14 @@ importlib-resources = {version = ">=5.0", markers = "python_version < \"3.10\""}
 
 [[package]]
 name = "fastapi"
-version = "0.97.0"
+version = "0.98.0"
 description = "FastAPI framework, high performance, easy to learn, fast to code, ready for production"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "fastapi-0.97.0-py3-none-any.whl", hash = "sha256:95d757511c596409930bd20673358d4a4d709004edb85c5d24d6ffc48fabcbf2"},
-    {file = "fastapi-0.97.0.tar.gz", hash = "sha256:b53248ee45f64f19bb7600953696e3edf94b0f7de94df1e5433fc5c6136fa986"},
+    {file = "fastapi-0.98.0-py3-none-any.whl", hash = "sha256:f4165fb1fe3610c52cb1b8282c1480de9c34bc270f56a965aa93a884c350d605"},
+    {file = "fastapi-0.98.0.tar.gz", hash = "sha256:0d3c18886f652038262b5898fec6b09f4ca92ee23e9d9b1d1d24e429f84bf27b"},
 ]
 
 [package.dependencies]
@@ -2209,14 +2209,14 @@ files = [
 
 [[package]]
 name = "ipykernel"
-version = "6.23.2"
+version = "6.23.3"
 description = "IPython Kernel for Jupyter"
 category = "dev"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "ipykernel-6.23.2-py3-none-any.whl", hash = "sha256:7ccb6e2d32fd958c21453db494c914f3474908a2fdefd99ab548a5375b548d1f"},
-    {file = "ipykernel-6.23.2.tar.gz", hash = "sha256:fcfb67c5b504aa1bfcda1c5b3716636239e0f7b9290958f1c558c79b4c0e7ed5"},
+    {file = "ipykernel-6.23.3-py3-none-any.whl", hash = "sha256:bc00662dc44d4975b668cdb5fefb725e38e9d8d6e28441a519d043f38994922d"},
+    {file = "ipykernel-6.23.3.tar.gz", hash = "sha256:dd4e18116357f36a1e459b3768412371bee764c51844cbf25c4ed1eb9cae4a54"},
 ]
 
 [package.dependencies]
@@ -2535,14 +2535,14 @@ files = [
 
 [[package]]
 name = "jupyter-client"
-version = "8.2.0"
+version = "8.3.0"
 description = "Jupyter protocol implementation and client libraries"
 category = "dev"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "jupyter_client-8.2.0-py3-none-any.whl", hash = "sha256:b18219aa695d39e2ad570533e0d71fb7881d35a873051054a84ee2a17c4b7389"},
-    {file = "jupyter_client-8.2.0.tar.gz", hash = "sha256:9fe233834edd0e6c0aa5f05ca2ab4bdea1842bfd2d8a932878212fc5301ddaf0"},
+    {file = "jupyter_client-8.3.0-py3-none-any.whl", hash = "sha256:7441af0c0672edc5d28035e92ba5e32fadcfa8a4e608a434c228836a89df6158"},
+    {file = "jupyter_client-8.3.0.tar.gz", hash = "sha256:3af69921fe99617be1670399a0b857ad67275eefcfa291e2c81a160b7b650f5f"},
 ]
 
 [package.dependencies]
@@ -2668,14 +2668,14 @@ test = ["psutil", "pytest", "pytest-asyncio"]
 
 [[package]]
 name = "langchainplus-sdk"
-version = "0.0.16"
-description = "Client library to connect to the LangChainPlus LLM Tracing and Evaluation Platform."
+version = "0.0.17"
+description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
 category = "main"
 optional = false
 python-versions = ">=3.8.1,<4.0"
 files = [
-    {file = "langchainplus_sdk-0.0.16-py3-none-any.whl", hash = "sha256:2894e8ca1bbd41404925c3916099cd31ccea74e558a311c9aad67e02bcfa5ef8"},
-    {file = "langchainplus_sdk-0.0.16.tar.gz", hash = "sha256:2fc067dd038edcf18086d342da2c690984c4d37f9bfa684ffccaea34b43edb28"},
+    {file = "langchainplus_sdk-0.0.17-py3-none-any.whl", hash = "sha256:899675fe850bb0829691ce7643d5c3b4425de1535b6f2d6ce1e5f5457ffb05bf"},
+    {file = "langchainplus_sdk-0.0.17.tar.gz", hash = "sha256:6520c864a23dcadbe6fb7233a117347f6acc32725a97758e59354704c50de303"},
 ]
 
 [package.dependencies]
@@ -4092,14 +4092,14 @@ testing = ["pytest", "pytest-cov"]
 
 [[package]]
 name = "platformdirs"
-version = "3.7.0"
+version = "3.8.0"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
 category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "platformdirs-3.7.0-py3-none-any.whl", hash = "sha256:cfd065ba43133ff103ab3bd10aecb095c2a0035fcd1f07217c9376900d94ba07"},
-    {file = "platformdirs-3.7.0.tar.gz", hash = "sha256:87fbf6473e87c078d536980ba970a472422e94f17b752cfad17024c18876d481"},
+    {file = "platformdirs-3.8.0-py3-none-any.whl", hash = "sha256:ca9ed98ce73076ba72e092b23d3c93ea6c4e186b3f1c3dad6edd98ff6ffcca2e"},
+    {file = "platformdirs-3.8.0.tar.gz", hash = "sha256:b0cabcb11063d21a0b261d557acb0a9d2126350e63b70cdf7db6347baea456dc"},
 ]
 
 [package.extras]
@@ -4594,14 +4594,14 @@ diagrams = ["jinja2", "railroad-diagrams"]
 
 [[package]]
 name = "pypdf"
-version = "3.10.0"
+version = "3.11.0"
 description = "A pure-python PDF library capable of splitting, merging, cropping, and transforming PDF files"
 category = "main"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "pypdf-3.10.0-py3-none-any.whl", hash = "sha256:af28f36eeb5bcde26b4f9db9cc9df00610e8e5904d997e3141132e7768ff9247"},
-    {file = "pypdf-3.10.0.tar.gz", hash = "sha256:bc15457f1f9767532d51546300a9226f745fee8d9acf626fcfcf42af77ad342c"},
+    {file = "pypdf-3.11.0-py3-none-any.whl", hash = "sha256:4f1fd2c1ee05e381e05447152d9e993016666647578fcdd7cf15739d13536861"},
+    {file = "pypdf-3.11.0.tar.gz", hash = "sha256:2f5b9b28763234427cd6e525795e583aae7e36a79bdadd48ba8ab5277c12182a"},
 ]
 
 [package.dependencies]
@@ -4642,14 +4642,14 @@ chardet = "*"
 
 [[package]]
 name = "pytest"
-version = "7.3.2"
+version = "7.4.0"
 description = "pytest: simple powerful testing with Python"
 category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pytest-7.3.2-py3-none-any.whl", hash = "sha256:cdcbd012c9312258922f8cd3f1b62a6580fdced17db6014896053d47cddf9295"},
-    {file = "pytest-7.3.2.tar.gz", hash = "sha256:ee990a3cc55ba808b80795a79944756f315c67c12b56abd3ac993a7b8c17030b"},
+    {file = "pytest-7.4.0-py3-none-any.whl", hash = "sha256:78bf16451a2eb8c7a2ea98e32dc119fd2aa758f1d5d66dbf0a59d69a3969df32"},
+    {file = "pytest-7.4.0.tar.gz", hash = "sha256:b4bf8c45bd59934ed84001ad51e11b4ee40d40a1229d2c79f9c592b0a3f6bd8a"},
 ]
 
 [package.dependencies]
@@ -5033,14 +5033,14 @@ cffi = {version = "*", markers = "implementation_name == \"pypy\""}
 
 [[package]]
 name = "qdrant-client"
-version = "1.2.0"
+version = "1.3.0"
 description = "Client library for the Qdrant vector search engine"
 category = "main"
 optional = false
 python-versions = ">=3.7,<3.12"
 files = [
-    {file = "qdrant_client-1.2.0-py3-none-any.whl", hash = "sha256:e84e43bee529e27990aa5bad487bab4204eb20bda0414916498d8bb80ce601e6"},
-    {file = "qdrant_client-1.2.0.tar.gz", hash = "sha256:5a3d9f89adce392a2ba619cfd5b9f7afb13e5146c49e88ed80469993f0fadbf0"},
+    {file = "qdrant_client-1.3.0-py3-none-any.whl", hash = "sha256:f5ab40e24dd31d919475f9a1d7823b1eff2f4df8b4af1812abf19e2789b7021e"},
+    {file = "qdrant_client-1.3.0.tar.gz", hash = "sha256:68168e9b69af7c49ea5f9e90e027ae1944d2a1ee1ea6701315e0ba8a2fdc4a63"},
 ]
 
 [package.dependencies]
@@ -6578,14 +6578,14 @@ files = [
 
 [[package]]
 name = "websocket-client"
-version = "1.6.0"
+version = "1.6.1"
 description = "WebSocket client for Python with low level API options"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "websocket-client-1.6.0.tar.gz", hash = "sha256:e84c7eafc66aade6d1967a51dfd219aabdf81d15b9705196e11fd81f48666b78"},
-    {file = "websocket_client-1.6.0-py3-none-any.whl", hash = "sha256:72d7802608745b0a212f79b478642473bd825777d8637b6c8c421bf167790d4f"},
+    {file = "websocket-client-1.6.1.tar.gz", hash = "sha256:c951af98631d24f8df89ab1019fc365f2227c0892f12fd150e935607c79dd0dd"},
+    {file = "websocket_client-1.6.1-py3-none-any.whl", hash = "sha256:f1f9f2ad5291f0225a49efad77abf9e700b6fef553900623060dad6e26503b9d"},
 ]
 
 [package.extras]
@@ -6983,4 +6983,4 @@ deploy = ["langchain-serve"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "9a2b49e451b6cd9fa01617afc6625656854ff0770941de489209d64b095fe69d"
+content-hash = "dfd6420a5c09e4cde1710aec344feaceb295ca0345c7be89e10c34aac1af6dcd"
