@@ -101,3 +101,11 @@ class InitResponse(BaseModel):
 
 class BuiltResponse(BaseModel):
     built: bool
+
+
+class StreamData(BaseModel):
+    event: str
+    data: dict
+
+    def __str__(self) -> str:
+        return f"event: {self.event}\ndata: {json.dumps(self.data)}\n\n"
