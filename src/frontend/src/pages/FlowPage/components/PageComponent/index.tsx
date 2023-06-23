@@ -398,8 +398,8 @@ export default function Page({ flow }: { flow: FlowType }) {
                   zoomOnDoubleClick={!disableCopyPaste}
                   selectNodesOnDrag={false}
                   className="theme-attribution"
-                  minZoom={0.05}
-                  maxZoom={4}
+                  minZoom={0.01}
+                  maxZoom={8}
                 >
                   <Background className="dark:bg-gray-900" />
                   <Controls className="[&>button]:text-black  [&>button]:dark:bg-gray-800 hover:[&>button]:dark:bg-gray-700 [&>button]:dark:text-gray-400 [&>button]:dark:fill-gray-400 [&>button]:dark:border-gray-600"></Controls>
