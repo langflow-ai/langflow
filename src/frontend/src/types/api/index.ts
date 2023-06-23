@@ -11,6 +11,7 @@ export type APIClassType = {
   base_classes: Array<string>;
   description: string;
   template: APITemplateType;
+  display_name: string;
   [key: string]: Array<string> | string | APITemplateType;
 };
 export type TemplateVariableType = {
