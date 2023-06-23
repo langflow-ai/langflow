@@ -1,11 +1,11 @@
 import { useContext, useEffect, useRef } from "react";
 import { alertContext } from "../../contexts/alertContext";
-import { XMarkIcon } from "@heroicons/react/24/solid";
-import { TrashIcon } from "@heroicons/react/24/outline";
 import SingleAlert from "./components/singleAlertComponent";
 import { AlertDropdownType } from "../../types/alerts";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { useOnClickOutside } from "../hooks/useOnClickOutside";
+import { X, Trash2  } from "lucide-react";
+
 export default function AlertDropdown({}: AlertDropdownType) {
   const { closePopUp } = useContext(PopUpContext);
   const componentRef = useRef<HTMLDivElement>(null);
@@ -36,13 +36,13 @@ export default function AlertDropdown({}: AlertDropdownType) {
               setTimeout(clearNotificationList, 100);
             }}
           >
-            <TrashIcon className="w-[1.1rem] h-[1.1rem]" />
+            <Trash2 className="w-[1.1rem] h-[1.1rem]"/>
           </button>
           <button
             className="text-gray-800 hover:text-red-500 dark:text-gray-200 dark:hover:text-red-500"
             onClick={closePopUp}
           >
-            <XMarkIcon className="h-5 w-5" />
+            <X className="h-5 w-5" />
           </button>
         </div>
       </div>

@@ -1,7 +1,8 @@
 import { Transition } from "@headlessui/react";
-import { CheckCircleIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
 import { SuccessAlertType } from "../../types/alerts";
+import { CheckCircle2 } from "lucide-react";
+
 
 export default function SuccessAlert({
   title,
@@ -38,10 +39,12 @@ export default function SuccessAlert({
       >
         <div className="flex">
           <div className="flex-shrink-0">
-            <CheckCircleIcon
-              className="h-5 w-5 text-green-400 dark:text-green-50"
-              aria-hidden="true"
-            />
+          <CheckCircle2
+          
+          className="h-5 w-5 text-green-400 dark:text-green-50"
+          aria-hidden="true"
+          />
+
           </div>
           <div className="ml-3">
             <p className="text-sm font-medium text-green-800 dark:text-white/80">

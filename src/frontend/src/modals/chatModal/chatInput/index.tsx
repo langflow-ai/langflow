@@ -1,8 +1,9 @@
-import { LockClosedIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
 import { classNames } from "../../../utils";
 import { useContext, useEffect, useRef, useState } from "react";
 import { TabsContext } from "../../../contexts/tabsContext";
 import { INPUT_STYLE } from "../../../constants";
+import { Lock, Send } from "lucide-react";
+
 export default function ChatInput({
   lockChat,
   chatValue,
@@ -60,14 +61,14 @@ export default function ChatInput({
       <div className="absolute bottom-0.5 right-3">
         <button disabled={lockChat} onClick={() => sendMessage()}>
           {lockChat ? (
-            <LockClosedIcon
-              className="h-5 w-5 text-gray-500  dark:hover:text-gray-300 animate-pulse"
-              aria-hidden="true"
+            <Lock 
+            className="h-5 w-5 text-gray-500  dark:hover:text-gray-300 animate-pulse"
+            aria-hidden="true"
             />
           ) : (
-            <PaperAirplaneIcon
-              className="h-5 w-5 text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-              aria-hidden="true"
+            <Send 
+            className="h-5 w-5 text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+            aria-hidden="true"
             />
           )}
         </button>

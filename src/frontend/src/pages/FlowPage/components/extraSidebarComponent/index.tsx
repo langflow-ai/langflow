@@ -1,4 +1,3 @@
-import { Bars2Icon } from "@heroicons/react/24/outline";
 import DisclosureComponent from "../DisclosureComponent";
 import {
   classNames,
@@ -16,9 +15,9 @@ import ExportModal from "../../../../modals/exportModal";
 import ApiModal from "../../../../modals/ApiModal";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { alertContext } from "../../../../contexts/alertContext";
-import { updateFlowInDatabase } from "../../../../controllers/API";
 import { INPUT_STYLE } from "../../../../constants";
 import { Separator } from "../../../../components/ui/separator";
+import { Menu  } from "lucide-react";
 
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);
@@ -186,7 +185,7 @@ export default function ExtraSidebar() {
                               <span className="text-black dark:text-white w-full pr-1 truncate text-xs">
                                 {t}
                               </span>
-                              <Bars2Icon className="w-4 h-6  text-gray-400 dark:text-gray-600" />
+                              <Menu className="w-4 h-6  text-gray-400 dark:text-gray-600"/>
                             </div>
                           </div>
                         </div>
