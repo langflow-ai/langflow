@@ -157,7 +157,7 @@ export default function ExtraSidebar() {
                     .sort()
                     .map((t: string, k) => (
                       <ShadTooltip
-                        content={t}
+                        content={data[d][t].display_name}
                         delayDuration={1500}
                         side="right"
                         key={i}
