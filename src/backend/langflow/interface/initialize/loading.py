@@ -19,8 +19,11 @@ from langchain.chains.loading import load_chain_from_config
 from langchain.llms.loading import load_llm_from_config
 from langflow.interface.initialize.vector_store import (
     initialize_chroma,
+    initialize_faiss,
     initialize_pinecone,
     initialize_qdrant,
+    initialize_supabase,
+    initialize_weaviate,
 )
 from pydantic import ValidationError
 
@@ -162,11 +165,19 @@ def instantiate_vectorstore(class_object, params):
     if class_object.__name__ == "Pinecone":
         return initialize_pinecone(class_object, params)
     # Chroma requires all metadata values to not be None
-    if class_object.__name__ == "Chroma":
+    elif class_object.__name__ == "Chroma":
         return initialize_chroma(class_object, params)
 
-    if class_object.__name__ == "Qdrant":
+    elif class_object.__name__ == "Qdrant":
         return initialize_qdrant(class_object, params)
+
+    elif class_object.__name__ == "Weaviate":
+        return initialize_weaviate(class_object, params)
+    elif class_object.__name__ == "FAISS":
+        return initialize_faiss(class_object, params)
+    elif class_object.__name__ == "SupabaseVectorStore":
+        return initialize_supabase(class_object, params)
+
     else:
         if "texts" in params:
             params["documents"] = params.pop("texts")
