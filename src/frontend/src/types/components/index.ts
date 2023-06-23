@@ -1,4 +1,10 @@
-import { ForwardRefExoticComponent, ReactElement, ReactNode } from "react";
+import {
+  ComponentType,
+  ForwardRefExoticComponent,
+  ReactElement,
+  ReactNode,
+  SVGProps,
+} from "react";
 import { NodeDataType } from "../flow/index";
 import { typesContextType } from "../typesContext";
 export type InputComponentType = {
@@ -65,7 +71,7 @@ export type DisclosureComponentType = {
   openDisc: boolean;
   button: {
     title: string;
-    Icon: ForwardRefExoticComponent<React.SVGProps<SVGSVGElement>>;
+    Icon: any;
     buttons?: {
       Icon: ReactElement;
       title: string;
@@ -97,4 +103,15 @@ export type TooltipComponentType = {
     | "top-end"
     | "top-start"
     | "top";
+};
+
+export type ProgressBarType = {
+  children?: ReactElement;
+  value?: number;
+  max?: number;
+};
+
+export type RadialProgressType = {
+  value?: number;
+  color?: string;
 };

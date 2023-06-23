@@ -1,7 +1,8 @@
 import { ReactFlowInstance } from "reactflow";
+import { APIClassType } from "../api";
 
 const types: { [char: string]: string } = {};
-const template: { [char: string]: string } = {};
+const template: { [char: string]: APIClassType } = {};
 const data: { [char: string]: string } = {};
 
 export type typesContextType = {
