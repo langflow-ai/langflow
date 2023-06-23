@@ -68,7 +68,7 @@ class LangChainTypeCreator(BaseModel, ABC):
                     value=value.get("value", None),
                     suffixes=value.get("suffixes", []),
                     file_types=value.get("fileTypes", []),
-                    content=value.get("content", None),
+                    file_path=value.get("file_path", None),
                 )
                 for key, value in signature["template"].items()
                 if key != "_type"

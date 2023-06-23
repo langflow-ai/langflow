@@ -104,8 +104,8 @@ export default function GenericNode({
               }}
             />
             <div className="ml-2 truncate">
-              <ShadTooltip delayDuration={1500} content={data.type}>
-                <div className="ml-2 truncate text-gray-800">{data.type}</div>
+              <ShadTooltip delayDuration={1500} content={data.node.display_name}>
+                <div className="ml-2 truncate text-gray-800">{data.node.display_name}</div>
               </ShadTooltip>
             </div>
           </div>

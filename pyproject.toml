@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "0.1.6"
+version = "0.1.7"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
@@ -23,14 +23,14 @@ langflow = "langflow.__main__:main"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.12"
-fastapi = "^0.97.0"
+fastapi = "^0.98.0"
 uvicorn = "^0.22.0"
 beautifulsoup4 = "^4.11.2"
 google-search-results = "^2.4.1"
 google-api-python-client = "^2.79.0"
 typer = "^0.9.0"
 gunicorn = "^20.1.0"
-langchain = "^0.0.202"
+langchain = "^0.0.211"
 openai = "^0.27.8"
 types-pyyaml = "^6.0.12.8"
 pandas = "^1.5.3"
@@ -51,12 +51,13 @@ tiktoken = "~0.4.0"
 wikipedia = "^1.4.0"
 langchain-serve = { version = ">0.0.39", optional = true }
 qdrant-client = "^1.2.0"
-websockets = "^11.0.3"
+websockets = "^10.3"
 weaviate-client = "^3.21.0"
 jina = "3.15.2"
 sentence-transformers = "^2.2.2"
 ctransformers = "^0.2.2"
 cohere = "^4.6.0"
+python-multipart = "^0.0.6"
 sqlmodel = "^0.0.8"
 faiss-cpu = "^1.7.4"
 anthropic = "^0.2.10"
@@ -64,6 +65,11 @@ orjson = "^3.9.1"
 multiprocess = "^0.70.14"
 cachetools = "^5.3.1"
 types-cachetools = "^5.3.0.5"
+appdirs = "^1.4.4"
+pinecone-client = "^2.2.2"
+supabase = "^1.0.3"
+pymongo = "^4.4.0"
+certifi = "^2023.5.7"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -78,6 +84,7 @@ requests = "^2.28.0"
 pytest-cov = "^4.0.0"
 pandas-stubs = "^2.0.0.230412"
 types-pillow = "^9.5.0.2"
+types-appdirs = "^1.4.3.5"
 
 
 [tool.poetry.extras]

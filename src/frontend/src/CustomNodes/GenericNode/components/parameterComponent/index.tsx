@@ -1,6 +1,7 @@
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import {
   classNames,
+  getRandomKeyByssmm,
   groupByFamily,
   isValidConnection,
   nodeIconsLucide,
@@ -41,7 +42,7 @@ export default function ParameterComponent({
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   const { closePopUp } = useContext(PopUpContext);
-  const { setTabsState, tabId } = useContext(TabsContext);
+  const { setTabsState, tabId, save } = useContext(TabsContext);
 
   useEffect(() => {
     if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
@@ -83,7 +84,7 @@ export default function ParameterComponent({
 
     refHtml.current = groupedObj.map((item, i) => (
       <span
-        key={i}
+        key={getRandomKeyByssmm()}
         className={classNames(
           i > 0 ? "items-center flex mt-3" : "items-center flex"
         )}
@@ -103,14 +104,14 @@ export default function ParameterComponent({
             -&nbsp;
             {item.type.split(", ").length > 2
               ? item.type.split(", ").map((el, i) => (
-                  <>
-                    <span key={i}>
-                      {i == item.type.split(", ").length - 1
+                  <React.Fragment key={el + i}>
+                    <span>
+                      {i === item.type.split(", ").length - 1
                         ? el
                         : (el += `, `)}
                     </span>
-                    {i % 2 == 0 && i > 0 && <br></br>}
-                  </>
+                    {i % 2 === 0 && i > 0 && <br />}
+                  </React.Fragment>
                 ))
               : item.type}
           </span>
@@ -240,7 +241,8 @@ export default function ParameterComponent({
             fileTypes={data.node.template[name].fileTypes}
             suffixes={data.node.template[name].suffixes}
             onFileChange={(t: string) => {
-              data.node.template[name].content = t;
+              data.node.template[name].file_path = t;
+              save();
             }}
           ></InputFileComponent>
         ) : left === true && type === "int" ? (

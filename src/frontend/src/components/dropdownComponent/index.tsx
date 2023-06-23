@@ -1,5 +1,5 @@
 import { Listbox, Transition } from "@headlessui/react";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { DropDownComponentType } from "../../types/components";
 import { classNames } from "../../utils";
 import { INPUT_STYLE } from "../../constants";
@@ -15,6 +15,9 @@ export default function Dropdown({
   let [internalValue, setInternalValue] = useState(
     value === "" || !value ? "Choose an option" : value
   );
+  useEffect(()=>{
+    setInternalValue(value === "" || !value ? "Choose an option" : value)
+  },[value])
 
   return (
     <>
