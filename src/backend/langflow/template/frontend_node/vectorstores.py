@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
@@ -6,7 +6,7 @@ from langflow.template.frontend_node.base import FrontendNode
 
 class VectorStoreFrontendNode(FrontendNode):
     def add_extra_fields(self) -> None:
-        extra_fields = []
+        extra_fields: List[TemplateField] = []
         if self.template.type_name == "Weaviate":
             extra_field = TemplateField(
                 name="weaviate_url",
