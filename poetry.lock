@@ -2604,21 +2604,21 @@ testing = ["pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)",
 
 [[package]]
 name = "langchain"
-version = "0.0.209"
+version = "0.0.211"
 description = "Building applications with LLMs through composability"
 category = "main"
 optional = false
 python-versions = ">=3.8.1,<4.0"
 files = [
-    {file = "langchain-0.0.209-py3-none-any.whl", hash = "sha256:7dfdea6afbfb1b2770a6a4031d714095cfc921c0bb04663acc8fea98ab6a59c5"},
-    {file = "langchain-0.0.209.tar.gz", hash = "sha256:50778b17839a79bbc336ceca1392e6161795faf586c8d36aee809df3343c40bb"},
+    {file = "langchain-0.0.211-py3-none-any.whl", hash = "sha256:527b602466d68e5c4e82c550cb6e218d7fe0e1b3d37f97beddc13785a75dbf96"},
+    {file = "langchain-0.0.211.tar.gz", hash = "sha256:35b43d4492ef3de67b6ea0168f12a489029cae0f5c4031d5c907764168b177cb"},
 ]
 
 [package.dependencies]
 aiohttp = ">=3.8.3,<4.0.0"
 async-timeout = {version = ">=4.0.0,<5.0.0", markers = "python_version < \"3.11\""}
 dataclasses-json = ">=0.5.7,<0.6.0"
-langchainplus-sdk = ">=0.0.13"
+langchainplus-sdk = ">=0.0.17"
 numexpr = ">=2.8.4,<3.0.0"
 numpy = ">=1,<2"
 openapi-schema-pydantic = ">=1.2,<2.0"
@@ -2635,7 +2635,7 @@ clarifai = ["clarifai (==9.1.0)"]
 cohere = ["cohere (>=3,<4)"]
 docarray = ["docarray[hnswlib] (>=0.32.0,<0.33.0)"]
 embeddings = ["sentence-transformers (>=2,<3)"]
-extended-testing = ["atlassian-python-api (>=3.36.0,<4.0.0)", "beautifulsoup4 (>=4,<5)", "bibtexparser (>=1.4.0,<2.0.0)", "chardet (>=5.1.0,<6.0.0)", "gql (>=3.4.1,<4.0.0)", "html2text (>=2020.1.16,<2021.0.0)", "jq (>=1.4.1,<2.0.0)", "lxml (>=4.9.2,<5.0.0)", "openai (>=0,<1)", "pandas (>=2.0.1,<3.0.0)", "pdfminer-six (>=20221105,<20221106)", "pgvector (>=0.1.6,<0.2.0)", "psychicapi (>=0.5,<0.6)", "py-trello (>=0.19.0,<0.20.0)", "pymupdf (>=1.22.3,<2.0.0)", "pypdf (>=3.4.0,<4.0.0)", "pypdfium2 (>=4.10.0,<5.0.0)", "pyspark (>=3.4.0,<4.0.0)", "requests-toolbelt (>=1.0.0,<2.0.0)", "scikit-learn (>=1.2.2,<2.0.0)", "telethon (>=1.28.5,<2.0.0)", "tqdm (>=4.48.0)", "zep-python (>=0.31)"]
+extended-testing = ["atlassian-python-api (>=3.36.0,<4.0.0)", "beautifulsoup4 (>=4,<5)", "bibtexparser (>=1.4.0,<2.0.0)", "chardet (>=5.1.0,<6.0.0)", "gql (>=3.4.1,<4.0.0)", "html2text (>=2020.1.16,<2021.0.0)", "jq (>=1.4.1,<2.0.0)", "lxml (>=4.9.2,<5.0.0)", "openai (>=0,<1)", "pandas (>=2.0.1,<3.0.0)", "pdfminer-six (>=20221105,<20221106)", "pgvector (>=0.1.6,<0.2.0)", "psychicapi (>=0.5,<0.6)", "py-trello (>=0.19.0,<0.20.0)", "pymupdf (>=1.22.3,<2.0.0)", "pypdf (>=3.4.0,<4.0.0)", "pypdfium2 (>=4.10.0,<5.0.0)", "pyspark (>=3.4.0,<4.0.0)", "requests-toolbelt (>=1.0.0,<2.0.0)", "scikit-learn (>=1.2.2,<2.0.0)", "streamlit (>=1.18.0,<2.0.0)", "telethon (>=1.28.5,<2.0.0)", "tqdm (>=4.48.0)", "zep-python (>=0.31)"]
 llms = ["anthropic (>=0.2.6,<0.3.0)", "clarifai (==9.1.0)", "cohere (>=3,<4)", "huggingface_hub (>=0,<1)", "manifest-ml (>=0.0.1,<0.0.2)", "nlpcloud (>=1,<2)", "openai (>=0,<1)", "openllm (>=0.1.6)", "openlm (>=0.0.5,<0.0.6)", "torch (>=1,<3)", "transformers (>=4,<5)"]
 openai = ["openai (>=0,<1)", "tiktoken (>=0.3.2,<0.4.0)"]
 qdrant = ["qdrant-client (>=1.1.2,<2.0.0)"]
@@ -2643,13 +2643,13 @@ text-helpers = ["chardet (>=5.1.0,<6.0.0)"]
 
 [[package]]
 name = "langchain-serve"
-version = "0.0.46"
+version = "0.0.47"
 description = "Langchain Serve - serve your langchain apps on Jina AI Cloud."
 category = "main"
 optional = true
 python-versions = "*"
 files = [
-    {file = "langchain-serve-0.0.46.tar.gz", hash = "sha256:e99e31aada6b6e61e514e6398d110df3b9dcd03a804cdb46f40ac9dba5614820"},
+    {file = "langchain-serve-0.0.47.tar.gz", hash = "sha256:2b7827ddaffa4fe6eb8fa988fc8b9be827ded702340f1644f065200b89fdc3a9"},
 ]
 
 [package.dependencies]
@@ -2660,6 +2660,7 @@ jina-hubble-sdk = "*"
 langchain = "*"
 nest-asyncio = "*"
 requests = "*"
+slack_bolt = "*"
 textual = "*"
 toml = "*"
 
@@ -5617,6 +5618,44 @@ files = [
 ]
 
 [[package]]
+name = "slack-bolt"
+version = "1.18.0"
+description = "The Bolt Framework for Python"
+category = "main"
+optional = true
+python-versions = ">=3.6"
+files = [
+    {file = "slack_bolt-1.18.0-py2.py3-none-any.whl", hash = "sha256:63089a401ae3900c37698890249acd008a4651d06e86194edc7b72a00819bbac"},
+    {file = "slack_bolt-1.18.0.tar.gz", hash = "sha256:43b121acf78440303ce5129e53be36bdfe5d926a193daef7daf2860688e65dd3"},
+]
+
+[package.dependencies]
+slack-sdk = ">=3.21.2,<4"
+
+[package.extras]
+adapter = ["CherryPy (>=18,<19)", "Django (>=3,<5)", "Flask (>=1,<3)", "Werkzeug (>=2,<3)", "boto3 (<=2)", "bottle (>=0.12,<1)", "chalice (>=1.28,<2)", "falcon (>=2,<4)", "fastapi (>=0.70.0,<1)", "gunicorn (>=20,<21)", "pyramid (>=1,<3)", "sanic (>=22,<23)", "starlette (>=0.14,<1)", "tornado (>=6,<7)", "uvicorn (<1)", "websocket-client (>=1.2.3,<2)"]
+adapter-testing = ["Flask (>=1,<2)", "Werkzeug (>=1,<2)", "boddle (>=0.2,<0.3)", "docker (>=5,<6)", "moto (>=3,<4)", "requests (>=2,<3)", "sanic-testing (>=0.7)"]
+async = ["aiohttp (>=3,<4)", "websockets (>=10,<11)"]
+testing = ["Flask-Sockets (>=0.2,<1)", "Jinja2 (==3.0.3)", "Werkzeug (>=1,<2)", "aiohttp (>=3,<4)", "black (==22.8.0)", "click (<=8.0.4)", "itsdangerous (==2.0.1)", "pytest (>=6.2.5,<7)", "pytest-asyncio (>=0.18.2,<1)", "pytest-cov (>=3,<4)"]
+testing-without-asyncio = ["Flask-Sockets (>=0.2,<1)", "Jinja2 (==3.0.3)", "Werkzeug (>=1,<2)", "black (==22.8.0)", "click (<=8.0.4)", "itsdangerous (==2.0.1)", "pytest (>=6.2.5,<7)", "pytest-cov (>=3,<4)"]
+
+[[package]]
+name = "slack-sdk"
+version = "3.21.3"
+description = "The Slack API Platform SDK for Python"
+category = "main"
+optional = true
+python-versions = ">=3.6.0"
+files = [
+    {file = "slack_sdk-3.21.3-py2.py3-none-any.whl", hash = "sha256:de3c07b92479940b61cd68c566f49fbc9974c8f38f661d26244078f3903bb9cc"},
+    {file = "slack_sdk-3.21.3.tar.gz", hash = "sha256:20829bdc1a423ec93dac903470975ebf3bc76fd3fd91a4dadc0eeffc940ecb0c"},
+]
+
+[package.extras]
+optional = ["SQLAlchemy (>=1.4,<3)", "aiodns (>1.0)", "aiohttp (>=3.7.3,<4)", "boto3 (<=2)", "websocket-client (>=1,<2)", "websockets (>=10,<11)"]
+testing = ["Flask (>=1,<2)", "Flask-Sockets (>=0.2,<1)", "Jinja2 (==3.0.3)", "Werkzeug (<2)", "black (==22.8.0)", "boto3 (<=2)", "click (==8.0.4)", "databases (>=0.5)", "flake8 (>=5,<6)", "itsdangerous (==1.1.0)", "moto (>=3,<4)", "psutil (>=5,<6)", "pytest (>=6.2.5,<7)", "pytest-asyncio (<1)", "pytest-cov (>=2,<3)"]
+
+[[package]]
 name = "smmap"
 version = "5.0.0"
 description = "A pure Python implementation of a sliding window memory map manager"
@@ -7078,4 +7117,4 @@ deploy = ["langchain-serve"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "33634908dff83e9689c64e730dc23854d9e82a89ec8fffd8de02732ecea69f20"
+content-hash = "e7b18762564269aaf9c6b046fa151f5e3acf85444f38653503341f658155e70a"
