@@ -1,141 +1,243 @@
----
 agents:
-  - ZeroShotAgent
-  - JsonAgent
-  - CSVAgent
-  - AgentInitializer
-  - VectorStoreAgent
-  - VectorStoreRouterAgent
-  - SQLAgent
+  ZeroShotAgent:
+    documentation: "https://python.langchain.com/docs/modules/agents/how_to/custom_mrkl_agent"
+  JsonAgent:
+    documentation: "https://python.langchain.com/docs/modules/agents/toolkits/openapi"
+  CSVAgent:
+    documentation: "https://python.langchain.com/docs/modules/agents/toolkits/csv"
+  AgentInitializer:
+    documentation: "https://python.langchain.com/docs/modules/agents/agent_types/"
+  VectorStoreAgent:
+    documentation: "https://example.com/VectorStoreAgent"
+  VectorStoreRouterAgent:
+    documentation: "https://example.com/VectorStoreRouterAgent"
+  SQLAgent:
+    documentation: "https://example.com/SQLAgent"
 chains:
-  - LLMChain
-  - LLMMathChain
-  - LLMCheckerChain
-  - ConversationChain
-  - SeriesCharacterChain
-  - MidJourneyPromptChain
-  - TimeTravelGuideChain
-  - SQLDatabaseChain
-  - RetrievalQA
-  - RetrievalQAWithSourcesChain
-  - ConversationalRetrievalChain
-  - CombineDocsChain
+  LLMChain:
+    documentation: "https://python.langchain.com/docs/modules/chains/foundational/llm_chain"
+  LLMMathChain:
+    documentation: "https://python.langchain.com/docs/modules/chains/additional/llm_math"
+  LLMCheckerChain:
+    documentation: "https://python.langchain.com/docs/modules/chains/additional/llm_checker"
+  ConversationChain:
+    documentation: "https://example.com/ConversationChain"
+  SeriesCharacterChain:
+    documentation: "https://example.com/SeriesCharacterChain"
+  MidJourneyPromptChain:
+    documentation: "https://example.com/MidJourneyPromptChain"
+  TimeTravelGuideChain:
+    documentation: "https://example.com/TimeTravelGuideChain"
+  SQLDatabaseChain:
+    documentation: "https://example.com/SQLDatabaseChain"
+  RetrievalQA:
+    documentation: "https://python.langchain.com/docs/modules/chains/popular/vector_db_qa"
+  RetrievalQAWithSourcesChain:
+    documentation: "https://example.com/RetrievalQAWithSourcesChain"
+  ConversationalRetrievalChain:
+    documentation: "https://python.langchain.com/docs/modules/chains/popular/chat_vector_db"
+  CombineDocsChain:
+    documentation: "https://example.com/CombineDocsChain"
 documentloaders:
-  - AirbyteJSONLoader
-  - CoNLLULoader
-  - CSVLoader
-  - UnstructuredEmailLoader
-  - EverNoteLoader
-  - FacebookChatLoader
-  - GutenbergLoader
-  - BSHTMLLoader
-  - UnstructuredHTMLLoader
-  # - UnstructuredImageLoader # Issue with Python 3.11 (https://github.com/Unstructured-IO/unstructured-inference/issues/83)
-  - UnstructuredMarkdownLoader
-  - PyPDFLoader
-  - UnstructuredPowerPointLoader
-  - SRTLoader
-  - TelegramChatLoader
-  - TextLoader
-  - UnstructuredWordDocumentLoader
-  - WebBaseLoader
-  - AZLyricsLoader
-  - CollegeConfidentialLoader
-  - HNLoader
-  - IFixitLoader
-  - IMSDbLoader
-  - GitbookLoader
-  - ReadTheDocsLoader
-  - SlackDirectoryLoader
-  - NotionDirectoryLoader
-  - DirectoryLoader
-  - GitLoader
+  AirbyteJSONLoader:
+    documentation: "https://example.com/AirbyteJSONLoader"
+  CoNLLULoader:
+    documentation: "https://example.com/CoNLLULoader"
+  CSVLoader:
+    documentation: "https://example.com/CSVLoader"
+  UnstructuredEmailLoader:
+    documentation: "https://example.com/UnstructuredEmailLoader"
+  EverNoteLoader:
+    documentation: "https://example.com/EverNoteLoader"
+  FacebookChatLoader:
+    documentation: "https://example.com/FacebookChatLoader"
+  GutenbergLoader:
+    documentation: "https://example.com/GutenbergLoader"
+  BSHTMLLoader:
+    documentation: "https://example.com/BSHTMLLoader"
+  UnstructuredHTMLLoader:
+    documentation: "https://example.com/UnstructuredHTMLLoader"
+  UnstructuredMarkdownLoader:
+    documentation: "https://example.com/UnstructuredMarkdownLoader"
+  PyPDFLoader:
+    documentation: "https://example.com/PyPDFLoader"
+  UnstructuredPowerPointLoader:
+    documentation: "https://example.com/UnstructuredPowerPointLoader"
+  SRTLoader:
+    documentation: "https://example.com/SRTLoader"
+  TelegramChatLoader:
+    documentation: "https://example.com/TelegramChatLoader"
+  TextLoader:
+    documentation: "https://example.com/TextLoader"
+  UnstructuredWordDocumentLoader:
+    documentation: "https://example.com/UnstructuredWordDocumentLoader"
+  WebBaseLoader:
+    documentation: "https://example.com/WebBaseLoader"
+  AZLyricsLoader:
+    documentation: "https://example.com/AZLyricsLoader"
+  CollegeConfidentialLoader:
+    documentation: "https://example.com/CollegeConfidentialLoader"
+  HNLoader:
+    documentation: "https://example.com/HNLoader"
+  IFixitLoader:
+    documentation: "https://example.com/IFixitLoader"
+  IMSDbLoader:
+    documentation: "https://example.com/IMSDbLoader"
+  GitbookLoader:
+    documentation: "https://example.com/GitbookLoader"
+  ReadTheDocsLoader:
+    documentation: "https://example.com/ReadTheDocsLoader"
+  SlackDirectoryLoader:
+    documentation: "https://example.com/SlackDirectoryLoader"
+  NotionDirectoryLoader:
+    documentation: "https://example.com/NotionDirectoryLoader"
+  DirectoryLoader:
+    documentation: "https://example.com/DirectoryLoader"
+  GitLoader:
+    documentation: "https://example.com/GitLoader"
 embeddings:
-  - OpenAIEmbeddings
-  - HuggingFaceEmbeddings
-  - CohereEmbeddings
+  OpenAIEmbeddings:
+    documentation: "https://example.com/OpenAIEmbeddings"
+  HuggingFaceEmbeddings:
+    documentation: "https://example.com/HuggingFaceEmbeddings"
+  CohereEmbeddings:
+    documentation: "https://example.com/CohereEmbeddings"
 llms:
-  - OpenAI
-  # - AzureOpenAI
-  # - AzureChatOpenAI
-  - ChatOpenAI
-  - LlamaCpp
-  - CTransformers
-  - Cohere
-  - Anthropic
-  - ChatAnthropic
-  - HuggingFaceHub
+  OpenAI:
+    documentation: "https://example.com/OpenAI"
+  ChatOpenAI:
+    documentation: "https://example.com/ChatOpenAI"
+  LlamaCpp:
+    documentation: "https://example.com/LlamaCpp"
+  CTransformers:
+    documentation: "https://example.com/CTransformers"
+  Cohere:
+    documentation: "https://example.com/Cohere"
+  Anthropic:
+    documentation: "https://example.com/Anthropic"
+  ChatAnthropic:
+    documentation: "https://example.com/ChatAnthropic"
+  HuggingFaceHub:
+    documentation: "https://example.com/HuggingFaceHub"
 memories:
-  - ConversationBufferMemory
-  - ConversationSummaryMemory
-  - ConversationKGMemory
+  ConversationBufferMemory:
+    documentation: "https://example.com/ConversationBufferMemory"
+  ConversationSummaryMemory:
+    documentation: "https://example.com/ConversationSummaryMemory"
+  ConversationKGMemory:
+    documentation: "https://example.com/ConversationKGMemory"
 prompts:
-  - PromptTemplate
-  - FewShotPromptTemplate
-  - ZeroShotPrompt
+  PromptTemplate:
+    documentation: "https://python.langchain.com/docs/modules/model_io/prompts/prompt_templates/"
+  ZeroShotPrompt:
+    documentation: "https://python.langchain.com/docs/modules/agents/how_to/custom_mrkl_agent"
 textsplitters:
-  - CharacterTextSplitter
-  - RecursiveCharacterTextSplitter
-  # - LatexTextSplitter
-  # - PythonCodeTextSplitter
+  CharacterTextSplitter:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_transformers/text_splitters/character_text_splitter"
+  RecursiveCharacterTextSplitter:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_transformers/text_splitters/recursive_text_splitter"
 toolkits:
-  - OpenAPIToolkit
-  - JsonToolkit
-  - VectorStoreInfo
-  - VectorStoreRouterToolkit
-  - VectorStoreToolkit
+  OpenAPIToolkit:
+    documentation: "https://example.com/OpenAPIToolkit"
+  JsonToolkit:
+    documentation: "https://example.com/JsonToolkit"
+  VectorStoreInfo:
+    documentation: "https://example.com/VectorStoreInfo"
+  VectorStoreRouterToolkit:
+    documentation: "https://example.com/VectorStoreRouterToolkit"
+  VectorStoreToolkit:
+    documentation: "https://example.com/VectorStoreToolkit"
 tools:
-  - Search
-  - PAL-MATH
-  - Calculator
-  - Serper Search
-  - Tool
-  - PythonFunctionTool
-  - PythonFunction
-  - JsonSpec
-  - News API
-  - TMDB API
-  - Podcast API
-  - QuerySQLDataBaseTool
-  - InfoSQLDatabaseTool
-  - ListSQLDatabaseTool
-  # - QueryCheckerTool
-  - BingSearchRun
-  - GoogleSearchRun
-  - GoogleSearchResults
-  - GoogleSerperRun
-  - JsonListKeysTool
-  - JsonGetValueTool
-  - PythonREPLTool
-  - PythonAstREPLTool
-  - RequestsGetTool
-  - RequestsPostTool
-  - RequestsPatchTool
-  - RequestsPutTool
-  - RequestsDeleteTool
-  - WikipediaQueryRun
-  - WolframAlphaQueryRun
+  Search:
+    documentation: "https://example.com/Search"
+  PAL-MATH:
+    documentation: "https://example.com/PAL-MATH"
+  Calculator:
+    documentation: "https://example.com/Calculator"
+  Serper Search:
+    documentation: "https://example.com/SerperSearch"
+  Tool:
+    documentation: "https://example.com/Tool"
+  PythonFunctionTool:
+    documentation: "https://example.com/PythonFunctionTool"
+  PythonFunction:
+    documentation: "https://example.com/PythonFunction"
+  JsonSpec:
+    documentation: "https://example.com/JsonSpec"
+  News API:
+    documentation: "https://example.com/NewsAPI"
+  TMDB API:
+    documentation: "https://example.com/TMDBAPI"
+  Podcast API:
+    documentation: "https://example.com/PodcastAPI"
+  QuerySQLDataBaseTool:
+    documentation: "https://example.com/QuerySQLDataBaseTool"
+  InfoSQLDatabaseTool:
+    documentation: "https://example.com/InfoSQLDatabaseTool"
+  ListSQLDatabaseTool:
+    documentation: "https://example.com/ListSQLDatabaseTool"
+  BingSearchRun:
+    documentation: "https://example.com/BingSearchRun"
+  GoogleSearchRun:
+    documentation: "https://example.com/GoogleSearchRun"
+  GoogleSearchResults:
+    documentation: "https://example.com/GoogleSearchResults"
+  GoogleSerperRun:
+    documentation: "https://example.com/GoogleSerperRun"
+  JsonListKeysTool:
+    documentation: "https://example.com/JsonListKeysTool"
+  JsonGetValueTool:
+    documentation: "https://example.com/JsonGetValueTool"
+  PythonREPLTool:
+    documentation: "https://example.com/PythonREPLTool"
+  PythonAstREPLTool:
+    documentation: "https://example.com/PythonAstREPLTool"
+  RequestsGetTool:
+    documentation: "https://example.com/RequestsGetTool"
+  RequestsPostTool:
+    documentation: "https://example.com/RequestsPostTool"
+  RequestsPatchTool:
+    documentation: "https://example.com/RequestsPatchTool"
+  RequestsPutTool:
+    documentation: "https://example.com/RequestsPutTool"
+  RequestsDeleteTool:
+    documentation: "https://example.com/RequestsDeleteTool"
+  WikipediaQueryRun:
+    documentation: "https://example.com/WikipediaQueryRun"
+  WolframAlphaQueryRun:
+    documentation: "https://example.com/WolframAlphaQueryRun"
 utilities:
-  - BingSearchAPIWrapper
-  - GoogleSearchAPIWrapper
-  - GoogleSerperAPIWrapper
-  - SearxResults
-  - SearxSearchWrapper
-  - SerpAPIWrapper
-  - WikipediaAPIWrapper
-  - WolframAlphaAPIWrapper
-  # - ZapierNLAWrapper
-  - SQLDatabase
+  BingSearchAPIWrapper:
+    documentation: "https://example.com/BingSearchAPIWrapper"
+  GoogleSearchAPIWrapper:
+    documentation: "https://example.com/GoogleSearchAPIWrapper"
+  GoogleSerperAPIWrapper:
+    documentation: "https://example.com/GoogleSerperAPIWrapper"
+  SearxResults:
+    documentation: "https://example.com/SearxResults"
+  SearxSearchWrapper:
+    documentation: "https://example.com/SearxSearchWrapper"
+  SerpAPIWrapper:
+    documentation: "https://example.com/SerpAPIWrapper"
+  WikipediaAPIWrapper:
+    documentation: "https://example.com/WikipediaAPIWrapper"
+  WolframAlphaAPIWrapper:
+    documentation: "https://example.com/WolframAlphaAPIWrapper"
 vectorstores:
-  - Chroma
-  - Qdrant
-  - Weaviate
-  - FAISS
-  - Pinecone
-  - SupabaseVectorStore
-  - MongoDBAtlasVectorSearch
+  Chroma:
+    documentation: "https://example.com/Chroma"
+  Qdrant:
+    documentation: "https://example.com/Qdrant"
+  Weaviate:
+    documentation: "https://example.com/Weaviate"
+  FAISS:
+    documentation: "https://example.com/FAISS"
+  Pinecone:
+    documentation: "https://example.com/Pinecone"
+  SupabaseVectorStore:
+    documentation: "https://example.com/SupabaseVectorStore"
+  MongoDBAtlasVectorSearch:
+    documentation: "https://example.com/MongoDBAtlasVectorSearch"
 wrappers:
-  - RequestsWrapper
-  # - ChatPromptTemplate
-  # - SystemMessagePromptTemplate
-  # - HumanMessagePromptTemplate
+  RequestsWrapper:
+    documentation: "https://example.com/RequestsWrapper"

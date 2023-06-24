@@ -1,24 +1,23 @@
 import os
-from typing import List
 
 import yaml
 from pydantic import BaseSettings, root_validator
 
 
 class Settings(BaseSettings):
-    chains: List[str] = []
-    agents: List[str] = []
-    prompts: List[str] = []
-    llms: List[str] = []
-    tools: List[str] = []
-    memories: List[str] = []
-    embeddings: List[str] = []
-    vectorstores: List[str] = []
-    documentloaders: List[str] = []
-    wrappers: List[str] = []
-    toolkits: List[str] = []
-    textsplitters: List[str] = []
-    utilities: List[str] = []
+    chains: dict = {}
+    agents: dict = {}
+    prompts: dict = {}
+    llms: dict = {}
+    tools: dict = {}
+    memories: dict = {}
+    embeddings: dict = {}
+    vectorstores: dict = {}
+    documentloaders: dict = {}
+    wrappers: dict = {}
+    toolkits: dict = {}
+    textsplitters: dict = {}
+    utilities: dict = {}
     dev: bool = False
     database_url: str = "sqlite:///./langflow.db"
     remove_api_keys: bool = False
