@@ -44,6 +44,7 @@ def import_by_type(_type: str, name: str) -> Any:
         "documentloaders": import_documentloader,
         "textsplitters": import_textsplitter,
         "utilities": import_utility,
+        "io": import_io,
     }
     if _type == "llms":
         key = "chat" if "chat" in name.lower() else "llm"
@@ -52,6 +53,11 @@ def import_by_type(_type: str, name: str) -> Any:
         loaded_func = func_dict[_type]
 
     return loaded_func(name)
+
+
+def import_io(io: str) -> Any:
+    """Import io from io name"""
+    return import_module(f"from langflow.interface.io.custom import {io}")
 
 
 def import_chat_llm(llm: str) -> BaseChatModel:

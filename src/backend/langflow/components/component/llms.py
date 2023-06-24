@@ -1,10 +1,10 @@
 from typing import Optional
 
-from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.base import FrontendNode
+from langflow.components.field.base import TemplateField
+from langflow.components.component.base import Component
 
 
-class LLMFrontendNode(FrontendNode):
+class LLMComponent(Component):
     @staticmethod
     def format_openai_field(field: TemplateField):
         if "openai" in field.name.lower():
@@ -36,12 +36,12 @@ class LLMFrontendNode(FrontendNode):
         display_names_dict = {
             "huggingfacehub_api_token": "HuggingFace Hub API Token",
         }
-        FrontendNode.format_field(field, name)
-        LLMFrontendNode.format_openai_field(field)
+        Component.format_field(field, name)
+        LLMComponent.format_openai_field(field)
         if name and "azure" in name.lower():
-            LLMFrontendNode.format_azure_field(field)
+            LLMComponent.format_azure_field(field)
         if name and "llama" in name.lower():
-            LLMFrontendNode.format_llama_field(field)
+            LLMComponent.format_llama_field(field)
         SHOW_FIELDS = ["repo_id"]
         if field.name in SHOW_FIELDS:
             field.show = True

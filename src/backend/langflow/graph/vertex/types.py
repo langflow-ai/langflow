@@ -188,3 +188,8 @@ class PromptVertex(Vertex):
 
             self._build()
         return self._built_object
+
+
+class IoVertex(Vertex):
+    def __init__(self, data: Dict):
+        super().__init__(data, base_type="io")

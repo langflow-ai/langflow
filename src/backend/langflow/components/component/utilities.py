@@ -2,14 +2,14 @@ import ast
 import json
 from typing import Optional
 
-from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.base import FrontendNode
+from langflow.components.field.base import TemplateField
+from langflow.components.component.base import Component
 
 
-class UtilitiesFrontendNode(FrontendNode):
+class UtilitiesComponent(Component):
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
-        FrontendNode.format_field(field, name)
+        Component.format_field(field, name)
         # field.field_type could be "Literal['news', 'search', 'places', 'images']
         # we need to convert it to a list
         if "Literal" in field.field_type:

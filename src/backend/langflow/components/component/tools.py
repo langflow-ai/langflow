@@ -1,10 +1,10 @@
-from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.base import FrontendNode
-from langflow.template.template.base import Template
+from langflow.components.field.base import TemplateField
+from langflow.components.component.base import Component
+from langflow.components.template.base import Template
 from langflow.utils.constants import DEFAULT_PYTHON_FUNCTION
 
 
-class ToolNode(FrontendNode):
+class ToolNode(Component):
     name: str = "Tool"
     template: Template = Template(
         type_name="Tool",
@@ -59,7 +59,7 @@ class ToolNode(FrontendNode):
         return super().to_dict()
 
 
-class PythonFunctionToolNode(FrontendNode):
+class PythonFunctionToolNode(Component):
     name: str = "PythonFunctionTool"
     template: Template = Template(
         type_name="PythonFunctionTool",
@@ -115,7 +115,7 @@ class PythonFunctionToolNode(FrontendNode):
         return super().to_dict()
 
 
-class PythonFunctionNode(FrontendNode):
+class PythonFunctionNode(Component):
     name: str = "PythonFunction"
     template: Template = Template(
         type_name="PythonFunction",

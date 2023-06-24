@@ -6,7 +6,7 @@ from langflow.custom.customs import get_custom_nodes
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class
 from langflow.settings import settings
-from langflow.template.frontend_node.utilities import UtilitiesFrontendNode
+from langflow.components.component.utilities import UtilitiesComponent
 from langflow.utils.logger import logger
 from langflow.utils.util import build_template_from_class
 
@@ -15,8 +15,8 @@ class UtilityCreator(LangChainTypeCreator):
     type_name: str = "utilities"
 
     @property
-    def frontend_node_class(self) -> Type[UtilitiesFrontendNode]:
-        return UtilitiesFrontendNode
+    def component_class(self) -> Type[UtilitiesComponent]:
+        return UtilitiesComponent
 
     @property
     def type_to_loader_dict(self) -> Dict:

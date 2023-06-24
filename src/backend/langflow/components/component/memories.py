@@ -1,10 +1,10 @@
 from typing import Optional
 
-from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.base import FrontendNode
+from langflow.components.field.base import TemplateField
+from langflow.components.component.base import Component
 
 
-class MemoryFrontendNode(FrontendNode):
+class MemoryComponent(Component):
     #! Needs testing
     def add_extra_fields(self) -> None:
         # add return_messages field
@@ -42,7 +42,7 @@ class MemoryFrontendNode(FrontendNode):
 
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
-        FrontendNode.format_field(field, name)
+        Component.format_field(field, name)
 
         if not isinstance(field.value, str):
             field.value = None

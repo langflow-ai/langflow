@@ -1,6 +1,6 @@
 from typing import Optional
-from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.base import FrontendNode
+from langflow.components.field.base import TemplateField
+from langflow.components.component.base import Component
 
 
 def build_file_field(
@@ -18,7 +18,7 @@ def build_file_field(
     )
 
 
-class DocumentLoaderFrontNode(FrontendNode):
+class DocumentLoaderFrontNode(Component):
     file_path_templates = {
         "AirbyteJSONLoader": build_file_field(suffixes=[".json"], fileTypes=["json"]),
         "CoNLLULoader": build_file_field(suffixes=[".csv"], fileTypes=["csv"]),
@@ -160,7 +160,7 @@ class DocumentLoaderFrontNode(FrontendNode):
 
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
-        FrontendNode.format_field(field, name)
+        Component.format_field(field, name)
         if field.name == "metadata":
             field.show = True
             field.advanced = False

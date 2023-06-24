@@ -45,7 +45,7 @@ import { twMerge } from "tailwind-merge";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "./constants";
 import { ComponentType, SVGProps } from "react";
 import {
-  Boxes,
+  ArrowDownUp,
   Cpu,
   Fingerprint,
   Gift,
@@ -53,7 +53,6 @@ import {
   HelpCircle,
   Laptop2,
   Layers,
-  LayoutDashboard,
   Lightbulb,
   Link,
   MessageCircle,
@@ -141,6 +140,7 @@ export const nodeColors: { [char: string]: string } = {
   toolkits: "#DB2C2C",
   wrappers: "#E6277A",
   utilities: "#31A3CC",
+  io: "#F5B85A",
   unknown: "#9CA3AF",
 };
 
@@ -160,6 +160,7 @@ export const nodeNames: { [char: string]: string } = {
   wrappers: "Wrappers",
   textsplitters: "Text Splitters",
   utilities: "Utilities",
+  io: "I/O",
   unknown: "Unknown",
 };
 
@@ -354,6 +355,9 @@ export const nodeIconsLucide: {
     ComponentType<SVGProps<SVGSVGElement>>
   >,
   utilities: Wand2 as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  io: ArrowDownUp as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
   unknown: HelpCircle as React.ForwardRefExoticComponent<

@@ -2,9 +2,9 @@ from typing import Optional
 
 from langchain.agents import types
 
-from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.base import FrontendNode
-from langflow.template.template.base import Template
+from langflow.components.field.base import TemplateField
+from langflow.components.component.base import Component
+from langflow.components.template.base import Template
 
 NON_CHAT_AGENTS = {
     agent_type: agent_class
@@ -13,7 +13,7 @@ NON_CHAT_AGENTS = {
 }
 
 
-class SQLAgentNode(FrontendNode):
+class SQLAgentNode(Component):
     name: str = "SQLAgent"
     template: Template = Template(
         type_name="sql_agent",
@@ -44,7 +44,7 @@ class SQLAgentNode(FrontendNode):
         return super().to_dict()
 
 
-class VectorStoreRouterAgentNode(FrontendNode):
+class VectorStoreRouterAgentNode(Component):
     name: str = "VectorStoreRouterAgent"
     template: Template = Template(
         type_name="vectorstorerouter_agent",
@@ -72,7 +72,7 @@ class VectorStoreRouterAgentNode(FrontendNode):
         return super().to_dict()
 
 
-class VectorStoreAgentNode(FrontendNode):
+class VectorStoreAgentNode(Component):
     name: str = "VectorStoreAgent"
     template: Template = Template(
         type_name="vectorstore_agent",
@@ -100,7 +100,7 @@ class VectorStoreAgentNode(FrontendNode):
         return super().to_dict()
 
 
-class SQLDatabaseNode(FrontendNode):
+class SQLDatabaseNode(Component):
     name: str = "SQLDatabase"
     template: Template = Template(
         type_name="sql_database",
@@ -123,7 +123,7 @@ class SQLDatabaseNode(FrontendNode):
         return super().to_dict()
 
 
-class CSVAgentNode(FrontendNode):
+class CSVAgentNode(Component):
     name: str = "CSVAgent"
     template: Template = Template(
         type_name="csv_agent",
@@ -153,7 +153,7 @@ class CSVAgentNode(FrontendNode):
         return super().to_dict()
 
 
-class InitializeAgentNode(FrontendNode):
+class InitializeAgentNode(Component):
     name: str = "AgentInitializer"
     display_name: str = "AgentInitializer"
     template: Template = Template(
@@ -207,7 +207,7 @@ class InitializeAgentNode(FrontendNode):
         pass
 
 
-class JsonAgentNode(FrontendNode):
+class JsonAgentNode(Component):
     name: str = "JsonAgent"
     template: Template = Template(
         type_name="json_agent",

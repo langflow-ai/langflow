@@ -3,13 +3,13 @@ from typing import List, Optional
 
 from pydantic import BaseModel
 
-from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
-from langflow.template.field.base import TemplateField
-from langflow.template.template.base import Template
+from langflow.components.component.constants import FORCE_SHOW_FIELDS
+from langflow.components.field.base import TemplateField
+from langflow.components.template.base import Template
 from langflow.utils import constants
 
 
-class FrontendNode(BaseModel):
+class Component(BaseModel):
     template: Template
     description: str
     base_classes: List[str]
@@ -44,24 +44,24 @@ class FrontendNode(BaseModel):
         value = field.to_dict()
         _type = value["type"]
 
-        _type = FrontendNode.remove_optional(_type)
-        _type, is_list = FrontendNode.check_for_list_type(_type)
+        _type = Component.remove_optional(_type)
+        _type, is_list = Component.check_for_list_type(_type)
         field.is_list = is_list or field.is_list
-        _type = FrontendNode.replace_mapping_with_dict(_type)
-        _type = FrontendNode.handle_union_type(_type)
+        _type = Component.replace_mapping_with_dict(_type)
+        _type = Component.handle_union_type(_type)
 
-        field.field_type = FrontendNode.handle_special_field(
+        field.field_type = Component.handle_special_field(
             field, key, _type, SPECIAL_FIELD_HANDLERS
         )
-        field.field_type = FrontendNode.handle_dict_type(field, _type)
-        field.show = FrontendNode.should_show_field(key, field.required)
-        field.password = FrontendNode.should_be_password(key, field.show)
-        field.multiline = FrontendNode.should_be_multiline(key)
+        field.field_type = Component.handle_dict_type(field, _type)
+        field.show = Component.should_show_field(key, field.required)
+        field.password = Component.should_be_password(key, field.show)
+        field.multiline = Component.should_be_multiline(key)
 
-        FrontendNode.replace_default_value(field, value)
-        FrontendNode.handle_specific_field_values(field, key, name)
-        FrontendNode.handle_kwargs_field(field)
-        FrontendNode.handle_api_key_field(field, key)
+        Component.replace_default_value(field, value)
+        Component.handle_specific_field_values(field, key, name)
+        Component.handle_kwargs_field(field)
+        Component.handle_api_key_field(field, key)
 
     @staticmethod
     def remove_optional(_type: str) -> str:
@@ -123,8 +123,8 @@ class FrontendNode(BaseModel):
         """Handles specific field values for certain fields."""
         if key == "headers":
             field.value = """{'Authorization': 'Bearer <token>'}"""
-        FrontendNode._handle_model_specific_field_values(field, key, name)
-        FrontendNode._handle_api_key_specific_field_values(field, key, name)
+        Component._handle_model_specific_field_values(field, key, name)
+        Component._handle_api_key_specific_field_values(field, key, name)
 
     @staticmethod
     def _handle_model_specific_field_values(

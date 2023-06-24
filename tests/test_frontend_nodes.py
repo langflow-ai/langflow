@@ -1,7 +1,7 @@
 import pytest
-from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.base import FrontendNode
-from langflow.template.template.base import Template
+from langflow.components.field.base import TemplateField
+from langflow.components.component.base import Component
+from langflow.components.template.base import Template
 
 
 @pytest.fixture
@@ -15,8 +15,8 @@ def sample_template(sample_template_field: TemplateField) -> Template:
 
 
 @pytest.fixture
-def sample_frontend_node(sample_template: Template) -> FrontendNode:
-    return FrontendNode(
+def sample_frontend_node(sample_template: Template) -> Component:
+    return Component(
         template=sample_template,
         description="test description",
         base_classes=["base_class1", "base_class2"],
@@ -50,7 +50,7 @@ def test_template_to_dict(
     assert "required" in template_dict["test_field"]
 
 
-def test_frontend_node_to_dict(sample_frontend_node: FrontendNode):
+def test_frontend_node_to_dict(sample_frontend_node: Component):
     node_dict = sample_frontend_node.to_dict()
     assert len(node_dict) == 1
     assert "test_frontend_node" in node_dict

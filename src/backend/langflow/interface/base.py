@@ -4,12 +4,12 @@ from langchain.chains.base import Chain
 from langchain.agents import AgentExecutor
 from pydantic import BaseModel
 
-from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.base import FrontendNode
-from langflow.template.template.base import Template
+from langflow.components.field.base import TemplateField
+from langflow.components.component.base import Component
+from langflow.components.template.base import Template
 from langflow.utils.logger import logger
 
-# Assuming necessary imports for Field, Template, and FrontendNode classes
+# Assuming necessary imports for Field, Template, and Component classes
 
 
 class LangChainTypeCreator(BaseModel, ABC):
@@ -17,9 +17,9 @@ class LangChainTypeCreator(BaseModel, ABC):
     type_dict: Optional[Dict] = None
 
     @property
-    def frontend_node_class(self) -> Type[FrontendNode]:
-        """The class type of the FrontendNode created in frontend_node."""
-        return FrontendNode
+    def component_class(self) -> Type[Component]:
+        """The class type of the Component created in component."""
+        return Component
 
     @property
     @abstractmethod
@@ -29,7 +29,7 @@ class LangChainTypeCreator(BaseModel, ABC):
         return self.type_dict
 
     @abstractmethod
-    def get_signature(self, name: str) -> Union[Optional[Dict[Any, Any]], FrontendNode]:
+    def get_signature(self, name: str) -> Union[Optional[Dict[Any, Any]], Component]:
         pass
 
     @abstractmethod
@@ -40,22 +40,22 @@ class LangChainTypeCreator(BaseModel, ABC):
         result: Dict = {self.type_name: {}}
 
         for name in self.to_list():
-            # frontend_node.to_dict() returns a dict with the following structure:
+            # component.to_dict() returns a dict with the following structure:
             # {name: {template: {fields}, description: str}}
             # so we should update the result dict
-            node = self.frontend_node(name)
+            node = self.component(name)
             if node is not None:
                 node = node.to_dict()  # type: ignore
                 result[self.type_name].update(node)
 
         return result
 
-    def frontend_node(self, name) -> Union[FrontendNode, None]:
+    def component(self, name) -> Union[Component, None]:
         signature = self.get_signature(name)
         if signature is None:
             logger.error(f"Node {name} not loaded")
             return signature
-        if not isinstance(signature, FrontendNode):
+        if not isinstance(signature, Component):
             fields = [
                 TemplateField(
                     name=key,
@@ -74,7 +74,7 @@ class LangChainTypeCreator(BaseModel, ABC):
                 if key != "_type"
             ]
             template = Template(type_name=name, fields=fields)
-            signature = self.frontend_node_class(
+            signature = self.component_class(
                 template=template,
                 description=signature.get("description", ""),
                 base_classes=signature["base_classes"],

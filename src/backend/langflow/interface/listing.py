@@ -11,6 +11,7 @@ from langflow.interface.tools.base import tool_creator
 from langflow.interface.utilities.base import utility_creator
 from langflow.interface.vector_store.base import vectorstore_creator
 from langflow.interface.wrappers.base import wrapper_creator
+from langflow.interface.io.base import io_creator
 
 
 def get_type_dict():
@@ -38,4 +39,5 @@ LANGCHAIN_TYPES_DICT = get_type_dict()
 ALL_TYPES_DICT = {
     **LANGCHAIN_TYPES_DICT,
     "Custom": ["Custom Tool", "Python Function"],
+    "io": io_creator.to_list(),
 }

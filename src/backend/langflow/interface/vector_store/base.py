@@ -5,7 +5,7 @@ from langchain import vectorstores
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class
 from langflow.settings import settings
-from langflow.template.frontend_node.vectorstores import VectorStoreFrontendNode
+from langflow.components.component.vectorstores import VectorStoreComponent
 from langflow.utils.logger import logger
 from langflow.utils.util import build_template_from_method
 
@@ -14,8 +14,8 @@ class VectorstoreCreator(LangChainTypeCreator):
     type_name: str = "vectorstores"
 
     @property
-    def frontend_node_class(self) -> Type[VectorStoreFrontendNode]:
-        return VectorStoreFrontendNode
+    def component_class(self) -> Type[VectorStoreComponent]:
+        return VectorStoreComponent
 
     @property
     def type_to_loader_dict(self) -> Dict:

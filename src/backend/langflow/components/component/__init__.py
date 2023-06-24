@@ -1,4 +1,4 @@
-from langflow.template.frontend_node import (
+from langflow.components.component import (
     agents,
     chains,
     embeddings,
@@ -9,6 +9,7 @@ from langflow.template.frontend_node import (
     vectorstores,
     documentloaders,
     textsplitters,
+    io,
 )
 
 __all__ = [
@@ -22,4 +23,5 @@ __all__ = [
     "vectorstores",
     "documentloaders",
     "textsplitters",
+    "io",
 ]

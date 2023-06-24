@@ -1,12 +1,12 @@
 from typing import Optional
 
-from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.base import FrontendNode
-from langflow.template.frontend_node.constants import QA_CHAIN_TYPES
-from langflow.template.template.base import Template
+from langflow.components.field.base import TemplateField
+from langflow.components.component.base import Component
+from langflow.components.component.constants import QA_CHAIN_TYPES
+from langflow.components.template.base import Template
 
 
-class ChainFrontendNode(FrontendNode):
+class ChainComponent(Component):
     def add_extra_fields(self) -> None:
         if self.template.type_name == "ConversationalRetrievalChain":
             # add memory
@@ -47,7 +47,7 @@ class ChainFrontendNode(FrontendNode):
 
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
-        FrontendNode.format_field(field, name)
+        Component.format_field(field, name)
 
         field.advanced = False
         if "key" in field.name:
@@ -91,7 +91,7 @@ class ChainFrontendNode(FrontendNode):
             field.value = True
 
 
-class SeriesCharacterChainNode(FrontendNode):
+class SeriesCharacterChainNode(Component):
     name: str = "SeriesCharacterChain"
     template: Template = Template(
         type_name="SeriesCharacterChain",
@@ -140,7 +140,7 @@ class SeriesCharacterChainNode(FrontendNode):
     ]
 
 
-class TimeTravelGuideChainNode(FrontendNode):
+class TimeTravelGuideChainNode(Component):
     name: str = "TimeTravelGuideChain"
     template: Template = Template(
         type_name="TimeTravelGuideChain",
@@ -175,7 +175,7 @@ class TimeTravelGuideChainNode(FrontendNode):
     ]
 
 
-class MidJourneyPromptChainNode(FrontendNode):
+class MidJourneyPromptChainNode(Component):
     name: str = "MidJourneyPromptChain"
     template: Template = Template(
         type_name="MidJourneyPromptChain",
@@ -210,7 +210,7 @@ class MidJourneyPromptChainNode(FrontendNode):
     ]
 
 
-class CombineDocsChainNode(FrontendNode):
+class CombineDocsChainNode(Component):
     name: str = "CombineDocsChain"
     template: Template = Template(
         type_name="load_qa_chain",

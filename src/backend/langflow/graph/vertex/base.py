@@ -201,12 +201,13 @@ class Vertex:
                 params=self.params,
             )
         except Exception as exc:
+            logger.exception(exc, stack_info=True)
             raise ValueError(
-                f"Error building node {self.vertex_type}: {str(exc)}"
+                f"Error building component {self.vertex_type}: {str(exc)}"
             ) from exc
 
         if self._built_object is None:
-            raise ValueError(f"Node type {self.vertex_type} not found")
+            raise ValueError(f"Component type {self.vertex_type} not found")
 
         self._built = True
 

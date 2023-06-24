@@ -4,20 +4,20 @@ from langflow.custom.customs import get_custom_nodes
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class
 from langflow.settings import settings
-from langflow.template.frontend_node.chains import ChainFrontendNode
+from langflow.components.component.chains import ChainComponent
 from langflow.utils.logger import logger
 from langflow.utils.util import build_template_from_class, build_template_from_method
 from langchain import chains
 
-# Assuming necessary imports for Field, Template, and FrontendNode classes
+# Assuming necessary imports for Field, Template, and Component classes
 
 
 class ChainCreator(LangChainTypeCreator):
     type_name: str = "chains"
 
     @property
-    def frontend_node_class(self) -> Type[ChainFrontendNode]:
-        return ChainFrontendNode
+    def component_class(self) -> Type[ChainComponent]:
+        return ChainComponent
 
     #! We need to find a better solution for this
     from_method_nodes = {

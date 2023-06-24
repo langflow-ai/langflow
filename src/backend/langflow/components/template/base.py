@@ -2,7 +2,7 @@ from typing import Callable, Optional, Union
 
 from pydantic import BaseModel
 
-from langflow.template.field.base import TemplateField
+from langflow.components.field.base import TemplateField
 from langflow.utils.constants import DIRECT_TYPES
 
 

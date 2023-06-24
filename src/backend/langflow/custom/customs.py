@@ -1,35 +1,39 @@
-from langflow.template import frontend_node
+from langflow.components import component
 
 # These should always be instantiated
 CUSTOM_NODES = {
     "prompts": {
-        "ZeroShotPrompt": frontend_node.prompts.ZeroShotPromptNode(),
+        "ZeroShotPrompt": component.prompts.ZeroShotPromptNode(),
     },
     "tools": {
-        "PythonFunctionTool": frontend_node.tools.PythonFunctionToolNode(),
-        "PythonFunction": frontend_node.tools.PythonFunctionNode(),
-        "Tool": frontend_node.tools.ToolNode(),
+        "PythonFunctionTool": component.tools.PythonFunctionToolNode(),
+        "PythonFunction": component.tools.PythonFunctionNode(),
+        "Tool": component.tools.ToolNode(),
     },
     "agents": {
-        "JsonAgent": frontend_node.agents.JsonAgentNode(),
-        "CSVAgent": frontend_node.agents.CSVAgentNode(),
-        "AgentInitializer": frontend_node.agents.InitializeAgentNode(),
-        "VectorStoreAgent": frontend_node.agents.VectorStoreAgentNode(),
-        "VectorStoreRouterAgent": frontend_node.agents.VectorStoreRouterAgentNode(),
-        "SQLAgent": frontend_node.agents.SQLAgentNode(),
+        "JsonAgent": component.agents.JsonAgentNode(),
+        "CSVAgent": component.agents.CSVAgentNode(),
+        "AgentInitializer": component.agents.InitializeAgentNode(),
+        "VectorStoreAgent": component.agents.VectorStoreAgentNode(),
+        "VectorStoreRouterAgent": component.agents.VectorStoreRouterAgentNode(),
+        "SQLAgent": component.agents.SQLAgentNode(),
     },
     "utilities": {
-        "SQLDatabase": frontend_node.agents.SQLDatabaseNode(),
+        "SQLDatabase": component.agents.SQLDatabaseNode(),
     },
     "chains": {
-        "SeriesCharacterChain": frontend_node.chains.SeriesCharacterChainNode(),
-        "TimeTravelGuideChain": frontend_node.chains.TimeTravelGuideChainNode(),
-        "MidJourneyPromptChain": frontend_node.chains.MidJourneyPromptChainNode(),
-        "load_qa_chain": frontend_node.chains.CombineDocsChainNode(),
+        "SeriesCharacterChain": component.chains.SeriesCharacterChainNode(),
+        "TimeTravelGuideChain": component.chains.TimeTravelGuideChainNode(),
+        "MidJourneyPromptChain": component.chains.MidJourneyPromptChainNode(),
+        "load_qa_chain": component.chains.CombineDocsChainNode(),
+    },
+    "io": {
+        "Chat": component.io.ChatComponent(),
+        "Form": component.io.FormComponent(),
     },
 }
 
 
-def get_custom_nodes(node_type: str):
+def get_custom_nodes(node_type: str) -> dict:
     """Get custom nodes."""
     return CUSTOM_NODES.get(node_type, {})

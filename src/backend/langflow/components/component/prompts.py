@@ -2,17 +2,17 @@ from typing import Optional
 
 from langchain.agents.mrkl import prompt
 
-from langflow.template.frontend_node.constants import (
+from langflow.components.component.constants import (
     DEFAULT_PROMPT,
     HUMAN_PROMPT,
     SYSTEM_PROMPT,
 )
-from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.base import FrontendNode
-from langflow.template.template.base import Template
+from langflow.components.field.base import TemplateField
+from langflow.components.component.base import Component
+from langflow.components.template.base import Template
 
 
-class PromptFrontendNode(FrontendNode):
+class PromptComponent(Component):
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         # if field.field_type  == "StringPromptTemplate"
@@ -45,7 +45,7 @@ class PromptFrontendNode(FrontendNode):
         field.password = False
 
 
-class PromptTemplateNode(FrontendNode):
+class PromptTemplateNode(Component):
     name: str = "PromptTemplate"
     template: Template
     description: str
@@ -56,12 +56,12 @@ class PromptTemplateNode(FrontendNode):
 
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
-        FrontendNode.format_field(field, name)
+        Component.format_field(field, name)
         if field.name == "examples":
             field.advanced = False
 
 
-class BasePromptFrontendNode(FrontendNode):
+class BasePromptComponent(Component):
     name: str
     template: Template
     description: str
@@ -71,7 +71,7 @@ class BasePromptFrontendNode(FrontendNode):
         return super().to_dict()
 
 
-class ZeroShotPromptNode(BasePromptFrontendNode):
+class ZeroShotPromptNode(BasePromptComponent):
     name: str = "ZeroShotPrompt"
     template: Template = Template(
         type_name="ZeroShotPrompt",
@@ -116,4 +116,4 @@ class ZeroShotPromptNode(BasePromptFrontendNode):
 
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
-        PromptFrontendNode.format_field(field, name)
+        PromptComponent.format_field(field, name)

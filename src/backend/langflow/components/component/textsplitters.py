@@ -1,8 +1,8 @@
-from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.base import FrontendNode
+from langflow.components.field.base import TemplateField
+from langflow.components.component.base import Component
 
 
-class TextSplittersFrontendNode(FrontendNode):
+class TextSplittersComponent(Component):
     def add_extra_fields(self) -> None:
         self.template.add_field(
             TemplateField(

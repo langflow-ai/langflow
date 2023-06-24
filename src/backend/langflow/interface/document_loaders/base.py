@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional, Type
 
 from langflow.interface.base import LangChainTypeCreator
-from langflow.template.frontend_node.documentloaders import DocumentLoaderFrontNode
+from langflow.components.component.documentloaders import DocumentLoaderFrontNode
 from langflow.interface.custom_lists import documentloaders_type_to_cls_dict
 from langflow.settings import settings
 from langflow.utils.logger import logger
@@ -12,7 +12,7 @@ class DocumentLoaderCreator(LangChainTypeCreator):
     type_name: str = "documentloaders"
 
     @property
-    def frontend_node_class(self) -> Type[DocumentLoaderFrontNode]:
+    def component_class(self) -> Type[DocumentLoaderFrontNode]:
         return DocumentLoaderFrontNode
 
     @property

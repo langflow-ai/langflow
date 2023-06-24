@@ -1,10 +1,10 @@
 from typing import List, Optional
 
-from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.base import FrontendNode
+from langflow.components.field.base import TemplateField
+from langflow.components.component.base import Component
 
 
-class VectorStoreFrontendNode(FrontendNode):
+class VectorStoreComponent(Component):
     def add_extra_fields(self) -> None:
         extra_fields: List[TemplateField] = []
         # Add search_kwargs field
@@ -204,7 +204,7 @@ class VectorStoreFrontendNode(FrontendNode):
 
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
-        FrontendNode.format_field(field, name)
+        Component.format_field(field, name)
         # Define common field attributes
         basic_fields = [
             "work_dir",

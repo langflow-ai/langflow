@@ -1,10 +1,10 @@
 from typing import Optional
 
-from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.base import FrontendNode
+from langflow.components.field.base import TemplateField
+from langflow.components.component.base import Component
 
 
-class EmbeddingFrontendNode(FrontendNode):
+class EmbeddingComponent(Component):
     @staticmethod
     def format_jina_fields(field: TemplateField):
         if "jina" in field.name:
@@ -40,12 +40,12 @@ class EmbeddingFrontendNode(FrontendNode):
 
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
-        FrontendNode.format_field(field, name)
+        Component.format_field(field, name)
         field.advanced = not field.required
         field.show = True
         if field.name == "headers":
             field.show = False
 
         # Format Jina fields
-        EmbeddingFrontendNode.format_jina_fields(field)
-        EmbeddingFrontendNode.format_openai_fields(field)
+        EmbeddingComponent.format_jina_fields(field)
+        EmbeddingComponent.format_openai_fields(field)
