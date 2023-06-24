@@ -6,16 +6,7 @@ import {
 } from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
 import { typesContext } from "../../contexts/typesContext";
-import {
-  useContext,
-  useState,
-  useEffect,
-  useRef,
-  ForwardRefExoticComponent,
-  ComponentType,
-  SVGProps,
-  ReactNode,
-} from "react";
+import { useContext, useState, useEffect, useRef } from "react";
 import { NodeDataType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
 import { PopUpContext } from "../../contexts/popUpContext";
@@ -23,10 +14,9 @@ import NodeModal from "../../modals/NodeModal";
 import Tooltip from "../../components/TooltipComponent";
 import { NodeToolbar } from "reactflow";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
-
+import { Info } from "lucide-react";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import { useSSE } from "../../contexts/SSEContext";
-import { ReactElement } from "react-markdown/lib/react-markdown";
 
 export default function GenericNode({
   data,
@@ -124,6 +114,17 @@ export default function GenericNode({
             ></button>
           </div>
           <div className="flex gap-3">
+            <div className=" px-5 pb-3 mr-5">
+              <Tooltip title={`Open ${data.node.display_name} documentation`}>
+                <a
+                  href={data.node.documentation}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Info />
+                </a>
+              </Tooltip>
+            </div>
             <div>
               <Tooltip
                 title={
