@@ -36,16 +36,16 @@ class Settings(BaseSettings):
 
     def update_from_yaml(self, file_path: str, dev: bool = False):
         new_settings = load_settings_from_yaml(file_path)
-        self.chains = new_settings.chains or []
-        self.agents = new_settings.agents or []
-        self.prompts = new_settings.prompts or []
-        self.llms = new_settings.llms or []
-        self.tools = new_settings.tools or []
-        self.memories = new_settings.memories or []
-        self.wrappers = new_settings.wrappers or []
-        self.toolkits = new_settings.toolkits or []
-        self.textsplitters = new_settings.textsplitters or []
-        self.utilities = new_settings.utilities or []
+        self.chains = new_settings.chains or {}
+        self.agents = new_settings.agents or {}
+        self.prompts = new_settings.prompts or {}
+        self.llms = new_settings.llms or {}
+        self.tools = new_settings.tools or {}
+        self.memories = new_settings.memories or {}
+        self.wrappers = new_settings.wrappers or {}
+        self.toolkits = new_settings.toolkits or {}
+        self.textsplitters = new_settings.textsplitters or {}
+        self.utilities = new_settings.utilities or {}
         self.dev = dev
 
     def update_settings(self, **kwargs):
