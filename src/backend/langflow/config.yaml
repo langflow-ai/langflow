@@ -112,20 +112,24 @@ llms:
   CTransformers:
     documentation: "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/ctransformers"
   Cohere:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/cohere"
   Anthropic:
     documentation: ""
   ChatAnthropic:
     documentation: ""
   HuggingFaceHub:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/huggingface_hub"
 memories:
   ConversationBufferMemory:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/memory/how_to/summary"
   ConversationSummaryMemory:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/memory/how_to/summary"
   ConversationKGMemory:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/memory/how_to/kg"
+  ConversationBufferWindowMemory:
+    documentation: "https://python.langchain.com/docs/modules/memory/how_to/buffer_window"
+  VectorStoreRetrieverMemory:
+    documentation: "https://python.langchain.com/docs/modules/memory/how_to/vectorstore_retriever_memory"
 prompts:
   PromptTemplate:
     documentation: "https://python.langchain.com/docs/modules/model_io/prompts/prompt_templates/"
