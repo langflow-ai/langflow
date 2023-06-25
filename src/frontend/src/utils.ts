@@ -45,7 +45,6 @@ import { twMerge } from "tailwind-merge";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "./constants";
 import { ComponentType, SVGProps } from "react";
 import {
-  Boxes,
   Cpu,
   Fingerprint,
   Gift,
@@ -53,7 +52,6 @@ import {
   HelpCircle,
   Laptop2,
   Layers,
-  LayoutDashboard,
   Lightbulb,
   Link,
   MessageCircle,
@@ -189,7 +187,7 @@ export const nodeIcons: {
   HuggingFaceEmbeddings: HugginFaceIcon,
   IFixitLoader: IFixIcon,
   Meta: MetaIcon,
-  Midjorney: MidjorneyIcon,
+  Midjourney: MidjorneyIcon,
   NotionDirectoryLoader: NotionIcon,
   ChatOpenAI: OpenAiIcon,
   OpenAI: OpenAiIcon,
@@ -290,6 +288,9 @@ export const nodeIconsLucide: {
   Midjorney: MidjorneyIcon as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
+  MongoDBAtlasVectorSearch: MongoDBIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
   NotionDirectoryLoader: NotionIcon as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
@@ -302,6 +303,9 @@ export const nodeIconsLucide: {
   OpenAIEmbeddings: OpenAiIcon as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
+  Pinecone: PineconeIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
   Qdrant: QDrantIcon as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
@@ -309,6 +313,9 @@ export const nodeIconsLucide: {
     ComponentType<SVGProps<SVGSVGElement>>
   >,
   SlackDirectoryLoader: SlackIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  SupabaseVectorStore: SupabaseIcon as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
   agents: Rocket as React.ForwardRefExoticComponent<
