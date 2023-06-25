@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     utilities: List[str] = []
     dev: bool = False
     database_url: str = "sqlite:///./langflow.db"
+    cache: str = "InMemoryCache"
     remove_api_keys: bool = False
 
     class Config:
