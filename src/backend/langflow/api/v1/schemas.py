@@ -1,6 +1,8 @@
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from langflow.database.models.flow import FlowCreate, FlowRead
 from pydantic import BaseModel, Field, validator
+import json
 
 
 class GraphData(BaseModel):
@@ -19,34 +21,22 @@ class ExportedFlow(BaseModel):
     data: GraphData
 
 
-class PredictRequest(BaseModel):
-    """Predict request schema."""
+class InputRequest(BaseModel):
+    input: dict
 
-    message: str
+
+class TweaksRequest(BaseModel):
     tweaks: Optional[Dict[str, Dict[str, str]]] = Field(default_factory=dict)
 
-    class Config:
-        schema_extra = {
-            "example": {
-                "message": "Hello, how are you?",
-                "tweaks": {
-                    "dndnode_986363f0-4677-4035-9f38-74b94af5dd78": {
-                        "name": "A tool name",
-                        "description": "A tool description",
-                    },
-                    "dndnode_986363f0-4677-4035-9f38-74b94af57378": {
-                        "template": "A {template}",
-                    },
-                },
-            }
-        }
+
+class UpdateTemplateRequest(BaseModel):
+    template: dict
 
 
-class PredictResponse(BaseModel):
-    """Predict response schema."""
+class ProcessResponse(BaseModel):
+    """Process response schema."""
 
-    result: str
-    intermediate_steps: str = ""
+    result: dict
 
 
 class ChatMessage(BaseModel):
@@ -101,3 +91,18 @@ class InitResponse(BaseModel):
 
 class BuiltResponse(BaseModel):
     built: bool
+
+
+class UploadFileResponse(BaseModel):
+    """Upload file response schema."""
+
+    flowId: str
+    file_path: Path
+
+
+class StreamData(BaseModel):
+    event: str
+    data: dict
+
+    def __str__(self) -> str:
+        return f"event: {self.event}\ndata: {json.dumps(self.data)}\n\n"

@@ -1,13 +1,8 @@
-import {
-  XCircleIcon,
-  XMarkIcon,
-  InformationCircleIcon,
-  CheckCircleIcon,
-} from "@heroicons/react/24/outline";
 import { Link } from "react-router-dom";
 import { Transition } from "@headlessui/react";
 import { useState } from "react";
 import { SingleAlertComponentType } from "../../../../types/alerts";
+import { X, CheckCircle2, Info, XCircle } from "lucide-react";
 
 export default function SingleAlert({
   dropItem,
@@ -34,7 +29,7 @@ export default function SingleAlert({
           key={dropItem.id}
         >
           <div className="flex-shrink-0">
-            <XCircleIcon
+            <XCircle
               className="h-5 w-5 text-red-400 dark:text-red-50"
               aria-hidden="true"
             />
@@ -70,7 +65,7 @@ export default function SingleAlert({
                 className="inline-flex rounded-md bg-red-50 dark:bg-transparent p-1.5 text-red-500 dark:text-red-50"
               >
                 <span className="sr-only">Dismiss</span>
-                <XMarkIcon className="h-5 w-5" aria-hidden="true" />
+                <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -81,7 +76,7 @@ export default function SingleAlert({
           key={dropItem.id}
         >
           <div className="flex-shrink-0">
-            <InformationCircleIcon
+            <Info
               className="h-5 w-5 text-blue-400 dark:text-blue-50"
               aria-hidden="true"
             />
@@ -116,7 +111,7 @@ export default function SingleAlert({
                 className="inline-flex rounded-md bg-blue-50 dark:bg-transparent p-1.5 text-blue-500 dark:text-blue-50"
               >
                 <span className="sr-only">Dismiss</span>
-                <XMarkIcon className="h-5 w-5" aria-hidden="true" />
+                <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -127,7 +122,7 @@ export default function SingleAlert({
           key={dropItem.id}
         >
           <div className="flex-shrink-0">
-            <CheckCircleIcon
+            <CheckCircle2
               className="h-5 w-5 text-green-400 dark:text-green-50"
               aria-hidden="true"
             />
@@ -150,7 +145,7 @@ export default function SingleAlert({
                 className="inline-flex rounded-md bg-green-50 dark:bg-transparent p-1.5 text-green-500 dark:text-green-50"
               >
                 <span className="sr-only">Dismiss</span>
-                <XMarkIcon className="h-5 w-5" aria-hidden="true" />
+                <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
           </div>

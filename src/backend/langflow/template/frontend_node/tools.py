@@ -96,6 +96,16 @@ class PythonFunctionToolNode(FrontendNode):
                 name="code",
                 advanced=False,
             ),
+            TemplateField(
+                field_type="bool",
+                required=True,
+                placeholder="",
+                is_list=False,
+                show=True,
+                multiline=False,
+                value=False,
+                name="return_direct",
+            ),
         ],
     )
     description: str = "Python function to be executed."

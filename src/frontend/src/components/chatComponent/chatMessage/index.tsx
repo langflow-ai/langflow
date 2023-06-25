@@ -1,13 +1,9 @@
-import {
-  ChatBubbleLeftEllipsisIcon,
-  ChatBubbleOvalLeftEllipsisIcon,
-  PlusSmallIcon,
-} from "@heroicons/react/24/outline";
 import { useState } from "react";
 import { ChatMessageType } from "../../../types/chat";
 import { nodeColors } from "../../../utils";
 import Convert from "ansi-to-html";
 const convert = new Convert({ newline: true });
+import { MessageCircle } from "lucide-react";
 
 export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
   const [hidden, setHidden] = useState(true);
@@ -24,7 +20,7 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
                 onClick={() => setHidden((prev) => !prev)}
                 className="absolute top-2 right-2 cursor-pointer"
               >
-                <ChatBubbleOvalLeftEllipsisIcon className="w-5 h-5 animate-bounce" />
+                <MessageCircle className="w-5 h-5 animate-bounce" />
               </div>
             )}
             {chat.thought && chat.thought !== "" && !hidden && (
