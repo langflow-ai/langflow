@@ -7,6 +7,7 @@ import re
 import yaml
 from langchain.base_language import BaseLanguageModel
 from PIL.Image import Image
+from langflow.utils.logger import logger
 
 
 def load_file_into_dict(file_path: str) -> dict:
@@ -58,3 +59,12 @@ def try_setting_streaming_options(langchain_object, websocket):
 def extract_input_variables_from_prompt(prompt: str) -> list[str]:
     """Extract input variables from prompt."""
     return re.findall(r"{(.*?)}", prompt)
+
+
+def setup_llm_caching():
+    """Setup LLM caching."""
+    import langchain
+    from langchain.cache import SQLiteCache
+
+    logger.debug("Setting up LLM caching")
+    langchain.llm_cache = SQLiteCache()
