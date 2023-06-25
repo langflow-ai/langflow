@@ -33,7 +33,7 @@ import { HackerNewsIcon } from "./icons/hackerNews";
 import { HugginFaceIcon } from "./icons/HuggingFace";
 import { IFixIcon } from "./icons/IFixIt";
 import { MetaIcon } from "./icons/Meta";
-import { MidjorneyIcon } from "./icons/Midjorney";
+import { MidjourneyIcon } from "./icons/Midjorney";
 import { NotionIcon } from "./icons/Notion";
 import { OpenAiIcon } from "./icons/OpenAi";
 import { QDrantIcon } from "./icons/QDrant";
@@ -187,7 +187,7 @@ export const nodeIcons: {
   HuggingFaceEmbeddings: HugginFaceIcon,
   IFixitLoader: IFixIcon,
   Meta: MetaIcon,
-  Midjourney: MidjorneyIcon,
+  Midjourney: MidjourneyIcon,
   NotionDirectoryLoader: NotionIcon,
   ChatOpenAI: OpenAiIcon,
   OpenAI: OpenAiIcon,
@@ -285,7 +285,7 @@ export const nodeIconsLucide: {
   Meta: MetaIcon as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
-  Midjorney: MidjorneyIcon as React.ForwardRefExoticComponent<
+  Midjorney: MidjourneyIcon as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
   MongoDBAtlasVectorSearch: MongoDBIcon as React.ForwardRefExoticComponent<
