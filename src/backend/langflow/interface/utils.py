@@ -7,6 +7,7 @@ import re
 import yaml
 from langchain.base_language import BaseLanguageModel
 from PIL.Image import Image
+from langflow.utils.logger import logger
 
 
 def load_file_into_dict(file_path: str) -> dict:
@@ -58,3 +59,22 @@ def try_setting_streaming_options(langchain_object, websocket):
 def extract_input_variables_from_prompt(prompt: str) -> list[str]:
     """Extract input variables from prompt."""
     return re.findall(r"{(.*?)}", prompt)
+
+
+def setup_llm_caching():
+    """Setup LLM caching."""
+
+    try:
+        import langchain
+        from langflow.settings import settings
+        from langflow.interface.importing.utils import import_class
+
+        cache_class = import_class(f"langchain.cache.{settings.cache}")
+
+        logger.debug(f"Setting up LLM caching with {cache_class.__name__}")
+        langchain.llm_cache = cache_class()
+        logger.info(f"LLM caching setup with {cache_class.__name__}")
+    except ImportError:
+        logger.warning(f"Could not import {settings.cache}. ")
+    except Exception as exc:
+        logger.warning(f"Could not setup LLM caching. Error: {exc}")
