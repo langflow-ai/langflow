@@ -13,6 +13,7 @@ import { Link, useLocation, useParams } from "react-router-dom";
 import { USER_PROJECTS_HEADER } from "../../constants";
 import { getRepoStars } from "../../controllers/API";
 import { Separator } from "../ui/separator";
+import { Bell } from "lucide-react";
 
 export default function Header() {
   const { flows, addFlow, tabId } = useContext(TabsContext);
@@ -98,7 +99,7 @@ export default function Header() {
           >
             <FaDiscord className="h-5 w-5" />
           </a>
-          <Separator orientation="vertical" />
+          {/* <Separator orientation="vertical" />
           <button
             className="text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
             onClick={() => {
@@ -110,7 +111,7 @@ export default function Header() {
             ) : (
               <MoonIcon className="h-5 w-5" />
             )}
-          </button>
+          </button> */}
           <button
             className="text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200 relative"
             onClick={(event: React.MouseEvent<HTMLElement>) => {
@@ -134,7 +135,7 @@ export default function Header() {
             {notificationCenter && (
               <div className="absolute w-1.5 h-1.5 rounded-full bg-destructive right-[3px]"></div>
             )}
-            <BellIcon className="h-5 w-5" aria-hidden="true" />
+            <Bell className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
       </div>

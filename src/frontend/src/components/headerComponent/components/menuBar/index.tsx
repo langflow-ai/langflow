@@ -53,7 +53,7 @@ export const MenuBar = ({ flows, tabId }) => {
       </Link>
       <div className="flex items-center font-medium text-sm rounded-md py-1 px-1.5 gap-0.5">
         <DropdownMenu>
-          <DropdownMenuTrigger>
+          <DropdownMenuTrigger asChild>
             <Button
               className="gap-2 flex items-center max-w-[200px]"
               variant="primary"
@@ -69,6 +69,7 @@ export const MenuBar = ({ flows, tabId }) => {
               onClick={() => {
                 handleAddFlow();
               }}
+              className="cursor-pointer"
             >
               <Plus className="w-4 h-4 mr-2" />
               New
@@ -77,6 +78,7 @@ export const MenuBar = ({ flows, tabId }) => {
               onClick={() => {
                 openPopUp(<FlowSettingsModal />);
               }}
+              className="cursor-pointer"
             >
               <Settings2 className="w-4 h-4 mr-2 dark:text-gray-300" />
               Settings
@@ -85,6 +87,7 @@ export const MenuBar = ({ flows, tabId }) => {
               onClick={() => {
                 undo();
               }}
+              className="cursor-pointer"
             >
               <Undo className="w-4 h-4 mr-2 dark:text-gray-300" />
               Undo
@@ -93,6 +96,7 @@ export const MenuBar = ({ flows, tabId }) => {
               onClick={() => {
                 redo();
               }}
+              className="cursor-pointer"
             >
               <Redo className="w-4 h-4 mr-2 dark:text-gray-300" />
               Redo

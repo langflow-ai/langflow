@@ -1,10 +1,8 @@
-import { ChatBubbleOvalLeftEllipsisIcon } from "@heroicons/react/24/outline";
 import { useEffect, useRef, useState } from "react";
 import { ChatMessageType } from "../../../types/chat";
 import { classNames } from "../../../utils";
 import AiIcon from "../../../assets/Gooey Ring-5s-271px.svg";
 import AiIconStill from "../../../assets/froze-flow.png";
-import { UserIcon } from "@heroicons/react/24/solid";
 import FileCard from "../fileComponent";
 import ReactMarkdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
@@ -12,6 +10,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { CodeBlock } from "./codeBlock";
 import Convert from "ansi-to-html";
+import { User2, MessageCircle } from "lucide-react";
 
 export default function ChatMessage({
   chat,
@@ -62,7 +61,7 @@ export default function ChatMessage({
           </div>
         )}
         {chat.isSend && (
-          <UserIcon className="w-6 h-6 -mb-1 text-gray-800 dark:text-gray-200" />
+          <User2 className="w-6 h-6 -mb-1 text-gray-800 dark:text-gray-200" />
         )}
       </div>
       {!chat.isSend ? (
@@ -73,7 +72,7 @@ export default function ChatMessage({
                 onClick={() => setHidden((prev) => !prev)}
                 className="absolute -top-1 -left-2 cursor-pointer"
               >
-                <ChatBubbleOvalLeftEllipsisIcon className="w-5 h-5 animate-bounce dark:text-white" />
+                <MessageCircle className="w-5 h-5 animate-bounce dark:text-white" />
               </div>
             )}
             {chat.thought && chat.thought !== "" && !hidden && (
@@ -152,7 +151,7 @@ export default function ChatMessage({
         </div>
       ) : (
         <div className="w-full flex items-center">
-          <div className="text-start inline-block px-3 text-sm text-gray-600 dark:text-white">
+          <div className="text-start inline-block px-3 text-gray-600 dark:text-white">
             <span
               className="text-gray-600 dark:text-gray-200"
               dangerouslySetInnerHTML={{
