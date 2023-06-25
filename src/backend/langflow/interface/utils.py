@@ -64,7 +64,16 @@ def extract_input_variables_from_prompt(prompt: str) -> list[str]:
 def setup_llm_caching():
     """Setup LLM caching."""
     import langchain
-    from langchain.cache import SQLiteCache
+    from langflow.settings import settings
+    from langflow.interface.importing.utils import import_class
 
-    logger.debug("Setting up LLM caching")
-    langchain.llm_cache = SQLiteCache()
+    try:
+        cache_class = import_class(f"langchain.cache.{settings.cache}")
+
+        logger.debug(f"Setting up LLM caching with {cache_class.__name__}")
+        langchain.llm_cache = cache_class()
+        logger.info(f"LLM caching setup with {cache_class.__name__}")
+    except ImportError:
+        logger.warning(f"Could not import {settings.cache}. ")
+    except Exception as exc:
+        logger.warning(f"Could not setup LLM caching. Error: {exc}")
