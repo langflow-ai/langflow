@@ -30,6 +30,7 @@ def get_number_of_workers(workers=None):
 
 def update_settings(
     config: str,
+    cache: str,
     dev: bool = False,
     database_url: Optional[str] = None,
     remove_api_keys: bool = False,
@@ -41,6 +42,8 @@ def update_settings(
         settings.update_settings(database_url=database_url)
     if remove_api_keys:
         settings.update_settings(remove_api_keys=remove_api_keys)
+    if cache:
+        settings.update_settings(cache=cache)
 
 
 def serve_on_jcloud():
@@ -102,6 +105,11 @@ def serve(
     ),
     log_level: str = typer.Option("critical", help="Logging level."),
     log_file: Path = typer.Option("logs/langflow.log", help="Path to the log file."),
+    cache: str = typer.Argument(
+        envvar="LANGCHAIN_CACHE",
+        help="Type of cache to use. (InMemoryCache, SQLiteCache)",
+        default="SQLiteCache",
+    ),
     jcloud: bool = typer.Option(False, help="Deploy on Jina AI Cloud"),
     dev: bool = typer.Option(False, help="Run in development mode (may contain bugs)"),
     database_url: str = typer.Option(
@@ -130,7 +138,11 @@ def serve(
 
     configure(log_level=log_level, log_file=log_file)
     update_settings(
-        config, dev=dev, database_url=database_url, remove_api_keys=remove_api_keys
+        config,
+        dev=dev,
+        database_url=database_url,
+        remove_api_keys=remove_api_keys,
+        cache=cache,
     )
     # get the directory of the current file
     if not path:
