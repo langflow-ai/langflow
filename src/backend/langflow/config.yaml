@@ -108,9 +108,9 @@ llms:
   ChatOpenAI:
     documentation: ""
   LlamaCpp:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/llamacpp"
   CTransformers:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/ctransformers"
   Cohere:
     documentation: ""
   Anthropic:
