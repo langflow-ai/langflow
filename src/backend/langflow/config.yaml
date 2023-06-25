@@ -229,19 +229,19 @@ utilities:
     documentation: ""
 vectorstores:
   Chroma:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/chroma"
   Qdrant:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/qdrant"
   Weaviate:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/weaviate"
   FAISS:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/faiss"
   Pinecone:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/pinecone"
   SupabaseVectorStore:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/supabase"
   MongoDBAtlasVectorSearch:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/mongodb_atlas_vector_search"
 wrappers:
   RequestsWrapper:
     documentation: ""
