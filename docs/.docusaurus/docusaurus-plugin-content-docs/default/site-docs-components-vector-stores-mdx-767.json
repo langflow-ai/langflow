@@ -1,0 +1,23 @@
+{
+  "unversionedId": "components/vector-stores",
+  "id": "components/vector-stores",
+  "title": "Vector Stores",
+  "description": "(coming soon)",
+  "source": "@site/docs/components/vector-stores.mdx",
+  "sourceDirName": "components",
+  "slug": "/components/vector-stores",
+  "permalink": "/components/vector-stores",
+  "draft": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Utilities",
+    "permalink": "/components/utilities"
+  },
+  "next": {
+    "title": "Wrappers",
+    "permalink": "/components/wrappers"
+  }
+}

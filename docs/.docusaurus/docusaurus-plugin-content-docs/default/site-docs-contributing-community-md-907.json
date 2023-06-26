@@ -1,0 +1,19 @@
+{
+  "unversionedId": "contributing/community",
+  "id": "contributing/community",
+  "title": "Community",
+  "description": "🤖 Join LangFlow Discord server",
+  "source": "@site/docs/contributing/community.md",
+  "sourceDirName": "contributing",
+  "slug": "/contributing/community",
+  "permalink": "/contributing/community",
+  "draft": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "GitHub Issues",
+    "permalink": "/contributing/github-issues"
+  }
+}

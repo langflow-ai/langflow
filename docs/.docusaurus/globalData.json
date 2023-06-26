@@ -11,103 +11,168 @@
           "mainDocId": "index",
           "docs": [
             {
-              "id": "buffer-memory",
-              "path": "/buffer-memory",
+              "id": "components/agents",
+              "path": "/components/agents",
               "sidebar": "docs"
             },
             {
-              "id": "collection",
-              "path": "/collection",
+              "id": "components/chains",
+              "path": "/components/chains",
               "sidebar": "docs"
             },
             {
-              "id": "community",
-              "path": "/community",
+              "id": "components/embeddings",
+              "path": "/components/embeddings",
               "sidebar": "docs"
             },
             {
-              "id": "components",
-              "path": "/components",
+              "id": "components/llms",
+              "path": "/components/llms",
               "sidebar": "docs"
             },
             {
-              "id": "conversation-chain",
-              "path": "/conversation-chain",
+              "id": "components/loaders",
+              "path": "/components/loaders",
               "sidebar": "docs"
             },
             {
-              "id": "creating-flows",
-              "path": "/creating-flows",
+              "id": "components/memories",
+              "path": "/components/memories",
               "sidebar": "docs"
             },
             {
-              "id": "csv-loader",
-              "path": "/csv-loader",
+              "id": "components/prompts",
+              "path": "/components/prompts",
               "sidebar": "docs"
             },
             {
-              "id": "features",
-              "path": "/features",
+              "id": "components/text-splitters",
+              "path": "/components/text-splitters",
               "sidebar": "docs"
             },
             {
-              "id": "gcp-deployment",
-              "path": "/gcp-deployment",
+              "id": "components/toolkits",
+              "path": "/components/toolkits",
               "sidebar": "docs"
             },
             {
-              "id": "github-issues",
-              "path": "/github-issues",
+              "id": "components/tools",
+              "path": "/components/tools",
               "sidebar": "docs"
             },
             {
-              "id": "how-contribute",
-              "path": "/how-contribute",
+              "id": "components/utilities",
+              "path": "/components/utilities",
               "sidebar": "docs"
             },
             {
-              "id": "how-upload-examples",
-              "path": "/how-upload-examples",
+              "id": "components/vector-stores",
+              "path": "/components/vector-stores",
               "sidebar": "docs"
             },
             {
-              "id": "hugging-face-spaces",
-              "path": "/hugging-face-spaces",
+              "id": "components/wrappers",
+              "path": "/components/wrappers",
+              "sidebar": "docs"
+            },
+            {
+              "id": "contributing/community",
+              "path": "/contributing/community",
+              "sidebar": "docs"
+            },
+            {
+              "id": "contributing/github-issues",
+              "path": "/contributing/github-issues",
+              "sidebar": "docs"
+            },
+            {
+              "id": "contributing/how-contribute",
+              "path": "/contributing/how-contribute",
+              "sidebar": "docs"
+            },
+            {
+              "id": "deployment/gcp-deployment",
+              "path": "/deployment/gcp-deployment",
+              "sidebar": "docs"
+            },
+            {
+              "id": "deployment/jina-deployment",
+              "path": "/deployment/jina-deployment",
+              "sidebar": "docs"
+            },
+            {
+              "id": "examples/buffer-memory",
+              "path": "/examples/buffer-memory",
+              "sidebar": "docs"
+            },
+            {
+              "id": "examples/conversation-chain",
+              "path": "/examples/conversation-chain",
+              "sidebar": "docs"
+            },
+            {
+              "id": "examples/csv-loader",
+              "path": "/examples/csv-loader",
+              "sidebar": "docs"
+            },
+            {
+              "id": "examples/how-upload-examples",
+              "path": "/examples/how-upload-examples",
+              "sidebar": "docs"
+            },
+            {
+              "id": "examples/midjourney-prompt-chain",
+              "path": "/examples/midjourney-prompt-chain",
+              "sidebar": "docs"
+            },
+            {
+              "id": "examples/multiple-vectorstores",
+              "path": "/examples/multiple-vectorstores",
+              "sidebar": "docs"
+            },
+            {
+              "id": "examples/python-function",
+              "path": "/examples/python-function",
+              "sidebar": "docs"
+            },
+            {
+              "id": "examples/serp-api-tool",
+              "path": "/examples/serp-api-tool",
+              "sidebar": "docs"
+            },
+            {
+              "id": "getting-started/creating-flows",
+              "path": "/getting-started/creating-flows",
+              "sidebar": "docs"
+            },
+            {
+              "id": "getting-started/hugging-face-spaces",
+              "path": "/getting-started/hugging-face-spaces",
+              "sidebar": "docs"
+            },
+            {
+              "id": "getting-started/installation",
+              "path": "/getting-started/installation",
+              "sidebar": "docs"
+            },
+            {
+              "id": "guidelines/collection",
+              "path": "/guidelines/collection",
+              "sidebar": "docs"
+            },
+            {
+              "id": "guidelines/components",
+              "path": "/guidelines/components",
+              "sidebar": "docs"
+            },
+            {
+              "id": "guidelines/features",
+              "path": "/guidelines/features",
               "sidebar": "docs"
             },
             {
               "id": "index",
               "path": "/",
-              "sidebar": "docs"
-            },
-            {
-              "id": "installation",
-              "path": "/installation",
-              "sidebar": "docs"
-            },
-            {
-              "id": "jina-deployment",
-              "path": "/jina-deployment",
-              "sidebar": "docs"
-            },
-            {
-              "id": "midjourney-prompt-chain",
-              "path": "/midjourney-prompt-chain",
-              "sidebar": "docs"
-            },
-            {
-              "id": "multiple-vectorstores",
-              "path": "/multiple-vectorstores",
-              "sidebar": "docs"
-            },
-            {
-              "id": "python-function",
-              "path": "/python-function",
-              "sidebar": "docs"
-            },
-            {
-              "id": "serp-api-tool",
-              "path": "/serp-api-tool",
               "sidebar": "docs"
             }
           ],

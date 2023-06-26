@@ -1,0 +1,23 @@
+{
+  "unversionedId": "components/chains",
+  "id": "components/chains",
+  "title": "Chains",
+  "description": "(coming soon)",
+  "source": "@site/docs/components/chains.mdx",
+  "sourceDirName": "components",
+  "slug": "/components/chains",
+  "permalink": "/components/chains",
+  "draft": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Agents",
+    "permalink": "/components/agents"
+  },
+  "next": {
+    "title": "Loaders",
+    "permalink": "/components/loaders"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "unversionedId": "guidelines/features",
+  "id": "guidelines/features",
+  "title": "Features",
+  "description": "When you click for New Project, you will see on the top left corner of the screen, some options such as Import, Export, Code and Save, as displayed in the image below:",
+  "source": "@site/docs/guidelines/features.mdx",
+  "sourceDirName": "guidelines",
+  "slug": "/guidelines/features",
+  "permalink": "/guidelines/features",
+  "draft": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Component",
+    "permalink": "/guidelines/components"
+  },
+  "next": {
+    "title": "Collection",
+    "permalink": "/guidelines/collection"
+  }
+}
