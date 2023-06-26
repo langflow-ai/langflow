@@ -204,7 +204,7 @@ def instantiate_textsplitter(
             "Try changing the chunk_size of the Text Splitter."
         ) from exc
 
-    if type(class_object) == RecursiveCharacterTextSplitter:
+    if class_object is RecursiveCharacterTextSplitter:
         if "separator_type" in params and params["separator_type"] == "Text":
             text_splitter = class_object(**params)
         else:
