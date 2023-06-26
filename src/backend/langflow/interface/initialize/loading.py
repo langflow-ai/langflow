@@ -16,7 +16,6 @@ from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.chains.base import chain_creator
 from langflow.interface.utils import load_file_into_dict
 from langflow.utils import validate
-from langchain.text_splitter import TextSplitter, RecursiveCharacterTextSplitter
 from langchain.chains.base import Chain
 from langchain.vectorstores.base import VectorStore
 from langchain.document_loaders.base import BaseLoader
@@ -193,7 +192,7 @@ def instantiate_documentloader(class_object: Type[BaseLoader], params: Dict):
 
 
 def instantiate_textsplitter(
-    class_object: Type[TextSplitter],
+    class_object,
     params: Dict,
 ):
     try:
@@ -204,13 +203,12 @@ def instantiate_textsplitter(
             "Try changing the chunk_size of the Text Splitter."
         ) from exc
 
-    if class_object is RecursiveCharacterTextSplitter:
-        if "separator_type" in params and params["separator_type"] == "Text":
-            text_splitter = class_object(**params)
-        else:
-            params["language"] = params.pop("separator_type", None)
-            params.pop("separators", None)
-            text_splitter = class_object.from_language(**params)
+    if "separator_type" in params and params["separator_type"] == "Text":
+        text_splitter = class_object(**params)
+    else:
+        params["language"] = params.pop("separator_type", None)
+        params.pop("separators", None)
+        text_splitter = class_object.from_language(**params)
 
     return text_splitter.split_documents(documents)
 
