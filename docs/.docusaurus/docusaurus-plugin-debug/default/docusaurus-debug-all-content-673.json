@@ -9,8 +9,8 @@
           "badge": false,
           "noIndex": false,
           "className": "docs-version-current",
-          "path": "/",
-          "tagsPath": "/tags",
+          "path": "/langflow/",
+          "tagsPath": "/langflow/tags",
           "isLast": true,
           "routePriority": -1,
           "sidebarFilePath": "/home/carlos/repo/logspace/langflow/docs/sidebars.js",
@@ -25,7 +25,7 @@
               "source": "@site/docs/buffer-memory.mdx",
               "sourceDirName": ".",
               "slug": "/buffer-memory",
-              "permalink": "/buffer-memory",
+              "permalink": "/langflow/buffer-memory",
               "draft": false,
               "tags": [],
               "version": "current",
@@ -33,11 +33,11 @@
               "sidebar": "docs",
               "previous": {
                 "title": "Conversation Chain",
-                "permalink": "/conversation-chain"
+                "permalink": "/langflow/conversation-chain"
               },
               "next": {
                 "title": "MidJourney Prompt Chain",
-                "permalink": "/midjourney-prompt-chain"
+                "permalink": "/langflow/midjourney-prompt-chain"
               }
             },
             {
@@ -48,7 +48,7 @@
               "source": "@site/docs/collection.mdx",
               "sourceDirName": ".",
               "slug": "/collection",
-              "permalink": "/collection",
+              "permalink": "/langflow/collection",
               "draft": false,
               "tags": [],
               "version": "current",
@@ -56,11 +56,11 @@
               "sidebar": "docs",
               "previous": {
                 "title": "Features",
-                "permalink": "/features"
+                "permalink": "/langflow/features"
               },
               "next": {
                 "title": "Conversation Chain",
-                "permalink": "/conversation-chain"
+                "permalink": "/langflow/conversation-chain"
               }
             },
             {
@@ -71,7 +71,7 @@
               "source": "@site/docs/community.md",
               "sourceDirName": ".",
               "slug": "/community",
-              "permalink": "/community",
+              "permalink": "/langflow/community",
               "draft": false,
               "tags": [],
               "version": "current",
@@ -79,7 +79,7 @@
               "sidebar": "docs",
               "previous": {
                 "title": "GitHub Issues",
-                "permalink": "/github-issues"
+                "permalink": "/langflow/github-issues"
               }
             },
             {
@@ -90,7 +90,7 @@
               "source": "@site/docs/components.mdx",
               "sourceDirName": ".",
               "slug": "/components",
-              "permalink": "/components",
+              "permalink": "/langflow/components",
               "draft": false,
               "tags": [],
               "version": "current",
@@ -98,11 +98,11 @@
               "sidebar": "docs",
               "previous": {
                 "title": "🎨 Creating Flows",
-                "permalink": "/creating-flows"
+                "permalink": "/langflow/creating-flows"
               },
               "next": {
                 "title": "Features",
-                "permalink": "/features"
+                "permalink": "/langflow/features"
               }
             },
             {
@@ -113,7 +113,7 @@
               "source": "@site/docs/conversation-chain.mdx",
               "sourceDirName": ".",
               "slug": "/conversation-chain",
-              "permalink": "/conversation-chain",
+              "permalink": "/langflow/conversation-chain",
               "draft": false,
               "tags": [],
               "version": "current",
@@ -121,11 +121,11 @@
               "sidebar": "docs",
               "previous": {
                 "title": "Collection",
-                "permalink": "/collection"
+                "permalink": "/langflow/collection"
               },
               "next": {
                 "title": "Buffer Memory",
-                "permalink": "/buffer-memory"
+                "permalink": "/langflow/buffer-memory"
               }
             },
             {
@@ -136,7 +136,7 @@
               "source": "@site/docs/creating-flows.mdx",
               "sourceDirName": ".",
               "slug": "/creating-flows",
-              "permalink": "/creating-flows",
+              "permalink": "/langflow/creating-flows",
               "draft": false,
               "tags": [],
               "version": "current",
@@ -144,11 +144,11 @@
               "sidebar": "docs",
               "previous": {
                 "title": "🤗 HuggingFace Spaces",
-                "permalink": "/hugging-face-spaces"
+                "permalink": "/langflow/hugging-face-spaces"
               },
               "next": {
                 "title": "Component",
-                "permalink": "/components"
+                "permalink": "/langflow/components"
               }
             },
             {
@@ -159,7 +159,7 @@
               "source": "@site/docs/csv-loader.mdx",
               "sourceDirName": ".",
               "slug": "/csv-loader",
-              "permalink": "/csv-loader",
+              "permalink": "/langflow/csv-loader",
               "draft": false,
               "tags": [],
               "version": "current",
@@ -167,11 +167,11 @@
               "sidebar": "docs",
               "previous": {
                 "title": "MidJourney Prompt Chain",
-                "permalink": "/midjourney-prompt-chain"
+                "permalink": "/langflow/midjourney-prompt-chain"
               },
               "next": {
                 "title": "Serp API Tool",
-                "permalink": "/serp-api-tool"
+                "permalink": "/langflow/serp-api-tool"
               }
             },
             {
@@ -182,7 +182,7 @@
               "source": "@site/docs/features.mdx",
               "sourceDirName": ".",
               "slug": "/features",
-              "permalink": "/features",
+              "permalink": "/langflow/features",
               "draft": false,
               "tags": [],
               "version": "current",
@@ -190,11 +190,11 @@
               "sidebar": "docs",
               "previous": {
                 "title": "Component",
-                "permalink": "/components"
+                "permalink": "/langflow/components"
               },
               "next": {
                 "title": "Collection",
-                "permalink": "/collection"
+                "permalink": "/langflow/collection"
               }
             },
             {
@@ -205,7 +205,7 @@
               "source": "@site/docs/gcp-deployment.md",
               "sourceDirName": ".",
               "slug": "/gcp-deployment",
-              "permalink": "/gcp-deployment",
+              "permalink": "/langflow/gcp-deployment",
               "draft": false,
               "tags": [],
               "version": "current",
@@ -213,11 +213,11 @@
               "sidebar": "docs",
               "previous": {
                 "title": "📚 How to Upload Examples?",
-                "permalink": "/how-upload-examples"
+                "permalink": "/langflow/how-upload-examples"
               },
               "next": {
                 "title": "Deploy on Jina AI Cloud",
-                "permalink": "/jina-deployment"
+                "permalink": "/langflow/jina-deployment"
               }
             },
             {
@@ -228,7 +228,7 @@
               "source": "@site/docs/github-issues.md",
               "sourceDirName": ".",
               "slug": "/github-issues",
-              "permalink": "/github-issues",
+              "permalink": "/langflow/github-issues",
               "draft": false,
               "tags": [],
               "version": "current",
@@ -236,11 +236,11 @@
               "sidebar": "docs",
               "previous": {
                 "title": "How to contribute?",
-                "permalink": "/how-contribute"
+                "permalink": "/langflow/how-contribute"
               },
               "next": {
                 "title": "Community",
-                "permalink": "/community"
+                "permalink": "/langflow/community"
               }
             },
             {
@@ -251,7 +251,7 @@
               "source": "@site/docs/how-contribute.md",
               "sourceDirName": ".",
               "slug": "/how-contribute",
-              "permalink": "/how-contribute",
+              "permalink": "/langflow/how-contribute",
               "draft": false,
               "tags": [],
               "version": "current",
@@ -259,11 +259,11 @@
               "sidebar": "docs",
               "previous": {
                 "title": "Deploy on Jina AI Cloud",
-                "permalink": "/jina-deployment"
+                "permalink": "/langflow/jina-deployment"
               },
               "next": {
                 "title": "GitHub Issues",
-                "permalink": "/github-issues"
+                "permalink": "/langflow/github-issues"
               }
             },
             {
@@ -274,7 +274,7 @@
               "source": "@site/docs/how-upload-examples.mdx",
               "sourceDirName": ".",
               "slug": "/how-upload-examples",
-              "permalink": "/how-upload-examples",
+              "permalink": "/langflow/how-upload-examples",
               "draft": false,
               "tags": [],
               "version": "current",
@@ -282,11 +282,11 @@
               "sidebar": "docs",
               "previous": {
                 "title": "Python Function",
-                "permalink": "/python-function"
+                "permalink": "/langflow/python-function"
               },
               "next": {
                 "title": "Deploy on Google Cloud Platform",
-                "permalink": "/gcp-deployment"
+                "permalink": "/langflow/gcp-deployment"
               }
             },
             {
@@ -297,7 +297,7 @@
               "source": "@site/docs/hugging-face-spaces.mdx",
               "sourceDirName": ".",
               "slug": "/hugging-face-spaces",
-              "permalink": "/hugging-face-spaces",
+              "permalink": "/langflow/hugging-face-spaces",
               "draft": false,
               "tags": [],
               "version": "current",
@@ -305,11 +305,11 @@
               "sidebar": "docs",
               "previous": {
                 "title": "📦 How to install?",
-                "permalink": "/installation"
+                "permalink": "/langflow/installation"
               },
               "next": {
                 "title": "🎨 Creating Flows",
-                "permalink": "/creating-flows"
+                "permalink": "/langflow/creating-flows"
               }
             },
             {
@@ -320,7 +320,7 @@
               "source": "@site/docs/index.mdx",
               "sourceDirName": ".",
               "slug": "/",
-              "permalink": "/",
+              "permalink": "/langflow/",
               "draft": false,
               "tags": [],
               "version": "current",
@@ -328,7 +328,7 @@
               "sidebar": "docs",
               "next": {
                 "title": "📦 How to install?",
-                "permalink": "/installation"
+                "permalink": "/langflow/installation"
               }
             },
             {
@@ -339,7 +339,7 @@
               "source": "@site/docs/installation.md",
               "sourceDirName": ".",
               "slug": "/installation",
-              "permalink": "/installation",
+              "permalink": "/langflow/installation",
               "draft": false,
               "tags": [],
               "version": "current",
@@ -347,11 +347,11 @@
               "sidebar": "docs",
               "previous": {
                 "title": "👋 Welcome to LangFlow",
-                "permalink": "/"
+                "permalink": "/langflow/"
               },
               "next": {
                 "title": "🤗 HuggingFace Spaces",
-                "permalink": "/hugging-face-spaces"
+                "permalink": "/langflow/hugging-face-spaces"
               }
             },
             {
@@ -362,7 +362,7 @@
               "source": "@site/docs/jina-deployment.md",
               "sourceDirName": ".",
               "slug": "/jina-deployment",
-              "permalink": "/jina-deployment",
+              "permalink": "/langflow/jina-deployment",
               "draft": false,
               "tags": [],
               "version": "current",
@@ -370,11 +370,11 @@
               "sidebar": "docs",
               "previous": {
                 "title": "Deploy on Google Cloud Platform",
-                "permalink": "/gcp-deployment"
+                "permalink": "/langflow/gcp-deployment"
               },
               "next": {
                 "title": "How to contribute?",
-                "permalink": "/how-contribute"
+                "permalink": "/langflow/how-contribute"
               }
             },
             {
@@ -385,7 +385,7 @@
               "source": "@site/docs/midjourney-prompt-chain.mdx",
               "sourceDirName": ".",
               "slug": "/midjourney-prompt-chain",
-              "permalink": "/midjourney-prompt-chain",
+              "permalink": "/langflow/midjourney-prompt-chain",
               "draft": false,
               "tags": [],
               "version": "current",
@@ -393,11 +393,11 @@
               "sidebar": "docs",
               "previous": {
                 "title": "Buffer Memory",
-                "permalink": "/buffer-memory"
+                "permalink": "/langflow/buffer-memory"
               },
               "next": {
                 "title": "CSV Loader",
-                "permalink": "/csv-loader"
+                "permalink": "/langflow/csv-loader"
               }
             },
             {
@@ -408,7 +408,7 @@
               "source": "@site/docs/multiple-vectorstores.mdx",
               "sourceDirName": ".",
               "slug": "/multiple-vectorstores",
-              "permalink": "/multiple-vectorstores",
+              "permalink": "/langflow/multiple-vectorstores",
               "draft": false,
               "tags": [],
               "version": "current",
@@ -416,11 +416,11 @@
               "sidebar": "docs",
               "previous": {
                 "title": "Serp API Tool",
-                "permalink": "/serp-api-tool"
+                "permalink": "/langflow/serp-api-tool"
               },
               "next": {
                 "title": "Python Function",
-                "permalink": "/python-function"
+                "permalink": "/langflow/python-function"
               }
             },
             {
@@ -431,7 +431,7 @@
               "source": "@site/docs/python-function.mdx",
               "sourceDirName": ".",
               "slug": "/python-function",
-              "permalink": "/python-function",
+              "permalink": "/langflow/python-function",
               "draft": false,
               "tags": [],
               "version": "current",
@@ -439,11 +439,11 @@
               "sidebar": "docs",
               "previous": {
                 "title": "Multiple Vector Stores",
-                "permalink": "/multiple-vectorstores"
+                "permalink": "/langflow/multiple-vectorstores"
               },
               "next": {
                 "title": "📚 How to Upload Examples?",
-                "permalink": "/how-upload-examples"
+                "permalink": "/langflow/how-upload-examples"
               }
             },
             {
@@ -454,7 +454,7 @@
               "source": "@site/docs/serp-api-tool.mdx",
               "sourceDirName": ".",
               "slug": "/serp-api-tool",
-              "permalink": "/serp-api-tool",
+              "permalink": "/langflow/serp-api-tool",
               "draft": false,
               "tags": [],
               "version": "current",
@@ -462,11 +462,11 @@
               "sidebar": "docs",
               "previous": {
                 "title": "CSV Loader",
-                "permalink": "/csv-loader"
+                "permalink": "/langflow/csv-loader"
               },
               "next": {
                 "title": "Multiple Vector Stores",
-                "permalink": "/multiple-vectorstores"
+                "permalink": "/langflow/multiple-vectorstores"
               }
             }
           ],
@@ -605,7 +605,7 @@
       "blogPosts": [],
       "blogListPaginated": [],
       "blogTags": {},
-      "blogTagsListPath": "/blog/tags",
+      "blogTagsListPath": "/langflow/blog/tags",
       "blogTagsPaginated": []
     }
   },
@@ -613,7 +613,7 @@
     "default": [
       {
         "type": "mdx",
-        "permalink": "/markdown-page",
+        "permalink": "/langflow/markdown-page",
         "source": "@site/src/pages/markdown-page.md",
         "title": "Markdown page example",
         "description": "You don't need React to write simple standalone pages.",
