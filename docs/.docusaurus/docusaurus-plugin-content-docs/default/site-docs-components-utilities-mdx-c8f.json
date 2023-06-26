@@ -1,0 +1,23 @@
+{
+  "unversionedId": "components/utilities",
+  "id": "components/utilities",
+  "title": "Utilities",
+  "description": "(coming soon)",
+  "source": "@site/docs/components/utilities.mdx",
+  "sourceDirName": "components",
+  "slug": "/components/utilities",
+  "permalink": "/components/utilities",
+  "draft": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Tools",
+    "permalink": "/components/tools"
+  },
+  "next": {
+    "title": "Vector Stores",
+    "permalink": "/components/vector-stores"
+  }
+}

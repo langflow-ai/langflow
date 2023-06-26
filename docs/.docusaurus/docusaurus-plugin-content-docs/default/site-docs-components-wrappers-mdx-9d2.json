@@ -1,0 +1,23 @@
+{
+  "unversionedId": "components/wrappers",
+  "id": "components/wrappers",
+  "title": "Wrappers",
+  "description": "(coming soon)",
+  "source": "@site/docs/components/wrappers.mdx",
+  "sourceDirName": "components",
+  "slug": "/components/wrappers",
+  "permalink": "/components/wrappers",
+  "draft": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Vector Stores",
+    "permalink": "/components/vector-stores"
+  },
+  "next": {
+    "title": "Conversation Chain",
+    "permalink": "/examples/conversation-chain"
+  }
+}

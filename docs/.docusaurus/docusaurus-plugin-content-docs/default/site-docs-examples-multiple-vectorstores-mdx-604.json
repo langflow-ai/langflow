@@ -1,0 +1,23 @@
+{
+  "unversionedId": "examples/multiple-vectorstores",
+  "id": "examples/multiple-vectorstores",
+  "title": "Multiple Vector Stores",
+  "description": "The example below shows an agent operating with two vector stores built upon different data sources.",
+  "source": "@site/docs/examples/multiple-vectorstores.mdx",
+  "sourceDirName": "examples",
+  "slug": "/examples/multiple-vectorstores",
+  "permalink": "/examples/multiple-vectorstores",
+  "draft": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Serp API Tool",
+    "permalink": "/examples/serp-api-tool"
+  },
+  "next": {
+    "title": "Python Function",
+    "permalink": "/examples/python-function"
+  }
+}

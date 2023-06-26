@@ -1,0 +1,23 @@
+{
+  "unversionedId": "deployment/jina-deployment",
+  "id": "deployment/jina-deployment",
+  "title": "Deploy on Jina AI Cloud",
+  "description": "LangFlow integrates with langchain-serve to provide a one-command deployment to Jina AI Cloud.",
+  "source": "@site/docs/deployment/jina-deployment.md",
+  "sourceDirName": "deployment",
+  "slug": "/deployment/jina-deployment",
+  "permalink": "/deployment/jina-deployment",
+  "draft": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Deploy on Google Cloud Platform",
+    "permalink": "/deployment/gcp-deployment"
+  },
+  "next": {
+    "title": "How to contribute?",
+    "permalink": "/contributing/how-contribute"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "unversionedId": "guidelines/collection",
+  "id": "guidelines/collection",
+  "title": "Collection",
+  "description": "A collection is a snapshot of the flows available in the database. You can download your entire collection for local storage and upload it anytime for future use.",
+  "source": "@site/docs/guidelines/collection.mdx",
+  "sourceDirName": "guidelines",
+  "slug": "/guidelines/collection",
+  "permalink": "/guidelines/collection",
+  "draft": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Features",
+    "permalink": "/guidelines/features"
+  },
+  "next": {
+    "title": "Agents",
+    "permalink": "/components/agents"
+  }
+}

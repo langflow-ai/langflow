@@ -1,0 +1,23 @@
+{
+  "unversionedId": "components/agents",
+  "id": "components/agents",
+  "title": "Agents",
+  "description": "(coming soon)",
+  "source": "@site/docs/components/agents.mdx",
+  "sourceDirName": "components",
+  "slug": "/components/agents",
+  "permalink": "/components/agents",
+  "draft": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Collection",
+    "permalink": "/guidelines/collection"
+  },
+  "next": {
+    "title": "Chains",
+    "permalink": "/components/chains"
+  }
+}
