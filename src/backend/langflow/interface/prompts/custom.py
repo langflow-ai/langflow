@@ -48,6 +48,14 @@ class BaseCustomPrompt(PromptTemplate):
         return values
 
 
+class ZeroShotPrompt(PromptTemplate):
+    @classmethod
+    def initialize(cls, prefix, format_instructions, suffix):
+        from langchain.agents import ZeroShotAgent
+
+        return ZeroShotAgent.create_prompt(prefix, format_instructions, suffix)
+
+
 class SeriesCharacterPrompt(BaseCustomPrompt):
     # Add a very descriptive description for the prompt generator
     description: Optional[
