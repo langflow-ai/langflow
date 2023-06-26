@@ -47,6 +47,8 @@ export default function Page({ flow }: { flow: FlowType }) {
     saveFlow,
     setTabsState,
     tabId,
+    setLastNodeSelection,
+    setNodesInFlow
   } = useContext(TabsContext);
   const { types, reactFlowInstance, setReactFlowInstance, templates } =
     useContext(typesContext);
@@ -124,6 +126,7 @@ export default function Page({ flow }: { flow: FlowType }) {
       updateFlow(flow);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+    setNodesInFlow(nodes);    
   }, [nodes, edges]);
   //update flow when tabs change
   useEffect(() => {
@@ -340,6 +343,10 @@ export default function Page({ flow }: { flow: FlowType }) {
 
   const onSelectionChange = useCallback((flow) => {
     setLastSelection(flow);
+    if(flow['nodes']?.length > 0){
+       setLastNodeSelection(flow['nodes'][0]['data']['id']);
+    }
+
   }, []);
 
   const { setDisableCopyPaste } = useContext(TabsContext);

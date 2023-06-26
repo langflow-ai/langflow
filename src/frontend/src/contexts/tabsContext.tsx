@@ -57,6 +57,10 @@ const TabsContextInitialValue: TabsContextType = {
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }
   ) => {},
+  setLastNodeSelection: (node: string) => {},
+  lastNodeSelection: "",
+  setNodesInFlow: (nodes: any) => {},
+  nodesInFlow: [],
 };
 
 export const TabsContext = createContext<TabsContextType>(
@@ -67,6 +71,9 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   const { setErrorData, setNoticeData } = useContext(alertContext);
 
   const [tabId, setTabId] = useState("");
+
+  const [lastNodeSelection, setLastNodeSelection] = useState("");
+  const [nodesInFlow, setNodesInFlow] = useState([]);
 
   const [flows, setFlows] = useState<Array<FlowType>>([]);
   const [id, setId] = useState(uid());
@@ -634,6 +641,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         tabsState,
         setTabsState,
         paste,
+        setLastNodeSelection,
+        lastNodeSelection,
+        setNodesInFlow,
+        nodesInFlow
       }}
     >
       {children}
