@@ -80,7 +80,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
       code: pythonApiCode,
     },
     {
-      name: "JavaScript API",
+      name: "JS API",
       mode: "javascript",
       image:
         "https://cdn.iconscout.com/icon/free/png-512/javascript-2752148-2284965.png",
