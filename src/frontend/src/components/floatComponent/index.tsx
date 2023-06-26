@@ -30,7 +30,6 @@ export default function FloatComponent({
     setMyValue(value);
   }, [closePopUp]);
 
-
   return (
     <div
       className={

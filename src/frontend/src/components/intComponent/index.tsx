@@ -28,7 +28,6 @@ export default function IntComponent({
     setMyValue(value);
   }, [closePopUp]);
 
-
   return (
     <div
       className={

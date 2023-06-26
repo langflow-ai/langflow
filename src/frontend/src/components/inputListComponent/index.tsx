@@ -26,9 +26,7 @@ export default function InputListComponent({
   useEffect(() => {
     setInputList(value);
   }, [closePopUp]);
-  
 
-  
   return (
     <div
       className={

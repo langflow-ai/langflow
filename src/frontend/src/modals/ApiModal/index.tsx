@@ -103,7 +103,9 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
           <div className="flex items-center justify-between px-2">
             <TabsList>
               {tabs.map((tab, index) => (
-                <TabsTrigger key={index} value={index.toString()}>{tab.name}</TabsTrigger>
+                <TabsTrigger key={index} value={index.toString()}>
+                  {tab.name}
+                </TabsTrigger>
               ))}
             </TabsList>
             <div className="float-right">
