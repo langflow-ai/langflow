@@ -6,7 +6,7 @@
   "source": "@site/docs/community.md",
   "sourceDirName": ".",
   "slug": "/community",
-  "permalink": "/langflow/community",
+  "permalink": "/community",
   "draft": false,
   "tags": [],
   "version": "current",
@@ -14,6 +14,6 @@
   "sidebar": "docs",
   "previous": {
     "title": "GitHub Issues",
-    "permalink": "/langflow/github-issues"
+    "permalink": "/github-issues"
   }
 }

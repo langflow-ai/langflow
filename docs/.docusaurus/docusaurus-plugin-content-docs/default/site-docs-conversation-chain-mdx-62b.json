@@ -6,7 +6,7 @@
   "source": "@site/docs/conversation-chain.mdx",
   "sourceDirName": ".",
   "slug": "/conversation-chain",
-  "permalink": "/langflow/conversation-chain",
+  "permalink": "/conversation-chain",
   "draft": false,
   "tags": [],
   "version": "current",
@@ -14,10 +14,10 @@
   "sidebar": "docs",
   "previous": {
     "title": "Collection",
-    "permalink": "/langflow/collection"
+    "permalink": "/collection"
   },
   "next": {
     "title": "Buffer Memory",
-    "permalink": "/langflow/buffer-memory"
+    "permalink": "/buffer-memory"
   }
 }

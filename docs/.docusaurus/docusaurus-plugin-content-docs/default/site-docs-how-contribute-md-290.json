@@ -6,7 +6,7 @@
   "source": "@site/docs/how-contribute.md",
   "sourceDirName": ".",
   "slug": "/how-contribute",
-  "permalink": "/langflow/how-contribute",
+  "permalink": "/how-contribute",
   "draft": false,
   "tags": [],
   "version": "current",
@@ -14,10 +14,10 @@
   "sidebar": "docs",
   "previous": {
     "title": "Deploy on Jina AI Cloud",
-    "permalink": "/langflow/jina-deployment"
+    "permalink": "/jina-deployment"
   },
   "next": {
     "title": "GitHub Issues",
-    "permalink": "/langflow/github-issues"
+    "permalink": "/github-issues"
   }
 }

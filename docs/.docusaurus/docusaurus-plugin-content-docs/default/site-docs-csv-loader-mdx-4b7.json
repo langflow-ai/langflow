@@ -6,7 +6,7 @@
   "source": "@site/docs/csv-loader.mdx",
   "sourceDirName": ".",
   "slug": "/csv-loader",
-  "permalink": "/langflow/csv-loader",
+  "permalink": "/csv-loader",
   "draft": false,
   "tags": [],
   "version": "current",
@@ -14,10 +14,10 @@
   "sidebar": "docs",
   "previous": {
     "title": "MidJourney Prompt Chain",
-    "permalink": "/langflow/midjourney-prompt-chain"
+    "permalink": "/midjourney-prompt-chain"
   },
   "next": {
     "title": "Serp API Tool",
-    "permalink": "/langflow/serp-api-tool"
+    "permalink": "/serp-api-tool"
   }
 }
