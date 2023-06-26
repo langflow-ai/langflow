@@ -66,15 +66,15 @@ export default function Chat({ flow }: ChatType) {
       {isBuilt ? (
         <div>
           <BuildTrigger
-            open={open}
+            open={open || openForm}
             flow={flow}
             setIsBuilt={setIsBuilt}
             isBuilt={isBuilt}
           />
           <ChatModal key={flow.id} flow={flow} open={open} setOpen={setOpen} />
           <FormModal key={flow.id} flow={flow} open={openForm} setOpen={setOpenForm} />
-          <ChatTrigger open={open} setOpen={setOpen} isBuilt={isBuilt} />
-          <FormTrigger open={openForm} setOpen={setOpenForm} isBuilt={isBuilt} />
+          <ChatTrigger open={open || openForm} setOpen={setOpen} isBuilt={isBuilt} />
+          <FormTrigger open={open || openForm} setOpen={setOpenForm} isBuilt={isBuilt} />
         </div>
       ) : (
         <BuildTrigger
