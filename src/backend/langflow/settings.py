@@ -1,24 +1,24 @@
-import os
-from typing import List
+from pathlib import Path
+from langflow.schema import Component, ComponentList
 
 import yaml
 from pydantic import BaseSettings, root_validator
 
 
 class Settings(BaseSettings):
-    chains: List[str] = []
-    agents: List[str] = []
-    prompts: List[str] = []
-    llms: List[str] = []
-    tools: List[str] = []
-    memories: List[str] = []
-    embeddings: List[str] = []
-    vectorstores: List[str] = []
-    documentloaders: List[str] = []
-    wrappers: List[str] = []
-    toolkits: List[str] = []
-    textsplitters: List[str] = []
-    utilities: List[str] = []
+    chains: ComponentList = ComponentList(components=[])
+    agents: ComponentList = ComponentList(components=[])
+    prompts: ComponentList = ComponentList(components=[])
+    llms: ComponentList = ComponentList(components=[])
+    tools: ComponentList = ComponentList(components=[])
+    memories: ComponentList = ComponentList(components=[])
+    embeddings: ComponentList = ComponentList(components=[])
+    vectorstores: ComponentList = ComponentList(components=[])
+    documentloaders: ComponentList = ComponentList(components=[])
+    wrappers: ComponentList = ComponentList(components=[])
+    toolkits: ComponentList = ComponentList(components=[])
+    textsplitters: ComponentList = ComponentList(components=[])
+    utilities: ComponentList = ComponentList(components=[])
     dev: bool = False
     database_url: str = "sqlite:///./langflow.db"
     cache: str = "InMemoryCache"
@@ -62,18 +62,37 @@ def save_settings_to_yaml(settings: Settings, file_path: str):
         yaml.dump(settings_dict, f)
 
 
-def load_settings_from_yaml(file_path: str) -> Settings:
-    # Check if a string is a valid path or a file name
-    if "/" not in file_path:
-        # Get current path
-        current_path = os.path.dirname(os.path.abspath(__file__))
+def load_settings_from_yaml(config_folder: str) -> Settings:
+    settings_dict = {}
 
-        file_path = os.path.join(current_path, file_path)
+    # Load the main config.yaml file if present
+    config_file = Path(config_folder) / "config.yaml"
+    if config_file.exists():
+        with open(config_file, "r") as f:
+            settings_dict = yaml.safe_load(f) or {}
 
-    with open(file_path, "r") as f:
-        settings_dict = yaml.safe_load(f)
+    # Load component-specific config files
+    component_files = []
+    for key, value in settings_dict.items():
+        if isinstance(value, str):
+            component_file = Path(config_folder) / value
+            if component_file.exists():
+                component_files.append(component_file)
+
+    for component_file in component_files:
+        component_type = component_file.stem  # Get component type from file name
+
+        with open(component_file, "r") as f:
+            component_data = yaml.safe_load(f) or []
+            components = [Component(**component) for component in component_data]
+            settings_dict[component_type] = ComponentList(components=components)
+
+    # Convert the component lists in the settings dictionary to ComponentList objects
+    for key, value in settings_dict.items():
+        if isinstance(value, list):
+            settings_dict[key] = ComponentList(components=value)
 
     return Settings(**settings_dict)
 
 
-settings = load_settings_from_yaml("config.yaml")
+settings = load_settings_from_yaml("./config/config.yaml")
