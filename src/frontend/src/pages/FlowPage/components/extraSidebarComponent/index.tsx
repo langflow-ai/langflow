@@ -66,44 +66,44 @@ export default function ExtraSidebar() {
       <div className="mt-2 mb-2 w-full flex gap-2 justify-between px-2 items-center">
         <ShadTooltip delayDuration={1000} content="Import" side="top">
           <button
-            className="hover:dark:hover:bg-btn-hover-bg text-foreground w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-foreground dark:text-medium-low-gray  relative inline-flex items-center rounded-md bg-background px-2 py-2 ring-1 ring-inset ring-input hover:bg-muted"
+            className="text-foreground w-full justify-center shadow-sm transition-all duration-500 ease-in-out   relative inline-flex items-center rounded-md bg-background px-2 py-2 ring-1 ring-inset ring-input hover:bg-muted"
             onClick={() => {
               // openPopUp(<ImportModal />);
               uploadFlow();
             }}
           >
-            <FileUp className="w-5 h-5 dark:text-medium-low-gray"></FileUp>
+            <FileUp className="w-5 h-5 "></FileUp>
           </button>
         </ShadTooltip>
 
         <ShadTooltip delayDuration={1000} content="Export" side="top">
           <button
             className={classNames(
-              "hover:dark:hover:bg-btn-hover-bg text-foreground w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-foreground dark:text-medium-low-gray  relative inline-flex items-center bg-background px-2 py-2  ring-1 ring-inset ring-input hover:bg-muted rounded-md"
+              "text-foreground w-full justify-center shadow-sm transition-all duration-500 ease-in-out   relative inline-flex items-center bg-background px-2 py-2  ring-1 ring-inset ring-input hover:bg-muted rounded-md"
             )}
             onClick={(event) => {
               openPopUp(<ExportModal />);
             }}
           >
-            <FileDown className="w-5 h-5  dark:text-medium-low-gray"></FileDown>
+            <FileDown className="w-5 h-5  "></FileDown>
           </button>
         </ShadTooltip>
         <ShadTooltip delayDuration={1000} content="Code" side="top">
           <button
             className={classNames(
-              "hover:dark:hover:bg-btn-hover-bg text-foreground w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-foreground dark:text-medium-low-gray  relative inline-flex items-center bg-background px-2 py-2  ring-1 ring-inset ring-input hover:bg-muted rounded-md"
+              "text-foreground w-full justify-center shadow-sm transition-all duration-500 ease-in-out   relative inline-flex items-center bg-background px-2 py-2  ring-1 ring-inset ring-input hover:bg-muted rounded-md"
             )}
             onClick={(event) => {
               openPopUp(<ApiModal flow={flows.find((f) => f.id === tabId)} />);
             }}
           >
-            <Code2 className="w-5 h-5  dark:text-medium-low-gray"></Code2>
+            <Code2 className="w-5 h-5  "></Code2>
           </button>
         </ShadTooltip>
 
         <ShadTooltip delayDuration={1000} content="Save" side="top">
           <button
-            className="hover:dark:hover:bg-btn-hover-bg text-foreground w-full justify-center transition-all shadow-sm duration-500 ease-in-out dark:bg-foreground dark:text-medium-low-gray  relative inline-flex items-center bg-background px-2 py-2  ring-1 ring-inset ring-input hover:bg-muted rounded-md"
+            className="text-foreground w-full justify-center transition-all shadow-sm duration-500 ease-in-out   relative inline-flex items-center bg-background px-2 py-2  ring-1 ring-inset ring-input hover:bg-muted rounded-md"
             onClick={(event) => {
               saveFlow(flows.find((f) => f.id === tabId));
               setSuccessData({ title: "Changes saved successfully" });
@@ -127,7 +127,7 @@ export default function ExtraSidebar() {
           placeholder="Search Nodes"
           className={
             INPUT_STYLE +
-            "w-full border-1 dark:border-0.5 dark:ring-0 focus-visible:dark:ring-0 focus-visible:dark:ring-offset-1 rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            "w-full border-1 rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
           }
           onChange={(e) => {
             handleSearchInput(e.target.value);
@@ -135,7 +135,7 @@ export default function ExtraSidebar() {
           }}
         />
         <div className="absolute inset-y-0 right-0 flex py-1.5 pr-3 items-center">
-          <MagnifyingGlassIcon className="h-5 w-5 dark:text-background"></MagnifyingGlassIcon>
+          <MagnifyingGlassIcon className="h-5 w-5"></MagnifyingGlassIcon>
         </div>
       </div>
 
@@ -183,11 +183,11 @@ export default function ExtraSidebar() {
                               );
                             }}
                           >
-                            <div className="flex w-full justify-between text-sm px-3 py-1 bg-background dark:bg-foreground items-center border-dashed border-ring dark:border-muted-foreground border-l-0 rounded-md rounded-l-none border">
-                              <span className="text-black dark:text-background w-full pr-1 truncate text-xs">
+                            <div className="flex w-full justify-between text-sm px-3 py-1 bg-background items-center border-dashed border-ring  border-l-0 rounded-md rounded-l-none border">
+                              <span className="text-black w-full pr-1 truncate text-xs">
                                 {t}
                               </span>
-                              <Bars2Icon className="w-4 h-6  text-ring dark:text-muted-foreground" />
+                              <Bars2Icon className="w-4 h-6  text-ring " />
                             </div>
                           </div>
                         </div>

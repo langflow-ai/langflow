@@ -36,7 +36,7 @@ export default function ChatTrigger({ open, setOpen, isBuilt }) {
           side="left"
         >
           <div
-            className="border flex justify-center items-center py-1 px-3 w-12 h-12 rounded-full bg-almost-dark-blue dark:border-muted-foreground cursor-pointer"
+            className="border flex justify-center items-center py-1 px-3 w-12 h-12 rounded-full bg-almost-dark-blue cursor-pointer"
             onClick={handleClick}
           >
             <button>

@@ -121,7 +121,7 @@ export default function ParameterComponent({
   return (
     <div
       ref={ref}
-      className="w-full flex flex-wrap justify-between items-center bg-muted dark:bg-foreground dark:text-background mt-1 px-5 py-2"
+      className="w-full flex flex-wrap justify-between items-center bg-muted mt-1 px-5 py-2"
     >
       <>
         <div className={"text-sm truncate w-full " + (left ? "" : "text-end")}>
@@ -153,7 +153,7 @@ export default function ParameterComponent({
               }
               className={classNames(
                 left ? "-ml-0.5 " : "-mr-0.5 ",
-                "w-3 h-3 rounded-full border-2 bg-background dark:bg-foreground"
+                "w-3 h-3 rounded-full border-2 bg-background"
               )}
               style={{
                 borderColor: color,

@@ -46,11 +46,11 @@ export default function InputComponent({
           if (disableCopyPaste) setDisableCopyPaste(false);
         }}
         className={classNames(
-          "block w-full pr-12 form-input dark:bg-foreground dark:text-medium-low-gray dark:border-muted-foreground rounded-md border-ring shadow-sm sm:text-sm focus:placeholder-transparent",
-          disabled ? " bg-input dark:bg-foreground" : "",
+          "block w-full pr-12 form-input rounded-md bg-background border-ring shadow-sm sm:text-sm focus:placeholder-transparent placeholder:text-muted-foreground",
+          disabled ? " bg-input" : "",
           password && !pwdVisible && myValue !== "" ? "password" : "",
           editNode
-            ? "border-1 block w-full pt-0.5 pb-0.5 form-input dark:bg-foreground dark:text-medium-low-gray dark:border-muted-foreground rounded-md border-ring shadow-sm sm:text-sm text-center" +
+            ? "border-1 block w-full pt-0.5 pb-0.5 form-input rounded-md border-ring shadow-sm sm:text-sm text-center" +
                 INPUT_STYLE
             : "ring-offset-input" + INPUT_STYLE,
           password && editNode ? "pr-8" : "pr-3"

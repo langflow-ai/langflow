@@ -31,13 +31,13 @@ export default function Dropdown({
               <Listbox.Button
                 className={
                   editNode
-                    ? "relative pr-8 placeholder:text-center block w-full pt-0.5 pb-0.5 form-input dark:bg-foreground dark:text-medium-low-gray dark:border-muted-foreground rounded-md shadow-sm sm:text-sm border-ring border-1" +
+                    ? "relative pr-8 placeholder:text-center block w-full pt-0.5 pb-0.5 form-input rounded-md shadow-sm sm:text-sm border-ring border-1 bg-transparent" +
                       INPUT_STYLE
-                      : "ring-1 ring-ring w-full py-2 pl-3 pr-10 text-left dark:focus:ring-offset-2 dark:focus:ring-offset-foreground dark:focus:ring-1 dark:focus:ring-muted-foreground dark:focus-visible:ring-foreground dark:focus-visible:ring-offset-2 focus-visible:outline-none dark:bg-foreground dark:text-medium-low-gray dark:border-muted-foreground rounded-md border-ring shadow-sm sm:text-sm" +
+                      : "ring-1 ring-ring placeholder:text-muted-foreground w-full py-2 pl-3 pr-10 text-left focus-visible:outline-none rounded-md border-ring shadow-sm sm:text-sm" +
                       INPUT_STYLE
                 }
               >
-                <span className="block truncate w-full">{internalValue}</span>
+                <span className="block bg-background truncate w-full">{internalValue}</span>
                 <span
                   className={
                     "pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
@@ -70,11 +70,11 @@ export default function Dropdown({
                       className={({ active }) =>
                         classNames(
                           active
-                            ? " bg-accent dark:bg-background dark:text-ring"
+                            ? " bg-accent"
                             : "",
                           editNode
-                            ? "relative cursor-default select-none py-0.5 pl-3 pr-12 dark:text-medium-low-gray dark:bg-foreground"
-                            : "relative cursor-default select-none py-2 pl-3 pr-9 dark:text-medium-low-gray dark:bg-foreground"
+                            ? "relative cursor-default select-none py-0.5 pl-3 pr-12"
+                            : "relative cursor-default select-none py-2 pl-3 pr-9"
                         )
                       }
                       value={option}
@@ -93,15 +93,15 @@ export default function Dropdown({
                           {selected ? (
                             <span
                               className={classNames(
-                                active ? "text-background dark:text-black" : "",
+                                active ? "text-background " : "",
                                 "absolute inset-y-0 right-0 flex items-center pr-4"
                               )}
                             >
                               <CheckIcon
                                 className={
                                   active
-                                    ? "h-5 w-5 dark:text-black text-black"
-                                    : "h-5 w-5 dark:text-background text-black"
+                                    ? "h-5 w-5 text-black"
+                                    : "h-5 w-5 text-black"
                                 }
                                 aria-hidden="true"
                               />

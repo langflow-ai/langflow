@@ -44,9 +44,9 @@ export default function ChatInput({
         }}
         className={classNames(
           lockChat
-            ? " bg-input text-black dark:bg-foreground dark:text-medium-low-gray"
-            : "  bg-background-200 text-black dark:bg-foreground dark:text-medium-low-gray",
-          "form-input block w-full custom-scroll rounded-md border-ring dark:border-muted-foreground pr-10 sm:text-sm" +
+            ? " bg-input text-black "
+            : "  bg-background-200 text-black ",
+          "form-input block w-full custom-scroll rounded-md border-ring  pr-10 sm:text-sm" +
             INPUT_STYLE
         )}
         placeholder={"Send a message..."}
@@ -55,12 +55,12 @@ export default function ChatInput({
         <button disabled={lockChat} onClick={() => sendMessage()}>
           {lockChat ? (
             <LockClosedIcon
-              className="h-5 w-5 text-ring  dark:hover:text-medium-low-gray animate-pulse"
+              className="h-5 w-5 text-ring animate-pulse"
               aria-hidden="true"
             />
           ) : (
             <PaperAirplaneIcon
-              className="h-5 w-5 text-ring hover:text-muted-foreground dark:hover:text-medium-low-gray"
+              className="h-5 w-5 text-ring hover:text-muted-foreground"
               aria-hidden="true"
             />
           )}
