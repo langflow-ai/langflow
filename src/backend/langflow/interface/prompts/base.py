@@ -5,7 +5,7 @@ from langchain import prompts
 from langflow.custom.customs import get_custom_nodes
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class
-from langflow.settings import settings
+
 from langflow.template.frontend_node.prompts import PromptFrontendNode
 from langflow.utils.logger import logger
 from langflow.utils.util import build_template_from_class
@@ -21,6 +21,8 @@ class PromptCreator(LangChainTypeCreator):
     @property
     def type_to_loader_dict(self) -> Dict:
         if self.type_dict is None:
+            from langflow.settings import settings
+
             self.type_dict = {
                 prompt_name: import_class(f"langchain.prompts.{prompt_name}")
                 # if prompt_name is not lower case it is a class

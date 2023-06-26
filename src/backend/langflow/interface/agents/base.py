@@ -5,7 +5,7 @@ from langchain.agents import types
 from langflow.custom.customs import get_custom_nodes
 from langflow.interface.agents.custom import CUSTOM_AGENTS
 from langflow.interface.base import LangChainTypeCreator
-from langflow.settings import settings
+
 from langflow.utils.logger import logger
 from langflow.utils.util import build_template_from_class
 
@@ -38,6 +38,8 @@ class AgentCreator(LangChainTypeCreator):
 
     # Now this is a generator
     def to_list(self) -> List[str]:
+        from langflow.settings import settings
+
         names = []
         for _, agent in self.type_to_loader_dict.items():
             agent_name = (

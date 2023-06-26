@@ -4,7 +4,7 @@ from langchain.agents import agent_toolkits
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class, import_module
-from langflow.settings import settings
+
 from langflow.utils.logger import logger
 from langflow.utils.util import build_template_from_class
 
@@ -29,6 +29,8 @@ class ToolkitCreator(LangChainTypeCreator):
     @property
     def type_to_loader_dict(self) -> Dict:
         if self.type_dict is None:
+            from langflow.settings import settings
+
             self.type_dict = {
                 toolkit_name: import_class(
                     f"langchain.agents.agent_toolkits.{toolkit_name}"

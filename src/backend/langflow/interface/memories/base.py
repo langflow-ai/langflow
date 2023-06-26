@@ -2,7 +2,7 @@ from typing import Dict, List, Optional, Type
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import memory_type_to_cls_dict
-from langflow.settings import settings
+
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.frontend_node.memories import MemoryFrontendNode
 from langflow.utils.logger import logger
@@ -34,6 +34,8 @@ class MemoryCreator(LangChainTypeCreator):
             return None
 
     def to_list(self) -> List[str]:
+        from langflow.settings import settings
+
         return [
             memory.__name__
             for memory in self.type_to_loader_dict.values()

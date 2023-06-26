@@ -2,7 +2,7 @@ from typing import Dict, List, Optional, Type
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import embedding_type_to_cls_dict
-from langflow.settings import settings
+
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.frontend_node.embeddings import EmbeddingFrontendNode
 from langflow.utils.logger import logger
@@ -32,6 +32,8 @@ class EmbeddingCreator(LangChainTypeCreator):
             return None
 
     def to_list(self) -> List[str]:
+        from langflow.settings import settings
+
         return [
             embedding.__name__
             for embedding in self.type_to_loader_dict.values()
