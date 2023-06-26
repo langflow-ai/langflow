@@ -40,73 +40,73 @@ chains:
     documentation: ""
 documentloaders:
   AirbyteJSONLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/airbyte_json"
   CoNLLULoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/conll-u"
   CSVLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/csv"
   UnstructuredEmailLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/email"
   EverNoteLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/evernote"
   FacebookChatLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/facebook_chat"
   GutenbergLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/gutenberg"
   BSHTMLLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/how_to/html"
   UnstructuredHTMLLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/how_to/html"
   UnstructuredMarkdownLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/how_to/markdown"
   PyPDFLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/how_to/pdf"
   UnstructuredPowerPointLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/microsoft_powerpoint"
   SRTLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/subtitle"
   TelegramChatLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/telegram"
   TextLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/"
   UnstructuredWordDocumentLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/microsoft_word"
   WebBaseLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/web_base"
   AZLyricsLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/azlyrics"
   CollegeConfidentialLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/college_confidential"
   HNLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/hacker_news"
   IFixitLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/ifixit"
   IMSDbLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/imsdb"
   GitbookLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/gitbook"
   ReadTheDocsLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/readthedocs_documentation"
   SlackDirectoryLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/slack"
   NotionDirectoryLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/notion"
   DirectoryLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/how_to/file_directory"
   GitLoader:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/git"
 embeddings:
   OpenAIEmbeddings:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/openai"
   HuggingFaceEmbeddings:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/sentence_transformers"
   CohereEmbeddings:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/cohere"
 llms:
   OpenAI:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/openai"
   ChatOpenAI:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/model_io/models/chat/integrations/openai"
   LlamaCpp:
     documentation: "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/llamacpp"
   CTransformers:
@@ -116,7 +116,7 @@ llms:
   Anthropic:
     documentation: ""
   ChatAnthropic:
-    documentation: ""
+    documentation: "https://python.langchain.com/docs/modules/model_io/models/chat/integrations/anthropic"
   HuggingFaceHub:
     documentation: "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/huggingface_hub"
 memories:
