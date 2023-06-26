@@ -6,7 +6,7 @@
   "source": "@site/docs/buffer-memory.mdx",
   "sourceDirName": ".",
   "slug": "/buffer-memory",
-  "permalink": "/langflow/buffer-memory",
+  "permalink": "/buffer-memory",
   "draft": false,
   "tags": [],
   "version": "current",
@@ -14,10 +14,10 @@
   "sidebar": "docs",
   "previous": {
     "title": "Conversation Chain",
-    "permalink": "/langflow/conversation-chain"
+    "permalink": "/conversation-chain"
   },
   "next": {
     "title": "MidJourney Prompt Chain",
-    "permalink": "/langflow/midjourney-prompt-chain"
+    "permalink": "/midjourney-prompt-chain"
   }
 }

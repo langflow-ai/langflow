@@ -8,13 +8,15 @@ export default {
   "tagline": "LangFlow is a GUI for LangChain, designed with react-flow",
   "favicon": "img/favicon.ico",
   "url": "https://logspace-ai.github.io",
-  "baseUrl": "/langflow/",
+  "baseUrl": "/",
   "onBrokenLinks": "throw",
   "onBrokenMarkdownLinks": "warn",
   "organizationName": "logspace-ai",
   "projectName": "langflow",
   "trailingSlash": false,
-  "customFields": {},
+  "customFields": {
+    "mendableAnonKey": "b7f52734-297c-41dc-8737-edbd13196394"
+  },
   "i18n": {
     "defaultLocale": "en",
     "locales": [

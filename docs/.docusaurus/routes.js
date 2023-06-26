@@ -3,166 +3,131 @@ import ComponentCreator from '@docusaurus/ComponentCreator';
 
 export default [
   {
-    path: '/langflow/__docusaurus/debug',
-    component: ComponentCreator('/langflow/__docusaurus/debug', '671'),
+    path: '/markdown-page',
+    component: ComponentCreator('/markdown-page', 'd68'),
     exact: true
   },
   {
-    path: '/langflow/__docusaurus/debug/config',
-    component: ComponentCreator('/langflow/__docusaurus/debug/config', 'a2f'),
-    exact: true
-  },
-  {
-    path: '/langflow/__docusaurus/debug/content',
-    component: ComponentCreator('/langflow/__docusaurus/debug/content', 'e3a'),
-    exact: true
-  },
-  {
-    path: '/langflow/__docusaurus/debug/globalData',
-    component: ComponentCreator('/langflow/__docusaurus/debug/globalData', '44a'),
-    exact: true
-  },
-  {
-    path: '/langflow/__docusaurus/debug/metadata',
-    component: ComponentCreator('/langflow/__docusaurus/debug/metadata', 'ef5'),
-    exact: true
-  },
-  {
-    path: '/langflow/__docusaurus/debug/registry',
-    component: ComponentCreator('/langflow/__docusaurus/debug/registry', 'f2a'),
-    exact: true
-  },
-  {
-    path: '/langflow/__docusaurus/debug/routes',
-    component: ComponentCreator('/langflow/__docusaurus/debug/routes', '214'),
-    exact: true
-  },
-  {
-    path: '/langflow/markdown-page',
-    component: ComponentCreator('/langflow/markdown-page', '677'),
-    exact: true
-  },
-  {
-    path: '/langflow/',
-    component: ComponentCreator('/langflow/', 'af1'),
+    path: '/',
+    component: ComponentCreator('/', '6c4'),
     routes: [
       {
-        path: '/langflow/',
-        component: ComponentCreator('/langflow/', '337'),
+        path: '/',
+        component: ComponentCreator('/', '08f'),
         exact: true,
         sidebar: "docs"
       },
       {
-        path: '/langflow/buffer-memory',
-        component: ComponentCreator('/langflow/buffer-memory', '497'),
+        path: '/buffer-memory',
+        component: ComponentCreator('/buffer-memory', '859'),
         exact: true,
         sidebar: "docs"
       },
       {
-        path: '/langflow/collection',
-        component: ComponentCreator('/langflow/collection', 'daa'),
+        path: '/collection',
+        component: ComponentCreator('/collection', '373'),
         exact: true,
         sidebar: "docs"
       },
       {
-        path: '/langflow/community',
-        component: ComponentCreator('/langflow/community', '557'),
+        path: '/community',
+        component: ComponentCreator('/community', '80d'),
         exact: true,
         sidebar: "docs"
       },
       {
-        path: '/langflow/components',
-        component: ComponentCreator('/langflow/components', '8e9'),
+        path: '/components',
+        component: ComponentCreator('/components', '997'),
         exact: true,
         sidebar: "docs"
       },
       {
-        path: '/langflow/conversation-chain',
-        component: ComponentCreator('/langflow/conversation-chain', 'c58'),
+        path: '/conversation-chain',
+        component: ComponentCreator('/conversation-chain', 'cb6'),
         exact: true,
         sidebar: "docs"
       },
       {
-        path: '/langflow/creating-flows',
-        component: ComponentCreator('/langflow/creating-flows', '27b'),
+        path: '/creating-flows',
+        component: ComponentCreator('/creating-flows', '058'),
         exact: true,
         sidebar: "docs"
       },
       {
-        path: '/langflow/csv-loader',
-        component: ComponentCreator('/langflow/csv-loader', '8bc'),
+        path: '/csv-loader',
+        component: ComponentCreator('/csv-loader', 'bb7'),
         exact: true,
         sidebar: "docs"
       },
       {
-        path: '/langflow/features',
-        component: ComponentCreator('/langflow/features', 'f1f'),
+        path: '/features',
+        component: ComponentCreator('/features', 'ef0'),
         exact: true,
         sidebar: "docs"
       },
       {
-        path: '/langflow/gcp-deployment',
-        component: ComponentCreator('/langflow/gcp-deployment', 'f91'),
+        path: '/gcp-deployment',
+        component: ComponentCreator('/gcp-deployment', '1f3'),
         exact: true,
         sidebar: "docs"
       },
       {
-        path: '/langflow/github-issues',
-        component: ComponentCreator('/langflow/github-issues', '156'),
+        path: '/github-issues',
+        component: ComponentCreator('/github-issues', '385'),
         exact: true,
         sidebar: "docs"
       },
       {
-        path: '/langflow/how-contribute',
-        component: ComponentCreator('/langflow/how-contribute', 'd46'),
+        path: '/how-contribute',
+        component: ComponentCreator('/how-contribute', '5ea'),
         exact: true,
         sidebar: "docs"
       },
       {
-        path: '/langflow/how-upload-examples',
-        component: ComponentCreator('/langflow/how-upload-examples', '0fa'),
+        path: '/how-upload-examples',
+        component: ComponentCreator('/how-upload-examples', '143'),
         exact: true,
         sidebar: "docs"
       },
       {
-        path: '/langflow/hugging-face-spaces',
-        component: ComponentCreator('/langflow/hugging-face-spaces', 'e51'),
+        path: '/hugging-face-spaces',
+        component: ComponentCreator('/hugging-face-spaces', 'dd3'),
         exact: true,
         sidebar: "docs"
       },
       {
-        path: '/langflow/installation',
-        component: ComponentCreator('/langflow/installation', '583'),
+        path: '/installation',
+        component: ComponentCreator('/installation', 'd10'),
         exact: true,
         sidebar: "docs"
       },
       {
-        path: '/langflow/jina-deployment',
-        component: ComponentCreator('/langflow/jina-deployment', 'ece'),
+        path: '/jina-deployment',
+        component: ComponentCreator('/jina-deployment', '370'),
         exact: true,
         sidebar: "docs"
       },
       {
-        path: '/langflow/midjourney-prompt-chain',
-        component: ComponentCreator('/langflow/midjourney-prompt-chain', '878'),
+        path: '/midjourney-prompt-chain',
+        component: ComponentCreator('/midjourney-prompt-chain', 'ef0'),
         exact: true,
         sidebar: "docs"
       },
       {
-        path: '/langflow/multiple-vectorstores',
-        component: ComponentCreator('/langflow/multiple-vectorstores', 'ece'),
+        path: '/multiple-vectorstores',
+        component: ComponentCreator('/multiple-vectorstores', '293'),
         exact: true,
         sidebar: "docs"
       },
       {
-        path: '/langflow/python-function',
-        component: ComponentCreator('/langflow/python-function', 'a07'),
+        path: '/python-function',
+        component: ComponentCreator('/python-function', 'c91'),
         exact: true,
         sidebar: "docs"
       },
       {
-        path: '/langflow/serp-api-tool',
-        component: ComponentCreator('/langflow/serp-api-tool', 'fb8'),
+        path: '/serp-api-tool',
+        component: ComponentCreator('/serp-api-tool', '558'),
         exact: true,
         sidebar: "docs"
       }

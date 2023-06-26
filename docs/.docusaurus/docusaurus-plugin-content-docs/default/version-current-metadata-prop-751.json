@@ -17,25 +17,25 @@
           {
             "type": "link",
             "label": "👋 Welcome to LangFlow",
-            "href": "/langflow/",
+            "href": "/",
             "docId": "index"
           },
           {
             "type": "link",
             "label": "📦 How to install?",
-            "href": "/langflow/installation",
+            "href": "/installation",
             "docId": "installation"
           },
           {
             "type": "link",
             "label": "🤗 HuggingFace Spaces",
-            "href": "/langflow/hugging-face-spaces",
+            "href": "/hugging-face-spaces",
             "docId": "hugging-face-spaces"
           },
           {
             "type": "link",
             "label": "🎨 Creating Flows",
-            "href": "/langflow/creating-flows",
+            "href": "/creating-flows",
             "docId": "creating-flows"
           }
         ],
@@ -49,19 +49,19 @@
           {
             "type": "link",
             "label": "Component",
-            "href": "/langflow/components",
+            "href": "/components",
             "docId": "components"
           },
           {
             "type": "link",
             "label": "Features",
-            "href": "/langflow/features",
+            "href": "/features",
             "docId": "features"
           },
           {
             "type": "link",
             "label": "Collection",
-            "href": "/langflow/collection",
+            "href": "/collection",
             "docId": "collection"
           }
         ],
@@ -75,49 +75,49 @@
           {
             "type": "link",
             "label": "Conversation Chain",
-            "href": "/langflow/conversation-chain",
+            "href": "/conversation-chain",
             "docId": "conversation-chain"
           },
           {
             "type": "link",
             "label": "Buffer Memory",
-            "href": "/langflow/buffer-memory",
+            "href": "/buffer-memory",
             "docId": "buffer-memory"
           },
           {
             "type": "link",
             "label": "MidJourney Prompt Chain",
-            "href": "/langflow/midjourney-prompt-chain",
+            "href": "/midjourney-prompt-chain",
             "docId": "midjourney-prompt-chain"
           },
           {
             "type": "link",
             "label": "CSV Loader",
-            "href": "/langflow/csv-loader",
+            "href": "/csv-loader",
             "docId": "csv-loader"
           },
           {
             "type": "link",
             "label": "Serp API Tool",
-            "href": "/langflow/serp-api-tool",
+            "href": "/serp-api-tool",
             "docId": "serp-api-tool"
           },
           {
             "type": "link",
             "label": "Multiple Vector Stores",
-            "href": "/langflow/multiple-vectorstores",
+            "href": "/multiple-vectorstores",
             "docId": "multiple-vectorstores"
           },
           {
             "type": "link",
             "label": "Python Function",
-            "href": "/langflow/python-function",
+            "href": "/python-function",
             "docId": "python-function"
           },
           {
             "type": "link",
             "label": "📚 How to Upload Examples?",
-            "href": "/langflow/how-upload-examples",
+            "href": "/how-upload-examples",
             "docId": "how-upload-examples"
           }
         ],
@@ -131,13 +131,13 @@
           {
             "type": "link",
             "label": "Deploy on Google Cloud Platform",
-            "href": "/langflow/gcp-deployment",
+            "href": "/gcp-deployment",
             "docId": "gcp-deployment"
           },
           {
             "type": "link",
             "label": "Deploy on Jina AI Cloud",
-            "href": "/langflow/jina-deployment",
+            "href": "/jina-deployment",
             "docId": "jina-deployment"
           }
         ],
@@ -151,19 +151,19 @@
           {
             "type": "link",
             "label": "How to contribute?",
-            "href": "/langflow/how-contribute",
+            "href": "/how-contribute",
             "docId": "how-contribute"
           },
           {
             "type": "link",
             "label": "GitHub Issues",
-            "href": "/langflow/github-issues",
+            "href": "/github-issues",
             "docId": "github-issues"
           },
           {
             "type": "link",
             "label": "Community",
-            "href": "/langflow/community",
+            "href": "/community",
             "docId": "community"
           }
         ],

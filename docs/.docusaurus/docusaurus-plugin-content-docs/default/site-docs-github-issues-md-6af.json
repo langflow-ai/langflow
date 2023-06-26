@@ -6,7 +6,7 @@
   "source": "@site/docs/github-issues.md",
   "sourceDirName": ".",
   "slug": "/github-issues",
-  "permalink": "/langflow/github-issues",
+  "permalink": "/github-issues",
   "draft": false,
   "tags": [],
   "version": "current",
@@ -14,10 +14,10 @@
   "sidebar": "docs",
   "previous": {
     "title": "How to contribute?",
-    "permalink": "/langflow/how-contribute"
+    "permalink": "/how-contribute"
   },
   "next": {
     "title": "Community",
-    "permalink": "/langflow/community"
+    "permalink": "/community"
   }
 }

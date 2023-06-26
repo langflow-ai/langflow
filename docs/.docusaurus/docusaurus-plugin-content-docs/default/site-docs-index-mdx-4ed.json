@@ -6,7 +6,7 @@
   "source": "@site/docs/index.mdx",
   "sourceDirName": ".",
   "slug": "/",
-  "permalink": "/langflow/",
+  "permalink": "/",
   "draft": false,
   "tags": [],
   "version": "current",
@@ -14,6 +14,6 @@
   "sidebar": "docs",
   "next": {
     "title": "📦 How to install?",
-    "permalink": "/langflow/installation"
+    "permalink": "/installation"
   }
 }
