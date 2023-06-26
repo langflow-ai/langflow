@@ -1,0 +1,7 @@
+- class_object: langchain.vectorstores.Chroma
+- class_object: langchain.vectorstores.Qdrant
+- class_object: langchain.vectorstores.Weaviate
+- class_object: langchain.vectorstores.FAISS
+- class_object: langchain.vectorstores.Pinecone
+- class_object: langchain.vectorstores.SupabaseVectorStore
+- class_object: langchain.vectorstores.MongoDBAtlasVectorSearch

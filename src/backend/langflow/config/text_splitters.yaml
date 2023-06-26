@@ -1,0 +1,2 @@
+- class_object: langchain.text_splitter.CharacterTextSplitter
+- class_object: langchain.text_splitter.RecursiveCharacterTextSplitter

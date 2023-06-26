@@ -1,0 +1,3 @@
+- class_object: langchain.memory.ConversationBufferMemory
+- class_object: langchain.memory.ConversationSummaryMemory
+- class_object: langchain.memory.ConversationKGMemory

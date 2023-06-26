@@ -1,0 +1,3 @@
+- class_object: langchain.embeddings.OpenAIEmbeddings
+- class_object: langchain.embeddings.HuggingFaceEmbeddings
+- class_object: langchain.embeddings.CohereEmbeddings

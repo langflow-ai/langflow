@@ -1,0 +1,7 @@
+- class_object: langchain.agents.ZeroShotAgent
+- class_object: langflow.interface.agents.custom.JsonAgent
+- class_object: langflow.interface.agents.custom.CSVAgent
+- class_object: langflow.interface.agents.custom.InitializeAgent
+- class_object: langflow.interface.agents.custom.VectorStoreAgent
+- class_object: langflow.interface.agents.custom.VectorStoreRouterAgent
+- class_object: langflow.interface.agents.custom.SQLAgent

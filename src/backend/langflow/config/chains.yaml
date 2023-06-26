@@ -1,0 +1,23 @@
+- class_object: langchain.chains.LLMChain
+
+- class_object: langchain.chains.LLMMathChain
+
+- class_object: langchain.chains.LLMCheckerChain
+
+- class_object: langchain.chains.ConversationChain
+
+- class_object: langflow.interface.chains.custom.SeriesCharacterChain
+
+- class_object: langflow.interface.chains.custom.MidJourneyPromptChain
+
+- class_object: langflow.interface.chains.custom.TimeTravelGuideChain
+
+- class_object: langchain.chains.SQLDatabaseChain
+
+- class_object: langchain.chains.RetrievalQA
+
+- class_object: langchain.chains.RetrievalQAWithSourcesChain
+
+- class_object: langchain.chains.ConversationalRetrievalChain
+
+- class_object: langflow.interface.chains.custom.CombineDocsChain

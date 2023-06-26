@@ -1,0 +1,15 @@
+---
+agents: agents.yaml
+chains: chains.yaml
+documentloaders: document_loaders.yaml
+embeddings: embeddings.yaml
+llms: llms.yaml
+memories: memories.yaml
+prompts: prompts.yaml
+text_splitters: text_splitters.yaml
+toolkits: toolkits.yaml
+tools: tools.yaml
+utilities: utilities.yaml
+vectorstores: vectorstores.yaml
+wrappers: wrappers.yaml
+dev: false

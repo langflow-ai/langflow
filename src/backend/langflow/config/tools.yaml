@@ -1,0 +1,30 @@
+- class_object: langchain.agents.load_tools.Search
+- class_object: langchain.tools.PAL-MATH
+- class_object: langchain.tools.Calculator
+- class_object: langchain.tools.Serper Search
+- class_object: langchain.tools.Tool
+- class_object: langchain.tools.PythonFunctionTool
+- class_object: langchain.tools.PythonFunction
+- class_object: langchain.tools.JsonSpec
+- class_object: langchain.tools.News API
+- class_object: langchain.tools.TMDB API
+- class_object: langchain.tools.Podcast API
+- class_object: langchain.tools.QuerySQLDataBaseTool
+- class_object: langchain.tools.InfoSQLDatabaseTool
+- class_object: langchain.tools.ListSQLDatabaseTool
+# class_object: langchain.tools.QueryCheckerTool
+- class_object: langchain.tools.BingSearchRun
+- class_object: langchain.tools.GoogleSearchRun
+- class_object: langchain.tools.GoogleSearchResults
+- class_object: langchain.tools.GoogleSerperRun
+- class_object: langchain.tools.JsonListKeysTool
+- class_object: langchain.tools.JsonGetValueTool
+- class_object: langchain.tools.PythonREPLTool
+- class_object: langchain.tools.PythonAstREPLTool
+- class_object: langchain.tools.RequestsGetTool
+- class_object: langchain.tools.RequestsPostTool
+- class_object: langchain.tools.RequestsPatchTool
+- class_object: langchain.tools.RequestsPutTool
+- class_object: langchain.tools.RequestsDeleteTool
+- class_object: langchain.tools.WikipediaQueryRun
+- class_object: langchain.tools.WolframAlphaQueryRun

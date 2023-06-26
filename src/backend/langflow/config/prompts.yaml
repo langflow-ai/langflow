@@ -1,0 +1,3 @@
+- class_object: langchain.prompts.PromptTemplate
+- class_object: langchain.prompts.FewShotPromptTemplate
+- class_object: langflow.interface.prompts.custom.ZeroShotPrompt

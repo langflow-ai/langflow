@@ -1,0 +1,10 @@
+- class_object: langchain.llms.OpenAI
+# class_object: langchain.llms.AzureOpenAI
+# class_object: langchain.llms.AzureChatOpenAI
+- class_object: langchain.llms.LlamaCpp
+- class_object: langchain.llms.CTransformers
+- class_object: langchain.llms.Cohere
+- class_object: langchain.llms.Anthropic
+- class_object: langchain.llms.HuggingFaceHub
+- class_object: langchain.chat_models.ChatAnthropic
+- class_object: langchain.chat_models.ChatOpenAI
