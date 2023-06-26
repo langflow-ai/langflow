@@ -1,16 +1,21 @@
-import { Dialog, Transition } from "@headlessui/react";
+import { Transition } from "@headlessui/react";
 import { Fragment, useContext, useEffect, useRef, useState } from "react";
 import { FlowType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
 import { validateNodes } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import ChatMessage from "./chatMessage";
-import { X, MessagesSquare, Eraser } from "lucide-react";
+import { X, MessagesSquare, Eraser, TerminalSquare } from "lucide-react";
 import { sendAllProps } from "../../types/api";
 import { ChatMessageType } from "../../types/chat";
 import ChatInput from "./chatInput";
 
 import _ from "lodash";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../../components/ui/dialog";
+import { dark } from "@mui/material/styles/createPalette";
+import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants";
+import { postValidateCode } from "../../controllers/API";
+import { Button } from "../../components/ui/button";
 
 export default function FormModal({
   flow,
@@ -314,102 +319,36 @@ export default function FormModal({
     setOpen(x);
   }
   return (
-    <Transition.Root show={open} appear={open} as={Fragment}>
-      <Dialog
-        as="div"
-        className="relative z-10"
-        onClose={setModalOpen}
-        initialFocus={ref}
-      >
-        <Transition.Child
-          as={Fragment}
-          enter="ease-out duration-300"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="ease-in duration-200"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0 bg-black backdrop-blur-sm dark:bg-gray-600 dark:bg-opacity-80 bg-opacity-80 transition-opacity" />
-        </Transition.Child>
+    <Dialog open={open} onOpenChange={setModalOpen}>
+      <DialogTrigger className="hidden"></DialogTrigger>
+      <DialogContent className="lg:max-w-[700px] h-[500px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center">
+            <span className="pr-2">Chat Form</span>
+            <TerminalSquare
+              className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
+              aria-hidden="true"
+            />
+          </DialogTitle>
+          <DialogDescription>{CODE_PROMPT_DIALOG_SUBTITLE}</DialogDescription>
+        </DialogHeader>
 
-        <div className="fixed inset-0 z-10 overflow-y-auto">
-          <div className="flex h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-            <Transition.Child
-              as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-              enterTo="opacity-100 translate-y-0 sm:scale-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100 translate-y-0 sm:scale-100"
-              leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-            >
-              <Dialog.Panel className=" drop-shadow-2xl relative flex flex-col justify-between transform h-[95%] overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all w-[690px]">
-                <div className="relative w-full p-4">
-                  <button
-                    onClick={() => clearChat()}
-                    className="absolute top-2 right-10 hover:text-red-500 text-gray-600 dark:text-gray-300 dark:hover:text-red-500 z-30"
-                  >
-                    <Eraser className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setModalOpen(false)}
-                    className="absolute top-1.5 right-2 hover:text-red-500 text-gray-600 dark:text-gray-300 dark:hover:text-red-500 z-30"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-                <div
-                  ref={messagesRef}
-                  className="w-full h-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center overflow-scroll scrollbar-hide"
-                >
-                  {chatHistory.length > 0 ? (
-                    chatHistory.map((c, i) => (
-                      <ChatMessage
-                        lockChat={lockChat}
-                        chat={c}
-                        lastMessage={chatHistory.length - 1 == i ? true : false}
-                        key={i}
-                      />
-                    ))
-                  ) : (
-                    <div className="flex flex-col h-full text-center justify-center w-full items-center align-middle">
-                      <span>
-                        👋{" "}
-                        <span className="text-gray-600 dark:text-gray-300 text-lg">
-                          LangFlow Chat
-                        </span>
-                      </span>
-                      <br />
-                      <div className="bg-muted dark:bg-gray-900 rounded-md w-2/4 px-6 py-8 border border-gray-200 dark:border-gray-700">
-                        <span className="text-base text-gray-500">
-                          Start a conversation and click the agent’s thoughts{" "}
-                          <span>
-                            <MessagesSquare className="w-5 h-5 inline animate-bounce mx-1 " />
-                          </span>{" "}
-                          to inspect the chaining process.
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                  <div ref={ref}></div>
-                </div>
-                <div className="w-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center justify-between p-3">
-                  <div className="relative w-full  mt-1 rounded-md shadow-sm">
-                    <ChatInput
-                      chatValue={chatValue}
-                      lockChat={lockChat}
-                      sendMessage={sendMessage}
-                      setChatValue={setChatValue}
-                      inputRef={ref}
-                    />
-                  </div>
-                </div>
-              </Dialog.Panel>
-            </Transition.Child>
-          </div>
+        <div className="flex h-full w-full mt-2">
+          teste
         </div>
-      </Dialog>
-    </Transition.Root>
+
+        <DialogFooter>
+          <Button
+            className="mt-3"
+            onClick={() => {
+              
+            }}
+            type="submit"
+          >
+            Check & Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
