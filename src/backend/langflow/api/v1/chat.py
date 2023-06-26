@@ -120,7 +120,15 @@ async def stream_build(flow_id: str):
 
                 yield str(StreamData(event="message", data=response))
 
-            chat_manager.set_cache(flow_id, graph.build())
+            langchain_object = graph.build()
+            # Now we  need to check the input_keys to send them to the client
+            if hasattr(langchain_object, "input_keys"):
+                input_keys_response = {
+                    "input_keys": langchain_object.input_keys,
+                }
+                yield str(StreamData(event="input_keys", data=input_keys_response))
+
+            chat_manager.set_cache(flow_id, langchain_object)
         except Exception as exc:
             logger.error("Error while building the flow: %s", exc)
             yield str(StreamData(event="error", data={"error": str(exc)}))

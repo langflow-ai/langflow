@@ -1,6 +1,7 @@
 from pydantic import BaseModel, validator
 
 from langflow.interface.utils import extract_input_variables_from_prompt
+from langchain.prompts import PromptTemplate
 
 
 class CacheResponse(BaseModel):
@@ -57,6 +58,13 @@ def validate_prompt(template: str):
 
     # Check if there are invalid characters in the input_variables
     input_variables = check_input_variables(input_variables)
+    try:
+        PromptTemplate(template=template, input_variables=input_variables)
+    except Exception as exc:
+        raise ValueError(str(exc)) from exc
+
+    # if len(input_variables) > 1:
+    #     # If there's more than one input variable
 
     return PromptValidationResponse(input_variables=input_variables)
 
