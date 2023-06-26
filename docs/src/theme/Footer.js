@@ -33,7 +33,7 @@ export default function FooterWrapper(props) {
     {
       style: { darkMode: true, accentColor: '#4051b5' },
       floatingButtonStyle: { color: '#ffffff', backgroundColor: '#010810' },
-      anon_key: 'b7f52734-297c-41dc-8737-edbd13196394', // Mendable Search Public ANON key, ok to be public
+      anon_key: customFields.mendableAnonKey, // Mendable Search Public ANON key, ok to be public
       messageSettings: {
         openSourcesInNewTab: false,
       },

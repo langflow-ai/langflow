@@ -3,6 +3,41 @@ import ComponentCreator from '@docusaurus/ComponentCreator';
 
 export default [
   {
+    path: '/langflow/__docusaurus/debug',
+    component: ComponentCreator('/langflow/__docusaurus/debug', '671'),
+    exact: true
+  },
+  {
+    path: '/langflow/__docusaurus/debug/config',
+    component: ComponentCreator('/langflow/__docusaurus/debug/config', 'a2f'),
+    exact: true
+  },
+  {
+    path: '/langflow/__docusaurus/debug/content',
+    component: ComponentCreator('/langflow/__docusaurus/debug/content', 'e3a'),
+    exact: true
+  },
+  {
+    path: '/langflow/__docusaurus/debug/globalData',
+    component: ComponentCreator('/langflow/__docusaurus/debug/globalData', '44a'),
+    exact: true
+  },
+  {
+    path: '/langflow/__docusaurus/debug/metadata',
+    component: ComponentCreator('/langflow/__docusaurus/debug/metadata', 'ef5'),
+    exact: true
+  },
+  {
+    path: '/langflow/__docusaurus/debug/registry',
+    component: ComponentCreator('/langflow/__docusaurus/debug/registry', 'f2a'),
+    exact: true
+  },
+  {
+    path: '/langflow/__docusaurus/debug/routes',
+    component: ComponentCreator('/langflow/__docusaurus/debug/routes', '214'),
+    exact: true
+  },
+  {
     path: '/langflow/markdown-page',
     component: ComponentCreator('/langflow/markdown-page', '677'),
     exact: true
