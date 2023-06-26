@@ -17,7 +17,12 @@ import {
   DialogTrigger,
 } from "../../components/ui/dialog";
 import { FlowType } from "../../types/flow/index";
-import { getCurlCode, getPythonApiCode, getPythonCode } from "../../constants";
+import {
+  getCurlCode,
+  getPythonApiCode,
+  getPythonCode,
+  getJsApiCode,
+} from "../../constants";
 import { EXPORT_CODE_DIALOG } from "../../constants";
 import {
   Tabs,
@@ -55,6 +60,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
   }
 
   const pythonApiCode = getPythonApiCode(flow);
+  const jsApiCode = getJsApiCode(flow);
 
   const curl_code = getCurlCode(flow);
   const pythonCode = getPythonCode(flow);
@@ -72,6 +78,13 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
       image:
         "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
       code: pythonApiCode,
+    },
+    {
+      name: "JavaScript API",
+      mode: "javascript",
+      image:
+        "https://cdn.iconscout.com/icon/free/png-512/javascript-2752148-2284965.png",
+      code: jsApiCode,
     },
     {
       name: "Python Code",
@@ -103,7 +116,9 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
           <div className="flex items-center justify-between px-2">
             <TabsList>
               {tabs.map((tab, index) => (
-                <TabsTrigger key={index} value={index.toString()}>{tab.name}</TabsTrigger>
+                <TabsTrigger key={index} value={index.toString()}>
+                  {tab.name}
+                </TabsTrigger>
               ))}
             </TabsList>
             <div className="float-right">
