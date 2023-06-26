@@ -8,7 +8,7 @@ const lightCodeTheme = require('prism-react-renderer/themes/github');
     tagline: 'LangFlow is a GUI for LangChain, designed with react-flow',
     favicon: 'img/favicon.ico',
     url: 'https://logspace-ai.github.io',
-    baseUrl: '/langflow/',
+    baseUrl: '/',
     onBrokenLinks: 'throw',
     onBrokenMarkdownLinks: 'warn',
     organizationName: 'logspace-ai',
