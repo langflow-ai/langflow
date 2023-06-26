@@ -51,7 +51,7 @@ export const TEXT_DIALOG_SUBTITLE = "Edit your text.";
 
 /**
  * Function to get the python code for the API
- * @param {string} flowId - The id of the flow
+ * @param {FlowType} flow - The flow object
  * @returns {string} - The python code
  */
 export const getPythonApiCode = (flow: FlowType): string => {
@@ -95,6 +95,64 @@ def run_flow(message: str, flow_id: str, tweaks: dict = None) -> dict:
 
 print(run_flow("Your message", flow_id=FLOW_ID, tweaks=TWEAKS))`;
 };
+
+/**
+ * This function generates a JavaScript code snippet to make API requests. It takes a flow
+ * object as an argument and returns a string of JavaScript code.
+ *
+ * @param {FlowType} flow The flow object
+ * @returns A string of JavaScript code to make API requests.
+ */
+export const getJsApiCode = (flow: FlowType): string => {
+  const flowId = flow.id;
+  const tweaks = buildTweaks(flow);
+  return `const BASE_API_URL = "${window.location.protocol}//${
+    window.location.host
+  }/api/v1/process";
+const FLOW_ID = "${flowId}";
+const TWEAKS = ${JSON.stringify(tweaks, null, 2)};
+
+/**
+ * Run a flow with a given message and optional tweaks.
+ *
+ * @param {string} message The message to send to the flow
+ * @param {string} flowId The ID of the flow to run
+ * @param {Object} [tweaks] Optional tweaks to customize the flow
+ * @returns {Promise<any>} A promise that resolves to the JSON response from the flow
+ */
+async function runFlow(message, flowId, tweaks = null) {
+  const apiUrl = \`\${BASE_API_URL}/\${flowId}\`;
+
+  const payload = {
+    inputs: { input: message }
+  };
+
+  if (tweaks) {
+    payload.tweaks = tweaks;
+  }
+
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (response.ok) {
+    return response.json();
+  } else {
+    throw new Error("HTTP Error: " + response.status);
+  }
+}
+
+// Setup any tweaks you want to apply to the flow
+runFlow("Your message", FLOW_ID, TWEAKS)
+  .then(result => console.log(result))
+  .catch(error => console.error(error));
+`;
+};
+
 /**
  * Function to get the curl code for the API
  * @param {string} flowId - The id of the flow
