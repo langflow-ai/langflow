@@ -31,8 +31,8 @@ export default function ToggleComponent({
             enabled ? "translate-x-5" : "translate-x-0",
             "pointer-events-none relative inline-block h-5 w-5 transform rounded-full  shadow ring-0 transition duration-200 ease-in-out",
             disabled
-              ? "bg-input dark:bg-muted-foreground"
-              : "bg-background dark:bg-foreground"
+              ? "bg-input "
+              : "bg-background"
           )}
         >
           <span

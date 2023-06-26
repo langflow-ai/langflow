@@ -93,7 +93,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
               <VariableIcon className="w-5 h-5 pe-1 text-foreground stroke-2">
                 &nbsp;
               </VariableIcon>
-              <span className="text-sm font-semibold text-foreground dark:text-background">
+              <span className="text-sm font-semibold text-foreground">
                 Parameters
               </span>
             </div>
@@ -103,7 +103,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
         <div className="flex w-full max-h-[350px] h-fit">
           <div
             className={classNames(
-              "w-full rounded-lg bg-background dark:bg-foreground border-[1px] border-input",
+              "w-full rounded-lg bg-background border-[1px] border-input",
               nodeLength > limitScrollFieldsModal
                 ? "overflow-scroll overflow-x-hidden custom-scroll"
                 : "overflow-hidden"
@@ -113,7 +113,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
               <div className="flex flex-col gap-5 h-fit">
                 <Table className="table-fixed bg-muted outline-1">
                   <TableHeader className="border-input text-ring text-xs font-medium h-10">
-                    <TableRow className="dark:border-b-muted">
+                    <TableRow className="">
                       <TableHead className="h-7 text-center">PARAM</TableHead>
                       <TableHead className="p-0 h-7 text-center">
                         VALUE
@@ -136,13 +136,13 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                             data.node.template[t].type === "int")
                       )
                       .map((n, i) => (
-                        <TableRow key={i} className="h-10 dark:border-b-muted">
-                          <TableCell className="p-0 text-center text-foreground dark:text-medium-low-gray text-sm">
+                        <TableRow key={i} className="h-10 ">
+                          <TableCell className="p-0 text-center text-foreground  text-sm">
                             {data.node.template[n].name
                               ? data.node.template[n].name
                               : data.node.template[n].display_name}
                           </TableCell>
-                          <TableCell className="p-0 text-center text-foreground text-xs w-[300px] dark:text-medium-low-gray">
+                          <TableCell className="p-0 text-center text-foreground text-xs w-[300px] ">
                             {data.node.template[n].type === "str" &&
                             !data.node.template[n].options ? (
                               <div className="mx-auto">

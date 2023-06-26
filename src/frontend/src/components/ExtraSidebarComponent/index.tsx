@@ -19,9 +19,9 @@ export default function ExtraSidebar() {
       <aside
         className={` ${
           isStackedOpen ? "w-52" : "w-0 "
-        } flex-shrink-0 flex overflow-hidden flex-col border-r dark:border-r-foreground transition-all duration-500`}
+        } flex-shrink-0 flex overflow-hidden flex-col border-r  transition-all duration-500`}
       >
-        <div className="w-52 dark:bg-foreground border dark:border-foreground  overflow-y-auto scrollbar-hide h-full flex flex-col items-start bg-background">
+        <div className="w-52 border  overflow-y-auto scrollbar-hide h-full flex flex-col items-start bg-background">
           <div className="flex flex-grow flex-col w-full">
             {extraNavigation.options ? (
               <div className="p-4">

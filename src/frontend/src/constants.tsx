@@ -147,7 +147,7 @@ export const EXPORT_CODE_DIALOG =
  * @constant
  */
 export const INPUT_STYLE =
-  " focus:ring-1 focus:ring-offset-1 focus:ring-ring focus:outline-none ";
+  " focus:ring-1 focus:ring-offset-1 focus:ring-offset-muted-foreground focus:ring-ring focus:outline-none";
 
 
 /**

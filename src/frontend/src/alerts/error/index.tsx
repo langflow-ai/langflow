@@ -44,16 +44,16 @@ export default function ErrorAlert({
         <div className="flex">
           <div className="flex-shrink-0">
             <XCircleIcon
-              className="h-5 w-5 text-error-background dark:text-error-background"
+              className="h-5 w-5 text-error-background"
               aria-hidden="true"
             />
           </div>
           <div className="ml-3">
-            <h3 className="text-sm font-medium text-error-foreground dark:text-background/80">
+            <h3 className="text-sm font-medium text-error-foreground">
               {title}
             </h3>
             {list.length !== 0 ? (
-              <div className="mt-2 text-sm text-error-foreground dark:text-error-background">
+              <div className="mt-2 text-sm text-error-foreground">
                 <ul className="list-disc space-y-1 pl-5">
                   {list.map((item, index) => (
                     <li key={index}>{item}</li>

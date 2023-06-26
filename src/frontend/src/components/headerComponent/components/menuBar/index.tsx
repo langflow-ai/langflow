@@ -70,7 +70,7 @@ export const MenuBar = ({ flows, tabId }) => {
                 openPopUp(<FlowSettingsModal />);
               }}
             >
-              <Settings2 className="w-4 h-4 mr-2 dark:text-medium-low-gray" />
+              <Settings2 className="w-4 h-4 mr-2 " />
               Settings
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -78,7 +78,7 @@ export const MenuBar = ({ flows, tabId }) => {
                 undo();
               }}
             >
-              <Undo className="w-4 h-4 mr-2 dark:text-medium-low-gray" />
+              <Undo className="w-4 h-4 mr-2 " />
               Undo
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -86,7 +86,7 @@ export const MenuBar = ({ flows, tabId }) => {
                 redo();
               }}
             >
-              <Redo className="w-4 h-4 mr-2 dark:text-medium-low-gray" />
+              <Redo className="w-4 h-4 mr-2 " />
               Redo
             </DropdownMenuItem>
             <DropdownMenuSeparator />

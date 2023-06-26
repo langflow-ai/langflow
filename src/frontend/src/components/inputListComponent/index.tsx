@@ -32,9 +32,9 @@ export default function InputListComponent({
             value={i}
             className={
               editNode
-                ? "border-[1px]  truncate cursor-pointer text-center placeholder:text-center text-ring block w-full pt-0.5 pb-0.5 form-input dark:bg-foreground dark:text-medium-low-gray dark:border-muted-foreground rounded-md border-ring shadow-sm sm:text-sm" +
+                ? "border-[1px]  truncate cursor-pointer text-center placeholder:text-center text-ring block w-full pt-0.5 pb-0.5 form-input rounded-md border-ring shadow-sm sm:text-sm" +
                   INPUT_STYLE
-                : "block w-full form-input rounded-md border-ring shadow-sm focus:border-ring focus:ring-ring sm:text-sm" +
+                : "block w-full form-input bg-background rounded-md border-ring shadow-sm focus:border-ring focus:ring-ring sm:text-sm" +
                   (disabled ? " bg-input" : "") +
                   "focus:placeholder-transparent"
             }

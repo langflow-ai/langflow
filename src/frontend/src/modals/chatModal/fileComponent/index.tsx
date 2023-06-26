@@ -37,10 +37,10 @@ export default function FileCard({ fileName, content, fileType }) {
         />
         {isHovered && (
           <div
-            className={`absolute top-0 right-0 bg-muted text-foreground rounded-bl-lg px-1 text-sm font-bold dark:bg-foreground dark:text-medium-low-gray`}
+            className={`absolute top-0 right-0 bg-muted text-foreground rounded-bl-lg px-1 text-sm font-bold `}
           >
             <button
-              className="text-ring py-1 px-2 dark:bg-foreground dark:text-medium-low-gray"
+              className="text-ring py-1 px-2 "
               onClick={handleDownload}
             >
               <CloudArrowDownIcon className="hover:scale-110 w-5 h-5 text-current"></CloudArrowDownIcon>

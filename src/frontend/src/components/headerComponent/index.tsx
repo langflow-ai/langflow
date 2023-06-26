@@ -60,7 +60,7 @@ export default function Header() {
           <Button
             asChild
             variant="outline"
-            className="text-muted-foreground dark:text-medium-low-gray "
+            className="text-muted-foreground  "
           >
             <a
               href="https://github.com/logspace-ai/langflow"
@@ -72,8 +72,8 @@ export default function Header() {
               Join The Community
             </a>
           </Button>
-          {/* <button
-            className="text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
+          <button
+            className="text-gray-600 hover:text-gray-500"
             onClick={() => {
               setDark(!dark);
             }}
@@ -83,9 +83,9 @@ export default function Header() {
             ) : (
               <MoonIcon className="h-5 w-5" />
             )}
-          </button> */}
+          </button>
           <button
-            className="text-muted-foreground hover:text-ring dark:text-medium-low-gray dark:hover:text-light-gray relative"
+            className="text-muted-foreground hover:text-ring relative"
             onClick={(event: React.MouseEvent<HTMLElement>) => {
               setNotificationCenter(false);
               const { top, left } = (

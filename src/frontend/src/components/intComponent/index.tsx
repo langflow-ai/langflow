@@ -70,13 +70,13 @@ export default function IntComponent({
         value={myValue}
         className={
           editNode
-            ? "focus:placeholder-transparent text-center placeholder:text-center border-1 block w-full pt-0.5 pb-0.5 form-input dark:bg-foreground dark:text-medium-low-gray dark:border-muted-foreground rounded-md border-ring shadow-sm sm:text-sm" +
+            ? "focus:placeholder-transparent text-center placeholder:text-center border-1 block w-full pt-0.5 pb-0.5 form-input rounded-md border-ring shadow-sm sm:text-sm bg-transparent placeholder:text-muted-foreground" +
               INPUT_STYLE
-            : "focus:placeholder-transparent block w-full form-input dark:bg-foreground dark:border-muted-foreground dark:text-medium-low-gray rounded-md border-ring shadow-sm ring-offset-background sm:text-sm" +
+            : "focus:placeholder-transparent block w-full form-input bg-background rounded-md border-ring shadow-sm ring-offset-background sm:text-sm placeholder:text-muted-foreground" +
               INPUT_STYLE +
-              (disabled ? " bg-input dark:bg-foreground" : "")
+              (disabled ? " bg-input" : "")
         }
-        placeholder={editNode ? "Integer number" : "Type a integer number"}
+        placeholder={editNode ? "Integer number" : "Type an integer number"}
         onChange={(e) => {
           setMyValue(e.target.value);
           onChange(e.target.value);
