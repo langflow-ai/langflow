@@ -116,14 +116,18 @@ export default function GenericNode({
           <div className="flex gap-3">
             <div className=" px-5 pb-3 mr-5">
               {data.node.documentation !== "" && (
-                <Tooltip title={`Open ${data.node.display_name} documentation`}>
-                  <a
-                    href={data.node.documentation}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Info />
-                  </a>
+                <Tooltip
+                  title={
+                    <a
+                      href={data.node.documentation}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {`Open ${data.node.display_name} documentation`}
+                    </a>
+                  }
+                >
+                  <Info />
                 </Tooltip>
               )}
             </div>
