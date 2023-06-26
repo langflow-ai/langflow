@@ -6,6 +6,7 @@ from fastapi import (
     status,
 )
 from fastapi.responses import StreamingResponse
+from langflow.api.utils import build_input_keys_response
 from langflow.api.v1.schemas import BuiltResponse, InitResponse, StreamData
 
 from langflow.chat.manager import ChatManager
@@ -123,9 +124,7 @@ async def stream_build(flow_id: str):
             langchain_object = graph.build()
             # Now we  need to check the input_keys to send them to the client
             if hasattr(langchain_object, "input_keys"):
-                input_keys_response = {
-                    "input_keys": langchain_object.input_keys,
-                }
+                input_keys_response = build_input_keys_response(langchain_object)
                 yield str(StreamData(event="input_keys", data=input_keys_response))
 
             chat_manager.set_cache(flow_id, langchain_object)
