@@ -14,9 +14,7 @@ export default {
   "organizationName": "logspace-ai",
   "projectName": "langflow",
   "trailingSlash": false,
-  "customFields": {
-    "mendableAnonKey": "b7f52734-297c-41dc-8737-edbd13196394"
-  },
+  "customFields": {},
   "i18n": {
     "defaultLocale": "en",
     "locales": [
