@@ -1,7 +1,6 @@
 import json
 from typing import Any, Callable, Dict, Sequence
 
-from langchain.agents import ZeroShotAgent
 from langchain.agents import agent as agent_module
 from langchain.agents.agent import AgentExecutor
 from langchain.agents.agent_toolkits.base import BaseToolkit
@@ -96,7 +95,7 @@ def instantiate_prompt(node_type, class_object, params):
     if node_type == "ZeroShotPrompt":
         if "tools" not in params:
             params["tools"] = []
-        return ZeroShotAgent.create_prompt(**params)
+        return class_object.initialize(**params)
     return class_object(**params)
 
 
@@ -187,22 +186,6 @@ def instantiate_utility(node_type, class_object, params):
     if node_type == "SQLDatabase":
         return class_object.from_uri(params.pop("uri"))
     return class_object(**params)
-
-
-def replace_zero_shot_prompt_with_prompt_template(nodes):
-    """Replace ZeroShotPrompt with PromptTemplate"""
-    for node in nodes:
-        if node["data"]["type"] == "ZeroShotPrompt":
-            # Build Prompt Template
-            tools = [
-                tool
-                for tool in nodes
-                if tool["type"] != "chatOutputNode"
-                and "Tool" in tool["data"]["node"]["base_classes"]
-            ]
-            node["data"] = build_prompt_template(prompt=node["data"], tools=tools)
-            break
-    return nodes
 
 
 def load_agent_executor(agent_class: type[agent_module.Agent], params, **kwargs):
