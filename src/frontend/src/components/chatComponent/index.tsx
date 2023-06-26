@@ -7,9 +7,12 @@ import ChatModal from "../../modals/chatModal";
 
 import { getBuildStatus } from "../../controllers/API";
 import { NodeType } from "../../types/flow";
+import FormTrigger from "./formTrigger";
+import FormModal from "../../modals/formModal";
 
 export default function Chat({ flow }: ChatType) {
   const [open, setOpen] = useState(false);
+  const [openForm, setOpenForm] = useState(false);
   const [isBuilt, setIsBuilt] = useState(false);
 
   useEffect(() => {
@@ -69,7 +72,9 @@ export default function Chat({ flow }: ChatType) {
             isBuilt={isBuilt}
           />
           <ChatModal key={flow.id} flow={flow} open={open} setOpen={setOpen} />
+          <FormModal key={flow.id} flow={flow} open={openForm} setOpen={setOpenForm} />
           <ChatTrigger open={open} setOpen={setOpen} isBuilt={isBuilt} />
+          <FormTrigger open={openForm} setOpen={setOpenForm} isBuilt={isBuilt} />
         </div>
       ) : (
         <BuildTrigger
