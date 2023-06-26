@@ -1,16 +1,17 @@
 import json
+import os
 from typing import Any, Callable, Dict, Type
+
+
 from langchain.vectorstores import (
+    FAISS,
+    Chroma,
+    MongoDBAtlasVectorSearch,
     Pinecone,
     Qdrant,
-    Chroma,
-    FAISS,
-    Weaviate,
     SupabaseVectorStore,
-    MongoDBAtlasVectorSearch,
+    Weaviate,
 )
-
-import os
 
 
 def docs_in_params(params: dict) -> bool:
@@ -221,3 +222,19 @@ vecstore_initializer: Dict[str, Callable[[Type[Any], dict], Any]] = {
     "SupabaseVectorStore": initialize_supabase,
     "MongoDBAtlasVectorSearch": initialize_mongodb,
 }
+
+
+def instantiate_vectorstore(class_object, params):
+    search_kwargs = params.pop("search_kwargs", {})
+    if initializer := vecstore_initializer.get(class_object.__name__):
+        vecstore = initializer(class_object, params)
+    else:
+        if "texts" in params:
+            params["documents"] = params.pop("texts")
+        vecstore = class_object.from_documents(**params)
+
+    # ! This might not work. Need to test
+    if search_kwargs and hasattr(vecstore, "as_retriever"):
+        vecstore = vecstore.as_retriever(search_kwargs=search_kwargs)
+
+    return vecstore

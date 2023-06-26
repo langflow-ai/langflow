@@ -6,7 +6,7 @@ from langchain.agents import agent as agent_module
 from langchain.agents.agent import AgentExecutor
 from langchain.agents.agent_toolkits.base import BaseToolkit
 from langchain.agents.tools import BaseTool
-from langflow.interface.initialize.vector_store import vecstore_initializer
+from langflow.interface.vector_store.initialize import instantiate_vectorstore
 
 from pydantic import ValidationError
 
@@ -140,22 +140,6 @@ def instantiate_embedding(class_object, params):
             if key in class_object.__fields__
         }
         return class_object(**params)
-
-
-def instantiate_vectorstore(class_object, params):
-    search_kwargs = params.pop("search_kwargs", {})
-    if initializer := vecstore_initializer.get(class_object.__name__):
-        vecstore = initializer(class_object, params)
-    else:
-        if "texts" in params:
-            params["documents"] = params.pop("texts")
-        vecstore = class_object.from_documents(**params)
-
-    # ! This might not work. Need to test
-    if search_kwargs and hasattr(vecstore, "as_retriever"):
-        vecstore = vecstore.as_retriever(search_kwargs=search_kwargs)
-
-    return vecstore
 
 
 def instantiate_documentloader(class_object, params):
