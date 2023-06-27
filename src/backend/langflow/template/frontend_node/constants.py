@@ -40,5 +40,5 @@ QA_CHAIN_TYPES = ["stuff", "map_reduce", "map_rerank", "refine"]
 OPENAI_API_BASE_INFO = """
 The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.
 
-You can change this to use other APIs like Prem and LocalAI.
+You can change this to use other APIs like JinaChat, LocalAI and Prem.
 """
