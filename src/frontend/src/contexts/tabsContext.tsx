@@ -597,6 +597,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           return {
             ...prev,
             [tabId]: {
+              ...prev[tabId],
               isPending: false,
             },
           };

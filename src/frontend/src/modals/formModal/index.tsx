@@ -18,6 +18,7 @@ import { postValidateCode } from "../../controllers/API";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
+import { TabsContext } from "../../contexts/tabsContext";
 
 export default function FormModal({
   flow,
@@ -32,6 +33,7 @@ export default function FormModal({
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
   const { reactFlowInstance } = useContext(typesContext);
   const { setErrorData, setNoticeData } = useContext(alertContext);
+  const { tabsState } = useContext(TabsContext);
   const ws = useRef<WebSocket | null>(null);
   const [lockChat, setLockChat] = useState(false);
   const isOpen = useRef(open);
@@ -49,6 +51,7 @@ export default function FormModal({
   }, [open]);
   useEffect(() => {
     id.current = flow.id;
+    console.log(tabsState[flow.id])
   }, [flow.id]);
 
   var isStream = false;

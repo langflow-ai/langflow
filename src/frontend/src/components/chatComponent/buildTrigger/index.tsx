@@ -10,6 +10,7 @@ import { alertContext } from "../../../contexts/alertContext";
 import { postBuildInit } from "../../../controllers/API";
 
 import RadialProgressComponent from "../../RadialProgress";
+import { TabsContext } from "../../../contexts/tabsContext";
 
 export default function BuildTrigger({
   open,
@@ -24,6 +25,7 @@ export default function BuildTrigger({
 }) {
   const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
   const { reactFlowInstance } = useContext(typesContext);
+  const { setTabsState } = useContext(TabsContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [isIconTouched, setIsIconTouched] = useState(false);
   const eventClick = isBuilding ? "pointer-events-none" : "";
@@ -87,6 +89,17 @@ export default function BuildTrigger({
       } else if (parsedData.log) {
         // If the event is a log, log it
         setSuccessData({ title: parsedData.log });
+      } else if (parsedData.input_keys) {
+        setTabsState((old) => {
+          return {
+            ...old,
+            [flowId]: {
+              ...old[flowId],
+              formKeysData: parsedData,
+            
+            }
+          };
+        })
       } else {
         // Otherwise, process the data
         const isValid = processStreamResult(parsedData);
