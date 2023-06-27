@@ -97,6 +97,19 @@ def instantiate_prompt(node_type, class_object, params):
         if "tools" not in params:
             params["tools"] = []
         return ZeroShotAgent.create_prompt(**params)
+    if "MessagePromptTemplate" in node_type:
+        # Then we only need the template
+        from_template_params = {
+            "template": params.pop("prompt", params.pop("template", ""))
+        }
+
+        if not from_template_params.get("template"):
+            raise ValueError("Prompt template is required")
+        return class_object.from_template(**from_template_params)
+
+    if node_type == "ChatPromptTemplate":
+        return class_object.from_messages(**params)
+
     return class_object(**params)
 
 
