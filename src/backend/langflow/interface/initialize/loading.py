@@ -6,6 +6,7 @@ from langchain.agents import agent as agent_module
 from langchain.agents.agent import AgentExecutor
 from langchain.agents.agent_toolkits.base import BaseToolkit
 from langchain.agents.tools import BaseTool
+
 from langflow.interface.initialize.vector_store import vecstore_initializer
 
 from pydantic import ValidationError
@@ -20,6 +21,7 @@ from langchain.chains.base import Chain
 from langchain.vectorstores.base import VectorStore
 from langchain.document_loaders.base import BaseLoader
 from langchain.prompts.base import BasePromptTemplate
+from langflow.chat.config import ChatConfig
 
 
 def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
@@ -76,8 +78,19 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
         return instantiate_utility(node_type, class_object, params)
     elif base_type == "chains":
         return instantiate_chains(node_type, class_object, params)
+    elif base_type == "llms":
+        return instantiate_llm(node_type, class_object, params)
     else:
         return class_object(**params)
+
+
+def instantiate_llm(node_type, class_object, params: Dict):
+    # This is a workaround so JinaChat works until streaming is implemented
+    # if "openai_api_base" in params and "jina" in params["openai_api_base"]:
+    # False if condition is True
+    ChatConfig.streaming = "jina" not in params.get("openai_api_base", "")
+
+    return class_object(**params)
 
 
 def instantiate_chains(node_type, class_object: Type[Chain], params: Dict):
