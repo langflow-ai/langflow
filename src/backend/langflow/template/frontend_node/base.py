@@ -15,6 +15,7 @@ class FrontendNode(BaseModel):
     base_classes: List[str]
     name: str = ""
     display_name: str = ""
+    custom_fields: List[str] = []
 
     def to_dict(self) -> dict:
         return {
@@ -23,6 +24,7 @@ class FrontendNode(BaseModel):
                 "description": self.description,
                 "base_classes": self.base_classes,
                 "display_name": self.display_name or self.name,
+                "custom_fields": self.custom_fields,
             },
         }
 

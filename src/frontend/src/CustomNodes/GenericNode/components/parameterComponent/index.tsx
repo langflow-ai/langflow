@@ -229,6 +229,10 @@ export default function ParameterComponent({
           </div>
         ) : left === true && type === "code" ? (
           <CodeAreaComponent
+            setNodeClass={(nodeClass) => {
+              data.node = nodeClass;
+            }}
+            nodeClass={data.node}
             disabled={disabled}
             value={data.node.template[name].value ?? ""}
             onChange={handleOnNewValue}
@@ -256,6 +260,7 @@ export default function ParameterComponent({
           </div>
         ) : left === true && type === "prompt" ? (
           <PromptAreaComponent
+            nodeClass={data.node}
             disabled={disabled}
             value={data.node.template[name].value ?? ""}
             onChange={handleOnNewValue}
