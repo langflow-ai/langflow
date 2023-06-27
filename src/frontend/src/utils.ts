@@ -830,10 +830,16 @@ export function groupByFamily(data, baseClasses) {
 
   Object.keys(data).map((d) => {
     Object.keys(data[d]).map((n) => {
-      if (
-        data[d][n].base_classes.some((r) => baseClasses.split("\n").includes(r))
-      ) {
-        arrOfParent.push(d);
+      try {
+        if (
+          data[d][n].base_classes.some((r) =>
+            baseClasses.split("\n").includes(r)
+          )
+        ) {
+          arrOfParent.push(d);
+        }
+      } catch (e) {
+        console.log(e);
       }
     });
   });
@@ -844,16 +850,20 @@ export function groupByFamily(data, baseClasses) {
 
   Object.keys(data).map((d) => {
     Object.keys(data[d]).map((n) => {
-      baseClasses.split("\n").forEach((tol) => {
-        data[d][n].base_classes.forEach((data) => {
-          if (tol == data) {
-            arrOfType.push({
-              family: d,
-              type: data,
-            });
-          }
+      try {
+        baseClasses.split("\n").forEach((tol) => {
+          data[d][n].base_classes.forEach((data) => {
+            if (tol == data) {
+              arrOfType.push({
+                family: d,
+                type: data,
+              });
+            }
+          });
         });
-      });
+      } catch (e) {
+        console.log(e);
+      }
     });
   });
 
