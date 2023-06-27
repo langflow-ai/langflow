@@ -31,6 +31,10 @@ def post_validate_code(code: Code):
 def post_validate_prompt(prompt: ValidatePromptRequest):
     try:
         input_variables = validate_prompt(prompt.template)
+        # Reinitialize custom_fields
+        old_custom_fields = prompt.frontend_node.custom_fields.copy()
+        prompt.frontend_node.custom_fields = []
+        # Add new variables to the template
         for variable in input_variables:
             try:
                 template_field = TemplateField(
@@ -39,12 +43,19 @@ def post_validate_prompt(prompt: ValidatePromptRequest):
 
                 prompt.frontend_node.template[variable] = template_field.to_dict()
                 prompt.frontend_node.custom_fields.append(variable)
-                for key in prompt.frontend_node.template:
-                    if key not in input_variables:
-                        prompt.frontend_node.template.pop(key, None)
+
             except Exception as exc:
                 logger.exception(exc)
                 raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+        # Remove variables that are not in the template anymore
+        for variable in old_custom_fields:
+            if variable not in input_variables:
+                try:
+                    prompt.frontend_node.template.pop(variable, None)
+                except Exception as exc:
+                    logger.exception(exc)
+                    raise HTTPException(status_code=500, detail=str(exc)) from exc
 
         return PromptValidationResponse(
             input_variables=input_variables,
