@@ -10,7 +10,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { CodeBlock } from "./codeBlock";
 import Convert from "ansi-to-html";
-import { User2, MessageCircle } from "lucide-react";
+import { User2, MessageSquare } from "lucide-react";
 
 export default function ChatMessage({
   chat,
@@ -72,7 +72,7 @@ export default function ChatMessage({
                   onClick={() => setHidden((prev) => !prev)}
                   className="absolute -top-1 -left-2 cursor-pointer"
                 >
-                  <MessageCircle className="w-5 h-5 animate-bounce dark:text-white" />
+                  <MessageSquare className="w-5 h-5 animate-bounce dark:text-white" />
                 </div>
               )}
               {chat.thought && chat.thought !== "" && !hidden && (

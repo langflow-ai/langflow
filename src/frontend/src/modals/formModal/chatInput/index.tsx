@@ -53,12 +53,12 @@ export default function ChatInput({
           lockChat
             ? " bg-input text-black dark:bg-gray-700 dark:text-gray-300"
             : "  bg-white-200 text-black dark:bg-gray-900 dark:text-gray-300",
-          "form-input block w-full custom-scroll rounded-md border-gray-300 dark:border-gray-600 pr-10 sm:text-sm" +
+          "p-4 form-input block w-full custom-scroll rounded-md border-gray-300 dark:border-gray-600 pr-12 sm:text-sm" +
             INPUT_STYLE
         )}
         placeholder={"Send a message..."}
       />
-      <div className="absolute bottom-0.5 right-3">
+      <div className="absolute bottom-2.5 right-4">
         <button disabled={lockChat} onClick={() => sendMessage()}>
           {lockChat ? (
             <Lock
