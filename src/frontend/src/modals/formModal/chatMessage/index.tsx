@@ -31,136 +31,143 @@ export default function ChatMessage({
   return (
     <div
       className={classNames(
-        "w-full py-2 pl-2 flex",
-        chat.isSend
-          ? "bg-background dark:bg-gray-900 "
-          : "bg-input  dark:bg-gray-800"
+        "w-full flex",
+        chat.isSend ? "justify-end" : "justify-start"
       )}
     >
       <div
         className={classNames(
-          "rounded-full overflow-hidden w-8 h-8 flex items-center my-3 justify-center"
+          "w-3/4 py-2 px-2 mb-4 flex",
+          chat.isSend
+            ? "bg-input pl-4 flex-row-reverse rounded-xl rounded-tr-none dark:bg-gray-900 "
+            : "bg-foreground pr-4 rounded-xl rounded-tl-none dark:bg-gray-800"
         )}
       >
-        {!chat.isSend && (
-          <div className="relative w-8 h-8">
-            <img
-              className={
-                "absolute transition-opacity duration-500 scale-150 " +
-                (lockChat ? "opacity-100" : "opacity-0")
-              }
-              src={lastMessage ? AiIcon : AiIconStill}
-            />
-            <img
-              className={
-                "absolute transition-opacity duration-500 scale-150 " +
-                (lockChat ? "opacity-0" : "opacity-100")
-              }
-              src={AiIconStill}
-            />
-          </div>
-        )}
-        {chat.isSend && (
-          <User2 className="w-6 h-6 -mb-1 text-gray-800 dark:text-gray-200" />
-        )}
-      </div>
-      {!chat.isSend ? (
-        <div className="w-full text-start flex items-center">
-          <div className="w-full relative text-start inline-block text-gray-600 dark:text-gray-300 text-sm font-normal">
-            {hidden && chat.thought && chat.thought !== "" && (
-              <div
-                onClick={() => setHidden((prev) => !prev)}
-                className="absolute -top-1 -left-2 cursor-pointer"
-              >
-                <MessageCircle className="w-5 h-5 animate-bounce dark:text-white" />
-              </div>
-            )}
-            {chat.thought && chat.thought !== "" && !hidden && (
-              <div
-                onClick={() => setHidden((prev) => !prev)}
-                className=" text-start inline-block rounded-md text-gray-600 dark:text-gray-200 h-full border border-gray-300 dark:border-gray-500
+        <div
+          className={classNames(
+            "rounded-full overflow-hidden w-8 h-8 flex items-center my-3 mx-3 justify-center"
+          )}
+        >
+          {!chat.isSend && (
+            <div className="relative w-8 h-8">
+              <img
+                className={
+                  "absolute transition-opacity duration-500 scale-150 " +
+                  (lockChat ? "opacity-100" : "opacity-0")
+                }
+                src={lastMessage ? AiIcon : AiIconStill}
+              />
+              <img
+                className={
+                  "absolute transition-opacity duration-500 scale-150 " +
+                  (lockChat ? "opacity-0" : "opacity-100")
+                }
+                src={AiIconStill}
+              />
+            </div>
+          )}
+          {chat.isSend && (
+            <User2 className="w-6 h-6 text-gray-800 dark:text-gray-200" />
+          )}
+        </div>
+        {!chat.isSend ? (
+          <div className="w-full text-start flex items-center">
+            <div className="w-full relative text-start inline-block text-background text-sm font-normal">
+              {hidden && chat.thought && chat.thought !== "" && (
+                <div
+                  onClick={() => setHidden((prev) => !prev)}
+                  className="absolute -top-1 -left-2 cursor-pointer"
+                >
+                  <MessageCircle className="w-5 h-5 animate-bounce dark:text-white" />
+                </div>
+              )}
+              {chat.thought && chat.thought !== "" && !hidden && (
+                <div
+                  onClick={() => setHidden((prev) => !prev)}
+                  className=" text-start inline-block rounded-md text-background h-full border border-gray-300 dark:border-gray-500
 								bg-muted dark:bg-gray-800 w-[95%] pb-3 pt-3 px-2 ml-3 cursor-pointer scrollbar-hide overflow-scroll"
-                dangerouslySetInnerHTML={{
-                  __html: convert.toHtml(chat.thought),
-                }}
-              ></div>
-            )}
-            {chat.thought && chat.thought !== "" && !hidden && <br></br>}
-            <div className="w-full px-4 pb-3 pt-3 pr-8">
-              <div className="dark:text-white w-full">
-                <div className="w-full">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm, remarkMath]}
-                    rehypePlugins={[rehypeMathjax]}
-                    className="markdown prose dark:prose-invert text-gray-600 dark:text-gray-200"
-                    components={{
-                      code({ node, inline, className, children, ...props }) {
-                        if (children.length) {
-                          if (children[0] == "▍") {
-                            return (
-                              <span className="animate-pulse cursor-default mt-1">
-                                ▍
-                              </span>
+                  dangerouslySetInnerHTML={{
+                    __html: convert.toHtml(chat.thought),
+                  }}
+                ></div>
+              )}
+              {chat.thought && chat.thought !== "" && !hidden && <br></br>}
+              <div className="w-full pb-3 pt-3">
+                <div className="dark:text-white w-full">
+                  <div className="w-full">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm, remarkMath]}
+                      rehypePlugins={[rehypeMathjax]}
+                      className="markdown prose dark:prose-invert text-background"
+                      components={{
+                        code({ node, inline, className, children, ...props }) {
+                          if (children.length) {
+                            if (children[0] == "▍") {
+                              return (
+                                <span className="animate-pulse cursor-default mt-1">
+                                  ▍
+                                </span>
+                              );
+                            }
+
+                            children[0] = (children[0] as string).replace(
+                              "`▍`",
+                              "▍"
                             );
                           }
 
-                          children[0] = (children[0] as string).replace(
-                            "`▍`",
-                            "▍"
+                          const match = /language-(\w+)/.exec(className || "");
+
+                          return !inline ? (
+                            <CodeBlock
+                              key={Math.random()}
+                              language={(match && match[1]) || ""}
+                              value={String(children).replace(/\n$/, "")}
+                              {...props}
+                            />
+                          ) : (
+                            <code className={className} {...props}>
+                              {children}
+                            </code>
                           );
-                        }
-
-                        const match = /language-(\w+)/.exec(className || "");
-
-                        return !inline ? (
-                          <CodeBlock
-                            key={Math.random()}
-                            language={(match && match[1]) || ""}
-                            value={String(children).replace(/\n$/, "")}
-                            {...props}
-                          />
-                        ) : (
-                          <code className={className} {...props}>
-                            {children}
-                          </code>
-                        );
-                      },
-                    }}
-                  >
-                    {message}
-                  </ReactMarkdown>
-                </div>
-                {chat.files && (
-                  <div className="my-2 w-full">
-                    {chat.files.map((file, index) => {
-                      return (
-                        <div key={index} className="my-2 w-full">
-                          <FileCard
-                            fileName={"Generated File"}
-                            fileType={file.data_type}
-                            content={file.data}
-                          />
-                        </div>
-                      );
-                    })}
+                        },
+                      }}
+                    >
+                      {message}
+                    </ReactMarkdown>
                   </div>
-                )}
+                  {chat.files && (
+                    <div className="my-2 w-full">
+                      {chat.files.map((file, index) => {
+                        return (
+                          <div key={index} className="my-2 w-full">
+                            <FileCard
+                              fileName={"Generated File"}
+                              fileType={file.data_type}
+                              content={file.data}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      ) : (
-        <div className="w-full flex items-center">
-          <div className="text-start inline-block px-3 text-gray-600 dark:text-white">
-            <span
-              className="text-gray-600 dark:text-gray-200"
-              dangerouslySetInnerHTML={{
-                __html: message.replace(/\n/g, "<br>"),
-              }}
-            ></span>
+        ) : (
+          <div className="w-full flex items-center">
+            <div className="text-start inline-block text-gray-600 dark:text-white">
+              <span
+                className="text-gray-600 dark:text-gray-200"
+                dangerouslySetInnerHTML={{
+                  __html: message.replace(/\n/g, "<br>"),
+                }}
+              ></span>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

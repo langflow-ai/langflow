@@ -11,7 +11,15 @@ import { ChatMessageType } from "../../types/chat";
 import ChatInput from "./chatInput";
 
 import _ from "lodash";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../../components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../../components/ui/dialog";
 import { dark } from "@mui/material/styles/createPalette";
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants";
 import { postValidateCode } from "../../controllers/API";
@@ -51,7 +59,7 @@ export default function FormModal({
   }, [open]);
   useEffect(() => {
     id.current = flow.id;
-    console.log(tabsState[flow.id])
+    console.log(tabsState[flow.id]);
   }, [flow.id]);
 
   var isStream = false;
@@ -338,15 +346,56 @@ export default function FormModal({
         </DialogHeader>
 
         <div className="flex h-[600px] w-full mt-2">
-          <div className="w-64 h-full flex flex-col justify-start">
-          <div className="grid w-full max-w-sm items-center gap-1.5">
-      <Label htmlFor="context">context</Label>
-      <Input placeholder="Type your message" id="context"/>
-    </div>
+          <div className="w-96 h-full flex flex-col justify-start">
           </div>
           <div className="w-full pl-6">
-            <div className="bg-muted rounded-md w-full h-full">
-              teste
+            <div className="flex flex-col rounded-md w-full h-full">
+              <div
+                ref={messagesRef}
+                className="w-full h-full flex-col flex items-center overflow-scroll scrollbar-hide"
+              >
+                {chatHistory.length > 0 ? (
+                  chatHistory.map((c, i) => (
+                    <ChatMessage
+                      lockChat={lockChat}
+                      chat={c}
+                      lastMessage={chatHistory.length - 1 == i ? true : false}
+                      key={i}
+                    />
+                  ))
+                ) : (
+                  <div className="flex flex-col h-full text-center justify-center w-full items-center align-middle">
+                    <span>
+                      👋{" "}
+                      <span className="text-gray-600 dark:text-gray-300 text-lg">
+                        LangFlow Chat
+                      </span>
+                    </span>
+                    <br />
+                    <div className="bg-muted dark:bg-gray-900 rounded-md w-2/4 px-6 py-8 border border-gray-200 dark:border-gray-700">
+                      <span className="text-base text-gray-500">
+                        Start a conversation and click the agent’s thoughts{" "}
+                        <span>
+                          <MessagesSquare className="w-5 h-5 inline animate-bounce mx-1 " />
+                        </span>{" "}
+                        to inspect the chaining process.
+                      </span>
+                    </div>
+                  </div>
+                )}
+                <div ref={ref}></div>
+              </div>
+              <div className="w-full bg-background flex-col flex items-center justify-between">
+                <div className="relative w-full mt-1 rounded-md shadow-sm">
+                  <ChatInput
+                    chatValue={chatValue}
+                    lockChat={lockChat}
+                    sendMessage={sendMessage}
+                    setChatValue={setChatValue}
+                    inputRef={ref}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
