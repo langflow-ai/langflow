@@ -180,11 +180,17 @@ class PromptVertex(Vertex):
                 ]
             else:
                 prompt_params = ["template"]
-            for param in prompt_params:
-                prompt_text = self.params[param]
-                variables = extract_input_variables_from_prompt(prompt_text)
-                self.params["input_variables"].extend(variables)
-            self.params["input_variables"] = list(set(self.params["input_variables"]))
+
+            if "prompt" not in self.params and "messages" not in self.params:
+                for param in prompt_params:
+                    prompt_text = self.params[param]
+                    variables = extract_input_variables_from_prompt(prompt_text)
+                    self.params["input_variables"].extend(variables)
+                self.params["input_variables"] = list(
+                    set(self.params["input_variables"])
+                )
+            else:
+                self.params.pop("input_variables", None)
 
             self._build()
         return self._built_object
