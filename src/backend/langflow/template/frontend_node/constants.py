@@ -32,3 +32,13 @@ You are a good listener and you can talk about anything.
 HUMAN_PROMPT = "{input}"
 
 QA_CHAIN_TYPES = ["stuff", "map_reduce", "map_rerank", "refine"]
+
+
+# This variable is used to tell the user
+# that it can be changed to use other APIs
+# like Prem and LocalAI
+OPENAI_API_BASE_INFO = """
+The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.
+
+You can change this to use other APIs like Prem and LocalAI.
+"""
