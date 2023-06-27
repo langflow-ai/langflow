@@ -5,7 +5,7 @@ import { alertContext } from "../../contexts/alertContext";
 import { validateNodes } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import ChatMessage from "./chatMessage";
-import { X, MessagesSquare, Eraser, TerminalSquare } from "lucide-react";
+import { X, MessagesSquare, Eraser, TerminalSquare, MessageCircle, MessageSquareDashed, MessageSquare } from "lucide-react";
 import { sendAllProps } from "../../types/api";
 import { ChatMessageType } from "../../types/chat";
 import ChatInput from "./chatInput";
@@ -425,7 +425,7 @@ export default function FormModal({
                       <span className="text-base text-gray-500">
                         Start a conversation and click the agent’s thoughts{" "}
                         <span>
-                          <MessagesSquare className="w-5 h-5 inline animate-bounce mx-1 " />
+                          <MessageSquare className="w-5 h-5 inline animate-bounce mx-1 " />
                         </span>{" "}
                         to inspect the chaining process.
                       </span>
@@ -434,7 +434,7 @@ export default function FormModal({
                 )}
                 <div ref={ref}></div>
               </div>
-              <div className="w-full p-2 flex-col flex items-center justify-between">
+              <div className="w-full px-8 pb-6 flex-col flex items-center justify-between">
                 <div className="relative w-full rounded-md shadow-sm">
                   <ChatInput
                     chatValue={chatValue}
