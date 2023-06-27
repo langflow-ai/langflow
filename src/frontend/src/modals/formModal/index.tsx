@@ -27,6 +27,16 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { TabsContext } from "../../contexts/tabsContext";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "../../components/ui/accordion";
+import { AccordionHeader } from "@radix-ui/react-accordion";
+import { Textarea } from "../../components/ui/textarea";
+import { Badge } from "../../components/ui/badge";
+import { Separator } from "../../components/ui/separator";
 
 export default function FormModal({
   flow,
@@ -334,7 +344,7 @@ export default function FormModal({
   return (
     <Dialog open={open} onOpenChange={setModalOpen}>
       <DialogTrigger className="hidden"></DialogTrigger>
-      <DialogContent className="min-w-[1000px]">
+      <DialogContent className="min-w-[95vw]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Chat Form</span>
@@ -345,11 +355,31 @@ export default function FormModal({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex h-[600px] w-full mt-2">
-          <div className="w-96 h-full flex flex-col justify-start">
+        <div className="flex h-[80vh] w-full mt-2">
+          <div className="w-2/5 h-full flex flex-col justify-start mr-6">
+            <Accordion type="single" collapsible className="w-full">
+              {tabsState[id.current].formKeysData.input_keys.map((i, k) => (
+                <AccordionItem key={k} value={i}>
+                  <AccordionTrigger>{i}</AccordionTrigger>
+                  <AccordionContent>
+                    <div className="p-1">
+                      <Textarea placeholder="Enter text..."></Textarea>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+              {tabsState[id.current].formKeysData.memory_keys.map((i, k) => (
+                <AccordionItem key={k} value={i}>
+                  <div className="flex flex-1 items-center justify-between py-4 font-medium transition-all group">
+                    <div className="group-hover:underline">{i}</div>
+                    <Badge>Message Key</Badge>
+                  </div>
+                </AccordionItem>
+              ))}
+            </Accordion>
           </div>
-          <div className="w-full pl-6">
-            <div className="flex flex-col rounded-md w-full h-full">
+          <div className="w-full ">
+            <div className="flex flex-col rounded-md border w-full h-full">
               <div
                 ref={messagesRef}
                 className="w-full h-full flex-col flex items-center overflow-scroll scrollbar-hide"
@@ -385,8 +415,8 @@ export default function FormModal({
                 )}
                 <div ref={ref}></div>
               </div>
-              <div className="w-full bg-background flex-col flex items-center justify-between">
-                <div className="relative w-full mt-1 rounded-md shadow-sm">
+              <div className="w-full p-2 flex-col flex items-center justify-between">
+                <div className="relative w-full rounded-md shadow-sm">
                   <ChatInput
                     chatValue={chatValue}
                     lockChat={lockChat}

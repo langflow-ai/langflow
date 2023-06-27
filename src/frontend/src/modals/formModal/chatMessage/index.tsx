@@ -29,18 +29,12 @@ export default function ChatMessage({
   }, [chat.message]);
   const [hidden, setHidden] = useState(true);
   return (
-    <div
-      className={classNames(
-        "w-full flex",
-        chat.isSend ? "justify-end" : "justify-start"
-      )}
-    >
       <div
         className={classNames(
-          "w-3/4 py-2 px-2 mb-4 flex",
+          "w-full py-2 px-2 pl-4 flex",
           chat.isSend
-            ? "bg-input pl-4 flex-row-reverse rounded-xl rounded-tr-none dark:bg-gray-900 "
-            : "bg-foreground pr-4 rounded-xl rounded-tl-none dark:bg-gray-800"
+            ? "bg-input dark:bg-gray-900 "
+            : " dark:bg-gray-800"
         )}
       >
         <div
@@ -72,7 +66,7 @@ export default function ChatMessage({
         </div>
         {!chat.isSend ? (
           <div className="w-full text-start flex items-center">
-            <div className="w-full relative text-start inline-block text-background text-sm font-normal">
+            <div className="w-full relative text-start inline-block text-primary text-sm font-normal">
               {hidden && chat.thought && chat.thought !== "" && (
                 <div
                   onClick={() => setHidden((prev) => !prev)}
@@ -84,7 +78,7 @@ export default function ChatMessage({
               {chat.thought && chat.thought !== "" && !hidden && (
                 <div
                   onClick={() => setHidden((prev) => !prev)}
-                  className=" text-start inline-block rounded-md text-background h-full border border-gray-300 dark:border-gray-500
+                  className=" text-start inline-block rounded-md text-primary h-full border border-gray-300 dark:border-gray-500
 								bg-muted dark:bg-gray-800 w-[95%] pb-3 pt-3 px-2 ml-3 cursor-pointer scrollbar-hide overflow-scroll"
                   dangerouslySetInnerHTML={{
                     __html: convert.toHtml(chat.thought),
@@ -98,7 +92,7 @@ export default function ChatMessage({
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm, remarkMath]}
                       rehypePlugins={[rehypeMathjax]}
-                      className="markdown prose dark:prose-invert text-background"
+                      className="markdown prose dark:prose-invert text-primary"
                       components={{
                         code({ node, inline, className, children, ...props }) {
                           if (children.length) {
@@ -168,6 +162,5 @@ export default function ChatMessage({
           </div>
         )}
       </div>
-    </div>
   );
 }
