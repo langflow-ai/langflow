@@ -227,8 +227,8 @@ export default function ParameterComponent({
           </div>
         ) : left === true && type === "code" ? (
           <CodeAreaComponent
-          setTemplate={(template)=>{data.node.template = template}}
-            template={data.node.template}
+          setNodeClass={(nodeClass)=>{data.node = nodeClass}}
+            nodeClass={data.node}
             disabled={disabled}
             value={data.node.template[name].value ?? ""}
             onChange={handleOnNewValue}

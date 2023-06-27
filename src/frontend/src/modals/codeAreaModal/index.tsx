@@ -21,18 +21,19 @@ import {
 } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants";
-import { APITemplateType } from "../../types/api";
+import Loading from "../../components/ui/loading";
+import { APIClassType, APITemplateType } from "../../types/api";
 
 export default function CodeAreaModal({
   value,
   setValue,
-  template,
-  setTemplate,
+  nodeClass,
+  setNodeClass
 }: {
   setValue: (value: string) => void;
   value: string;
-  template: APITemplateType;
-  setTemplate: (template: APITemplateType) => void;
+  nodeClass: APIClassType,
+  setNodeClass: (Class: APIClassType) => void;
 }) {
   const [open, setOpen] = useState(true);
   const [code, setCode] = useState(value);
@@ -86,14 +87,16 @@ export default function CodeAreaModal({
       .catch((_) => {
         setLoading(false);
         setErrorData({
-          title: "There is something wrong with this code, please review it",
-        });
-      });
-    postCustomComponent(code).then((apiReturn) => {
+          title:
+            "There is something wrong with this code, please review it",
+        })
+      }
+      );
+    UpdateTemplate('code',nodeClass).then((apiReturn) => {
       const data = apiReturn.data;
-      if (data.template) {
-        console.log("updated");
-        setTemplate(data.template);
+      if (data) {
+        console.log(data)   
+        setNodeClass(data);
         setModalOpen(false);
       }
     });

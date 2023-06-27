@@ -4,6 +4,7 @@ import {
   errorsTypeAPI,
   InitTypeAPI,
   APITemplateType,
+  APIClassType,
 } from "./../../types/api/index";
 import { APIObjectType, sendAllProps } from "../../types/api/index";
 import axios, { AxiosResponse } from "axios";
@@ -321,8 +322,6 @@ export async function postBuildInit(
   return await axios.post(`/api/v1/build/init`, flow);
 }
 
-export async function postCustomComponent(
-  code: string
-): Promise<AxiosResponse<{ template: APITemplateType }>> {
-  return await axios.post(`/api/v1/custom_component`, { code });
+export async function UpdateTemplate(type:string, template:APITemplateType):Promise<AxiosResponse<{template:APITemplateType}>>{
+  return await axios.get(`/dynamic_node`);
 }
