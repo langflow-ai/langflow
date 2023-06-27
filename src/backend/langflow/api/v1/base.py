@@ -13,9 +13,13 @@ class Code(BaseModel):
     code: str
 
 
+class FrontendNodeRequest(FrontendNode):
+    template: dict
+
+
 class ValidatePromptRequest(BaseModel):
     template: str
-    frontend_node: FrontendNode
+    frontend_node: FrontendNodeRequest
 
 
 # Build ValidationResponse class for {"imports": {"errors": []}, "function": {"errors": []}}
@@ -34,7 +38,7 @@ class CodeValidationResponse(BaseModel):
 
 class PromptValidationResponse(BaseModel):
     input_variables: list
-    frontend_node: FrontendNode
+    frontend_node: FrontendNodeRequest
 
 
 INVALID_CHARACTERS = {
