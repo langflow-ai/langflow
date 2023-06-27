@@ -7,6 +7,7 @@ import {
 } from "react";
 import { NodeDataType } from "../flow/index";
 import { typesContextType } from "../typesContext";
+import { APIClassType, APITemplateType } from "../api";
 export type InputComponentType = {
   value: string;
   disabled?: boolean;
@@ -54,6 +55,15 @@ export type TextAreaComponentType = {
   onChange: (value: string[] | string) => void;
   value: string;
   editNode?: boolean;
+};
+
+export type CodeAreaComponentType = {
+  disabled: boolean;
+  onChange: (value: string[] | string) => void;
+  value: string;
+  editNode?: boolean;
+  nodeClass: APIClassType;
+  setNodeClass: (value: APIClassType) => void;
 };
 
 export type FileComponentType = {

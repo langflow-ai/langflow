@@ -336,3 +336,9 @@ export async function uploadFile(
   formData.append("file", file);
   return await axios.post(`/api/v1/upload/${id}`, formData);
 }
+export async function UpdateTemplate(
+  type: string,
+  nodeClass: APIClassType
+): Promise<AxiosResponse<APIClassType>> {
+  return await axios.get(`/dynamic_node`);
+}

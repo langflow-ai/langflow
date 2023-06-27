@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import CodeAreaModal from "../../modals/codeAreaModal";
 import TextAreaModal from "../../modals/textAreaModal";
-import { TextAreaComponentType } from "../../types/components";
+import { CodeAreaComponentType, TextAreaComponentType } from "../../types/components";
 import { INPUT_STYLE } from "../../constants";
 import { ExternalLink } from "lucide-react";
 
@@ -11,7 +11,9 @@ export default function CodeAreaComponent({
   onChange,
   disabled,
   editNode = false,
-}: TextAreaComponentType) {
+  nodeClass,
+  setNodeClass,
+}: CodeAreaComponentType) {
   const [myValue, setMyValue] = useState(value);
   const { openPopUp } = useContext(PopUpContext);
   useEffect(() => {
@@ -37,6 +39,8 @@ export default function CodeAreaComponent({
             openPopUp(
               <CodeAreaModal
                 value={myValue}
+                nodeClass={nodeClass}
+                setNodeClass={setNodeClass}
                 setValue={(t: string) => {
                   setMyValue(t);
                   onChange(t);
@@ -59,7 +63,9 @@ export default function CodeAreaComponent({
           onClick={() => {
             openPopUp(
               <CodeAreaModal
+              setNodeClass={setNodeClass}
                 value={myValue}
+                nodeClass={nodeClass}
                 setValue={(t: string) => {
                   setMyValue(t);
                   onChange(t);
