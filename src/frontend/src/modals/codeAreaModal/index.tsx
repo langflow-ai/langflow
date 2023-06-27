@@ -7,7 +7,7 @@ import "ace-builds/src-noconflict/theme-twilight";
 import "ace-builds/src-noconflict/ext-language_tools";
 // import "ace-builds/webpack-resolver";
 import { darkContext } from "../../contexts/darkContext";
-import { UpdateTemplate, postValidateCode } from "../../controllers/API";
+import { postCustomComponent, postValidateCode } from "../../controllers/API";
 import { alertContext } from "../../contexts/alertContext";
 import {
   Dialog,
@@ -89,10 +89,9 @@ export default function CodeAreaModal({
           title: "There is something wrong with this code, please review it",
         });
       });
-    UpdateTemplate("code", nodeClass).then((apiReturn) => {
+    postCustomComponent(code, nodeClass).then((apiReturn) => {
       const data = apiReturn.data;
       if (data) {
-        console.log(data);
         setNodeClass(data);
         setModalOpen(false);
       }

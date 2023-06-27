@@ -11,7 +11,10 @@ from langflow.api.v1.schemas import (
     UploadFileResponse,
 )
 
-from langflow.interface.types import build_langchain_types_dict
+from langflow.interface.types import (
+    build_langchain_types_dict,
+    build_langchain_template_custom_component,
+)
 from langflow.database.base import get_session
 from sqlmodel import Session
 
@@ -81,3 +84,45 @@ def get_version():
     from langflow import __version__
 
     return {"version": __version__}
+
+
+# @router.post("/custom_component", response_model=CustomComponentResponse, status_code=200)
+@router.post("/custom_component", status_code=200)
+def custom_component(
+    code: CustomComponentCode,
+    session: Session = Depends(get_session),
+):
+    code_test = """
+from langflow.interface.chains.base import ChainCreator
+from langflow.interface.tools.base import ToolCreator
+
+
+class MyPythonClass():
+    def __init__(self, title: str, author: str, year_published: int):
+        self.title = title
+        self.author = author
+        self.year_published = year_published
+
+    def get_details(self):
+        return f"Title: {self.title}, Author: {self.author}, Year Published: {self.year_published}"
+
+    def update_year_published(self, new_year: int):
+        self.year_published = new_year
+        print(f"The year of publication has been updated to {new_year}.")
+
+    def build(self, name: str, id: int, other: str) -> ChainCreator:
+        return ChainCreator()
+"""
+
+    extractor = ClassCodeExtractor(code_test)
+    data = extractor.extract_class_info()
+    is_valid_class_template(data)
+
+    (
+        function_args,
+        function_return_type,
+    ) = extractor.get_entrypoint_function_args_and_return_type()
+
+    return build_langchain_template_custom_component(
+        code_test, function_args, function_return_type
+    )
