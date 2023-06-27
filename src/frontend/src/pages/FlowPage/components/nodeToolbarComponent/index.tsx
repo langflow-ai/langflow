@@ -81,6 +81,7 @@ const NodeToolbarComponent = (props) => {
                     ? " text-muted-foreground"
                     : " text-foreground")
               )}
+              target="_blank"
               href={props.data.node.documentation}
               // deactivate link if no documentation is provided
               onClick={(event) => {
