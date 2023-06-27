@@ -423,7 +423,7 @@ export default function FormModal({
                     <br />
                     <div className="bg-muted dark:bg-gray-900 rounded-md w-2/4 px-6 py-8 border border-gray-200 dark:border-gray-700">
                       <span className="text-base text-gray-500">
-                        Start a conversation and click the agent’s thoughts{" "}
+                        Start a conversation and click the agent's thoughts{" "}
                         <span>
                           <MessageSquare className="w-5 h-5 inline animate-bounce mx-1 " />
                         </span>{" "}
