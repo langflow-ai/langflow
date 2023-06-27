@@ -46,6 +46,7 @@ export type InputListComponentType = {
 
 export type TextAreaComponentType = {
   nodeClass?: APIClassType;
+  setNodeClass?: (value: APIClassType) => void;
   disabled: boolean;
   onChange: (value: string[] | string) => void;
   value: string;

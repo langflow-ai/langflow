@@ -8,6 +8,7 @@ import { ExternalLink } from "lucide-react";
 
 export default function PromptAreaComponent({
   nodeClass,
+  setNodeClass,
   value,
   onChange,
   disabled,
@@ -46,6 +47,7 @@ export default function PromptAreaComponent({
                   onChange(t);
                 }}
                 nodeClass={nodeClass}
+                setNodeClass={setNodeClass}
               />
             );
           }}
