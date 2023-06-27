@@ -4,6 +4,7 @@ import {
   errorsTypeAPI,
   InitTypeAPI,
   UploadFileTypeAPI,
+  APIClassType,
 } from "./../../types/api/index";
 import { APIObjectType, sendAllProps } from "../../types/api/index";
 import axios, { AxiosResponse } from "axios";
@@ -56,9 +57,13 @@ export async function postValidateCode(
  * @returns {Promise<AxiosResponse<PromptTypeAPI>>} A promise that resolves to an AxiosResponse containing the validation results.
  */
 export async function checkPrompt(
-  template: string
+  template: string,
+  frontend_node: APIClassType
 ): Promise<AxiosResponse<PromptTypeAPI>> {
-  return await axios.post("/api/v1/validate/prompt", { template });
+  return await axios.post("/api/v1/validate/prompt", {
+    template: template,
+    frontend_node: frontend_node,
+  });
 }
 
 /**
