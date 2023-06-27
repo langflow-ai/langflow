@@ -92,7 +92,7 @@ export default function CodeAreaModal({
         })
       }
       );
-    postCustomComponent('code',nodeClass).then((apiReturn) => {
+    postCustomComponent(code,nodeClass).then((apiReturn) => {
       const data = apiReturn.data;
       if (data) {
         setNodeClass(data);
