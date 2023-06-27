@@ -1,10 +1,4 @@
-import {
-  ComponentType,
-  ForwardRefExoticComponent,
-  ReactElement,
-  ReactNode,
-  SVGProps,
-} from "react";
+import { ReactElement, ReactNode } from "react";
 import { NodeDataType } from "../flow/index";
 import { typesContextType } from "../typesContext";
 export type InputComponentType = {
@@ -41,6 +35,7 @@ export type ParameterComponentType = {
   name?: string;
   tooltipTitle: string;
   dataContext?: typesContextType;
+  info?: string;
 };
 export type InputListComponentType = {
   value: string[];
@@ -114,4 +109,13 @@ export type ProgressBarType = {
 export type RadialProgressType = {
   value?: number;
   color?: string;
+};
+
+export type Side = "top" | "right" | "bottom" | "left";
+
+export type ShadTooltipProps = {
+  delayDuration?: number;
+  side?: Side;
+  content: ReactNode;
+  children: ReactNode;
 };

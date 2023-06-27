@@ -4,10 +4,12 @@ import os
 from io import BytesIO
 import re
 
+
 import yaml
 from langchain.base_language import BaseLanguageModel
 from PIL.Image import Image
 from langflow.utils.logger import logger
+from langflow.chat.config import ChatConfig
 
 
 def load_file_into_dict(file_path: str) -> dict:
@@ -49,9 +51,9 @@ def try_setting_streaming_options(langchain_object, websocket):
 
     if isinstance(llm, BaseLanguageModel):
         if hasattr(llm, "streaming") and isinstance(llm.streaming, bool):
-            llm.streaming = True
+            llm.streaming = ChatConfig.streaming
         elif hasattr(llm, "stream") and isinstance(llm.stream, bool):
-            llm.stream = True
+            llm.stream = ChatConfig.streaming
 
     return langchain_object
 
