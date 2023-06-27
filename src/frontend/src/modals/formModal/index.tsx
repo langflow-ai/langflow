@@ -16,6 +16,8 @@ import { dark } from "@mui/material/styles/createPalette";
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants";
 import { postValidateCode } from "../../controllers/API";
 import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
 
 export default function FormModal({
   flow,
@@ -321,7 +323,7 @@ export default function FormModal({
   return (
     <Dialog open={open} onOpenChange={setModalOpen}>
       <DialogTrigger className="hidden"></DialogTrigger>
-      <DialogContent className="lg:max-w-[700px] h-[500px]">
+      <DialogContent className="min-w-[1000px]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Chat Form</span>
@@ -330,24 +332,21 @@ export default function FormModal({
               aria-hidden="true"
             />
           </DialogTitle>
-          <DialogDescription>{CODE_PROMPT_DIALOG_SUBTITLE}</DialogDescription>
         </DialogHeader>
 
-        <div className="flex h-full w-full mt-2">
-          teste
+        <div className="flex h-[600px] w-full mt-2">
+          <div className="w-64 h-full flex flex-col justify-start">
+          <div className="grid w-full max-w-sm items-center gap-1.5">
+      <Label htmlFor="context">context</Label>
+      <Input placeholder="Type your message" id="context"/>
+    </div>
+          </div>
+          <div className="w-full pl-6">
+            <div className="bg-muted rounded-md w-full h-full">
+              teste
+            </div>
+          </div>
         </div>
-
-        <DialogFooter>
-          <Button
-            className="mt-3"
-            onClick={() => {
-              
-            }}
-            type="submit"
-          >
-            Check & Save
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
