@@ -198,10 +198,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       edge.style = { stroke: "#555555" };
     });
   }
+
   function updateDisplay_name(node: NodeType, template: APIClassType) {
-    node.data.node.display_name = template["display_name"]
-      ? template["display_name"]
-      : node.data.type;
+    node.data.node.display_name = template["display_name"] || node.data.type;
+  }
+
+  function updateNodeDocumentation(node: NodeType, template: APIClassType) {
+    node.data.node.documentation = template["documentation"];
   }
 
   function processFlowNodes(flow) {
@@ -218,6 +221,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         updateNodeEdges(flow, node, template);
         updateNodeDescription(node, template);
         updateNodeTemplate(node, template);
+        updateNodeDocumentation(node, template);
       }
     });
   }

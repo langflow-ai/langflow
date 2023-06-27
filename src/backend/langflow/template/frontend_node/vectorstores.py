@@ -200,7 +200,7 @@ class VectorStoreFrontendNode(FrontendNode):
                 self.template.add_field(field)
 
     def add_extra_base_classes(self) -> None:
-        self.base_classes.append("BaseRetriever")
+        self.base_classes.extend(("BaseRetriever", "VectorStoreRetriever"))
 
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
