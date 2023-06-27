@@ -209,5 +209,3 @@ class ChatManager:
             except Exception as e:
                 logger.error(e)
             self.disconnect(client_id)
-
-
