@@ -98,23 +98,23 @@ export default function InputFileComponent({
         disabled ? "pointer-events-none cursor-not-allowed w-full" : "w-full"
       }
     >
-      <div className="w-full flex items-center gap-2">
+      <div className="w-full flex items-center">
         <span
           onClick={handleButtonClick}
           className={
             editNode
               ? "truncate placeholder:text-center text-gray-500 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm border-1" +
-                INPUT_STYLE
+                INPUT_STYLE + (disabled ? " bg-gray-200 " : "")
               : "truncate block w-full text-gray-500 dark:text-gray-300 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 shadow-sm sm:text-sm" +
                 INPUT_STYLE +
-                (disabled ? " bg-gray-200" : "")
+                (disabled ? " bg-gray-200 " : "")
           }
         >
           {myValue !== "" ? myValue : "No file"}
         </span>
         <button onClick={handleButtonClick}>
           {!editNode && !loading && (
-            <FileSearch2 className="w-6 h-6 hover:text-ring" />
+            <FileSearch2 className="w-6 h-6 hover:text-ring ml-3" />
           )}
           {!editNode && loading && (
             <span className="loading loading-spinner loading-sm pl-3 h-8 pointer-events-none"></span>
