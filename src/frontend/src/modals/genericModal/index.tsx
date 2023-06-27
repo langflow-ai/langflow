@@ -1,7 +1,7 @@
 import { useContext, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { darkContext } from "../../contexts/darkContext";
-import { checkPrompt } from "../../controllers/API";
+import { postValidatePrompt } from "../../controllers/API";
 import { alertContext } from "../../contexts/alertContext";
 import {
   Dialog,
@@ -25,13 +25,15 @@ export default function GenericModal({
   modalTitle,
   type,
   nodeClass,
+  setNodeClass,
 }: {
   setValue: (value: string) => void;
   value: string;
   buttonText: string;
   modalTitle: string;
   type: number;
-  nodeClass: APIClassType;
+  nodeClass?: APIClassType;
+  setNodeClass?: (Class: APIClassType) => void;
 }) {
   const [myButtonText] = useState(buttonText);
   const [myModalTitle] = useState(modalTitle);
@@ -99,13 +101,12 @@ export default function GenericModal({
                   setModalOpen(false);
                   break;
                 case 2:
-                  checkPrompt(myValue, nodeClass)
+                  postValidatePrompt(myValue, nodeClass)
                     .then((apiReturn) => {
                       if (apiReturn.data) {
-                        if (apiReturn.data) {
-                          setNodeClass(data);
-                          setModalOpen(false);
-                        }
+                        setNodeClass(apiReturn.data.frontend_node);
+                        setModalOpen(false);
+
                         let inputVariables = apiReturn.data.input_variables;
                         if (inputVariables.length === 0) {
                           setErrorData({

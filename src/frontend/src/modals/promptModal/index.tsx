@@ -3,7 +3,7 @@ import { XMarkIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { darkContext } from "../../contexts/darkContext";
-import { checkPrompt } from "../../controllers/API";
+import { postValidatePrompt } from "../../controllers/API";
 import { alertContext } from "../../contexts/alertContext";
 export default function PromptAreaModal({
   value,
@@ -107,7 +107,7 @@ export default function PromptAreaModal({
                       type="button"
                       className="inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-ring focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:ring-offset-1 sm:ml-3 sm:w-auto sm:text-sm"
                       onClick={() => {
-                        checkPrompt(myValue)
+                        postValidatePrompt(myValue)
                           .then((apiReturn) => {
                             if (apiReturn.data) {
                               let inputVariables =

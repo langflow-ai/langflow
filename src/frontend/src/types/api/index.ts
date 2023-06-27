@@ -14,6 +14,7 @@ export type APIClassType = {
   display_name: string;
   [key: string]: Array<string> | string | APITemplateType;
 };
+
 export type TemplateVariableType = {
   type: string;
   required: boolean;
@@ -38,7 +39,10 @@ export type errorsTypeAPI = {
   function: { errors: Array<string> };
   imports: { errors: Array<string> };
 };
-export type PromptTypeAPI = { input_variables: Array<string> };
+export type PromptTypeAPI = {
+  input_variables: Array<string>;
+  frontend_node: APIClassType;
+};
 
 export type BuildStatusTypeAPI = {
   built: boolean;
