@@ -37,6 +37,7 @@ import { AccordionHeader } from "@radix-ui/react-accordion";
 import { Textarea } from "../../components/ui/textarea";
 import { Badge } from "../../components/ui/badge";
 import { Separator } from "../../components/ui/separator";
+import { Switch } from "../../components/ui/switch";
 
 export default function FormModal({
   flow,
@@ -48,6 +49,7 @@ export default function FormModal({
   flow: FlowType;
 }) {
   const [chatValue, setChatValue] = useState("");
+  const [keysValue, setKeysValue] = useState([]);
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
   const { reactFlowInstance } = useContext(typesContext);
   const { setErrorData, setNoticeData } = useContext(alertContext);
@@ -57,6 +59,7 @@ export default function FormModal({
   const isOpen = useRef(open);
   const messagesRef = useRef(null);
   const id = useRef(flow.id);
+  const [chatKey, setChatKey] = useState(0);
 
   useEffect(() => {
     if (messagesRef.current) {
@@ -69,7 +72,7 @@ export default function FormModal({
   }, [open]);
   useEffect(() => {
     id.current = flow.id;
-    console.log(tabsState[flow.id]);
+    setKeysValue(Array(tabsState[flow.id].formKeysData.input_keys.length).fill(""));
   }, [flow.id]);
 
   var isStream = false;
@@ -309,9 +312,15 @@ export default function FormModal({
       let nodeValidationErrors = validateNodes(reactFlowInstance);
       if (nodeValidationErrors.length === 0) {
         setLockChat(true);
-        let message = chatValue;
+        // Message variable makes a object with the keys being the names from tabsState[flow.id].formKeysData.input_keys and the values being the keysValue of the correspondent index
+        let keys = tabsState[flow.id].formKeysData.input_keys; // array of keys
+        let values = keysValue.map((k, i) => i == chatKey ? chatValue : k); // array of values
+        let message = keys.reduce((object, key, index) => {
+          object[key] = values[index];
+          return object;
+        }, {});
         setChatValue("");
-        addChatHistory(message, true);
+        addChatHistory(message.toString(), true);
         sendAll({
           ...reactFlowInstance.toObject(),
           message,
@@ -341,6 +350,12 @@ export default function FormModal({
   function setModalOpen(x: boolean) {
     setOpen(x);
   }
+
+  function handleOnCheckedChange(checked: boolean, index: number) {
+    if(checked === true){
+      setChatKey(index);
+    }
+  }
   return (
     <Dialog open={open} onOpenChange={setModalOpen}>
       <DialogTrigger className="hidden"></DialogTrigger>
@@ -362,8 +377,12 @@ export default function FormModal({
                 <AccordionItem key={k} value={i}>
                   <AccordionTrigger>{i}</AccordionTrigger>
                   <AccordionContent>
-                    <div className="p-1">
-                      <Textarea placeholder="Enter text..."></Textarea>
+                    <div className="p-1 flex flex-col gap-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch id="airplane-mode" checked={chatKey === k } onCheckedChange={(value) => handleOnCheckedChange(value, k)}/>
+                      <Label htmlFor="airplane-mode">From Chat</Label>
+                    </div>
+                      <Textarea value={keysValue[k]} onChange={(e) => setKeysValue({...keysValue, [k]: e.target.value})} disabled={chatKey === k} placeholder="Enter text..."></Textarea>
                     </div>
                   </AccordionContent>
                 </AccordionItem>
@@ -372,14 +391,14 @@ export default function FormModal({
                 <AccordionItem key={k} value={i}>
                   <div className="flex flex-1 items-center justify-between py-4 font-medium transition-all group">
                     <div className="group-hover:underline">{i}</div>
-                    <Badge>Message Key</Badge>
+                    <Badge>Memory Key</Badge>
                   </div>
                 </AccordionItem>
               ))}
             </Accordion>
           </div>
           <div className="w-full ">
-            <div className="flex flex-col rounded-md border w-full h-full">
+            <div className="flex flex-col rounded-md border bg-muted w-full h-full">
               <div
                 ref={messagesRef}
                 className="w-full h-full flex-col flex items-center overflow-scroll scrollbar-hide"
