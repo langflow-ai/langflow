@@ -73,6 +73,11 @@ prompts:
   - PromptTemplate
   - FewShotPromptTemplate
   - ZeroShotPrompt
+  - ChatPromptTemplate
+  - SystemMessagePromptTemplate
+  - AIMessagePromptTemplate
+  - HumanMessagePromptTemplate
+  - ChatMessagePromptTemplate
 textsplitters:
   - CharacterTextSplitter
   - RecursiveCharacterTextSplitter
