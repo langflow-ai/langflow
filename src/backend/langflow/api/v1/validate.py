@@ -37,7 +37,7 @@ def post_validate_prompt(prompt: ValidatePromptRequest):
                     name=variable, field_type="str", show=True, advanced=False
                 )
 
-                prompt.frontend_node.template[variable] = template_field.dict()
+                prompt.frontend_node.template[variable] = template_field.to_dict()
                 prompt.frontend_node.custom_fields.append(variable)
             except Exception as exc:
                 logger.exception(exc)
