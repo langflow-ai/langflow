@@ -7,8 +7,8 @@ import { INPUT_STYLE } from "../../constants";
 import { ExternalLink } from "lucide-react";
 
 export default function PromptAreaComponent({
-  nodeClass,
   setNodeClass,
+  nodeClass,
   value,
   onChange,
   disabled,
