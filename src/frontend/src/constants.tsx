@@ -23,6 +23,13 @@ export const CODE_DIALOG_SUBTITLE =
   "Export your flow to use it with this code.";
 
 /**
+ * The base text for subtitle of Chat Form
+ * @constant
+ */
+export const CHAT_FORM_DIALOG_SUBTITLE =
+  "Export your flow to use it with this code.";
+
+/**
  * The base text for subtitle of Edit Node Dialog
  * @constant
  */
