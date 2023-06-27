@@ -11,8 +11,8 @@ export default function CodeAreaComponent({
   onChange,
   disabled,
   editNode = false,
-  template,
-  setTemplate,
+  nodeClass,
+  setNodeClass,
 }: CodeAreaComponentType) {
   const [myValue, setMyValue] = useState(value);
   const { openPopUp } = useContext(PopUpContext);
@@ -39,8 +39,8 @@ export default function CodeAreaComponent({
             openPopUp(
               <CodeAreaModal
                 value={myValue}
-                template={template}
-                setTemplate={setTemplate}
+                nodeClass={nodeClass}
+                setNodeClass={setNodeClass}
                 setValue={(t: string) => {
                   setMyValue(t);
                   onChange(t);
@@ -63,9 +63,9 @@ export default function CodeAreaComponent({
           onClick={() => {
             openPopUp(
               <CodeAreaModal
-              setTemplate={setTemplate}
+              setNodeClass={setNodeClass}
                 value={myValue}
-                template={template}
+                nodeClass={nodeClass}
                 setValue={(t: string) => {
                   setMyValue(t);
                   onChange(t);
