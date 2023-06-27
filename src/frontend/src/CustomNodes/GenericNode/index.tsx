@@ -14,7 +14,6 @@ import NodeModal from "../../modals/NodeModal";
 import Tooltip from "../../components/TooltipComponent";
 import { NodeToolbar } from "reactflow";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
-import { FileText, Info } from "lucide-react";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import { useSSE } from "../../contexts/SSEContext";
 
@@ -70,22 +69,6 @@ export default function GenericNode({
 
   useEffect(() => {}, [closePopUp, data.node.template]);
 
-  useEffect(() => {
-    refHtml.current = (
-      <div className="flex">
-        <span>{`${data.node.display_name} Documentation`}</span>
-        <span
-          className="self-center"
-          style={{
-            color: nodeColors[types[data.type]] ?? nodeColors.unknown,
-          }}
-        >
-          <FileText className="h-4 w-4 ml-2" />
-        </span>
-      </div>
-    );
-  }, []);
-
   return (
     <>
       <NodeToolbar>
@@ -111,37 +94,11 @@ export default function GenericNode({
               }}
             />
             <div className="ml-2 truncate flex">
-              <ShadTooltip
-                delayDuration={1500}
-                content={data.node.display_name}
-              >
+              <ShadTooltip content={data.node.display_name}>
                 <div className="ml-2 truncate text-gray-800">
                   {data.node.display_name}
                 </div>
               </ShadTooltip>
-              <div className="">
-                {data.node.documentation !== "" && (
-                  <ShadTooltip
-                    open={true}
-                    delayDuration={1000}
-                    content={refHtml.current}
-                  >
-                    <a
-                      href={data.node.documentation}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <Info
-                        style={{
-                          color:
-                            nodeColors[types[data.type]] ?? nodeColors.unknown,
-                        }}
-                        className="ml-2 self-center w-4 h-4"
-                      />
-                    </a>
-                  </ShadTooltip>
-                )}
-              </div>
             </div>
           </div>
           <div className="flex gap-3">

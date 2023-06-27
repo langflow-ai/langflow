@@ -149,18 +149,14 @@ export default function ParameterComponent({
           }
         >
           {title}
+          <span className="text-red-600">{required ? " *" : ""}</span>
           <div className="">
             {info !== "" && (
-              <ShadTooltip
-                open={true}
-                delayDuration={500}
-                content={infoHtml.current}
-              >
+              <ShadTooltip content={infoHtml.current}>
                 <Info className="ml-2 relative bottom-0.5 w-3 h-3" />
               </ShadTooltip>
             )}
           </div>
-          <span className="text-red-600">{required ? " *" : ""}</span>
         </div>
         {left &&
         (type === "str" ||
