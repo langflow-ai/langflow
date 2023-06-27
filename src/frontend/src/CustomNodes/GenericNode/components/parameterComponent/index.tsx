@@ -260,6 +260,9 @@ export default function ParameterComponent({
           </div>
         ) : left === true && type === "prompt" ? (
           <PromptAreaComponent
+            setNodeClass={(nodeClass) => {
+              data.node = nodeClass;
+            }}
             nodeClass={data.node}
             disabled={disabled}
             value={data.node.template[name].value ?? ""}
