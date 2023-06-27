@@ -110,3 +110,12 @@ export type RadialProgressType = {
   value?: number;
   color?: string;
 };
+
+export type Side = "top" | "right" | "bottom" | "left";
+
+export type ShadTooltipProps = {
+  delayDuration?: number;
+  side?: Side;
+  content: ReactNode;
+  children: ReactNode;
+};
