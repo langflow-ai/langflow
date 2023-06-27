@@ -25,6 +25,7 @@ import { nodeColors } from "../../../../utils";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import { PopUpContext } from "../../../../contexts/popUpContext";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
+import { Info } from "lucide-react";
 
 export default function ParameterComponent({
   left,
@@ -36,9 +37,11 @@ export default function ParameterComponent({
   type,
   name = "",
   required = false,
+  info = "",
 }: ParameterComponentType) {
   const ref = useRef(null);
   const refHtml = useRef(null);
+  const infoHtml = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   const { closePopUp } = useContext(PopUpContext);
@@ -78,6 +81,18 @@ export default function ParameterComponent({
       };
     });
   };
+
+  useEffect(() => {
+    infoHtml.current = (
+      <div className="h-full w-full break-words">
+        {info.split("\n").map((line, i) => (
+          <p key={i} className="block">
+            {line}
+          </p>
+        ))}
+      </div>
+    );
+  }, [info]);
 
   useEffect(() => {
     const groupedObj = groupByFamily(myData, tooltipTitle);
@@ -126,8 +141,25 @@ export default function ParameterComponent({
       className="w-full flex flex-wrap justify-between items-center bg-muted dark:bg-gray-800 dark:text-white mt-1 px-5 py-2"
     >
       <>
-        <div className={"text-sm truncate w-full " + (left ? "" : "text-end")}>
+        <div
+          className={
+            "text-sm truncate w-full" +
+            (left ? "" : " text-end") +
+            (info !== "" ? " flex items-center" : "")
+          }
+        >
           {title}
+          <div className="">
+            {info !== "" && (
+              <ShadTooltip
+                open={true}
+                delayDuration={500}
+                content={infoHtml.current}
+              >
+                <Info className="ml-2 relative bottom-0.5 w-3 h-3" />
+              </ShadTooltip>
+            )}
+          </div>
           <span className="text-red-600">{required ? " *" : ""}</span>
         </div>
         {left &&

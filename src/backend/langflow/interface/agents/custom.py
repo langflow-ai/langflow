@@ -6,6 +6,7 @@ from langchain.agents import (
     Tool,
     ZeroShotAgent,
     initialize_agent,
+    AgentType,
 )
 from langchain.agents.agent_toolkits import (
     SQLDatabaseToolkit,
@@ -297,6 +298,9 @@ class InitializeAgent(CustomAgentExecutor):
         agent: str,
         memory: Optional[BaseChatMemory] = None,
     ):
+        # Find which value in the AgentType enum corresponds to the string
+        # passed in as agent
+        agent = AgentType(agent)
         return initialize_agent(
             tools=tools,
             llm=llm,
