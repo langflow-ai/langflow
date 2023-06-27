@@ -39,6 +39,9 @@ def post_validate_prompt(prompt: ValidatePromptRequest):
 
                 prompt.frontend_node.template[variable] = template_field.to_dict()
                 prompt.frontend_node.custom_fields.append(variable)
+                for key in prompt.frontend_node.template:
+                    if key not in input_variables:
+                        prompt.frontend_node.template.pop(key, None)
             except Exception as exc:
                 logger.exception(exc)
                 raise HTTPException(status_code=500, detail=str(exc)) from exc
