@@ -77,6 +77,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
       closePopUp();
     }
   }
+  
 
   const pythonApiCode = getPythonApiCode(flow, tweak.current);
   const curl_code = getCurlCode(flow, tweak.current);
