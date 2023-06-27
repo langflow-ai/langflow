@@ -54,7 +54,7 @@ export const TEXT_DIALOG_SUBTITLE = "Edit your text.";
  * @param {string} flowId - The id of the flow
  * @returns {string} - The python code
  */
-export const getPythonApiCode = (flow: FlowType): string => {
+export const getPythonApiCode = (flow: FlowType, tweak?): string => {
   const flowId = flow.id;
 
   // create a dictionary of node ids and the values is an empty dictionary
@@ -70,7 +70,9 @@ BASE_API_URL = "${window.location.protocol}//${
 FLOW_ID = "${flowId}"
 # You can tweak the flow by adding a tweaks dictionary
 # e.g {"OpenAI-XXXXX": {"model_name": "gpt-4"}}
-TWEAKS = ${JSON.stringify(tweaks, null, 2)}
+TWEAKS = ${
+    tweak ? JSON.stringify(tweak, null, 2) : JSON.stringify(tweaks, null, 2)
+  }
 
 def run_flow(message: str, flow_id: str, tweaks: dict = None) -> dict:
     """
@@ -100,7 +102,7 @@ print(run_flow("Your message", flow_id=FLOW_ID, tweaks=TWEAKS))`;
  * @param {string} flowId - The id of the flow
  * @returns {string} - The curl code
  */
-export const getCurlCode = (flow: FlowType): string => {
+export const getCurlCode = (flow: FlowType, tweak?): string => {
   const flowId = flow.id;
   const tweaks = buildTweaks(flow);
   return `curl -X POST \\
@@ -108,22 +110,22 @@ export const getCurlCode = (flow: FlowType): string => {
     window.location.host
   }/api/v1/process/${flowId} \\
   -H 'Content-Type: application/json' \\
-  -d '{"inputs": {"input": message}, "tweaks": ${JSON.stringify(
-    tweaks,
-    null,
-    2
-  )}}'`;
+  -d '{"inputs": {"input": message}, "tweaks": ${
+    tweak ? JSON.stringify(tweak, null, 2) : JSON.stringify(tweaks, null, 2)
+  }}'`;
 };
 /**
  * Function to get the python code for the API
  * @param {string} flowName - The name of the flow
  * @returns {string} - The python code
  */
-export const getPythonCode = (flow: FlowType): string => {
+export const getPythonCode = (flow: FlowType, tweak?): string => {
   const flowName = flow.name;
   const tweaks = buildTweaks(flow);
   return `from langflow import load_flow_from_json
-TWEAKS = ${JSON.stringify(tweaks, null, 2)}
+TWEAKS = ${
+    tweak ? JSON.stringify(tweak, null, 2) : JSON.stringify(tweaks, null, 2)
+  }
 flow = load_flow_from_json("${flowName}.json", tweaks=TWEAKS)
 # Now you can use it like any chain
 flow("Hey, have you heard of LangFlow?")`;
