@@ -119,6 +119,8 @@ llms:
     documentation: "https://python.langchain.com/docs/modules/model_io/models/chat/integrations/anthropic"
   HuggingFaceHub:
     documentation: "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/huggingface_hub"
+  VertexAI:
+    documentation: "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/google_vertex_ai_palm"
 memories:
   ConversationBufferMemory:
     documentation: "https://python.langchain.com/docs/modules/memory/how_to/summary"
