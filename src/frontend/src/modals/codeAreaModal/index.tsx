@@ -1,5 +1,5 @@
-import { XMarkIcon, CommandLineIcon } from "@heroicons/react/24/outline";
-import { Fragment, useContext, useRef, useState } from "react";
+import { CommandLineIcon } from "@heroicons/react/24/outline";
+import { useContext, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import AceEditor from "react-ace";
 import "ace-builds/src-noconflict/mode-python";
@@ -8,9 +8,8 @@ import "ace-builds/src-noconflict/theme-twilight";
 import "ace-builds/src-noconflict/ext-language_tools";
 // import "ace-builds/webpack-resolver";
 import { darkContext } from "../../contexts/darkContext";
-import { UpdateTemplate, postValidateCode } from "../../controllers/API";
+import { postCustomComponent, postValidateCode } from "../../controllers/API";
 import { alertContext } from "../../contexts/alertContext";
-import { TabsContext } from "../../contexts/tabsContext";
 import {
   Dialog,
   DialogContent,
@@ -22,18 +21,17 @@ import {
 } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants";
-import Loading from "../../components/ui/loading";
 import { APITemplateType } from "../../types/api";
 
 export default function CodeAreaModal({
   value,
   setValue,
   template,
-  setTemplate
+  setTemplate,
 }: {
   setValue: (value: string) => void;
   value: string;
-  template: APITemplateType,
+  template: APITemplateType;
   setTemplate: (template: APITemplateType) => void;
 }) {
   const [open, setOpen] = useState(true);
@@ -88,19 +86,17 @@ export default function CodeAreaModal({
       .catch((_) => {
         setLoading(false);
         setErrorData({
-          title:
-            "There is something wrong with this code, please review it",
-        })
-      }
-      );
-    UpdateTemplate('code',template).then((apiReturn) => {
+          title: "There is something wrong with this code, please review it",
+        });
+      });
+    postCustomComponent(code).then((apiReturn) => {
       const data = apiReturn.data;
       if (data.template) {
-        console.log('updated')
+        console.log("updated");
         setTemplate(data.template);
         setModalOpen(false);
       }
-    })
+    });
   }
 
   return (
@@ -137,11 +133,7 @@ export default function CodeAreaModal({
         </div>
 
         <DialogFooter>
-          <Button
-            className="mt-3"
-            onClick={handleClick}
-            type="submit"
-          >
+          <Button className="mt-3" onClick={handleClick} type="submit">
             {/* {loading?(<Loading/>):'Check & Save'} */}
             Check & Save
           </Button>
