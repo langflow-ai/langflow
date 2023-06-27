@@ -414,7 +414,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           y: insidePosition.y + n.position.y - minimumY,
         },
         data: {
-          ...n.data,
+          ..._.cloneDeep(n.data),
           id: newId,
         },
       };
