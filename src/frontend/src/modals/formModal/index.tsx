@@ -5,7 +5,16 @@ import { alertContext } from "../../contexts/alertContext";
 import { validateNodes } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import ChatMessage from "./chatMessage";
-import { X, MessagesSquare, Eraser, TerminalSquare, MessageCircle, MessageSquareDashed, MessageSquare, Variable } from "lucide-react";
+import {
+  X,
+  MessagesSquare,
+  Eraser,
+  TerminalSquare,
+  MessageCircle,
+  MessageSquareDashed,
+  MessageSquare,
+  Variable,
+} from "lucide-react";
 import { sendAllProps } from "../../types/api";
 import { ChatMessageType } from "../../types/chat";
 import ChatInput from "./chatInput";
@@ -74,8 +83,10 @@ export default function FormModal({
   }, [open]);
   useEffect(() => {
     id.current = flow.id;
-    setKeysValue(Array(tabsState[flow.id].formKeysData.input_keys.length).fill(""));
-  }, [flow.id]);
+    setKeysValue(
+      Array(tabsState[flow.id].formKeysData.input_keys.length).fill("")
+    );
+  }, [flow.id, tabsState[flow.id], tabsState[flow.id].formKeysData]);
 
   var isStream = false;
 
@@ -316,7 +327,7 @@ export default function FormModal({
         setLockChat(true);
         // Message variable makes a object with the keys being the names from tabsState[flow.id].formKeysData.input_keys and the values being the keysValue of the correspondent index
         let keys = tabsState[flow.id].formKeysData.input_keys; // array of keys
-        let values = keysValue.map((k, i) => i == chatKey ? chatValue : k); // array of values
+        let values = keysValue.map((k, i) => (i == chatKey ? chatValue : k)); // array of values
         let message = keys.reduce((object, key, index) => {
           object[key] = values[index];
           return object;
@@ -354,115 +365,126 @@ export default function FormModal({
   }
 
   function handleOnCheckedChange(checked: boolean, index: number) {
-    if(checked === true){
+    if (checked === true) {
       setChatKey(index);
     }
   }
   return (
     <Dialog open={open} onOpenChange={setModalOpen}>
       <DialogTrigger className="hidden"></DialogTrigger>
-      <DialogContent className="min-w-[80vw]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center">
-            <span className="pr-2">Chat</span>
-            <TerminalSquare
-              className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
-              aria-hidden="true"
-            />
-          </DialogTitle>
-          <DialogDescription>{CHAT_FORM_DIALOG_SUBTITLE}</DialogDescription>
-        </DialogHeader>
+      {tabsState[flow.id].formKeysData && (
+        <DialogContent className="min-w-[80vw]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <span className="pr-2">Chat</span>
+              <TerminalSquare
+                className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
+                aria-hidden="true"
+              />
+            </DialogTitle>
+            <DialogDescription>{CHAT_FORM_DIALOG_SUBTITLE}</DialogDescription>
+          </DialogHeader>
 
-        <div className="flex h-[80vh] w-full mt-2">
-          <div className="w-1/4 h-full flex flex-col justify-start mr-6">
-          <div className="flex py-2">
-              <Variable className="w-6 h-6 pe-1 text-gray-700 stroke-2 dark:text-slate-200"></Variable>
-              <span className="text-md font-semibold text-gray-800 dark:text-white">
-                Input Variables
-              </span>
-            </div>
-            <Accordion type="single" collapsible className="w-full">
-              {tabsState[id.current].formKeysData.input_keys.map((i, k) => (
-                <AccordionItem key={k} value={i}>
-                  <AccordionTrigger>{i}</AccordionTrigger>
-                  <AccordionContent>
-                    <div className="p-1 flex flex-col gap-4">
-                    <div className="flex items-center space-x-2">
-                      <Label htmlFor="airplane-mode">From Chat</Label>
-                      <ToggleShadComponent
-                                  enabled={chatKey === k }
-                                  setEnabled={(value) => handleOnCheckedChange(value, k)}
-                                  size="small"
-                                  disabled={false}
-                                />
-                    </div>
-                      <Textarea value={keysValue[k]} onChange={(e) => setKeysValue({...keysValue, [k]: e.target.value})} disabled={chatKey === k} placeholder="Enter text..."></Textarea>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-              {tabsState[id.current].formKeysData.memory_keys.map((i, k) => (
-                <AccordionItem key={k} value={i}>
-                  <div className="flex flex-1 items-center justify-between py-4 font-medium transition-all group">
-                    <div className="group-hover:underline">{i}</div>
-                    <Badge>Memory Key</Badge>
-                  </div>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </div>
-          <div className="w-full ">
-            <div className="flex flex-col rounded-md border bg-muted w-full h-full">
-              <div
-                ref={messagesRef}
-                className="w-full h-full flex-col flex items-center overflow-scroll scrollbar-hide"
-              >
-                {chatHistory.length > 0 ? (
-                  chatHistory.map((c, i) => (
-                    <ChatMessage
-                      lockChat={lockChat}
-                      chat={c}
-                      lastMessage={chatHistory.length - 1 == i ? true : false}
-                      key={i}
-                    />
-                  ))
-                ) : (
-                  <div className="flex flex-col h-full text-center justify-center w-full items-center align-middle">
-                    <span>
-                      👋{" "}
-                      <span className="text-gray-600 dark:text-gray-300 text-lg">
-                        LangFlow Chat
-                      </span>
-                    </span>
-                    <br />
-                    <div className="bg-muted dark:bg-gray-900 rounded-md w-2/4 px-6 py-8 border border-gray-200 dark:border-gray-700">
-                      <span className="text-base text-gray-500">
-                        Start a conversation and click the agent's thoughts{" "}
-                        <span>
-                          <MessageSquare className="w-5 h-5 inline animate-bounce mx-1 " />
-                        </span>{" "}
-                        to inspect the chaining process.
-                      </span>
-                    </div>
-                  </div>
-                )}
-                <div ref={ref}></div>
+          <div className="flex h-[80vh] w-full mt-2">
+            <div className="w-1/4 h-full flex flex-col justify-start mr-6">
+              <div className="flex py-2">
+                <Variable className="w-6 h-6 pe-1 text-gray-700 stroke-2 dark:text-slate-200"></Variable>
+                <span className="text-md font-semibold text-gray-800 dark:text-white">
+                  Input Variables
+                </span>
               </div>
-              <div className="w-full px-8 pb-6 flex-col flex items-center justify-between">
-                <div className="relative w-full rounded-md shadow-sm">
-                  <ChatInput
-                    chatValue={chatValue}
-                    lockChat={lockChat}
-                    sendMessage={sendMessage}
-                    setChatValue={setChatValue}
-                    inputRef={ref}
-                  />
+              <Accordion type="single" collapsible className="w-full">
+                {tabsState[id.current].formKeysData.input_keys.map((i, k) => (
+                  <AccordionItem key={k} value={i}>
+                    <AccordionTrigger>{i}</AccordionTrigger>
+                    <AccordionContent>
+                      <div className="p-1 flex flex-col gap-4">
+                        <div className="flex items-center space-x-2">
+                          <Label htmlFor="airplane-mode">From Chat</Label>
+                          <ToggleShadComponent
+                            enabled={chatKey === k}
+                            setEnabled={(value) =>
+                              handleOnCheckedChange(value, k)
+                            }
+                            size="small"
+                            disabled={false}
+                          />
+                        </div>
+                        <Textarea
+                          value={keysValue[k]}
+                          onChange={(e) =>
+                            setKeysValue({ ...keysValue, [k]: e.target.value })
+                          }
+                          disabled={chatKey === k}
+                          placeholder="Enter text..."
+                        ></Textarea>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+                {tabsState[id.current].formKeysData.memory_keys.map((i, k) => (
+                  <AccordionItem key={k} value={i}>
+                    <div className="flex flex-1 items-center justify-between py-4 font-medium transition-all group">
+                      <div className="group-hover:underline">{i}</div>
+                      <Badge>Memory Key</Badge>
+                    </div>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </div>
+            <div className="w-full ">
+              <div className="flex flex-col rounded-md border bg-muted w-full h-full">
+                <div
+                  ref={messagesRef}
+                  className="w-full h-full flex-col flex items-center overflow-scroll scrollbar-hide"
+                >
+                  {chatHistory.length > 0 ? (
+                    chatHistory.map((c, i) => (
+                      <ChatMessage
+                        lockChat={lockChat}
+                        chat={c}
+                        lastMessage={chatHistory.length - 1 == i ? true : false}
+                        key={i}
+                      />
+                    ))
+                  ) : (
+                    <div className="flex flex-col h-full text-center justify-center w-full items-center align-middle">
+                      <span>
+                        👋{" "}
+                        <span className="text-gray-600 dark:text-gray-300 text-lg">
+                          LangFlow Chat
+                        </span>
+                      </span>
+                      <br />
+                      <div className="bg-muted dark:bg-gray-900 rounded-md w-2/4 px-6 py-8 border border-gray-200 dark:border-gray-700">
+                        <span className="text-base text-gray-500">
+                          Start a conversation and click the agent's thoughts{" "}
+                          <span>
+                            <MessageSquare className="w-5 h-5 inline animate-bounce mx-1 " />
+                          </span>{" "}
+                          to inspect the chaining process.
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={ref}></div>
+                </div>
+                <div className="w-full px-8 pb-6 flex-col flex items-center justify-between">
+                  <div className="relative w-full rounded-md shadow-sm">
+                    <ChatInput
+                      chatValue={chatValue}
+                      lockChat={lockChat}
+                      sendMessage={sendMessage}
+                      setChatValue={setChatValue}
+                      inputRef={ref}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </DialogContent>
+        </DialogContent>
+      )}
     </Dialog>
   );
 }
