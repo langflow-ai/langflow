@@ -78,13 +78,9 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
     }
   }
 
-  useEffect(() => {
-    console.log(tweak.current);
-  }, [closePopUp]);
-
-  const pythonApiCode = getPythonApiCode(flow);
-  const curl_code = getCurlCode(flow);
-  const pythonCode = getPythonCode(flow);
+  const pythonApiCode = getPythonApiCode(flow, tweak.current);
+  const curl_code = getCurlCode(flow, tweak.current);
+  const pythonCode = getPythonCode(flow, tweak.current);
   const tweaksCode = buildTweaks(flow);
 
   const tabs = [
@@ -166,6 +162,14 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
       };
       tweak.current.push(newTweak);
     }
+
+    const pythonApiCode = getPythonApiCode(flow, tweak.current);
+    const curl_code = getCurlCode(flow, tweak.current);
+    const pythonCode = getPythonCode(flow, tweak.current);
+
+    tabs[0].code = curl_code;
+    tabs[1].code = pythonApiCode;
+    tabs[2].code = pythonCode;
 
     console.log(tweak.current);
   }
