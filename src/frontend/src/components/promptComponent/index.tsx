@@ -7,6 +7,7 @@ import { INPUT_STYLE } from "../../constants";
 import { ExternalLink } from "lucide-react";
 
 export default function PromptAreaComponent({
+  nodeClass,
   value,
   onChange,
   disabled,
@@ -44,6 +45,7 @@ export default function PromptAreaComponent({
                   setMyValue(t);
                   onChange(t);
                 }}
+                nodeClass={nodeClass}
               />
             );
           }}

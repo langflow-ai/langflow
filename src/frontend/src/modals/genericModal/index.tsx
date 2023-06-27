@@ -1,9 +1,8 @@
-import { Fragment, useContext, useRef, useState } from "react";
+import { useContext, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { darkContext } from "../../contexts/darkContext";
 import { checkPrompt } from "../../controllers/API";
 import { alertContext } from "../../contexts/alertContext";
-import { TypeModal } from "../../utils";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +16,7 @@ import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
 import { PROMPT_DIALOG_SUBTITLE, TEXT_DIALOG_SUBTITLE } from "../../constants";
 import { FileText } from "lucide-react";
+import { APIClassType } from "../../types/api";
 
 export default function GenericModal({
   value,
@@ -24,12 +24,14 @@ export default function GenericModal({
   buttonText,
   modalTitle,
   type,
+  nodeClass,
 }: {
   setValue: (value: string) => void;
   value: string;
   buttonText: string;
   modalTitle: string;
   type: number;
+  nodeClass: APIClassType;
 }) {
   const [myButtonText] = useState(buttonText);
   const [myModalTitle] = useState(modalTitle);
@@ -97,9 +99,13 @@ export default function GenericModal({
                   setModalOpen(false);
                   break;
                 case 2:
-                  checkPrompt(myValue)
+                  checkPrompt(myValue, nodeClass)
                     .then((apiReturn) => {
                       if (apiReturn.data) {
+                        if (apiReturn.data) {
+                          setNodeClass(data);
+                          setModalOpen(false);
+                        }
                         let inputVariables = apiReturn.data.input_variables;
                         if (inputVariables.length === 0) {
                           setErrorData({
