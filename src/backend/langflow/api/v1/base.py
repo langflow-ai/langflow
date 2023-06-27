@@ -1,3 +1,4 @@
+from langflow.template.frontend_node.base import FrontendNode
 from pydantic import BaseModel, validator
 
 from langflow.interface.utils import extract_input_variables_from_prompt
@@ -12,8 +13,9 @@ class Code(BaseModel):
     code: str
 
 
-class Prompt(BaseModel):
+class ValidatePromptRequest(BaseModel):
     template: str
+    frontend_node: FrontendNode
 
 
 # Build ValidationResponse class for {"imports": {"errors": []}, "function": {"errors": []}}
@@ -32,6 +34,7 @@ class CodeValidationResponse(BaseModel):
 
 class PromptValidationResponse(BaseModel):
     input_variables: list
+    frontend_node: FrontendNode
 
 
 INVALID_CHARACTERS = {
@@ -66,7 +69,7 @@ def validate_prompt(template: str):
     # if len(input_variables) > 1:
     #     # If there's more than one input variable
 
-    return PromptValidationResponse(input_variables=input_variables)
+    return input_variables
 
 
 def check_input_variables(input_variables: list):
