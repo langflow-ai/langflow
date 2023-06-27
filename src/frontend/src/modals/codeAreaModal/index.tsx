@@ -92,10 +92,9 @@ export default function CodeAreaModal({
         })
       }
       );
-    UpdateTemplate('code',nodeClass).then((apiReturn) => {
+    postCustomComponent('code',nodeClass).then((apiReturn) => {
       const data = apiReturn.data;
       if (data) {
-        console.log(data)   
         setNodeClass(data);
         setModalOpen(false);
       }
