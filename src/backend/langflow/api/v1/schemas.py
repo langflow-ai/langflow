@@ -116,3 +116,7 @@ class StreamData(BaseModel):
 class CustomComponentResponse(BaseModel):
     model: str = ""
     step: str = ""
+
+
+class CustomComponentCode(BaseModel):
+    code: str
