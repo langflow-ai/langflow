@@ -244,6 +244,7 @@ export default function GenericNode({
                           ? toTitleCase(data.node.template[t].name)
                           : toTitleCase(t)
                       }
+                      info={data.node.template[t].info}
                       name={t}
                       tooltipTitle={data.node.template[t].type}
                       required={data.node.template[t].required}
