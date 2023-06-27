@@ -4,6 +4,7 @@ import ast
 class ClassCodeExtractor:
     def __init__(self, code):
         self.code = code
+        self.function_entrypoint_name = "build"
         self.data = {
             "imports": [],
             "class": {
@@ -61,10 +62,40 @@ class ClassCodeExtractor:
 
         return self.data
 
+    def get_entrypoint_function_args_and_return_type(self):
+        data = self.extract_class_info()
+        functions = data.get("functions", [])
 
-def is_valid_class_template(code: dict) -> bool:
-    class_name_ok = code["class"]["name"] == "PythonFunction"
-    function_run_exists = len(
-        [f for f in code["functions"] if f["name"] == "run"]) == 1
+        build_function = next(
+            (f for f in functions if f["name"] ==
+             self.function_entrypoint_name), None
+        )
 
-    return (class_name_ok and function_run_exists)
+        funtion_args = build_function.get("arguments", None)
+        return_type = build_function.get("return_type", None)
+
+        return funtion_args, return_type
+
+
+def is_valid_class_template(code: dict):
+    function_entrypoint_name = "build"
+    return_type_valid_list = ["ChainCreator", "ToolCreator"]
+
+    class_name = code.get("class", {}).get("name", None)
+    if not class_name:  # this will also check for None, empty string, etc.
+        return False
+
+    functions = code.get("functions", [])
+    # use a generator and next to find if a function matching the criteria exists
+    build_function = next(
+        (f for f in functions if f["name"] == function_entrypoint_name), None
+    )
+
+    if not build_function:
+        return False
+
+    # Check if the return type of the build function is valid
+    if build_function.get("return_type") not in return_type_valid_list:
+        return False
+
+    return True
