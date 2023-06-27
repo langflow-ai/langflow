@@ -1,13 +1,7 @@
-import {
-  ComponentType,
-  ForwardRefExoticComponent,
-  ReactElement,
-  ReactNode,
-  SVGProps,
-} from "react";
+import { ReactElement, ReactNode } from "react";
 import { NodeDataType } from "../flow/index";
 import { typesContextType } from "../typesContext";
-import { APIClassType, APITemplateType } from "../api";
+import { APIClassType } from "../api";
 export type InputComponentType = {
   value: string;
   disabled?: boolean;
@@ -51,6 +45,7 @@ export type InputListComponentType = {
 };
 
 export type TextAreaComponentType = {
+  nodeClass?: APIClassType;
   disabled: boolean;
   onChange: (value: string[] | string) => void;
   value: string;
