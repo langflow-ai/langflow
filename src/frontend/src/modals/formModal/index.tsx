@@ -1,10 +1,10 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { FlowType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
-import { validateNodes } from "../../utils";
+import { classNames, validateNodes } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import ChatMessage from "./chatMessage";
-import { TerminalSquare, MessageSquare, Variable } from "lucide-react";
+import { TerminalSquare, MessageSquare, Variable, Eraser } from "lucide-react";
 import { sendAllProps } from "../../types/api";
 import { ChatMessageType } from "../../types/chat";
 import ChatInput from "./chatInput";
@@ -397,7 +397,7 @@ export default function FormModal({
               <Accordion type="single" collapsible className="w-full">
                 {tabsState[id.current].formKeysData.input_keys.map((i, k) => (
                   <AccordionItem key={k} value={i}>
-                    <AccordionTrigger>{i}</AccordionTrigger>
+                    <AccordionTrigger><Badge variant="gray" size="md">{i}</Badge></AccordionTrigger>
                     <AccordionContent>
                       <div className="p-1 flex flex-col gap-4">
                         <div className="flex items-center space-x-2">
@@ -425,16 +425,25 @@ export default function FormModal({
                 ))}
                 {tabsState[id.current].formKeysData.memory_keys.map((i, k) => (
                   <AccordionItem key={k} value={i}>
-                    <div className="flex flex-1 items-center justify-between py-4 font-medium transition-all group">
-                      <div className="group-hover:underline">{i}</div>
-                      <Badge>Memory Key</Badge>
+                    <div className="flex flex-1 items-center justify-between py-4 font-normal transition-all group text-muted-foreground text-sm">
+                      <div className="group-hover:underline"><Badge size="md" variant="gray">{i}</Badge></div>
+                      Used as Memory Key
                     </div>
                   </AccordionItem>
                 ))}
               </Accordion>
             </div>
-            <div className="w-full ">
-              <div className="flex flex-col rounded-md border bg-muted w-full h-full">
+            <div className="w-full">
+              <div className="flex flex-col rounded-md border bg-muted w-full h-full relative">
+              <div className="absolute right-3 top-3">
+
+              <button disabled={lockChat} onClick={() => clearChat()}>
+                <Eraser 
+                  className={classNames("h-5 w-5", lockChat ? "text-gray-500 animate-pulse" : "text-gray-500 hover:text-gray-600")}
+                  aria-hidden="true"
+                />
+              </button>
+              </div>
                 <div
                   ref={messagesRef}
                   className="w-full h-full flex-col flex items-center overflow-scroll scrollbar-hide"
@@ -475,6 +484,7 @@ export default function FormModal({
                     <ChatInput
                       chatValue={chatValue}
                       lockChat={lockChat}
+                      clearChat={clearChat}
                       sendMessage={sendMessage}
                       setChatValue={setChatValue}
                       inputRef={ref}

@@ -33,8 +33,8 @@ export default function ChatMessage({
         className={classNames(
           "w-full py-2 px-2 pl-4 flex",
           chat.isSend
-            ? " dark:bg-gray-900 "
-            : " dark:bg-gray-800"
+            ? " bg-border"
+            : " "
         )}
       >
         <div
