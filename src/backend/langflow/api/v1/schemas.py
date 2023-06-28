@@ -111,3 +111,8 @@ class StreamData(BaseModel):
 
 class CustomComponentCode(BaseModel):
     code: str
+
+
+class CustomComponentResponseError(BaseModel):
+    detail: str
+    traceback: str
