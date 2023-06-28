@@ -221,14 +221,17 @@ def instantiate_textsplitter(
         ) from exc
 
     if (
-        "separator_type" in params
-        and params["separator_type"] == "Text"
-        or "separator_type" not in params
-    ):
+        "separator_type" in params and params["separator_type"] == "Text"
+    ) or "separator_type" not in params:
+        params.pop("separator_type", None)
         text_splitter = class_object(**params)
     else:
-        params["language"] = params.pop("separator_type", None)
+        from langchain.text_splitter import Language
+
+        language = params.pop("separator_type", None)
+        params["language"] = Language(language)
         params.pop("separators", None)
+
         text_splitter = class_object.from_language(**params)
     return text_splitter.split_documents(documents)
 
