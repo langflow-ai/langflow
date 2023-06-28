@@ -23,6 +23,7 @@ export type TemplateVariableType = {
   show: boolean;
   multiline?: boolean;
   value?: any;
+  input_types?: Array<string>;
   [key: string]: any;
 };
 export type sendAllProps = {
