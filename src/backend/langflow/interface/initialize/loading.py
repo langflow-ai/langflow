@@ -112,17 +112,13 @@ def instantiate_prompt(node_type, class_object, params):
 
     prompt = class_object(**params)
 
-    # Now we go through input_variables
-    # Check if they are in params, if so
-    # get their values and set them
-    format_kwargs = {}
-    for input_variable in prompt.input_variables:
-        if input_variable in params:
-            input_value = params[input_variable]
-            format_kwargs[input_variable] = input_value
-
-    if format_kwargs:
-        prompt = prompt.partial(**format_kwargs)
+    format_kwargs = {
+        input_variable: params[input_variable]
+        for input_variable in prompt.input_variables
+        if input_variable in params
+    }
+    # if format_kwargs:
+    #     prompt = prompt.partial(**format_kwargs)
 
     return prompt, format_kwargs
 
