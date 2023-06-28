@@ -26,8 +26,9 @@ def remove_api_keys(flow: dict):
 
 def build_input_keys_response(langchain_object):
     """Build the input keys response."""
+
     input_keys_response = {
-        "input_keys": langchain_object.input_keys,
+        "input_keys": {key: "" for key in langchain_object.input_keys},
         "memory_keys": [],
     }
     # If the object has memory, that memory will have a memory_variables attribute
@@ -43,5 +44,8 @@ def build_input_keys_response(langchain_object):
         ]
         # Add memory variables to memory_keys
         input_keys_response["memory_keys"] = langchain_object.memory.memory_variables
+
+    if hasattr(langchain_object, "prompt"):
+        input_keys_response["template"] = langchain_object.prompt.template
 
     return input_keys_response

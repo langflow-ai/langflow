@@ -3,11 +3,9 @@ import { useNodes } from "reactflow";
 import { ChatType } from "../../types/chat";
 import ChatTrigger from "./chatTrigger";
 import BuildTrigger from "./buildTrigger";
-import ChatModal from "../../modals/chatModal";
 
 import { getBuildStatus } from "../../controllers/API";
 import { NodeType } from "../../types/flow";
-import FormTrigger from "./formTrigger";
 import FormModal from "../../modals/formModal";
 
 export default function Chat({ flow }: ChatType) {
@@ -46,10 +44,11 @@ export default function Chat({ flow }: ChatType) {
   const prevNodesRef = useRef<any[] | undefined>();
   const nodes = useNodes();
   useEffect(() => {
+    
     const prevNodes = prevNodesRef.current;
     const currentNodes = nodes.map(
-      (node: NodeType) => node.data.node.template.value
-    );
+      (node: NodeType) => node.data.node.template
+      );
 
     if (
       prevNodes &&
@@ -66,15 +65,13 @@ export default function Chat({ flow }: ChatType) {
       {isBuilt ? (
         <div>
           <BuildTrigger
-            open={open || openForm}
+            open={open}
             flow={flow}
             setIsBuilt={setIsBuilt}
             isBuilt={isBuilt}
           />
-          <ChatModal key={flow.id} flow={flow} open={open} setOpen={setOpen} />
-          <FormModal key={flow.id + "form"} flow={flow} open={openForm} setOpen={setOpenForm} />
-          <ChatTrigger open={open || openForm} setOpen={setOpen} isBuilt={isBuilt} />
-          <FormTrigger open={open || openForm} setOpen={setOpenForm} isBuilt={isBuilt} />
+          <FormModal key={flow.id} flow={flow} open={open} setOpen={setOpen} />
+          <ChatTrigger open={open} setOpen={setOpen} isBuilt={isBuilt} />
         </div>
       ) : (
         <BuildTrigger

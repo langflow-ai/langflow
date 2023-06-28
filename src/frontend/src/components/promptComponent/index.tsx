@@ -73,6 +73,8 @@ export default function PromptAreaComponent({
                   setMyValue(t);
                   onChange(t);
                 }}
+                nodeClass={nodeClass}
+                setNodeClass={setNodeClass}
               />
             );
           }}

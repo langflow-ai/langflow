@@ -23,6 +23,7 @@ export type TemplateVariableType = {
   show: boolean;
   multiline?: boolean;
   value?: any;
+  input_types?: Array<string>;
   [key: string]: any;
 };
 export type sendAllProps = {
@@ -31,7 +32,7 @@ export type sendAllProps = {
   name: string;
   description: string;
   viewport: Viewport;
-  message: any;
+  inputs: any;
 
   chatHistory: { message: string; isSend: boolean }[];
 };
