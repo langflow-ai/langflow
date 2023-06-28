@@ -99,7 +99,8 @@ export default function Header() {
           >
             <FaDiscord className="h-5 w-5" />
           </a>
-          {/* <Separator orientation="vertical" />
+
+          <Separator orientation="vertical" />
           <button
             className="text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
             onClick={() => {

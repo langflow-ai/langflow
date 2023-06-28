@@ -14,7 +14,7 @@ export default function CrashErrorComponent({ error, resetErrorBoundary }) {
         <div className="flex justify-center">
           <button
             onClick={resetErrorBoundary}
-            className="bg-almost-dark-blue hover:bg-ring text-background font-bold py-2 px-4 rounded mr-4"
+            className="bg-primary hover:bg-ring text-background font-bold py-2 px-4 rounded mr-4"
           >
             Reset Application
           </button>
