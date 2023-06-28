@@ -399,9 +399,9 @@ export default function FormModal({
                   <AccordionItem key={k} value={i}>
                     <AccordionTrigger><Badge variant="gray" size="md">{i}</Badge></AccordionTrigger>
                     <AccordionContent>
-                      <div className="p-1 flex flex-col gap-4">
+                      <div className="p-1 flex flex-col gap-2">
                         <div className="flex items-center space-x-2">
-                          <Label htmlFor="airplane-mode">From Chat</Label>
+                          <Label htmlFor="airplane-mode" className="-mt-1">From Chat</Label>
                           <ToggleShadComponent
                             enabled={chatKey === k}
                             setEnabled={(value) =>
