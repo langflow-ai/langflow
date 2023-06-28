@@ -41,7 +41,7 @@ export default function NoticeAlert({
         <div className="flex">
           <div className="flex-shrink-0">
             <Info
-              className="h-5 w-5 text-blue-400 dark:text-blue-50"
+              className="h-5 w-5 text-blue-400 "
               aria-hidden="true"
             />
           </div>

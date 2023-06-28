@@ -90,8 +90,8 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
           <DialogDescription>
             {data.node?.description}
             <div className="flex pt-4">
-              <Variable className="w-5 h-5 pe-1 text-gray-700 stroke-2 dark:text-slate-200"></Variable>
-              <span className="text-sm font-semibold text-gray-800 dark:text-white">
+              <Variable className="w-5 h-5 pe-1 text-gray-700 stroke-2 "></Variable>
+              <span className="text-sm font-semibold text-gray-800 ">
                 Parameters
               </span>
             </div>

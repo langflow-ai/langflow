@@ -30,7 +30,7 @@ export default function SingleAlert({
         >
           <div className="flex-shrink-0">
             <XCircle
-              className="h-5 w-5 text-red-400 dark:text-red-50"
+              className="h-5 w-5 text-red-400"
               aria-hidden="true"
             />
           </div>
@@ -77,7 +77,7 @@ export default function SingleAlert({
         >
           <div className="flex-shrink-0">
             <Info
-              className="h-5 w-5 text-blue-400 dark:text-blue-50"
+              className="h-5 w-5 text-blue-400 "
               aria-hidden="true"
             />
           </div>
@@ -123,7 +123,7 @@ export default function SingleAlert({
         >
           <div className="flex-shrink-0">
             <CheckCircle2
-              className="h-5 w-5 text-green-400 dark:text-green-50"
+              className="h-5 w-5 text-green-400 "
               aria-hidden="true"
             />
           </div>

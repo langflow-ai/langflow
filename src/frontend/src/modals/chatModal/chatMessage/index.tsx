@@ -61,7 +61,7 @@ export default function ChatMessage({
           </div>
         )}
         {chat.isSend && (
-          <User2 className="w-6 h-6 -mb-1 text-gray-800 dark:text-gray-200" />
+          <User2 className="w-6 h-6 -mb-1 text-gray-800 " />
         )}
       </div>
       {!chat.isSend ? (
@@ -72,7 +72,7 @@ export default function ChatMessage({
                 onClick={() => setHidden((prev) => !prev)}
                 className="absolute -top-1 -left-2 cursor-pointer"
               >
-                <MessageCircle className="w-5 h-5 animate-bounce dark:text-white" />
+                <MessageCircle className="w-5 h-5 animate-bounce " />
               </div>
             )}
             {chat.thought && chat.thought !== "" && !hidden && (
@@ -151,7 +151,7 @@ export default function ChatMessage({
         </div>
       ) : (
         <div className="w-full flex items-center">
-          <div className="text-start inline-block px-3 text-gray-600 dark:text-white">
+          <div className="text-start inline-block px-3 text-gray-600 ">
             <span
               className="text-muted-foreground "
               dangerouslySetInnerHTML={{

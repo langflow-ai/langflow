@@ -39,7 +39,7 @@ export default function SuccessAlert({
         <div className="flex">
           <div className="flex-shrink-0">
             <CheckCircle2
-              className="h-5 w-5 text-green-400 dark:text-green-50"
+              className="h-5 w-5 text-green-400 "
               aria-hidden="true"
             />
           </div>

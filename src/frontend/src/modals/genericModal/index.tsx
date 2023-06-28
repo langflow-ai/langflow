@@ -55,7 +55,7 @@ export default function GenericModal({
           <DialogTitle className="flex items-center">
             <span className="pr-2">{myModalTitle}</span>
             <FileText
-              className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
+              className="h-6 w-6 text-gray-800 pl-1 "
               aria-hidden="true"
             />
           </DialogTitle>
