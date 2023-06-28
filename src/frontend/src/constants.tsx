@@ -27,7 +27,7 @@ export const CODE_DIALOG_SUBTITLE =
  * @constant
  */
 export const CHAT_FORM_DIALOG_SUBTITLE =
-  "Export your flow to use it with this code.";
+  "Set up the input variables defined in prompt templates. Interact with agents and chains.";
 
 /**
  * The base text for subtitle of Edit Node Dialog
