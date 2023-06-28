@@ -58,7 +58,8 @@ class ChatResponse(ChatMessage):
     @validator("type")
     def validate_message_type(cls, v):
         if v not in ["start", "stream", "end", "error", "info", "file"]:
-            raise ValueError("type must be start, stream, end, error, info, or file")
+            raise ValueError(
+                "type must be start, stream, end, error, info, or file")
         return v
 
 
@@ -106,3 +107,7 @@ class StreamData(BaseModel):
 
     def __str__(self) -> str:
         return f"event: {self.event}\ndata: {json.dumps(self.data)}\n\n"
+
+
+class CustomComponentCode(BaseModel):
+    code: str

@@ -6,14 +6,22 @@ from langflow.utils.logger import logger
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 
+from langflow.api.extract_info_from_class import (
+    ClassCodeExtractor,
+    is_valid_class_template
+)
+
 from langflow.api.v1.schemas import (
     ProcessResponse,
     UploadFileResponse,
+    CustomComponentCode,
 )
 
 from langflow.interface.types import (
     build_langchain_types_dict,
+    build_langchain_template_custom_component
 )
+
 from langflow.database.base import get_session
 from sqlmodel import Session
 
@@ -83,3 +91,22 @@ def get_version():
     from langflow import __version__
 
     return {"version": __version__}
+
+
+# @router.post("/custom_component", response_model=CustomComponentResponse, status_code=200)
+@router.post("/custom_component", status_code=200)
+def custom_component(
+    raw_code: CustomComponentCode,
+    session: Session = Depends(get_session),
+):
+    extractor = ClassCodeExtractor(raw_code.code)
+    data = extractor.extract_class_info()
+    valid = is_valid_class_template(data)
+
+    function_args, function_return_type = extractor.get_entrypoint_function_args_and_return_type()
+
+    return build_langchain_template_custom_component(
+        raw_code.code,
+        function_args,
+        function_return_type
+    )
