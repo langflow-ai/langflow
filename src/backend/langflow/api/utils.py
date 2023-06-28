@@ -24,13 +24,18 @@ def remove_api_keys(flow: dict):
     return flow
 
 
-def build_input_keys_response(langchain_object):
+def build_input_keys_response(langchain_object, artifacts):
     """Build the input keys response."""
 
     input_keys_response = {
         "input_keys": {key: "" for key in langchain_object.input_keys},
         "memory_keys": [],
     }
+
+    # Set the input keys values from artifacts
+    for key, value in artifacts.items():
+        if key in input_keys_response["input_keys"]:
+            input_keys_response["input_keys"][key] = value
     # If the object has memory, that memory will have a memory_variables attribute
     # memory variables should be removed from the input keys
     if hasattr(langchain_object, "memory") and hasattr(

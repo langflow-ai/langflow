@@ -124,7 +124,7 @@ def instantiate_prompt(node_type, class_object, params):
     if format_kwargs:
         prompt = prompt.partial(**format_kwargs)
 
-    return prompt
+    return prompt, format_kwargs
 
 
 def instantiate_tool(node_type, class_object, params):
