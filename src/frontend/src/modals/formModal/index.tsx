@@ -414,7 +414,7 @@ export default function FormModal({
                         <Textarea
                           value={keysValue[k]}
                           onChange={(e) =>
-                            setKeysValue({ ...keysValue, [k]: e.target.value })
+                            setKeysValue((old) => [...old.slice(0, k), e.target.value, ...old.slice(k + 1)])
                           }
                           disabled={chatKey === k}
                           placeholder="Enter text..."

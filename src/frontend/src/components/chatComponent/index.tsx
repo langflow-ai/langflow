@@ -3,7 +3,6 @@ import { useNodes } from "reactflow";
 import { ChatType } from "../../types/chat";
 import ChatTrigger from "./chatTrigger";
 import BuildTrigger from "./buildTrigger";
-import ChatModal from "../../modals/chatModal";
 
 import { getBuildStatus } from "../../controllers/API";
 import { NodeType } from "../../types/flow";
@@ -45,10 +44,11 @@ export default function Chat({ flow }: ChatType) {
   const prevNodesRef = useRef<any[] | undefined>();
   const nodes = useNodes();
   useEffect(() => {
+    
     const prevNodes = prevNodesRef.current;
     const currentNodes = nodes.map(
-      (node: NodeType) => node.data.node.template.value
-    );
+      (node: NodeType) => node.data.node.template
+      );
 
     if (
       prevNodes &&

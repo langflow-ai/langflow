@@ -59,15 +59,15 @@ export default function ChatInput({
         placeholder={"Send a message..."}
       />
       <div className="absolute bottom-2 right-4">
-        <button className={classNames("p-2 pl-1 pr-3 transition-all duration-300 rounded-md",chatValue == "" ? "text-primary" : " bg-indigo-600 text-background")} disabled={lockChat} onClick={() => sendMessage()}>
+        <button className={classNames("p-2 px-1 transition-all duration-300 rounded-md",chatValue == "" ? "text-primary" : " bg-indigo-600 text-background")} disabled={lockChat} onClick={() => sendMessage()}>
           {lockChat ? (
             <Lock
-              className="h-5 w-5 text-primary animate-pulse"
+              className="h-5 w-5 ml-1 mr-11 animate-pulse"
               aria-hidden="true"
             />
           ) : (
             <LucideSend
-              className="h-5 w-5 rotate-[44deg] "
+              className="h-5 w-5 mr-2 rotate-[44deg] "
               aria-hidden="true"
             />
           )}
