@@ -34,13 +34,15 @@ export default function CodeAreaModal({
   const [code, setCode] = useState(value);
   const { dark } = useContext(darkContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
-  const { closePopUp } = useContext(PopUpContext);
+  const { closePopUp,setCloseEdit } = useContext(PopUpContext);
   const ref = useRef();
   function setModalOpen(x: boolean) {
     setOpen(x);
     if (x === false) {
       setTimeout(() => {
         closePopUp();
+        setCloseEdit("editcode");
+        
       }, 300);
     }
   }

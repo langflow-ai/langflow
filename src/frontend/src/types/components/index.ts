@@ -121,6 +121,6 @@ export type RadialProgressType = {
 
 export type AccordionComponentType  = {
   children?: ReactElement;
-  value?: string;
+  open?: boolean;
   trigger?: string;
 };
