@@ -48,7 +48,7 @@ import PromptAreaComponent from "../../components/promptComponent";
 import TextAreaComponent from "../../components/textAreaComponent";
 import ToggleShadComponent from "../../components/toggleShadComponent";
 import ShadTooltip from "../../components/ShadTooltipComponent";
-import { cloneDeep } from "lodash";
+import { cloneDeep, filter } from "lodash";
 import { TabsContext } from "../../contexts/tabsContext";
 
 export default function ApiModal({ flow }: { flow: FlowType }) {
@@ -60,6 +60,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
   const [enabled, setEnabled] = useState(null);
   const [openAccordion, setOpenAccordion] = useState(false);
   const tweak = useRef([]);
+  const tweaksList = useRef([]);
   const { setTweak, getTweak } = useContext(TabsContext);
   const copyToClipboard = () => {
     if (!navigator.clipboard || !navigator.clipboard.writeText) {
@@ -91,10 +92,53 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
     }
   }, [closeEdit]);
 
+
+
   const pythonApiCode = getPythonApiCode(flow, tweak.current);
   const curl_code = getCurlCode(flow, tweak.current);
   const pythonCode = getPythonCode(flow, tweak.current);
   const tweaksCode = buildTweaks(flow);
+
+  useEffect(() => {
+    filterNodes();
+
+  }, [])
+  function filterNodes(){
+
+    let arrNodesWithValues = [];
+    
+    flow["data"]["nodes"].forEach(t => {
+      
+      Object.keys(t['data']['node']['template']).filter(
+        (n) =>
+          n.charAt(0) !== "_" &&
+          t.data.node.template[n].show &&
+          (t.data.node.template[n].type ===
+            "str" ||
+            t.data.node.template[n].type ===
+              "bool" ||
+            t.data.node.template[n].type ===
+              "float" ||
+            t.data.node.template[n].type ===
+              "code" ||
+            t.data.node.template[n].type ===
+              "prompt" ||
+            t.data.node.template[n].type ===
+              "file" ||
+            t.data.node.template[n].type ===
+              "int")
+      )
+      .map((n, i) => {
+        arrNodesWithValues.push(t['id'])
+      })
+      
+    })
+
+    tweaksList.current = arrNodesWithValues.filter((value, index, self) => {
+      return self.indexOf(value) === index;
+    });
+    
+  }
 
   const tabs = [
     {
@@ -238,9 +282,9 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
           value={activeTab}
           className="w-full h-full overflow-hidden text-center bg-muted rounded-md border"
           onValueChange={(value) => {
-            setActiveTab(value)
-            
-            if(tweak.current.length > 0){
+            setActiveTab(value);
+
+            if (tweak.current.length > 0) {
               setOpenAccordion(true);
             }
           }}
@@ -293,6 +337,12 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                     >
                       {flow["data"]["nodes"].map((t: any, index) => (
                         <div className="px-3" key={index}>
+                         {(
+
+                         
+                            tweaksList.current.includes(t["data"]["id"]) &&
+                            
+                                                    
                           <AccordionComponent
                             trigger={t["data"]["id"]}
                             open={openAccordion}
@@ -331,7 +381,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                             "int")
                                     )
                                     .map((n, i) => {
-                                      // console.log(t.data.node.template[n]);
+                                      //console.log(t.data.node.template[n]);
 
                                       return (
                                         <TableRow
@@ -375,16 +425,14 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                     />
                                                   ) : t.data.node.template[n]
                                                       .multiline ? (
-                                                        <ShadTooltip
-                                                        delayDuration={1000}
-                                                        content={buildContent(
-                                                          t.data.node.template[
-                                                            n
-                                                          ].value
-                                                        )}
-                                                      >
-                                                    <div>
-
+                                                    <ShadTooltip
+                                                      delayDuration={1000}
+                                                      content={buildContent(
+                                                        t.data.node.template[n]
+                                                          .value
+                                                      )}
+                                                    >
+                                                      <div>
                                                         <TextAreaComponent
                                                           disabled={false}
                                                           editNode={true}
@@ -405,9 +453,8 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                             );
                                                           }}
                                                         />
-                                                    </div>
+                                                      </div>
                                                     </ShadTooltip>
-
                                                   ) : (
                                                     <InputComponent
                                                       editNode={true}
@@ -648,6 +695,15 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                               </Table>
                             </div>
                           </AccordionComponent>
+                         )}
+
+                         {(
+                           tweaksList.current.length === 0 && 
+                           <>
+                            <div className="pt-3">No tweaks are available for this flow.</div>
+                           </>
+                         )}
+
                         </div>
                       ))}
 
