@@ -28,6 +28,8 @@ export type TabsContextType = {
   ) => void;
   lastCopiedSelection: { nodes: any; edges: any };
   setLastCopiedSelection: (selection: { nodes: any; edges: any }) => void;
+  setTweak: (tweak: any) => void;
+  getTweak: any;
 };
 
 export type TabsState = {

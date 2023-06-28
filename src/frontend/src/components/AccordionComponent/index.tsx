@@ -14,10 +14,11 @@ export default function AccordionComponent({
   children,
 }: AccordionComponentType) {
 
+
   return <>
                             <Accordion type="single" collapsible>
                           <AccordionItem value="item-1" className="border-none">
-                            <AccordionTrigger className="ml-3">{trigger}</AccordionTrigger>
+                            <AccordionTrigger  className="ml-3">{trigger}</AccordionTrigger>
                             <AccordionContent>
                               {children}
                             </AccordionContent>

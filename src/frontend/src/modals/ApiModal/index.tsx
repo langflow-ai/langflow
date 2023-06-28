@@ -48,6 +48,8 @@ import PromptAreaComponent from "../../components/promptComponent";
 import TextAreaComponent from "../../components/textAreaComponent";
 import ToggleShadComponent from "../../components/toggleShadComponent";
 import ShadTooltip from "../../components/ShadTooltipComponent";
+import { cloneDeep } from "lodash";
+import { TabsContext } from "../../contexts/tabsContext";
 
 export default function ApiModal({ flow }: { flow: FlowType }) {
   const [open, setOpen] = useState(true);
@@ -57,7 +59,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
   const [isCopied, setIsCopied] = useState<Boolean>(false);
   const [enabled, setEnabled] = useState(null);
   const tweak = useRef([]);
-
+  const { setTweak, getTweak } = useContext(TabsContext);
   const copyToClipboard = () => {
     if (!navigator.clipboard || !navigator.clipboard.writeText) {
       return;
@@ -78,7 +80,6 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
     }
   }
   
-
   const pythonApiCode = getPythonApiCode(flow, tweak.current);
   const curl_code = getCurlCode(flow, tweak.current);
   const pythonCode = getPythonCode(flow, tweak.current);
@@ -171,8 +172,8 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
     tabs[0].code = curl_code;
     tabs[1].code = pythonApiCode;
     tabs[2].code = pythonCode;
-
-    console.log(tweak.current);
+    
+    setTweak(tweak.current);
   }
 
   function buildContent(value) {
@@ -183,6 +184,33 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
     );
     return htmlContent;
   }
+
+  function getValue(value, node, template){
+
+    let returnValue = value ?? "";
+
+    if(getTweak.length > 0){
+      for (const obj of getTweak) {
+        // Obtém a chave do objeto interno
+          const key = Object.keys(obj)[0];
+          // Obtém o valor do objeto interno
+          const value = obj[key];
+          if(key == node['id']){
+            Object.keys(value).forEach((key) => {
+              if(key == template['name']){
+                returnValue = value[key];
+              }
+            })
+          }
+        }
+    }
+    else{
+      return value ?? "";
+    }
+    return returnValue;
+  }
+
+
 
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
@@ -251,7 +279,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                       )}
                     >
                       {flow["data"]["nodes"].map((t: any, index) => (
-                        <div className="px-3">
+                        <div className="px-3" key={index}>
                           <AccordionComponent trigger={t["data"]["id"]}>
                             <div className="flex flex-col gap-5 h-fit">
                               <Table className="table-fixed bg-muted outline-1">
@@ -318,7 +346,9 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                           : t.data.node
                                                               .template[n].value
                                                       }
-                                                      onChange={(k) => {}}
+                                                      onChange={(k) => {
+
+                                                      }}
                                                       onAddInput={(k) => {
                                                         buildTweakObject(
                                                           t["data"]["id"],
@@ -348,7 +378,8 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                               .template[n]
                                                               .value ?? ""
                                                           }
-                                                          onChange={(k) => {}}
+                                                          onChange={(k) => {
+                                                          }}
                                                         />
                                                       </ShadTooltip>
                                                     </div>
@@ -361,8 +392,10 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                           .password ?? false
                                                       }
                                                       value={
-                                                        t.data.node.template[n]
-                                                          .value ?? ""
+
+                                                        getValue(t.data.node.template[n]
+                                                          .value, t.data, t.data.node.template[n])
+
                                                       }
                                                       onChange={(k) => {
                                                         buildTweakObject(
@@ -420,7 +453,6 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                         .value ?? ""
                                                     }
                                                     onChange={(k: any) => {
-
                                                     }}
                                                     fileTypes={
                                                       t.data.node.template[n]
@@ -444,8 +476,8 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                     disabled={false}
                                                     editNode={true}
                                                     value={
-                                                      t.data.node.template[n]
-                                                        .value ?? ""
+                                                      getValue(t.data.node.template[n]
+                                                        .value, t.data, t.data.node.template[n])
                                                     }
                                                     onChange={(k) => {
                                                       buildTweakObject(
@@ -468,17 +500,21 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                       t.data.node.template[n]
                                                         .options
                                                     }
-                                                    onSelect={(k) =>
+                                                    onSelect={(k) =>{
+
+
+
                                                       buildTweakObject(
                                                         t["data"]["id"],
                                                         k,
                                                         t.data.node.template[n]
                                                       )
                                                     }
+
+                                                    }
                                                     value={
-                                                      t.data.node.template[n]
-                                                        .value ??
-                                                      "Choose an option"
+                                                      getValue(t.data.node.template[n]
+                                                        .value, t.data, t.data.node.template[n])
                                                     }
                                                   ></Dropdown>
                                                 </div>
@@ -489,8 +525,8 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                     disabled={false}
                                                     editNode={true}
                                                     value={
-                                                      t.data.node.template[n]
-                                                        .value ?? ""
+                                                      getValue(t.data.node.template[n]
+                                                        .value, t.data, t.data.node.template[n])
                                                     }
                                                     onChange={(k) => {
                                                       buildTweakObject(
@@ -518,7 +554,8 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                         t.data.node.template[n]
                                                           .value ?? ""
                                                       }
-                                                      onChange={(k) => {}}
+                                                      onChange={(k) => {
+                                                      }}
                                                     />
                                                   </div>
                                                 </ShadTooltip>
@@ -539,7 +576,8 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                         t.data.node.template[n]
                                                           .value ?? ""
                                                       }
-                                                      onChange={(k) => {}}
+                                                      onChange={(k) => {
+                                                      }}
                                                     />
                                                   </div>
                                                 </ShadTooltip>
