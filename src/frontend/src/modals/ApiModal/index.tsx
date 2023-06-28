@@ -87,6 +87,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
     if (closeEdit !== "") {
       setActiveTab("3");
       setOpenAccordion(true);
+      tweak.current = getTweak;
     }
   }, [closeEdit]);
 
