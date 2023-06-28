@@ -225,6 +225,7 @@ def load_agent_executor(agent_class: type[agent_module.Agent], params, **kwargs)
     """Load agent executor from agent class, tools and chain"""
     allowed_tools: Sequence[BaseTool] = params.get("allowed_tools", [])
     llm_chain = params["llm_chain"]
+    memory = params["memory"]
     # if allowed_tools is not a list or set, make it a list
     if not isinstance(allowed_tools, (list, set)) and isinstance(
         allowed_tools, BaseTool
@@ -237,6 +238,7 @@ def load_agent_executor(agent_class: type[agent_module.Agent], params, **kwargs)
     return AgentExecutor.from_agent_and_tools(
         agent=agent,
         tools=allowed_tools,
+        memory=memory,
         **kwargs,
     )
 
