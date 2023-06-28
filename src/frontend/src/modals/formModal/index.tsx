@@ -45,7 +45,7 @@ export default function FormModal({
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
   const { reactFlowInstance } = useContext(typesContext);
   const { setErrorData, setNoticeData } = useContext(alertContext);
-  const { tabsState } = useContext(TabsContext);
+  const { tabsState, setTabsState } = useContext(TabsContext);
   const ws = useRef<WebSocket | null>(null);
   const [lockChat, setLockChat] = useState(false);
   const isOpen = useRef(open);
@@ -327,12 +327,14 @@ export default function FormModal({
       if (nodeValidationErrors.length === 0) {
         setLockChat(true);
         // Message variable makes a object with the keys being the names from tabsState[flow.id].formKeysData.input_keys and the values being the keysValue of the correspondent index
-        let keys = tabsState[flow.id].formKeysData.input_keys; // array of keys
-        let values = keysValue.map((k, i) => (i == chatKey ? chatValue : k)); // array of values
-        let inputs = keys.reduce((object, key, index) => {
-          object[key] = values[index];
-          return object;
-        }, {});
+        let key = Object.keys(tabsState[id.current].formKeysData.input_keys)[chatKey];
+        setTabsState((old) => {
+          let newTabsState = _.cloneDeep(old);
+          newTabsState[id.current].formKeysData.input_keys[key] = chatValue;
+          return newTabsState;
+        })
+        let inputs = tabsState[id.current].formKeysData.input_keys;
+        inputs[key] = chatValue;
         setChatValue("");
         const message = formatMessage(inputs);
         addChatHistory(message, true);
@@ -372,7 +374,9 @@ export default function FormModal({
     }
   }
 
+  console.log(tabsState[id.current])
   return (
+    (tabsState[id.current].formKeysData?.input_keys && tabsState[id.current].formKeysData?.memory_keys) &&
     <Dialog open={open} onOpenChange={setModalOpen}>
       <DialogTrigger className="hidden"></DialogTrigger>
       {tabsState[flow.id].formKeysData && (
@@ -397,7 +401,7 @@ export default function FormModal({
                 </span>
               </div>
               <Accordion type="single" collapsible className="w-full">
-                {tabsState[id.current].formKeysData.input_keys.map((i, k) => (
+                {Object.keys(tabsState[id.current].formKeysData.input_keys).map((i, k) => (
                   <AccordionItem key={k} value={i}>
                     <AccordionTrigger><Badge variant="gray" size="md">{i}</Badge></AccordionTrigger>
                     <AccordionContent>
@@ -414,9 +418,13 @@ export default function FormModal({
                           />
                         </div>
                         <Textarea
-                          value={keysValue[k]}
+                          value={tabsState[id.current].formKeysData.input_keys[i]}
                           onChange={(e) =>
-                            setKeysValue((old) => [...old.slice(0, k), e.target.value, ...old.slice(k + 1)])
+                            setTabsState((old) => {
+                              let newTabsState = _.cloneDeep(old);
+                              newTabsState[id.current].formKeysData.input_keys[i] = e.target.value;
+                              return newTabsState;
+                            })
                           }
                           disabled={chatKey === k}
                           placeholder="Enter text..."
