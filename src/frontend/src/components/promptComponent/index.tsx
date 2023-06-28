@@ -5,6 +5,7 @@ import GenericModal from "../../modals/genericModal";
 import { TypeModal } from "../../utils";
 import { INPUT_STYLE } from "../../constants";
 import { ExternalLink } from "lucide-react";
+import { postValidatePrompt } from "../../controllers/API";
 
 export default function PromptAreaComponent({
   setNodeClass,
@@ -22,6 +23,18 @@ export default function PromptAreaComponent({
       onChange("");
     }
   }, [disabled, onChange]);
+
+  useEffect(() => {
+    if (value) {
+      postValidatePrompt(myValue, nodeClass)
+        .then((apiReturn) => {
+          if (apiReturn.data) {
+            setNodeClass(apiReturn.data.frontend_node);
+          }
+        })
+        .catch((error) => {});
+    }
+  }, [value]);
 
   useEffect(() => {
     setMyValue(value);
