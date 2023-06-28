@@ -1,20 +1,10 @@
-import { Transition } from "@headlessui/react";
-import { Fragment, useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { FlowType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
 import { validateNodes } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import ChatMessage from "./chatMessage";
-import {
-  X,
-  MessagesSquare,
-  Eraser,
-  TerminalSquare,
-  MessageCircle,
-  MessageSquareDashed,
-  MessageSquare,
-  Variable,
-} from "lucide-react";
+import { TerminalSquare, MessageSquare, Variable } from "lucide-react";
 import { sendAllProps } from "../../types/api";
 import { ChatMessageType } from "../../types/chat";
 import ChatInput from "./chatInput";
@@ -24,16 +14,11 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-import { dark } from "@mui/material/styles/createPalette";
 import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants";
-import { postValidateCode } from "../../controllers/API";
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { TabsContext } from "../../contexts/tabsContext";
 import {
@@ -42,12 +27,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "../../components/ui/accordion";
-import { AccordionHeader } from "@radix-ui/react-accordion";
 import { Textarea } from "../../components/ui/textarea";
 import { Badge } from "../../components/ui/badge";
-import { Separator } from "../../components/ui/separator";
-import { Switch } from "../../components/ui/switch";
-import { CardTitle } from "../../components/ui/card";
 import ToggleShadComponent from "../../components/toggleShadComponent";
 
 export default function FormModal({
@@ -83,9 +64,12 @@ export default function FormModal({
   }, [open]);
   useEffect(() => {
     id.current = flow.id;
-    setKeysValue(
-      Array(tabsState[flow.id].formKeysData.input_keys.length).fill("")
-    );
+
+    if (tabsState[flow.id].formKeysData) {
+      setKeysValue(
+        Array(tabsState[flow.id].formKeysData.input_keys.length).fill("")
+      );
+    }
   }, [flow.id, tabsState[flow.id], tabsState[flow.id].formKeysData]);
 
   var isStream = false;
@@ -303,7 +287,7 @@ export default function FormModal({
         title: "There was an error sending the message",
         list: [error.message],
       });
-      setChatValue(data.message);
+      setChatValue(data.inputs);
       connectWS();
     }
   }
@@ -319,6 +303,22 @@ export default function FormModal({
       ref.current.focus();
     }
   }, [open]);
+  function formatMessage(inputs: any): string {
+    if (inputs) {
+      // inputs is a object with the keys and values being input_keys and keysValue
+      // so the formated message is a string with the keys and values separated by ": "
+      let message = "";
+      for (const [key, value] of Object.entries(inputs)) {
+        // make key bold
+        // dangerouslySetInnerHTML={{
+        //           __html: message.replace(/\n/g, "<br>"),
+        //         }}
+        message += `<b>${key}</b>: ${value}\n`;
+      }
+      return message;
+    }
+    return "";
+  }
 
   function sendMessage() {
     if (chatValue !== "") {
@@ -328,15 +328,16 @@ export default function FormModal({
         // Message variable makes a object with the keys being the names from tabsState[flow.id].formKeysData.input_keys and the values being the keysValue of the correspondent index
         let keys = tabsState[flow.id].formKeysData.input_keys; // array of keys
         let values = keysValue.map((k, i) => (i == chatKey ? chatValue : k)); // array of values
-        let message = keys.reduce((object, key, index) => {
+        let inputs = keys.reduce((object, key, index) => {
           object[key] = values[index];
           return object;
         }, {});
         setChatValue("");
-        addChatHistory(message.toString(), true);
+        const message = formatMessage(inputs);
+        addChatHistory(message, true);
         sendAll({
           ...reactFlowInstance.toObject(),
-          message,
+          inputs: inputs,
           chatHistory,
           name: flow.name,
           description: flow.description,
