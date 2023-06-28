@@ -30,9 +30,6 @@ from langflow.interface.wrappers.base import wrapper_creator
 from typing import Dict, Type
 
 
-DIRECT_TYPES = ["str", "bool", "code", "int", "float", "Any", "prompt"]
-
-
 VERTEX_TYPE_MAP: Dict[str, Type[Vertex]] = {
     **{t: PromptVertex for t in prompt_creator.to_list()},
     **{t: AgentVertex for t in agent_creator.to_list()},

@@ -106,9 +106,6 @@ class VectorStoreVertex(Vertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="vectorstores")
 
-    def _built_object_repr(self):
-        return "Vector stores can take time to build. It will build on the first query."
-
 
 class MemoryVertex(Vertex):
     def __init__(self, data: Dict):

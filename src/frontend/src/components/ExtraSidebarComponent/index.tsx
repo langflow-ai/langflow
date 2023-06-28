@@ -1,5 +1,4 @@
 import { Disclosure } from "@headlessui/react";
-import { ChevronLeftIcon } from "@heroicons/react/24/outline";
 import { useContext, useState } from "react";
 import { Link } from "react-router-dom";
 import { classNames } from "../../utils";

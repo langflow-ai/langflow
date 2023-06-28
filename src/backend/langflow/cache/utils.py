@@ -8,16 +8,17 @@ import tempfile
 from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Dict
-
-import dill  # type: ignore
+from appdirs import user_cache_dir
 
 CACHE: Dict[str, Any] = {}
+
+CACHE_DIR = user_cache_dir("langflow", "langflow")
 
 
 def create_cache_folder(func):
     def wrapper(*args, **kwargs):
         # Get the destination folder
-        cache_path = Path(tempfile.gettempdir()) / PREFIX
+        cache_path = Path(CACHE_DIR) / PREFIX
 
         # Create the destination folder if it doesn't exist
         os.makedirs(cache_path, exist_ok=True)
@@ -119,7 +120,7 @@ def save_binary_file(content: str, file_name: str, accepted_types: list[str]) ->
         raise ValueError(f"File {file_name} is not accepted")
 
     # Get the destination folder
-    cache_path = Path(tempfile.gettempdir()) / PREFIX
+    cache_path = Path(CACHE_DIR) / PREFIX
     if not content:
         raise ValueError("Please, reload the file in the loader.")
     data = content.split(",")[1]
@@ -136,19 +137,43 @@ def save_binary_file(content: str, file_name: str, accepted_types: list[str]) ->
 
 
 @create_cache_folder
-def save_cache(hash_val: str, chat_data, clean_old_cache_files: bool):
-    cache_path = Path(tempfile.gettempdir()) / PREFIX / f"{hash_val}.dill"
-    with cache_path.open("wb") as cache_file:
-        dill.dump(chat_data, cache_file)
+def save_uploaded_file(file, folder_name):
+    """
+    Save an uploaded file to the specified folder with a hash of its content as the file name.
 
-    if clean_old_cache_files:
-        clear_old_cache_files()
+    Args:
+        file: The uploaded file object.
+        folder_name: The name of the folder to save the file in.
 
+    Returns:
+        The path to the saved file.
+    """
+    cache_path = Path(CACHE_DIR)
+    folder_path = cache_path / folder_name
 
-@create_cache_folder
-def load_cache(hash_val):
-    cache_path = Path(tempfile.gettempdir()) / PREFIX / f"{hash_val}.dill"
-    if cache_path.exists():
-        with cache_path.open("rb") as cache_file:
-            return dill.load(cache_file)
-    return None
+    # Create the folder if it doesn't exist
+    if not folder_path.exists():
+        folder_path.mkdir()
+
+    # Create a hash of the file content
+    sha256_hash = hashlib.sha256()
+    # Reset the file cursor to the beginning of the file
+    file.seek(0)
+    # Iterate over the uploaded file in small chunks to conserve memory
+    while chunk := file.read(8192):  # Read 8KB at a time (adjust as needed)
+        sha256_hash.update(chunk)
+
+    # Use the hex digest of the hash as the file name
+    hex_dig = sha256_hash.hexdigest()
+    file_name = hex_dig
+
+    # Reset the file cursor to the beginning of the file
+    file.seek(0)
+
+    # Save the file with the hash as its name
+    file_path = folder_path / file_name
+    with open(file_path, "wb") as new_file:
+        while chunk := file.read(8192):
+            new_file.write(chunk)
+
+    return file_path

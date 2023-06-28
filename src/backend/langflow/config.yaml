@@ -3,7 +3,7 @@ agents:
   - ZeroShotAgent
   - JsonAgent
   - CSVAgent
-  - initialize_agent
+  - AgentInitializer
   - VectorStoreAgent
   - VectorStoreRouterAgent
   - SQLAgent
@@ -48,6 +48,8 @@ documentloaders:
   - ReadTheDocsLoader
   - SlackDirectoryLoader
   - NotionDirectoryLoader
+  - DirectoryLoader
+  - GitLoader
 embeddings:
   - OpenAIEmbeddings
   - HuggingFaceEmbeddings
@@ -57,7 +59,7 @@ llms:
   # - AzureOpenAI
   # - AzureChatOpenAI
   - ChatOpenAI
-  - LlamaCpp 
+  - LlamaCpp
   - CTransformers
   - Cohere
   - Anthropic
@@ -129,6 +131,9 @@ vectorstores:
   - Qdrant
   - Weaviate
   - FAISS
+  - Pinecone
+  - SupabaseVectorStore
+  - MongoDBAtlasVectorSearch
 wrappers:
   - RequestsWrapper
   # - ChatPromptTemplate

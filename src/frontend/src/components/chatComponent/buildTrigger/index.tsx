@@ -1,4 +1,4 @@
-import { useState, useContext } from "react";
+import { useContext, useState } from "react";
 import { Transition } from "@headlessui/react";
 import { Zap } from "lucide-react";
 import { validateNodes } from "../../../utils";
@@ -9,6 +9,8 @@ import { typesContext } from "../../../contexts/typesContext";
 import { alertContext } from "../../../contexts/alertContext";
 import { postBuildInit } from "../../../controllers/API";
 import ShadTooltip from "../../ShadTooltipComponent";
+
+import RadialProgressComponent from "../../RadialProgress";
 
 export default function BuildTrigger({
   open,
@@ -21,11 +23,12 @@ export default function BuildTrigger({
   setIsBuilt: any;
   isBuilt: boolean;
 }) {
-  const [isBuilding, setIsBuilding] = useState(false);
-
-  const { updateSSEData } = useSSE();
+  const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
   const { reactFlowInstance } = useContext(typesContext);
-  const { setErrorData } = useContext(alertContext);
+  const { setErrorData, setSuccessData } = useContext(alertContext);
+  const [isIconTouched, setIsIconTouched] = useState(false);
+  const eventClick = isBuilding ? "pointer-events-none" : "";
+  const [progress, setProgress] = useState(0);
 
   async function handleBuild(flow: FlowType) {
     try {
@@ -47,10 +50,12 @@ export default function BuildTrigger({
       const allNodesValid = await streamNodeData(flow);
       await enforceMinimumLoadingTime(startTime, minimumLoadingTime);
       setIsBuilt(allNodesValid);
-      if(!allNodesValid) {
+      if (!allNodesValid) {
         setErrorData({
           title: "Oops! Looks like you missed something",
-          list: ["Check nodes and retry. Hover over 🔴 node for status."],
+          list: [
+            "Check components and retry. Hover over component status icon 🔴 to inspect.",
+          ],
         });
       }
     } catch (error) {
@@ -59,12 +64,10 @@ export default function BuildTrigger({
       setIsBuilding(false);
     }
   }
-
   async function streamNodeData(flow: FlowType) {
     // Step 1: Make a POST request to send the flow data and receive a unique session ID
     const response = await postBuildInit(flow);
     const { flowId } = response.data;
-
     // Step 2: Use the session ID to establish an SSE connection using EventSource
     let validationResults = [];
     let finished = false;
@@ -82,15 +85,25 @@ export default function BuildTrigger({
         eventSource.close();
 
         return;
+      } else if (parsedData.log) {
+        // If the event is a log, log it
+        setSuccessData({ title: parsedData.log });
+      } else {
+        // Otherwise, process the data
+        const isValid = processStreamResult(parsedData);
+        setProgress(parsedData.progress);
+        validationResults.push(isValid);
       }
-      // Otherwise, process the data
-      const isValid = processStreamResult(parsedData);
-      validationResults.push(isValid);
     };
 
-    eventSource.onerror = (error) => {
+    eventSource.onerror = (error: any) => {
       console.error("EventSource failed:", error);
       eventSource.close();
+      if (error.data) {
+        const parsedData = JSON.parse(error.data);
+        setErrorData({ title: parsedData.error });
+        setIsBuilding(false);
+      }
     };
     // Step 3: Wait for the stream to finish
     while (!finished) {
@@ -124,6 +137,14 @@ export default function BuildTrigger({
     }
   }
 
+  const handleMouseEnter = () => {
+    setIsIconTouched(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsIconTouched(false);
+  };
+
   return (
     <Transition
       show={!open}
@@ -136,30 +157,30 @@ export default function BuildTrigger({
       leaveTo="translate-y-96"
     >
       <div className={`fixed right-4` + (isBuilt ? " bottom-20" : " bottom-4")}>
-        <ShadTooltip
-          delayDuration={500}
-          content="Build Flow"
-          side="left"
+        <div
+          className={`${eventClick} flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full shadow-md shadow-[#0000002a] hover:shadow-[#00000032] bg-[#E2E7EE] dark:border-gray-600 cursor-pointer`}
+          onClick={() => {
+            handleBuild(flow);
+          }}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
         >
-          <div
-            className="flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full shadow-md hover:shadow-sm shadow-btn-shadow hover:shadow-btn-shadow
-            bg-buildBackground cursor-pointer"
-            onClick={() => {
-              handleBuild(flow);
-            }}
-          >
-            <button>
-              <div className="flex gap-3 items-center">
-                {isBuilding ? (
-                  // Render your loading animation here when isBuilding is true
-                  <Loading strokeWidth={1.5} className="text-build" />
-                ) : (
-                  <Zap className="sh-6 w-6 fill-build stroke-1 stroke-build"/>
-                )}
-              </div>
-            </button>
-          </div>
-        </ShadTooltip>
+          <button>
+            <div className="flex gap-3 items-center">
+              {isBuilding && progress < 1 ? (
+                // Render your loading animation here when isBuilding is true
+                <RadialProgressComponent
+                  color={"text-orange-400"}
+                  value={progress}
+                ></RadialProgressComponent>
+              ) : isBuilding ? (
+                <Loading strokeWidth={1.5} style={{ color: "#fb923c" }} />
+              ) : (
+                <Zap className="sh-6 w-6 fill-orange-400 stroke-1 stroke-orange-400" />
+              )}
+            </div>
+          </button>
+        </div>
       </div>
     </Transition>
   );

@@ -66,7 +66,7 @@ export const getPythonApiCode = (flow: FlowType): string => {
 
 BASE_API_URL = "${window.location.protocol}//${
     window.location.host
-  }/ap1/v1/predict"
+  }/api/v1/process"
 FLOW_ID = "${flowId}"
 # You can tweak the flow by adding a tweaks dictionary
 # e.g {"OpenAI-XXXXX": {"model_name": "gpt-4"}}
@@ -83,7 +83,7 @@ def run_flow(message: str, flow_id: str, tweaks: dict = None) -> dict:
     """
     api_url = f"{BASE_API_URL}/{flow_id}"
 
-    payload = {"message": message}
+    payload = {"inputs": {"input": message}}
 
     if tweaks:
         payload["tweaks"] = tweaks
@@ -106,9 +106,9 @@ export const getCurlCode = (flow: FlowType): string => {
   return `curl -X POST \\
   ${window.location.protocol}//${
     window.location.host
-  }/api/v1/predict/${flowId} \\
+  }/api/v1/process/${flowId} \\
   -H 'Content-Type: application/json' \\
-  -d '{"message": "Your message", "tweaks": ${JSON.stringify(
+  -d '{"inputs": {"input": message}, "tweaks": ${JSON.stringify(
     tweaks,
     null,
     2
@@ -121,11 +121,12 @@ export const getCurlCode = (flow: FlowType): string => {
  */
 export const getPythonCode = (flow: FlowType): string => {
   const flowName = flow.name;
+  const tweaks = buildTweaks(flow);
   return `from langflow import load_flow_from_json
-
-    flow = load_flow_from_json("${flowName}.json")
-    # Now you can use it like any chain
-    flow("Hey, have you heard of LangFlow?")`;
+TWEAKS = ${JSON.stringify(tweaks, null, 2)}
+flow = load_flow_from_json("${flowName}.json", tweaks=TWEAKS)
+# Now you can use it like any chain
+flow("Hey, have you heard of LangFlow?")`;
 };
 
 /**
@@ -170,3 +171,262 @@ export const NAV_DISPLAY_STYLE =
  */
 export const BUTTON_DIV_STYLE =
   " flex gap-2 ";
+  " focus:ring-1 focus:ring-offset-1 focus:ring-ring focus:outline-none ";
+
+/**
+ * Default description for the flow
+ * @constant
+ */
+export const DESCRIPTIONS: string[] = [
+  "Chain the Words, Master Language!",
+  "Language Architect at Work!",
+  "Empowering Language Engineering.",
+  "Craft Language Connections Here.",
+  "Create, Connect, Converse.",
+  "Smart Chains, Smarter Conversations.",
+  "Bridging Prompts for Brilliance.",
+  "Language Models, Unleashed.",
+  "Your Hub for Text Generation.",
+  "Promptly Ingenious!",
+  "Building Linguistic Labyrinths.",
+  "LangFlow: Create, Chain, Communicate.",
+  "Connect the Dots, Craft Language.",
+  "Interactive Language Weaving.",
+  "Generate, Innovate, Communicate.",
+  "Conversation Catalyst Engine.",
+  "Language Chainlink Master.",
+  "Design Dialogues with LangFlow.",
+  "Nurture NLP Nodes Here.",
+  "Conversational Cartography Unlocked.",
+  "Design, Develop, Dialogize.",
+];
+
+/**
+ * Adjectives for the name of the flow
+ * @constant
+ *
+ */
+export const ADJECTIVES: string[] = [
+  "admiring",
+  "adoring",
+  "agitated",
+  "amazing",
+  "angry",
+  "awesome",
+  "backstabbing",
+  "berserk",
+  "big",
+  "boring",
+  "clever",
+  "cocky",
+  "compassionate",
+  "condescending",
+  "cranky",
+  "desperate",
+  "determined",
+  "distracted",
+  "dreamy",
+  "drunk",
+  "ecstatic",
+  "elated",
+  "elegant",
+  "evil",
+  "fervent",
+  "focused",
+  "furious",
+  "gigantic",
+  "gloomy",
+  "goofy",
+  "grave",
+  "happy",
+  "high",
+  "hopeful",
+  "hungry",
+  "insane",
+  "jolly",
+  "jovial",
+  "kickass",
+  "lonely",
+  "loving",
+  "mad",
+  "modest",
+  "naughty",
+  "nauseous",
+  "nostalgic",
+  "pedantic",
+  "pensive",
+  "prickly",
+  "reverent",
+  "romantic",
+  "sad",
+  "serene",
+  "sharp",
+  "sick",
+  "silly",
+  "sleepy",
+  "small",
+  "stoic",
+  "stupefied",
+  "suspicious",
+  "tender",
+  "thirsty",
+  "tiny",
+  "trusting",
+];
+
+/**
+ * Nouns for the name of the flow
+ * @constant
+ *
+ */
+export const NOUNS: string[] = [
+  "albattani",
+  "allen",
+  "almeida",
+  "archimedes",
+  "ardinghelli",
+  "aryabhata",
+  "austin",
+  "babbage",
+  "banach",
+  "bardeen",
+  "bartik",
+  "bassi",
+  "bell",
+  "bhabha",
+  "bhaskara",
+  "blackwell",
+  "bohr",
+  "booth",
+  "borg",
+  "bose",
+  "boyd",
+  "brahmagupta",
+  "brattain",
+  "brown",
+  "carson",
+  "chandrasekhar",
+  "colden",
+  "cori",
+  "cray",
+  "curie",
+  "darwin",
+  "davinci",
+  "dijkstra",
+  "dubinsky",
+  "easley",
+  "einstein",
+  "elion",
+  "engelbart",
+  "euclid",
+  "euler",
+  "fermat",
+  "fermi",
+  "feynman",
+  "franklin",
+  "galileo",
+  "gates",
+  "goldberg",
+  "goldstine",
+  "goldwasser",
+  "golick",
+  "goodall",
+  "hamilton",
+  "hawking",
+  "heisenberg",
+  "heyrovsky",
+  "hodgkin",
+  "hoover",
+  "hopper",
+  "hugle",
+  "hypatia",
+  "jang",
+  "jennings",
+  "jepsen",
+  "joliot",
+  "jones",
+  "kalam",
+  "kare",
+  "keller",
+  "khorana",
+  "kilby",
+  "kirch",
+  "knuth",
+  "kowalevski",
+  "lalande",
+  "lamarr",
+  "leakey",
+  "leavitt",
+  "lichterman",
+  "liskov",
+  "lovelace",
+  "lumiere",
+  "mahavira",
+  "mayer",
+  "mccarthy",
+  "mcclintock",
+  "mclean",
+  "mcnulty",
+  "meitner",
+  "meninsky",
+  "mestorf",
+  "minsky",
+  "mirzakhani",
+  "morse",
+  "murdock",
+  "newton",
+  "nobel",
+  "noether",
+  "northcutt",
+  "noyce",
+  "panini",
+  "pare",
+  "pasteur",
+  "payne",
+  "perlman",
+  "pike",
+  "poincare",
+  "poitras",
+  "ptolemy",
+  "raman",
+  "ramanujan",
+  "ride",
+  "ritchie",
+  "roentgen",
+  "rosalind",
+  "saha",
+  "sammet",
+  "shaw",
+  "shirley",
+  "shockley",
+  "sinoussi",
+  "snyder",
+  "spence",
+  "stallman",
+  "stonebraker",
+  "swanson",
+  "swartz",
+  "swirles",
+  "tesla",
+  "thompson",
+  "torvalds",
+  "turing",
+  "varahamihira",
+  "visvesvaraya",
+  "volhard",
+  "wescoff",
+  "williams",
+  "wilson",
+  "wing",
+  "wozniak",
+  "wright",
+  "yalow",
+  "yonath",
+];
+
+/**
+ * Header text for user projects
+ * @constant
+ *
+ */
+export const USER_PROJECTS_HEADER = "My Collection";

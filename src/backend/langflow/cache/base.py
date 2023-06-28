@@ -17,7 +17,6 @@ class BaseCache(abc.ABC):
         Returns:
             The value associated with the key, or None if the key is not found.
         """
-        pass
 
     @abc.abstractmethod
     def set(self, key, value):
@@ -28,7 +27,6 @@ class BaseCache(abc.ABC):
             key: The key of the item.
             value: The value to cache.
         """
-        pass
 
     @abc.abstractmethod
     def delete(self, key):
@@ -38,14 +36,12 @@ class BaseCache(abc.ABC):
         Args:
             key: The key of the item to remove.
         """
-        pass
 
     @abc.abstractmethod
     def clear(self):
         """
         Clear all items from the cache.
         """
-        pass
 
     @abc.abstractmethod
     def __contains__(self, key):
@@ -58,7 +54,6 @@ class BaseCache(abc.ABC):
         Returns:
             True if the key is in the cache, False otherwise.
         """
-        pass
 
     @abc.abstractmethod
     def __getitem__(self, key):
@@ -67,11 +62,7 @@ class BaseCache(abc.ABC):
 
         Args:
             key: The key of the item to retrieve.
-
-        Returns:
-            The value associated with the key, or None if the key is not found.
         """
-        pass
 
     @abc.abstractmethod
     def __setitem__(self, key, value):
@@ -82,7 +73,6 @@ class BaseCache(abc.ABC):
             key: The key of the item.
             value: The value to cache.
         """
-        pass
 
     @abc.abstractmethod
     def __delitem__(self, key):
@@ -92,4 +82,3 @@ class BaseCache(abc.ABC):
         Args:
             key: The key of the item to remove.
         """
-        pass

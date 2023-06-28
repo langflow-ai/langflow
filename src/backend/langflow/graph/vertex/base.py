@@ -1,6 +1,5 @@
-from langflow.cache import utils as cache_utils
-from langflow.graph.vertex.constants import DIRECT_TYPES
-from langflow.interface import loading
+from langflow.utils.constants import DIRECT_TYPES
+from langflow.interface.initialize import loading
 from langflow.interface.listing import ALL_TYPES_DICT
 from langflow.utils.logger import logger
 from langflow.utils.util import sync_to_async
@@ -90,12 +89,7 @@ class Vertex:
                 # Load the type in value.get('suffixes') using
                 # what is inside value.get('content')
                 # value.get('value') is the file name
-                file_name = value.get("value")
-                content = value.get("content")
-                type_to_load = value.get("suffixes")
-                file_path = cache_utils.save_binary_file(
-                    content=content, file_name=file_name, accepted_types=type_to_load
-                )
+                file_path = value.get("file_path")
 
                 params[key] = file_path
 

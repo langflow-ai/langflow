@@ -1,9 +1,9 @@
 import React, { forwardRef } from "react";
-import { ReactComponent as MidjorneySVG } from "./Midjourney_Emblem.svg";
+import { ReactComponent as MidjourneySVG } from "./Midjourney_Emblem.svg";
 
-export const MidjorneyIcon = forwardRef<
+export const MidjourneyIcon = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<{}>
 >((props, ref) => {
-  return <MidjorneySVG ref={ref} {...props} />;
+  return <MidjourneySVG ref={ref} {...props} />;
 });

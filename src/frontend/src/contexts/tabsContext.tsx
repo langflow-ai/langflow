@@ -8,10 +8,15 @@ import {
 } from "react";
 import { FlowType, NodeType } from "../types/flow";
 import { TabsContextType, TabsState } from "../types/tabs";
-import { updateIds, updateTemplate } from "../utils";
+import {
+  updateIds,
+  updateTemplate,
+  getRandomDescription,
+  getRandomName,
+} from "../utils";
 import { alertContext } from "./alertContext";
 import { typesContext } from "./typesContext";
-import { APITemplateType } from "../types/api";
+import { APIClassType, APITemplateType } from "../types/api";
 import ShortUniqueId from "short-unique-id";
 import { addEdge } from "reactflow";
 import {
@@ -40,7 +45,7 @@ const TabsContextInitialValue: TabsContextType = {
   uploadFlows: () => {},
   uploadFlow: () => {},
   hardReset: () => {},
-  saveFlow: async (flow:FlowType) => {},
+  saveFlow: async (flow: FlowType) => {},
   disableCopyPaste: false,
   setDisableCopyPaste: (state: boolean) => {},
   lastCopiedSelection: null,
@@ -187,20 +192,26 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
 
   function processFlowEdges(flow) {
+    if(!flow.data || !flow.data.edges) return;
     flow.data.edges.forEach((edge) => {
       edge.className = "";
       edge.style = { stroke: "#555555" };
     });
   }
+  function updateDisplay_name(node:NodeType,template:APIClassType) {
+    node.data.node.display_name = template["display_name"]?template["display_name"]:node.data.type;
+  }
 
   function processFlowNodes(flow) {
-    flow.data.nodes.forEach((node) => {
+    if(!flow.data || !flow.data.nodes) return;
+    flow.data.nodes.forEach((node:NodeType) => {
       const template = templates[node.data.type];
       if (!template) {
         setErrorData({ title: `Unknown node type: ${node.data.type}` });
         return;
       }
       if (Object.keys(template["template"]).length > 0) {
+        updateDisplay_name(node,template);
         updateNodeBaseClasses(node, template);
         updateNodeEdges(flow, node, template);
         updateNodeDescription(node, template);
@@ -209,11 +220,11 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  function updateNodeBaseClasses(node, template) {
+  function updateNodeBaseClasses(node:NodeType,template:APIClassType) {
     node.data.node.base_classes = template["base_classes"];
   }
 
-  function updateNodeEdges(flow, node, template) {
+  function updateNodeEdges(flow:FlowType, node:NodeType,template:APIClassType) {
     flow.data.edges.forEach((edge) => {
       if (edge.source === node.id) {
         edge.sourceHandle = edge.sourceHandle
@@ -225,11 +236,11 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  function updateNodeDescription(node, template) {
+  function updateNodeDescription(node:NodeType,template:APIClassType) {
     node.data.node.description = template["description"];
   }
 
-  function updateNodeTemplate(node, template) {
+  function updateNodeTemplate(node:NodeType,template:APIClassType) {
     node.data.node.template = updateTemplate(
       template["template"] as unknown as APITemplateType,
       node.data.node.template as APITemplateType
@@ -346,7 +357,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
    */
   function removeFlow(id: string) {
     const index = flows.findIndex((flow) => flow.id === id);
-    console.log(index);
     if (index >= 0) {
       deleteFlowFromDatabase(id).then(() => {
         setFlows(flows.filter((flow) => flow.id !== id));
@@ -454,11 +464,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     if (newProject) {
       let flowData = extractDataFromFlow(flow);
       if (flowData.description == "") {
-        flowData.description = "This is a new flow.";
+        flowData.description = getRandomDescription();
       }
 
       // Create a new flow with a default name if no flow is provided.
       const newFlow = createNewFlow(flowData, flow);
+      processFlowEdges(newFlow);
+      processFlowNodes(newFlow);
 
       try {
         const { id } = await saveFlowToDatabase(newFlow);
@@ -536,7 +548,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
   const createNewFlow = (flowData, flow) => ({
     description: flowData.description,
-    name: flow?.name ?? "New Flow",
+    name: flow?.name ?? getRandomName(),
     data: flowData.data,
     id: "",
   });
@@ -565,10 +577,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
 
   async function saveFlow(newFlow: FlowType) {
-    try{
+    try {
       // updates flow in db
       const updatedFlow = await updateFlowInDatabase(newFlow);
-      if (updatedFlow){
+      if (updatedFlow) {
         // updates flow in state
         setFlows((prevState) => {
           const newFlows = [...prevState];
@@ -590,8 +602,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           };
         });
       }
-    }
-    catch(err){
+    } catch (err) {
       setErrorData(err);
     }
   }

@@ -1,4 +1,3 @@
-import { XMarkIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { darkContext } from "../../contexts/darkContext";
@@ -17,6 +16,7 @@ import {
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
 import { PROMPT_DIALOG_SUBTITLE, TEXT_DIALOG_SUBTITLE } from "../../constants";
+import { FileText } from "lucide-react";
 
 export default function GenericModal({
   value,
@@ -54,8 +54,8 @@ export default function GenericModal({
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">{myModalTitle}</span>
-            <DocumentTextIcon
-              className="h-6 w-6 text-foreground pl-1"
+            <FileText
+              className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
               aria-hidden="true"
             />
           </DialogTitle>

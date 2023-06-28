@@ -53,7 +53,7 @@ export const MenuBar = ({ flows, tabId }) => {
       </Link>
       <div className="flex items-center font-medium text-sm rounded-md py-1 px-1.5 gap-0.5">
         <DropdownMenu>
-          <DropdownMenuTrigger>
+          <DropdownMenuTrigger asChild>
             <Button
               className="gap-2 flex items-center max-w-[200px]"
               variant="primary"
@@ -64,11 +64,21 @@ export const MenuBar = ({ flows, tabId }) => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-44">
-            <DropdownMenuLabel>Edit</DropdownMenuLabel>
+            <DropdownMenuLabel>Options</DropdownMenuLabel>
+            <DropdownMenuItem
+              onClick={() => {
+                handleAddFlow();
+              }}
+              className="cursor-pointer"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              New
+            </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
                 openPopUp(<FlowSettingsModal />);
               }}
+              className="cursor-pointer"
             >
               <Settings2 className="w-4 h-4 mr-2 " />
               Settings
@@ -77,6 +87,7 @@ export const MenuBar = ({ flows, tabId }) => {
               onClick={() => {
                 undo();
               }}
+              className="cursor-pointer"
             >
               <Undo className="w-4 h-4 mr-2 " />
               Undo
@@ -85,13 +96,14 @@ export const MenuBar = ({ flows, tabId }) => {
               onClick={() => {
                 redo();
               }}
+              className="cursor-pointer"
             >
               <Redo className="w-4 h-4 mr-2 " />
               Redo
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuLabel>Projects</DropdownMenuLabel>
-            <DropdownMenuRadioGroup
+            {/* <DropdownMenuLabel>Projects</DropdownMenuLabel> */}
+            {/* <DropdownMenuRadioGroup className="max-h-full overflow-scroll"
               value={tabId}
               onValueChange={(value) => {
                 setTabId(value);
@@ -99,22 +111,20 @@ export const MenuBar = ({ flows, tabId }) => {
             >
               {flows.map((flow, idx) => {
                 return (
-                  <Link to={"/flow/" + flow.id} className="flex w-full items-center">
-                    <DropdownMenuRadioItem value={flow.id} className="flex-1 w-full inline-block truncate break-words mr-2">
+                  <Link
+                    to={"/flow/" + flow.id}
+                    className="flex w-full items-center"
+                  >
+                    <DropdownMenuRadioItem
+                      value={flow.id}
+                      className="flex-1 w-full inline-block truncate break-words mr-2"
+                    >
                       {flow.name}
                     </DropdownMenuRadioItem>
                   </Link>
                 );
               })}
-            </DropdownMenuRadioGroup>
-            <DropdownMenuItem
-              onClick={() => {
-                handleAddFlow();
-              }}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              New Project
-            </DropdownMenuItem>
+            </DropdownMenuRadioGroup> */}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

@@ -97,7 +97,7 @@ def test_csv_agent(client: TestClient):
         "name": "path",
         "type": "file",
         "list": False,
-        "content": None,
+        "file_path": None,
         "advanced": False,
     }
     assert template["llm"] == {
@@ -136,6 +136,8 @@ def test_initialize_agent(client: TestClient):
             "react-docstore",
             "self-ask-with-search",
             "conversational-react-description",
+            "openai-functions",
+            "openai-multi-functions",
         ],
         "name": "agent",
         "type": "str",

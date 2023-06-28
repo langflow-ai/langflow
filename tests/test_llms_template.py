@@ -369,9 +369,18 @@ def test_chat_open_ai(client: TestClient):
         "placeholder": "",
         "show": True,
         "multiline": False,
-        "value": "gpt-3.5-turbo",
+        "value": "gpt-3.5-turbo-0613",
         "password": False,
-        "options": ["gpt-3.5-turbo", "gpt-4", "gpt-4-32k"],
+        "options": [
+            "gpt-3.5-turbo-0613",
+            "gpt-3.5-turbo",
+            "gpt-3.5-turbo-16k-0613",
+            "gpt-3.5-turbo-16k",
+            "gpt-4-0613",
+            "gpt-4-32k-0613",
+            "gpt-4",
+            "gpt-4-32k",
+        ],
         "name": "model_name",
         "type": "str",
         "list": True,
@@ -478,6 +487,7 @@ def test_chat_open_ai(client: TestClient):
         == "Wrapper around OpenAI Chat large language models."  # noqa E501
     )
     assert set(model["base_classes"]) == {
+        "Serializable",
         "BaseChatModel",
         "ChatOpenAI",
         "BaseLanguageModel",

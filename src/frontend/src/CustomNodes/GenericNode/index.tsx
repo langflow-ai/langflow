@@ -1,7 +1,21 @@
-import { classNames, nodeColors, nodeIcons, toTitleCase } from "../../utils";
+import {
+  classNames,
+  nodeColors,
+  nodeIconsLucide,
+  toTitleCase,
+} from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
 import { typesContext } from "../../contexts/typesContext";
-import { useContext, useState, useEffect, useRef } from "react";
+import {
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+  ForwardRefExoticComponent,
+  ComponentType,
+  SVGProps,
+  ReactNode,
+} from "react";
 import { NodeDataType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
 import { PopUpContext } from "../../contexts/popUpContext";
@@ -12,6 +26,7 @@ import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarCom
 
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import { useSSE } from "../../contexts/SSEContext";
+import { ReactElement } from "react-markdown/lib/react-markdown";
 
 export default function GenericNode({
   data,
@@ -25,11 +40,12 @@ export default function GenericNode({
   const { types, deleteNode } = useContext(typesContext);
 
   const { closePopUp, openPopUp } = useContext(PopUpContext);
-
-  const Icon = nodeIcons[data.type] || nodeIcons[types[data.type]];
+  // any to avoid type conflict
+  const Icon: any =
+    nodeIconsLucide[data.type] || nodeIconsLucide[types[data.type]];
   const [validationStatus, setValidationStatus] = useState(null);
   // State for outline color
-  const { sseData } = useSSE();
+  const { sseData, isBuilding } = useSSE();
 
   // useEffect(() => {
   //   if (reactFlowInstance) {
@@ -88,8 +104,13 @@ export default function GenericNode({
               }}
             />
             <div className="ml-2 truncate">
-              <ShadTooltip delayDuration={1500} content={data.type}>
-                <div className="ml-2 truncate text-foreground">{data.type}</div>
+              <ShadTooltip
+                delayDuration={1500}
+                content={data.node.display_name}
+              >
+                <div className="ml-2 truncate text-gray-800">
+                  {data.node.display_name}
+                </div>
               </ShadTooltip>
             </div>
           </div>
@@ -137,10 +158,10 @@ export default function GenericNode({
                   ></div>
                   <div
                     className={classNames(
-                      !validationStatus
-                        ? "w-4 h-4 rounded-full  bg-status-yellow opacity-100"
-                        : "w-4 h-4 rounded-full bg-ring opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-ring hover: transition-all ease-in-out duration-200"
+                      !validationStatus || isBuilding
+                        ? "w-4 h-4 rounded-full  bg-yellow-500 opacity-100"
+                        : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
+                      "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
                     )}
                   ></div>
                 </div>

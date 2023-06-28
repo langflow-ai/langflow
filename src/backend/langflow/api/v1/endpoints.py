@@ -1,13 +1,14 @@
+from typing import Optional
+from langflow.cache.utils import save_uploaded_file
 from langflow.database.models.flow import Flow
 from langflow.processing.process import process_graph_cached, process_tweaks
 from langflow.utils.logger import logger
 
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.security import HTTPBearer
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
 
 from langflow.api.v1.schemas import (
-    PredictRequest,
-    PredictResponse,
+    ProcessResponse,
+    UploadFileResponse,
 )
 
 from langflow.interface.types import build_langchain_types_dict
@@ -17,53 +18,61 @@ from sqlmodel import Session
 # build router
 router = APIRouter(tags=["Base"])
 
-security = HTTPBearer()
-
-
-def get_flow_from_token(
-    bearer: HTTPBearer = Depends(security), session: Session = Depends(get_session)
-) -> str:
-    # Extract the token, which is the flow_id in this case
-    flow_id = bearer.credentials
-    # Check if the flow_id exists in the database
-    flow = session.get(Flow, flow_id)
-    if flow is None:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    return flow
-
 
 @router.get("/all")
 def get_all():
     return build_langchain_types_dict()
 
 
-@router.post("/predict/{flow_id}", response_model=PredictResponse)
-async def predict_flow(
-    predict_request: PredictRequest,
+# For backwards compatibility we will keep the old endpoint
+@router.post("/predict/{flow_id}", response_model=ProcessResponse)
+@router.post("/process/{flow_id}", response_model=ProcessResponse)
+async def process_flow(
     flow_id: str,
+    inputs: Optional[dict] = None,
+    tweaks: Optional[dict] = None,
     session: Session = Depends(get_session),
 ):
     """
-    Endpoint to process a message using the flow passed in the bearer token.
+    Endpoint to process an input with a given flow_id.
     """
 
     try:
         flow = session.get(Flow, flow_id)
         if flow is None:
             raise ValueError(f"Flow {flow_id} not found")
-        graph_data = flow.data
-        if predict_request.tweaks:
-            graph_data = process_tweaks(graph_data, predict_request.tweaks)
 
-        response = process_graph_cached(graph_data, predict_request.message)
-        return PredictResponse(
-            result=response.get("result", ""),
-            intermediate_steps=response.get("thought", ""),
+        if flow.data is None:
+            raise ValueError(f"Flow {flow_id} has no data")
+        graph_data = flow.data
+        if tweaks:
+            try:
+                graph_data = process_tweaks(graph_data, tweaks)
+            except Exception as exc:
+                logger.error(f"Error processing tweaks: {exc}")
+        response = process_graph_cached(graph_data, inputs)
+        return ProcessResponse(
+            result=response,
         )
     except Exception as e:
         # Log stack trace
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/upload/{flow_id}", response_model=UploadFileResponse, status_code=201)
+async def create_upload_file(file: UploadFile, flow_id: str):
+    # Cache file
+    try:
+        file_path = save_uploaded_file(file.file, folder_name=flow_id)
+
+        return UploadFileResponse(
+            flowId=flow_id,
+            file_path=file_path,
+        )
+    except Exception as exc:
+        logger.error(f"Error saving file: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 # get endpoint to return version of langflow
