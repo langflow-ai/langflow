@@ -435,11 +435,10 @@ export default function FormModal({
             </div>
             <div className="w-full">
               <div className="flex flex-col rounded-md border bg-muted w-full h-full relative">
-              <div className="absolute right-3 top-3">
-
+              <div className="absolute right-3 top-3 z-50">
               <button disabled={lockChat} onClick={() => clearChat()}>
                 <Eraser 
-                  className={classNames("h-5 w-5", lockChat ? "text-gray-500 animate-pulse" : "text-gray-500 hover:text-gray-600")}
+                  className={classNames("h-5 w-5", lockChat ? "text-primary animate-pulse" : "text-primary hover:text-gray-600")}
                   aria-hidden="true"
                 />
               </button>
@@ -484,7 +483,6 @@ export default function FormModal({
                     <ChatInput
                       chatValue={chatValue}
                       lockChat={lockChat}
-                      clearChat={clearChat}
                       sendMessage={sendMessage}
                       setChatValue={setChatValue}
                       inputRef={ref}
