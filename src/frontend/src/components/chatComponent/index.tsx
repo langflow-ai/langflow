@@ -59,6 +59,8 @@ export default function Chat({ flow }: ChatType) {
     prevNodesRef.current = currentNodes;
   }, [nodes]);
 
+  console.log("open", open);
+  console.log("isBuilt",isBuilt);
   return (
     <>
       {isBuilt ? (

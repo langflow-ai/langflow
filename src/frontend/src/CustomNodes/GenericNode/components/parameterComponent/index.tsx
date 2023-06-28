@@ -73,6 +73,7 @@ export default function ParameterComponent({
       return {
         ...prev,
         [tabId]: {
+          ...prev[tabId],
           isPending: true,
         },
       };
