@@ -161,7 +161,7 @@ export default function GenericNode({
                       !validationStatus || isBuilding
                         ? "w-4 h-4 rounded-full  bg-yellow-500 opacity-100"
                         : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
+                      "absolute w-4 hover:text-gray-500 transition-all ease-in-out duration-200"
                     )}
                   ></div>
                 </div>

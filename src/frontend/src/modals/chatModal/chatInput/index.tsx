@@ -62,12 +62,12 @@ export default function ChatInput({
         <button disabled={lockChat} onClick={() => sendMessage()}>
           {lockChat ? (
             <Lock
-              className="h-5 w-5 text-gray-500  dark:hover:text-gray-300 animate-pulse"
+              className="h-5 w-5 text-gray-500   animate-pulse"
               aria-hidden="true"
             />
           ) : (
             <Send
-              className="h-5 w-5 text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+              className="h-5 w-5 text-gray-500 hover:text-gray-600 "
               aria-hidden="true"
             />
           )}

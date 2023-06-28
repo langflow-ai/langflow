@@ -158,7 +158,7 @@ export default function BuildTrigger({
     >
       <div className={`fixed right-4` + (isBuilt ? " bottom-20" : " bottom-4")}>
         <div
-          className={`${eventClick} flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full shadow-md shadow-[#0000002a] hover:shadow-[#00000032] bg-[#E2E7EE] dark:border-gray-600 cursor-pointer`}
+          className={`${eventClick} flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full shadow-md shadow-[#0000002a] hover:shadow-[#00000032] bg-[#E2E7EE]  cursor-pointer`}
           onClick={() => {
             handleBuild(flow);
           }}

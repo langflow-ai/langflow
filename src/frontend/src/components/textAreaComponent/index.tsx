@@ -77,7 +77,7 @@ export default function TextAreaComponent({
           }}
         >
           {!editNode && (
-            <ExternalLink className="w-6 h-6 hover:text-ring dark:text-gray-300" />
+            <ExternalLink className="w-6 h-6 hover:text-ring " />
           )}
         </button>
       </div>
