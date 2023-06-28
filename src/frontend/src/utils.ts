@@ -656,7 +656,6 @@ export function isValidConnection(
 
 export function removeApiKeys(flow: FlowType): FlowType {
   let cleanFLow = _.cloneDeep(flow);
-  console.log(cleanFLow);
   cleanFLow.data.nodes.forEach((node) => {
     for (const key in node.data.node.template) {
       if (node.data.node.template[key].password) {

@@ -49,7 +49,6 @@ const NodeToolbarComponent = (props) => {
               )}
               onClick={(event) => {
                 event.preventDefault();
-                // console.log(reactFlowInstance.getNode(props.data.id));
                 paste(
                   {
                     nodes: [reactFlowInstance.getNode(props.data.id)],
