@@ -37,11 +37,11 @@ def build_input_keys_response(langchain_object):
         langchain_object.memory, "memory_variables"
     ):
         # Remove memory variables from input keys
-        input_keys_response["input_keys"] = [
-            key
-            for key in input_keys_response["input_keys"]
+        input_keys_response["input_keys"] = {
+            key: value
+            for key, value in input_keys_response["input_keys"].items()
             if key not in langchain_object.memory.memory_variables
-        ]
+        }
         # Add memory variables to memory_keys
         input_keys_response["memory_keys"] = langchain_object.memory.memory_variables
 
