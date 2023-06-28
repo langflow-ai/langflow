@@ -1,3 +1,6 @@
+import random
+
+from http import HTTPStatus
 from typing import Optional
 from langflow.cache.utils import save_uploaded_file
 from langflow.database.models.flow import Flow
@@ -15,6 +18,7 @@ from langflow.api.v1.schemas import (
     ProcessResponse,
     UploadFileResponse,
     CustomComponentCode,
+    CustomComponentResponseError,
 )
 
 from langflow.interface.types import (
@@ -70,7 +74,7 @@ async def process_flow(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.post("/upload/{flow_id}", response_model=UploadFileResponse, status_code=201)
+@router.post("/upload/{flow_id}", response_model=UploadFileResponse, status_code=HTTPStatus.CREATED)
 async def create_upload_file(file: UploadFile, flow_id: str):
     # Cache file
     try:
@@ -93,11 +97,9 @@ def get_version():
     return {"version": __version__}
 
 
-# @router.post("/custom_component", response_model=CustomComponentResponse, status_code=200)
-@router.post("/custom_component", status_code=200)
-def custom_component(
+@router.post("/custom_component", status_code=HTTPStatus.OK)
+async def custom_component(
     raw_code: CustomComponentCode,
-    session: Session = Depends(get_session),
 ):
     extractor = ClassCodeExtractor(raw_code.code)
     data = extractor.extract_class_info()
@@ -110,3 +112,28 @@ def custom_component(
         function_args,
         function_return_type
     )
+
+
+# TODO: Just for test - will be remove
+@router.get("/custom_component_error",
+            response_model=CustomComponentResponseError,
+            status_code=HTTPStatus.BAD_REQUEST)
+async def custom_component_error():
+    error1 = {
+        "detail": "'int' object has no attribute 'get'",
+        "traceback": "Traceback (most recent call last):\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/starlette/middleware/errors.py\", line 162, in __call__\n    await self.app(scope, receive, _send)\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/starlette/middleware/cors.py\", line 83, in __call__\n    await self.app(scope, receive, send)\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/starlette/middleware/exceptions.py\", line 79, in __call__\n    raise exc\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/starlette/middleware/exceptions.py\", line 68, in __call__\n    await self.app(scope, receive, sender)\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py\", line 20, in __call__\n    raise e\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py\", line 17, in __call__\n    await self.app(scope, receive, send)\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/starlette/routing.py\", line 718, in __call__\n    await route.handle(scope, receive, send)\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/starlette/routing.py\", line 276, in handle\n    await self.app(scope, receive, send)\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/starlette/routing.py\", line 66, in app\n    response = await func(request)\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/fastapi/routing.py\", line 241, in app\n    raw_response = await run_endpoint_function(\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/fastapi/routing.py\", line 167, in run_endpoint_function\n    return await dependant.call(**values)\n  File \"/Users/gustavopoa/Documents/Langspace/langflow/src/backend/langflow/api/v1/endpoints.py\", line 124, in custom_component_error\n    c = x.get(\"a\")\nAttributeError: 'int' object has no attribute 'get'\n"
+    }
+
+    error2 = {
+        "detail": "division by zero",
+        "traceback": "Traceback (most recent call last):\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/starlette/middleware/errors.py\", line 162, in __call__\n    await self.app(scope, receive, _send)\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/starlette/middleware/cors.py\", line 83, in __call__\n    await self.app(scope, receive, send)\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/starlette/middleware/exceptions.py\", line 79, in __call__\n    raise exc\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/starlette/middleware/exceptions.py\", line 68, in __call__\n    await self.app(scope, receive, sender)\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py\", line 20, in __call__\n    raise e\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py\", line 17, in __call__\n    await self.app(scope, receive, send)\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/starlette/routing.py\", line 718, in __call__\n    await route.handle(scope, receive, send)\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/starlette/routing.py\", line 276, in handle\n    await self.app(scope, receive, send)\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/starlette/routing.py\", line 66, in app\n    response = await func(request)\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/fastapi/routing.py\", line 241, in app\n    raw_response = await run_endpoint_function(\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/fastapi/routing.py\", line 167, in run_endpoint_function\n    return await dependant.call(**values)\n  File \"/Users/gustavopoa/Documents/Langspace/langflow/src/backend/langflow/api/v1/endpoints.py\", line 130, in custom_component_error\n    return 1/0\nZeroDivisionError: division by zero\n"
+    }
+
+    error3 = {
+        "detail": "name 'CreateObject' is not defined",
+        "traceback": "Traceback (most recent call last):\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/starlette/middleware/errors.py\", line 162, in __call__\n    await self.app(scope, receive, _send)\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/starlette/middleware/cors.py\", line 83, in __call__\n    await self.app(scope, receive, send)\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/starlette/middleware/exceptions.py\", line 79, in __call__\n    raise exc\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/starlette/middleware/exceptions.py\", line 68, in __call__\n    await self.app(scope, receive, sender)\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py\", line 20, in __call__\n    raise e\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py\", line 17, in __call__\n    await self.app(scope, receive, send)\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/starlette/routing.py\", line 718, in __call__\n    await route.handle(scope, receive, send)\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/starlette/routing.py\", line 276, in handle\n    await self.app(scope, receive, send)\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/starlette/routing.py\", line 66, in app\n    response = await func(request)\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/fastapi/routing.py\", line 241, in app\n    raw_response = await run_endpoint_function(\n  File \"/Users/gustavopoa/Library/Caches/pypoetry/virtualenvs/langflow-3LyDxlRJ-py3.10/lib/python3.10/site-packages/fastapi/routing.py\", line 167, in run_endpoint_function\n    return await dependant.call(**values)\n  File \"/Users/gustavopoa/Documents/Langspace/langflow/src/backend/langflow/api/v1/endpoints.py\", line 130, in custom_component_error\n    error3 = CreateObject()\nNameError: name 'CreateObject' is not defined\n"
+    }
+
+    error = [error1, error2, error3]
+
+    return error[random.randint(0, 2)]
