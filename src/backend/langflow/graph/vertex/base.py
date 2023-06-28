@@ -25,6 +25,7 @@ class Vertex:
         self._parse_data()
         self._built_object = None
         self._built = False
+        self.artifacts: Dict[str, Any] = {}
 
     def _parse_data(self) -> None:
         self.data = self._data["data"]
@@ -195,11 +196,17 @@ class Vertex:
         # and return the instance
 
         try:
-            self._built_object = loading.instantiate_class(
+            result = loading.instantiate_class(
                 node_type=self.vertex_type,
                 base_type=self.base_type,
                 params=self.params,
             )
+            # Result could be the _built_object or
+            # (_built_object, dict) tuple
+            if isinstance(result, tuple):
+                self._built_object, self.artifacts = result
+            else:
+                self._built_object = result
         except Exception as exc:
             raise ValueError(
                 f"Error building node {self.vertex_type}: {str(exc)}"
