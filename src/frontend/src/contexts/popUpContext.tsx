@@ -5,11 +5,14 @@ import React, { useState } from "react";
 export const PopUpContext = createContext({
   openPopUp: (popUpElement: JSX.Element) => {},
   closePopUp: () => {},
+  setCloseEdit: (value: string) => {},
+  closeEdit: "",
 });
 
 interface PopUpProviderProps {
   children: React.ReactNode;
 }
+
 
 const PopUpProvider = ({ children }: PopUpProviderProps) => {
   const [popUpElements, setPopUpElements] = useState<JSX.Element[]>([]);
@@ -22,8 +25,11 @@ const PopUpProvider = ({ children }: PopUpProviderProps) => {
     setPopUpElements((prevPopUps) => prevPopUps.slice(1));
   };
 
+  const [closeEdit, setCloseEdit] = useState("");
+
+
   return (
-    <PopUpContext.Provider value={{ openPopUp, closePopUp }}>
+    <PopUpContext.Provider value={{ openPopUp, closePopUp, closeEdit, setCloseEdit }}>
       {children}
       {popUpElements[0]}
     </PopUpContext.Provider>

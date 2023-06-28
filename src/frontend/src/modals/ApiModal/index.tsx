@@ -54,10 +54,11 @@ import { TabsContext } from "../../contexts/tabsContext";
 export default function ApiModal({ flow }: { flow: FlowType }) {
   const [open, setOpen] = useState(true);
   const { dark } = useContext(darkContext);
-  const { closePopUp } = useContext(PopUpContext);
+  const { closePopUp, closeEdit, setCloseEdit } = useContext(PopUpContext);
   const [activeTab, setActiveTab] = useState("0");
   const [isCopied, setIsCopied] = useState<Boolean>(false);
   const [enabled, setEnabled] = useState(null);
+  const [openAccordion, setOpenAccordion] = useState(false);
   const tweak = useRef([]);
   const { setTweak, getTweak } = useContext(TabsContext);
   const copyToClipboard = () => {
@@ -76,10 +77,19 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
   function setModalOpen(x: boolean) {
     setOpen(x);
     if (x === false) {
+      setCloseEdit("");
+      setTweak([]);
       closePopUp();
     }
   }
-  
+
+  useEffect(() => {
+    if (closeEdit !== "") {
+      setActiveTab("3");
+      setOpenAccordion(true);
+    }
+  }, [closeEdit]);
+
   const pythonApiCode = getPythonApiCode(flow, tweak.current);
   const curl_code = getCurlCode(flow, tweak.current);
   const pythonCode = getPythonCode(flow, tweak.current);
@@ -172,45 +182,41 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
     tabs[0].code = curl_code;
     tabs[1].code = pythonApiCode;
     tabs[2].code = pythonCode;
-    
+
     setTweak(tweak.current);
   }
 
   function buildContent(value) {
     const htmlContent = (
       <div className="w-[200px]">
-        <span>{value != null && value != '' ? value : 'None'}</span>
+        <span>{value != null && value != "" ? value : "None"}</span>
       </div>
     );
     return htmlContent;
   }
 
-  function getValue(value, node, template){
-
+  function getValue(value, node, template) {
     let returnValue = value ?? "";
 
-    if(getTweak.length > 0){
+    if (getTweak.length > 0) {
       for (const obj of getTweak) {
         // Obtém a chave do objeto interno
-          const key = Object.keys(obj)[0];
-          // Obtém o valor do objeto interno
-          const value = obj[key];
-          if(key == node['id']){
-            Object.keys(value).forEach((key) => {
-              if(key == template['name']){
-                returnValue = value[key];
-              }
-            })
-          }
+        const key = Object.keys(obj)[0];
+        // Obtém o valor do objeto interno
+        const value = obj[key];
+        if (key == node["id"]) {
+          Object.keys(value).forEach((key) => {
+            if (key == template["name"]) {
+              returnValue = value[key];
+            }
+          });
         }
-    }
-    else{
+      }
+    } else {
       return value ?? "";
     }
     return returnValue;
   }
-
-
 
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
@@ -228,9 +234,15 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
         </DialogHeader>
 
         <Tabs
-          defaultValue={"0"}
+          value={activeTab}
           className="w-full h-full overflow-hidden text-center bg-muted rounded-md border"
-          onValueChange={(value) => setActiveTab(value)}
+          onValueChange={(value) => {
+            setActiveTab(value)
+            
+            if(tweak.current.length > 0){
+              setOpenAccordion(true);
+            }
+          }}
         >
           <div className="flex items-center justify-between px-2">
             <TabsList>
@@ -280,7 +292,10 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                     >
                       {flow["data"]["nodes"].map((t: any, index) => (
                         <div className="px-3" key={index}>
-                          <AccordionComponent trigger={t["data"]["id"]}>
+                          <AccordionComponent
+                            trigger={t["data"]["id"]}
+                            open={openAccordion}
+                          >
                             <div className="flex flex-col gap-5 h-fit">
                               <Table className="table-fixed bg-muted outline-1">
                                 <TableHeader className="border-gray-200 text-gray-500 text-xs font-medium h-10">
@@ -309,7 +324,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                             "code" ||
                                           t.data.node.template[n].type ===
                                             "prompt" ||
-                                            t.data.node.template[n].type ===
+                                          t.data.node.template[n].type ===
                                             "file" ||
                                           t.data.node.template[n].type ===
                                             "int")
@@ -346,9 +361,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                           : t.data.node
                                                               .template[n].value
                                                       }
-                                                      onChange={(k) => {
-
-                                                      }}
+                                                      onChange={(k) => {}}
                                                       onAddInput={(k) => {
                                                         buildTweakObject(
                                                           t["data"]["id"],
@@ -371,14 +384,23 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                         )}
                                                       >
                                                         <TextAreaComponent
-                                                          disabled={true}
+                                                          disabled={false}
                                                           editNode={true}
-                                                          value={
+                                                          value={getValue(
                                                             t.data.node
                                                               .template[n]
-                                                              .value ?? ""
-                                                          }
+                                                              .value,
+                                                            t.data,
+                                                            t.data.node
+                                                              .template[n]
+                                                          )}
                                                           onChange={(k) => {
+                                                            buildTweakObject(
+                                                              t["data"]["id"],
+                                                              k,
+                                                              t.data.node
+                                                                .template[n]
+                                                            );
                                                           }}
                                                         />
                                                       </ShadTooltip>
@@ -391,12 +413,12 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                         t.data.node.template[n]
                                                           .password ?? false
                                                       }
-                                                      value={
-
-                                                        getValue(t.data.node.template[n]
-                                                          .value, t.data, t.data.node.template[n])
-
-                                                      }
+                                                      value={getValue(
+                                                        t.data.node.template[n]
+                                                          .value,
+                                                        t.data,
+                                                        t.data.node.template[n]
+                                                      )}
                                                       onChange={(k) => {
                                                         buildTweakObject(
                                                           t["data"]["id"],
@@ -433,52 +455,54 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                     disabled={false}
                                                   />
                                                 </div>
-                                              )
-                                              :
-                                              t.data.node.template[n]
+                                              ) : t.data.node.template[n]
                                                   .type === "file" ? (
-                                                    <ShadTooltip
-                                                    delayDuration={1000}
-                                                    content={buildContent(
+                                                <ShadTooltip
+                                                  delayDuration={1000}
+                                                  content={buildContent(
+                                                    getValue(
                                                       t.data.node.template[n]
-                                                        .value
-                                                    )}
-                                                  >
+                                                        .value,
+                                                      t.data,
+                                                      t.data.node.template[n]
+                                                    )
+                                                  )}
+                                                >
                                                   <div className="mx-auto">
-                                                  <InputFileComponent
-                                                    editNode={true}
-                                                    disabled={true}
-                                                    value={
-                                                      t.data.node.template[n]
-                                                        .value ?? ""
-                                                    }
-                                                    onChange={(k: any) => {
-                                                    }}
-                                                    fileTypes={
-                                                      t.data.node.template[n]
-                                                        .fileTypes
-                                                    }
-                                                    suffixes={
-                                                      t.data.node.template[n]
-                                                        .suffixes
-                                                    }
-                                                    onFileChange={(k: any) => {
-                                                    }}
-                                                  ></InputFileComponent>
-                                                </div>
-                                                    </ShadTooltip>
-
-                                              )
-                                              : t.data.node.template[n]
+                                                    <InputFileComponent
+                                                      editNode={true}
+                                                      disabled={false}
+                                                      value={
+                                                        t.data.node.template[n]
+                                                          .value ?? ""
+                                                      }
+                                                      onChange={(k: any) => {}}
+                                                      fileTypes={
+                                                        t.data.node.template[n]
+                                                          .fileTypes
+                                                      }
+                                                      suffixes={
+                                                        t.data.node.template[n]
+                                                          .suffixes
+                                                      }
+                                                      onFileChange={(
+                                                        k: any
+                                                      ) => {}}
+                                                    ></InputFileComponent>
+                                                  </div>
+                                                </ShadTooltip>
+                                              ) : t.data.node.template[n]
                                                   .type === "float" ? (
                                                 <div className="mx-auto">
                                                   <FloatComponent
                                                     disabled={false}
                                                     editNode={true}
-                                                    value={
-                                                      getValue(t.data.node.template[n]
-                                                        .value, t.data, t.data.node.template[n])
-                                                    }
+                                                    value={getValue(
+                                                      t.data.node.template[n]
+                                                        .value,
+                                                      t.data,
+                                                      t.data.node.template[n]
+                                                    )}
                                                     onChange={(k) => {
                                                       buildTweakObject(
                                                         t["data"]["id"],
@@ -500,22 +524,19 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                       t.data.node.template[n]
                                                         .options
                                                     }
-                                                    onSelect={(k) =>{
-
-
-
+                                                    onSelect={(k) => {
                                                       buildTweakObject(
                                                         t["data"]["id"],
                                                         k,
                                                         t.data.node.template[n]
-                                                      )
-                                                    }
-
-                                                    }
-                                                    value={
-                                                      getValue(t.data.node.template[n]
-                                                        .value, t.data, t.data.node.template[n])
-                                                    }
+                                                      );
+                                                    }}
+                                                    value={getValue(
+                                                      t.data.node.template[n]
+                                                        .value,
+                                                      t.data,
+                                                      t.data.node.template[n]
+                                                    )}
                                                   ></Dropdown>
                                                 </div>
                                               ) : t.data.node.template[n]
@@ -524,10 +545,12 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                   <IntComponent
                                                     disabled={false}
                                                     editNode={true}
-                                                    value={
-                                                      getValue(t.data.node.template[n]
-                                                        .value, t.data, t.data.node.template[n])
-                                                    }
+                                                    value={getValue(
+                                                      t.data.node.template[n]
+                                                        .value,
+                                                      t.data,
+                                                      t.data.node.template[n]
+                                                    )}
                                                     onChange={(k) => {
                                                       buildTweakObject(
                                                         t["data"]["id"],
@@ -542,19 +565,32 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                 <ShadTooltip
                                                   delayDuration={1000}
                                                   content={buildContent(
-                                                    t.data.node.template[n]
-                                                      .value
+                                                    getValue(
+                                                      t.data.node.template[n]
+                                                        .value,
+                                                      t.data,
+                                                      t.data.node.template[n]
+                                                    )
                                                   )}
                                                 >
                                                   <div className="mx-auto">
                                                     <PromptAreaComponent
                                                       editNode={true}
-                                                      disabled={true}
-                                                      value={
+                                                      disabled={false}
+                                                      value={getValue(
                                                         t.data.node.template[n]
-                                                          .value ?? ""
-                                                      }
+                                                          .value,
+                                                        t.data,
+                                                        t.data.node.template[n]
+                                                      )}
                                                       onChange={(k) => {
+                                                        buildTweakObject(
+                                                          t["data"]["id"],
+                                                          k,
+                                                          t.data.node.template[
+                                                            n
+                                                          ]
+                                                        );
                                                       }}
                                                     />
                                                   </div>
@@ -564,19 +600,32 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                 <ShadTooltip
                                                   delayDuration={1000}
                                                   content={buildContent(
-                                                    t.data.node.template[n]
-                                                      .value
+                                                    getValue(
+                                                      t.data.node.template[n]
+                                                        .value,
+                                                      t.data,
+                                                      t.data.node.template[n]
+                                                    )
                                                   )}
                                                 >
                                                   <div className="mx-auto">
                                                     <CodeAreaComponent
-                                                      disabled={true}
+                                                      disabled={false}
                                                       editNode={true}
-                                                      value={
+                                                      value={getValue(
                                                         t.data.node.template[n]
-                                                          .value ?? ""
-                                                      }
+                                                          .value,
+                                                        t.data,
+                                                        t.data.node.template[n]
+                                                      )}
                                                       onChange={(k) => {
+                                                        buildTweakObject(
+                                                          t["data"]["id"],
+                                                          k,
+                                                          t.data.node.template[
+                                                            n
+                                                          ]
+                                                        );
                                                       }}
                                                     />
                                                   </div>
