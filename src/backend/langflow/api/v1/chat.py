@@ -72,6 +72,7 @@ async def stream_build(flow_id: str):
 
     async def event_stream(flow_id):
         final_response = {"end_of_stream": True}
+        artifacts = {}
         try:
             if flow_id not in flow_data_store:
                 error_message = "Invalid session ID"
@@ -108,6 +109,11 @@ async def stream_build(flow_id: str):
                     logger.debug(
                         f"Building node {params[:50]}{'...' if len(params) > 50 else ''}"
                     )
+                    if vertex.artifacts:
+                        # The artifacts will be prompt variables
+                        # passed to build_input_keys_response
+                        # to set the input_keys values
+                        artifacts.update(vertex.artifacts)
                 except Exception as exc:
                     params = str(exc)
                     valid = False
@@ -124,7 +130,9 @@ async def stream_build(flow_id: str):
             langchain_object = graph.build()
             # Now we  need to check the input_keys to send them to the client
             if hasattr(langchain_object, "input_keys"):
-                input_keys_response = build_input_keys_response(langchain_object)
+                input_keys_response = build_input_keys_response(
+                    langchain_object, artifacts
+                )
                 yield str(StreamData(event="message", data=input_keys_response))
 
             chat_manager.set_cache(flow_id, langchain_object)
