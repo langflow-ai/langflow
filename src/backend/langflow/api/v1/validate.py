@@ -61,6 +61,11 @@ def post_validate_prompt(prompt: ValidatePromptRequest):
                     logger.exception(exc)
                     raise HTTPException(status_code=500, detail=str(exc)) from exc
 
+        # Now we will set the field "input_variables" to the new list of variables
+        # if it exists
+        if "input_variables" in prompt.frontend_node.template:
+            prompt.frontend_node.template["input_variables"]["value"] = input_variables
+
         return PromptValidationResponse(
             input_variables=input_variables,
             frontend_node=prompt.frontend_node,
