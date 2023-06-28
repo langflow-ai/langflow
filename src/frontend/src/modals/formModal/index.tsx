@@ -166,13 +166,13 @@ export default function FormModal({
                 chatItem.files
                   ? {
                       isSend: !chatItem.is_bot,
-                      message: chatItem.is_bot ? chatItem.message : formatMessage(chatItem.message),
+                      message: formatMessage(chatItem.message),
                       thought: chatItem.intermediate_steps,
                       files: chatItem.files,
                     }
                   : {
                       isSend: !chatItem.is_bot,
-                      message: chatItem.is_bot ? chatItem.message : formatMessage(chatItem.message),
+                      message: formatMessage(chatItem.message),
                       thought: chatItem.intermediate_steps,
                     }
               );
@@ -305,6 +305,7 @@ export default function FormModal({
   }, [open]);
   function formatMessage(inputs: any): string {
     if (inputs) {
+      if(typeof inputs == "string") return inputs;
       // inputs is a object with the keys and values being input_keys and keysValue
       // so the formated message is a string with the keys and values separated by ": "
       let message = "";
@@ -371,7 +372,6 @@ export default function FormModal({
     }
   }
 
-  console.log(chatHistory)
   return (
     <Dialog open={open} onOpenChange={setModalOpen}>
       <DialogTrigger className="hidden"></DialogTrigger>

@@ -10,7 +10,6 @@ import FormModal from "../../modals/formModal";
 
 export default function Chat({ flow }: ChatType) {
   const [open, setOpen] = useState(false);
-  const [openForm, setOpenForm] = useState(false);
   const [isBuilt, setIsBuilt] = useState(false);
 
   useEffect(() => {
