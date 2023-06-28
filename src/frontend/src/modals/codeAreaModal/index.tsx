@@ -40,9 +40,8 @@ export default function CodeAreaModal({
     setOpen(x);
     if (x === false) {
       setTimeout(() => {
-        closePopUp();
         setCloseEdit("editcode");
-        
+        closePopUp();
       }, 300);
     }
   }

@@ -374,8 +374,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                     />
                                                   ) : t.data.node.template[n]
                                                       .multiline ? (
-                                                    <div>
-                                                      <ShadTooltip
+                                                        <ShadTooltip
                                                         delayDuration={1000}
                                                         content={buildContent(
                                                           t.data.node.template[
@@ -383,6 +382,8 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                           ].value
                                                         )}
                                                       >
+                                                    <div>
+
                                                         <TextAreaComponent
                                                           disabled={false}
                                                           editNode={true}
@@ -403,8 +404,9 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                             );
                                                           }}
                                                         />
-                                                      </ShadTooltip>
                                                     </div>
+                                                    </ShadTooltip>
+
                                                   ) : (
                                                     <InputComponent
                                                       editNode={true}
