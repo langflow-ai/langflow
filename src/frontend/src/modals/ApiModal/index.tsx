@@ -92,8 +92,6 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
     }
   }, [closeEdit]);
 
-
-
   const pythonApiCode = getPythonApiCode(flow, tweak.current);
   const curl_code = getCurlCode(flow, tweak.current);
   const pythonCode = getPythonCode(flow, tweak.current);
@@ -101,43 +99,32 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
 
   useEffect(() => {
     filterNodes();
-
-  }, [])
-  function filterNodes(){
-
+  }, []);
+  function filterNodes() {
     let arrNodesWithValues = [];
-    
-    flow["data"]["nodes"].forEach(t => {
-      
-      Object.keys(t['data']['node']['template']).filter(
-        (n) =>
-          n.charAt(0) !== "_" &&
-          t.data.node.template[n].show &&
-          (t.data.node.template[n].type ===
-            "str" ||
-            t.data.node.template[n].type ===
-              "bool" ||
-            t.data.node.template[n].type ===
-              "float" ||
-            t.data.node.template[n].type ===
-              "code" ||
-            t.data.node.template[n].type ===
-              "prompt" ||
-            t.data.node.template[n].type ===
-              "file" ||
-            t.data.node.template[n].type ===
-              "int")
-      )
-      .map((n, i) => {
-        arrNodesWithValues.push(t['id'])
-      })
-      
-    })
+
+    flow["data"]["nodes"].forEach((t) => {
+      Object.keys(t["data"]["node"]["template"])
+        .filter(
+          (n) =>
+            n.charAt(0) !== "_" &&
+            t.data.node.template[n].show &&
+            (t.data.node.template[n].type === "str" ||
+              t.data.node.template[n].type === "bool" ||
+              t.data.node.template[n].type === "float" ||
+              t.data.node.template[n].type === "code" ||
+              t.data.node.template[n].type === "prompt" ||
+              t.data.node.template[n].type === "file" ||
+              t.data.node.template[n].type === "int")
+        )
+        .map((n, i) => {
+          arrNodesWithValues.push(t["id"]);
+        });
+    });
 
     tweaksList.current = arrNodesWithValues.filter((value, index, self) => {
       return self.indexOf(value) === index;
     });
-    
   }
 
   const tabs = [
@@ -337,329 +324,222 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                     >
                       {flow["data"]["nodes"].map((t: any, index) => (
                         <div className="px-3" key={index}>
-                         {(
+                          {tweaksList.current.includes(t["data"]["id"]) && (
+                            <AccordionComponent
+                              trigger={t["data"]["id"]}
+                              open={openAccordion}
+                            >
+                              <div className="flex flex-col gap-5 h-fit">
+                                <Table className="table-fixed bg-muted outline-1">
+                                  <TableHeader className="border-gray-200 text-gray-500 text-xs font-medium h-10">
+                                    <TableRow className="dark:border-b-muted">
+                                      <TableHead className="h-7 text-center">
+                                        PARAM
+                                      </TableHead>
+                                      <TableHead className="p-0 h-7 text-center">
+                                        VALUE
+                                      </TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody className="p-0">
+                                    {Object.keys(t["data"]["node"]["template"])
+                                      .filter(
+                                        (n) =>
+                                          n.charAt(0) !== "_" &&
+                                          t.data.node.template[n].show &&
+                                          (t.data.node.template[n].type ===
+                                            "str" ||
+                                            t.data.node.template[n].type ===
+                                              "bool" ||
+                                            t.data.node.template[n].type ===
+                                              "float" ||
+                                            t.data.node.template[n].type ===
+                                              "code" ||
+                                            t.data.node.template[n].type ===
+                                              "prompt" ||
+                                            t.data.node.template[n].type ===
+                                              "file" ||
+                                            t.data.node.template[n].type ===
+                                              "int")
+                                      )
+                                      .map((n, i) => {
+                                        //console.log(t.data.node.template[n]);
 
-                         
-                            tweaksList.current.includes(t["data"]["id"]) &&
-                            
-                                                    
-                          <AccordionComponent
-                            trigger={t["data"]["id"]}
-                            open={openAccordion}
-                          >
-                            <div className="flex flex-col gap-5 h-fit">
-                              <Table className="table-fixed bg-muted outline-1">
-                                <TableHeader className="border-gray-200 text-gray-500 text-xs font-medium h-10">
-                                  <TableRow className="dark:border-b-muted">
-                                    <TableHead className="h-7 text-center">
-                                      PARAM
-                                    </TableHead>
-                                    <TableHead className="p-0 h-7 text-center">
-                                      VALUE
-                                    </TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody className="p-0">
-                                  {Object.keys(t["data"]["node"]["template"])
-                                    .filter(
-                                      (n) =>
-                                        n.charAt(0) !== "_" &&
-                                        t.data.node.template[n].show &&
-                                        (t.data.node.template[n].type ===
-                                          "str" ||
-                                          t.data.node.template[n].type ===
-                                            "bool" ||
-                                          t.data.node.template[n].type ===
-                                            "float" ||
-                                          t.data.node.template[n].type ===
-                                            "code" ||
-                                          t.data.node.template[n].type ===
-                                            "prompt" ||
-                                          t.data.node.template[n].type ===
-                                            "file" ||
-                                          t.data.node.template[n].type ===
-                                            "int")
-                                    )
-                                    .map((n, i) => {
-                                      //console.log(t.data.node.template[n]);
-
-                                      return (
-                                        <TableRow
-                                          key={i}
-                                          className="h-10 dark:border-b-muted"
-                                        >
-                                          <TableCell className="p-0 text-center text-gray-900 text-sm">
-                                            {n}
-                                          </TableCell>
-                                          <TableCell className="p-0 text-center text-gray-900 text-xs dark:text-gray-300">
-                                            <div className="w-[250px] m-auto">
-                                              {t.data.node.template[n].type ===
-                                                "str" &&
-                                              !t.data.node.template[n]
-                                                .options ? (
-                                                <div className="mx-auto">
-                                                  {t.data.node.template[n]
-                                                    .list ? (
-                                                    <InputListComponent
-                                                      editNode={true}
-                                                      disabled={false}
-                                                      value={
-                                                        !t.data.node.template[n]
-                                                          .value ||
-                                                        t.data.node.template[n]
-                                                          .value === ""
-                                                          ? [""]
-                                                          : t.data.node
-                                                              .template[n].value
-                                                      }
-                                                      onChange={(k) => {}}
-                                                      onAddInput={(k) => {
-                                                        buildTweakObject(
-                                                          t["data"]["id"],
-                                                          k,
+                                        return (
+                                          <TableRow
+                                            key={i}
+                                            className="h-10 dark:border-b-muted"
+                                          >
+                                            <TableCell className="p-0 text-center text-gray-900 text-sm">
+                                              {n}
+                                            </TableCell>
+                                            <TableCell className="p-0 text-center text-gray-900 text-xs dark:text-gray-300">
+                                              <div className="w-[250px] m-auto">
+                                                {t.data.node.template[n]
+                                                  .type === "str" &&
+                                                !t.data.node.template[n]
+                                                  .options ? (
+                                                  <div className="mx-auto">
+                                                    {t.data.node.template[n]
+                                                      .list ? (
+                                                      <InputListComponent
+                                                        editNode={true}
+                                                        disabled={false}
+                                                        value={
+                                                          !t.data.node.template[
+                                                            n
+                                                          ].value ||
                                                           t.data.node.template[
                                                             n
-                                                          ]
-                                                        );
-                                                      }}
-                                                    />
-                                                  ) : t.data.node.template[n]
-                                                      .multiline ? (
-                                                    <ShadTooltip
-                                                      delayDuration={1000}
-                                                      content={buildContent(
-                                                        t.data.node.template[n]
-                                                          .value
-                                                      )}
-                                                    >
-                                                      <div>
-                                                        <TextAreaComponent
-                                                          disabled={false}
-                                                          editNode={true}
-                                                          value={getValue(
+                                                          ].value === ""
+                                                            ? [""]
+                                                            : t.data.node
+                                                                .template[n]
+                                                                .value
+                                                        }
+                                                        onChange={(k) => {}}
+                                                        onAddInput={(k) => {
+                                                          buildTweakObject(
+                                                            t["data"]["id"],
+                                                            k,
                                                             t.data.node
                                                               .template[n]
-                                                              .value,
-                                                            t.data,
-                                                            t.data.node
-                                                              .template[n]
-                                                          )}
-                                                          onChange={(k) => {
-                                                            buildTweakObject(
-                                                              t["data"]["id"],
-                                                              k,
+                                                          );
+                                                        }}
+                                                      />
+                                                    ) : t.data.node.template[n]
+                                                        .multiline ? (
+                                                      <ShadTooltip
+                                                        delayDuration={1000}
+                                                        content={buildContent(
+                                                          t.data.node.template[
+                                                            n
+                                                          ].value
+                                                        )}
+                                                      >
+                                                        <div>
+                                                          <TextAreaComponent
+                                                            disabled={false}
+                                                            editNode={true}
+                                                            value={getValue(
                                                               t.data.node
                                                                 .template[n]
-                                                            );
-                                                          }}
-                                                        />
-                                                      </div>
-                                                    </ShadTooltip>
-                                                  ) : (
-                                                    <InputComponent
-                                                      editNode={true}
-                                                      disabled={false}
-                                                      password={
+                                                                .value,
+                                                              t.data,
+                                                              t.data.node
+                                                                .template[n]
+                                                            )}
+                                                            onChange={(k) => {
+                                                              buildTweakObject(
+                                                                t["data"]["id"],
+                                                                k,
+                                                                t.data.node
+                                                                  .template[n]
+                                                              );
+                                                            }}
+                                                          />
+                                                        </div>
+                                                      </ShadTooltip>
+                                                    ) : (
+                                                      <InputComponent
+                                                        editNode={true}
+                                                        disabled={false}
+                                                        password={
+                                                          t.data.node.template[
+                                                            n
+                                                          ].password ?? false
+                                                        }
+                                                        value={getValue(
+                                                          t.data.node.template[
+                                                            n
+                                                          ].value,
+                                                          t.data,
+                                                          t.data.node.template[
+                                                            n
+                                                          ]
+                                                        )}
+                                                        onChange={(k) => {
+                                                          buildTweakObject(
+                                                            t["data"]["id"],
+                                                            k,
+                                                            t.data.node
+                                                              .template[n]
+                                                          );
+                                                        }}
+                                                      />
+                                                    )}
+                                                  </div>
+                                                ) : t.data.node.template[n]
+                                                    .type === "bool" ? (
+                                                  <div className="ml-auto">
+                                                    {" "}
+                                                    <ToggleShadComponent
+                                                      enabled={
                                                         t.data.node.template[n]
-                                                          .password ?? false
+                                                          .value
                                                       }
-                                                      value={getValue(
-                                                        t.data.node.template[n]
-                                                          .value,
-                                                        t.data,
-                                                        t.data.node.template[n]
-                                                      )}
-                                                      onChange={(k) => {
+                                                      setEnabled={(e) => {
+                                                        t.data.node.template[
+                                                          n
+                                                        ].value = e;
+                                                        setEnabled(e);
                                                         buildTweakObject(
                                                           t["data"]["id"],
-                                                          k,
+                                                          e,
                                                           t.data.node.template[
                                                             n
                                                           ]
                                                         );
                                                       }}
+                                                      size="small"
+                                                      disabled={false}
                                                     />
-                                                  )}
-                                                </div>
-                                              ) : t.data.node.template[n]
-                                                  .type === "bool" ? (
-                                                <div className="ml-auto">
-                                                  {" "}
-                                                  <ToggleShadComponent
-                                                    enabled={
-                                                      t.data.node.template[n]
-                                                        .value
-                                                    }
-                                                    setEnabled={(e) => {
-                                                      t.data.node.template[
-                                                        n
-                                                      ].value = e;
-                                                      setEnabled(e);
-                                                      buildTweakObject(
-                                                        t["data"]["id"],
-                                                        e,
-                                                        t.data.node.template[n]
-                                                      );
-                                                    }}
-                                                    size="small"
-                                                    disabled={false}
-                                                  />
-                                                </div>
-                                              ) : t.data.node.template[n]
-                                                  .type === "file" ? (
-                                                <ShadTooltip
-                                                  delayDuration={1000}
-                                                  content={buildContent(
-                                                    getValue(
-                                                      t.data.node.template[n]
-                                                        .value,
-                                                      t.data,
-                                                      t.data.node.template[n]
-                                                    )
-                                                  )}
-                                                >
-                                                  <div className="mx-auto">
-                                                    <InputFileComponent
-                                                      editNode={true}
-                                                      disabled={false}
-                                                      value={
-                                                        t.data.node.template[n]
-                                                          .value ?? ""
-                                                      }
-                                                      onChange={(k: any) => {}}
-                                                      fileTypes={
-                                                        t.data.node.template[n]
-                                                          .fileTypes
-                                                      }
-                                                      suffixes={
-                                                        t.data.node.template[n]
-                                                          .suffixes
-                                                      }
-                                                      onFileChange={(
-                                                        k: any
-                                                      ) => {}}
-                                                    ></InputFileComponent>
                                                   </div>
-                                                </ShadTooltip>
-                                              ) : t.data.node.template[n]
-                                                  .type === "float" ? (
-                                                <div className="mx-auto">
-                                                  <FloatComponent
-                                                    disabled={false}
-                                                    editNode={true}
-                                                    value={getValue(
-                                                      t.data.node.template[n]
-                                                        .value,
-                                                      t.data,
-                                                      t.data.node.template[n]
-                                                    )}
-                                                    onChange={(k) => {
-                                                      buildTweakObject(
-                                                        t["data"]["id"],
-                                                        k,
-                                                        t.data.node.template[n]
-                                                      );
-                                                    }}
-                                                  />
-                                                </div>
-                                              ) : t.data.node.template[n]
-                                                  .type === "str" &&
-                                                t.data.node.template[n]
-                                                  .options ? (
-                                                <div className="mx-auto">
-                                                  <Dropdown
-                                                    editNode={true}
-                                                    apiModal={true}
-                                                    options={
-                                                      t.data.node.template[n]
-                                                        .options
-                                                    }
-                                                    onSelect={(k) => {
-                                                      buildTweakObject(
-                                                        t["data"]["id"],
-                                                        k,
-                                                        t.data.node.template[n]
-                                                      );
-                                                    }}
-                                                    value={getValue(
-                                                      t.data.node.template[n]
-                                                        .value,
-                                                      t.data,
-                                                      t.data.node.template[n]
-                                                    )}
-                                                  ></Dropdown>
-                                                </div>
-                                              ) : t.data.node.template[n]
-                                                  .type === "int" ? (
-                                                <div className="mx-auto">
-                                                  <IntComponent
-                                                    disabled={false}
-                                                    editNode={true}
-                                                    value={getValue(
-                                                      t.data.node.template[n]
-                                                        .value,
-                                                      t.data,
-                                                      t.data.node.template[n]
-                                                    )}
-                                                    onChange={(k) => {
-                                                      buildTweakObject(
-                                                        t["data"]["id"],
-                                                        k,
-                                                        t.data.node.template[n]
-                                                      );
-                                                    }}
-                                                  />
-                                                </div>
-                                              ) : t.data.node.template[n]
-                                                  .type === "prompt" ? (
-                                                <ShadTooltip
-                                                  delayDuration={1000}
-                                                  content={buildContent(
-                                                    getValue(
-                                                      t.data.node.template[n]
-                                                        .value,
-                                                      t.data,
-                                                      t.data.node.template[n]
-                                                    )
-                                                  )}
-                                                >
-                                                  <div className="mx-auto">
-                                                    <PromptAreaComponent
-                                                      editNode={true}
-                                                      disabled={false}
-                                                      value={getValue(
+                                                ) : t.data.node.template[n]
+                                                    .type === "file" ? (
+                                                  <ShadTooltip
+                                                    delayDuration={1000}
+                                                    content={buildContent(
+                                                      getValue(
                                                         t.data.node.template[n]
                                                           .value,
                                                         t.data,
                                                         t.data.node.template[n]
-                                                      )}
-                                                      onChange={(k) => {
-                                                        buildTweakObject(
-                                                          t["data"]["id"],
-                                                          k,
+                                                      )
+                                                    )}
+                                                  >
+                                                    <div className="mx-auto">
+                                                      <InputFileComponent
+                                                        editNode={true}
+                                                        disabled={false}
+                                                        value={
                                                           t.data.node.template[
                                                             n
-                                                          ]
-                                                        );
-                                                      }}
-                                                    />
-                                                  </div>
-                                                </ShadTooltip>
-                                              ) : t.data.node.template[n]
-                                                  .type === "code" ? (
-                                                <ShadTooltip
-                                                  delayDuration={1000}
-                                                  content={buildContent(
-                                                    getValue(
-                                                      t.data.node.template[n]
-                                                        .value,
-                                                      t.data,
-                                                      t.data.node.template[n]
-                                                    )
-                                                  )}
-                                                >
+                                                          ].value ?? ""
+                                                        }
+                                                        onChange={(
+                                                          k: any
+                                                        ) => {}}
+                                                        fileTypes={
+                                                          t.data.node.template[
+                                                            n
+                                                          ].fileTypes
+                                                        }
+                                                        suffixes={
+                                                          t.data.node.template[
+                                                            n
+                                                          ].suffixes
+                                                        }
+                                                        onFileChange={(
+                                                          k: any
+                                                        ) => {}}
+                                                      ></InputFileComponent>
+                                                    </div>
+                                                  </ShadTooltip>
+                                                ) : t.data.node.template[n]
+                                                    .type === "float" ? (
                                                   <div className="mx-auto">
-                                                    <CodeAreaComponent
+                                                    <FloatComponent
                                                       disabled={false}
                                                       editNode={true}
                                                       value={getValue(
@@ -679,31 +559,156 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                       }}
                                                     />
                                                   </div>
-                                                </ShadTooltip>
-                                              ) : t.data.node.template[n]
-                                                  .type === "Any" ? (
-                                                "-"
-                                              ) : (
-                                                <div className="hidden"></div>
-                                              )}
-                                            </div>
-                                          </TableCell>
-                                        </TableRow>
-                                      );
-                                    })}
-                                </TableBody>
-                              </Table>
-                            </div>
-                          </AccordionComponent>
-                         )}
+                                                ) : t.data.node.template[n]
+                                                    .type === "str" &&
+                                                  t.data.node.template[n]
+                                                    .options ? (
+                                                  <div className="mx-auto">
+                                                    <Dropdown
+                                                      editNode={true}
+                                                      apiModal={true}
+                                                      options={
+                                                        t.data.node.template[n]
+                                                          .options
+                                                      }
+                                                      onSelect={(k) => {
+                                                        buildTweakObject(
+                                                          t["data"]["id"],
+                                                          k,
+                                                          t.data.node.template[
+                                                            n
+                                                          ]
+                                                        );
+                                                      }}
+                                                      value={getValue(
+                                                        t.data.node.template[n]
+                                                          .value,
+                                                        t.data,
+                                                        t.data.node.template[n]
+                                                      )}
+                                                    ></Dropdown>
+                                                  </div>
+                                                ) : t.data.node.template[n]
+                                                    .type === "int" ? (
+                                                  <div className="mx-auto">
+                                                    <IntComponent
+                                                      disabled={false}
+                                                      editNode={true}
+                                                      value={getValue(
+                                                        t.data.node.template[n]
+                                                          .value,
+                                                        t.data,
+                                                        t.data.node.template[n]
+                                                      )}
+                                                      onChange={(k) => {
+                                                        buildTweakObject(
+                                                          t["data"]["id"],
+                                                          k,
+                                                          t.data.node.template[
+                                                            n
+                                                          ]
+                                                        );
+                                                      }}
+                                                    />
+                                                  </div>
+                                                ) : t.data.node.template[n]
+                                                    .type === "prompt" ? (
+                                                  <ShadTooltip
+                                                    delayDuration={1000}
+                                                    content={buildContent(
+                                                      getValue(
+                                                        t.data.node.template[n]
+                                                          .value,
+                                                        t.data,
+                                                        t.data.node.template[n]
+                                                      )
+                                                    )}
+                                                  >
+                                                    <div className="mx-auto">
+                                                      <PromptAreaComponent
+                                                        editNode={true}
+                                                        disabled={false}
+                                                        value={getValue(
+                                                          t.data.node.template[
+                                                            n
+                                                          ].value,
+                                                          t.data,
+                                                          t.data.node.template[
+                                                            n
+                                                          ]
+                                                        )}
+                                                        onChange={(k) => {
+                                                          buildTweakObject(
+                                                            t["data"]["id"],
+                                                            k,
+                                                            t.data.node
+                                                              .template[n]
+                                                          );
+                                                        }}
+                                                      />
+                                                    </div>
+                                                  </ShadTooltip>
+                                                ) : t.data.node.template[n]
+                                                    .type === "code" ? (
+                                                  <ShadTooltip
+                                                    delayDuration={1000}
+                                                    content={buildContent(
+                                                      getValue(
+                                                        t.data.node.template[n]
+                                                          .value,
+                                                        t.data,
+                                                        t.data.node.template[n]
+                                                      )
+                                                    )}
+                                                  >
+                                                    <div className="mx-auto">
+                                                      <CodeAreaComponent
+                                                        disabled={false}
+                                                        editNode={true}
+                                                        value={getValue(
+                                                          t.data.node.template[
+                                                            n
+                                                          ].value,
+                                                          t.data,
+                                                          t.data.node.template[
+                                                            n
+                                                          ]
+                                                        )}
+                                                        onChange={(k) => {
+                                                          buildTweakObject(
+                                                            t["data"]["id"],
+                                                            k,
+                                                            t.data.node
+                                                              .template[n]
+                                                          );
+                                                        }}
+                                                      />
+                                                    </div>
+                                                  </ShadTooltip>
+                                                ) : t.data.node.template[n]
+                                                    .type === "Any" ? (
+                                                  "-"
+                                                ) : (
+                                                  <div className="hidden"></div>
+                                                )}
+                                              </div>
+                                            </TableCell>
+                                          </TableRow>
+                                        );
+                                      })}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            </AccordionComponent>
+                          )}
 
-                         {(
-                           tweaksList.current.length === 0 && 
-                           <>
-                            <div className="pt-3">No tweaks are available for this flow.</div>
-                           </>
-                         )}
-
+                          {tweaksList.current.length === 0 && (
+                            <>
+                              <div className="pt-3">
+                                No tweaks are available for this flow.
+                              </div>
+                            </>
+                          )}
                         </div>
                       ))}
 
