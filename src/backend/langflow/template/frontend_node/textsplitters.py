@@ -21,6 +21,8 @@ class TextSplittersFrontendNode(FrontendNode):
             # Add a field for type of separator
             # which will have Text or any value from the
             # Language enum
+            options = [x.value for x in Language] + ["Text"]
+            options.sort()
             self.template.add_field(
                 TemplateField(
                     field_type="str",
@@ -29,7 +31,7 @@ class TextSplittersFrontendNode(FrontendNode):
                     name="separator_type",
                     advanced=False,
                     is_list=True,
-                    options=[x.value for x in Language],
+                    options=options,
                     value="Text",
                     display_name="Separator Type",
                 )
