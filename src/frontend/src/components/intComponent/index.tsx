@@ -41,7 +41,6 @@ export default function IntComponent({
           if (disableCopyPaste) setDisableCopyPaste(false);
         }}
         onKeyDown={(event) => {
-          // console.log(event);
           if (
             event.key !== "Backspace" &&
             event.key !== "Enter" &&
