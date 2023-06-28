@@ -2,7 +2,7 @@
   "unversionedId": "components/loaders",
   "id": "components/loaders",
   "title": "Loaders",
-  "description": "(coming soon)",
+  "description": "AZLyrics Loader",
   "source": "@site/docs/components/loaders.mdx",
   "sourceDirName": "components",
   "slug": "/components/loaders",

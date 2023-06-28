@@ -261,19 +261,19 @@
     "components/agents": {
       "id": "components/agents",
       "title": "Agents",
-      "description": "(coming soon)",
+      "description": "Agent Initializer",
       "sidebar": "docs"
     },
     "components/chains": {
       "id": "components/chains",
       "title": "Chains",
-      "description": "(coming soon)",
+      "description": "Combine Docs Chain",
       "sidebar": "docs"
     },
     "components/embeddings": {
       "id": "components/embeddings",
       "title": "Embeddings",
-      "description": "(coming soon)",
+      "description": "Cohere Embeddings",
       "sidebar": "docs"
     },
     "components/llms": {
@@ -285,7 +285,7 @@
     "components/loaders": {
       "id": "components/loaders",
       "title": "Loaders",
-      "description": "(coming soon)",
+      "description": "AZLyrics Loader",
       "sidebar": "docs"
     },
     "components/memories": {

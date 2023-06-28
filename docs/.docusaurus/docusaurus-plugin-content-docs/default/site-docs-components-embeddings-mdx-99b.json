@@ -2,7 +2,7 @@
   "unversionedId": "components/embeddings",
   "id": "components/embeddings",
   "title": "Embeddings",
-  "description": "(coming soon)",
+  "description": "Cohere Embeddings",
   "source": "@site/docs/components/embeddings.mdx",
   "sourceDirName": "components",
   "slug": "/components/embeddings",
