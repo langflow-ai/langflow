@@ -151,6 +151,7 @@ export default function Page({ flow }: { flow: FlowType }) {
         return {
           ...prev,
           [tabId]: {
+            ...prev[tabId],
             isPending: true,
           },
         };
@@ -166,6 +167,7 @@ export default function Page({ flow }: { flow: FlowType }) {
         return {
           ...prev,
           [tabId]: {
+            ...prev[tabId],
             isPending: true,
           },
         };

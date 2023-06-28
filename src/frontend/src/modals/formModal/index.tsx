@@ -373,10 +373,7 @@ export default function FormModal({
       setChatKey(index);
     }
   }
-
-  console.log(tabsState[id.current])
   return (
-    (tabsState[id.current].formKeysData?.input_keys && tabsState[id.current].formKeysData?.memory_keys) &&
     <Dialog open={open} onOpenChange={setModalOpen}>
       <DialogTrigger className="hidden"></DialogTrigger>
       {tabsState[flow.id].formKeysData && (
