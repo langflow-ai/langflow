@@ -1,8 +1,0 @@
-.SwitchRoot[data-state='checked'] {
-    background-color: blue !important;
-  }
-  
-  .SwitchRoot[data-state='unchecked'] {
-    background-color: red !important;
-  }
-  
