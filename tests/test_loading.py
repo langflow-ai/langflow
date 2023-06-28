@@ -14,6 +14,15 @@ def test_load_flow_from_json():
     assert isinstance(loaded, Chain)
 
 
+def test_load_flow_from_json_with_tweaks():
+    """Test loading a flow from a json file and applying tweaks"""
+    tweaks = {"dndnode_82": {"model_name": "test model"}}
+    loaded = load_flow_from_json(pytest.BASIC_EXAMPLE_PATH, tweaks=tweaks)
+    assert loaded is not None
+    assert isinstance(loaded, Chain)
+    assert loaded.llm.model_name == "test model"
+
+
 def test_get_root_node():
     with open(pytest.BASIC_EXAMPLE_PATH, "r") as f:
         flow_graph = json.load(f)

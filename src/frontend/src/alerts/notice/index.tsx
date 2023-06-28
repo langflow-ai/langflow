@@ -1,8 +1,8 @@
 import { Transition } from "@headlessui/react";
-import { InformationCircleIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { NoticeAlertType } from "../../types/alerts";
+import { Info } from "lucide-react";
 
 export default function NoticeAlert({
   title,
@@ -40,8 +40,8 @@ export default function NoticeAlert({
       >
         <div className="flex">
           <div className="flex-shrink-0">
-            <InformationCircleIcon
-              className="h-5 w-5 text-medium-blue"
+            <Info
+              className="h-5 w-5 text-blue-400 dark:text-blue-50"
               aria-hidden="true"
             />
           </div>

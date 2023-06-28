@@ -12,7 +12,6 @@ import {
   TableRow,
 } from "../../components/ui/table";
 import ToggleShadComponent from "../../components/toggleShadComponent";
-import { VariableIcon } from "@heroicons/react/24/outline";
 import InputListComponent from "../../components/inputListComponent";
 import TextAreaComponent from "../../components/textAreaComponent";
 import InputComponent from "../../components/inputComponent";
@@ -33,6 +32,7 @@ import {
 } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
+import { Variable } from "lucide-react";
 
 export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const [open, setOpen] = useState(true);
@@ -79,8 +79,8 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
   }
 
   return (
-    <Dialog open={true} onOpenChange={setModalOpen}>
-      <DialogTrigger></DialogTrigger>
+    <Dialog open={true} onOpenChange={setModalOpen} >
+      <DialogTrigger asChild></DialogTrigger>
       <DialogContent className="lg:max-w-[700px] ">
         <DialogHeader>
           <DialogTitle className="flex items-center">
@@ -90,10 +90,8 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
           <DialogDescription>
             {data.node?.description}
             <div className="flex pt-4">
-              <VariableIcon className="w-5 h-5 pe-1 text-foreground stroke-2">
-                &nbsp;
-              </VariableIcon>
-              <span className="text-sm font-semibold text-foreground">
+              <Variable className="w-5 h-5 pe-1 text-gray-700 stroke-2 dark:text-slate-200"></Variable>
+              <span className="text-sm font-semibold text-gray-800 dark:text-white">
                 Parameters
               </span>
             </div>

@@ -11,6 +11,7 @@ from langflow.graph.vertex.types import (
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
 from langflow.utils.logger import logger
+from langchain.chains.base import Chain
 
 
 class Graph:
@@ -99,7 +100,7 @@ class Graph:
         ]
         return connected_nodes
 
-    def build(self) -> List[Vertex]:
+    def build(self) -> Chain:
         """Builds the graph."""
         # Get root node
         root_node = payload.get_root_node(self)
@@ -145,7 +146,7 @@ class Graph:
     def generator_build(self) -> Generator:
         """Builds each vertex in the graph and yields it."""
         sorted_vertices = self.topological_sort()
-        logger.info("Sorted vertices: %s", sorted_vertices)
+        logger.debug("Sorted vertices: %s", sorted_vertices)
         yield from sorted_vertices
 
     def get_node_neighbors(self, node: Vertex) -> Dict[Vertex, int]:

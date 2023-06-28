@@ -1,25 +1,23 @@
-import { Bars2Icon } from "@heroicons/react/24/outline";
 import DisclosureComponent from "../DisclosureComponent";
 import {
   classNames,
   nodeColors,
-  nodeIcons,
+  nodeIconsLucide,
   nodeNames,
 } from "../../../../utils";
 import { useContext, useState } from "react";
 import { typesContext } from "../../../../contexts/typesContext";
 import { APIClassType, APIObjectType } from "../../../../types/api";
-import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
-import { Code2, FileDown, FileUp, Save } from "lucide-react";
+import { Code2, FileDown, FileUp, Save, Search } from "lucide-react";
 import { PopUpContext } from "../../../../contexts/popUpContext";
 import ExportModal from "../../../../modals/exportModal";
 import ApiModal from "../../../../modals/ApiModal";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { alertContext } from "../../../../contexts/alertContext";
-import { updateFlowInDatabase } from "../../../../controllers/API";
 import { INPUT_STYLE } from "../../../../constants";
 import { Separator } from "../../../../components/ui/separator";
+import { Menu } from "lucide-react";
 
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);
@@ -124,7 +122,7 @@ export default function ExtraSidebar() {
           type="text"
           name="search"
           id="search"
-          placeholder="Search Nodes"
+          placeholder="Search"
           className={
             INPUT_STYLE +
             "w-full border-1 rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
@@ -135,7 +133,7 @@ export default function ExtraSidebar() {
           }}
         />
         <div className="absolute inset-y-0 right-0 flex py-1.5 pr-3 items-center">
-          <MagnifyingGlassIcon className="h-5 w-5"></MagnifyingGlassIcon>
+          <Search size={20} color="#000000" />
         </div>
       </div>
 
@@ -146,10 +144,10 @@ export default function ExtraSidebar() {
             Object.keys(dataFilter[d]).length > 0 ? (
               <DisclosureComponent
                 openDisc={search.length == 0 ? false : true}
-                key={i}
+                key={nodeNames[d]}
                 button={{
                   title: nodeNames[d] ?? nodeNames.unknown,
-                  Icon: nodeIcons[d] ?? nodeIcons.unknown,
+                  Icon: nodeIconsLucide[d] ?? nodeIconsLucide.unknown,
                 }}
               >
                 <div className="p-2 flex flex-col gap-2">
@@ -157,9 +155,10 @@ export default function ExtraSidebar() {
                     .sort()
                     .map((t: string, k) => (
                       <ShadTooltip
-                        content={t}
-                        delayDuration={500}
+                        content={data[d][t].display_name}
+                        delayDuration={1500}
                         side="right"
+                        key={data[d][t].display_name}
                       >
                         <div key={k} data-tooltip-id={t}>
                           <div
@@ -183,11 +182,11 @@ export default function ExtraSidebar() {
                               );
                             }}
                           >
-                            <div className="flex w-full justify-between text-sm px-3 py-1 bg-background items-center border-dashed border-ring  border-l-0 rounded-md rounded-l-none border">
-                              <span className="text-black w-full pr-1 truncate text-xs">
-                                {t}
+                            <div className="flex w-full justify-between text-sm px-3 py-1 bg-white dark:bg-gray-800 items-center border-dashed border-gray-400 dark:border-gray-600 border-l-0 rounded-md rounded-l-none border">
+                              <span className="text-black dark:text-white w-full pr-1 truncate text-xs">
+                                {data[d][t].display_name}
                               </span>
-                              <Bars2Icon className="w-4 h-6  text-ring " />
+                              <Menu className="w-4 h-6  text-gray-400 dark:text-gray-600" />
                             </div>
                           </div>
                         </div>

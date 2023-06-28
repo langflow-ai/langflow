@@ -33,15 +33,37 @@ import { HackerNewsIcon } from "./icons/hackerNews";
 import { HugginFaceIcon } from "./icons/HuggingFace";
 import { IFixIcon } from "./icons/IFixIt";
 import { MetaIcon } from "./icons/Meta";
-import { MidjorneyIcon } from "./icons/Midjorney";
+import { MidjourneyIcon } from "./icons/Midjorney";
 import { NotionIcon } from "./icons/Notion";
 import { OpenAiIcon } from "./icons/OpenAi";
 import { QDrantIcon } from "./icons/QDrant";
 import { SearxIcon } from "./icons/Searx";
 import { SlackIcon } from "./icons/Slack";
+import { PineconeIcon } from "./icons/Pinecone";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { WeaviateIcon } from "./icons/Weaviate";
+import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "./constants";
+import { ComponentType, SVGProps } from "react";
+import {
+  Cpu,
+  Fingerprint,
+  Gift,
+  Hammer,
+  HelpCircle,
+  Laptop2,
+  Layers,
+  Lightbulb,
+  Link,
+  MessageCircle,
+  Paperclip,
+  Rocket,
+  Scissors,
+  TerminalSquare,
+  Wand2,
+  Wrench,
+} from "lucide-react";
+import { SupabaseIcon } from "./icons/supabase";
+import { MongoDBIcon } from "./icons/MongoDB";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -165,11 +187,14 @@ export const nodeIcons: {
   HuggingFaceEmbeddings: HugginFaceIcon,
   IFixitLoader: IFixIcon,
   Meta: MetaIcon,
-  Midjorney: MidjorneyIcon,
+  Midjourney: MidjourneyIcon,
   NotionDirectoryLoader: NotionIcon,
   ChatOpenAI: OpenAiIcon,
   OpenAI: OpenAiIcon,
   OpenAIEmbeddings: OpenAiIcon,
+  Pinecone: PineconeIcon,
+  SupabaseVectorStore: SupabaseIcon,
+  MongoDBAtlasVectorSearch: MongoDBIcon,
   // UnstructuredPowerPointLoader: PowerPointIcon, // word and powerpoint have differente styles
   Qdrant: QDrantIcon,
   // ReadTheDocsLoader: ReadTheDocsIcon, // does not work
@@ -196,6 +221,151 @@ export const nodeIcons: {
   wrappers: GiftIcon,
   utilities: Squares2X2Icon,
   unknown: QuestionMarkCircleIcon,
+};
+
+export const nodeIconsLucide: {
+  [char: string]: React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >;
+} = {
+  Chroma: ChromaIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  AirbyteJSONLoader: AirbyteIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  Anthropic: AnthropicIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  ChatAnthropic: AnthropicIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  BingSearchAPIWrapper: BingIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  BingSearchRun: BingIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  Cohere: CohereIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  CohereEmbeddings: CohereIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  EverNoteLoader: EvernoteIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  FacebookChatLoader: FBIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  GitbookLoader: GitBookIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  GoogleSearchAPIWrapper: GoogleIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  GoogleSearchResults: GoogleIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  GoogleSearchRun: GoogleIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  HNLoader: HackerNewsIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  HuggingFaceHub: HugginFaceIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  HuggingFaceEmbeddings: HugginFaceIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  IFixitLoader: IFixIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  Meta: MetaIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  Midjorney: MidjourneyIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  MongoDBAtlasVectorSearch: MongoDBIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  NotionDirectoryLoader: NotionIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  ChatOpenAI: OpenAiIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  OpenAI: OpenAiIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  OpenAIEmbeddings: OpenAiIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  Pinecone: PineconeIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  Qdrant: QDrantIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  Searx: SearxIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  SlackDirectoryLoader: SlackIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  SupabaseVectorStore: SupabaseIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  agents: Rocket as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  chains: Link as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  memories: Cpu as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  llms: Lightbulb as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  prompts: TerminalSquare as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  tools: Wrench as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  advanced: Laptop2 as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  chat: MessageCircle as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  embeddings: Fingerprint as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  documentloaders: Paperclip as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  vectorstores: Layers as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  toolkits: Hammer as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  textsplitters: Scissors as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  wrappers: Gift as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  utilities: Wand2 as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  unknown: HelpCircle as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
 };
 
 export const gradients = [
@@ -420,9 +590,7 @@ export function toFirstUpperCase(str: string) {
 }
 
 export function snakeToSpaces(str: string) {
-  let result = str.split("_").join(" ");
-
-  return result;
+  return str.split("_").join(" ");
 }
 
 export function toNormalCase(str: string) {
@@ -466,10 +634,7 @@ export function roundNumber(x: number, decimals: number) {
 export function getConnectedNodes(edge: Edge, nodes: Array<Node>): Array<Node> {
   const sourceId = edge.source;
   const targetId = edge.target;
-  const connectedNodes = nodes.filter(
-    (node) => node.id === targetId || node.id === sourceId
-  );
-  return connectedNodes;
+  return nodes.filter((node) => node.id === targetId || node.id === sourceId);
 }
 
 export function isValidConnection(
@@ -508,9 +673,10 @@ export function isValidConnection(
 
 export function removeApiKeys(flow: FlowType): FlowType {
   let cleanFLow = _.cloneDeep(flow);
+  console.log(cleanFLow);
   cleanFLow.data.nodes.forEach((node) => {
     for (const key in node.data.node.template) {
-      if (key.includes("api")) {
+      if (node.data.node.template[key].password) {
         node.data.node.template[key].value = "";
       }
     }
@@ -715,7 +881,7 @@ export function groupByFamily(data, baseClasses) {
     return foundIndex === index;
   });
 
-  let groupedObj = groupedBy.reduce((result, item) => {
+  return groupedBy.reduce((result, item) => {
     const existingGroup = result.find((group) => group.family === item.family);
 
     if (existingGroup) {
@@ -726,8 +892,6 @@ export function groupByFamily(data, baseClasses) {
 
     return result;
   }, []);
-
-  return groupedObj;
 }
 
 export function buildTweaks(flow) {
@@ -768,9 +932,7 @@ export function validateNode(
             )
           ? [
               `${type} is missing ${
-                template.display_name
-                  ? template.display_name
-                  : toNormalCase(template[t].name)
+                template.display_name || toNormalCase(template[t].name)
               }.`,
             ]
           : []
@@ -788,4 +950,50 @@ export function validateNodes(reactFlowInstance: ReactFlowInstance) {
   return reactFlowInstance
     .getNodes()
     .flatMap((n: NodeType) => validateNode(n, reactFlowInstance));
+}
+
+export function getRandomElement<T>(array: T[]): T {
+  return array[Math.floor(Math.random() * array.length)];
+}
+export function getRandomDescription(): string {
+  return getRandomElement(DESCRIPTIONS);
+}
+
+export function getRandomName(
+  retry: number = 0,
+  noSpace: boolean = false,
+  maxRetries: number = 3
+): string {
+  const left: string[] = ADJECTIVES;
+  const right: string[] = NOUNS;
+
+  const lv = getRandomElement(left);
+  const rv = getRandomElement(right);
+
+  // Condition to avoid "boring wozniak"
+  if (lv === "boring" && rv === "wozniak") {
+    if (retry < maxRetries) {
+      return getRandomName(retry + 1, noSpace, maxRetries);
+    } else {
+      console.warn("Max retries reached, returning as is");
+    }
+  }
+
+  // Append a suffix if retrying and noSpace is true
+  if (retry > 0 && noSpace) {
+    const retrySuffix = Math.floor(Math.random() * 10);
+    return `${lv}_${rv}${retrySuffix}`;
+  }
+
+  // Construct the final name
+  let final_name = noSpace ? `${lv}_${rv}` : `${lv} ${rv}`;
+  // Return title case final name
+  return toTitleCase(final_name);
+}
+
+export function getRandomKeyByssmm(): string {
+  const now = new Date();
+  const seconds = String(now.getSeconds()).padStart(2, "0");
+  const milliseconds = String(now.getMilliseconds()).padStart(3, "0");
+  return seconds + milliseconds;
 }

@@ -22,7 +22,8 @@ export default function FlowSettingsModal() {
   const { closePopUp } = useContext(PopUpContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const ref = useRef();
-  const { flows, tabId, updateFlow, setTabsState, saveFlow } = useContext(TabsContext);
+  const { flows, tabId, updateFlow, setTabsState, saveFlow } =
+    useContext(TabsContext);
   const maxLength = 50;
   const [name, setName] = useState(flows.find((f) => f.id === tabId).name);
   const [description, setDescription] = useState(
@@ -36,8 +37,8 @@ export default function FlowSettingsModal() {
       }, 300);
     }
   }
-  function handleClick(){
-    let savedFlow = flows.find((f) => f.id === tabId)
+  function handleClick() {
+    let savedFlow = flows.find((f) => f.id === tabId);
     savedFlow.name = name;
     savedFlow.description = description;
     saveFlow(savedFlow);
@@ -67,10 +68,7 @@ export default function FlowSettingsModal() {
         />
 
         <DialogFooter>
-          <Button
-            onClick={handleClick}
-            type="submit"
-          >
+          <Button onClick={handleClick} type="submit">
             Save
           </Button>
         </DialogFooter>

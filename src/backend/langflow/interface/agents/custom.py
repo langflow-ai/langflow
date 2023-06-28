@@ -6,6 +6,7 @@ from langchain.agents import (
     Tool,
     ZeroShotAgent,
     initialize_agent,
+    AgentType,
 )
 from langchain.agents.agent_toolkits import (
     SQLDatabaseToolkit,
@@ -64,7 +65,9 @@ class JsonAgent(CustomAgentExecutor):
             llm=llm,
             prompt=prompt,
         )
-        agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names)  # type: ignore
+        agent = ZeroShotAgent(
+            llm_chain=llm_chain, allowed_tools=tool_names  # type: ignore
+        )
         return cls.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
 
     def run(self, *args, **kwargs):
@@ -111,7 +114,9 @@ class CSVAgent(CustomAgentExecutor):
             prompt=partial_prompt,
         )
         tool_names = {tool.name for tool in tools}
-        agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)  # type: ignore
+        agent = ZeroShotAgent(
+            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs  # type: ignore
+        )
 
         return cls.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
 
@@ -148,7 +153,9 @@ class VectorStoreAgent(CustomAgentExecutor):
             prompt=prompt,
         )
         tool_names = {tool.name for tool in tools}
-        agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)  # type: ignore
+        agent = ZeroShotAgent(
+            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs  # type: ignore
+        )
         return AgentExecutor.from_agent_and_tools(
             agent=agent, tools=tools, verbose=True
         )
@@ -186,7 +193,7 @@ class SQLAgent(CustomAgentExecutor):
         from langchain.tools.sql_database.tool import (
             InfoSQLDatabaseTool,
             ListSQLDatabaseTool,
-            QueryCheckerTool,
+            QuerySQLCheckerTool,
             QuerySQLDataBaseTool,
         )
 
@@ -201,7 +208,7 @@ class SQLAgent(CustomAgentExecutor):
             QuerySQLDataBaseTool(db=db),  # type: ignore
             InfoSQLDatabaseTool(db=db),  # type: ignore
             ListSQLDatabaseTool(db=db),  # type: ignore
-            QueryCheckerTool(db=db, llm_chain=llmchain, llm=llm),  # type: ignore
+            QuerySQLCheckerTool(db=db, llm_chain=llmchain, llm=llm),  # type: ignore
         ]
 
         prefix = SQL_PREFIX.format(dialect=toolkit.dialect, top_k=10)
@@ -216,7 +223,9 @@ class SQLAgent(CustomAgentExecutor):
             prompt=prompt,
         )
         tool_names = {tool.name for tool in tools}  # type: ignore
-        agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)  # type: ignore
+        agent = ZeroShotAgent(
+            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs  # type: ignore
+        )
         return AgentExecutor.from_agent_and_tools(
             agent=agent,
             tools=tools,  # type: ignore
@@ -252,14 +261,20 @@ class VectorStoreRouterAgent(CustomAgentExecutor):
     ):
         """Construct a vector store router agent from an LLM and tools."""
 
-        tools = vectorstoreroutertoolkit.get_tools()
+        tools = (
+            vectorstoreroutertoolkit
+            if isinstance(vectorstoreroutertoolkit, list)
+            else vectorstoreroutertoolkit.get_tools()
+        )
         prompt = ZeroShotAgent.create_prompt(tools, prefix=VECTORSTORE_ROUTER_PREFIX)
         llm_chain = LLMChain(
             llm=llm,
             prompt=prompt,
         )
         tool_names = {tool.name for tool in tools}
-        agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)  # type: ignore
+        agent = ZeroShotAgent(
+            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs  # type: ignore
+        )
         return AgentExecutor.from_agent_and_tools(
             agent=agent, tools=tools, verbose=True
         )
@@ -269,11 +284,11 @@ class VectorStoreRouterAgent(CustomAgentExecutor):
 
 
 class InitializeAgent(CustomAgentExecutor):
-    """Implementation of initialize_agent function"""
+    """Implementation of AgentInitializer function"""
 
     @staticmethod
     def function_name():
-        return "initialize_agent"
+        return "AgentInitializer"
 
     @classmethod
     def initialize(
@@ -283,6 +298,9 @@ class InitializeAgent(CustomAgentExecutor):
         agent: str,
         memory: Optional[BaseChatMemory] = None,
     ):
+        # Find which value in the AgentType enum corresponds to the string
+        # passed in as agent
+        agent = AgentType(agent)
         return initialize_agent(
             tools=tools,
             llm=llm,
@@ -302,7 +320,7 @@ class InitializeAgent(CustomAgentExecutor):
 CUSTOM_AGENTS = {
     "JsonAgent": JsonAgent,
     "CSVAgent": CSVAgent,
-    "initialize_agent": InitializeAgent,
+    "AgentInitializer": InitializeAgent,
     "VectorStoreAgent": VectorStoreAgent,
     "VectorStoreRouterAgent": VectorStoreRouterAgent,
     "SQLAgent": SQLAgent,

@@ -16,7 +16,8 @@ export default function Chat({ flow }: ChatType) {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
         (event.key === "K" || event.key === "k") &&
-        (event.metaKey || event.ctrlKey)
+        (event.metaKey || event.ctrlKey) &&
+        isBuilt
       ) {
         event.preventDefault();
         setOpen((oldState) => !oldState);
@@ -26,7 +27,7 @@ export default function Chat({ flow }: ChatType) {
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, []);
+  }, [isBuilt]);
 
   useEffect(() => {
     // Define an async function within the useEffect hook

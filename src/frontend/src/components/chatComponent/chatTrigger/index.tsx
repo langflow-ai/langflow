@@ -1,5 +1,6 @@
 import { Transition } from "@headlessui/react";
 import { MessagesSquare } from "lucide-react";
+
 import { alertContext } from "../../../contexts/alertContext";
 import { useContext } from "react";
 import ShadTooltip from "../../ShadTooltipComponent";
@@ -30,26 +31,21 @@ export default function ChatTrigger({ open, setOpen, isBuilt }) {
       leaveTo="translate-y-96"
     >
       <div className="absolute bottom-4 right-3">
-        <ShadTooltip
-          delayDuration={500}
-          content="Chat Interface"
-          side="left"
+        <div
+          className="flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full shadow-md shadow-[#0000002a] hover:shadow-[#00000032]
+          bg-[#E2E7EE] dark:border-gray-600 cursor-pointer"
+          onClick={handleClick}
         >
-          <div
-            className="border flex justify-center items-center py-1 px-3 w-12 h-12 rounded-full bg-almost-dark-blue cursor-pointer"
-            onClick={handleClick}
-          >
-            <button>
-              <div className="flex gap-3">
-                <MessagesSquare
-                  className="h-6 w-6  text-medium-light-blue fill-medium-light-blue"
-                  style={{ color: "white" }}
-                  strokeWidth={1.5}
-                />
-              </div>
-            </button>
-          </div>
-        </ShadTooltip>
+          <button>
+            <div className="flex gap-3">
+              <MessagesSquare
+                className="pth-6 w-6 fill-[#5c8be1] stroke-1 stroke-[#5c8be1]"
+                style={{ color: "white" }}
+                strokeWidth={1.5}
+              />
+            </div>
+          </button>
+        </div>
       </div>
     </Transition>
   );

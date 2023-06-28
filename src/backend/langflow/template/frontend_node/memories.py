@@ -18,6 +18,27 @@ class MemoryFrontendNode(FrontendNode):
                 value=False,
             )
         )
+        # add input_key and output_key str fields
+        self.template.add_field(
+            TemplateField(
+                field_type="str",
+                required=False,
+                show=True,
+                name="input_key",
+                advanced=True,
+                value="",
+            )
+        )
+        self.template.add_field(
+            TemplateField(
+                field_type="str",
+                required=False,
+                show=True,
+                name="output_key",
+                advanced=True,
+                value="",
+            )
+        )
 
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
@@ -36,3 +57,10 @@ class MemoryFrontendNode(FrontendNode):
             field.required = False
             field.show = True
             field.advanced = False
+        if field.name in ["input_key", "output_key"]:
+            field.required = False
+            field.show = True
+            field.advanced = False
+            field.value = ""
+        if field.name == "memory_key":
+            field.value = "chat_history"

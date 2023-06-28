@@ -1,6 +1,5 @@
 import json
 from langflow.graph import Graph
-from langflow.processing.process import load_or_build_langchain_object
 
 import pytest
 from langflow.interface.run import (
@@ -39,18 +38,6 @@ def openapi_data_graph():
 
 def langchain_objects_are_equal(obj1, obj2):
     return str(obj1) == str(obj2)
-
-
-# Test load_or_build_langchain_object
-def test_load_or_build_langchain_object_first_message_true(basic_data_graph):
-    build_langchain_object_with_caching.clear_cache()
-    graph = load_or_build_langchain_object(basic_data_graph, is_first_message=True)
-    assert graph is not None
-
-
-def test_load_or_build_langchain_object_first_message_false(basic_data_graph):
-    graph = load_or_build_langchain_object(basic_data_graph, is_first_message=False)
-    assert graph is not None
 
 
 # Test build_langchain_object_with_caching

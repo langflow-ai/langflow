@@ -1,3 +1,5 @@
+import os
+from pathlib import Path
 from typing import Type, Union
 from langflow.graph.edge.base import Edge
 from langflow.graph.vertex.base import Vertex
@@ -236,6 +238,7 @@ def test_build_params(basic_graph):
     root = get_root_node(basic_graph)
     # Root node is a TimeTravelGuideChain
     # which requires an llm and memory
+    assert root is not None
     assert isinstance(root.params, dict)
     assert "llm" in root.params
     assert "memory" in root.params
@@ -269,7 +272,6 @@ def test_tool_node_build(complex_graph):
     assert tool_node is not None
     built_object = tool_node.build()
     assert built_object is not None
-    # Add any further assertions specific to the ToolNode's build() method
 
 
 def test_chain_node_build(complex_graph):
@@ -277,7 +279,6 @@ def test_chain_node_build(complex_graph):
     assert chain_node is not None
     built_object = chain_node.build()
     assert built_object is not None
-    # Add any further assertions specific to the ChainNode's build() method
 
 
 def test_prompt_node_build(complex_graph):
@@ -285,7 +286,6 @@ def test_prompt_node_build(complex_graph):
     assert prompt_node is not None
     built_object = prompt_node.build()
     assert built_object is not None
-    # Add any further assertions specific to the PromptNode's build() method
 
 
 def test_llm_node_build(basic_graph):
@@ -293,23 +293,36 @@ def test_llm_node_build(basic_graph):
     assert llm_node is not None
     built_object = llm_node.build()
     assert built_object is not None
-    # Add any further assertions specific to the LLMNode's build() method
 
 
 def test_toolkit_node_build(openapi_graph):
+    # Write a file to the disk
+    file_path = "api-with-examples.yaml"
+    with open(file_path, "w") as f:
+        f.write("openapi: 3.0.0")
+
     toolkit_node = get_node_by_type(openapi_graph, ToolkitVertex)
     assert toolkit_node is not None
     built_object = toolkit_node.build()
     assert built_object is not None
-    # Add any further assertions specific to the ToolkitNode's build() method
+    # Remove the file
+    os.remove(file_path)
+    assert not Path(file_path).exists()
 
 
 def test_file_tool_node_build(openapi_graph):
+    file_path = "api-with-examples.yaml"
+    with open(file_path, "w") as f:
+        f.write("openapi: 3.0.0")
+
+    assert Path(file_path).exists()
     file_tool_node = get_node_by_type(openapi_graph, FileToolVertex)
     assert file_tool_node is not None
     built_object = file_tool_node.build()
     assert built_object is not None
-    # Add any further assertions specific to the FileToolNode's build() method
+    # Remove the file
+    os.remove(file_path)
+    assert not Path(file_path).exists()
 
 
 def test_wrapper_node_build(openapi_graph):
@@ -317,7 +330,6 @@ def test_wrapper_node_build(openapi_graph):
     assert wrapper_node is not None
     built_object = wrapper_node.build()
     assert built_object is not None
-    # Add any further assertions specific to the WrapperNode's build() method
 
 
 def test_get_result_and_thought(basic_graph):
@@ -325,7 +337,7 @@ def test_get_result_and_thought(basic_graph):
     responses = [
         "Final Answer: I am a response",
     ]
-    message = "Hello"
+    message = {"input": "Hello"}
     # Find the node that is an LLMNode and change the
     # _built_object to a FakeListLLM
     llm_node = get_node_by_type(basic_graph, LLMVertex)
@@ -338,8 +350,5 @@ def test_get_result_and_thought(basic_graph):
     # now build again and check if FakeListLLM was used
 
     # Get the result and thought
-    result, thought = get_result_and_thought(langchain_object, message)
-    # The result should be a str
-    assert isinstance(result, str)
-    # The thought should be a Thought
-    assert isinstance(thought, str)
+    result = get_result_and_thought(langchain_object, message)
+    assert isinstance(result, dict)

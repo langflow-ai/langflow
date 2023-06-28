@@ -1,8 +1,10 @@
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import {
   classNames,
+  getRandomKeyByssmm,
   groupByFamily,
   isValidConnection,
+  nodeIconsLucide,
 } from "../../../../utils";
 import { useContext, useEffect, useRef, useState } from "react";
 import InputComponent from "../../../../components/inputComponent";
@@ -17,7 +19,7 @@ import InputFileComponent from "../../../../components/inputFileComponent";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import IntComponent from "../../../../components/intComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
-import { nodeNames, nodeIcons } from "../../../../utils";
+import { nodeNames } from "../../../../utils";
 import React from "react";
 import { nodeColors } from "../../../../utils";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
@@ -40,7 +42,7 @@ export default function ParameterComponent({
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   const { closePopUp } = useContext(PopUpContext);
-  const { setTabsState, tabId } = useContext(TabsContext);
+  const { setTabsState, tabId, save } = useContext(TabsContext);
 
   useEffect(() => {
     if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
@@ -82,18 +84,18 @@ export default function ParameterComponent({
 
     refHtml.current = groupedObj.map((item, i) => (
       <span
-        key={i}
+        key={getRandomKeyByssmm()}
         className={classNames(
           i > 0 ? "items-center flex mt-3" : "items-center flex"
         )}
       >
         <div
-          className="h-5 w-5"
+          className="h-6 w-6"
           style={{
             color: nodeColors[item.family],
           }}
         >
-          {React.createElement(nodeIcons[item.family])}
+          {React.createElement(nodeIconsLucide[item.family])}
         </div>
         <span className="ps-2 text-gray-950">
           {nodeNames[item.family] ?? ""}{" "}
@@ -102,14 +104,14 @@ export default function ParameterComponent({
             -&nbsp;
             {item.type.split(", ").length > 2
               ? item.type.split(", ").map((el, i) => (
-                  <>
-                    <span key={i}>
-                      {i == item.type.split(", ").length - 1
+                  <React.Fragment key={el + i}>
+                    <span>
+                      {i === item.type.split(", ").length - 1
                         ? el
                         : (el += `, `)}
                     </span>
-                    {i % 2 == 0 && i > 0 && <br></br>}
-                  </>
+                    {i % 2 === 0 && i > 0 && <br />}
+                  </React.Fragment>
                 ))
               : item.type}
           </span>
@@ -239,7 +241,8 @@ export default function ParameterComponent({
             fileTypes={data.node.template[name].fileTypes}
             suffixes={data.node.template[name].suffixes}
             onFileChange={(t: string) => {
-              data.node.template[name].content = t;
+              data.node.template[name].file_path = t;
+              save();
             }}
           ></InputFileComponent>
         ) : left === true && type === "int" ? (

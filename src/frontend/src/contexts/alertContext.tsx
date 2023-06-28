@@ -80,7 +80,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
   function setErrorData(newState: { title: string; list?: Array<string> }) {
     setErrorDataState(newState);
     setErrorOpen(true);
-    if (newState.title) {
+    if (newState.title && newState.title !== "") {
       setNotificationCenter(true);
       pushNotificationList({
         type: "error",
@@ -97,7 +97,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
   function setNoticeData(newState: { title: string; link?: string }) {
     setNoticeDataState(newState);
     setNoticeOpen(true);
-    if (newState.title) {
+    if (newState.title && newState.title !== "") {
       // Add new notice to notification center
       setNotificationCenter(true);
       pushNotificationList({
@@ -117,7 +117,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
     setSuccessOpen(true); // open the success alert
 
     // If the new state has a "title" property, add a new success notification to the list
-    if (newState.title) {
+    if (newState.title && newState.title !== "") {
       setNotificationCenter(true); // show the notification center
       pushNotificationList({
         // add the new notification to the list
