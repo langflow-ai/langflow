@@ -155,7 +155,7 @@ export default function FormModal({
         let newChatHistory: ChatMessageType[] = [];
         data.forEach(
           (chatItem: {
-            intermediate_steps?: "string";
+            intermediate_steps?: string;
             is_bot: boolean;
             message: string;
             type: string;
@@ -166,13 +166,13 @@ export default function FormModal({
                 chatItem.files
                   ? {
                       isSend: !chatItem.is_bot,
-                      message: chatItem.message,
+                      message: chatItem.is_bot ? chatItem.message : formatMessage(chatItem.message),
                       thought: chatItem.intermediate_steps,
                       files: chatItem.files,
                     }
                   : {
                       isSend: !chatItem.is_bot,
-                      message: chatItem.message,
+                      message: chatItem.is_bot ? chatItem.message : formatMessage(chatItem.message),
                       thought: chatItem.intermediate_steps,
                     }
               );
@@ -370,6 +370,8 @@ export default function FormModal({
       setChatKey(index);
     }
   }
+
+  console.log(chatHistory)
   return (
     <Dialog open={open} onOpenChange={setModalOpen}>
       <DialogTrigger className="hidden"></DialogTrigger>
