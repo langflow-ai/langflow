@@ -233,6 +233,9 @@ def format_dict(d, name: Optional[str] = None):
 
         _type = value["type"]
 
+        if not isinstance(_type, str):
+            _type = _type.__name__
+
         # Remove 'Optional' wrapper
         if "Optional" in _type:
             _type = _type.replace("Optional[", "")[:-1]
