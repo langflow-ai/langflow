@@ -58,7 +58,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
   const [activeTab, setActiveTab] = useState("0");
   const [isCopied, setIsCopied] = useState<Boolean>(false);
   const [enabled, setEnabled] = useState(null);
-  const [openAccordion, setOpenAccordion] = useState(false);
+  const [openAccordion, setOpenAccordion] = useState([]);
   const tweak = useRef([]);
   const tweaksList = useRef([]);
   const { setTweak, getTweak } = useContext(TabsContext);
@@ -87,8 +87,11 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
   useEffect(() => {
     if (closeEdit !== "") {
       setActiveTab("3");
-      setOpenAccordion(true);
       tweak.current = getTweak;
+      openAccordions();    
+    }
+    else{
+      startTweaks();
     }
   }, [closeEdit]);
 
@@ -100,6 +103,11 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
   useEffect(() => {
     filterNodes();
   }, []);
+
+  function startTweaks() {
+    tweak.current.push(buildTweaks(flow));
+  }
+
   function filterNodes() {
     let arrNodesWithValues = [];
 
@@ -176,25 +184,13 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
     if (existingTweak) {
       existingTweak[tw][template["name"]] = changes;
 
-      if (template.list === true) {
-        if (changes.length === 0) {
-          if (existingTweak[tw] && existingTweak[tw][template["name"]]) {
-            delete existingTweak[tw][template["name"]];
-          }
-        }
-      }
-
       if (existingTweak[tw][template["name"]] == template.value) {
         tweak.current.forEach((element) => {
-          if (element[tw] && element[tw][template["name"]]) {
-            delete element[tw][template["name"]];
-          }
           if (element[tw] && Object.keys(element[tw])?.length === 0) {
             tweak.current = tweak.current.filter((obj) => {
               const prop = obj[Object.keys(obj)[0]].prop;
               return prop !== undefined && prop !== null && prop !== "";
             });
-            delete element[tw];
           }
         });
       }
@@ -205,6 +201,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
         },
       };
       tweak.current.push(newTweak);
+
     }
 
     const pythonApiCode = getPythonApiCode(flow, tweak.current);
@@ -232,22 +229,33 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
 
     if (getTweak.length > 0) {
       for (const obj of getTweak) {
-        // Obtém a chave do objeto interno
-        const key = Object.keys(obj)[0];
-        // Obtém o valor do objeto interno
-        const value = obj[key];
-        if (key == node["id"]) {
-          Object.keys(value).forEach((key) => {
-            if (key == template["name"]) {
-              returnValue = value[key];
-            }
-          });
-        }
+        Object.keys(obj).forEach(key =>{
+          const value = obj[key];
+          if (key == node["id"]) {
+            Object.keys(value).forEach((key) => {
+              if (key == template["name"]) {
+                returnValue = value[key];
+              }
+            });
+          }
+        })
       }
     } else {
       return value ?? "";
     }
     return returnValue;
+  }
+
+  function openAccordions(){
+    let accordionsToOpen = [];
+    tweak.current.forEach((el) => {
+      Object.keys(el).forEach((key) => {
+        if (Object.keys(el[key]).length > 0) {
+          accordionsToOpen.push(key)
+          setOpenAccordion(accordionsToOpen);
+        }
+      });
+    });   
   }
 
   return (
@@ -270,9 +278,8 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
           className="w-full h-full overflow-hidden text-center bg-muted rounded-md border"
           onValueChange={(value) => {
             setActiveTab(value);
-
-            if (tweak.current.length > 0) {
-              setOpenAccordion(true);
+            if(value === "3"){
+              openAccordions()
             }
           }}
         >
