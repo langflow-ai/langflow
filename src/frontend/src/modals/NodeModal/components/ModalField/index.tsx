@@ -52,8 +52,8 @@ export default function ModalField({
     >
       {display && (
         <div>
-          <span className="mx-2 dark:text-gray-300">{title}</span>
-          <span className="text-red-600">{required ? " *" : ""}</span>
+          <span className="mx-2">{title}</span>
+          <span className="text-destructive">{required ? " *" : ""}</span>
         </div>
       )}
 

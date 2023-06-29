@@ -184,8 +184,8 @@ export default function Page({ flow }: { flow: FlowType }) {
             style: { stroke: "inherit" },
             className:
               params.targetHandle.split("|")[0] === "Text"
-                ? "stroke-gray-800 dark:stroke-gray-300"
-                : "stroke-gray-900 dark:stroke-gray-200",
+                ? "stroke-foreground "
+                : "stroke-foreground ",
             animated: params.targetHandle.split("|")[0] === "Text",
           },
           eds
@@ -401,8 +401,11 @@ export default function Page({ flow }: { flow: FlowType }) {
                   minZoom={0.01}
                   maxZoom={8}
                 >
-                  <Background className="dark:bg-gray-900" />
-                  <Controls className="[&>button]:text-black  [&>button]:dark:bg-gray-800 hover:[&>button]:dark:bg-gray-700 [&>button]:dark:text-gray-400 [&>button]:dark:fill-gray-400 [&>button]:dark:border-gray-600"></Controls>
+                  <Background className="" />
+                  <Controls
+                    className="text-primary stroke-foreground [&>button]:border-b-border hover:[&>button]:bg-border
+                   fill-foreground bg-muted"
+                  ></Controls>
                 </ReactFlow>
                 <Chat flow={flow} reactFlowInstance={reactFlowInstance} />
               </div>

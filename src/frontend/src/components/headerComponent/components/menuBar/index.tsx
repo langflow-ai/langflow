@@ -80,7 +80,7 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <Settings2 className="w-4 h-4 mr-2 dark:text-gray-300" />
+              <Settings2 className="w-4 h-4 mr-2 " />
               Settings
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -89,7 +89,7 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <Undo className="w-4 h-4 mr-2 dark:text-gray-300" />
+              <Undo className="w-4 h-4 mr-2 " />
               Undo
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -98,7 +98,7 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <Redo className="w-4 h-4 mr-2 dark:text-gray-300" />
+              <Redo className="w-4 h-4 mr-2 " />
               Redo
             </DropdownMenuItem>
             <DropdownMenuSeparator />

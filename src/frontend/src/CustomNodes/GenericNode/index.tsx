@@ -91,13 +91,14 @@ export default function GenericNode({
 
       <div
         className={classNames(
-          selected ? "border border-ring" : "border dark:border-gray-700",
-          "prompt-node relative flex w-96 flex-col justify-center rounded-lg bg-white dark:bg-gray-900"
+          selected ? "border border-ring" : "border",
+          "prompt-node relative flex w-96 flex-col justify-center rounded-lg bg-background"
         )}
       >
-        <div className="flex w-full items-center justify-between gap-8 rounded-t-lg border-b bg-muted p-4 dark:border-b-gray-700 dark:bg-gray-800 dark:text-white ">
+        <div className="flex w-full items-center justify-between gap-8 rounded-t-lg border-b bg-muted p-4  ">
           <div className="flex w-full items-center gap-2 truncate text-lg">
             <Icon
+              strokeWidth={1.5}
               className="h-10 w-10 rounded p-1"
               style={{
                 color: nodeColors[types[data.type]] ?? nodeColors.unknown,
@@ -108,7 +109,7 @@ export default function GenericNode({
                 delayDuration={1500}
                 content={data.node.display_name}
               >
-                <div className="ml-2 truncate text-gray-800">
+                <div className="ml-2 truncate text-primary">
                   {data.node.display_name}
                 </div>
               </ShadTooltip>
@@ -143,25 +144,25 @@ export default function GenericNode({
                   <div
                     className={classNames(
                       validationStatus && validationStatus.valid
-                        ? "w-4 h-4 rounded-full bg-green-500 opacity-100"
-                        : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
+                        ? "w-4 h-4 rounded-full bg-status-red opacity-100"
+                        : "w-4 h-4 rounded-full bg-ring opacity-0 hidden animate-spin",
+                      "absolute w-4 hover:text-ring hover: transition-all ease-in-out duration-200"
                     )}
                   ></div>
                   <div
                     className={classNames(
                       validationStatus && !validationStatus.valid
-                        ? "w-4 h-4 rounded-full  bg-red-500 opacity-100"
-                        : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
+                        ? "w-4 h-4 rounded-full  bg-status-red opacity-100"
+                        : "w-4 h-4 rounded-full bg-ring opacity-0 hidden animate-spin",
+                      "absolute w-4 hover:text-ring hover: transition-all ease-in-out duration-200"
                     )}
                   ></div>
                   <div
                     className={classNames(
                       !validationStatus || isBuilding
-                        ? "w-4 h-4 rounded-full  bg-yellow-500 opacity-100"
-                        : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
+                        ? "w-4 h-4 rounded-full  bg-status-yellow opacity-100"
+                        : "w-4 h-4 rounded-full bg-ring opacity-0 hidden animate-spin",
+                      "absolute w-4 hover:text-ring transition-all ease-in-out duration-200"
                     )}
                   ></div>
                 </div>
@@ -170,7 +171,7 @@ export default function GenericNode({
           </div>
         </div>
 
-        <div className="h-full w-full py-5 text-gray-800">
+        <div className="h-full w-full py-5 text-foreground">
           <div className="w-full px-5 pb-3 text-sm text-muted-foreground">
             {data.node.description}
           </div>
@@ -183,7 +184,7 @@ export default function GenericNode({
                   {/* {idx === 0 ? (
                                 <div
                                     className={classNames(
-                                        "px-5 py-2 mt-2 dark:text-white text-center",
+                                        "px-5 py-2 mt-2 text-center",
                                         Object.keys(data.node.template).filter(
                                             (key) =>
                                                 !key.startsWith("_") &&
@@ -234,7 +235,7 @@ export default function GenericNode({
             >
               {" "}
             </div>
-            {/* <div className="px-5 py-2 mt-2 dark:text-white text-center">
+            {/* <div className="px-5 py-2 mt-2 text-center">
                   Output
               </div> */}
             <ParameterComponent

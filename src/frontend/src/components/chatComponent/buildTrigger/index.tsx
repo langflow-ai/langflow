@@ -8,6 +8,7 @@ import { useSSE } from "../../../contexts/SSEContext";
 import { typesContext } from "../../../contexts/typesContext";
 import { alertContext } from "../../../contexts/alertContext";
 import { postBuildInit } from "../../../controllers/API";
+import ShadTooltip from "../../ShadTooltipComponent";
 
 import RadialProgressComponent from "../../RadialProgress";
 
@@ -157,7 +158,7 @@ export default function BuildTrigger({
     >
       <div className={`fixed right-4` + (isBuilt ? " bottom-20" : " bottom-4")}>
         <div
-          className={`${eventClick} flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full shadow-md shadow-[#0000002a] hover:shadow-[#00000032] bg-[#E2E7EE] dark:border-gray-600 cursor-pointer`}
+          className={`${eventClick} flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full shadow-md shadow-round-btn-shadow hover:shadow-round-btn-shadow bg-border cursor-pointer`}
           onClick={() => {
             handleBuild(flow);
           }}
@@ -169,13 +170,14 @@ export default function BuildTrigger({
               {isBuilding && progress < 1 ? (
                 // Render your loading animation here when isBuilding is true
                 <RadialProgressComponent
-                  color={"text-orange-400"}
+                  // ! confirm below works
+                  color={"text-build-trigger"}
                   value={progress}
                 ></RadialProgressComponent>
               ) : isBuilding ? (
-                <Loading strokeWidth={1.5} style={{ color: "#fb923c" }} />
+                <Loading strokeWidth={1.5} className="stroke-build-trigger" />
               ) : (
-                <Zap className="sh-6 w-6 fill-orange-400 stroke-1 stroke-orange-400" />
+                <Zap className="sh-6 w-6 fill-build-trigger stroke-1 stroke-build-trigger" />
               )}
             </div>
           </button>

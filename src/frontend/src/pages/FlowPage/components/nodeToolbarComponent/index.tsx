@@ -1,10 +1,11 @@
 import { useContext, useState } from "react";
-import { Settings2, Copy, Trash2 } from "lucide-react";
+import { Settings2, Copy, Trash2, Menu } from "lucide-react";
 import { classNames } from "../../../../utils";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { useReactFlow } from "reactflow";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
+import { EllipsisVerticalIcon } from "@heroicons/react/24/outline";
 
 const NodeToolbarComponent = (props) => {
   const [nodeLength, setNodeLength] = useState(
@@ -31,12 +32,12 @@ const NodeToolbarComponent = (props) => {
         <span className="isolate inline-flex rounded-md shadow-sm">
           <ShadTooltip delayDuration={1000} content="Delete" side="top">
             <button
-              className="hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative inline-flex items-center rounded-l-md bg-white px-2 py-2 ring-1 ring-inset ring-gray-300 hover:bg-muted focus:z-10"
+              className="text-foreground transition-all duration-500 ease-in-out  shadow-md relative inline-flex items-center rounded-l-md bg-background px-2 py-2 ring-1 ring-inset ring-ring hover:bg-muted focus:z-10"
               onClick={() => {
                 props.deleteNode(props.data.id);
               }}
             >
-              <Trash2 className="w-4 h-4 dark:text-gray-300"></Trash2>
+              <Trash2 className="w-4 h-4 "></Trash2>
             </button>
           </ShadTooltip>
 
@@ -44,8 +45,8 @@ const NodeToolbarComponent = (props) => {
             <button
               className={classNames(
                 nodeLength > 0
-                  ? "hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-muted focus:z-10"
-                  : "hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-muted focus:z-10 rounded-r-md"
+                  ? "text-foreground transition-all duration-500 ease-in-out shadow-md relative -ml-px inline-flex items-center bg-background px-2 py-2  ring-1 ring-inset ring-ring hover:bg-muted focus:z-10"
+                  : "text-foreground transition-all duration-500 ease-in-out shadow-md relative -ml-px inline-flex items-center bg-background px-2 py-2  ring-1 ring-inset ring-ring hover:bg-muted focus:z-10 rounded-r-md"
               )}
               onClick={(event) => {
                 event.preventDefault();
@@ -64,31 +65,30 @@ const NodeToolbarComponent = (props) => {
                 );
               }}
             >
-              <Copy className="w-4 h-4 dark:text-gray-300"></Copy>
+              <Copy className="w-4 h-4 "></Copy>
             </button>
           </ShadTooltip>
 
           {nodeLength > 0 && (
             <ShadTooltip delayDuration={1000} content="Edit" side="top">
               <button
-                className="hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-muted focus:z-10 rounded-r-md"
+                className="text-foreground transition-all duration-500 ease-in-out shadow-md relative -ml-px inline-flex items-center bg-background px-2 py-2 ring-1 ring-inset ring-ring hover:bg-muted focus:z-10 rounded-r-md"
                 onClick={(event) => {
                   event.preventDefault();
                   props.openPopUp(<EditNodeModal data={props.data} />);
                 }}
               >
-                <Settings2 className="w-4 h-4 dark:text-gray-300"></Settings2>
+                <Settings2 className="w-4 h-4 "></Settings2>
               </button>
             </ShadTooltip>
           )}
 
-          {/*
-          <Menu as="div" className="relative inline-block text-left z-100">
-            <button className="hover:dark:hover:bg-[#242f47] text-gray-700 transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300 shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2 ring-1 ring-inset ring-gray-300 hover:bg-muted focus:z-10 rounded-r-md">
+          {/* <Menu as="div" className="relative inline-block text-left z-100">
+            <button className="text-gray-700 transition-all duration-500 ease-in-out   shadow-md relative -ml-px inline-flex items-center bg-background px-2 py-2 ring-1 ring-inset ring-gray-300 hover:bg-muted focus:z-10 rounded-r-md">
               <div>
                 <Menu.Button className="flex items-center">
                   <EllipsisVerticalIcon
-                    className="w-5 h-5 dark:text-gray-300"
+                    className="w-5 h-5 "
                     aria-hidden="true"
                   />
                 </Menu.Button>
@@ -103,7 +103,7 @@ const NodeToolbarComponent = (props) => {
                 leaveFrom="transform opacity-100 scale-100"
                 leaveTo="transform opacity-0 scale-95"
               >
-                <Menu.Items className="absolute z-40 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none top-[28px]">
+                <Menu.Items className="absolute z-40 mt-2 w-56 origin-top-right rounded-md bg-background shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none top-[28px]">
                   <div className="py-1">
                     <Menu.Item>
                       {({ active }) => (

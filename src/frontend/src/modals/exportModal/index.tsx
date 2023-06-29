@@ -46,7 +46,7 @@ export default function ExportModal() {
           <DialogTitle className="flex items-center">
             <span className="pr-2">Export</span>
             <Download
-              className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
+              className="h-6 w-6 text-foreground pl-1"
               aria-hidden="true"
             />
           </DialogTitle>

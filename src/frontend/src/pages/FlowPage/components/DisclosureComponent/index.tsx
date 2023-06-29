@@ -12,10 +12,10 @@ export default function DisclosureComponent({
       {({ open }) => (
         <>
           <div>
-            <Disclosure.Button className="select-none bg-muted dark:bg-gray-700/60 dark:border-y-gray-600 w-full flex justify-between items-center -mt-px px-3 py-2 border-y border-y-gray-200">
+            <Disclosure.Button className="select-none bg-muted w-full flex justify-between items-center -mt-px px-3 py-2 border-y border-y-input">
               <div className="flex gap-4">
-                <Icon size={22} className="text-gray-800 dark:text-white/80" />
-                <span className="flex items-center text-sm text-gray-800 dark:text-white/80 font-medium">
+                <Icon strokeWidth={1.5} size={22} className="text-primary " />
+                <span className="flex items-center text-sm text-primary">
                   {title}
                 </span>
               </div>
@@ -29,7 +29,7 @@ export default function DisclosureComponent({
                   <ChevronRight
                     className={`${
                       open || openDisc ? "rotate-90 transform" : ""
-                    } h-4 w-4 text-gray-800 dark:text-white`}
+                    } h-4 w-4 text-foreground`}
                   />
                 </div>
               </div>

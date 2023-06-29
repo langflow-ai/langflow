@@ -330,7 +330,7 @@ export default function ChatModal({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black backdrop-blur-sm dark:bg-gray-600 dark:bg-opacity-80 bg-opacity-80 transition-opacity" />
+          <div className="fixed inset-0 bg-black backdrop-blur-sm   bg-opacity-80 transition-opacity" />
         </Transition.Child>
 
         <div className="fixed inset-0 z-10 overflow-y-auto">
@@ -344,24 +344,24 @@ export default function ChatModal({
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className=" drop-shadow-2xl relative flex flex-col justify-between transform h-[95%] overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all w-[690px]">
+              <Dialog.Panel className=" drop-shadow-2xl relative flex flex-col justify-between transform h-[95%] overflow-hidden rounded-lg bg-background text-left shadow-xl transition-all w-[690px]">
                 <div className="relative w-full p-4">
                   <button
                     onClick={() => clearChat()}
-                    className="absolute top-2 right-10 hover:text-red-500 text-gray-600 dark:text-gray-300 dark:hover:text-red-500 z-30"
+                    className="absolute top-2 right-10 hover:text-status-red text-muted-foreground z-30"
                   >
                     <Eraser className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setModalOpen(false)}
-                    className="absolute top-1.5 right-2 hover:text-red-500 text-gray-600 dark:text-gray-300 dark:hover:text-red-500 z-30"
+                    className="absolute top-1.5 right-2 hover:text-status-red text-muted-foreground z-30"
                   >
                     <X className="w-5 h-5" />
                   </button>
                 </div>
                 <div
                   ref={messagesRef}
-                  className="w-full h-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center overflow-scroll scrollbar-hide"
+                  className="w-full h-full bg-background border-t  flex-col flex items-center overflow-scroll scrollbar-hide"
                 >
                   {chatHistory.length > 0 ? (
                     chatHistory.map((c, i) => (
@@ -376,13 +376,13 @@ export default function ChatModal({
                     <div className="flex flex-col h-full text-center justify-center w-full items-center align-middle">
                       <span>
                         👋{" "}
-                        <span className="text-gray-600 dark:text-gray-300 text-lg">
+                        <span className="text-muted-foreground  text-lg">
                           LangFlow Chat
                         </span>
                       </span>
                       <br />
-                      <div className="bg-muted dark:bg-gray-900 rounded-md w-2/4 px-6 py-8 border border-gray-200 dark:border-gray-700">
-                        <span className="text-base text-gray-500">
+                      <div className="bg-muted rounded-md w-2/4 px-6 py-8 border border-input">
+                        <span className="text-base text-ring">
                           Start a conversation and click the agent’s thoughts{" "}
                           <span>
                             <MessagesSquare className="w-5 h-5 inline animate-bounce mx-1 " />
@@ -394,7 +394,7 @@ export default function ChatModal({
                   )}
                   <div ref={ref}></div>
                 </div>
-                <div className="w-full bg-white dark:bg-gray-800 border-t dark:border-t-gray-600 flex-col flex items-center justify-between p-3">
+                <div className="w-full bg-background border-t  flex-col flex items-center justify-between p-3">
                   <div className="relative w-full  mt-1 rounded-md shadow-sm">
                     <ChatInput
                       chatValue={chatValue}

@@ -33,10 +33,10 @@ export default function InputListComponent({
             value={i}
             className={
               editNode
-                ? "border-[1px]  truncate cursor-pointer text-center placeholder:text-center text-gray-500 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm" +
+                ? "border-[1px]  truncate cursor-pointer text-center placeholder:text-center text-ring block w-full pt-0.5 pb-0.5 form-input rounded-md border-ring shadow-sm sm:text-sm" +
                   INPUT_STYLE
-                : "block w-full form-input rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500 sm:text-sm" +
-                  (disabled ? " bg-gray-200" : "") +
+                : "block w-full form-input bg-background rounded-md border-ring shadow-sm focus:border-ring focus:ring-ring sm:text-sm" +
+                  (disabled ? " bg-input" : "") +
                   "focus:placeholder-transparent"
             }
             placeholder="Type something..."
@@ -73,7 +73,7 @@ export default function InputListComponent({
                 onChange(inputList);
               }}
             >
-              <X className="w-4 h-4 hover:text-red-600" />
+              <X className="w-4 h-4 hover:text-status-red" />
             </button>
           )}
         </div>
