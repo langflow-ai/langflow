@@ -6171,14 +6171,14 @@ typing-extensions = ">=4.2.0,<5.0.0"
 
 [[package]]
 name = "strenum"
-version = "0.4.12"
+version = "0.4.15"
 description = "An Enum that inherits from str."
 category = "main"
 optional = false
 python-versions = "*"
 files = [
-    {file = "StrEnum-0.4.12-py3-none-any.whl", hash = "sha256:d75cdebe07e2537989a925089a248673a34e8a6e9d8fe6846fd04b1aa2e1f44f"},
-    {file = "StrEnum-0.4.12.tar.gz", hash = "sha256:75e234fea070aabae9b03b63385880e286defdcdf6fb2933cde4f964f7763544"},
+    {file = "StrEnum-0.4.15-py3-none-any.whl", hash = "sha256:a30cda4af7cc6b5bf52c8055bc4bf4b2b6b14a93b574626da33df53cf7740659"},
+    {file = "StrEnum-0.4.15.tar.gz", hash = "sha256:878fb5ab705442070e4dd1929bb5e2249511c0bcf2b0eeacf3bcd80875c82eff"},
 ]
 
 [package.extras]
@@ -7500,4 +7500,4 @@ deploy = ["langchain-serve"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "e3d0c8e7e89bf23d24b13e187f49a7d1b2dd273cd823f2adff33762190f79bb8"
+content-hash = "3875f61e1228dfac1574076a6c3755703463fa6ed1fe737d064a171be94259d4"
