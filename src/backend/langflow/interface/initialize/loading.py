@@ -131,7 +131,7 @@ def instantiate_tool(node_type, class_object, params):
     if node_type == "JsonSpec":
         params["dict_"] = load_file_into_dict(params.pop("path"))
         return class_object(**params)
-    elif node_type == "PythonFunctionTool":
+    elif node_type in ["PythonFunctionTool", "CustomComponent"]:
         params["func"] = get_function(params.get("code"))
         return class_object(**params)
     # For backward compatibility
@@ -243,7 +243,8 @@ def replace_zero_shot_prompt_with_prompt_template(nodes):
                 if tool["type"] != "chatOutputNode"
                 and "Tool" in tool["data"]["node"]["base_classes"]
             ]
-            node["data"] = build_prompt_template(prompt=node["data"], tools=tools)
+            node["data"] = build_prompt_template(
+                prompt=node["data"], tools=tools)
             break
     return nodes
 
@@ -260,7 +261,8 @@ def load_agent_executor(agent_class: type[agent_module.Agent], params, **kwargs)
     tool_names = [tool.name for tool in allowed_tools]
     # Agent class requires an output_parser but Agent classes
     # have a default output_parser.
-    agent = agent_class(allowed_tools=tool_names, llm_chain=llm_chain)  # type: ignore
+    agent = agent_class(allowed_tools=tool_names,
+                        llm_chain=llm_chain)  # type: ignore
     return AgentExecutor.from_agent_and_tools(
         agent=agent,
         tools=allowed_tools,

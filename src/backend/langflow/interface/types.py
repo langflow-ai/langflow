@@ -12,6 +12,9 @@ from langflow.interface.utilities.base import utility_creator
 from langflow.interface.vector_store.base import vectorstore_creator
 from langflow.interface.wrappers.base import wrapper_creator
 
+from langflow.template.field.base import TemplateField
+from langflow.template.frontend_node.tools import CustomComponentNode
+
 
 def get_type_list():
     """Get a list of all langchain types"""
@@ -54,6 +57,7 @@ def build_langchain_types_dict():  # sourcery skip: dict-assign-update-to-union
     return all_types
 
 
+# TODO: Move to correct place
 def find_class_type(class_name, classes_dict):
     return next(
         (
@@ -65,10 +69,23 @@ def find_class_type(class_name, classes_dict):
     )
 
 
-def build_langchain_template_custom_component(raw_code, function_args, function_return_type):
-    type_list = get_type_list()
-    type_and_class = find_class_type("Tool", type_list)
+# TODO: Move to correct place
+def add_new_custom_field(template, field_name: str, field_type: str):
+    new_field = TemplateField(
+        name=field_name,
+        field_type=field_type,
+        show=True,
+        advanced=False
+    )
+    template.get('template')[field_name] = new_field.to_dict()
+    template.get('custom_fields').append(field_name)
 
+    return template
+
+# TODO: Move to correct place
+
+
+def add_code_field(template, raw_code):
     # Field with the Python code to allow update
     code_field = {
         "code": {
@@ -84,13 +101,47 @@ def build_langchain_template_custom_component(raw_code, function_args, function_
             "list": False
         }
     }
+    template.get('template')['code'] = code_field.get('code')
+
+    return template
+
+
+def build_langchain_template_custom_component(raw_code, function_args, function_return_type):
+    # type_list = get_type_list()
+    # type_and_class = find_class_type("Tool", type_list)
+    # node = get_custom_nodes(node_type: str)
+
+    # TODO: Build base template
+    template = llm_creator.to_dict()['llms']['ChatOpenAI']
+
+    template = CustomComponentNode().to_dict().get('CustomComponent')
 
     # TODO: Add extra fields
+    template = add_new_custom_field(
+        template,
+        "my_id",
+        "str"
+    )
 
-    # TODO: Build template result
-    template = chain_creator.to_dict()['chains']['ConversationChain']
+    template = add_new_custom_field(
+        template,
+        "year",
+        "int"
+    )
 
-    template.get('template')['code'] = code_field.get('code')
+    template = add_new_custom_field(
+        template,
+        "other_field",
+        "bool"
+    )
+
+    template = add_code_field(
+        template,
+        raw_code
+    )
+
+    # criar um vertex
+    # olhar loading.py
 
     return template
     # return globals()['tool_creator'].to_dict()[type_and_class['type']][type_and_class['class']]

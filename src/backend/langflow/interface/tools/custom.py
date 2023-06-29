@@ -52,3 +52,9 @@ class PythonFunction(Function):
     """Python function"""
 
     code: str
+
+
+class CustomComponent(Function):
+    """Python function"""
+
+    code: str

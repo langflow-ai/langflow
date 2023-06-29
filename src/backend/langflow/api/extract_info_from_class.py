@@ -71,10 +71,14 @@ class ClassCodeExtractor:
              self.function_entrypoint_name), None
         )
 
-        funtion_args = build_function.get("arguments", None)
-        return_type = build_function.get("return_type", None)
+        if build_function:
+            function_args = build_function.get("arguments", None)
+            return_type = build_function.get("return_type", None)
+        else:
+            function_args = None
+            return_type = None
 
-        return funtion_args, return_type
+        return function_args, return_type
 
 
 def is_valid_class_template(code: dict):
