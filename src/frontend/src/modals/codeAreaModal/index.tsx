@@ -22,6 +22,12 @@ import { Button } from "../../components/ui/button";
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants";
 import { TerminalSquare } from "lucide-react";
 import { APIClassType } from "../../types/api";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../../components/ui/tabs";
 
 export default function CodeAreaModal({
   value,
@@ -40,6 +46,7 @@ export default function CodeAreaModal({
   const { dark } = useContext(darkContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const { closePopUp } = useContext(PopUpContext);
+  const [activeTab, setActiveTab] = useState("0");
   const ref = useRef();
   function setModalOpen(x: boolean) {
     setOpen(x);
@@ -97,6 +104,7 @@ export default function CodeAreaModal({
       }
     });
   }
+  const tabs = [{ name: "code" }, { name: "errors" }]
 
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
@@ -112,24 +120,45 @@ export default function CodeAreaModal({
           </DialogTitle>
           <DialogDescription>{CODE_PROMPT_DIALOG_SUBTITLE}</DialogDescription>
         </DialogHeader>
+        <Tabs
+          defaultValue={"0"}
+          className="w-full h-full overflow-hidden text-center bg-muted rounded-md border"
+          onValueChange={(value) => setActiveTab(value)}
+        >
+          <div className="flex flex-col items-start h-80 px-2">
+            <TabsList>
+              {tabs.map((tab, index) => (
+                <TabsTrigger key={index} value={index.toString()}>{tab.name}</TabsTrigger>
+              ))}
+            </TabsList>
+            {tabs.map((tab, index) => (
+              <TabsContent
+                value={index.toString()}
+                className="overflow-hidden w-full h-full px-4 pb-4 -mt-1 "
+              >
+                {tab.name === "code" ? <div className="h-full w-full my-2">
+                  <AceEditor
+                    value={code}
+                    mode="python"
+                    highlightActiveLine={true}
+                    showPrintMargin={false}
+                    fontSize={14}
+                    showGutter
+                    enableLiveAutocompletion
+                    theme={dark ? "twilight" : "github"}
+                    name="CodeEditor"
+                    onChange={(value) => {
+                      setCode(value);
+                    }}
+                    className="w-full rounded-lg h-full custom-scroll border-[1px] border-gray-300 dark:border-gray-600"
+                  />
+                </div> : <div>errors</div>}
+              </TabsContent>))
+            }
+          </div>
+        </Tabs>
 
-        <div className="flex h-full w-full mt-2">
-          <AceEditor
-            value={code}
-            mode="python"
-            highlightActiveLine={true}
-            showPrintMargin={false}
-            fontSize={14}
-            showGutter
-            enableLiveAutocompletion
-            theme={dark ? "twilight" : "github"}
-            name="CodeEditor"
-            onChange={(value) => {
-              setCode(value);
-            }}
-            className="w-full rounded-lg h-[300px] custom-scroll border-[1px] border-gray-300 dark:border-gray-600"
-          />
-        </div>
+
 
         <DialogFooter>
           <Button className="mt-3" onClick={handleClick} type="submit">
