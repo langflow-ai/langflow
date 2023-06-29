@@ -75,6 +75,55 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
       }, 2000);
     });
   };
+  const pythonApiCode = getPythonApiCode(flow, tweak.current);
+  const curl_code = getCurlCode(flow, tweak.current);
+  const pythonCode = getPythonCode(flow, tweak.current);
+  const tweaksCode = buildTweaks(flow);
+  const tabs = [
+    {
+      name: "cURL",
+      mode: "bash",
+      image: "https://curl.se/logo/curl-symbol-transparent.png",
+      code: curl_code,
+    },
+    {
+      name: "Python API",
+      mode: "python",
+      image:
+        "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
+      code: pythonApiCode,
+    },
+    {
+      name: "Python Code",
+      mode: "python",
+      image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+      code: pythonCode,
+    },
+  ];
+
+  useEffect(() => {
+    if (closeEdit !== "") {
+      setActiveTab("3");
+      tweak.current = getTweak;
+      openAccordions();
+    } else {
+      startTweaks();
+    }
+  }, [closeEdit]);
+
+  useEffect(() => {
+    filterNodes();
+  }, []);
+
+  if (Object.keys(tweaksCode).length > 0) {
+    tabs.push({
+      name: "Tweaks",
+      mode: "python",
+      image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+      code: pythonCode,
+    });
+  }
+
   function setModalOpen(x: boolean) {
     setOpen(x);
     if (x === false) {
@@ -83,26 +132,6 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
       closePopUp();
     }
   }
-
-  useEffect(() => {
-    if (closeEdit !== "") {
-      setActiveTab("3");
-      tweak.current = getTweak;
-      openAccordions();    
-    }
-    else{
-      startTweaks();
-    }
-  }, [closeEdit]);
-
-  const pythonApiCode = getPythonApiCode(flow, tweak.current);
-  const curl_code = getCurlCode(flow, tweak.current);
-  const pythonCode = getPythonCode(flow, tweak.current);
-  const tweaksCode = buildTweaks(flow);
-
-  useEffect(() => {
-    filterNodes();
-  }, []);
 
   function startTweaks() {
     tweak.current.push(buildTweaks(flow));
@@ -132,37 +161,6 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
 
     tweaksList.current = arrNodesWithValues.filter((value, index, self) => {
       return self.indexOf(value) === index;
-    });
-  }
-
-  const tabs = [
-    {
-      name: "cURL",
-      mode: "bash",
-      image: "https://curl.se/logo/curl-symbol-transparent.png",
-      code: curl_code,
-    },
-    {
-      name: "Python API",
-      mode: "python",
-      image:
-        "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
-      code: pythonApiCode,
-    },
-    {
-      name: "Python Code",
-      mode: "python",
-      image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-      code: pythonCode,
-    },
-  ];
-
-  if (Object.keys(tweaksCode).length > 0) {
-    tabs.push({
-      name: "Tweaks",
-      mode: "python",
-      image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-      code: pythonCode,
     });
   }
 
@@ -201,7 +199,6 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
         },
       };
       tweak.current.push(newTweak);
-
     }
 
     const pythonApiCode = getPythonApiCode(flow, tweak.current);
@@ -229,7 +226,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
 
     if (getTweak.length > 0) {
       for (const obj of getTweak) {
-        Object.keys(obj).forEach(key =>{
+        Object.keys(obj).forEach((key) => {
           const value = obj[key];
           if (key == node["id"]) {
             Object.keys(value).forEach((key) => {
@@ -238,7 +235,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
               }
             });
           }
-        })
+        });
       }
     } else {
       return value ?? "";
@@ -246,16 +243,16 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
     return returnValue;
   }
 
-  function openAccordions(){
+  function openAccordions() {
     let accordionsToOpen = [];
     tweak.current.forEach((el) => {
       Object.keys(el).forEach((key) => {
         if (Object.keys(el[key]).length > 0) {
-          accordionsToOpen.push(key)
+          accordionsToOpen.push(key);
           setOpenAccordion(accordionsToOpen);
         }
       });
-    });   
+    });
   }
 
   return (
@@ -278,8 +275,8 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
           className="w-full h-full overflow-hidden text-center bg-muted rounded-md border"
           onValueChange={(value) => {
             setActiveTab(value);
-            if(value === "3"){
-              openAccordions()
+            if (value === "3") {
+              openAccordions();
             }
           }}
         >
