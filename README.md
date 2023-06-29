@@ -13,8 +13,9 @@
 <img alt="Github License" src="https://img.shields.io/github/license/logspace-ai/langflow" />
 </p>
 
+
 <p>
-<a href="https://discord.gg/FUhJnnJ9"><img alt="Discord Server" src="https://dcbadge.vercel.app/api/server/FUhJnnJ9?compact=true&style=flat"/></a>
+<a href="https://discord.gg/EqksyE2EX9"><img alt="Discord Server" src="https://dcbadge.vercel.app/api/server/EqksyE2EX9?compact=true&style=flat"/></a>
 <a href="https://huggingface.co/spaces/Logspace/LangFlow"><img src="https://huggingface.co/datasets/huggingface/badges/raw/main/open-in-hf-spaces-sm.svg" alt="HuggingFace Spaces"></a>
 </p>
 
