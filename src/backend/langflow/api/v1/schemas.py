@@ -1,8 +1,17 @@
+from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from langflow.database.models.flow import FlowCreate, FlowRead
 from pydantic import BaseModel, Field, validator
 import json
+
+
+class BuildStatus(Enum):
+    """Status of the build."""
+
+    SUCCESS = "success"
+    FAILURE = "failure"
+    IN_PROGRESS = "in_progress"
 
 
 class GraphData(BaseModel):
