@@ -10,8 +10,12 @@ from langflow.interface.initialize.vector_store import vecstore_initializer
 
 from pydantic import ValidationError
 
+from langflow.interface.importing.utils import (
+    get_function,
+    import_by_type,
+    get_function_custom
+)
 from langflow.interface.custom_lists import CUSTOM_NODES
-from langflow.interface.importing.utils import get_function, import_by_type
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.chains.base import chain_creator
 from langflow.interface.utils import load_file_into_dict
@@ -131,8 +135,11 @@ def instantiate_tool(node_type, class_object, params):
     if node_type == "JsonSpec":
         params["dict_"] = load_file_into_dict(params.pop("path"))
         return class_object(**params)
-    elif node_type in ["PythonFunctionTool", "CustomComponent"]:
+    elif node_type == "PythonFunctionTool":
         params["func"] = get_function(params.get("code"))
+        return class_object(**params)
+    elif node_type == "CustomComponent":
+        params["func"] = get_function_custom(params.get("code"))
         return class_object(**params)
     # For backward compatibility
     elif node_type == "PythonFunction":

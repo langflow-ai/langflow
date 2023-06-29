@@ -29,7 +29,8 @@ def import_module(module_path: str) -> Any:
 def import_by_type(_type: str, name: str) -> Any:
     """Import class by type and name"""
     if _type is None:
-        raise ValueError(f"Type cannot be None. Check if {name} is in the config file.")
+        raise ValueError(
+            f"Type cannot be None. Check if {name} is in the config file.")
     func_dict = {
         "agents": import_agent,
         "prompts": import_prompt,
@@ -153,5 +154,11 @@ def import_utility(utility: str) -> Any:
 def get_function(code):
     """Get the function"""
     function_name = validate.extract_function_name(code)
+
+    return validate.create_function(code, function_name)
+
+
+def get_function_custom(code):
+    function_name = "build"
 
     return validate.create_function(code, function_name)

@@ -5,13 +5,6 @@ from langflow.api import router
 from langflow.database.base import create_db_and_tables
 from langflow.interface.utils import setup_llm_caching
 
-from pydantic import BaseModel
-
-
-class ErrorMessage(BaseModel):
-    detail: str
-    traceback: str
-
 
 def create_app():
     """Create the FastAPI app and include the router."""
