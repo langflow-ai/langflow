@@ -28,6 +28,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "../../components/ui/tabs";
+import axios from "axios";
 
 export default function CodeAreaModal({
   value,
@@ -47,6 +48,7 @@ export default function CodeAreaModal({
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const { closePopUp } = useContext(PopUpContext);
   const [activeTab, setActiveTab] = useState("0");
+  const [error, setError] = useState<{detail:string,traceback:string}>()
   const ref = useRef();
   function setModalOpen(x: boolean) {
     setOpen(x);
@@ -96,13 +98,18 @@ export default function CodeAreaModal({
           title: "There is something wrong with this code, please review it",
         });
       });
-    postCustomComponent(code, nodeClass).then((apiReturn) => {
-      const data = apiReturn.data;
-      if (data) {
-        setNodeClass(data);
-        setModalOpen(false);
-      }
-    });
+    // postCustomComponent(code, nodeClass).then((apiReturn) => {
+    //   const data = apiReturn.data;
+    //   if (data) {
+    //     setNodeClass(data);
+    //     setModalOpen(false);
+    //   }
+    // });
+    axios.get("/api/v1/custom_component_error").catch((err) => {
+      console.log(err.response.data);
+      setError(err.response.data);
+    })
+
   }
   const tabs = [{ name: "code" }, { name: "errors" }]
 
@@ -152,7 +159,10 @@ export default function CodeAreaModal({
                     }}
                     className="w-full rounded-lg h-full custom-scroll border-[1px] border-gray-300 dark:border-gray-600"
                   />
-                </div> : <div>errors</div>}
+                </div> : <div className="w-full h-full bg-red-400">
+                  <h1>{error?.detail}</h1>
+                  <div></div>
+                  </div>}
               </TabsContent>))
             }
           </div>
