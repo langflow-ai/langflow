@@ -150,14 +150,14 @@ files = [
 
 [[package]]
 name = "anthropic"
-version = "0.3.0"
+version = "0.3.1"
 description = "Client library for the anthropic API"
 category = "main"
 optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "anthropic-0.3.0-py3-none-any.whl", hash = "sha256:13d1d5eb6c835dfa79922eef66589d602c09294105a2951bc7f4284a0581090c"},
-    {file = "anthropic-0.3.0.tar.gz", hash = "sha256:e239046e9276486391152f147c81d990b226facd4434ad968585912ffff4e031"},
+    {file = "anthropic-0.3.1-py3-none-any.whl", hash = "sha256:bbb534e81018aa756fc4cc79b76b802871c99743a309aa3278f955999aa62d08"},
+    {file = "anthropic-0.3.1.tar.gz", hash = "sha256:6714ae9192721278189bc619364b52bf42fd00d35f22172b9f8e4090382399ed"},
 ]
 
 [package.dependencies]
@@ -1606,14 +1606,14 @@ grpcio-gcp = ["grpcio-gcp (>=0.2.2,<1.0.dev0)"]
 
 [[package]]
 name = "google-api-python-client"
-version = "2.90.0"
+version = "2.91.0"
 description = "Google API Client Library for Python"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "google-api-python-client-2.90.0.tar.gz", hash = "sha256:cbcb3ba8be37c6806676a49df16ac412077e5e5dc7fa967941eff977b31fba03"},
-    {file = "google_api_python_client-2.90.0-py2.py3-none-any.whl", hash = "sha256:4a41ffb7797d4f28e44635fb1e7076240b741c6493e7c3233c0e4421cec7c913"},
+    {file = "google-api-python-client-2.91.0.tar.gz", hash = "sha256:d9385ad6e7f95eecd40f7c81e3abfe4b6ad3a84f2c16bcdb66fb7b8dd814ed56"},
+    {file = "google_api_python_client-2.91.0-py2.py3-none-any.whl", hash = "sha256:6959d21d4b20c0f65c69662ca7b6a8a02fc08f3e7f72d70b28ae3e6e3a5f9ab2"},
 ]
 
 [package.dependencies]
@@ -2584,14 +2584,14 @@ i18n = ["Babel (>=2.7)"]
 
 [[package]]
 name = "joblib"
-version = "1.3.0"
+version = "1.3.1"
 description = "Lightweight pipelining with Python functions"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "joblib-1.3.0-py3-none-any.whl", hash = "sha256:172d56d4c43dd6bcd953bea213018c4084cf754963bbf54b8dae40faea716b98"},
-    {file = "joblib-1.3.0.tar.gz", hash = "sha256:0b12a65dc76c530dbd790dd92881f75c40932b4254a7c8e608a868df408ca0a3"},
+    {file = "joblib-1.3.1-py3-none-any.whl", hash = "sha256:89cf0529520e01b3de7ac7b74a8102c90d16d54c64b5dd98cafcd14307fdf915"},
+    {file = "joblib-1.3.1.tar.gz", hash = "sha256:1f937906df65329ba98013dc9692fe22a4c5e4a648112de500508b18a21b41e3"},
 ]
 
 [[package]]
@@ -7500,4 +7500,4 @@ deploy = ["langchain-serve"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "3875f61e1228dfac1574076a6c3755703463fa6ed1fe737d064a171be94259d4"
+content-hash = "e3d0c8e7e89bf23d24b13e187f49a7d1b2dd273cd823f2adff33762190f79bb8"
