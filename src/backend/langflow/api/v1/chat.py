@@ -1,10 +1,4 @@
-from fastapi import (
-    APIRouter,
-    HTTPException,
-    WebSocket,
-    WebSocketException,
-    status,
-)
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketException, status
 from fastapi.responses import StreamingResponse
 from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, StreamData
 
@@ -32,16 +26,18 @@ async def chat(client_id: str, websocket: WebSocket):
         await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=str(exc))
 
 
-@router.post("/build/init", response_model=InitResponse, status_code=201)
-async def init_build(graph_data: dict):
+@router.post("/build/init/{flow_id}", response_model=InitResponse, status_code=201)
+async def init_build(graph_data: dict, flow_id: str):
     """Initialize the build by storing graph data and returning a unique session ID."""
 
     try:
-        flow_id = graph_data.get("id")
         if flow_id is None:
             raise ValueError("No ID provided")
         # Check if already building
-        if flow_id in flow_data_store and flow_data_store[flow_id].get("building"):
+        if (
+            flow_id in flow_data_store
+            and flow_data_store[flow_id]["status"] == BuildStatus.IN_PROGRESS
+        ):
             return InitResponse(flowId=flow_id)
 
         # Delete from cache if already exists
