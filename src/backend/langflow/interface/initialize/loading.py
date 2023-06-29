@@ -188,18 +188,22 @@ def instantiate_documentloader(class_object: Type[BaseLoader], params: Dict):
             extension.strip() in x for extension in extensions
         )
     metadata = params.pop("metadata", None)
+    if metadata and isinstance(metadata, str):
+        try:
+            metadata = json.loads(metadata)
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                "The metadata you provided is not a valid JSON string."
+            ) from exc
     docs = class_object(**params).load()
+    # Now if metadata is an empty dict, we will not add it to the documents
     if metadata:
-        if isinstance(metadata, str):
-            try:
-                metadata = json.loads(metadata)
-            except json.JSONDecodeError as exc:
-                raise ValueError(
-                    "The metadata you provided is not a valid JSON string."
-                ) from exc
-
         for doc in docs:
-            doc.metadata = metadata
+            # If the document already has metadata, we will not overwrite it
+            if not doc.metadata:
+                doc.metadata = metadata
+            else:
+                doc.metadata.update(metadata)
 
     return docs
 
@@ -216,13 +220,19 @@ def instantiate_textsplitter(
             "Try changing the chunk_size of the Text Splitter."
         ) from exc
 
-    if "separator_type" in params and params["separator_type"] == "Text":
+    if (
+        "separator_type" in params and params["separator_type"] == "Text"
+    ) or "separator_type" not in params:
+        params.pop("separator_type", None)
         text_splitter = class_object(**params)
     else:
-        params["language"] = params.pop("separator_type", None)
-        params.pop("separators", None)
-        text_splitter = class_object.from_language(**params)
+        from langchain.text_splitter import Language
 
+        language = params.pop("separator_type", None)
+        params["language"] = Language(language)
+        params.pop("separators", None)
+
+        text_splitter = class_object.from_language(**params)
     return text_splitter.split_documents(documents)
 
 

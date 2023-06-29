@@ -123,7 +123,7 @@ llms:
     documentation: "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/google_vertex_ai_palm"
 memories:
   ConversationBufferMemory:
-    documentation: "https://python.langchain.com/docs/modules/memory/how_to/summary"
+    documentation: "https://python.langchain.com/docs/modules/memory/how_to/buffer"
   ConversationSummaryMemory:
     documentation: "https://python.langchain.com/docs/modules/memory/how_to/summary"
   ConversationKGMemory:
