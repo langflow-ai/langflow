@@ -3,6 +3,7 @@ from typing import Optional
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.template.base import Template
+from langchain.memory.chat_message_histories.postgres import DEFAULT_CONNECTION_STRING
 
 
 class MemoryFrontendNode(FrontendNode):
@@ -10,7 +11,7 @@ class MemoryFrontendNode(FrontendNode):
     def add_extra_fields(self) -> None:
         # chat history should have another way to add common field?
         # prevent adding incorect field in ChatMessageHistory
-        if "BaseChatMessageHistory" in self.base_classes: 
+        if "BaseChatMessageHistory" in self.base_classes:
             return
 
         # add return_messages field
@@ -95,6 +96,7 @@ class PostgresChatMessageHistoryFrontendNode(MemoryFrontendNode):
                 required=True,
                 show=True,
                 name="connection_string",
+                value=DEFAULT_CONNECTION_STRING,
             ),
             TemplateField(
                 field_type="str",
@@ -109,7 +111,4 @@ class PostgresChatMessageHistoryFrontendNode(MemoryFrontendNode):
         ],
     )
     description: str = "Memory store with Postgres"
-    base_classes: list[str] = [
-        "PostgresChatMessageHistory",
-        "BaseChatMessageHistory"
-    ]
+    base_classes: list[str] = ["PostgresChatMessageHistory", "BaseChatMessageHistory"]
