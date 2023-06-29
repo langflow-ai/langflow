@@ -41,7 +41,6 @@ export default function FormModal({
   flow: FlowType;
 }) {
   const [chatValue, setChatValue] = useState("");
-  const [keysValue, setKeysValue] = useState([]);
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
   const { reactFlowInstance } = useContext(typesContext);
   const { setErrorData, setNoticeData } = useContext(alertContext);
@@ -64,12 +63,6 @@ export default function FormModal({
   }, [open]);
   useEffect(() => {
     id.current = flow.id;
-
-    if (tabsState[flow.id].formKeysData) {
-      setKeysValue(
-        Array(tabsState[flow.id].formKeysData.input_keys.length).fill("")
-      );
-    }
   }, [flow.id, tabsState[flow.id], tabsState[flow.id].formKeysData]);
 
   var isStream = false;
@@ -435,6 +428,14 @@ export default function FormModal({
                     <div className="flex flex-1 items-center justify-between py-4 font-normal transition-all group text-muted-foreground text-sm">
                       <div className="group-hover:underline"><Badge size="md" variant="gray">{i}</Badge></div>
                       Used as Memory Key
+                    </div>
+                  </AccordionItem>
+                ))}
+                {tabsState[id.current].formKeysData.handle_keys.map((i, k) => (
+                  <AccordionItem key={k} value={i}>
+                    <div className="flex flex-1 items-center justify-between py-4 font-normal transition-all group text-muted-foreground text-sm">
+                      <div className="group-hover:underline"><Badge size="md" variant="gray">{i}</Badge></div>
+                      Value coming from Handle
                     </div>
                   </AccordionItem>
                 ))}
