@@ -29,16 +29,14 @@ export default function PromptAreaComponent({
   }, [disabled, onChange]);
 
   useEffect(() => {
-    if (value !== "") { // only executed once
+    if (value !== "" && myValue !== value && reactFlowInstance) { // only executed once
       setMyValue(value);
       postValidatePrompt(value, nodeClass)
         .then((apiReturn) => {
           if (apiReturn.data) {
             setNodeClass(apiReturn.data.frontend_node);
-            if(reactFlowInstance){
-              // need to update reactFlowInstance to re-render the nodes.
-              reactFlowInstance.setEdges(_.cloneDeep(reactFlowInstance.getEdges()));
-            }
+            // need to update reactFlowInstance to re-render the nodes.
+            reactFlowInstance.setEdges(_.cloneDeep(reactFlowInstance.getEdges()));
           }
         })
         .catch((error) => {});
