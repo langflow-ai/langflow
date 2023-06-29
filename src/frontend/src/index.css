@@ -31,13 +31,6 @@
 
   --round-btn-shadow: #00000063;
 
-  --build-trigger: 	#dc735b;
-  --chat-trigger: #5c8be1;
-
-  --status-red: #ef4444;
-  --status-yellow: #eab308;
-  --status-green: #4ade80;
-
   --error-background: #fef2f2;
   --error-foreground: #991b1b;
 
@@ -49,10 +42,15 @@
 
   --high-indigo: #4338ca;
   --medium-indigo: #6366f1;
-  --medium-dark-blue:#1d4ed8;
 
   /* Colors that are shared in dark and light mode */
   --blur-shared: #151923de;
+  --build-trigger: 	#dc735b;
+  --chat-trigger: #5c8be1;
+  --status-red: #ef4444;
+  --status-yellow: #eab308;
+  --status-green: #4ade80;
+  --status-blue:#2563eb;
 }
 
 .dark {
@@ -88,30 +86,28 @@
   --radius: 0.5rem;
 
   --round-btn-shadow: #00000063;
+  
+  --success-background: #022c22;
+  --success-foreground: #ecfdf5;
 
-  --build-trigger: 	#dc735b;
-  --chat-trigger: #5c8be1;
+  --error-foreground: #fef2f2;
+  --error-background: #450a0a;
 
-  --status-red: #ef4444;
-  --status-yellow: #eab308;
-  --status-green: #4ade80;
-
-  --success-background: #f0fdf4;
-  --success-foreground: #14532d;
-
-  --error-foreground: #c2b7b7;
-  --error-background: #3e1818;
-
-  --info-foreground: #b7b8c2;
-  --info-background: #18243e;
+  --info-foreground: #eff6ff;
+  --info-background: #172554;
 
 
   --high-indigo: #4338ca;
   --medium-indigo: #6366f1;
-  --medium-dark-blue:#1d4ed8;
 
   /* Colors that are shared in dark and light mode */
   --blur-shared: #151923d2;
+  --build-trigger: 	#dc735b;
+  --chat-trigger: #5c8be1;
+  --status-red: #ef4444;
+  --status-yellow: #eab308;
+  --status-green: #4ade80;
+  --status-blue: #2563eb;
 }}
 
 @layer base {

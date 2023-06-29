@@ -77,19 +77,19 @@ export default function SingleAlert({
         >
           <div className="flex-shrink-0">
             <Info
-              className="h-5 w-5 text-info-background"
+              className="h-5 w-5 text-status-blue "
               aria-hidden="true"
             />
           </div>
           <div className="ml-3 flex-1 md:flex md:justify-between">
-            <p className="text-sm text-info-background">
+            <p className="text-sm text-info-foreground font-medium">
               {dropItem.title}
             </p>
             <p className="mt-3 text-sm md:mt-0 md:ml-6">
               {dropItem.link ? (
                 <Link
                   to={dropItem.link}
-                  className="whitespace-nowrap font-medium text-info-background hover:text-ring"
+                  className="whitespace-nowrap font-medium text-info-foreground hover:text-ring"
                 >
                   Details
                 </Link>

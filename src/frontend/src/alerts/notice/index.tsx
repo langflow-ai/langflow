@@ -36,22 +36,22 @@ export default function NoticeAlert({
           setShow(false);
           removeAlert(id);
         }}
-        className="rounded-md w-96 mt-6 shadow-xl bg-light-blue p-4"
+        className="rounded-md w-96 mt-6 shadow-xl bg-info-background p-4"
       >
         <div className="flex">
           <div className="flex-shrink-0">
             <Info
-              className="h-5 w-5 text-medium-dark-blue "
+              className="h-5 w-5 text-status-blue "
               aria-hidden="true"
             />
           </div>
           <div className="ml-3 flex-1 md:flex md:justify-between">
-            <p className="text-sm text-ring">{title}</p>
+            <p className="text-sm text-info-foreground">{title}</p>
             <p className="mt-3 text-sm md:mt-0 md:ml-6">
               {link !== "" ? (
                 <Link
                   to={link}
-                  className="whitespace-nowrap font-medium text-ring hover:text-ring"
+                  className="whitespace-nowrap font-medium text-info-foreground hover:text-ring"
                 >
                   Details
                 </Link>
