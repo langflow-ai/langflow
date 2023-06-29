@@ -62,34 +62,34 @@ export default function SingleAlert({
                     removeAlert(dropItem.id);
                   }, 500);
                 }}
-                className="inline-flex rounded-md bg-red-50 p-1.5 text-status-red"
+                className="inline-flex rounded-md p-1.5 text-status-red"
               >
                 <span className="sr-only">Dismiss</span>
-                <X className="h-5 w-5" aria-hidden="true" />
+                <X className="h-4 w-4 text-error-foreground" aria-hidden="true" />
               </button>
             </div>
           </div>
         </div>
       ) : type === "notice" ? (
         <div
-          className="flex rounded-md bg-blue-50 p-3 mb-2 mx-2"
+          className="flex rounded-md bg-info-background p-3 mb-2 mx-2"
           key={dropItem.id}
         >
           <div className="flex-shrink-0">
             <Info
-              className="h-5 w-5 text-medium-dark-blue"
+              className="h-5 w-5 text-info-background"
               aria-hidden="true"
             />
           </div>
           <div className="ml-3 flex-1 md:flex md:justify-between">
-            <p className="text-sm text-medium-dark-blue">
+            <p className="text-sm text-info-background">
               {dropItem.title}
             </p>
             <p className="mt-3 text-sm md:mt-0 md:ml-6">
               {dropItem.link ? (
                 <Link
                   to={dropItem.link}
-                  className="whitespace-nowrap font-medium text-medium-dark-blue hover:text-ring"
+                  className="whitespace-nowrap font-medium text-info-background hover:text-ring"
                 >
                   Details
                 </Link>
@@ -108,17 +108,17 @@ export default function SingleAlert({
                     removeAlert(dropItem.id);
                   }, 500);
                 }}
-                className="inline-flex rounded-md bg-blue-50 p-1.5 text-medium-dark-blue "
+                className="inline-flex rounded-md p-1.5 text-info-foreground"
               >
                 <span className="sr-only">Dismiss</span>
-                <X className="h-5 w-5" aria-hidden="true" />
+                <X className="h-4 w-4 text-info-foreground" aria-hidden="true" />
               </button>
             </div>
           </div>
         </div>
       ) : (
         <div
-          className="flex bg-green-50  p-3 mb-2 mx-2 rounded-md"
+          className="flex bg-success-background p-3 mb-2 mx-2 rounded-md"
           key={dropItem.id}
         >
           <div className="flex-shrink-0">
@@ -142,10 +142,10 @@ export default function SingleAlert({
                     removeAlert(dropItem.id);
                   }, 500);
                 }}
-                className="inline-flex rounded-md bg-success-background p-1.5 text-status-green"
+                className="inline-flex rounded-md p-1.5 text-status-green"
               >
                 <span className="sr-only">Dismiss</span>
-                <X className="h-5 w-5" aria-hidden="true" />
+                <X className="h-4 w-4 text-success-foreground" aria-hidden="true" />
               </button>
             </div>
           </div>
