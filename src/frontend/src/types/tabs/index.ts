@@ -33,6 +33,6 @@ export type TabsContextType = {
 export type TabsState = {
   [key: string]: {
     isPending: boolean;
-    formKeysData: {input_keys?: Array<string>, memory_keys?: Array<string>};
+    formKeysData: {input_keys?: Object, memory_keys?: Array<string>, handle_keys?: Array<string>};
   };
 };
