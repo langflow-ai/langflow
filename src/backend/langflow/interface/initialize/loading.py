@@ -21,7 +21,6 @@ from langchain.chains.base import Chain
 from langchain.vectorstores.base import VectorStore
 from langchain.document_loaders.base import BaseLoader
 from langchain.prompts.base import BasePromptTemplate
-from langflow.chat.config import ChatConfig
 
 
 def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
@@ -49,8 +48,8 @@ def convert_params_to_sets(params):
 
 def convert_kwargs(params):
     # if *kwargs are passed as a string, convert to dict
-    # first find any key that has kwargs in it
-    kwargs_keys = [key for key in params.keys() if "kwargs" in key]
+    # first find any key that has kwargs or config in it
+    kwargs_keys = [key for key in params.keys() if "kwargs" in key or "config" in key]
     for key in kwargs_keys:
         if isinstance(params[key], str):
             params[key] = json.loads(params[key])
@@ -85,11 +84,6 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
 
 
 def instantiate_llm(node_type, class_object, params: Dict):
-    # This is a workaround so JinaChat works until streaming is implemented
-    # if "openai_api_base" in params and "jina" in params["openai_api_base"]:
-    # False if condition is True
-    ChatConfig.streaming = "jina" not in params.get("openai_api_base", "")
-
     return class_object(**params)
 
 
