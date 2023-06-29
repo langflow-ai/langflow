@@ -47,7 +47,7 @@ async def init_build(graph_data: dict, flow_id: str):
                 logger.debug(f"Deleted flow {flow_id} from cache")
         flow_data_store[flow_id] = {
             "graph_data": graph_data,
-            "status": BuildStatus.IN_PROGRESS,
+            "status": BuildStatus.STARTED,
         }
 
         return InitResponse(flowId=flow_id)
@@ -91,7 +91,7 @@ async def stream_build(flow_id: str):
                 yield str(StreamData(event="error", data={"error": error_message}))
                 return
 
-            graph_data = flow_data_store[flow_id].get("data")
+            graph_data = flow_data_store[flow_id].get("graph_data")
 
             if not graph_data:
                 error_message = "No data provided"
@@ -109,6 +109,7 @@ async def stream_build(flow_id: str):
                 return
 
             number_of_nodes = len(graph.nodes)
+            flow_data_store[flow_id]["status"] = BuildStatus.IN_PROGRESS
             for i, vertex in enumerate(graph.generator_build(), 1):
                 try:
                     log_dict = {
