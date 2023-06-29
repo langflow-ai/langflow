@@ -141,9 +141,6 @@ vectorstores:
   - MongoDBAtlasVectorSearch
 wrappers:
   - RequestsWrapper
-  # - ChatPromptTemplate
-  # - SystemMessagePromptTemplate
-  # - HumanMessagePromptTemplate
 output_parsers:
   - StructuredOutputParser
   - ResponseSchema
