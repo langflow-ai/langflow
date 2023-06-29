@@ -15,9 +15,21 @@ import {
 export default function AccordionComponent({
   trigger,
   children,
-  open = false,
+  open = [],
 }: AccordionComponentType) {
-  const [value, setValue] = useState(!open ? "" : trigger);
+  const [value, setValue] = useState(open.length == 0 ? "" : getOpenAccordion());
+
+  function getOpenAccordion(){
+    let value = "";
+    open.forEach(el => {
+      if(el == trigger){
+        value = trigger;
+      } 
+    })
+
+    return value;
+  }
+
   function handleClick() {
     value == "" ? setValue(trigger) : setValue("");
   }
