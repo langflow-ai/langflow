@@ -158,7 +158,7 @@ export default function BuildTrigger({
     >
       <div className={`fixed right-4` + (isBuilt ? " bottom-20" : " bottom-4")}>
         <div
-          className={`${eventClick} flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full shadow-md shadow-[#0000002a] hover:shadow-[#00000032] bg-[#E2E7EE]  cursor-pointer`}
+          className={`${eventClick} flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full shadow-md shadow-round-btn-shadow hover:shadow-round-btn-shadow bg-border cursor-pointer`}
           onClick={() => {
             handleBuild(flow);
           }}
@@ -170,7 +170,8 @@ export default function BuildTrigger({
               {isBuilding && progress < 1 ? (
                 // Render your loading animation here when isBuilding is true
                 <RadialProgressComponent
-                  color={"text-orange-400"}
+                // ! confirm below works
+                  color={"text-build-trigger"}
                   value={progress}
                 ></RadialProgressComponent>
               ) : isBuilding ? (
