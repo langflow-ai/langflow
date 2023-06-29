@@ -11,6 +11,7 @@ class BuildStatus(Enum):
 
     SUCCESS = "success"
     FAILURE = "failure"
+    STARTED = "started"
     IN_PROGRESS = "in_progress"
 
 
