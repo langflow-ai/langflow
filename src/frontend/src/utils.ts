@@ -40,7 +40,7 @@ import {
   Paperclip,
   Rocket,
   Scissors,
-  Search,
+  FileSearch,
   TerminalSquare,
   Wand2,
   Wrench,
@@ -286,7 +286,7 @@ export const nodeIconsLucide: {
   utilities: Wand2 as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
-  retrievers: Search as React.ForwardRefExoticComponent<
+  retrievers: FileSearch as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
   unknown: HelpCircle as React.ForwardRefExoticComponent<
