@@ -165,6 +165,7 @@ def build_template_from_method(
                         "required": param.default == param.empty,
                     }
                     for name, param in params.items()
+                    if name != "self"
                 },
             }
 
