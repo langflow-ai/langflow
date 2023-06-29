@@ -7,6 +7,7 @@ from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.frontend_node.memories import MemoryFrontendNode
 from langflow.utils.logger import logger
 from langflow.utils.util import build_template_from_class
+from langflow.custom.customs import get_custom_nodes
 
 
 class MemoryCreator(LangChainTypeCreator):
@@ -26,6 +27,8 @@ class MemoryCreator(LangChainTypeCreator):
     def get_signature(self, name: str) -> Optional[Dict]:
         """Get the signature of a memory."""
         try:
+            if name in get_custom_nodes(self.type_name).keys():
+                return get_custom_nodes(self.type_name)[name]
             return build_template_from_class(name, memory_type_to_cls_dict)
         except ValueError as exc:
             raise ValueError("Memory not found") from exc
