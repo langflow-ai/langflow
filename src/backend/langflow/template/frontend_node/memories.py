@@ -11,7 +11,7 @@ class MemoryFrontendNode(FrontendNode):
         # chat history should have another way to add common field?
         # prevent adding incorect field in ChatMessageHistory
         if "BaseChatMessageHistory" in self.base_classes: 
-            pass
+            return
 
         # add return_messages field
         self.template.add_field(
