@@ -144,6 +144,8 @@ class ChatManager:
                 if isinstance(msg, FileResponse):
                     if msg.data_type == "image":
                         # Base64 encode the image
+                        if isinstance(msg.data, str):
+                            continue
                         msg.data = pil_to_base64(msg.data)
                     file_responses.append(msg)
                 if msg.type == "start":

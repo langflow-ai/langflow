@@ -1,6 +1,5 @@
 import sys
 import time
-from fastapi import FastAPI
 import httpx
 from multiprocess import Process, cpu_count  # type: ignore
 import platform
@@ -11,9 +10,7 @@ from rich.panel import Panel
 from rich import box
 from rich import print as rprint
 import typer
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-from langflow.main import create_app
+from langflow.main import setup_app
 from langflow.settings import settings
 from langflow.utils.logger import configure, logger
 import webbrowser
@@ -30,6 +27,7 @@ def get_number_of_workers(workers=None):
 
 def update_settings(
     config: str,
+    cache: str,
     dev: bool = False,
     database_url: Optional[str] = None,
     remove_api_keys: bool = False,
@@ -41,6 +39,8 @@ def update_settings(
         settings.update_settings(database_url=database_url)
     if remove_api_keys:
         settings.update_settings(remove_api_keys=remove_api_keys)
+    if cache:
+        settings.update_settings(cache=cache)
 
 
 def serve_on_jcloud():
@@ -102,6 +102,11 @@ def serve(
     ),
     log_level: str = typer.Option("critical", help="Logging level."),
     log_file: Path = typer.Option("logs/langflow.log", help="Path to the log file."),
+    cache: str = typer.Argument(
+        envvar="LANGCHAIN_CACHE",
+        help="Type of cache to use. (InMemoryCache, SQLiteCache)",
+        default="SQLiteCache",
+    ),
     jcloud: bool = typer.Option(False, help="Deploy on Jina AI Cloud"),
     dev: bool = typer.Option(False, help="Run in development mode (may contain bugs)"),
     database_url: str = typer.Option(
@@ -130,17 +135,15 @@ def serve(
 
     configure(log_level=log_level, log_file=log_file)
     update_settings(
-        config, dev=dev, database_url=database_url, remove_api_keys=remove_api_keys
+        config,
+        dev=dev,
+        database_url=database_url,
+        remove_api_keys=remove_api_keys,
+        cache=cache,
     )
-    # get the directory of the current file
-    if not path:
-        frontend_path = Path(__file__).parent
-        static_files_dir = frontend_path / "frontend"
-    else:
-        static_files_dir = Path(path)
-
-    app = create_app()
-    setup_static_files(app, static_files_dir)
+    # create path object if path is provided
+    static_files_dir: Optional[Path] = Path(path) if path else None
+    app = setup_app(static_files_dir=static_files_dir)
     # check if port is being used
     if is_port_in_use(port, host):
         port = get_free_port(port)
@@ -186,29 +189,6 @@ def run_on_windows(host, port, log_level, options, app):
     """
     print_banner(host, port)
     run_langflow(host, port, log_level, options, app)
-
-
-def setup_static_files(app: FastAPI, static_files_dir: Path):
-    """
-    Setup the static files directory.
-
-    Args:
-        app (FastAPI): FastAPI app.
-        path (str): Path to the static files directory.
-    """
-    app.mount(
-        "/",
-        StaticFiles(directory=static_files_dir, html=True),
-        name="static",
-    )
-
-    @app.exception_handler(404)
-    async def custom_404_handler(request, __):
-        path = static_files_dir / "index.html"
-
-        if not path.exists():
-            raise RuntimeError(f"File at path {path} does not exist.")
-        return FileResponse(path)
 
 
 def is_port_in_use(port, host="localhost"):

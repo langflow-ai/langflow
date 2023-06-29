@@ -49,3 +49,12 @@ CTRANSFORMERS_DEFAULT_CONFIG = {
     "context_length": -1,
     "gpu_layers": 0,
 }
+
+# This variable is used to tell the user
+# that it can be changed to use other APIs
+# like Prem and LocalAI
+OPENAI_API_BASE_INFO = """
+The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.
+
+You can change this to use other APIs like JinaChat, LocalAI and Prem.
+"""

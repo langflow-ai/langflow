@@ -11,6 +11,8 @@ export type APIClassType = {
   base_classes: Array<string>;
   description: string;
   template: APITemplateType;
+  display_name: string;
+  documentation: string;
   [key: string]: Array<string> | string | APITemplateType;
 };
 export type TemplateVariableType = {
@@ -44,5 +46,10 @@ export type BuildStatusTypeAPI = {
 };
 
 export type InitTypeAPI = {
+  flowId: string;
+};
+
+export type UploadFileTypeAPI = {
+  file_path: string;
   flowId: string;
 };

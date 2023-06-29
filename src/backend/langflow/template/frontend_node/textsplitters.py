@@ -1,5 +1,6 @@
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
+from langchain.text_splitter import Language
 
 
 class TextSplittersFrontendNode(FrontendNode):
@@ -17,6 +18,22 @@ class TextSplittersFrontendNode(FrontendNode):
             name = "separator"
         elif self.template.type_name == "RecursiveCharacterTextSplitter":
             name = "separators"
+            # Add a field for type of separator
+            # which will have Text or any value from the
+            # Language enum
+            self.template.add_field(
+                TemplateField(
+                    field_type="str",
+                    required=True,
+                    show=True,
+                    name="separator_type",
+                    advanced=False,
+                    is_list=True,
+                    options=[x.value for x in Language],
+                    value="Text",
+                    display_name="Separator Type",
+                )
+            )
         self.template.add_field(
             TemplateField(
                 field_type="str",

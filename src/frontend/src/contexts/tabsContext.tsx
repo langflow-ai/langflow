@@ -16,7 +16,7 @@ import {
 } from "../utils";
 import { alertContext } from "./alertContext";
 import { typesContext } from "./typesContext";
-import { APITemplateType } from "../types/api";
+import { APIClassType, APITemplateType } from "../types/api";
 import ShortUniqueId from "short-unique-id";
 import { addEdge } from "reactflow";
 import {
@@ -192,33 +192,49 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
 
   function processFlowEdges(flow) {
+    if (!flow.data || !flow.data.edges) return;
     flow.data.edges.forEach((edge) => {
       edge.className = "";
       edge.style = { stroke: "#555555" };
     });
   }
 
+  function updateDisplay_name(node: NodeType, template: APIClassType) {
+    node.data.node.display_name = template["display_name"] || node.data.type;
+  }
+
+  function updateNodeDocumentation(node: NodeType, template: APIClassType) {
+    node.data.node.documentation = template["documentation"];
+  }
+
   function processFlowNodes(flow) {
-    flow.data.nodes.forEach((node) => {
+    if (!flow.data || !flow.data.nodes) return;
+    flow.data.nodes.forEach((node: NodeType) => {
       const template = templates[node.data.type];
       if (!template) {
         setErrorData({ title: `Unknown node type: ${node.data.type}` });
         return;
       }
       if (Object.keys(template["template"]).length > 0) {
+        updateDisplay_name(node, template);
         updateNodeBaseClasses(node, template);
         updateNodeEdges(flow, node, template);
         updateNodeDescription(node, template);
         updateNodeTemplate(node, template);
+        updateNodeDocumentation(node, template);
       }
     });
   }
 
-  function updateNodeBaseClasses(node, template) {
+  function updateNodeBaseClasses(node: NodeType, template: APIClassType) {
     node.data.node.base_classes = template["base_classes"];
   }
 
-  function updateNodeEdges(flow, node, template) {
+  function updateNodeEdges(
+    flow: FlowType,
+    node: NodeType,
+    template: APIClassType
+  ) {
     flow.data.edges.forEach((edge) => {
       if (edge.source === node.id) {
         edge.sourceHandle = edge.sourceHandle
@@ -230,11 +246,11 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  function updateNodeDescription(node, template) {
+  function updateNodeDescription(node: NodeType, template: APIClassType) {
     node.data.node.description = template["description"];
   }
 
-  function updateNodeTemplate(node, template) {
+  function updateNodeTemplate(node: NodeType, template: APIClassType) {
     node.data.node.template = updateTemplate(
       template["template"] as unknown as APITemplateType,
       node.data.node.template as APITemplateType
@@ -398,7 +414,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           y: insidePosition.y + n.position.y - minimumY,
         },
         data: {
-          ...n.data,
+          ..._.cloneDeep(n.data),
           id: newId,
         },
       };
@@ -463,6 +479,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
       // Create a new flow with a default name if no flow is provided.
       const newFlow = createNewFlow(flowData, flow);
+      processFlowEdges(newFlow);
+      processFlowNodes(newFlow);
 
       try {
         const { id } = await saveFlowToDatabase(newFlow);
