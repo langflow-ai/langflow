@@ -220,7 +220,7 @@ export default function ParameterComponent({
         ) : left === true &&
           type === "str" &&
           data.node.template[name].options ? (
-          <div className="w-full">
+          <div className="w-full mt-2">
             <Dropdown
               options={data.node.template[name].options}
               onSelect={handleOnNewValue}
@@ -228,12 +228,16 @@ export default function ParameterComponent({
             ></Dropdown>
           </div>
         ) : left === true && type === "code" ? (
+          <div className="mt-2 w-full">
           <CodeAreaComponent
             disabled={disabled}
             value={data.node.template[name].value ?? ""}
             onChange={handleOnNewValue}
           />
+          </div>
+
         ) : left === true && type === "file" ? (
+          <div className="mt-2 w-full">
           <InputFileComponent
             disabled={disabled}
             value={data.node.template[name].value ?? ""}
@@ -245,6 +249,7 @@ export default function ParameterComponent({
               save();
             }}
           ></InputFileComponent>
+          </div>
         ) : left === true && type === "int" ? (
           <div className="mt-2 w-full">
             <IntComponent
@@ -255,11 +260,14 @@ export default function ParameterComponent({
             />
           </div>
         ) : left === true && type === "prompt" ? (
+          <div className="mt-2 w-full">
           <PromptAreaComponent
             disabled={disabled}
             value={data.node.template[name].value ?? ""}
             onChange={handleOnNewValue}
           />
+          </div>
+
         ) : (
           <></>
         )}
