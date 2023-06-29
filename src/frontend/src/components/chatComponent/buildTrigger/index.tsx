@@ -170,12 +170,12 @@ export default function BuildTrigger({
               {isBuilding && progress < 1 ? (
                 // Render your loading animation here when isBuilding is true
                 <RadialProgressComponent
-                // ! confirm below works
+                  // ! confirm below works
                   color={"text-build-trigger"}
                   value={progress}
                 ></RadialProgressComponent>
               ) : isBuilding ? (
-                <Loading strokeWidth={1.5} className="stroke-build-trigger"/>
+                <Loading strokeWidth={1.5} className="stroke-build-trigger" />
               ) : (
                 <Zap className="sh-6 w-6 fill-build-trigger stroke-1 stroke-build-trigger" />
               )}

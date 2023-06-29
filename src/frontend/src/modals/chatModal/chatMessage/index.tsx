@@ -32,9 +32,7 @@ export default function ChatMessage({
     <div
       className={classNames(
         "w-full py-2 pl-2 flex",
-        chat.isSend
-          ? "bg-background "
-          : "bg-input"
+        chat.isSend ? "bg-background " : "bg-input"
       )}
     >
       <div
@@ -60,9 +58,7 @@ export default function ChatMessage({
             />
           </div>
         )}
-        {chat.isSend && (
-          <User2 className="w-6 h-6 -mb-1 text-primary " />
-        )}
+        {chat.isSend && <User2 className="w-6 h-6 -mb-1 text-primary " />}
       </div>
       {!chat.isSend ? (
         <div className="w-full text-start flex items-center">

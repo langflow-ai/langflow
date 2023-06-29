@@ -150,8 +150,6 @@ export const EXPORT_CODE_DIALOG =
 export const INPUT_STYLE =
   "focus:tw-ring-none focus-visible:outline-none  focus:ring-ring bg-background focus:outline-none";
 
-
-
 /**
  * The base text for subtitle of code dialog
  * @constant
@@ -170,9 +168,8 @@ export const NAV_DISPLAY_STYLE =
  * The base text for subtitle of code dialog
  * @constant
  */
-export const BUTTON_DIV_STYLE =
-  " flex gap-2 ";
-  " focus:ring-1 focus:ring-offset-1 focus:ring-ring focus:outline-none ";
+export const BUTTON_DIV_STYLE = " flex gap-2 ";
+(" focus:ring-1 focus:ring-offset-1 focus:ring-ring focus:outline-none ");
 
 /**
  * Default description for the flow
