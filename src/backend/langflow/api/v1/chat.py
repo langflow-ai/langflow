@@ -1,11 +1,21 @@
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketException, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    WebSocket,
+    WebSocketException,
+    status,
+)
 from fastapi.responses import StreamingResponse
 from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, StreamData
 
 from langflow.chat.manager import ChatManager
+from langflow.database.base import get_session
+from langflow.database.models.flow import Flow
 from langflow.graph.graph.base import Graph
 from langflow.utils.logger import logger
 from cachetools import LRUCache
+from sqlmodel import Session
 
 router = APIRouter(tags=["Chat"])
 chat_manager = ChatManager()
@@ -27,12 +37,19 @@ async def chat(client_id: str, websocket: WebSocket):
 
 
 @router.post("/build/init/{flow_id}", response_model=InitResponse, status_code=201)
-async def init_build(graph_data: dict, flow_id: str):
+async def init_build(*, session: Session = Depends(get_session), flow_id: str):
     """Initialize the build by storing graph data and returning a unique session ID."""
 
     try:
-        if flow_id is None:
-            raise ValueError("No ID provided")
+        flow = session.get(Flow, flow_id)
+        if flow is None:
+            raise ValueError(f"Flow {flow_id} not found")
+
+        if flow.data is None:
+            raise ValueError(f"Flow {flow_id} has no data")
+
+        graph_data = flow.data
+
         # Check if already building
         if (
             flow_id in flow_data_store
