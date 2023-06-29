@@ -141,6 +141,7 @@ export const nodeColors: { [char: string]: string } = {
   wrappers: "#E6277A",
   utilities: "#31A3CC",
   output_parsers: "#E6A627",
+  str: "#049524",
   unknown: "#9CA3AF",
 };
 
@@ -631,11 +632,11 @@ export function isValidConnection(
   reactFlowInstance: ReactFlowInstance
 ) {
   if (
-    sourceHandle.split("|")[0] === targetHandle.split("|")[0] ||
+    targetHandle.split("|")[0].split(";").some((n) => n === sourceHandle.split("|")[0]) ||
     sourceHandle
       .split("|")
       .slice(2)
-      .some((t) => t === targetHandle.split("|")[0]) ||
+      .some((t) => targetHandle.split("|")[0].split(";").some((n) => n === t)) ||
     targetHandle.split("|")[0] === "str"
   ) {
     let targetNode = reactFlowInstance.getNode(target).data.node;
