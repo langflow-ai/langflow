@@ -120,6 +120,8 @@ llms:
   HuggingFaceHub:
     documentation: "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/huggingface_hub"
 memories:
+  PostgresChatMessageHistory:
+    documentation: "https://python.langchain.com/docs/modules/memory/how_to/agent_with_memory_in_db"
   ConversationBufferMemory:
     documentation: "https://python.langchain.com/docs/modules/memory/how_to/buffer"
   ConversationSummaryMemory:
@@ -130,6 +132,7 @@ memories:
     documentation: "https://python.langchain.com/docs/modules/memory/how_to/buffer_window"
   VectorStoreRetrieverMemory:
     documentation: "https://python.langchain.com/docs/modules/memory/how_to/vectorstore_retriever_memory"
+
 prompts:
   PromptTemplate:
     documentation: "https://python.langchain.com/docs/modules/model_io/prompts/prompt_templates/"

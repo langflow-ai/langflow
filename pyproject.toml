@@ -70,7 +70,8 @@ pinecone-client = "^2.2.2"
 supabase = "^1.0.3"
 pymongo = "^4.4.0"
 certifi = "^2023.5.7"
-
+psycopg = "^3.1.9"
+psycopg-binary = "^3.1.9"
 
 [tool.poetry.dev-dependencies]
 black = "^23.1.0"
