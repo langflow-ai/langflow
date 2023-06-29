@@ -75,6 +75,8 @@ class MemoryFrontendNode(FrontendNode):
             field.show = True
             field.advanced = False
             field.required = False
+        if field.name == "url":
+            field.show = True
 
 
 class PostgresChatMessageHistoryFrontendNode(MemoryFrontendNode):
