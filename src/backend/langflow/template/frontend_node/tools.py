@@ -1,7 +1,10 @@
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.template.base import Template
-from langflow.utils.constants import DEFAULT_PYTHON_FUNCTION
+from langflow.utils.constants import (
+    DEFAULT_PYTHON_FUNCTION,
+    DEFAULT_CUSTOM_COMPONENT_CODE
+)
 
 
 class ToolNode(FrontendNode):
@@ -134,6 +137,30 @@ class PythonFunctionNode(FrontendNode):
     )
     description: str = "Python function to be executed."
     base_classes: list[str] = ["function"]
+
+    def to_dict(self):
+        return super().to_dict()
+
+
+class CustomComponentNode(FrontendNode):
+    name: str = "CustomComponent"
+    template: Template = Template(
+        type_name="CustomComponent",
+        fields=[
+            TemplateField(
+                field_type="code",
+                required=True,
+                placeholder="",
+                is_list=False,
+                show=True,
+                value=DEFAULT_CUSTOM_COMPONENT_CODE,
+                name="code",
+                advanced=False,
+            )
+        ],
+    )
+    description: str = "Python Class to be executed."
+    base_classes: list[str] = []
 
     def to_dict(self):
         return super().to_dict()

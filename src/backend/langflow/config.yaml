@@ -95,6 +95,7 @@ tools:
   - Calculator
   - Serper Search
   - Tool
+  - CustomComponent
   - PythonFunctionTool
   - PythonFunction
   - JsonSpec
