@@ -194,3 +194,8 @@ class PromptVertex(Vertex):
 
             self._build()
         return self._built_object
+
+
+class OutputParserVertex(Vertex):
+    def __init__(self, data: Dict):
+        super().__init__(data, base_type="output_parsers")
