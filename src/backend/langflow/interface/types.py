@@ -11,6 +11,7 @@ from langflow.interface.tools.base import tool_creator
 from langflow.interface.utilities.base import utility_creator
 from langflow.interface.vector_store.base import vectorstore_creator
 from langflow.interface.wrappers.base import wrapper_creator
+from langflow.interface.output_parsers.base import output_parser_creator
 
 
 def get_type_list():
@@ -44,6 +45,7 @@ def build_langchain_types_dict():  # sourcery skip: dict-assign-update-to-union
         documentloader_creator,
         textsplitter_creator,
         utility_creator,
+        output_parser_creator,
     ]
 
     all_types = {}

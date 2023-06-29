@@ -14,6 +14,7 @@ from langflow.interface.custom_lists import CUSTOM_NODES
 from langflow.interface.importing.utils import get_function, import_by_type
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.chains.base import chain_creator
+from langflow.interface.output_parsers.base import output_parser_creator
 from langflow.interface.utils import load_file_into_dict
 from langflow.utils import validate
 
@@ -72,8 +73,19 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
         return instantiate_utility(node_type, class_object, params)
     elif base_type == "chains":
         return instantiate_chains(node_type, class_object, params)
+    elif base_type == "output_parsers":
+        return instantiate_output_parser(node_type, class_object, params)
     else:
         return class_object(**params)
+
+
+def instantiate_output_parser(node_type, class_object, params):
+    if node_type in output_parser_creator.from_method_nodes:
+        method = output_parser_creator.from_method_nodes[node_type]
+        if class_method := getattr(class_object, method, None):
+            return class_method(**params)
+        raise ValueError(f"Method {method} not found in {class_object}")
+    return class_object(**params)
 
 
 def instantiate_chains(node_type, class_object, params):
