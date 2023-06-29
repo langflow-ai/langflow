@@ -229,26 +229,25 @@ export default function ParameterComponent({
           </div>
         ) : left === true && type === "code" ? (
           <div className="mt-2 w-full">
-          <CodeAreaComponent
-            disabled={disabled}
-            value={data.node.template[name].value ?? ""}
-            onChange={handleOnNewValue}
-          />
+            <CodeAreaComponent
+              disabled={disabled}
+              value={data.node.template[name].value ?? ""}
+              onChange={handleOnNewValue}
+            />
           </div>
-
         ) : left === true && type === "file" ? (
           <div className="mt-2 w-full">
-          <InputFileComponent
-            disabled={disabled}
-            value={data.node.template[name].value ?? ""}
-            onChange={handleOnNewValue}
-            fileTypes={data.node.template[name].fileTypes}
-            suffixes={data.node.template[name].suffixes}
-            onFileChange={(t: string) => {
-              data.node.template[name].file_path = t;
-              save();
-            }}
-          ></InputFileComponent>
+            <InputFileComponent
+              disabled={disabled}
+              value={data.node.template[name].value ?? ""}
+              onChange={handleOnNewValue}
+              fileTypes={data.node.template[name].fileTypes}
+              suffixes={data.node.template[name].suffixes}
+              onFileChange={(t: string) => {
+                data.node.template[name].file_path = t;
+                save();
+              }}
+            ></InputFileComponent>
           </div>
         ) : left === true && type === "int" ? (
           <div className="mt-2 w-full">
@@ -261,13 +260,12 @@ export default function ParameterComponent({
           </div>
         ) : left === true && type === "prompt" ? (
           <div className="mt-2 w-full">
-          <PromptAreaComponent
-            disabled={disabled}
-            value={data.node.template[name].value ?? ""}
-            onChange={handleOnNewValue}
-          />
+            <PromptAreaComponent
+              disabled={disabled}
+              value={data.node.template[name].value ?? ""}
+              onChange={handleOnNewValue}
+            />
           </div>
-
         ) : (
           <></>
         )}

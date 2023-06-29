@@ -29,10 +29,7 @@ export default function SingleAlert({
           key={dropItem.id}
         >
           <div className="flex-shrink-0">
-            <XCircle
-              className="h-5 w-5 text-status-red"
-              aria-hidden="true"
-            />
+            <XCircle className="h-5 w-5 text-status-red" aria-hidden="true" />
           </div>
           <div className="ml-3">
             <h3 className="text-sm break-words font-medium text-error-foreground">
@@ -65,7 +62,10 @@ export default function SingleAlert({
                 className="inline-flex rounded-md p-1.5 text-status-red"
               >
                 <span className="sr-only">Dismiss</span>
-                <X className="h-4 w-4 text-error-foreground" aria-hidden="true" />
+                <X
+                  className="h-4 w-4 text-error-foreground"
+                  aria-hidden="true"
+                />
               </button>
             </div>
           </div>
@@ -76,10 +76,7 @@ export default function SingleAlert({
           key={dropItem.id}
         >
           <div className="flex-shrink-0">
-            <Info
-              className="h-5 w-5 text-status-blue "
-              aria-hidden="true"
-            />
+            <Info className="h-5 w-5 text-status-blue " aria-hidden="true" />
           </div>
           <div className="ml-3 flex-1 md:flex md:justify-between">
             <p className="text-sm text-info-foreground font-medium">
@@ -111,7 +108,10 @@ export default function SingleAlert({
                 className="inline-flex rounded-md p-1.5 text-info-foreground"
               >
                 <span className="sr-only">Dismiss</span>
-                <X className="h-4 w-4 text-info-foreground" aria-hidden="true" />
+                <X
+                  className="h-4 w-4 text-info-foreground"
+                  aria-hidden="true"
+                />
               </button>
             </div>
           </div>
@@ -145,7 +145,10 @@ export default function SingleAlert({
                 className="inline-flex rounded-md p-1.5 text-status-green"
               >
                 <span className="sr-only">Dismiss</span>
-                <X className="h-4 w-4 text-success-foreground" aria-hidden="true" />
+                <X
+                  className="h-4 w-4 text-success-foreground"
+                  aria-hidden="true"
+                />
               </button>
             </div>
           </div>

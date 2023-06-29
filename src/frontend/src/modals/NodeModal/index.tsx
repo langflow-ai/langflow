@@ -76,7 +76,7 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
                 <div className="h-full w-full flex flex-col justify-center items-center">
                   <div className="flex w-full pb-4 z-10 justify-center shadow-sm">
                     <Icon
-                    strokeWidth={1.5}
+                      strokeWidth={1.5}
                       className="w-10 mt-4 h-10 p-1 rounded"
                       style={{
                         color:

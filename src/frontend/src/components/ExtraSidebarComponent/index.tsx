@@ -71,9 +71,7 @@ export default function ExtraSidebar() {
                               <span className="flex-1">{item.name}</span>
                               <svg
                                 className={classNames(
-                                  open
-                                    ? "text-ring rotate-90"
-                                    : "text-ring",
+                                  open ? "text-ring rotate-90" : "text-ring",
                                   "ml-3 h-5 w-5 flex-shrink-0 transition-rotate duration-150 ease-in-out group-hover:text-ring"
                                 )}
                                 viewBox="0 0 20 20"

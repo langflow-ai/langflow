@@ -39,10 +39,7 @@ export default function FileCard({ fileName, content, fileType }) {
           <div
             className={`absolute top-0 right-0 bg-muted text-foreground rounded-bl-lg px-1 text-sm font-bold `}
           >
-            <button
-              className="text-ring py-1 px-2 "
-              onClick={handleDownload}
-            >
+            <button className="text-ring py-1 px-2 " onClick={handleDownload}>
               <DownloadCloud className="hover:scale-110 w-5 h-5 text-current" />
             </button>
           </div>

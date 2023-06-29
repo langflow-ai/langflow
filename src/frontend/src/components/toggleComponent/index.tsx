@@ -30,9 +30,7 @@ export default function ToggleComponent({
           className={classNames(
             enabled ? "translate-x-5" : "translate-x-0",
             "pointer-events-none relative inline-block h-5 w-5 transform rounded-full  shadow ring-0 transition duration-200 ease-in-out",
-            disabled
-              ? "bg-input "
-              : "bg-background"
+            disabled ? "bg-input " : "bg-background"
           )}
         >
           <span

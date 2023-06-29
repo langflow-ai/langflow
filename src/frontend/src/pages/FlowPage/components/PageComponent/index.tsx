@@ -402,8 +402,10 @@ export default function Page({ flow }: { flow: FlowType }) {
                   maxZoom={8}
                 >
                   <Background className="" />
-                  <Controls className="text-primary stroke-foreground [&>button]:border-b-border hover:[&>button]:bg-border
-                   fill-foreground bg-muted"></Controls>
+                  <Controls
+                    className="text-primary stroke-foreground [&>button]:border-b-border hover:[&>button]:bg-border
+                   fill-foreground bg-muted"
+                  ></Controls>
                 </ReactFlow>
                 <Chat flow={flow} reactFlowInstance={reactFlowInstance} />
               </div>
