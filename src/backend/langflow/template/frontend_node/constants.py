@@ -32,3 +32,29 @@ You are a good listener and you can talk about anything.
 HUMAN_PROMPT = "{input}"
 
 QA_CHAIN_TYPES = ["stuff", "map_reduce", "map_rerank", "refine"]
+
+CTRANSFORMERS_DEFAULT_CONFIG = {
+    "top_k": 40,
+    "top_p": 0.95,
+    "temperature": 0.8,
+    "repetition_penalty": 1.1,
+    "last_n_tokens": 64,
+    "seed": -1,
+    "max_new_tokens": 256,
+    "stop": None,
+    "stream": False,
+    "reset": True,
+    "batch_size": 8,
+    "threads": -1,
+    "context_length": -1,
+    "gpu_layers": 0,
+}
+
+# This variable is used to tell the user
+# that it can be changed to use other APIs
+# like Prem and LocalAI
+OPENAI_API_BASE_INFO = """
+The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.
+
+You can change this to use other APIs like JinaChat, LocalAI and Prem.
+"""

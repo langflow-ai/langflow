@@ -112,6 +112,11 @@ class MemoryVertex(Vertex):
         super().__init__(data, base_type="memory")
 
 
+class RetrieverVertex(Vertex):
+    def __init__(self, data: Dict):
+        super().__init__(data, base_type="retrievers")
+
+
 class TextSplitterVertex(Vertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="textsplitters")

@@ -6,11 +6,17 @@ from langflow.settings import settings
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.frontend_node.memories import MemoryFrontendNode
 from langflow.utils.logger import logger
-from langflow.utils.util import build_template_from_class
+from langflow.utils.util import build_template_from_class, build_template_from_method
+from langflow.custom.customs import get_custom_nodes
 
 
 class MemoryCreator(LangChainTypeCreator):
     type_name: str = "memories"
+
+    from_method_nodes = {
+        "ZepChatMessageHistory": "__init__",
+        "SQLiteEntityStore": "__init__",
+    }
 
     @property
     def frontend_node_class(self) -> Type[FrontendNode]:
@@ -26,6 +32,14 @@ class MemoryCreator(LangChainTypeCreator):
     def get_signature(self, name: str) -> Optional[Dict]:
         """Get the signature of a memory."""
         try:
+            if name in get_custom_nodes(self.type_name).keys():
+                return get_custom_nodes(self.type_name)[name]
+            elif name in self.from_method_nodes:
+                return build_template_from_method(
+                    name,
+                    type_to_cls_dict=memory_type_to_cls_dict,
+                    method_name=self.from_method_nodes[name],
+                )
             return build_template_from_class(name, memory_type_to_cls_dict)
         except ValueError as exc:
             raise ValueError("Memory not found") from exc

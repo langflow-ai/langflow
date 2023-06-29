@@ -32,6 +32,7 @@
     "base64-js": "^1.5.1",
     "class-variance-authority": "^0.6.0",
     "clsx": "^1.2.1",
+    "dompurify": "^3.0.3",
     "esbuild": "^0.17.18",
     "lodash": "^4.17.21",
     "lucide-react": "^0.233.0",

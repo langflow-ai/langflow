@@ -5,6 +5,7 @@ import { TabsContext } from "../../contexts/tabsContext";
 import _ from "lodash";
 import { INPUT_STYLE } from "../../constants";
 import { X, Plus } from "lucide-react";
+import { PopUpContext } from "../../contexts/popUpContext";
 
 export default function InputListComponent({
   value,
@@ -14,12 +15,19 @@ export default function InputListComponent({
   onAddInput
 }: InputListComponentType) {
   const [inputList, setInputList] = useState(value ?? [""]);
+  const { closePopUp } = useContext(PopUpContext);
+
   useEffect(() => {
     if (disabled) {
       setInputList([""]);
       onChange([""]);
     }
   }, [disabled, onChange]);
+
+  useEffect(() => {
+    setInputList(value);
+  }, [closePopUp]);
+
   return (
     <div
       className={
@@ -45,9 +53,9 @@ export default function InputListComponent({
               setInputList((old) => {
                 let newInputList = _.cloneDeep(old);
                 newInputList[idx] = e.target.value;
+                onChange(newInputList);
                 return newInputList;
               });
-              onChange(inputList);
             }}
           />
           {idx === inputList.length - 1 ? (
