@@ -43,7 +43,7 @@ module.exports = {
         'light-gray': "var(--light-gray)",
         'light-slate': "var(--light-slate)",
         'medium-blue': "var(--medium-blue)",
-        'medium-dark-blue': "var(--medium-dark-blue)",
+        'status-blue': "var(--status-blue)",
         'medium-dark-gray': "var(--medium-dark-gray)",
         'medium-dark-green': "var(--medium-dark-green)",
         'medium-dark-red': "var(--medium-dark-red)",
