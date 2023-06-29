@@ -30,6 +30,7 @@ def build_input_keys_response(langchain_object, artifacts):
     input_keys_response = {
         "input_keys": {key: "" for key in langchain_object.input_keys},
         "memory_keys": [],
+        "handle_keys": artifacts.get("handle_keys", []),
     }
 
     # Set the input keys values from artifacts
