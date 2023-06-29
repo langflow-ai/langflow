@@ -12,6 +12,7 @@ export type APIClassType = {
   description: string;
   template: APITemplateType;
   display_name: string;
+  input_types?: Array<string>;
   [key: string]: Array<string> | string | APITemplateType;
 };
 

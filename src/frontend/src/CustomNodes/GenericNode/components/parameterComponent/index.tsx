@@ -36,6 +36,7 @@ export default function ParameterComponent({
   type,
   name = "",
   required = false,
+  optionalHandle = null,
 }: ParameterComponentType) {
   const ref = useRef(null);
   const refHtml = useRef(null);
@@ -132,13 +133,14 @@ export default function ParameterComponent({
           <span className="text-red-600">{required ? " *" : ""}</span>
         </div>
         {left &&
-        (type === "str" ||
+        ((type === "str" ||
           type === "bool" ||
           type === "float" ||
           type === "code" ||
           type === "prompt" ||
           type === "file" ||
-          type === "int") ? (
+          type === "int") && !optionalHandle
+          ) ? (
           <></>
         ) : (
           <ShadTooltip
