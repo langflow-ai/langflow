@@ -1,9 +1,11 @@
 import { Listbox, Transition } from "@headlessui/react";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useContext, useEffect, useState } from "react";
 import { DropDownComponentType } from "../../types/components";
 import { classNames } from "../../utils";
 import { INPUT_STYLE } from "../../constants";
 import { ChevronsUpDown, Check } from "lucide-react";
+import { PopUpContext } from "../../contexts/popUpContext";
+import { TabsContext } from "../../contexts/tabsContext";
 
 export default function Dropdown({
   value,
@@ -13,12 +15,15 @@ export default function Dropdown({
   numberOfOptions = 0,
   apiModal = false
 }: DropDownComponentType) {
+  const { closePopUp } = useContext(PopUpContext);
+
   let [internalValue, setInternalValue] = useState(
     value === "" || !value ? "Choose an option" : value
   );
+
   useEffect(() => {
     setInternalValue(value === "" || !value ? "Choose an option" : value);
-  }, [value]);
+  }, [closePopUp]);
 
   return (
     <>
