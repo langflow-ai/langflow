@@ -50,10 +50,28 @@ def python_function(text: str) -> str:
 """
 
 DEFAULT_CUSTOM_COMPONENT_CODE = """
-def custom_component(text: str) -> str:
-    \"\"\"This is a default custom component function that returns the input text\"\"\"
-    \"\"\"TODO: Add a Class template\"\"\"
-    return text
+from langflow.interface.chains.base import ChainCreator
+from langflow.interface.tools.base import ToolCreator
+from xyz.abc import MyClassA, MyClassB
+
+
+class MyPythonClass(MyClassA, MyClassB):
+    def __init__(self, title: str, author: str, year_published: int):
+        self.title = title
+        self.author = author
+        self.year_published = year_published
+
+    def get_details(self):
+        return f"Title: {self.title}, Author: {self.author}, Year Published: {self.year_published}"
+
+    def update_year_published(self, new_year: int):
+        self.year_published = new_year
+        print(f"The year of publication has been updated to {new_year}.")
+
+    def build(self, name: str, my_int: int, my_str: str, my_bool: bool, no_type) -> ConversationChain:
+        # do something...
+
+        return ConversationChain()
 """
 
 DIRECT_TYPES = ["str", "bool", "code", "int", "float", "Any", "prompt"]

@@ -51,6 +51,22 @@ class ClassCodeExtractor:
         else:
             self.data["functions"].append(function_data)
 
+    def transform_list(self, input_list):
+        output_list = []
+        for item in input_list:
+            # Split each item on ':' to separate variable name and type
+            split_item = item.split(':')
+
+            # If there is a type, strip any leading/trailing spaces from it
+            if len(split_item) > 1:
+                split_item[1] = split_item[1].strip()
+            # If there isn't a type, append None
+            else:
+                split_item.append(None)
+            output_list.append(split_item)
+
+        return output_list
+
     def extract_class_info(self):
         module = ast.parse(self.code)
 
@@ -73,6 +89,8 @@ class ClassCodeExtractor:
 
         if build_function:
             function_args = build_function.get("arguments", None)
+            function_args = self.transform_list(function_args)
+
             return_type = build_function.get("return_type", None)
         else:
             function_args = None
@@ -82,7 +100,7 @@ class ClassCodeExtractor:
 
 
 def is_valid_class_template(code: dict):
-    function_entrypoint_name = "build"
+    extractor = ClassCodeExtractor(code)
     return_type_valid_list = ["ConversationChain", "Tool"]
 
     class_name = code.get("class", {}).get("name", None)
@@ -92,7 +110,8 @@ def is_valid_class_template(code: dict):
     functions = code.get("functions", [])
     # use a generator and next to find if a function matching the criteria exists
     build_function = next(
-        (f for f in functions if f["name"] == function_entrypoint_name), None
+        (f for f in functions if f["name"] ==
+         extractor.function_entrypoint_name), None
     )
 
     if not build_function:

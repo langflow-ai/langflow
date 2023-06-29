@@ -82,9 +82,8 @@ def add_new_custom_field(template, field_name: str, field_type: str):
 
     return template
 
+
 # TODO: Move to correct place
-
-
 def add_code_field(template, raw_code):
     # Field with the Python code to allow update
     code_field = {
@@ -111,29 +110,21 @@ def build_langchain_template_custom_component(raw_code, function_args, function_
     # type_and_class = find_class_type("Tool", type_list)
     # node = get_custom_nodes(node_type: str)
 
-    # TODO: Build base template
-    template = llm_creator.to_dict()['llms']['ChatOpenAI']
-
+    # Build base CustomComponent template
     template = CustomComponentNode().to_dict().get('CustomComponent')
 
-    # TODO: Add extra fields
-    template = add_new_custom_field(
-        template,
-        "my_id",
-        "str"
-    )
+    # Add extra fields
+    for extra_field in function_args:
+        if extra_field[0] != 'self':
+            # TODO: Validate type - if possible to render into frontend
+            if not extra_field[1]:
+                extra_field[1] = 'str'
 
-    template = add_new_custom_field(
-        template,
-        "year",
-        "int"
-    )
-
-    template = add_new_custom_field(
-        template,
-        "other_field",
-        "bool"
-    )
+            template = add_new_custom_field(
+                template,
+                extra_field[0],
+                extra_field[1]
+            )
 
     template = add_code_field(
         template,
@@ -144,5 +135,3 @@ def build_langchain_template_custom_component(raw_code, function_args, function_
     # olhar loading.py
 
     return template
-    # return globals()['tool_creator'].to_dict()[type_and_class['type']][type_and_class['class']]
-    # return chain_creator.to_dict()['chains']['ConversationChain']
