@@ -21,6 +21,10 @@ class LLMFrontendNode(FrontendNode):
         if field.name == "openai_api_base":
             field.info = OPENAI_API_BASE_INFO
 
+    def add_extra_base_classes(self) -> None:
+        if "BaseLLM" not in self.base_classes:
+            self.base_classes.append("BaseLLM")
+
     @staticmethod
     def format_azure_field(field: TemplateField):
         if field.name == "model_name":
