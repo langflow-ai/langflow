@@ -104,11 +104,10 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
   useEffect(() => {
     if (closeEdit !== "") {
       tweak.current = getTweak;
-      if(tweak.current.length > 0){
+      if (tweak.current.length > 0) {
         setActiveTab("3");
         openAccordions();
-      }
-      else{
+      } else {
         startTweaks();
       }
     } else {
@@ -250,14 +249,14 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
 
   function openAccordions() {
     let accordionsToOpen = [];
-      tweak.current.forEach((el) => {
-        Object.keys(el).forEach((key) => {
-          if (Object.keys(el[key]).length > 0) {
-            accordionsToOpen.push(key);
-            setOpenAccordion(accordionsToOpen);
-          }
-        });
+    tweak.current.forEach((el) => {
+      Object.keys(el).forEach((key) => {
+        if (Object.keys(el[key]).length > 0) {
+          accordionsToOpen.push(key);
+          setOpenAccordion(accordionsToOpen);
+        }
       });
+    });
   }
 
   return (
