@@ -120,8 +120,11 @@ llms:
   HuggingFaceHub:
     documentation: "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/huggingface_hub"
 memories:
+  # https://github.com/supabase-community/supabase-py/issues/482
+  # ZepChatMessageHistory:
+  #   documentation: "https://python.langchain.com/docs/modules/memory/integrations/zep_memory"
   PostgresChatMessageHistory:
-    documentation: "https://python.langchain.com/docs/modules/memory/how_to/agent_with_memory_in_db"
+    documentation: "https://python.langchain.com/docs/modules/memory/integrations/postgres_chat_message_history"
   ConversationBufferMemory:
     documentation: "https://python.langchain.com/docs/modules/memory/how_to/buffer"
   ConversationSummaryMemory:
@@ -233,6 +236,9 @@ utilities:
 retrievers:
   MultiQueryRetriever:
     documentation: "https://python.langchain.com/docs/modules/data_connection/retrievers/how_to/MultiQueryRetriever"
+  # https://github.com/supabase-community/supabase-py/issues/482
+  # ZepRetriever:
+  #   documentation: "https://python.langchain.com/docs/modules/data_connection/retrievers/integrations/zep_memorystore"
 vectorstores:
   Chroma:
     documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/chroma"
