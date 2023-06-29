@@ -11,7 +11,8 @@ class MemoryFrontendNode(FrontendNode):
     def add_extra_fields(self) -> None:
         # chat history should have another way to add common field?
         # prevent adding incorect field in ChatMessageHistory
-        if "BaseChatMessageHistory" in self.base_classes:
+        base_message_classes = ["BaseEntityStore", "BaseChatMessageHistory"]
+        if any(base_class in self.base_classes for base_class in base_message_classes):
             return
 
         # add return_messages field
@@ -76,6 +77,10 @@ class MemoryFrontendNode(FrontendNode):
             field.advanced = False
             field.required = False
         if field.name == "url":
+            field.show = True
+        if field.name == "entity_store":
+            field.show = True
+        if name == "SQLiteEntityStore":
             field.show = True
 
 
