@@ -142,6 +142,13 @@ def instantiate_prompt(node_type, class_object, params):
                         for item in variable
                     ]
                 )
+                # handle_keys will be a list but it does not exist yet
+                # so we need to create it
+                if "handle_keys" not in params:
+                    format_kwargs["handle_keys"] = []
+
+                # Add the handle_keys to the list
+                format_kwargs["handle_keys"].append(input_variable)
 
     return prompt, format_kwargs
 
