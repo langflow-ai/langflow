@@ -86,7 +86,7 @@ export default function ParameterComponent({
 
     refHtml.current = groupedObj.map((item, i) => (
       <span
-        key={getRandomKeyByssmm()}
+        key={getRandomKeyByssmm() + item.family + i}
         className={classNames(
           i > 0 ? "items-center flex mt-3" : "items-center flex"
         )}
