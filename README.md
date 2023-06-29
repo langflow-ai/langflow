@@ -163,7 +163,7 @@ print(run_flow("Your message", flow_id=FLOW_ID, tweaks=TWEAKS))
 
 ## 🎨 Creating Flows
 
-Creating flows with LangFlow is easy. Simply drag sidebar components onto the canvas and connect them together to create your pipeline. LangFlow provides a range of [LangChain components](https://langchain.readthedocs.io/en/latest/reference.html) to choose from, including LLMs, prompt serializers, agents, and chains.
+Creating flows with LangFlow is easy. Simply drag sidebar components onto the canvas and connect them together to create your pipeline. LangFlow provides a range of [LangChain components](https://api.python.langchain.com/en/latest/index.html) to choose from, including LLMs, prompt serializers, agents, and chains.
 
 Explore by editing prompt parameters, link chains and agents, track an agent's thought process, and export your flow.
 
