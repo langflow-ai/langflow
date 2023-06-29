@@ -8,6 +8,11 @@ from langflow.template.template.base import Template
 class MemoryFrontendNode(FrontendNode):
     #! Needs testing
     def add_extra_fields(self) -> None:
+        # chat history should have another way to add common field?
+        # prevent adding incorect field in ChatMessageHistory
+        if "BaseChatMessageHistory" in self.base_classes: 
+            pass
+
         # add return_messages field
         self.template.add_field(
             TemplateField(
@@ -65,6 +70,10 @@ class MemoryFrontendNode(FrontendNode):
             field.value = ""
         if field.name == "memory_key":
             field.value = "chat_history"
+        if field.name == "chat_memory":
+            field.show = True
+            field.advanced = False
+            field.required = False
 
 
 class PostgresChatMessageHistoryFrontendNode(MemoryFrontendNode):
