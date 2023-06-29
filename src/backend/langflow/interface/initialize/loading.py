@@ -82,8 +82,23 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
         return instantiate_llm(node_type, class_object, params)
     elif base_type == "retrievers":
         return instantiate_retriever(node_type, class_object, params)
+    elif base_type == "memory":
+        return instantiate_memory(node_type, class_object, params)
     else:
         return class_object(**params)
+
+
+def instantiate_memory(node_type, class_object, params):
+    try:
+        return class_object(**params)
+    # I want to catch a specific attribute error that happens
+    # when the object does not have a cursor attribute
+    except AttributeError as exc:
+        if "object has no attribute 'cursor'" in str(exc):
+            raise AttributeError(
+                f"Failed to build connection to database. Please check your connection string and try again. Error: {exc}"
+            ) from exc
+        raise exc
 
 
 def instantiate_retriever(node_type, class_object, params):
