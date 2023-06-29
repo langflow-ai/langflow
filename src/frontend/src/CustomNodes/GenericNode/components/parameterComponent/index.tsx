@@ -197,7 +197,7 @@ export default function ParameterComponent({
             )}
           </div>
         ) : left === true && type === "bool" ? (
-          <div className="mt-2">
+          <div className="mt-2 w-full">
             <ToggleShadComponent
               disabled={disabled}
               enabled={enabled}
