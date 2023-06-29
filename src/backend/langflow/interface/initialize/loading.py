@@ -98,7 +98,10 @@ def instantiate_memory(node_type, class_object, params):
             exc
         ) or 'object has no field "conn"' in str(exc):
             raise AttributeError(
-                f"Failed to build connection to database. Please check your connection string and try again. Error: {exc}"
+                (
+                    "Failed to build connection to database."
+                    f" Please check your connection string and try again. Error: {exc}"
+                )
             ) from exc
         raise exc
 
