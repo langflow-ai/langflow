@@ -97,7 +97,7 @@ export default function ParameterComponent({
         >
           {React.createElement(nodeIconsLucide[item.family])}
         </div>
-        <span className="ps-2 text-gray-950">
+        <span className="ps-2 text-foreground">
           {nodeNames[item.family] ?? ""}{" "}
           <span className={classNames(left ? "hidden" : "")}>
             {" "}
@@ -123,12 +123,12 @@ export default function ParameterComponent({
   return (
     <div
       ref={ref}
-      className="w-full flex flex-wrap justify-between items-center bg-muted dark:bg-gray-800 dark:text-white mt-1 px-5 py-2"
+      className="w-full flex flex-wrap justify-between items-center bg-muted mt-1 px-5 py-2"
     >
       <>
         <div className={"text-sm truncate w-full " + (left ? "" : "text-end")}>
           {title}
-          <span className="text-red-600">{required ? " *" : ""}</span>
+          <span className="text-destructive">{required ? " *" : ""}</span>
         </div>
         {left &&
         (type === "str" ||
@@ -155,7 +155,7 @@ export default function ParameterComponent({
               }
               className={classNames(
                 left ? "-ml-0.5 " : "-mr-0.5 ",
-                "w-3 h-3 rounded-full border-2 bg-white dark:bg-gray-800"
+                "w-3 h-3 rounded-full border-2 bg-background"
               )}
               style={{
                 borderColor: color,
@@ -197,7 +197,7 @@ export default function ParameterComponent({
             )}
           </div>
         ) : left === true && type === "bool" ? (
-          <div className="mt-2">
+          <div className="mt-2 w-full">
             <ToggleShadComponent
               disabled={disabled}
               enabled={enabled}
@@ -220,7 +220,7 @@ export default function ParameterComponent({
         ) : left === true &&
           type === "str" &&
           data.node.template[name].options ? (
-          <div className="w-full">
+          <div className="w-full mt-2">
             <Dropdown
               options={data.node.template[name].options}
               onSelect={handleOnNewValue}
@@ -228,23 +228,27 @@ export default function ParameterComponent({
             ></Dropdown>
           </div>
         ) : left === true && type === "code" ? (
-          <CodeAreaComponent
-            disabled={disabled}
-            value={data.node.template[name].value ?? ""}
-            onChange={handleOnNewValue}
-          />
+          <div className="mt-2 w-full">
+            <CodeAreaComponent
+              disabled={disabled}
+              value={data.node.template[name].value ?? ""}
+              onChange={handleOnNewValue}
+            />
+          </div>
         ) : left === true && type === "file" ? (
-          <InputFileComponent
-            disabled={disabled}
-            value={data.node.template[name].value ?? ""}
-            onChange={handleOnNewValue}
-            fileTypes={data.node.template[name].fileTypes}
-            suffixes={data.node.template[name].suffixes}
-            onFileChange={(t: string) => {
-              data.node.template[name].file_path = t;
-              save();
-            }}
-          ></InputFileComponent>
+          <div className="mt-2 w-full">
+            <InputFileComponent
+              disabled={disabled}
+              value={data.node.template[name].value ?? ""}
+              onChange={handleOnNewValue}
+              fileTypes={data.node.template[name].fileTypes}
+              suffixes={data.node.template[name].suffixes}
+              onFileChange={(t: string) => {
+                data.node.template[name].file_path = t;
+                save();
+              }}
+            ></InputFileComponent>
+          </div>
         ) : left === true && type === "int" ? (
           <div className="mt-2 w-full">
             <IntComponent
@@ -255,11 +259,13 @@ export default function ParameterComponent({
             />
           </div>
         ) : left === true && type === "prompt" ? (
-          <PromptAreaComponent
-            disabled={disabled}
-            value={data.node.template[name].value ?? ""}
-            onChange={handleOnNewValue}
-          />
+          <div className="mt-2 w-full">
+            <PromptAreaComponent
+              disabled={disabled}
+              value={data.node.template[name].value ?? ""}
+              onChange={handleOnNewValue}
+            />
+          </div>
         ) : (
           <></>
         )}

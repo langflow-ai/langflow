@@ -52,10 +52,10 @@ export default function TextAreaComponent({
           }}
           className={
             editNode
-              ? "truncate cursor-pointer placeholder:text-center text-gray-500 border-1 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm" +
+              ? "truncate cursor-pointer placeholder:text-center text-ring border-1 block w-full pt-0.5 pb-0.5 form-input   rounded-md border-ring bg-transparent shadow-sm sm:text-sm" +
                 INPUT_STYLE
-              : "truncate block w-full text-gray-500 dark:text-muted px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 shadow-sm sm:text-sm" +
-                (disabled ? " bg-gray-200" : "")
+              : "truncate block w-full text-ring px-3 py-2 rounded-md border border-ring shadow-sm sm:text-sm" +
+                (disabled ? " bg-input" : "")
           }
         >
           {myValue !== "" ? myValue : "Type something..."}
@@ -76,9 +76,7 @@ export default function TextAreaComponent({
             );
           }}
         >
-          {!editNode && (
-            <ExternalLink className="w-6 h-6 hover:text-ring dark:text-gray-300" />
-          )}
+          {!editNode && <ExternalLink className="w-6 h-6 hover:text-ring " />}
         </button>
       </div>
     </div>

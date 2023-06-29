@@ -46,11 +46,11 @@ export default function CodeAreaComponent({
           }}
           className={
             editNode
-              ? "truncate cursor-pointer placeholder:text-center text-gray-500 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 border-1 shadow-sm sm:text-sm" +
+              ? "truncate cursor-pointer placeholder:text-center text-ring block w-full pt-0.5 pb-0.5 form-input rounded-md border-ring border-1 shadow-sm text-sm bg-transparent sm:text-sm" +
                 INPUT_STYLE
-              : "truncate block w-full text-gray-500 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 shadow-sm sm:text-sm" +
+              : "truncate block w-full text-ring px-3 py-2 rounded-md border border-ring shadow-sm sm:text-sm placeholder:text-muted-foreground" +
                 INPUT_STYLE +
-                (disabled ? " bg-gray-200" : "")
+                (disabled ? " bg-input" : "")
           }
         >
           {myValue !== "" ? myValue : "Type something..."}
@@ -69,7 +69,7 @@ export default function CodeAreaComponent({
           }}
         >
           {!editNode && (
-            <ExternalLink className="w-6 h-6 hover:text-ring dark:text-gray-300 ml-3" />
+            <ExternalLink className="w-6 h-6 hover:text-ring  ml-3" />
           )}
         </button>
       </div>

@@ -37,12 +37,9 @@ export default function FileCard({ fileName, content, fileType }) {
         />
         {isHovered && (
           <div
-            className={`absolute top-0 right-0 bg-muted text-gray-700 rounded-bl-lg px-1 text-sm font-bold dark:bg-gray-700 dark:text-gray-300`}
+            className={`absolute top-0 right-0 bg-muted text-foreground rounded-bl-lg px-1 text-sm font-bold `}
           >
-            <button
-              className="text-gray-500 py-1 px-2 dark:bg-gray-700 dark:text-gray-300"
-              onClick={handleDownload}
-            >
+            <button className="text-ring py-1 px-2 " onClick={handleDownload}>
               <DownloadCloud className="hover:scale-110 w-5 h-5 text-current" />
             </button>
           </div>
@@ -54,7 +51,7 @@ export default function FileCard({ fileName, content, fileType }) {
   return (
     <button
       onClick={handleDownload}
-      className="bg-muted shadow rounded w-1/2 text-gray-700 hover:drop-shadow-lg px-2 py-2 flex justify-between items-center border border-gray-300"
+      className="bg-muted shadow rounded w-1/2 text-foreground hover:drop-shadow-lg px-2 py-2 flex justify-between items-center border border-ring"
     >
       <div className="flex gap-2 text-current items-center w-full mr-2">
         {" "}
@@ -70,7 +67,7 @@ export default function FileCard({ fileName, content, fileType }) {
         <div className="flex flex-col items-start">
           {" "}
           <div className="truncate text-sm text-current">{fileName}</div>
-          <div className="truncate text-xs  text-gray-500">{fileType}</div>
+          <div className="truncate text-xs  text-ring">{fileType}</div>
         </div>
         <DownloadCloud className="w-6 h-6 text-current ml-auto" />
       </div>

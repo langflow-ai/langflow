@@ -87,10 +87,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Code</span>
-            <Code2
-              className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
-              aria-hidden="true"
-            />
+            <Code2 className="h-6 w-6 text-primary pl-1 " aria-hidden="true" />
           </DialogTitle>
           <DialogDescription>{EXPORT_CODE_DIALOG}</DialogDescription>
         </DialogHeader>
@@ -103,12 +100,14 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
           <div className="flex items-center justify-between px-2">
             <TabsList>
               {tabs.map((tab, index) => (
-                <TabsTrigger key={index} value={index.toString()}>{tab.name}</TabsTrigger>
+                <TabsTrigger key={index} value={index.toString()}>
+                  {tab.name}
+                </TabsTrigger>
               ))}
             </TabsList>
             <div className="float-right">
               <button
-                className="flex gap-1.5 items-center rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
+                className="flex gap-1.5 items-center rounded bg-none p-1 text-xs text-ring "
                 onClick={copyToClipboard}
               >
                 {isCopied ? <Check size={18} /> : <Clipboard size={15} />}
