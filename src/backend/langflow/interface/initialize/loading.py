@@ -1,5 +1,5 @@
 import json
-from typing import Any, Callable, Dict, Sequence
+from typing import Any, Callable, Dict, List, Sequence
 
 from langchain.agents import ZeroShotAgent
 from langchain.agents import agent as agent_module
@@ -7,7 +7,7 @@ from langchain.agents.agent import AgentExecutor
 from langchain.agents.agent_toolkits.base import BaseToolkit
 from langchain.agents.tools import BaseTool
 from langflow.interface.initialize.vector_store import vecstore_initializer
-
+from langchain.schema import Document
 from pydantic import ValidationError
 
 from langflow.interface.custom_lists import CUSTOM_NODES
@@ -112,13 +112,24 @@ def instantiate_prompt(node_type, class_object, params):
 
     prompt = class_object(**params)
 
-    format_kwargs = {
-        input_variable: params[input_variable]
-        for input_variable in prompt.input_variables
-        if input_variable in params
-    }
-    # if format_kwargs:
-    #     prompt = prompt.partial(**format_kwargs)
+    format_kwargs = {}
+    for input_variable in prompt.input_variables:
+        if input_variable in params:
+            variable = params[input_variable]
+            if isinstance(variable, str):
+                format_kwargs[input_variable] = variable
+            # check if is a list of Document
+            elif isinstance(variable, List) and all(
+                isinstance(item, Document) for item in variable
+            ):
+                # Format document to contain page_content and metadata
+                # as one string separated by a newline
+                format_kwargs[input_variable] = "\n".join(
+                    [
+                        f"Document:{item.page_content}\nMetadata:{item.metadata}"
+                        for item in variable
+                    ]
+                )
 
     return prompt, format_kwargs
 
