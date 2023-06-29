@@ -117,7 +117,7 @@ export default function ExtraSidebar() {
         </ShadTooltip>
       </div>
       <Separator />
-      <div className="relative mt-2 flex items-center mb-2 mx-2">
+      <div className="relative mt-2 flex items-center mb-2 mx-auto">
         <input
           type="text"
           name="search"
