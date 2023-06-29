@@ -13,7 +13,10 @@ from langflow.custom.customs import get_custom_nodes
 class MemoryCreator(LangChainTypeCreator):
     type_name: str = "memories"
 
-    from_method_nodes = {"ZepChatMessageHistory": "__init__"}
+    from_method_nodes = {
+        "ZepChatMessageHistory": "__init__",
+        "SQLiteEntityStore": "__init__",
+    }
 
     @property
     def frontend_node_class(self) -> Type[FrontendNode]:
