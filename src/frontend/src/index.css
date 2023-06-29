@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+
+/* ! Confirm that all colors here are found in tailwind config */
+
 @layer base {
 
 :root {
@@ -27,68 +30,74 @@
   --ring: 215 20.2% 65.1%; /* hsl(215 20% 65%) */
 
   --round-btn-shadow: #00000063;
-  --hover-btn-background: #242f47;
 
-  --build-background: #E2E7EE;
-  --build-trigger: 	#dc735b; /* hsl(11, 65%, 61%) */
-  --chat-trigger: #dbeafe; /* tailwind blue 100 USED IN CHAT BACKGROUND */
+  --build-trigger: 	#dc735b;
+  --chat-trigger: #5c8be1;
 
-  --error-background: #fef2f2; /* tailwind red 50 USED IN START ERROR MESSAGE BG light-red */
-  --error-foreground: #991b1b; /* tailwind red 800 USED IN START ERROR MESSAGE TEXT almost-dark-red */
+  --error-background: #fef2f2;
+  --error-foreground: #991b1b;
 
-  --status-red: #ef4444; /* tailwind red 500 medium-red*/
-  --status-yellow: #eab308; /* tailwind yellow 500 medium-yellow*/
-  --status-green: #4ade80; /* tailwind green 400 medium-green*/
+  --status-red: #ef4444;
+  --status-yellow: #eab308;
+  --status-green: #4ade80;
 
-  --success-background: #f0fdf4; /* tailwind green 50 USED IN SUCCESS MSG light-green*/ 
-  --success-foreground: #14532d; /* tailwind green 900 USED IN SUCCESS MSG dark-green */
+  --success-background: #f0fdf4;
+  --success-foreground: #14532d;
 
-  --high-indigo: #4338ca;  /*tailwind indigo 700*/ 
-  --medium-indigo: #6366f1;  /* tailwind indigo 500 */
-  --medium-dark-blue:#1d4ed8; /* tailwind blue 700 Change in component (--ring)*/
+  --high-indigo: #4338ca;
+  --medium-indigo: #6366f1;
+  --medium-dark-blue:#1d4ed8;
 }
 
 .dark {
-  --background: 224 71% 0%; /* hsl(224 71% 4%) */
-  --foreground: 213 31% 0%; /* hsl(213 31% 91%) */
-  --muted: 223 47% 0%; /* hsl(223 47% 11%) */
-  --muted-foreground: 215.4 16.3% 0%; /* hsl(215 16% 56%) */
-  --popover: 224 71% 0%; /* hsl(224 71% 4%) */
-  --popover-foreground: 215 20.2% 0%; /* hsl(215 20% 65%) */
-  --card: 224 71% 0%; /* hsl(224 71% 4%) */
-  --card-foreground: 213 31% 0%; /* hsl(213 31% 91%) */
-  --border: 216 34% 0%; /* hsl(216 34% 17%) */
-  --input: 216 34% 0%; /* hsl(216 34% 17%) */
-  --primary: 210 40% 0%; /* hsl(210 40% 98%) */
-  --primary-foreground: 222.2 47.4% 0%; /* hsl(222 47% 1%) */
-  --secondary: 222.2 47.4% 0%; /* hsl(222 47% 11%) */
-  --secondary-foreground: 210 40% 0%; /* hsl(210 40% 98%) */
-  --accent: 216 34% 0%; /* hsl(216 34% 17%) */
-  --accent-foreground: 210 40% 0%; /* hsl(210 40% 98%) */
-  --destructive: 0 63% 0%; /* hsl(0 63% 31%) */
-  --destructive-foreground: 210 40% 0%; /* hsl(210 40% 98%) */
-  --ring: 216 34% 0%; /* hsl(216 34% 17%) */
+  --background: 224 71% 4%; /* hsl(224 71% 4%) */
+  --foreground: 213 31% 85%; /* hsl(213 31% 91%) */
+
+  --muted: 223 40% 11%; /* hsl(223 47% 11%) */
+  --muted-foreground: 215.4 16.3% 56.9%; /* hsl(215 16% 56%) */
+
+  --popover: 224 71% 4%; /* hsl(224 71% 4%) */
+  --popover-foreground: 215 20.2% 65.1%; /* hsl(215 20% 65%) */
+
+  --card: 224 71% 7%; /* hsl(224 71% 4%) */
+  --card-foreground: 213 31% 80%; /* hsl(213 31% 91%) */
+
+  --border: 216 24% 17%; /* hsl(216 34% 17%) */
+  --input: 216 24% 17%; /* hsl(216 34% 17%) */
+
+  --primary: 210 40% 80%; /* hsl(210 40% 98%) */
+  --primary-foreground: 222.2 47.4% 1.2%; /* hsl(222 47% 1%) */
+
+  --secondary: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
+  --secondary-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
+
+  --accent: 216 24% 17%; /* hsl(216 34% 17%) */
+  --accent-foreground: 210 30% 98%; /* hsl(210 40% 98%) */
+
+  --destructive: 0 63% 31%; /* hsl(0 63% 31%) */
+  --destructive-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
+
+  --ring: 216 24% 30%; /* hsl(216 24% 30%) */
+
   --radius: 0.5rem;
 
-  --round-btn-shadow: #000000;
-  --hover-btn-background: #000000;
+  --round-btn-shadow: #00000063;
 
-  --build-background: #000000;
-  --build-trigger: 	#000000; /* hsl(11, 65%, 61%) */
-  --chat-trigger: #000000; /* tailwind blue 100 USED IN CHAT BACKGROUND */
+  --build-trigger: 	#dc735b;
+  --chat-trigger: #5c8be1;
 
-  --error-background: #000000; /* tailwind red 50 USED IN START ERROR MESSAGE BG light-red */
-  --error-foreground: #000000; /* tailwind red 800 USED IN START ERROR MESSAGE TEXT almost-dark-red */
+  --error-foreground: #c2b7b7;
+  --error-background: #671212;
 
-  --status-red: #000000; /* tailwind red 500 medium-red*/
-  --status-yellow: #000000; /* tailwind yellow 500 medium-yellow*/
-  --status-green: #000000; /* tailwind green 400 medium-green*/
+  --status-red: #ef4444;
+  --status-yellow: #eab308;
+  --status-green: #4ade80;
 
-  --success-background: #000000; /* tailwind green 50 USED IN SUCCESS MSG light-green*/ 
-  --success-foreground: #000000; /* tailwind green 900 USED IN SUCCESS MSG dark-green */
-  --high-indigo: #000000;  /*tailwind indigo 700*/ 
-  --medium-indigo: #000000;  /* tailwind indigo 500 */
-  --medium-dark-blue:#000000; /* tailwind blue 700 Change in component (--ring)*/
+  --success-background: #f0fdf4;
+  --success-foreground: #14532d;
+  --high-indigo: #4338ca;
+  --medium-indigo: #6366f1;
+  --medium-dark-blue:#1d4ed8;
 }}
 
 @layer base {

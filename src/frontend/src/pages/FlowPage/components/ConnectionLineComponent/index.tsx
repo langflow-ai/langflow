@@ -11,6 +11,7 @@ const ConnectionLineComponent = ({
     <g>
       <path
         fill="none"
+        // ! Replace hash # colors here
         stroke="#222"
         strokeWidth={1.5}
         className="animated "

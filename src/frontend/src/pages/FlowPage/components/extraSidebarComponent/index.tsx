@@ -133,7 +133,8 @@ export default function ExtraSidebar() {
           }}
         />
         <div className="absolute inset-y-0 right-0 flex py-1.5 pr-3 items-center">
-          <Search size={20} color="#000000" />
+        {/* ! replace hash color here */}
+          <Search size={20} className="text-primary" />
         </div>
       </div>
 

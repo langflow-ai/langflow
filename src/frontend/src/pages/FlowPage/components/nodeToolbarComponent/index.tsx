@@ -45,8 +45,8 @@ const NodeToolbarComponent = (props) => {
             <button
               className={classNames(
                 nodeLength > 0
-                  ? "text-foreground transition-all duration-500 ease-in-out  shadow-md relative -ml-px inline-flex items-center bg-background px-2 py-2  ring-1 ring-inset ring-ring hover:bg-muted focus:z-10"
-                  : "text-foreground transition-all duration-500 ease-in-out  shadow-md relative -ml-px inline-flex items-center bg-background px-2 py-2  ring-1 ring-inset ring-ring hover:bg-muted focus:z-10 rounded-r-md"
+                  ? "text-foreground transition-all duration-500 ease-in-out shadow-md relative -ml-px inline-flex items-center bg-background px-2 py-2  ring-1 ring-inset ring-ring hover:bg-muted focus:z-10"
+                  : "text-foreground transition-all duration-500 ease-in-out shadow-md relative -ml-px inline-flex items-center bg-background px-2 py-2  ring-1 ring-inset ring-ring hover:bg-muted focus:z-10 rounded-r-md"
               )}
               onClick={(event) => {
                 event.preventDefault();
@@ -72,7 +72,7 @@ const NodeToolbarComponent = (props) => {
           {nodeLength > 0 && (
             <ShadTooltip delayDuration={1000} content="Edit" side="top">
               <button
-                className="text-foreground transition-all duration-500 ease-in-out  shadow-md relative -ml-px inline-flex items-center bg-background px-2 py-2  ring-1 ring-inset ring-ring hover:bg-muted focus:z-10 rounded-r-md"
+                className="text-foreground transition-all duration-500 ease-in-out shadow-md relative -ml-px inline-flex items-center bg-background px-2 py-2 ring-1 ring-inset ring-ring hover:bg-muted focus:z-10 rounded-r-md"
                 onClick={(event) => {
                   event.preventDefault();
                   props.openPopUp(<EditNodeModal data={props.data} />);
