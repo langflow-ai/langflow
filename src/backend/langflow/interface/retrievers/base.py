@@ -13,6 +13,8 @@ from langflow.utils.util import build_template_from_method
 class RetrieverCreator(LangChainTypeCreator):
     type_name: str = "retrievers"
 
+    from_method_nodes = {"MultiQueryRetriever": "from_llm"}
+
     @property
     def frontend_node_class(self) -> Type[RetrieverFrontendNode]:
         return RetrieverFrontendNode
