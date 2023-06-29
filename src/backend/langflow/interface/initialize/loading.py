@@ -93,8 +93,10 @@ def instantiate_memory(node_type, class_object, params):
         return class_object(**params)
     # I want to catch a specific attribute error that happens
     # when the object does not have a cursor attribute
-    except AttributeError as exc:
-        if "object has no attribute 'cursor'" in str(exc):
+    except Exception as exc:
+        if "object has no attribute 'cursor'" in str(
+            exc
+        ) or 'object has no field "conn"' in str(exc):
             raise AttributeError(
                 f"Failed to build connection to database. Please check your connection string and try again. Error: {exc}"
             ) from exc
