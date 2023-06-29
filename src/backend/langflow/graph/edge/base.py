@@ -30,8 +30,7 @@ class Edge:
             (
                 output
                 for output in self.source_types
-                for target_req in self.target_reqs
-                if output in target_req
+                if output in self.target_reqs
             ),
             None,
         )
