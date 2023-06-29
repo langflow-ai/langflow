@@ -15,13 +15,13 @@ from langflow.interface.custom_lists import CUSTOM_NODES
 from langflow.interface.importing.utils import get_function, import_by_type
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.chains.base import chain_creator
+from langflow.interface.retrievers.base import retriever_creator
 from langflow.interface.utils import load_file_into_dict
 from langflow.utils import validate
 from langchain.chains.base import Chain
 from langchain.vectorstores.base import VectorStore
 from langchain.document_loaders.base import BaseLoader
 from langchain.prompts.base import BasePromptTemplate
-from langflow.chat.config import ChatConfig
 
 
 def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
@@ -49,8 +49,8 @@ def convert_params_to_sets(params):
 
 def convert_kwargs(params):
     # if *kwargs are passed as a string, convert to dict
-    # first find any key that has kwargs in it
-    kwargs_keys = [key for key in params.keys() if "kwargs" in key]
+    # first find any key that has kwargs or config in it
+    kwargs_keys = [key for key in params.keys() if "kwargs" in key or "config" in key]
     for key in kwargs_keys:
         if isinstance(params[key], str):
             params[key] = json.loads(params[key])
@@ -80,16 +80,44 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
         return instantiate_chains(node_type, class_object, params)
     elif base_type == "llms":
         return instantiate_llm(node_type, class_object, params)
+    elif base_type == "retrievers":
+        return instantiate_retriever(node_type, class_object, params)
+    elif base_type == "memory":
+        return instantiate_memory(node_type, class_object, params)
     else:
         return class_object(**params)
 
 
-def instantiate_llm(node_type, class_object, params: Dict):
-    # This is a workaround so JinaChat works until streaming is implemented
-    # if "openai_api_base" in params and "jina" in params["openai_api_base"]:
-    # False if condition is True
-    ChatConfig.streaming = "jina" not in params.get("openai_api_base", "")
+def instantiate_memory(node_type, class_object, params):
+    try:
+        return class_object(**params)
+    # I want to catch a specific attribute error that happens
+    # when the object does not have a cursor attribute
+    except Exception as exc:
+        if "object has no attribute 'cursor'" in str(
+            exc
+        ) or 'object has no field "conn"' in str(exc):
+            raise AttributeError(
+                (
+                    "Failed to build connection to database."
+                    f" Please check your connection string and try again. Error: {exc}"
+                )
+            ) from exc
+        raise exc
 
+
+def instantiate_retriever(node_type, class_object, params):
+    if "retriever" in params and hasattr(params["retriever"], "as_retriever"):
+        params["retriever"] = params["retriever"].as_retriever()
+    if node_type in retriever_creator.from_method_nodes:
+        method = retriever_creator.from_method_nodes[node_type]
+        if class_method := getattr(class_object, method, None):
+            return class_method(**params)
+        raise ValueError(f"Method {method} not found in {class_object}")
+    return class_object(**params)
+
+
+def instantiate_llm(node_type, class_object, params: Dict):
     return class_object(**params)
 
 
@@ -262,6 +290,8 @@ def load_agent_executor(agent_class: type[agent_module.Agent], params, **kwargs)
     """Load agent executor from agent class, tools and chain"""
     allowed_tools: Sequence[BaseTool] = params.get("allowed_tools", [])
     llm_chain = params["llm_chain"]
+    # agent has hidden args for memory. might need to be support
+    # memory = params["memory"]
     # if allowed_tools is not a list or set, make it a list
     if not isinstance(allowed_tools, (list, set)) and isinstance(
         allowed_tools, BaseTool
@@ -274,6 +304,7 @@ def load_agent_executor(agent_class: type[agent_module.Agent], params, **kwargs)
     return AgentExecutor.from_agent_and_tools(
         agent=agent,
         tools=allowed_tools,
+        # memory=memory,
         **kwargs,
     )
 

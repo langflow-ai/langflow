@@ -165,6 +165,7 @@ def build_template_from_method(
                         "required": param.default == param.empty,
                     }
                     for name, param in params.items()
+                    if name not in ["self", "kwargs", "args"]
                 },
             }
 
@@ -232,6 +233,9 @@ def format_dict(d, name: Optional[str] = None):
             continue
 
         _type = value["type"]
+
+        if not isinstance(_type, str):
+            _type = _type.__name__
 
         # Remove 'Optional' wrapper
         if "Optional" in _type:

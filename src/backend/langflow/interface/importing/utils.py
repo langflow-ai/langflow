@@ -44,6 +44,7 @@ def import_by_type(_type: str, name: str) -> Any:
         "documentloaders": import_documentloader,
         "textsplitters": import_textsplitter,
         "utilities": import_utility,
+        "retrievers": import_retriever,
     }
     if _type == "llms":
         key = "chat" if "chat" in name.lower() else "llm"
@@ -57,6 +58,11 @@ def import_by_type(_type: str, name: str) -> Any:
 def import_chat_llm(llm: str) -> BaseChatModel:
     """Import chat llm from llm name"""
     return import_class(f"langchain.chat_models.{llm}")
+
+
+def import_retriever(retriever: str) -> Any:
+    """Import retriever from retriever name"""
+    return import_module(f"from langchain.retrievers import {retriever}")
 
 
 def import_memory(memory: str) -> Any:
