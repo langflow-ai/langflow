@@ -144,3 +144,6 @@ wrappers:
   # - ChatPromptTemplate
   # - SystemMessagePromptTemplate
   # - HumanMessagePromptTemplate
+output_parsers:
+  - StructuredOutputParser
+  - ResponseSchema
