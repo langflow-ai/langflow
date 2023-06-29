@@ -1,11 +1,12 @@
 import json
-from typing import Any, Callable, Dict, Sequence
+from typing import Any, Callable, Dict, Sequence, Type
 
 from langchain.agents import ZeroShotAgent
 from langchain.agents import agent as agent_module
 from langchain.agents.agent import AgentExecutor
 from langchain.agents.agent_toolkits.base import BaseToolkit
 from langchain.agents.tools import BaseTool
+
 from langflow.interface.initialize.vector_store import vecstore_initializer
 
 from pydantic import ValidationError
@@ -16,6 +17,10 @@ from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.chains.base import chain_creator
 from langflow.interface.utils import load_file_into_dict
 from langflow.utils import validate
+from langchain.chains.base import Chain
+from langchain.vectorstores.base import VectorStore
+from langchain.document_loaders.base import BaseLoader
+from langchain.prompts.base import BasePromptTemplate
 
 
 def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
@@ -43,8 +48,8 @@ def convert_params_to_sets(params):
 
 def convert_kwargs(params):
     # if *kwargs are passed as a string, convert to dict
-    # first find any key that has kwargs in it
-    kwargs_keys = [key for key in params.keys() if "kwargs" in key]
+    # first find any key that has kwargs or config in it
+    kwargs_keys = [key for key in params.keys() if "kwargs" in key or "config" in key]
     for key in kwargs_keys:
         if isinstance(params[key], str):
             params[key] = json.loads(params[key])
@@ -72,11 +77,17 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
         return instantiate_utility(node_type, class_object, params)
     elif base_type == "chains":
         return instantiate_chains(node_type, class_object, params)
+    elif base_type == "llms":
+        return instantiate_llm(node_type, class_object, params)
     else:
         return class_object(**params)
 
 
-def instantiate_chains(node_type, class_object, params):
+def instantiate_llm(node_type, class_object, params: Dict):
+    return class_object(**params)
+
+
+def instantiate_chains(node_type, class_object: Type[Chain], params: Dict):
     if "retriever" in params and hasattr(params["retriever"], "as_retriever"):
         params["retriever"] = params["retriever"].as_retriever()
     if node_type in chain_creator.from_method_nodes:
@@ -88,11 +99,11 @@ def instantiate_chains(node_type, class_object, params):
     return class_object(**params)
 
 
-def instantiate_agent(class_object, params):
+def instantiate_agent(class_object: Type[agent_module.Agent], params: Dict):
     return load_agent_executor(class_object, params)
 
 
-def instantiate_prompt(node_type, class_object, params):
+def instantiate_prompt(node_type, class_object: Type[BasePromptTemplate], params: Dict):
     if node_type == "ZeroShotPrompt":
         if "tools" not in params:
             params["tools"] = []
@@ -100,7 +111,7 @@ def instantiate_prompt(node_type, class_object, params):
     return class_object(**params)
 
 
-def instantiate_tool(node_type, class_object, params):
+def instantiate_tool(node_type, class_object: Type[BaseTool], params: Dict):
     if node_type == "JsonSpec":
         params["dict_"] = load_file_into_dict(params.pop("path"))
         return class_object(**params)
@@ -118,7 +129,7 @@ def instantiate_tool(node_type, class_object, params):
     return class_object(**params)
 
 
-def instantiate_toolkit(node_type, class_object, params):
+def instantiate_toolkit(node_type, class_object: Type[BaseToolkit], params: Dict):
     loaded_toolkit = class_object(**params)
     # Commenting this out for now to use toolkits as normal tools
     # if toolkits_creator.has_create_function(node_type):
@@ -128,7 +139,7 @@ def instantiate_toolkit(node_type, class_object, params):
     return loaded_toolkit
 
 
-def instantiate_embedding(class_object, params):
+def instantiate_embedding(class_object, params: Dict):
     params.pop("model", None)
     params.pop("headers", None)
     try:
@@ -142,7 +153,7 @@ def instantiate_embedding(class_object, params):
         return class_object(**params)
 
 
-def instantiate_vectorstore(class_object, params):
+def instantiate_vectorstore(class_object: Type[VectorStore], params: Dict):
     search_kwargs = params.pop("search_kwargs", {})
     if initializer := vecstore_initializer.get(class_object.__name__):
         vecstore = initializer(class_object, params)
@@ -158,7 +169,7 @@ def instantiate_vectorstore(class_object, params):
     return vecstore
 
 
-def instantiate_documentloader(class_object, params):
+def instantiate_documentloader(class_object: Type[BaseLoader], params: Dict):
     if "file_filter" in params:
         # file_filter will be a string but we need a function
         # that will be used to filter the files using file_filter
@@ -171,35 +182,55 @@ def instantiate_documentloader(class_object, params):
             extension.strip() in x for extension in extensions
         )
     metadata = params.pop("metadata", None)
+    if metadata and isinstance(metadata, str):
+        try:
+            metadata = json.loads(metadata)
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                "The metadata you provided is not a valid JSON string."
+            ) from exc
     docs = class_object(**params).load()
+    # Now if metadata is an empty dict, we will not add it to the documents
     if metadata:
-        if isinstance(metadata, str):
-            try:
-                metadata = json.loads(metadata)
-            except json.JSONDecodeError as exc:
-                raise ValueError(
-                    "The metadata you provided is not a valid JSON string."
-                ) from exc
-
         for doc in docs:
-            doc.metadata = metadata
+            # If the document already has metadata, we will not overwrite it
+            if not doc.metadata:
+                doc.metadata = metadata
+            else:
+                doc.metadata.update(metadata)
 
     return docs
 
 
-def instantiate_textsplitter(class_object, params):
+def instantiate_textsplitter(
+    class_object,
+    params: Dict,
+):
     try:
         documents = params.pop("documents")
-    except KeyError as e:
+    except KeyError as exc:
         raise ValueError(
             "The source you provided did not load correctly or was empty."
             "Try changing the chunk_size of the Text Splitter."
-        ) from e
-    text_splitter = class_object(**params)
+        ) from exc
+
+    if (
+        "separator_type" in params and params["separator_type"] == "Text"
+    ) or "separator_type" not in params:
+        params.pop("separator_type", None)
+        text_splitter = class_object(**params)
+    else:
+        from langchain.text_splitter import Language
+
+        language = params.pop("separator_type", None)
+        params["language"] = Language(language)
+        params.pop("separators", None)
+
+        text_splitter = class_object.from_language(**params)
     return text_splitter.split_documents(documents)
 
 
-def instantiate_utility(node_type, class_object, params):
+def instantiate_utility(node_type, class_object, params: Dict):
     if node_type == "SQLDatabase":
         return class_object.from_uri(params.pop("uri"))
     return class_object(**params)

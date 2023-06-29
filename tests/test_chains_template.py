@@ -38,6 +38,7 @@ def test_conversation_chain(client: TestClient):
         "type": "BaseMemory",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["verbose"] == {
         "required": False,
@@ -49,6 +50,7 @@ def test_conversation_chain(client: TestClient):
         "type": "bool",
         "list": False,
         "advanced": True,
+        "info": "",
     }
     assert template["llm"] == {
         "required": True,
@@ -60,6 +62,7 @@ def test_conversation_chain(client: TestClient):
         "type": "BaseLanguageModel",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["input_key"] == {
         "required": True,
@@ -72,6 +75,7 @@ def test_conversation_chain(client: TestClient):
         "type": "str",
         "list": False,
         "advanced": True,
+        "info": "",
     }
     assert template["output_key"] == {
         "required": True,
@@ -84,6 +88,7 @@ def test_conversation_chain(client: TestClient):
         "type": "str",
         "list": False,
         "advanced": True,
+        "info": "",
     }
     assert template["_type"] == "ConversationChain"
 
@@ -120,6 +125,7 @@ def test_llm_chain(client: TestClient):
         "type": "BaseMemory",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["verbose"] == {
         "required": False,
@@ -132,6 +138,7 @@ def test_llm_chain(client: TestClient):
         "type": "bool",
         "list": False,
         "advanced": True,
+        "info": "",
     }
     assert template["llm"] == {
         "required": True,
@@ -143,6 +150,7 @@ def test_llm_chain(client: TestClient):
         "type": "BaseLanguageModel",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["output_key"] == {
         "required": True,
@@ -155,6 +163,7 @@ def test_llm_chain(client: TestClient):
         "type": "str",
         "list": False,
         "advanced": True,
+        "info": "",
     }
 
 
@@ -184,6 +193,7 @@ def test_llm_checker_chain(client: TestClient):
         "type": "BaseLanguageModel",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["_type"] == "LLMCheckerChain"
 
@@ -217,6 +227,7 @@ def test_llm_math_chain(client: TestClient):
         "type": "BaseMemory",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["verbose"] == {
         "required": False,
@@ -229,6 +240,7 @@ def test_llm_math_chain(client: TestClient):
         "type": "bool",
         "list": False,
         "advanced": True,
+        "info": "",
     }
     assert template["llm"] == {
         "required": True,
@@ -240,6 +252,7 @@ def test_llm_math_chain(client: TestClient):
         "type": "BaseLanguageModel",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["input_key"] == {
         "required": True,
@@ -252,6 +265,7 @@ def test_llm_math_chain(client: TestClient):
         "type": "str",
         "list": False,
         "advanced": True,
+        "info": "",
     }
     assert template["output_key"] == {
         "required": True,
@@ -264,6 +278,7 @@ def test_llm_math_chain(client: TestClient):
         "type": "str",
         "list": False,
         "advanced": True,
+        "info": "",
     }
     assert template["_type"] == "LLMMathChain"
 
@@ -304,6 +319,7 @@ def test_series_character_chain(client: TestClient):
         "type": "BaseLanguageModel",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["character"] == {
         "required": True,
@@ -315,6 +331,7 @@ def test_series_character_chain(client: TestClient):
         "type": "str",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["series"] == {
         "required": True,
@@ -326,6 +343,7 @@ def test_series_character_chain(client: TestClient):
         "type": "str",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["_type"] == "SeriesCharacterChain"
 
@@ -367,6 +385,7 @@ def test_mid_journey_prompt_chain(client: TestClient):
         "type": "BaseLanguageModel",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     # Test the description object
     assert (
@@ -406,6 +425,7 @@ def test_time_travel_guide_chain(client: TestClient):
         "type": "BaseLanguageModel",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["memory"] == {
         "required": False,
@@ -417,6 +437,7 @@ def test_time_travel_guide_chain(client: TestClient):
         "type": "BaseChatMemory",
         "list": False,
         "advanced": False,
+        "info": "",
     }
 
     assert chain["description"] == "Time travel guide chain."
