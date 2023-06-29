@@ -7,13 +7,13 @@ from langflow.interface.importing.utils import import_class
 from langflow.settings import settings
 from langflow.template.frontend_node.retrievers import RetrieverFrontendNode
 from langflow.utils.logger import logger
-from langflow.utils.util import build_template_from_method
+from langflow.utils.util import build_template_from_method, build_template_from_class
 
 
 class RetrieverCreator(LangChainTypeCreator):
     type_name: str = "retrievers"
 
-    from_method_nodes = {"MultiQueryRetriever": "from_llm"}
+    from_method_nodes = {"MultiQueryRetriever": "from_llm", "ZepRetriever": "__init__"}
 
     @property
     def frontend_node_class(self) -> Type[RetrieverFrontendNode]:
@@ -31,9 +31,16 @@ class RetrieverCreator(LangChainTypeCreator):
     def get_signature(self, name: str) -> Optional[Dict]:
         """Get the signature of an embedding."""
         try:
-            return build_template_from_method(
-                name, type_to_cls_dict=self.type_to_loader_dict, method_name="from_llm"
-            )
+            if name in self.from_method_nodes:
+                return build_template_from_method(
+                    name,
+                    type_to_cls_dict=self.type_to_loader_dict,
+                    method_name=self.from_method_nodes[name],
+                )
+            else:
+                return build_template_from_class(
+                    name, type_to_cls_dict=self.type_to_loader_dict
+                )
         except ValueError as exc:
             raise ValueError(f"Retriever {name} not found") from exc
         except AttributeError as exc:
