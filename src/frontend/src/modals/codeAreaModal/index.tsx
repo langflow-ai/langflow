@@ -132,7 +132,7 @@ export default function CodeAreaModal({
           className="w-full h-full overflow-hidden text-center bg-muted rounded-md border"
           onValueChange={(value) => setActiveTab(value)}
         >
-          <div className="flex flex-col items-start h-80 px-2">
+          <div className="flex flex-col items-start h-72 px-2">
             <TabsList>
               {tabs.map((tab, index) => (
                 <TabsTrigger key={index} value={index.toString()}>{tab.name}</TabsTrigger>
@@ -141,9 +141,9 @@ export default function CodeAreaModal({
             {tabs.map((tab, index) => (
               <TabsContent
                 value={index.toString()}
-                className="overflow-hidden w-full h-full px-4 pb-4 -mt-1 "
+                className="overflow-hidden w-full h-full px-4 pb-4 mt-1"
               >
-                {tab.name === "code" ? <div className="h-full w-full my-2">
+                {tab.name === "code" ? <div className="h-full w-full">
                   <AceEditor
                     value={code}
                     mode="python"
@@ -159,9 +159,10 @@ export default function CodeAreaModal({
                     }}
                     className="w-full rounded-lg h-full custom-scroll border-[1px] border-gray-300 dark:border-gray-600"
                   />
-                </div> : <div className="w-full h-full bg-red-400">
-                  <h1>{error?.detail}</h1>
-                  <div></div>
+                </div> : <div className="w-full h-full  bg-red-200 p-2 flex flex-col overflow-scroll custom-scroll text-left">
+                  <h1 className="text-red-600 text-lg">{error?.detail}</h1>
+                  <span className="border border-red-300 w-full"></span>
+                  <div className="text-red-500 text-sm">{error?.traceback}</div>
                   </div>}
               </TabsContent>))
             }
