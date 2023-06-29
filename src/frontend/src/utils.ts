@@ -122,7 +122,7 @@ export const nodeColors: { [char: string]: string } = {
   toolkits: "#DB2C2C",
   wrappers: "#E6277A",
   utilities: "#31A3CC",
-  retrievers: "#F5B85A",
+  retrievers: "#e6b25a",
   unknown: "#9CA3AF",
 };
 
