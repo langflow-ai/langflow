@@ -230,6 +230,9 @@ utilities:
     documentation: ""
   WolframAlphaAPIWrapper:
     documentation: ""
+retrievers:
+  MultiQueryRetriever:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/retrievers/how_to/MultiQueryRetriever"
 vectorstores:
   Chroma:
     documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/chroma"
