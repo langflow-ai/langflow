@@ -648,7 +648,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         setTabsState,
         paste,
         getTweak,
-        setTweak
+        setTweak,
       }}
     >
       {children}

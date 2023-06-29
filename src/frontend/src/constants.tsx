@@ -71,7 +71,9 @@ FLOW_ID = "${flowId}"
 # You can tweak the flow by adding a tweaks dictionary
 # e.g {"OpenAI-XXXXX": {"model_name": "gpt-4"}}
 TWEAKS = ${
-    tweak && tweak.length > 0 ? buildTweakObject(tweak): JSON.stringify(tweaks, null, 2)
+    tweak && tweak.length > 0
+      ? buildTweakObject(tweak)
+      : JSON.stringify(tweaks, null, 2)
   }
 
 def run_flow(message: str, flow_id: str, tweaks: dict = None) -> dict:
@@ -111,7 +113,9 @@ export const getCurlCode = (flow: FlowType, tweak?): string => {
   }/api/v1/process/${flowId} \\
   -H 'Content-Type: application/json' \\
   -d '{"inputs": {"input": message}, "tweaks": ${
-    tweak && tweak.length > 0 ? buildTweakObject(tweak) : JSON.stringify(tweaks, null, 2)
+    tweak && tweak.length > 0
+      ? buildTweakObject(tweak)
+      : JSON.stringify(tweaks, null, 2)
   }}'`;
 };
 /**
@@ -124,25 +128,26 @@ export const getPythonCode = (flow: FlowType, tweak?): string => {
   const tweaks = buildTweaks(flow);
   return `from langflow import load_flow_from_json
 TWEAKS = ${
-  tweak && tweak.length > 0 ? buildTweakObject(tweak) : JSON.stringify(tweaks, null, 2)
+    tweak && tweak.length > 0
+      ? buildTweakObject(tweak)
+      : JSON.stringify(tweaks, null, 2)
   }
 flow = load_flow_from_json("${flowName}.json", tweaks=TWEAKS)
 # Now you can use it like any chain
 flow("Hey, have you heard of LangFlow?")`;
 };
 
-function buildTweakObject(tweak){
-  tweak.forEach(el => {
-    Object.keys(el).forEach(key => {
+function buildTweakObject(tweak) {
+  tweak.forEach((el) => {
+    Object.keys(el).forEach((key) => {
       for (let kp in el[key]) {
-        try{
+        try {
           el[key][kp] = JSON.parse(el[key][kp]);
-        }
-        catch{}
+        } catch {}
       }
-    })
+    });
   });
-  
+
   const tweakString = JSON.stringify(tweak, null, 2);
   return tweakString;
 }

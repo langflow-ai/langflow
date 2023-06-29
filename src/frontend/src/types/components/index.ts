@@ -44,7 +44,6 @@ export type InputListComponentType = {
   disabled: boolean;
   editNode?: boolean;
   onAddInput?: (value?: string[]) => void;
-
 };
 
 export type TextAreaComponentType = {
@@ -114,7 +113,7 @@ export type RadialProgressType = {
   color?: string;
 };
 
-export type AccordionComponentType  = {
+export type AccordionComponentType = {
   children?: ReactElement;
   open?: string[];
   trigger?: string;

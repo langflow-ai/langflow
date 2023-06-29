@@ -13,7 +13,6 @@ interface PopUpProviderProps {
   children: React.ReactNode;
 }
 
-
 const PopUpProvider = ({ children }: PopUpProviderProps) => {
   const [popUpElements, setPopUpElements] = useState<JSX.Element[]>([]);
 
@@ -27,9 +26,10 @@ const PopUpProvider = ({ children }: PopUpProviderProps) => {
 
   const [closeEdit, setCloseEdit] = useState("");
 
-
   return (
-    <PopUpContext.Provider value={{ openPopUp, closePopUp, closeEdit, setCloseEdit }}>
+    <PopUpContext.Provider
+      value={{ openPopUp, closePopUp, closeEdit, setCloseEdit }}
+    >
       {children}
       {popUpElements[0]}
     </PopUpContext.Provider>

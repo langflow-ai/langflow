@@ -17,15 +17,17 @@ export default function AccordionComponent({
   children,
   open = [],
 }: AccordionComponentType) {
-  const [value, setValue] = useState(open.length == 0 ? "" : getOpenAccordion());
+  const [value, setValue] = useState(
+    open.length == 0 ? "" : getOpenAccordion()
+  );
 
-  function getOpenAccordion(){
+  function getOpenAccordion() {
     let value = "";
-    open.forEach(el => {
-      if(el == trigger){
+    open.forEach((el) => {
+      if (el == trigger) {
         value = trigger;
-      } 
-    })
+      }
+    });
 
     return value;
   }
