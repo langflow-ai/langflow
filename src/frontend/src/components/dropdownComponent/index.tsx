@@ -47,7 +47,7 @@ export default function Dropdown({
                   }
                 >
                   <ChevronsUpDown
-                    className="h-5 w-5 text-gray-400"
+                    className="h-5 w-5 text-border"
                     aria-hidden="true"
                   />
                 </span>

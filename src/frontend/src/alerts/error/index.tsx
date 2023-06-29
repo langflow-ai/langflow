@@ -44,7 +44,7 @@ export default function ErrorAlert({
         <div className="flex">
           <div className="flex-shrink-0">
             <XCircle
-              className="h-5 w-5 text-red-400"
+              className="h-5 w-5 text-status-red"
               aria-hidden="true"
             />
           </div>

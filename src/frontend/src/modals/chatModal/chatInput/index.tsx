@@ -51,8 +51,8 @@ export default function ChatInput({
         }}
         className={classNames(
           lockChat
-            ? " bg-input text-black "
-            : "  bg-background-200 text-black ",
+            ? " bg-input text-foreground "
+            : "  bg-background text-foreground ",
           "form-input block w-full custom-scroll rounded-md border-ring  pr-10 sm:text-sm" +
             INPUT_STYLE
         )}
@@ -62,12 +62,12 @@ export default function ChatInput({
         <button disabled={lockChat} onClick={() => sendMessage()}>
           {lockChat ? (
             <Lock
-              className="h-5 w-5 text-gray-500   animate-pulse"
+              className="h-5 w-5 text-ring   animate-pulse"
               aria-hidden="true"
             />
           ) : (
             <Send
-              className="h-5 w-5 text-gray-500 hover:text-gray-600 "
+              className="h-5 w-5 text-ring hover:text-muted-foreground "
               aria-hidden="true"
             />
           )}

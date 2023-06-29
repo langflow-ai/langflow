@@ -182,11 +182,11 @@ export default function ExtraSidebar() {
                               );
                             }}
                           >
-                            <div className="flex w-full justify-between text-sm px-3 py-1 bg-white items-center border-dashed border-gray-400  border-l-0 rounded-md rounded-l-none border">
-                              <span className="text-black  w-full pr-1 truncate text-xs">
+                            <div className="flex w-full justify-between text-sm px-3 py-1 bg-white items-center border-dashed border-ring  border-l-0 rounded-md rounded-l-none border">
+                              <span className="text-foreground  w-full pr-1 truncate text-xs">
                                 {data[d][t].display_name}
                               </span>
-                              <Menu className="w-4 h-6  text-gray-400 " />
+                              <Menu className="w-4 h-6  text-ring " />
                             </div>
                           </div>
                         </div>

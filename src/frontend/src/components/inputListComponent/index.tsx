@@ -73,7 +73,7 @@ export default function InputListComponent({
                 onChange(inputList);
               }}
             >
-              <X className="w-4 h-4 hover:text-red-600" />
+              <X className="w-4 h-4 hover:text-status-red" />
             </button>
           )}
         </div>

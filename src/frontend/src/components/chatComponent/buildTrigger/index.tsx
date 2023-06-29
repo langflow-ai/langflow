@@ -174,9 +174,9 @@ export default function BuildTrigger({
                   value={progress}
                 ></RadialProgressComponent>
               ) : isBuilding ? (
-                <Loading strokeWidth={1.5} style={{ color: "#fb923c" }} />
+                <Loading strokeWidth={1.5} className="stroke-build-trigger"/>
               ) : (
-                <Zap className="sh-6 w-6 fill-orange-400 stroke-1 stroke-orange-400" />
+                <Zap className="sh-6 w-6 fill-build-trigger stroke-1 stroke-build-trigger" />
               )}
             </div>
           </button>

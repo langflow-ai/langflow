@@ -52,7 +52,7 @@ export default function CodeAreaModal({
           <DialogTitle className="flex items-center">
             <span className="pr-2">Edit Code</span>
             <TerminalSquare
-              className="h-6 w-6 text-gray-800 pl-1 "
+              className="h-6 w-6 text-primary pl-1 "
               aria-hidden="true"
             />
           </DialogTitle>

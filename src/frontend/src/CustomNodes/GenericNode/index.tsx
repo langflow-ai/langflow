@@ -108,7 +108,7 @@ export default function GenericNode({
                 delayDuration={1500}
                 content={data.node.display_name}
               >
-                <div className="ml-2 truncate text-gray-800">
+                <div className="ml-2 truncate text-primary">
                   {data.node.display_name}
                 </div>
               </ShadTooltip>
@@ -143,7 +143,7 @@ export default function GenericNode({
                   <div
                     className={classNames(
                       validationStatus && validationStatus.valid
-                        ? "w-4 h-4 rounded-full bg-red-600 opacity-100"
+                        ? "w-4 h-4 rounded-full bg-status-red opacity-100"
                         : "w-4 h-4 rounded-full bg-ring opacity-0 hidden animate-spin",
                       "absolute w-4 hover:text-ring hover: transition-all ease-in-out duration-200"
                     )}
@@ -159,9 +159,9 @@ export default function GenericNode({
                   <div
                     className={classNames(
                       !validationStatus || isBuilding
-                        ? "w-4 h-4 rounded-full  bg-yellow-500 opacity-100"
-                        : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-gray-500 transition-all ease-in-out duration-200"
+                        ? "w-4 h-4 rounded-full  bg-status-yellow opacity-100"
+                        : "w-4 h-4 rounded-full bg-ring opacity-0 hidden animate-spin",
+                      "absolute w-4 hover:text-ring transition-all ease-in-out duration-200"
                     )}
                   ></div>
                 </div>
