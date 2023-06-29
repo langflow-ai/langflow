@@ -9,6 +9,8 @@ from langflow.template.template.base import Template
 from langflow.utils import constants
 from langflow.template.frontend_node.formatter import field_formatters
 
+CLASSES_TO_REMOVE = ["Serializable", "BaseModel"]
+
 
 class FieldFormatters(BaseModel):
     formatters = {
@@ -47,6 +49,14 @@ class FrontendNode(BaseModel):
     documentation: str = ""
     field_formatters: FieldFormatters = Field(default_factory=FieldFormatters)
 
+    def process_base_classes(self) -> None:
+        """Removes unwanted base classes from the list of base classes."""
+        self.base_classes = [
+            base_class
+            for base_class in self.base_classes
+            if base_class not in CLASSES_TO_REMOVE
+        ]
+
     # field formatters is an instance attribute but it is not used in the class
     # so we need to create a method to get it
     @staticmethod
@@ -59,6 +69,7 @@ class FrontendNode(BaseModel):
 
     def to_dict(self) -> dict:
         """Returns a dict representation of the frontend node."""
+        self.process_base_classes()
         return {
             self.name: {
                 "template": self.template.to_dict(self.format_field),
