@@ -1,12 +1,6 @@
-from fastapi import (
-    APIRouter,
-    HTTPException,
-    WebSocket,
-    WebSocketException,
-    status,
-)
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketException, status
 from fastapi.responses import StreamingResponse
-from langflow.api.v1.schemas import BuiltResponse, InitResponse, StreamData
+from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, StreamData
 
 from langflow.chat.manager import ChatManager
 from langflow.graph.graph.base import Graph
@@ -32,15 +26,29 @@ async def chat(client_id: str, websocket: WebSocket):
         await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=str(exc))
 
 
-@router.post("/build/init", response_model=InitResponse, status_code=201)
-async def init_build(graph_data: dict):
+@router.post("/build/init/{flow_id}", response_model=InitResponse, status_code=201)
+async def init_build(graph_data: dict, flow_id: str):
     """Initialize the build by storing graph data and returning a unique session ID."""
 
     try:
-        flow_id = graph_data.get("id")
         if flow_id is None:
             raise ValueError("No ID provided")
-        flow_data_store[flow_id] = graph_data
+        # Check if already building
+        if (
+            flow_id in flow_data_store
+            and flow_data_store[flow_id]["status"] == BuildStatus.IN_PROGRESS
+        ):
+            return InitResponse(flowId=flow_id)
+
+        # Delete from cache if already exists
+        if flow_id in chat_manager.in_memory_cache:
+            with chat_manager.in_memory_cache._lock:
+                chat_manager.in_memory_cache.delete(flow_id)
+                logger.debug(f"Deleted flow {flow_id} from cache")
+        flow_data_store[flow_id] = {
+            "graph_data": graph_data,
+            "status": BuildStatus.IN_PROGRESS,
+        }
 
         return InitResponse(flowId=flow_id)
     except Exception as exc:
@@ -52,8 +60,9 @@ async def init_build(graph_data: dict):
 async def build_status(flow_id: str):
     """Check the flow_id is in the flow_data_store."""
     try:
-        built = flow_id in flow_data_store and not isinstance(
-            flow_data_store[flow_id], dict
+        built = (
+            flow_id in flow_data_store
+            and flow_data_store[flow_id]["status"] == BuildStatus.SUCCESS
         )
 
         return BuiltResponse(
@@ -74,6 +83,11 @@ async def stream_build(flow_id: str):
         try:
             if flow_id not in flow_data_store:
                 error_message = "Invalid session ID"
+                yield str(StreamData(event="error", data={"error": error_message}))
+                return
+
+            if flow_data_store[flow_id].get("status") == BuildStatus.IN_PROGRESS:
+                error_message = "Already building"
                 yield str(StreamData(event="error", data={"error": error_message}))
                 return
 
@@ -110,6 +124,7 @@ async def stream_build(flow_id: str):
                 except Exception as exc:
                     params = str(exc)
                     valid = False
+                    flow_data_store[flow_id]["status"] = BuildStatus.FAILURE
 
                 response = {
                     "valid": valid,
@@ -121,8 +136,10 @@ async def stream_build(flow_id: str):
                 yield str(StreamData(event="message", data=response))
 
             chat_manager.set_cache(flow_id, graph.build())
+            flow_data_store[flow_id]["status"] = BuildStatus.SUCCESS
         except Exception as exc:
             logger.error("Error while building the flow: %s", exc)
+            flow_data_store[flow_id]["status"] = BuildStatus.FAILURE
             yield str(StreamData(event="error", data={"error": str(exc)}))
         finally:
             yield str(StreamData(event="message", data=final_response))
