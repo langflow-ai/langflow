@@ -137,7 +137,6 @@ function buildTweakObject(tweak){
       for (let kp in el[key]) {
         try{
           el[key][kp] = JSON.parse(el[key][kp]);
-          console.log(el[key][kp]);
         }
         catch{}
       }
@@ -145,8 +144,6 @@ function buildTweakObject(tweak){
   });
   
   const tweakString = JSON.stringify(tweak, null, 2);
-    console.log(tweakString);
-    
   return tweakString;
 }
 
