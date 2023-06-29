@@ -10,6 +10,7 @@ import { alertContext } from "../../../contexts/alertContext";
 import { postBuildInit } from "../../../controllers/API";
 
 import RadialProgressComponent from "../../RadialProgress";
+import { TabsContext } from "../../../contexts/tabsContext";
 
 export default function BuildTrigger({
   open,
@@ -28,6 +29,7 @@ export default function BuildTrigger({
   const [isIconTouched, setIsIconTouched] = useState(false);
   const eventClick = isBuilding ? "pointer-events-none" : "";
   const [progress, setProgress] = useState(0);
+  const {saveFlow} = useContext(TabsContext)
 
   async function handleBuild(flow: FlowType) {
     try {
@@ -45,7 +47,7 @@ export default function BuildTrigger({
       const minimumLoadingTime = 200; // in milliseconds
       const startTime = Date.now();
       setIsBuilding(true);
-
+      await saveFlow(flow)
       const allNodesValid = await streamNodeData(flow);
       await enforceMinimumLoadingTime(startTime, minimumLoadingTime);
       setIsBuilt(allNodesValid);
