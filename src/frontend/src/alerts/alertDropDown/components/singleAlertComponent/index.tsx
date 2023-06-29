@@ -30,16 +30,16 @@ export default function SingleAlert({
         >
           <div className="flex-shrink-0">
             <XCircle
-              className="h-5 w-5 text-red-400"
+              className="h-5 w-5 text-status-red"
               aria-hidden="true"
             />
           </div>
           <div className="ml-3">
-            <h3 className="text-sm break-words font-medium text-red-800">
+            <h3 className="text-sm break-words font-medium text-error-foreground">
               {dropItem.title}
             </h3>
             {dropItem.list ? (
-              <div className="mt-2 text-sm text-red-700">
+              <div className="mt-2 text-sm text-error-foreground">
                 <ul className="list-disc space-y-1 pl-5">
                   {dropItem.list.map((item, idx) => (
                     <li className="break-words" key={idx}>
@@ -62,7 +62,7 @@ export default function SingleAlert({
                     removeAlert(dropItem.id);
                   }, 500);
                 }}
-                className="inline-flex rounded-md bg-red-50 p-1.5 text-red-500"
+                className="inline-flex rounded-md bg-red-50 p-1.5 text-status-red"
               >
                 <span className="sr-only">Dismiss</span>
                 <X className="h-5 w-5" aria-hidden="true" />
@@ -77,19 +77,19 @@ export default function SingleAlert({
         >
           <div className="flex-shrink-0">
             <Info
-              className="h-5 w-5 text-blue-400 "
+              className="h-5 w-5 text-medium-dark-blue"
               aria-hidden="true"
             />
           </div>
           <div className="ml-3 flex-1 md:flex md:justify-between">
-            <p className="text-sm text-blue-700">
+            <p className="text-sm text-medium-dark-blue">
               {dropItem.title}
             </p>
             <p className="mt-3 text-sm md:mt-0 md:ml-6">
               {dropItem.link ? (
                 <Link
                   to={dropItem.link}
-                  className="whitespace-nowrap font-medium text-blue-700 hover:text-ring"
+                  className="whitespace-nowrap font-medium text-medium-dark-blue hover:text-ring"
                 >
                   Details
                 </Link>
@@ -108,7 +108,7 @@ export default function SingleAlert({
                     removeAlert(dropItem.id);
                   }, 500);
                 }}
-                className="inline-flex rounded-md bg-blue-50 p-1.5 text-blue-500 "
+                className="inline-flex rounded-md bg-blue-50 p-1.5 text-medium-dark-blue "
               >
                 <span className="sr-only">Dismiss</span>
                 <X className="h-5 w-5" aria-hidden="true" />
@@ -123,12 +123,12 @@ export default function SingleAlert({
         >
           <div className="flex-shrink-0">
             <CheckCircle2
-              className="h-5 w-5 text-green-400 "
+              className="h-5 w-5 text-status-green"
               aria-hidden="true"
             />
           </div>
           <div className="ml-3">
-            <p className="text-sm font-medium text-green-800">
+            <p className="text-sm font-medium text-success-foreground">
               {dropItem.title}
             </p>
           </div>
@@ -142,7 +142,7 @@ export default function SingleAlert({
                     removeAlert(dropItem.id);
                   }, 500);
                 }}
-                className="inline-flex rounded-md bg-green-50 p-1.5 text-green-500 "
+                className="inline-flex rounded-md bg-success-background p-1.5 text-status-green"
               >
                 <span className="sr-only">Dismiss</span>
                 <X className="h-5 w-5" aria-hidden="true" />

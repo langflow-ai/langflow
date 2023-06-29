@@ -61,7 +61,7 @@ export default function ChatMessage({
           </div>
         )}
         {chat.isSend && (
-          <User2 className="w-6 h-6 -mb-1 text-gray-800 " />
+          <User2 className="w-6 h-6 -mb-1 text-primary " />
         )}
       </div>
       {!chat.isSend ? (
@@ -151,7 +151,7 @@ export default function ChatMessage({
         </div>
       ) : (
         <div className="w-full flex items-center">
-          <div className="text-start inline-block px-3 text-gray-600 ">
+          <div className="text-start inline-block px-3 text-muted-foreground ">
             <span
               className="text-muted-foreground "
               dangerouslySetInnerHTML={{

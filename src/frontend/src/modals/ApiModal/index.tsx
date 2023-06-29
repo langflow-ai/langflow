@@ -88,7 +88,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
           <DialogTitle className="flex items-center">
             <span className="pr-2">Code</span>
             <Code2
-              className="h-6 w-6 text-gray-800 pl-1 "
+              className="h-6 w-6 text-primary pl-1 "
               aria-hidden="true"
             />
           </DialogTitle>

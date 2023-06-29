@@ -97,7 +97,7 @@ export default function ParameterComponent({
         >
           {React.createElement(nodeIconsLucide[item.family])}
         </div>
-        <span className="ps-2 text-gray-950">
+        <span className="ps-2 text-foreground">
           {nodeNames[item.family] ?? ""}{" "}
           <span className={classNames(left ? "hidden" : "")}>
             {" "}

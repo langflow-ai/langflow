@@ -75,7 +75,7 @@ export default function Header() {
             href="https://github.com/logspace-ai/langflow"
             target="_blank"
             rel="noreferrer"
-            className="inline-flex shadow-sm items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background text-gray-600  border border-input hover:bg-accent hover:text-accent-foreground h-9 px-3 pr-0 rounded-md"
+            className="inline-flex shadow-sm items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background text-muted-foreground  border border-input hover:bg-accent hover:text-accent-foreground h-9 px-3 pr-0 rounded-md"
           >
             <FaGithub className="h-5 w-5 mr-2" />
             Star
@@ -102,7 +102,7 @@ export default function Header() {
 
           <Separator orientation="vertical" />
           <button
-            className="text-gray-600 hover:text-gray-500 "
+            className="text-muted-foreground hover:text-ring "
             onClick={() => {
               setDark(!dark);
             }}
