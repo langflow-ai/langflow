@@ -4,6 +4,7 @@ from typing import Optional
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.frontend_node.constants import CTRANSFORMERS_DEFAULT_CONFIG
+from langflow.template.frontend_node.constants import OPENAI_API_BASE_INFO
 
 
 class LLMFrontendNode(FrontendNode):
@@ -16,6 +17,9 @@ class LLMFrontendNode(FrontendNode):
 
         if "key" not in field.name.lower() and "token" not in field.name.lower():
             field.password = False
+
+        if field.name == "openai_api_base":
+            field.info = OPENAI_API_BASE_INFO
 
     @staticmethod
     def format_azure_field(field: TemplateField):

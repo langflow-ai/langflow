@@ -1,4 +1,9 @@
-import { classNames, nodeColors, nodeIcons, toTitleCase } from "../../utils";
+import {
+  classNames,
+  nodeColors,
+  nodeIconsLucide,
+  toTitleCase,
+} from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
 import { typesContext } from "../../contexts/typesContext";
 import { useContext, useState, useEffect, useRef } from "react";
@@ -9,7 +14,6 @@ import NodeModal from "../../modals/NodeModal";
 import Tooltip from "../../components/TooltipComponent";
 import { NodeToolbar } from "reactflow";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
-
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import { useSSE } from "../../contexts/SSEContext";
 
@@ -25,11 +29,13 @@ export default function GenericNode({
   const { types, deleteNode } = useContext(typesContext);
 
   const { closePopUp, openPopUp } = useContext(PopUpContext);
-
-  const Icon = nodeIcons[data.type] || nodeIcons[types[data.type]];
+  // any to avoid type conflict
+  const Icon: any =
+    nodeIconsLucide[data.type] || nodeIconsLucide[types[data.type]];
   const [validationStatus, setValidationStatus] = useState(null);
   // State for outline color
   const { sseData, isBuilding } = useSSE();
+  const refHtml = useRef(null);
 
   // useEffect(() => {
   //   if (reactFlowInstance) {
@@ -87,9 +93,11 @@ export default function GenericNode({
                 color: nodeColors[types[data.type]] ?? nodeColors.unknown,
               }}
             />
-            <div className="ml-2 truncate">
-              <ShadTooltip delayDuration={1500} content={data.type}>
-                <div className="ml-2 truncate text-gray-800">{data.type}</div>
+            <div className="ml-2 truncate flex">
+              <ShadTooltip content={data.node.display_name}>
+                <div className="ml-2 truncate text-gray-800">
+                  {data.node.display_name}
+                </div>
               </ShadTooltip>
             </div>
           </div>
@@ -193,6 +201,7 @@ export default function GenericNode({
                           ? toTitleCase(data.node.template[t].name)
                           : toTitleCase(t)
                       }
+                      info={data.node.template[t].info}
                       name={t}
                       tooltipTitle={data.node.template[t].type}
                       required={data.node.template[t].required}

@@ -1,25 +1,23 @@
-import { Bars2Icon } from "@heroicons/react/24/outline";
 import DisclosureComponent from "../DisclosureComponent";
 import {
   classNames,
   nodeColors,
-  nodeIcons,
+  nodeIconsLucide,
   nodeNames,
 } from "../../../../utils";
 import { useContext, useState } from "react";
 import { typesContext } from "../../../../contexts/typesContext";
 import { APIClassType, APIObjectType } from "../../../../types/api";
-import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
-import { Code2, FileDown, FileUp, Save } from "lucide-react";
+import { Code2, FileDown, FileUp, Save, Search } from "lucide-react";
 import { PopUpContext } from "../../../../contexts/popUpContext";
 import ExportModal from "../../../../modals/exportModal";
 import ApiModal from "../../../../modals/ApiModal";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { alertContext } from "../../../../contexts/alertContext";
-import { updateFlowInDatabase } from "../../../../controllers/API";
 import { INPUT_STYLE } from "../../../../constants";
 import { Separator } from "../../../../components/ui/separator";
+import { Menu } from "lucide-react";
 
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);
@@ -64,7 +62,7 @@ export default function ExtraSidebar() {
   return (
     <div className="w-52 flex flex-col overflow-hidden scrollbar-hide h-full border-r">
       <div className="mt-2 mb-2 w-full flex gap-2 justify-between px-2 items-center">
-        <ShadTooltip delayDuration={1000} content="Import" side="top">
+        <ShadTooltip content="Import" side="top">
           <button
             className="hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center rounded-md bg-white px-2 py-2 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
             onClick={() => {
@@ -76,7 +74,7 @@ export default function ExtraSidebar() {
           </button>
         </ShadTooltip>
 
-        <ShadTooltip delayDuration={1000} content="Export" side="top">
+        <ShadTooltip content="Export" side="top">
           <button
             className={classNames(
               "hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
@@ -88,7 +86,7 @@ export default function ExtraSidebar() {
             <FileDown className="w-5 h-5  dark:text-gray-300"></FileDown>
           </button>
         </ShadTooltip>
-        <ShadTooltip delayDuration={1000} content="Code" side="top">
+        <ShadTooltip content="Code" side="top">
           <button
             className={classNames(
               "hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
@@ -101,7 +99,7 @@ export default function ExtraSidebar() {
           </button>
         </ShadTooltip>
 
-        <ShadTooltip delayDuration={1000} content="Save" side="top">
+        <ShadTooltip content="Save" side="top">
           <button
             className="hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center transition-all shadow-sm duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
             onClick={(event) => {
@@ -135,7 +133,7 @@ export default function ExtraSidebar() {
           }}
         />
         <div className="absolute inset-y-0 right-0 flex py-1.5 pr-3 items-center">
-          <MagnifyingGlassIcon className="h-5 w-5 dark:text-white"></MagnifyingGlassIcon>
+          <Search size={20} color="#000000" />
         </div>
       </div>
 
@@ -146,10 +144,10 @@ export default function ExtraSidebar() {
             Object.keys(dataFilter[d]).length > 0 ? (
               <DisclosureComponent
                 openDisc={search.length == 0 ? false : true}
-                key={i}
+                key={nodeNames[d]}
                 button={{
                   title: nodeNames[d] ?? nodeNames.unknown,
-                  Icon: nodeIcons[d] ?? nodeIcons.unknown,
+                  Icon: nodeIconsLucide[d] ?? nodeIconsLucide.unknown,
                 }}
               >
                 <div className="p-2 flex flex-col gap-2">
@@ -157,10 +155,9 @@ export default function ExtraSidebar() {
                     .sort()
                     .map((t: string, k) => (
                       <ShadTooltip
-                        content={t}
-                        delayDuration={1500}
+                        content={data[d][t].display_name}
                         side="right"
-                        key={i}
+                        key={data[d][t].display_name}
                       >
                         <div key={k} data-tooltip-id={t}>
                           <div
@@ -186,9 +183,9 @@ export default function ExtraSidebar() {
                           >
                             <div className="flex w-full justify-between text-sm px-3 py-1 bg-white dark:bg-gray-800 items-center border-dashed border-gray-400 dark:border-gray-600 border-l-0 rounded-md rounded-l-none border">
                               <span className="text-black dark:text-white w-full pr-1 truncate text-xs">
-                                {t}
+                                {data[d][t].display_name}
                               </span>
-                              <Bars2Icon className="w-4 h-6  text-gray-400 dark:text-gray-600" />
+                              <Menu className="w-4 h-6  text-gray-400 dark:text-gray-600" />
                             </div>
                           </div>
                         </div>

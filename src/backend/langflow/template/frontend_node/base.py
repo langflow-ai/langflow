@@ -15,14 +15,21 @@ class FrontendNode(BaseModel):
     base_classes: List[str]
     name: str = ""
     display_name: str = ""
+    documentation: str = ""
+
+    def set_documentation(self, documentation: str) -> None:
+        """Sets the documentation of the frontend node."""
+        self.documentation = documentation
 
     def to_dict(self) -> dict:
+        """Returns a dict representation of the frontend node."""
         return {
             self.name: {
                 "template": self.template.to_dict(self.format_field),
                 "description": self.description,
                 "base_classes": self.base_classes,
                 "display_name": self.display_name or self.name,
+                "documentation": self.documentation,
             },
         }
 

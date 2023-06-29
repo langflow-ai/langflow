@@ -15,12 +15,13 @@ class TemplateFieldCreator(BaseModel, ABC):
     suffixes: list[str] = []
     fileTypes: list[str] = []
     file_types: list[str] = []
-    content: Union[str, None] = None
+    file_path: Union[str, None] = None
     password: bool = False
     options: list[str] = []
     name: str = ""
     display_name: Optional[str] = None
     advanced: bool = False
+    info: Optional[str] = ""
 
     def to_dict(self):
         result = self.dict()
@@ -35,7 +36,7 @@ class TemplateFieldCreator(BaseModel, ABC):
             result["fileTypes"] = result.pop("file_types")
 
         if self.field_type == "file":
-            result["content"] = self.content
+            result["file_path"] = self.file_path
         return result
 
 

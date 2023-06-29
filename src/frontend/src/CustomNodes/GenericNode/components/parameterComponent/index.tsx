@@ -4,6 +4,7 @@ import {
   getRandomKeyByssmm,
   groupByFamily,
   isValidConnection,
+  nodeIconsLucide,
 } from "../../../../utils";
 import { useContext, useEffect, useRef, useState } from "react";
 import InputComponent from "../../../../components/inputComponent";
@@ -18,12 +19,13 @@ import InputFileComponent from "../../../../components/inputFileComponent";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import IntComponent from "../../../../components/intComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
-import { nodeNames, nodeIcons } from "../../../../utils";
+import { nodeNames } from "../../../../utils";
 import React from "react";
 import { nodeColors } from "../../../../utils";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import { PopUpContext } from "../../../../contexts/popUpContext";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
+import { Info } from "lucide-react";
 
 export default function ParameterComponent({
   left,
@@ -35,13 +37,15 @@ export default function ParameterComponent({
   type,
   name = "",
   required = false,
+  info = "",
 }: ParameterComponentType) {
   const ref = useRef(null);
   const refHtml = useRef(null);
+  const infoHtml = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   const { closePopUp } = useContext(PopUpContext);
-  const { setTabsState, tabId } = useContext(TabsContext);
+  const { setTabsState, tabId, save } = useContext(TabsContext);
 
   useEffect(() => {
     if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
@@ -79,8 +83,20 @@ export default function ParameterComponent({
   };
 
   useEffect(() => {
+    infoHtml.current = (
+      <div className="h-full w-full break-words">
+        {info.split("\n").map((line, i) => (
+          <p key={i} className="block">
+            {line}
+          </p>
+        ))}
+      </div>
+    );
+  }, [info]);
+
+  useEffect(() => {
     const groupedObj = groupByFamily(myData, tooltipTitle);
-    
+
     refHtml.current = groupedObj.map((item, i) => (
       <span
         key={getRandomKeyByssmm()}
@@ -89,12 +105,12 @@ export default function ParameterComponent({
         )}
       >
         <div
-          className="h-5 w-5"
+          className="h-6 w-6"
           style={{
             color: nodeColors[item.family],
           }}
         >
-          {React.createElement(nodeIcons[item.family])}
+          {React.createElement(nodeIconsLucide[item.family])}
         </div>
         <span className="ps-2 text-gray-950">
           {nodeNames[item.family] ?? ""}{" "}
@@ -105,7 +121,9 @@ export default function ParameterComponent({
               ? item.type.split(", ").map((el, i) => (
                   <React.Fragment key={el + i}>
                     <span>
-                      {i === item.type.split(", ").length - 1 ? el : (el += `, `)}
+                      {i === item.type.split(", ").length - 1
+                        ? el
+                        : (el += `, `)}
                     </span>
                     {i % 2 === 0 && i > 0 && <br />}
                   </React.Fragment>
@@ -115,7 +133,6 @@ export default function ParameterComponent({
         </span>
       </span>
     ));
-    
   }, [tooltipTitle]);
 
   return (
@@ -124,9 +141,22 @@ export default function ParameterComponent({
       className="w-full flex flex-wrap justify-between items-center bg-muted dark:bg-gray-800 dark:text-white mt-1 px-5 py-2"
     >
       <>
-        <div className={"text-sm truncate w-full " + (left ? "" : "text-end")}>
+        <div
+          className={
+            "text-sm truncate w-full" +
+            (left ? "" : " text-end") +
+            (info !== "" ? " flex items-center" : "")
+          }
+        >
           {title}
           <span className="text-red-600">{required ? " *" : ""}</span>
+          <div className="">
+            {info !== "" && (
+              <ShadTooltip content={infoHtml.current}>
+                <Info className="ml-2 relative bottom-0.5 w-3 h-3" />
+              </ShadTooltip>
+            )}
+          </div>
         </div>
         {left &&
         (type === "str" ||
@@ -239,7 +269,8 @@ export default function ParameterComponent({
             fileTypes={data.node.template[name].fileTypes}
             suffixes={data.node.template[name].suffixes}
             onFileChange={(t: string) => {
-              data.node.template[name].content = t;
+              data.node.template[name].file_path = t;
+              save();
             }}
           ></InputFileComponent>
         ) : left === true && type === "int" ? (
