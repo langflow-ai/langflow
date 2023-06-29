@@ -34,39 +34,45 @@
   --build-trigger: 	#dc735b;
   --chat-trigger: #5c8be1;
 
-  --error-background: #fef2f2;
-  --error-foreground: #991b1b;
-
   --status-red: #ef4444;
   --status-yellow: #eab308;
   --status-green: #4ade80;
 
+  --error-background: #fef2f2;
+  --error-foreground: #991b1b;
+
   --success-background: #f0fdf4;
   --success-foreground: #14532d;
+
+  --info-background: #f0f4fd;
+  --info-foreground: #141653;
 
   --high-indigo: #4338ca;
   --medium-indigo: #6366f1;
   --medium-dark-blue:#1d4ed8;
+
+  /* Colors that are shared in dark and light mode */
+  --blur-shared: #151923de;
 }
 
 .dark {
-  --background: 224 71% 4%; /* hsl(224 71% 4%) */
+  --background: 224 35% 7.5%; /* hsl(224 40% 10%) */
   --foreground: 213 31% 85%; /* hsl(213 31% 91%) */
 
-  --muted: 223 40% 11%; /* hsl(223 47% 11%) */
+  --muted: 223 27% 11%; /* hsl(223 27% 11%) */
   --muted-foreground: 215.4 16.3% 56.9%; /* hsl(215 16% 56%) */
 
   --popover: 224 71% 4%; /* hsl(224 71% 4%) */
   --popover-foreground: 215 20.2% 65.1%; /* hsl(215 20% 65%) */
 
-  --card: 224 71% 7%; /* hsl(224 71% 4%) */
+  --card: 224 25% 15.5%; /* hsl(224 71% 4%) */
   --card-foreground: 213 31% 80%; /* hsl(213 31% 91%) */
 
   --border: 216 24% 17%; /* hsl(216 34% 17%) */
   --input: 216 24% 17%; /* hsl(216 34% 17%) */
 
-  --primary: 210 40% 80%; /* hsl(210 40% 98%) */
-  --primary-foreground: 222.2 47.4% 1.2%; /* hsl(222 47% 1%) */
+  --primary: 210 20% 80%; /* hsl(210 40% 98%) */
+  --primary-foreground: 222.2 27.4% 1.2%; /* hsl(222 47% 1%) */
 
   --secondary: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
   --secondary-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
@@ -86,18 +92,26 @@
   --build-trigger: 	#dc735b;
   --chat-trigger: #5c8be1;
 
-  --error-foreground: #c2b7b7;
-  --error-background: #671212;
-
   --status-red: #ef4444;
   --status-yellow: #eab308;
   --status-green: #4ade80;
 
   --success-background: #f0fdf4;
   --success-foreground: #14532d;
+
+  --error-foreground: #c2b7b7;
+  --error-background: #3e1818;
+
+  --info-foreground: #b7b8c2;
+  --info-background: #18243e;
+
+
   --high-indigo: #4338ca;
   --medium-indigo: #6366f1;
   --medium-dark-blue:#1d4ed8;
+
+  /* Colors that are shared in dark and light mode */
+  --blur-shared: #151923d2;
 }}
 
 @layer base {
