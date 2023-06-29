@@ -516,7 +516,7 @@ def test_chat_open_ai(client: TestClient):
         == "Wrapper around OpenAI Chat large language models."  # noqa E501
     )
     assert set(model["base_classes"]) == {
-        "Serializable",
+        "BaseLLM",
         "BaseChatModel",
         "ChatOpenAI",
         "BaseLanguageModel",

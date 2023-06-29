@@ -22,6 +22,7 @@ export type DropDownComponentType = {
   options: string[];
   onSelect: (value: string) => void;
   editNode?: boolean;
+  apiModal?: boolean;
   numberOfOptions?: number;
 };
 export type ParameterComponentType = {
@@ -42,6 +43,7 @@ export type InputListComponentType = {
   onChange: (value: string[]) => void;
   disabled: boolean;
   editNode?: boolean;
+  onAddInput?: (value?: string[]) => void;
 };
 
 export type TextAreaComponentType = {
@@ -111,6 +113,11 @@ export type RadialProgressType = {
   color?: string;
 };
 
+export type AccordionComponentType = {
+  children?: ReactElement;
+  open?: string[];
+  trigger?: string;
+};
 export type Side = "top" | "right" | "bottom" | "left";
 
 export type ShadTooltipProps = {

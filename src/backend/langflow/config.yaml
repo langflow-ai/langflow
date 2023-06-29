@@ -120,6 +120,16 @@ llms:
   HuggingFaceHub:
     documentation: "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/huggingface_hub"
 memories:
+  # https://github.com/supabase-community/supabase-py/issues/482
+  # ZepChatMessageHistory:
+  #   documentation: "https://python.langchain.com/docs/modules/memory/integrations/zep_memory"
+  ConversationEntityMemory:
+    documentation: "https://python.langchain.com/docs/modules/memory/integrations/entity_memory_with_sqlite"
+  # https://github.com/hwchase17/langchain/issues/6091
+  # SQLiteEntityStore:
+  #   documentation: "https://python.langchain.com/docs/modules/memory/integrations/entity_memory_with_sqlite"
+  PostgresChatMessageHistory:
+    documentation: "https://python.langchain.com/docs/modules/memory/integrations/postgres_chat_message_history"
   ConversationBufferMemory:
     documentation: "https://python.langchain.com/docs/modules/memory/how_to/buffer"
   ConversationSummaryMemory:
@@ -130,6 +140,7 @@ memories:
     documentation: "https://python.langchain.com/docs/modules/memory/how_to/buffer_window"
   VectorStoreRetrieverMemory:
     documentation: "https://python.langchain.com/docs/modules/memory/how_to/vectorstore_retriever_memory"
+
 prompts:
   PromptTemplate:
     documentation: "https://python.langchain.com/docs/modules/model_io/prompts/prompt_templates/"
@@ -227,6 +238,12 @@ utilities:
     documentation: ""
   WolframAlphaAPIWrapper:
     documentation: ""
+retrievers:
+  MultiQueryRetriever:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/retrievers/how_to/MultiQueryRetriever"
+  # https://github.com/supabase-community/supabase-py/issues/482
+  # ZepRetriever:
+  #   documentation: "https://python.langchain.com/docs/modules/data_connection/retrievers/integrations/zep_memorystore"
 vectorstores:
   Chroma:
     documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/chroma"

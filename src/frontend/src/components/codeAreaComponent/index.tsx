@@ -12,7 +12,9 @@ export default function CodeAreaComponent({
   disabled,
   editNode = false,
 }: TextAreaComponentType) {
-  const [myValue, setMyValue] = useState(value);
+  const [myValue, setMyValue] = useState(
+    typeof value == "string" ? value : JSON.stringify(value)
+  );
   const { openPopUp } = useContext(PopUpContext);
   useEffect(() => {
     if (disabled) {
@@ -22,7 +24,7 @@ export default function CodeAreaComponent({
   }, [disabled, onChange]);
 
   useEffect(() => {
-    setMyValue(value);
+    setMyValue(typeof value == "string" ? value : JSON.stringify(value));
   }, [value]);
 
   return (
@@ -47,7 +49,8 @@ export default function CodeAreaComponent({
           className={
             editNode
               ? "truncate cursor-pointer placeholder:text-center text-gray-500 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 border-1 shadow-sm sm:text-sm" +
-                INPUT_STYLE
+                INPUT_STYLE +
+                (disabled ? " bg-gray-200 " : "")
               : "truncate block w-full text-gray-500 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 shadow-sm sm:text-sm" +
                 INPUT_STYLE +
                 (disabled ? " bg-gray-200" : "")
