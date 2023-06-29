@@ -70,7 +70,7 @@ export default function ExtraSidebar() {
               uploadFlow();
             }}
           >
-            <FileUp className="w-5 h-5 "></FileUp>
+            <FileUp strokeWidth={1.5} className="w-5 h-5 "></FileUp>
           </button>
         </ShadTooltip>
 
@@ -83,7 +83,7 @@ export default function ExtraSidebar() {
               openPopUp(<ExportModal />);
             }}
           >
-            <FileDown className="w-5 h-5  "></FileDown>
+            <FileDown strokeWidth={1.5} className="w-5 h-5  "></FileDown>
           </button>
         </ShadTooltip>
         <ShadTooltip delayDuration={1000} content="Code" side="top">
@@ -95,7 +95,7 @@ export default function ExtraSidebar() {
               openPopUp(<ApiModal flow={flows.find((f) => f.id === tabId)} />);
             }}
           >
-            <Code2 className="w-5 h-5  "></Code2>
+            <Code2 strokeWidth={1.5} className="w-5 h-5  "></Code2>
           </button>
         </ShadTooltip>
 
@@ -109,6 +109,7 @@ export default function ExtraSidebar() {
             disabled={!isPending}
           >
             <Save
+            strokeWidth={1.5}
               className={
                 "w-5 h-5" + (isPending ? " " : " text-muted-foreground")
               }
@@ -134,7 +135,7 @@ export default function ExtraSidebar() {
         />
         <div className="absolute inset-y-0 right-0 flex py-1.5 pr-3 items-center">
         {/* ! replace hash color here */}
-          <Search size={20} className="text-primary" />
+          <Search size={20} strokeWidth={1.5} className="text-primary" />
         </div>
       </div>
 

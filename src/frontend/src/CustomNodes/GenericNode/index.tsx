@@ -98,6 +98,7 @@ export default function GenericNode({
         <div className="flex w-full items-center justify-between gap-8 rounded-t-lg border-b bg-muted p-4  ">
           <div className="flex w-full items-center gap-2 truncate text-lg">
             <Icon
+              strokeWidth={1.5}
               className="h-10 w-10 rounded p-1"
               style={{
                 color: nodeColors[types[data.type]] ?? nodeColors.unknown,
