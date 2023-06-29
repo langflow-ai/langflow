@@ -22,7 +22,9 @@ export default function LoadingComponent({ remSize }: LoadingComponentProps) {
         />
       </svg>
       <br></br>
-      <span className="animate-pulse text-almost-medium-blue text-lg">Loading...</span>
+      <span className="animate-pulse text-almost-medium-blue text-lg">
+        Loading...
+      </span>
     </div>
   );
 }

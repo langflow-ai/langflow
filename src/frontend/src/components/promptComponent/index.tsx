@@ -73,9 +73,7 @@ export default function PromptAreaComponent({
             );
           }}
         >
-          {!editNode && (
-            <ExternalLink className="w-6 h-6 hover:text-ring " />
-          )}
+          {!editNode && <ExternalLink className="w-6 h-6 hover:text-ring " />}
         </button>
       </div>
     </div>

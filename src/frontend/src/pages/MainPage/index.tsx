@@ -9,10 +9,10 @@ import { BUTTON_DIV_STYLE } from "../../constants";
 export default function HomePage() {
   const { flows, setTabId, downloadFlows, uploadFlows, addFlow, removeFlow } =
     useContext(TabsContext);
-    useEffect(() => {
-      setTabId("");
-    }, []);
-    const navigate = useNavigate();
+  useEffect(() => {
+    setTabId("");
+  }, []);
+  const navigate = useNavigate();
   return (
     <div className="w-full h-full flex overflow-auto flex-col bg-muted px-16">
       <div className="w-full flex justify-between py-12 pb-2 px-6">
@@ -20,7 +20,7 @@ export default function HomePage() {
           <Home className="w-6" />
           {USER_PROJECTS_HEADER}
         </span>
-        <div className={`${ BUTTON_DIV_STYLE }`}>
+        <div className={`${BUTTON_DIV_STYLE}`}>
           <Button
             variant="primary"
             onClick={() => {
