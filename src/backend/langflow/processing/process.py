@@ -107,6 +107,10 @@ def process_graph_cached(data_graph: Dict[str, Any], inputs: Optional[dict] = No
     elif isinstance(langchain_object, VectorStore):
         class_name = langchain_object.__class__.__name__
         result = {"message": f"Processed {class_name} successfully"}
+    else:
+        raise ValueError(
+            f"Unknown langchain_object type: {type(langchain_object).__name__}"
+        )
     return result
 
 

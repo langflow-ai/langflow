@@ -1,21 +1,3 @@
-import {
-  RocketLaunchIcon,
-  LinkIcon,
-  CpuChipIcon,
-  LightBulbIcon,
-  CommandLineIcon,
-  WrenchScrewdriverIcon,
-  WrenchIcon,
-  ComputerDesktopIcon,
-  GiftIcon,
-  PaperClipIcon,
-  QuestionMarkCircleIcon,
-  FingerPrintIcon,
-  ScissorsIcon,
-  CircleStackIcon,
-  Squares2X2Icon,
-  Bars3CenterLeftIcon,
-} from "@heroicons/react/24/outline";
 import { Connection, Edge, Node, ReactFlowInstance } from "reactflow";
 import { FlowType, NodeType } from "./types/flow";
 import { APITemplateType } from "./types/api";
@@ -58,6 +40,7 @@ import {
   Paperclip,
   Rocket,
   Scissors,
+  FileSearch,
   TerminalSquare,
   Wand2,
   Wrench,
@@ -139,6 +122,7 @@ export const nodeColors: { [char: string]: string } = {
   toolkits: "#DB2C2C",
   wrappers: "#E6277A",
   utilities: "#31A3CC",
+  retrievers: "#e6b25a",
   unknown: "#9CA3AF",
 };
 
@@ -157,70 +141,9 @@ export const nodeNames: { [char: string]: string } = {
   toolkits: "Toolkits",
   wrappers: "Wrappers",
   textsplitters: "Text Splitters",
+  retrievers: "Retrievers",
   utilities: "Utilities",
   unknown: "Unknown",
-};
-
-export const nodeIcons: {
-  [char: string]: React.ForwardRefExoticComponent<
-    React.SVGProps<SVGSVGElement>
-  >;
-} = {
-  Chroma: ChromaIcon,
-  AirbyteJSONLoader: AirbyteIcon,
-  // SerpAPIWrapper: SerperIcon,
-  // AZLyricsLoader: AzIcon,
-  Anthropic: AnthropicIcon,
-  ChatAnthropic: AnthropicIcon,
-  BingSearchAPIWrapper: BingIcon,
-  BingSearchRun: BingIcon,
-  Cohere: CohereIcon,
-  CohereEmbeddings: CohereIcon,
-  EverNoteLoader: EvernoteIcon,
-  FacebookChatLoader: FBIcon,
-  GitbookLoader: GitBookIcon,
-  GoogleSearchAPIWrapper: GoogleIcon,
-  GoogleSearchResults: GoogleIcon,
-  GoogleSearchRun: GoogleIcon,
-  HNLoader: HackerNewsIcon,
-  HuggingFaceHub: HugginFaceIcon,
-  HuggingFaceEmbeddings: HugginFaceIcon,
-  IFixitLoader: IFixIcon,
-  Meta: MetaIcon,
-  Midjourney: MidjourneyIcon,
-  NotionDirectoryLoader: NotionIcon,
-  ChatOpenAI: OpenAiIcon,
-  OpenAI: OpenAiIcon,
-  OpenAIEmbeddings: OpenAiIcon,
-  Pinecone: PineconeIcon,
-  SupabaseVectorStore: SupabaseIcon,
-  MongoDBAtlasVectorSearch: MongoDBIcon,
-  // UnstructuredPowerPointLoader: PowerPointIcon, // word and powerpoint have differente styles
-  Qdrant: QDrantIcon,
-  // ReadTheDocsLoader: ReadTheDocsIcon, // does not work
-  Searx: SearxIcon,
-  SlackDirectoryLoader: SlackIcon,
-  // Weaviate: WeaviateIcon, // does not work
-  // WikipediaAPIWrapper: WikipediaIcon,
-  // WolframAlphaQueryRun: WolframIcon,
-  // WolframAlphaAPIWrapper: WolframIcon,
-  // UnstructuredWordDocumentLoader: WordIcon, // word and powerpoint have differente styles
-  agents: RocketLaunchIcon,
-  chains: LinkIcon,
-  memories: CpuChipIcon,
-  llms: LightBulbIcon,
-  prompts: CommandLineIcon,
-  tools: WrenchIcon,
-  advanced: ComputerDesktopIcon,
-  chat: Bars3CenterLeftIcon,
-  embeddings: FingerPrintIcon,
-  documentloaders: PaperClipIcon,
-  vectorstores: CircleStackIcon,
-  toolkits: WrenchScrewdriverIcon,
-  textsplitters: ScissorsIcon,
-  wrappers: GiftIcon,
-  utilities: Squares2X2Icon,
-  unknown: QuestionMarkCircleIcon,
 };
 
 export const nodeIconsLucide: {
@@ -361,6 +284,9 @@ export const nodeIconsLucide: {
     ComponentType<SVGProps<SVGSVGElement>>
   >,
   utilities: Wand2 as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  retrievers: FileSearch as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
   unknown: HelpCircle as React.ForwardRefExoticComponent<

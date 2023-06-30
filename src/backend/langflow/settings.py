@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     vectorstores: dict = {}
     documentloaders: dict = {}
     wrappers: dict = {}
+    retrievers: dict = {}
     toolkits: dict = {}
     textsplitters: dict = {}
     utilities: dict = {}
@@ -47,6 +48,11 @@ class Settings(BaseSettings):
         self.toolkits = new_settings.toolkits or {}
         self.textsplitters = new_settings.textsplitters or {}
         self.utilities = new_settings.utilities or {}
+        self.embeddings = new_settings.embeddings or {}
+        self.vectorstores = new_settings.vectorstores or {}
+        self.documentloaders = new_settings.documentloaders or {}
+        self.retrievers = new_settings.retrievers or {}
+
         self.dev = dev
 
     def update_settings(self, **kwargs):

@@ -6,8 +6,7 @@ import {
   classNames,
   limitScrollFieldsModal,
   nodeColors,
-  nodeIcons,
-  toNormalCase,
+  nodeIconsLucide,
   toTitleCase,
 } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
@@ -28,7 +27,7 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
     }
   }
   // any to avoid type conflict
-  const Icon: any = nodeIcons[types[data.type]];
+  const Icon: any = nodeIconsLucide[types[data.type]];
   return (
     <Transition.Root show={open} appear={true} as={Fragment}>
       <Dialog
