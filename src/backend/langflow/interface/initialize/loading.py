@@ -95,6 +95,7 @@ def instantiate_llm(node_type, class_object, params: Dict):
     # False if condition is True
     if node_type == "VertexAI":
         return initialize_vertexai(class_object=class_object, params=params)
+    return class_object(**params)
 
 
 def instantiate_memory(node_type, class_object, params):
