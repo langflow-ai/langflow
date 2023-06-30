@@ -31,7 +31,7 @@ export default function TextAreaComponent({
       <div
         className={
           editNode
-            ? "w-full flex items-center"
+            ? "w-full items-center"
             : "w-full flex items-center gap-3"
         }
       >

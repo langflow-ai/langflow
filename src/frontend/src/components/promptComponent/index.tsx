@@ -31,7 +31,7 @@ export default function PromptAreaComponent({
         disabled ? "pointer-events-none cursor-not-allowed w-full" : " w-full"
       }
     >
-      <div className="w-full flex items-center gap-3">
+      <div className="w-full flex items-center">
         <span
           onClick={() => {
             openPopUp(
@@ -49,7 +49,7 @@ export default function PromptAreaComponent({
           }}
           className={
             editNode
-              ? "cursor-pointer truncate placeholder:text-center text-ring border-1 block w-full pt-0.5 pb-0.5 form-input   rounded-md border-ring shadow-sm sm:text-sm" +
+              ? "cursor-pointer truncate placeholder:text-center text-ring border-1 block w-full pt-0.5 pb-0.5 form-input text-sm  rounded-md border-ring shadow-sm sm:text-sm" +
                 INPUT_STYLE
               : "truncate block w-full text-ring px-3 py-2 rounded-md border border-ring shadow-sm sm:text-sm" +
                 (disabled ? " bg-input" : "")
