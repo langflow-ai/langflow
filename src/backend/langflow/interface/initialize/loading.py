@@ -7,7 +7,8 @@ from langchain.agents.agent import AgentExecutor
 from langchain.agents.agent_toolkits.base import BaseToolkit
 from langchain.agents.tools import BaseTool
 from langflow.interface.initialize.vector_store import vecstore_initializer
-from langchain.schema import Document
+
+from langchain.schema import Document, BaseOutputParser
 from pydantic import ValidationError
 
 from langflow.interface.custom_lists import CUSTOM_NODES
@@ -130,6 +131,10 @@ def instantiate_prompt(node_type, class_object, params):
             variable = params[input_variable]
             if isinstance(variable, str):
                 format_kwargs[input_variable] = variable
+            elif isinstance(variable, BaseOutputParser) and hasattr(
+                variable, "get_format_instructions"
+            ):
+                format_kwargs[input_variable] = variable.get_format_instructions()
             # check if is a list of Document
             elif isinstance(variable, List) and all(
                 isinstance(item, Document) for item in variable
