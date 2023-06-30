@@ -36,6 +36,7 @@ export type ParameterComponentType = {
   name?: string;
   tooltipTitle: string;
   dataContext?: typesContextType;
+  optionalHandle?: Array<String>;
 };
 export type InputListComponentType = {
   value: string[];

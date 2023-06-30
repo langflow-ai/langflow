@@ -102,7 +102,7 @@ export default function GenericNode({
                 color: nodeColors[types[data.type]] ?? nodeColors.unknown,
               }}
             />
-            <div className="ml-2 truncate">
+            <div className="ml-2 truncate flex-1">
               <ShadTooltip
                 delayDuration={1500}
                 content={data.node.display_name}
@@ -204,6 +204,7 @@ export default function GenericNode({
                       data={data}
                       color={
                         nodeColors[types[data.node.template[t].type]] ??
+                        nodeColors[data.node.template[t].type] ??
                         nodeColors.unknown
                       }
                       title={
@@ -214,11 +215,12 @@ export default function GenericNode({
                           : toTitleCase(t)
                       }
                       name={t}
-                      tooltipTitle={data.node.template[t].type}
+                      tooltipTitle={data.node.template[t].input_types?.join("\n") ?? data.node.template[t].type}
                       required={data.node.template[t].required}
-                      id={data.node.template[t].type + "|" + t + "|" + data.id}
+                      id={(data.node.template[t].input_types?.join(";") ?? data.node.template[t].type) + "|" + t + "|" + data.id}
                       left={true}
                       type={data.node.template[t].type}
+                      optionalHandle={data.node.template[t].input_types}
                     />
                   ) : (
                     <></>

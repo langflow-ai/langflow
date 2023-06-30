@@ -25,6 +25,7 @@ import { nodeColors } from "../../../../utils";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import { PopUpContext } from "../../../../contexts/popUpContext";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
+import * as _ from "lodash";
 
 export default function ParameterComponent({
   left,
@@ -36,6 +37,7 @@ export default function ParameterComponent({
   type,
   name = "",
   required = false,
+  optionalHandle = null,
 }: ParameterComponentType) {
   const ref = useRef(null);
   const refHtml = useRef(null);
@@ -73,6 +75,7 @@ export default function ParameterComponent({
       return {
         ...prev,
         [tabId]: {
+          ...prev[tabId],
           isPending: true,
           formKeysData: prev[tabId].formKeysData,
         },
@@ -85,7 +88,7 @@ export default function ParameterComponent({
 
     refHtml.current = groupedObj.map((item, i) => (
       <span
-        key={getRandomKeyByssmm()}
+        key={getRandomKeyByssmm() + item.family + i}
         className={classNames(
           i > 0 ? "items-center flex mt-3" : "items-center flex"
         )}
@@ -132,13 +135,14 @@ export default function ParameterComponent({
           <span className="text-red-600">{required ? " *" : ""}</span>
         </div>
         {left &&
-        (type === "str" ||
+        ((type === "str" ||
           type === "bool" ||
           type === "float" ||
           type === "code" ||
           type === "prompt" ||
           type === "file" ||
-          type === "int") ? (
+          type === "int") && !optionalHandle
+          ) ? (
           <></>
         ) : (
           <ShadTooltip

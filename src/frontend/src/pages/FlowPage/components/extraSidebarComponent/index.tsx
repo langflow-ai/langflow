@@ -40,7 +40,7 @@ export default function ExtraSidebar() {
     crt.classList.add("cursor-grabbing");
     document.body.appendChild(crt);
     event.dataTransfer.setDragImage(crt, 0, 0);
-    event.dataTransfer.setData("json", JSON.stringify(data));
+    event.dataTransfer.setData("nodedata", JSON.stringify(data));
   }
 
   function handleSearchInput(e: string) {

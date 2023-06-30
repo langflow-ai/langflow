@@ -5,6 +5,9 @@ import GenericModal from "../../modals/genericModal";
 import { TypeModal } from "../../utils";
 import { INPUT_STYLE } from "../../constants";
 import { ExternalLink } from "lucide-react";
+import { postValidatePrompt } from "../../controllers/API";
+import { typesContext } from "../../contexts/typesContext";
+import * as _ from "lodash";
 
 export default function PromptAreaComponent({
   setNodeClass,
@@ -14,8 +17,10 @@ export default function PromptAreaComponent({
   disabled,
   editNode = false,
 }: TextAreaComponentType) {
-  const [myValue, setMyValue] = useState(value);
+  const [myValue, setMyValue] = useState("");
   const { openPopUp } = useContext(PopUpContext);
+  const { reactFlowInstance } = useContext(typesContext);
+
   useEffect(() => {
     if (disabled) {
       setMyValue("");
@@ -24,8 +29,19 @@ export default function PromptAreaComponent({
   }, [disabled, onChange]);
 
   useEffect(() => {
-    setMyValue(value);
-  }, [value]);
+    if (value !== "" && myValue !== value && reactFlowInstance) { // only executed once
+      setMyValue(value);
+      postValidatePrompt(value, nodeClass)
+        .then((apiReturn) => {
+          if (apiReturn.data) {
+            setNodeClass(apiReturn.data.frontend_node);
+            // need to update reactFlowInstance to re-render the nodes.
+            reactFlowInstance.setEdges(_.cloneDeep(reactFlowInstance.getEdges()));
+          }
+        })
+        .catch((error) => {});
+    }
+  }, [reactFlowInstance]);
 
   return (
     <div

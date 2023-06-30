@@ -8,11 +8,6 @@ export default function ToggleShadComponent({
   disabled,
   size,
 }: ToggleComponentType) {
-  useEffect(() => {
-    if (disabled) {
-      setEnabled(false);
-    }
-  }, [disabled, setEnabled]);
   let scaleX, scaleY;
   switch (size) {
     case "small":
@@ -32,11 +27,12 @@ export default function ToggleShadComponent({
       scaleY = 1;
   }
   return (
-    <div className={disabled ? "pointer-events-none cursor-not-allowed" : ""}>
+    <div className={disabled ? "pointer-events-none cursor-not-allowed " : ""}>
       <Switch
         style={{
           transform: `scaleX(${scaleX}) scaleY(${scaleY})`,
         }}
+        disabled={disabled}
         className="data-[state=unchecked]:bg-slate-500"
         checked={enabled}
         onCheckedChange={(x: boolean) => {

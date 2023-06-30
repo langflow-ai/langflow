@@ -1,5 +1,5 @@
 import json
-from typing import Any, Callable, Dict, Sequence
+from typing import Any, Callable, Dict, List, Sequence
 
 from langchain.agents import ZeroShotAgent
 from langchain.agents import agent as agent_module
@@ -8,6 +8,7 @@ from langchain.agents.agent_toolkits.base import BaseToolkit
 from langchain.agents.tools import BaseTool
 from langflow.interface.initialize.vector_store import vecstore_initializer
 
+from langchain.schema import Document, BaseOutputParser
 from pydantic import ValidationError
 
 from langflow.interface.importing.utils import (
@@ -18,6 +19,7 @@ from langflow.interface.importing.utils import (
 from langflow.interface.custom_lists import CUSTOM_NODES
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.chains.base import chain_creator
+from langflow.interface.output_parsers.base import output_parser_creator
 from langflow.interface.utils import load_file_into_dict
 from langflow.utils import validate
 
@@ -76,8 +78,19 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
         return instantiate_utility(node_type, class_object, params)
     elif base_type == "chains":
         return instantiate_chains(node_type, class_object, params)
+    elif base_type == "output_parsers":
+        return instantiate_output_parser(node_type, class_object, params)
     else:
         return class_object(**params)
+
+
+def instantiate_output_parser(node_type, class_object, params):
+    if node_type in output_parser_creator.from_method_nodes:
+        method = output_parser_creator.from_method_nodes[node_type]
+        if class_method := getattr(class_object, method, None):
+            return class_method(**params)
+        raise ValueError(f"Method {method} not found in {class_object}")
+    return class_object(**params)
 
 
 def instantiate_chains(node_type, class_object, params):
@@ -116,19 +129,45 @@ def instantiate_prompt(node_type, class_object, params):
 
     prompt = class_object(**params)
 
-    # Now we go through input_variables
-    # Check if they are in params, if so
-    # get their values and set them
     format_kwargs = {}
     for input_variable in prompt.input_variables:
         if input_variable in params:
-            input_value = params[input_variable]
-            format_kwargs[input_variable] = input_value
+            variable = params[input_variable]
+            if isinstance(variable, str):
+                format_kwargs[input_variable] = variable
+            elif isinstance(variable, BaseOutputParser) and hasattr(
+                variable, "get_format_instructions"
+            ):
+                format_kwargs[input_variable] = variable.get_format_instructions()
+            # check if is a list of Document
+            elif isinstance(variable, List) and all(
+                isinstance(item, Document) for item in variable
+            ):
+                # Format document to contain page_content and metadata
+                # as one string separated by a newline
+                format_kwargs[input_variable] = "\n".join(
+                    [
+                        f"Document:{item.page_content}\nMetadata:{item.metadata}"
+                        for item in variable
+                    ]
+                )
+                # handle_keys will be a list but it does not exist yet
+                # so we need to create it
 
-    if format_kwargs:
-        prompt = prompt.partial(**format_kwargs)
+            if (
+                isinstance(variable, List)
+                and all(isinstance(item, Document) for item in variable)
+            ) or (
+                isinstance(variable, BaseOutputParser)
+                and hasattr(variable, "get_format_instructions")
+            ):
+                if "handle_keys" not in format_kwargs:
+                    format_kwargs["handle_keys"] = []
 
-    return prompt
+                # Add the handle_keys to the list
+                format_kwargs["handle_keys"].append(input_variable)
+
+    return prompt, format_kwargs
 
 
 def instantiate_tool(node_type, class_object, params):
