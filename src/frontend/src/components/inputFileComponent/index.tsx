@@ -114,7 +114,7 @@ export default function InputFileComponent({
         </span>
         <button onClick={handleButtonClick}>
           {!editNode && !loading && (
-            <FileSearch2 className="w-6 h-6 hover:text-ring" />
+            <FileSearch2 strokeWidth={1.5} className="w-6 h-6 hover:text-ring" />
           )}
           {!editNode && loading && (
             <span className="loading loading-spinner loading-sm pl-3 h-8 pointer-events-none"></span>

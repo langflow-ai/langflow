@@ -89,7 +89,7 @@ export default function Header() {
             rel="noreferrer"
             className="text-muted-foreground"
           >
-            <FaTwitter className="h-5 w-5" />
+            <FaTwitter className="h-5 w-5 hover:text-ring" />
           </a>
           <a
             href="https://discord.gg/EqksyE2EX9"
@@ -97,7 +97,7 @@ export default function Header() {
             rel="noreferrer"
             className="text-muted-foreground"
           >
-            <FaDiscord className="h-5 w-5" />
+            <FaDiscord className="h-5 w-5 hover:text-ring" />
           </a>
 
           <Separator orientation="vertical" />
