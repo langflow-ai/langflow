@@ -32,4 +32,5 @@ VERTEX_TYPE_MAP: Dict[str, Type[Vertex]] = {
     **{t: types.DocumentLoaderVertex for t in documentloader_creator.to_list()},
     **{t: types.TextSplitterVertex for t in textsplitter_creator.to_list()},
     **{t: types.OutputParserVertex for t in output_parser_creator.to_list()},
+    **{t: types.CustomComponentVertex for t in tool_creator.to_list()},
 }
