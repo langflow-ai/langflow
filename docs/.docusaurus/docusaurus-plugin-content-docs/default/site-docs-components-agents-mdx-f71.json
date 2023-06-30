@@ -2,7 +2,7 @@
   "unversionedId": "components/agents",
   "id": "components/agents",
   "title": "Agents",
-  "description": "Agent Initializer",
+  "description": "AgentInitializer",
   "source": "@site/docs/components/agents.mdx",
   "sourceDirName": "components",
   "slug": "/components/agents",

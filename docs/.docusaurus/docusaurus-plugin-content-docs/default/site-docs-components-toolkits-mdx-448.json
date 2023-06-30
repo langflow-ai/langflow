@@ -2,7 +2,7 @@
   "unversionedId": "components/toolkits",
   "id": "components/toolkits",
   "title": "Toolkits",
-  "description": "(coming soon)",
+  "description": "JsonToolkit",
   "source": "@site/docs/components/toolkits.mdx",
   "sourceDirName": "components",
   "slug": "/components/toolkits",

@@ -2,7 +2,7 @@
   "unversionedId": "components/wrappers",
   "id": "components/wrappers",
   "title": "Wrappers",
-  "description": "(coming soon)",
+  "description": "TextRequestsWrapper",
   "source": "@site/docs/components/wrappers.mdx",
   "sourceDirName": "components",
   "slug": "/components/wrappers",

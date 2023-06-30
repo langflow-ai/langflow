@@ -2,7 +2,7 @@
   "unversionedId": "components/tools",
   "id": "components/tools",
   "title": "Tools",
-  "description": "(coming soon)",
+  "description": "BigSearchRun",
   "source": "@site/docs/components/tools.mdx",
   "sourceDirName": "components",
   "slug": "/components/tools",

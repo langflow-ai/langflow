@@ -2,7 +2,7 @@
   "unversionedId": "components/llms",
   "id": "components/llms",
   "title": "LLMs",
-  "description": "(coming soon)",
+  "description": "Anthropic",
   "source": "@site/docs/components/llms.mdx",
   "sourceDirName": "components",
   "slug": "/components/llms",

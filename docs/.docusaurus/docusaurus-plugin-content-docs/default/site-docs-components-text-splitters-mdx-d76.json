@@ -2,7 +2,7 @@
   "unversionedId": "components/text-splitters",
   "id": "components/text-splitters",
   "title": "Text Splitters",
-  "description": "(coming soon)",
+  "description": "CharacterTextSplitter",
   "source": "@site/docs/components/text-splitters.mdx",
   "sourceDirName": "components",
   "slug": "/components/text-splitters",

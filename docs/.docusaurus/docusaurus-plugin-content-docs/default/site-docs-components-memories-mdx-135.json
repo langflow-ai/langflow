@@ -2,7 +2,7 @@
   "unversionedId": "components/memories",
   "id": "components/memories",
   "title": "Memories",
-  "description": "(coming soon)",
+  "description": "ConversationBufferMemory",
   "source": "@site/docs/components/memories.mdx",
   "sourceDirName": "components",
   "slug": "/components/memories",

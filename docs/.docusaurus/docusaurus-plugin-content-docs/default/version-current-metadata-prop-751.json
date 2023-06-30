@@ -261,79 +261,79 @@
     "components/agents": {
       "id": "components/agents",
       "title": "Agents",
-      "description": "Agent Initializer",
+      "description": "AgentInitializer",
       "sidebar": "docs"
     },
     "components/chains": {
       "id": "components/chains",
       "title": "Chains",
-      "description": "Combine Docs Chain",
+      "description": "CombineDocsChain",
       "sidebar": "docs"
     },
     "components/embeddings": {
       "id": "components/embeddings",
       "title": "Embeddings",
-      "description": "Cohere Embeddings",
+      "description": "CohereEmbeddings",
       "sidebar": "docs"
     },
     "components/llms": {
       "id": "components/llms",
       "title": "LLMs",
-      "description": "(coming soon)",
+      "description": "Anthropic",
       "sidebar": "docs"
     },
     "components/loaders": {
       "id": "components/loaders",
       "title": "Loaders",
-      "description": "AZLyrics Loader",
+      "description": "AZLyricsLoader",
       "sidebar": "docs"
     },
     "components/memories": {
       "id": "components/memories",
       "title": "Memories",
-      "description": "(coming soon)",
+      "description": "ConversationBufferMemory",
       "sidebar": "docs"
     },
     "components/prompts": {
       "id": "components/prompts",
       "title": "Prompts",
-      "description": "(coming soon)",
+      "description": "PromptTemplate",
       "sidebar": "docs"
     },
     "components/text-splitters": {
       "id": "components/text-splitters",
       "title": "Text Splitters",
-      "description": "(coming soon)",
+      "description": "CharacterTextSplitter",
       "sidebar": "docs"
     },
     "components/toolkits": {
       "id": "components/toolkits",
       "title": "Toolkits",
-      "description": "(coming soon)",
+      "description": "JsonToolkit",
       "sidebar": "docs"
     },
     "components/tools": {
       "id": "components/tools",
       "title": "Tools",
-      "description": "(coming soon)",
+      "description": "BigSearchRun",
       "sidebar": "docs"
     },
     "components/utilities": {
       "id": "components/utilities",
       "title": "Utilities",
-      "description": "(coming soon)",
+      "description": "BingSearchAPIWrapper",
       "sidebar": "docs"
     },
     "components/vector-stores": {
       "id": "components/vector-stores",
       "title": "Vector Stores",
-      "description": "(coming soon)",
+      "description": "Chroma",
       "sidebar": "docs"
     },
     "components/wrappers": {
       "id": "components/wrappers",
       "title": "Wrappers",
-      "description": "(coming soon)",
+      "description": "TextRequestsWrapper",
       "sidebar": "docs"
     },
     "contributing/community": {

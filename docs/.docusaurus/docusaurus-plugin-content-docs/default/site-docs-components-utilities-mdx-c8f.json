@@ -2,7 +2,7 @@
   "unversionedId": "components/utilities",
   "id": "components/utilities",
   "title": "Utilities",
-  "description": "(coming soon)",
+  "description": "BingSearchAPIWrapper",
   "source": "@site/docs/components/utilities.mdx",
   "sourceDirName": "components",
   "slug": "/components/utilities",

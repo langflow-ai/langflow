@@ -2,7 +2,7 @@
   "unversionedId": "components/chains",
   "id": "components/chains",
   "title": "Chains",
-  "description": "Combine Docs Chain",
+  "description": "CombineDocsChain",
   "source": "@site/docs/components/chains.mdx",
   "sourceDirName": "components",
   "slug": "/components/chains",

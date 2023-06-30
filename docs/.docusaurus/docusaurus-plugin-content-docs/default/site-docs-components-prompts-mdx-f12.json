@@ -2,7 +2,7 @@
   "unversionedId": "components/prompts",
   "id": "components/prompts",
   "title": "Prompts",
-  "description": "(coming soon)",
+  "description": "PromptTemplate",
   "source": "@site/docs/components/prompts.mdx",
   "sourceDirName": "components",
   "slug": "/components/prompts",

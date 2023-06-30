@@ -2,7 +2,7 @@
   "unversionedId": "components/vector-stores",
   "id": "components/vector-stores",
   "title": "Vector Stores",
-  "description": "(coming soon)",
+  "description": "Chroma",
   "source": "@site/docs/components/vector-stores.mdx",
   "sourceDirName": "components",
   "slug": "/components/vector-stores",
