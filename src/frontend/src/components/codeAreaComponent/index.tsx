@@ -48,7 +48,7 @@ export default function CodeAreaComponent({
           }}
           className={
             editNode
-              ? "truncate cursor-pointer placeholder:text-center text-ring block w-full pt-0.5 pb-0.5 form-input rounded-md border-ring border-1 shadow-sm text-sm bg-transparent sm:text-sm" +
+              ? "truncate cursor-pointer placeholder:text-center text-ring block w-full pt-0.5 pb-0.5 form-input rounded-md border-ring border shadow-sm text-sm bg-transparent sm:text-sm" +
                 INPUT_STYLE
               : "truncate block w-full text-ring px-3 py-2 rounded-md border border-ring shadow-sm sm:text-sm placeholder:text-muted-foreground" +
                 INPUT_STYLE +

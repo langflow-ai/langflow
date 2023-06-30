@@ -171,7 +171,7 @@ export const EXPORT_CODE_DIALOG =
  * @constant
  */
 export const INPUT_STYLE =
-  "focus:tw-ring-none focus-visible:outline-none  focus:ring-ring bg-background focus:outline-none";
+  " focus:tw-ring-none border-border focus-visible:outline-none focus:ring-ring focus:ring-1 bg-background focus:outline-none";
 
 /**
  * The base text for subtitle of code dialog

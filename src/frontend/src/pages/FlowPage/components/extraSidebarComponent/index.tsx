@@ -126,7 +126,7 @@ export default function ExtraSidebar() {
           placeholder="Search"
           className={
             INPUT_STYLE +
-            "w-full border-1 rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            "w-full border rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
           }
           onChange={(e) => {
             handleSearchInput(e.target.value);

@@ -58,9 +58,9 @@ export default function FloatComponent({
         value={myValue}
         className={
           editNode
-            ? "focus:placeholder-transparent text-center placeholder:text-center border-1 block w-full pt-0.5 pb-0.5 form-input rounded-md border-ring shadow-sm sm:text-sm placeholder:text-muted-foreground" +
+            ? "focus:placeholder-transparent text-center placeholder:text-center border block w-full pt-0.5 pb-0.5 form-input rounded-md border-border shadow-sm sm:text-sm placeholder:text-muted-foreground" +
               INPUT_STYLE
-            : "focus:placeholder-transparent block w-full form-input placeholder:text-muted-foreground bg-background rounded-md border-ring shadow-sm ring-offset-input sm:text-sm" +
+            : "focus:placeholder-transparent block w-full form-input placeholder:text-muted-foreground bg-background rounded-md border-border shadow-sm ring-offset-input sm:text-sm" +
               INPUT_STYLE +
               (disabled ? " bg-input" : "")
         }

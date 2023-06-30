@@ -50,7 +50,7 @@ export default function InputComponent({
           disabled ? " bg-input" : "",
           password && !pwdVisible && myValue !== "" ? "password" : "",
           editNode
-            ? "border-1 block w-full pt-0.5 pb-0.5 form-input rounded-md border-ring shadow-sm sm:text-sm text-center" +
+            ? "border block w-full pt-0.5 pb-0.5 form-input rounded-md border-ring shadow-sm sm:text-sm text-center" +
                 INPUT_STYLE
             : "ring-offset-input" + INPUT_STYLE,
           password && editNode ? "pr-8" : "pr-3"
