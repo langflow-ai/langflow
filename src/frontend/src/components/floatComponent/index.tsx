@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from "react";
 import { FloatComponentType } from "../../types/components";
 import { TabsContext } from "../../contexts/tabsContext";
-import { INPUT_STYLE } from "../../constants";
+import { INPUT_DISABLE, INPUT_EDIT_NODE, INPUT_STYLE } from "../../constants";
 
 export default function FloatComponent({
   value,
@@ -56,11 +56,9 @@ export default function FloatComponent({
         value={myValue}
         className={
           editNode
-            ? "focus:placeholder-transparent text-center placeholder:text-center border-1 block w-full pt-0.5 pb-0.5 form-input rounded-md border-ring shadow-sm sm:text-sm placeholder:text-muted-foreground" +
-              INPUT_STYLE
-            : "focus:placeholder-transparent block w-full form-input placeholder:text-muted-foreground bg-background rounded-md border-ring shadow-sm ring-offset-input sm:text-sm" +
-              INPUT_STYLE +
-              (disabled ? " bg-input" : "")
+            ? INPUT_EDIT_NODE
+            : INPUT_STYLE +
+              (disabled ? INPUT_DISABLE : "")
         }
         placeholder={
           editNode ? "Number 0 to 1" : "Type a number from zero to one"

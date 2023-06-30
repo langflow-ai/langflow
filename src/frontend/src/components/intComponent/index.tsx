@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { FloatComponentType } from "../../types/components";
 import { TabsContext } from "../../contexts/tabsContext";
 import { classNames } from "../../utils";
-import { INPUT_STYLE } from "../../constants";
+import { INPUT_DISABLE, INPUT_EDIT_NODE, INPUT_STYLE } from "../../constants";
 
 export default function IntComponent({
   value,
@@ -70,11 +70,10 @@ export default function IntComponent({
         value={myValue}
         className={
           editNode
-            ? "focus:placeholder-transparent text-center placeholder:text-center border-1 block w-full pt-0.5 pb-0.5 form-input rounded-md border-ring shadow-sm sm:text-sm placeholder:text-muted-foreground" +
-              INPUT_STYLE
-            : "focus:placeholder-transparent block w-full form-input bg-background rounded-md border-ring shadow-sm ring-offset-background sm:text-sm placeholder:text-muted-foreground" +
+            ? INPUT_EDIT_NODE
+            : 
               INPUT_STYLE +
-              (disabled ? " bg-input" : "")
+              (disabled ? INPUT_DISABLE : "")
         }
         placeholder={editNode ? "Integer number" : "Type an integer number"}
         onChange={(e) => {

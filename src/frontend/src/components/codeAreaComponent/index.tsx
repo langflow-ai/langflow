@@ -3,7 +3,7 @@ import { PopUpContext } from "../../contexts/popUpContext";
 import CodeAreaModal from "../../modals/codeAreaModal";
 import TextAreaModal from "../../modals/textAreaModal";
 import { TextAreaComponentType } from "../../types/components";
-import { INPUT_STYLE } from "../../constants";
+import { INPUT_DIALOG, INPUT_DISABLE, INPUT_EDIT_NODE, INPUT_STYLE } from "../../constants";
 import { ExternalLink } from "lucide-react";
 
 export default function CodeAreaComponent({
@@ -46,11 +46,11 @@ export default function CodeAreaComponent({
           }}
           className={
             editNode
-              ? "truncate cursor-pointer placeholder:text-center text-ring block w-full pt-0.5 pb-0.5 form-input rounded-md border-ring border-1 shadow-sm text-sm bg-transparent sm:text-sm" +
-                INPUT_STYLE
-              : "truncate block w-full text-ring px-3 py-2 rounded-md border border-ring shadow-sm sm:text-sm placeholder:text-muted-foreground" +
-                INPUT_STYLE +
-                (disabled ? " bg-input" : "")
+              ? INPUT_EDIT_NODE +
+                 INPUT_DIALOG
+              : 
+                INPUT_STYLE + INPUT_DIALOG +
+                (disabled ? INPUT_DISABLE : "")
           }
         >
           {myValue !== "" ? myValue : "Type something..."}

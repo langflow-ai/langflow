@@ -144,12 +144,36 @@ export const EXPORT_CODE_DIALOG =
   "Generate the code to integrate your flow into an external application.";
 
 /**
- * The base text for subtitle of code dialog
+ * The base input for clickable ones
+ * @constant
+ */
+export const INPUT_DIALOG = " text-ring cursor-pointer bg-transparent";
+
+/**
+ * The base input style
  * @constant
  */
 export const INPUT_STYLE =
-  "focus:tw-ring-none focus-visible:outline-none  focus:ring-ring bg-background focus:outline-none";
+  " px-3 bg-background focus:tw-ring-none focus-visible:outline-none focus:ring-ring focus:outline-none rounded-md block w-full truncate form-input border-ring shadow-sm sm:text-sm focus:placeholder-transparent placeholder:text-muted-foreground ";
 
+/**
+ * The base input on edit node
+ * @constant
+ */
+export const INPUT_EDIT_NODE =
+  " placeholder:text-center pt-0.5 pb-0.5 text-center " + INPUT_STYLE;
+
+/**
+ * The base search input style
+ * @constant
+ */
+export const INPUT_SEARCH = INPUT_STYLE + " pr-7 mx-2 ";
+
+/**
+ * The base disable input style
+ * @constant
+ */
+export const INPUT_DISABLE = " bg-input ";
 /**
  * The base text for subtitle of code dialog
  * @constant
