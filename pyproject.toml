@@ -22,7 +22,7 @@ include = ["src/backend/langflow/*", "src/backend/langflow/**/*"]
 langflow = "langflow.__main__:main"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.12"
+python = ">=3.9,<3.11"
 fastapi = "^0.98.0"
 uvicorn = "^0.22.0"
 beautifulsoup4 = "^4.12.2"
@@ -69,6 +69,7 @@ pinecone-client = "^2.2.2"
 supabase = "^1.0.3"
 pymongo = "^4.4.0"
 certifi = "^2023.5.7"
+google-cloud-aiplatform = "^1.26.1"
 psycopg = "^3.1.9"
 psycopg-binary = "^3.1.9"
 

@@ -47,6 +47,7 @@ import {
 } from "lucide-react";
 import { SupabaseIcon } from "./icons/supabase";
 import { MongoDBIcon } from "./icons/MongoDB";
+import { VertexAIIcon } from "./icons/VertexAI";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -239,6 +240,12 @@ export const nodeIconsLucide: {
     ComponentType<SVGProps<SVGSVGElement>>
   >,
   SupabaseVectorStore: SupabaseIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  VertexAI: VertexAIIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  ChatVertexAI: VertexAIIcon as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
   agents: Rocket as React.ForwardRefExoticComponent<
