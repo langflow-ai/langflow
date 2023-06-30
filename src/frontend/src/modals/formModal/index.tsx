@@ -561,7 +561,7 @@ export default function FormModal({
                           let newTabsState = _.cloneDeep(old);
                           newTabsState[id.current].formKeysData.input_keys[
                             chatKey
-                          ] = chatValue;
+                          ] = value;
                           return newTabsState;
                         });
                       }}
