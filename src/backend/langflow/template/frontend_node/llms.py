@@ -7,12 +7,12 @@ from langflow.template.frontend_node.constants import OPENAI_API_BASE_INFO
 
 class LLMFrontendNode(FrontendNode):
     def add_extra_fields(self) -> None:
-        if self.template.type_name == "VertexAI":
+        if "VertexAI" in self.template.type_name:
             # Add credentials field which should of type file.
             self.template.add_field(
                 TemplateField(
                     field_type="file",
-                    required=True,
+                    required=False,
                     show=True,
                     name="credentials",
                     value="",
@@ -20,6 +20,34 @@ class LLMFrontendNode(FrontendNode):
                     fileTypes=["json"],
                 )
             )
+
+    @staticmethod
+    def format_vertex_field(field: TemplateField, name: str):
+        if "VertexAI" in name:
+            advanced_fields = [
+                "tuned_model_name",
+                "verbose",
+                "top_p",
+                "top_k",
+                "max_output_tokens",
+            ]
+            if field.name in advanced_fields:
+                field.advanced = True
+            show_fields = [
+                "tuned_model_name",
+                "verbose",
+                "project",
+                "location",
+                "credentials",
+                "max_output_tokens",
+                "model_name",
+                "temperature",
+                "top_p",
+                "top_k",
+            ]
+
+            if field.name in show_fields:
+                field.show = True
 
     @staticmethod
     def format_openai_field(field: TemplateField):
@@ -61,6 +89,8 @@ class LLMFrontendNode(FrontendNode):
             LLMFrontendNode.format_azure_field(field)
         if name and "llama" in name.lower():
             LLMFrontendNode.format_llama_field(field)
+        if name and "vertex" in name.lower():
+            LLMFrontendNode.format_vertex_field(field, name)
         SHOW_FIELDS = ["repo_id"]
         if field.name in SHOW_FIELDS:
             field.show = True
