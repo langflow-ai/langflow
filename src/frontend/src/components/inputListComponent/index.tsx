@@ -60,7 +60,7 @@ export default function InputListComponent({
                 onChange(inputList);
               }}
             >
-              <Plus className={"w-4 h-4 hover:text-ring"} />
+              <Plus className={"w-4 h-4 hover:text-accent-foreground"} />
             </button>
           ) : (
             <button

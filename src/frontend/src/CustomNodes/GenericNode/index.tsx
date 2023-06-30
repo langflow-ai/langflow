@@ -146,7 +146,7 @@ export default function GenericNode({
                       validationStatus && validationStatus.valid
                         ? "w-4 h-4 rounded-full bg-status-red opacity-100"
                         : "w-4 h-4 rounded-full bg-ring opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-ring hover:transition-all ease-in-out duration-200"
+                      "absolute w-4 hover:text-accent-foreground hover:transition-all ease-in-out duration-200"
                     )}
                   ></div>
                   <div
@@ -154,7 +154,7 @@ export default function GenericNode({
                       validationStatus && !validationStatus.valid
                         ? "w-4 h-4 rounded-full  bg-status-red opacity-100"
                         : "w-4 h-4 rounded-full bg-ring opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-ring hover:transition-all ease-in-out duration-200"
+                      "absolute w-4 hover:text-accent-foreground hover:transition-all ease-in-out duration-200"
                     )}
                   ></div>
                   <div
@@ -162,7 +162,7 @@ export default function GenericNode({
                       !validationStatus || isBuilding
                         ? "w-4 h-4 rounded-full  bg-status-yellow opacity-100"
                         : "w-4 h-4 rounded-full bg-ring opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-ring hover:transition-all ease-in-out duration-200"
+                      "absolute w-4 hover:text-accent-foreground hover:transition-all ease-in-out duration-200"
                     )}
                   ></div>
                 </div>
