@@ -382,8 +382,8 @@ export default function FormModal({
             <DialogDescription>{CHAT_FORM_DIALOG_SUBTITLE}</DialogDescription>
           </DialogHeader>
 
-          <div className="flex h-[80vh] w-full mt-2">
-            <div className="w-1/4 h-full flex flex-col justify-start mr-6">
+          <div className="flex h-[80vh] w-full mt-2 ">
+            <div className="w-1/4 h-full overflow-auto scrollbar-hide flex flex-col justify-start mr-6">
               <div className="flex py-2">
                 <Variable className="w-6 h-6 pe-1 text-gray-700 stroke-2 dark:text-slate-200"></Variable>
                 <span className="text-md font-semibold text-gray-800 dark:text-white">
@@ -393,9 +393,10 @@ export default function FormModal({
               <Accordion type="single" collapsible className="w-full">
                 {Object.keys(tabsState[id.current].formKeysData.input_keys).map((i, k) => (
                   <AccordionItem key={k} value={i}>
-                    <AccordionTrigger className="flex gap-2"><Badge variant="gray" size="md">{i}</Badge>{tabsState[id.current].formKeysData.handle_keys.some((t) => t === i) && <Badge size="md" variant="secondary">Handle</Badge>}</AccordionTrigger>
+                    <AccordionTrigger className="flex gap-2"><Badge variant="gray" size="md">{i}</Badge></AccordionTrigger>
                     <AccordionContent>
                       <div className="p-1 flex flex-col gap-2">
+                      {tabsState[id.current].formKeysData.handle_keys.some((t) => t === i) ? <div className="font-normal text-muted-foreground ">Handle</div> :
                         <div className="flex items-center space-x-2">
                           <Label htmlFor="airplane-mode" className="-mt-1">From Chat</Label>
                           <ToggleShadComponent
@@ -407,6 +408,7 @@ export default function FormModal({
                             disabled={false}
                           />
                         </div>
+                      }
                         <Textarea
                           value={tabsState[id.current].formKeysData.input_keys[i]}
                           onChange={(e) =>
