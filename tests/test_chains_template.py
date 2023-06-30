@@ -23,7 +23,6 @@ def test_conversation_chain(client: TestClient):
         "ConversationChain",
         "LLMChain",
         "Chain",
-        "Serializable",
         "function",
     }
 
@@ -108,7 +107,6 @@ def test_llm_chain(client: TestClient):
 
     # Test the base classes, template, memory, verbose, llm, input_key, output_key, and _type objects
     assert set(chain["base_classes"]) == {
-        "Serializable",
         "function",
         "LLMChain",
         "Chain",
@@ -176,7 +174,6 @@ def test_llm_checker_chain(client: TestClient):
 
     # Test the base classes, template, memory, verbose, llm, input_key, output_key, and _type objects
     assert set(chain["base_classes"]) == {
-        "Serializable",
         "function",
         "LLMCheckerChain",
         "Chain",
@@ -211,7 +208,6 @@ def test_llm_math_chain(client: TestClient):
     # Test the base classes, template, memory, verbose, llm, input_key, output_key, and _type objects
     assert set(chain["base_classes"]) == {
         "function",
-        "Serializable",
         "LLMMathChain",
         "Chain",
     }
