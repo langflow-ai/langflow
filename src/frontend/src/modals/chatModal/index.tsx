@@ -11,6 +11,7 @@ import { ChatMessageType } from "../../types/chat";
 import ChatInput from "./chatInput";
 
 import _ from "lodash";
+import { getHealth } from "../../controllers/API";
 
 export default function ChatModal({
   flow,
@@ -204,25 +205,25 @@ export default function ChatModal({
         handleOnClose(event);
       };
       newWs.onerror = (ev) => {
-        console.log(ev, "error");
-        if (flow.id === "") {
-          connectWS();
-        } else {
+        getHealth().then((res) => {
+          if (res.status === 200) {
+            connectWS();
+          }
+        }).catch((err) => {
           setErrorData({
-            title: "There was an error on web connection, please: ",
+            // message when the backend failed
+            title: "The backend is not responding. Please try again later.",
+            // possible solution list
             list: [
-              "Refresh the page",
-              "Use a new flow tab",
-              "Check if the backend is up",
+              "Check your internet connection.",
+              "Check if the backend is running."
             ],
           });
-        }
+        })
       };
       ws.current = newWs;
     } catch (error) {
-      if (flow.id === "") {
         connectWS();
-      }
       console.log(error);
     }
   }

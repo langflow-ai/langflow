@@ -119,6 +119,15 @@ llms:
     documentation: "https://python.langchain.com/docs/modules/model_io/models/chat/integrations/anthropic"
   HuggingFaceHub:
     documentation: "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/huggingface_hub"
+  VertexAI:
+    documentation: "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/google_vertex_ai_palm"
+  ###
+  # There's a bug in this component deactivating until we get it sorted: _language_models.py", line 804, in send_message
+  #     is_blocked=safety_attributes.get("blocked", False),
+  # AttributeError: 'list' object has no attribute 'get'
+  # ChatVertexAI:
+  #   documentation: "https://python.langchain.com/docs/modules/model_io/models/chat/integrations/google_vertex_ai_palm"
+  ###
 memories:
   # https://github.com/supabase-community/supabase-py/issues/482
   # ZepChatMessageHistory:
