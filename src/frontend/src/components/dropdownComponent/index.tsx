@@ -1,9 +1,11 @@
 import { Listbox, Transition } from "@headlessui/react";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useContext, useEffect, useState } from "react";
 import { DropDownComponentType } from "../../types/components";
 import { classNames } from "../../utils";
 import { INPUT_STYLE } from "../../constants";
 import { ChevronsUpDown, Check } from "lucide-react";
+import { PopUpContext } from "../../contexts/popUpContext";
+import { TabsContext } from "../../contexts/tabsContext";
 
 export default function Dropdown({
   value,
@@ -11,13 +13,17 @@ export default function Dropdown({
   onSelect,
   editNode = false,
   numberOfOptions = 0,
+  apiModal = false,
 }: DropDownComponentType) {
+  const { closePopUp } = useContext(PopUpContext);
+
   let [internalValue, setInternalValue] = useState(
     value === "" || !value ? "Choose an option" : value
   );
+
   useEffect(() => {
     setInternalValue(value === "" || !value ? "Choose an option" : value);
-  }, [value]);
+  }, [closePopUp]);
 
   return (
     <>
@@ -63,11 +69,12 @@ export default function Dropdown({
                 leaveTo="opacity-0"
               >
                 <Listbox.Options
-                  className={
+                  className={classNames(
                     editNode
-                      ? "absolute z-10 mt-1 max-h-60 overflow-auto rounded-md bg-background py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm w-[215px]"
-                      : "nowheel absolute z-10 mt-1 max-h-60 w-full overflow-auto overflow-y rounded-md bg-background py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm "
-                  }
+                      ? "z-10 mt-1 max-h-60 overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm w-[215px]"
+                      : "nowheel z-10 mt-1 max-h-60 w-full overflow-auto overflow-y rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm ",
+                    apiModal ? "w-[250px] mb-2" : "absolute"
+                  )}
                 >
                   {options.map((option, id) => (
                     <Listbox.Option
