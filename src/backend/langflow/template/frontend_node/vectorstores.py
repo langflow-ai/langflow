@@ -51,7 +51,7 @@ class VectorStoreFrontendNode(FrontendNode):
                 required=False,
                 show=True,
                 advanced=False,
-                value=True,
+                value=False,
                 display_name="Persist",
             )
             extra_fields.append(extra_field)
@@ -285,6 +285,3 @@ class VectorStoreFrontendNode(FrontendNode):
 
         elif field.name == "text_key":
             field.show = False
-
-        if field.name == "persist_directory":
-            field.value = False
