@@ -17,7 +17,7 @@
     "permalink": "/components/memories"
   },
   "next": {
-    "title": "Text Splitters",
-    "permalink": "/components/text-splitters"
+    "title": "Retrievers",
+    "permalink": "/components/retrievers"
   }
 }

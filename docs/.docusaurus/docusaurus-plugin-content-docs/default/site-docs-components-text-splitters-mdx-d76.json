@@ -13,8 +13,8 @@
   "frontMatter": {},
   "sidebar": "docs",
   "previous": {
-    "title": "Prompts",
-    "permalink": "/components/prompts"
+    "title": "Retrievers",
+    "permalink": "/components/retrievers"
   },
   "next": {
     "title": "Toolkits",

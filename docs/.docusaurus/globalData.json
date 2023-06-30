@@ -46,6 +46,11 @@
               "sidebar": "docs"
             },
             {
+              "id": "components/retrievers",
+              "path": "/components/retrievers",
+              "sidebar": "docs"
+            },
+            {
               "id": "components/text-splitters",
               "path": "/components/text-splitters",
               "sidebar": "docs"

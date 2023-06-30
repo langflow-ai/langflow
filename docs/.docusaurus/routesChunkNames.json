@@ -49,7 +49,7 @@
     },
     "content": "content---markdown-page-393-028"
   },
-  "/-73a": {
+  "/-89c": {
     "__comp": "__comp---theme-doc-page-1-be-9be",
     "__context": {
       "plugin": "plugin---8-d-8-3f8"
@@ -87,6 +87,10 @@
   "/components/prompts-268": {
     "__comp": "__comp---theme-doc-item-178-a40",
     "content": "content---components-promptsf-12-cf2"
+  },
+  "/components/retrievers-f5b": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---components-retrievers-0-d-3-51c"
   },
   "/components/text-splitters-7f3": {
     "__comp": "__comp---theme-doc-item-178-a40",

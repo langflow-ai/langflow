@@ -116,6 +116,12 @@
           },
           {
             "type": "link",
+            "label": "Retrievers",
+            "href": "/components/retrievers",
+            "docId": "components/retrievers"
+          },
+          {
+            "type": "link",
             "label": "Text Splitters",
             "href": "/components/text-splitters",
             "docId": "components/text-splitters"
@@ -298,6 +304,12 @@
       "id": "components/prompts",
       "title": "Prompts",
       "description": "PromptTemplate",
+      "sidebar": "docs"
+    },
+    "components/retrievers": {
+      "id": "components/retrievers",
+      "title": "Retrievers",
+      "description": "MultiQueryRetriever",
       "sidebar": "docs"
     },
     "components/text-splitters": {

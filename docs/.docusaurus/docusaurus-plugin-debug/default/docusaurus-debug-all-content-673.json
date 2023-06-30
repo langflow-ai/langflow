@@ -174,6 +174,29 @@
                 "permalink": "/components/memories"
               },
               "next": {
+                "title": "Retrievers",
+                "permalink": "/components/retrievers"
+              }
+            },
+            {
+              "unversionedId": "components/retrievers",
+              "id": "components/retrievers",
+              "title": "Retrievers",
+              "description": "MultiQueryRetriever",
+              "source": "@site/docs/components/retrievers.mdx",
+              "sourceDirName": "components",
+              "slug": "/components/retrievers",
+              "permalink": "/components/retrievers",
+              "draft": false,
+              "tags": [],
+              "version": "current",
+              "frontMatter": {},
+              "sidebar": "docs",
+              "previous": {
+                "title": "Prompts",
+                "permalink": "/components/prompts"
+              },
+              "next": {
                 "title": "Text Splitters",
                 "permalink": "/components/text-splitters"
               }
@@ -193,8 +216,8 @@
               "frontMatter": {},
               "sidebar": "docs",
               "previous": {
-                "title": "Prompts",
-                "permalink": "/components/prompts"
+                "title": "Retrievers",
+                "permalink": "/components/retrievers"
               },
               "next": {
                 "title": "Toolkits",
@@ -848,6 +871,10 @@
                   {
                     "type": "doc",
                     "id": "components/prompts"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "components/retrievers"
                   },
                   {
                     "type": "doc",

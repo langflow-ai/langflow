@@ -44,7 +44,7 @@ export default [
   },
   {
     path: '/',
-    component: ComponentCreator('/', '73a'),
+    component: ComponentCreator('/', '89c'),
     routes: [
       {
         path: '/',
@@ -91,6 +91,12 @@ export default [
       {
         path: '/components/prompts',
         component: ComponentCreator('/components/prompts', '268'),
+        exact: true,
+        sidebar: "docs"
+      },
+      {
+        path: '/components/retrievers',
+        component: ComponentCreator('/components/retrievers', 'f5b'),
         exact: true,
         sidebar: "docs"
       },

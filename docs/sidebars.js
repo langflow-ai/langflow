@@ -18,8 +18,8 @@ module.exports = {
       collapsed: false,
       items: [
         'components/agents', 'components/chains', 'components/loaders', 'components/embeddings', 'components/llms',
-        'components/memories', 'components/prompts','components/text-splitters', 'components/toolkits', 'components/tools',
-        'components/utilities', 'components/vector-stores', 'components/wrappers',
+        'components/memories', 'components/prompts', 'components/retrievers', 'components/text-splitters', 'components/toolkits',
+        'components/tools', 'components/utilities', 'components/vector-stores', 'components/wrappers',
       ],
     },
     {
