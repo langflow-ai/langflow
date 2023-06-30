@@ -149,7 +149,15 @@ def instantiate_prompt(node_type, class_object, params):
                 )
                 # handle_keys will be a list but it does not exist yet
                 # so we need to create it
-                if "handle_keys" not in params:
+
+            if (
+                isinstance(variable, List)
+                and all(isinstance(item, Document) for item in variable)
+            ) or (
+                isinstance(variable, BaseOutputParser)
+                and hasattr(variable, "get_format_instructions")
+            ):
+                if "handle_keys" not in format_kwargs:
                     format_kwargs["handle_keys"] = []
 
                 # Add the handle_keys to the list
