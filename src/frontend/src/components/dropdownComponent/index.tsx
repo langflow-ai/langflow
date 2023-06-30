@@ -34,13 +34,11 @@ export default function Dropdown({
               <Listbox.Button
                 className={
                   editNode
-                    ? "relative pr-8 border-1" + INPUT_EDIT_NODE
-                      
-                    : "py-2 pl-3 pr-10 text-left" +
-                      INPUT_STYLE
+                    ? "border-1 relative pr-8" + INPUT_EDIT_NODE
+                    : "py-2 pl-3 pr-10 text-left" + INPUT_STYLE
                 }
               >
-                <span className="block bg-background truncate w-full">
+                <span className="block w-full truncate bg-background">
                   {internalValue}
                 </span>
                 <span
@@ -65,8 +63,8 @@ export default function Dropdown({
                 <Listbox.Options
                   className={
                     editNode
-                      ? "absolute z-10 mt-1 max-h-60 overflow-auto rounded-md bg-background py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm w-[215px]"
-                      : "nowheel absolute z-10 mt-1 max-h-60 w-full overflow-auto overflow-y rounded-md bg-background py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm "
+                      ? "absolute z-10 mt-1 max-h-60 w-[215px] overflow-auto rounded-md bg-background py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm"
+                      : "nowheel overflow-y absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-background py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm "
                   }
                 >
                   {options.map((option, id) => (

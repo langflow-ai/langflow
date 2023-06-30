@@ -158,7 +158,7 @@ export default function BuildTrigger({
     >
       <div className={`fixed right-4` + (isBuilt ? " bottom-20" : " bottom-4")}>
         <div
-          className={`${eventClick} flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full shadow-md shadow-round-btn-shadow hover:shadow-round-btn-shadow bg-border cursor-pointer`}
+          className={`${eventClick} align-center shadow-round-btn-shadow hover:shadow-round-btn-shadow flex h-12 w-12 cursor-pointer justify-center rounded-full bg-border px-3 py-1 shadow-md`}
           onClick={() => {
             handleBuild(flow);
           }}
@@ -166,7 +166,7 @@ export default function BuildTrigger({
           onMouseLeave={handleMouseLeave}
         >
           <button>
-            <div className="flex gap-3 items-center">
+            <div className="flex items-center gap-3">
               {isBuilding && progress < 1 ? (
                 // Render your loading animation here when isBuilding is true
                 <RadialProgressComponent
@@ -177,7 +177,7 @@ export default function BuildTrigger({
               ) : isBuilding ? (
                 <Loading strokeWidth={1.5} className="stroke-build-trigger" />
               ) : (
-                <Zap className="sh-6 w-6 fill-build-trigger stroke-1 stroke-build-trigger" />
+                <Zap className="sh-6 w-6 fill-build-trigger stroke-build-trigger stroke-1" />
               )}
             </div>
           </button>

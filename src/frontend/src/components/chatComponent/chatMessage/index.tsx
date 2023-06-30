@@ -13,21 +13,21 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
         <div className="w-full text-start">
           <div
             style={{ backgroundColor: nodeColors["chat"] }}
-            className=" relative text-start inline-block text-background rounded-xl overflow-hidden w-fit max-w-[280px] text-sm font-normal rounded-tl-none"
+            className=" relative inline-block w-fit max-w-[280px] overflow-hidden rounded-xl rounded-tl-none text-start text-sm font-normal text-background"
           >
             {hidden && chat.thought && chat.thought !== "" && (
               <div
                 onClick={() => setHidden((prev) => !prev)}
-                className="absolute top-2 right-2 cursor-pointer"
+                className="absolute right-2 top-2 cursor-pointer"
               >
-                <MessageCircle className="w-5 h-5 animate-bounce" />
+                <MessageCircle className="h-5 w-5 animate-bounce" />
               </div>
             )}
             {chat.thought && chat.thought !== "" && !hidden && (
               <div
                 onClick={() => setHidden((prev) => !prev)}
                 style={{ backgroundColor: nodeColors["thought"] }}
-                className=" text-start inline-block w-full pb-3 pt-3 px-5 cursor-pointer"
+                className=" inline-block w-full cursor-pointer px-5 pb-3 pt-3 text-start"
                 dangerouslySetInnerHTML={{
                   __html: convert.toHtml(chat.thought),
                 }}
@@ -35,7 +35,7 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
             )}
             {chat.thought && chat.thought !== "" && !hidden && <br></br>}
             <div
-              className="w-full rounded-b-md px-4 pb-3 pt-3 pr-8"
+              className="w-full rounded-b-md px-4 pb-3 pr-8 pt-3"
               style={{ backgroundColor: nodeColors["chat"] }}
             >
               {chat.message}
@@ -44,7 +44,7 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
         </div>
       ) : (
         <div className="w-full text-end">
-          <div className="text-start inline-block rounded-xl p-3 overflow-hidden w-fit max-w-[280px] px-5 text-sm text-black bg-input font-normal rounded-tr-none">
+          <div className="inline-block w-fit max-w-[280px] overflow-hidden rounded-xl rounded-tr-none bg-input p-3 px-5 text-start text-sm font-normal text-black">
             {chat.message}
           </div>
         </div>

@@ -83,18 +83,18 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger></DialogTrigger>
-      <DialogContent className="lg:max-w-[800px] sm:max-w-[600px] h-[580px]">
+      <DialogContent className="h-[580px] sm:max-w-[600px] lg:max-w-[800px]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Code</span>
-            <Code2 className="h-6 w-6 text-primary pl-1 " aria-hidden="true" />
+            <Code2 className="h-6 w-6 pl-1 text-primary " aria-hidden="true" />
           </DialogTitle>
           <DialogDescription>{EXPORT_CODE_DIALOG}</DialogDescription>
         </DialogHeader>
 
         <Tabs
           defaultValue={"0"}
-          className="w-full h-full overflow-hidden text-center bg-muted rounded-md border"
+          className="h-full w-full overflow-hidden rounded-md border bg-muted text-center"
           onValueChange={(value) => setActiveTab(value)}
         >
           <div className="flex items-center justify-between px-2">
@@ -107,7 +107,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
             </TabsList>
             <div className="float-right">
               <button
-                className="flex gap-1.5 items-center rounded bg-none p-1 text-xs text-ring "
+                className="flex items-center gap-1.5 rounded bg-none p-1 text-xs text-ring "
                 onClick={copyToClipboard}
               >
                 {isCopied ? <Check size={18} /> : <Clipboard size={15} />}
@@ -119,7 +119,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
           {tabs.map((tab, index) => (
             <TabsContent
               value={index.toString()}
-              className="overflow-hidden w-full h-full px-4 pb-4 -mt-1"
+              className="-mt-1 h-full w-full overflow-hidden px-4 pb-4"
             >
               <SyntaxHighlighter
                 className="h-[400px] w-full overflow-auto"

@@ -77,7 +77,7 @@ export default function ButtonBox({
     <button disabled={deactivate} onClick={onClick}>
       <div
         className={classNames(
-          "flex flex-col justify-center items-center rounded-lg text-center shadow border border-ring hover:shadow-lg transform hover:scale-105",
+          "flex transform flex-col items-center justify-center rounded-lg border border-ring text-center shadow hover:scale-105 hover:shadow-lg",
           bgColor,
           height,
           width,
@@ -85,18 +85,18 @@ export default function ButtonBox({
         )}
       >
         <div
-          className={`flex items-center justify-center ${bigCircle} bg-background/30 rounded-full mb-1`}
+          className={`flex items-center justify-center ${bigCircle} mb-1 rounded-full bg-background/30`}
         >
           <div
-            className={`flex items-center justify-center ${smallCircle} bg-background rounded-full`}
+            className={`flex items-center justify-center ${smallCircle} rounded-full bg-background`}
           >
             <div className={textColor}>{icon}</div>
           </div>
         </div>
-        <div className="w-full mt-auto mb-auto">
+        <div className="mb-auto mt-auto w-full">
           <h3
             className={classNames(
-              "w-full font-semibold break-words text-background truncate-multiline",
+              "w-full break-words font-semibold text-background truncate-multiline",
               titleFontSize,
               marginTop
             )}

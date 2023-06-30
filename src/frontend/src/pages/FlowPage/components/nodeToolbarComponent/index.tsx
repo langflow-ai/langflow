@@ -28,16 +28,16 @@ const NodeToolbarComponent = (props) => {
   const reactFlowInstance = useReactFlow();
   return (
     <>
-      <div className="h-10 w-26">
+      <div className="w-26 h-10">
         <span className="isolate inline-flex rounded-md shadow-sm">
           <ShadTooltip delayDuration={1000} content="Delete" side="top">
             <button
-              className="text-foreground transition-all duration-500 ease-in-out  shadow-md relative inline-flex items-center rounded-l-md bg-background px-2 py-2 ring-1 ring-inset ring-ring hover:bg-muted focus:z-10"
+              className="relative inline-flex items-center rounded-l-md  bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
               onClick={() => {
                 props.deleteNode(props.data.id);
               }}
             >
-              <Trash2 className="w-4 h-4 "></Trash2>
+              <Trash2 className="h-4 w-4 "></Trash2>
             </button>
           </ShadTooltip>
 
@@ -45,8 +45,8 @@ const NodeToolbarComponent = (props) => {
             <button
               className={classNames(
                 nodeLength > 0
-                  ? "text-foreground transition-all duration-500 ease-in-out shadow-md relative -ml-px inline-flex items-center bg-background px-2 py-2  ring-1 ring-inset ring-ring hover:bg-muted focus:z-10"
-                  : "text-foreground transition-all duration-500 ease-in-out shadow-md relative -ml-px inline-flex items-center bg-background px-2 py-2  ring-1 ring-inset ring-ring hover:bg-muted focus:z-10 rounded-r-md"
+                  ? "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
+                  : "relative -ml-px inline-flex items-center rounded-r-md bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
               )}
               onClick={(event) => {
                 event.preventDefault();
@@ -65,20 +65,20 @@ const NodeToolbarComponent = (props) => {
                 );
               }}
             >
-              <Copy className="w-4 h-4 "></Copy>
+              <Copy className="h-4 w-4 "></Copy>
             </button>
           </ShadTooltip>
 
           {nodeLength > 0 && (
             <ShadTooltip delayDuration={1000} content="Edit" side="top">
               <button
-                className="text-foreground transition-all duration-500 ease-in-out shadow-md relative -ml-px inline-flex items-center bg-background px-2 py-2 ring-1 ring-inset ring-ring hover:bg-muted focus:z-10 rounded-r-md"
+                className="relative -ml-px inline-flex items-center rounded-r-md bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
                 onClick={(event) => {
                   event.preventDefault();
                   props.openPopUp(<EditNodeModal data={props.data} />);
                 }}
               >
-                <Settings2 className="w-4 h-4 "></Settings2>
+                <Settings2 className="h-4 w-4 "></Settings2>
               </button>
             </ShadTooltip>
           )}

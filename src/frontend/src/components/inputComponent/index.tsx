@@ -33,7 +33,7 @@ export default function InputComponent({
     <div
       className={
         disabled
-          ? "relative pointer-events-none cursor-not-allowed"
+          ? "pointer-events-none relative cursor-not-allowed"
           : "relative"
       }
     >
@@ -49,9 +49,7 @@ export default function InputComponent({
           " pr-12 ",
           disabled ? INPUT_DISABLE : "",
           password && !pwdVisible && myValue !== "" ? "password" : "",
-          editNode
-            ? INPUT_EDIT_NODE
-            : INPUT_STYLE,
+          editNode ? INPUT_EDIT_NODE : INPUT_STYLE,
           password && editNode ? "pr-8" : "pr-3"
         )}
         placeholder={password && editNode ? "Key" : "Type something..."}
@@ -64,7 +62,7 @@ export default function InputComponent({
         <button
           className={classNames(
             editNode
-              ? "absolute inset-y-0 right-0 pr-2 items-center text-muted-foreground"
+              ? "absolute inset-y-0 right-0 items-center pr-2 text-muted-foreground"
               : "absolute inset-y-0 right-0 items-center px-4 text-muted-foreground"
           )}
           onClick={() => {
@@ -81,8 +79,8 @@ export default function InputComponent({
                 stroke="currentColor"
                 className={classNames(
                   editNode
-                    ? "w-5 h-5 absolute bottom-0.5 right-2"
-                    : "w-5 h-5 absolute bottom-2 right-3"
+                    ? "absolute bottom-0.5 right-2 h-5 w-5"
+                    : "absolute bottom-2 right-3 h-5 w-5"
                 )}
               >
                 <path
@@ -100,8 +98,8 @@ export default function InputComponent({
                 stroke="currentColor"
                 className={classNames(
                   editNode
-                    ? "w-5 h-5 absolute bottom-0.5 right-2"
-                    : "w-5 h-5 absolute bottom-2 right-3"
+                    ? "absolute bottom-0.5 right-2 h-5 w-5"
+                    : "absolute bottom-2 right-3 h-5 w-5"
                 )}
               >
                 <path

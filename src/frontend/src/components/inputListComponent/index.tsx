@@ -28,14 +28,15 @@ export default function InputListComponent({
     >
       {inputList.map((i, idx) => {
         return (
-          <div key={idx} className="w-full flex gap-3">
+          <div key={idx} className="flex w-full gap-3">
             <input
               type="text"
               value={i}
-              className={editNode
-                ? INPUT_EDIT_NODE
-                : INPUT_STYLE +
-                (disabled ? INPUT_DISABLE : "")}
+              className={
+                editNode
+                  ? INPUT_EDIT_NODE
+                  : INPUT_STYLE + (disabled ? INPUT_DISABLE : "")
+              }
               placeholder="Type something..."
               onChange={(e) => {
                 setInputList((old) => {
@@ -44,7 +45,8 @@ export default function InputListComponent({
                   return newInputList;
                 });
                 onChange(inputList);
-              } } />
+              }}
+            />
             {idx === inputList.length - 1 ? (
               <button
                 onClick={() => {
@@ -54,9 +56,9 @@ export default function InputListComponent({
                     return newInputList;
                   });
                   onChange(inputList);
-                } }
+                }}
               >
-                <Plus className={"w-4 h-4 hover:text-ring"} />
+                <Plus className={"h-4 w-4 hover:text-ring"} />
               </button>
             ) : (
               <button
@@ -67,9 +69,9 @@ export default function InputListComponent({
                     return newInputList;
                   });
                   onChange(inputList);
-                } }
+                }}
               >
-                <X className="w-4 h-4 hover:text-status-red" />
+                <X className="h-4 w-4 hover:text-status-red" />
               </button>
             )}
           </div>

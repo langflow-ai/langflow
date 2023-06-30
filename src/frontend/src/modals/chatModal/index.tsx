@@ -330,7 +330,7 @@ export default function ChatModal({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black backdrop-blur-sm   bg-opacity-80 transition-opacity" />
+          <div className="fixed inset-0 bg-black bg-opacity-80   backdrop-blur-sm transition-opacity" />
         </Transition.Child>
 
         <div className="fixed inset-0 z-10 overflow-y-auto">
@@ -344,24 +344,24 @@ export default function ChatModal({
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className=" drop-shadow-2xl relative flex flex-col justify-between transform h-[95%] overflow-hidden rounded-lg bg-background text-left shadow-xl transition-all w-[690px]">
+              <Dialog.Panel className=" relative flex h-[95%] w-[690px] transform flex-col justify-between overflow-hidden rounded-lg bg-background text-left shadow-xl drop-shadow-2xl transition-all">
                 <div className="relative w-full p-4">
                   <button
                     onClick={() => clearChat()}
-                    className="absolute top-2 right-10 hover:text-status-red text-muted-foreground z-30"
+                    className="absolute right-10 top-2 z-30 text-muted-foreground hover:text-status-red"
                   >
-                    <Eraser className="w-4 h-4" />
+                    <Eraser className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => setModalOpen(false)}
-                    className="absolute top-1.5 right-2 hover:text-status-red text-muted-foreground z-30"
+                    className="absolute right-2 top-1.5 z-30 text-muted-foreground hover:text-status-red"
                   >
-                    <X className="w-5 h-5" />
+                    <X className="h-5 w-5" />
                   </button>
                 </div>
                 <div
                   ref={messagesRef}
-                  className="w-full h-full bg-background border-t  flex-col flex items-center overflow-scroll scrollbar-hide"
+                  className="flex h-full w-full flex-col  items-center overflow-scroll border-t bg-background scrollbar-hide"
                 >
                   {chatHistory.length > 0 ? (
                     chatHistory.map((c, i) => (
@@ -373,19 +373,19 @@ export default function ChatModal({
                       />
                     ))
                   ) : (
-                    <div className="flex flex-col h-full text-center justify-center w-full items-center align-middle">
+                    <div className="flex h-full w-full flex-col items-center justify-center text-center align-middle">
                       <span>
                         👋{" "}
-                        <span className="text-muted-foreground  text-lg">
+                        <span className="text-lg  text-muted-foreground">
                           LangFlow Chat
                         </span>
                       </span>
                       <br />
-                      <div className="bg-muted rounded-md w-2/4 px-6 py-8 border border-input">
+                      <div className="w-2/4 rounded-md border border-input bg-muted px-6 py-8">
                         <span className="text-base text-ring">
                           Start a conversation and click the agent’s thoughts{" "}
                           <span>
-                            <MessagesSquare className="w-5 h-5 inline animate-bounce mx-1 " />
+                            <MessagesSquare className="mx-1 inline h-5 w-5 animate-bounce " />
                           </span>{" "}
                           to inspect the chaining process.
                         </span>
@@ -394,8 +394,8 @@ export default function ChatModal({
                   )}
                   <div ref={ref}></div>
                 </div>
-                <div className="w-full bg-background border-t  flex-col flex items-center justify-between p-3">
-                  <div className="relative w-full  mt-1 rounded-md shadow-sm">
+                <div className="flex w-full flex-col  items-center justify-between border-t bg-background p-3">
+                  <div className="relative mt-1  w-full rounded-md shadow-sm">
                     <ChatInput
                       chatValue={chatValue}
                       lockChat={lockChat}

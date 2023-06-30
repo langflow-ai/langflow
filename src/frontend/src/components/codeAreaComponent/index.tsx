@@ -3,7 +3,12 @@ import { PopUpContext } from "../../contexts/popUpContext";
 import CodeAreaModal from "../../modals/codeAreaModal";
 import TextAreaModal from "../../modals/textAreaModal";
 import { TextAreaComponentType } from "../../types/components";
-import { INPUT_DIALOG, INPUT_DISABLE, INPUT_EDIT_NODE, INPUT_STYLE } from "../../constants";
+import {
+  INPUT_DIALOG,
+  INPUT_DISABLE,
+  INPUT_EDIT_NODE,
+  INPUT_STYLE,
+} from "../../constants";
 import { ExternalLink } from "lucide-react";
 
 export default function CodeAreaComponent({
@@ -28,10 +33,10 @@ export default function CodeAreaComponent({
   return (
     <div
       className={
-        disabled ? "pointer-events-none cursor-not-allowed w-full" : "w-full"
+        disabled ? "pointer-events-none w-full cursor-not-allowed" : "w-full"
       }
     >
-      <div className="w-full flex items-center">
+      <div className="flex w-full items-center">
         <span
           onClick={() => {
             openPopUp(
@@ -46,11 +51,8 @@ export default function CodeAreaComponent({
           }}
           className={
             editNode
-              ? INPUT_EDIT_NODE +
-                 INPUT_DIALOG
-              : 
-                INPUT_STYLE + INPUT_DIALOG +
-                (disabled ? INPUT_DISABLE : "")
+              ? INPUT_EDIT_NODE + INPUT_DIALOG
+              : INPUT_STYLE + INPUT_DIALOG + (disabled ? INPUT_DISABLE : "")
           }
         >
           {myValue !== "" ? myValue : "Type something..."}
@@ -69,7 +71,7 @@ export default function CodeAreaComponent({
           }}
         >
           {!editNode && (
-            <ExternalLink className="w-6 h-6 hover:text-ring  ml-3" />
+            <ExternalLink className="ml-3 h-6 w-6  hover:text-ring" />
           )}
         </button>
       </div>

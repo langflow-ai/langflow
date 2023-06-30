@@ -154,7 +154,7 @@ export const INPUT_DIALOG = " text-ring cursor-pointer bg-transparent";
  * @constant
  */
 export const INPUT_STYLE =
-  " px-3 bg-background focus:tw-ring-none focus-visible:outline-none focus:ring-ring focus:outline-none rounded-md block w-full truncate form-input border-ring shadow-sm sm:text-sm focus:placeholder-transparent placeholder:text-muted-foreground ";
+  " bg-background block border-ring focus:outline-none focus:placeholder-transparent focus:ring-ring focus:tw-ring-none focus:visible:outline-none form-input px-3 placeholder:text-muted-foreground rounded-md shadow-sm sm:text-sm truncate w-full ";
 
 /**
  * The base input on edit node
