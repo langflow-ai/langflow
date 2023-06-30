@@ -283,7 +283,8 @@ export default function Page({ flow }: { flow: FlowType }) {
         }
         setNodes((nds) => nds.concat(newNode));
       } else if (event.dataTransfer.types.some((t) => t === "Files")) {
-        uploadFlow(false, event.dataTransfer.files.item(0))
+        takeSnapshot();
+        uploadFlow(false, event.dataTransfer.files.item(0));
       }
     },
     // Specify dependencies for useCallback
