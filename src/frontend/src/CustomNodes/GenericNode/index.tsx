@@ -102,7 +102,7 @@ export default function GenericNode({
                 color: nodeColors[types[data.type]] ?? nodeColors.unknown,
               }}
             />
-            <div className="ml-2 truncate">
+            <div className="ml-2 truncate flex-1">
               <ShadTooltip
                 delayDuration={1500}
                 content={data.node.display_name}
