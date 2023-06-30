@@ -6,6 +6,7 @@ from langchain.agents import agent as agent_module
 from langchain.agents.agent import AgentExecutor
 from langchain.agents.agent_toolkits.base import BaseToolkit
 from langchain.agents.tools import BaseTool
+from langflow.interface.initialize.llm import initialize_vertexai
 
 from langflow.interface.initialize.vector_store import vecstore_initializer
 
@@ -89,6 +90,8 @@ def instantiate_llm(node_type, class_object, params: Dict):
     # if "openai_api_base" in params and "jina" in params["openai_api_base"]:
     # False if condition is True
     ChatConfig.streaming = "jina" not in params.get("openai_api_base", "")
+    if node_type == "VertexAI":
+        return initialize_vertexai(class_object=class_object, params=params)
 
     return class_object(**params)
 
