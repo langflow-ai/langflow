@@ -2,7 +2,7 @@ from pathlib import Path
 from langchain.schema import AgentAction
 import json
 from langflow.interface.run import (
-    build_langchain_object_with_caching,
+    build_sorted_vertices_with_caching,
     get_memory_key,
     update_memory_keys,
 )
@@ -88,8 +88,16 @@ def process_graph_cached(data_graph: Dict[str, Any], inputs: Optional[dict] = No
     with PromptTemplate,then run the graph and return the result and thought.
     """
     # Load langchain object
-    langchain_object = build_langchain_object_with_caching(data_graph)
+    langchain_object, artifacts = build_sorted_vertices_with_caching(data_graph)
     logger.debug("Loaded LangChain object")
+    if inputs is None:
+        inputs = {}
+    for (
+        key,
+        value,
+    ) in artifacts.items():
+        if key not in inputs or not inputs[key]:
+            inputs[key] = value
 
     if langchain_object is None:
         # Raise user facing error
