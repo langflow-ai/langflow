@@ -157,7 +157,7 @@ def instantiate_prompt(node_type, class_object, params):
                 isinstance(variable, BaseOutputParser)
                 and hasattr(variable, "get_format_instructions")
             ):
-                if "handle_keys" not in params:
+                if "handle_keys" not in format_kwargs:
                     format_kwargs["handle_keys"] = []
 
                 # Add the handle_keys to the list
