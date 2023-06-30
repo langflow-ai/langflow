@@ -52,7 +52,7 @@ class PythonFunction(Function):
     code: str
 
 
-class CustomComponent(BaseModel):
+class CustomComponent_old(BaseModel):
     code: str
     function: Optional[Callable] = None
     imports: Optional[str] = None
@@ -78,8 +78,9 @@ class CustomComponent(BaseModel):
         return validate.create_function(self.code, function_name)
 
 
-class CustomComponent1(BaseModel):
+class CustomComponent(BaseModel):
     code: str
+    function: Optional[Callable] = None
     function_entrypoint_name = "build"
     return_type_valid_list = [
         "ConversationChain",

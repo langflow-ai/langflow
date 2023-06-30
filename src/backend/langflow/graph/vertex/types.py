@@ -184,7 +184,8 @@ class PromptVertex(Vertex):
             if "prompt" not in self.params and "messages" not in self.params:
                 for param in prompt_params:
                     prompt_text = self.params[param]
-                    variables = extract_input_variables_from_prompt(prompt_text)
+                    variables = extract_input_variables_from_prompt(
+                        prompt_text)
                     self.params["input_variables"].extend(variables)
                 self.params["input_variables"] = list(
                     set(self.params["input_variables"])
@@ -199,3 +200,8 @@ class PromptVertex(Vertex):
 class OutputParserVertex(Vertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="output_parsers")
+
+
+class CustomComponentVertex(Vertex):
+    def __init__(self, data: Dict):
+        super().__init__(data, base_type="tools")

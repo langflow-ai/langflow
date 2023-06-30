@@ -9,10 +9,12 @@ from langflow.utils.logger import logger
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 
-from langflow.api.extract_info_from_class import (
-    ClassCodeExtractor,
-    is_valid_class_template
-)
+# from langflow.api.extract_info_from_class import (
+#     ClassCodeExtractor,
+#     is_valid_class_template
+# )
+
+from langflow.interface.tools.custom import CustomComponent
 
 from langflow.api.v1.schemas import (
     ProcessResponse,
@@ -101,9 +103,9 @@ def get_version():
 async def custom_component(
     raw_code: CustomComponentCode,
 ):
-    extractor = ClassCodeExtractor(raw_code.code)
+    extractor = CustomComponent(code=raw_code.code)
     data = extractor.extract_class_info()
-    valid = is_valid_class_template(data)
+    valid = extractor.is_valid_class_template(data)
 
     function_args, function_return_type = extractor.get_entrypoint_function_args_and_return_type()
 
