@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { useNodes } from "reactflow";
 import { ChatType } from "../../types/chat";
 import ChatTrigger from "./chatTrigger";
@@ -7,10 +7,13 @@ import BuildTrigger from "./buildTrigger";
 import { getBuildStatus } from "../../controllers/API";
 import { NodeType } from "../../types/flow";
 import FormModal from "../../modals/formModal";
+import { TabsContext } from "../../contexts/tabsContext";
+import * as _ from "lodash";
 
 export default function Chat({ flow }: ChatType) {
   const [open, setOpen] = useState(false);
   const [isBuilt, setIsBuilt] = useState(false);
+  const {tabsState} = useContext(TabsContext);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -43,21 +46,19 @@ export default function Chat({ flow }: ChatType) {
   const prevNodesRef = useRef<any[] | undefined>();
   const nodes = useNodes();
   useEffect(() => {
-    
     const prevNodes = prevNodesRef.current;
     const currentNodes = nodes.map(
-      (node: NodeType) => node.data.node.template
+      (node: NodeType) => _.cloneDeep(node.data.node.template)
       );
-
     if (
-      prevNodes &&
-      JSON.stringify(prevNodes) !== JSON.stringify(currentNodes)
+      tabsState && tabsState[flow.id] && tabsState[flow.id].isPending
+      && JSON.stringify(prevNodes) !== JSON.stringify(currentNodes)
     ) {
       setIsBuilt(false);
     }
 
     prevNodesRef.current = currentNodes;
-  }, [nodes]);
+  }, [tabsState]);
 
   return (
     <>

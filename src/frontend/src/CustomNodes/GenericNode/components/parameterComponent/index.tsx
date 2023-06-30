@@ -25,6 +25,7 @@ import { nodeColors } from "../../../../utils";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import { PopUpContext } from "../../../../contexts/popUpContext";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
+import * as _ from "lodash";
 
 export default function ParameterComponent({
   left,
