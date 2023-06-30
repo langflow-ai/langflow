@@ -37,7 +37,7 @@ const NodeToolbarComponent = (props) => {
                 props.deleteNode(props.data.id);
               }}
             >
-              <Trash2 className="w-4 h-4" ></Trash2>
+              <Trash2 className="w-4 h-4"></Trash2>
             </button>
           </ShadTooltip>
 
