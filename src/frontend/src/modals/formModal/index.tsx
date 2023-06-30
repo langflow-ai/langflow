@@ -406,11 +406,16 @@ export default function FormModal({
 
           <div className="flex h-[80vh] w-full mt-2 ">
             <div className="w-2/5 h-full overflow-auto scrollbar-hide flex flex-col justify-start mr-6">
-              <div className="flex justify-between items-center">
-                <div className="flex py-2 items-center">
+            <div className="flex py-2 items-center">
                   <Variable className="w-4 h-4 mr-1 text-primary"></Variable>
-                  <span className="text-sm font-semibold text-primary">
+                  <span className="text-md font-semibold text-primary">
                     Input Variables
+                  </span>
+                </div>
+              <div className="flex justify-between items-center">
+              <div className="flex mr-2.5 py-2 items-center">
+                  <span className="text-sm font-semibold text-primary">
+                    Name
                   </span>
                 </div>
                 <div className="flex mr-2.5 py-2 items-center">
