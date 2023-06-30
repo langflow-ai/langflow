@@ -408,14 +408,14 @@ export default function FormModal({
             <div className="w-2/5 h-full overflow-auto scrollbar-hide flex flex-col justify-start mr-6">
               <div className="flex justify-between items-center">
                 <div className="flex py-2 items-center">
-                  <Variable className="w-6 h-6 pe-1 text-primary"></Variable>
-                  <span className="text-md font-semibold text-primary">
+                  <Variable className="w-4 h-4 mr-1 text-primary"></Variable>
+                  <span className="text-sm font-semibold text-primary">
                     Input Variables
                   </span>
                 </div>
                 <div className="flex py-2 items-center">
-                  <MessageSquarePlus className="w-6 h-6 pe-1 mr-0.5 text-primary" />
-                  <span className=" text-md font-semibold text-primary">
+                  <MessageSquarePlus className="w-4 h-4 mr-1 text-primary" />
+                  <span className="text-sm font-semibold text-primary">
                     Chat Input
                   </span>
                 </div>
@@ -423,7 +423,7 @@ export default function FormModal({
               <Accordion type="multiple" className="w-full">
                 {Object.keys(tabsState[id.current].formKeysData.input_keys).map(
                   (i, k) => (
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-3" key={k}>
                       <AccordionItem className="w-full" key={k} value={i}>
                         <AccordionTrigger className="flex gap-2">
                           <div className="flex items-center w-full justify-between">
