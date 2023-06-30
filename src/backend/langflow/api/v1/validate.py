@@ -39,10 +39,11 @@ def post_validate_prompt(prompt: ValidatePromptRequest):
             try:
                 template_field = TemplateField(
                     name=variable,
+                    display_name=variable,
                     field_type="str",
                     show=True,
                     advanced=False,
-                    input_types=["BaseLoader"],
+                    input_types=["BaseLoader", "BaseOutputParser"],
                 )
 
                 prompt.frontend_node.template[variable] = template_field.to_dict()

@@ -92,7 +92,7 @@ export default function ChatMessage({
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm, remarkMath]}
                       rehypePlugins={[rehypeMathjax]}
-                      className="markdown prose dark:prose-invert text-primary"
+                      className="markdown prose dark:prose-invert text-primary max-w-full"
                       components={{
                         code({ node, inline, className, children, ...props }) {
                           if (children.length) {

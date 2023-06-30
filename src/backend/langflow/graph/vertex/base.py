@@ -1,14 +1,11 @@
-from langflow.utils.constants import DIRECT_TYPES
 from langflow.interface.initialize import loading
 from langflow.interface.listing import ALL_TYPES_DICT
 from langflow.utils.logger import logger
 from langflow.utils.util import sync_to_async
 
 
-import contextlib
 import inspect
 import types
-import warnings
 from typing import Any, Dict, List, Optional
 from typing import TYPE_CHECKING
 
@@ -25,6 +22,7 @@ class Vertex:
         self._parse_data()
         self._built_object = None
         self._built = False
+        self.artifacts: Dict[str, Any] = {}
 
     def _parse_data(self) -> None:
         self.data = self._data["data"]
@@ -45,6 +43,14 @@ class Vertex:
             for key, value in template_dicts.items()
             if not value["required"]
         ]
+        # Add the template_dicts[key]["input_types"] to the optional_inputs
+        self.optional_inputs.extend(
+            [
+                input_type
+                for value in template_dicts.values()
+                for input_type in value.get("input_types", [])
+            ]
+        )
 
         template_dict = self.data["node"]["template"]
         self.vertex_type = (
@@ -60,6 +66,7 @@ class Vertex:
                     break
 
     def _build_params(self):
+        # sourcery skip: merge-list-append, remove-redundant-if
         # Some params are required, some are optional
         # but most importantly, some params are python base classes
         # like str and others are LangChain objects like LLMChain, BasePromptTemplate
@@ -80,8 +87,19 @@ class Vertex:
             if isinstance(value, dict)
         }
         params = {}
+
+        for edge in self.edges:
+            param_key = edge.target_param
+            if param_key in template_dict:
+                if template_dict[param_key]["list"]:
+                    if param_key not in params:
+                        params[param_key] = []
+                    params[param_key].append(edge.source)
+                else:
+                    params[param_key] = edge.source
+
         for key, value in template_dict.items():
-            if key == "_type":
+            if key == "_type" or not value.get("show"):
                 continue
             # If the type is not transformable to a python base class
             # then we need to get the edge that connects to this node
@@ -92,45 +110,8 @@ class Vertex:
                 file_path = value.get("file_path")
 
                 params[key] = file_path
-
-            elif value.get("type") not in DIRECT_TYPES:
-                # Get the edge that connects to this node
-                edges = [
-                    edge
-                    for edge in self.edges
-                    if edge.target == self and edge.matched_type in value["type"]
-                ]
-
-                # Get the output of the node that the edge connects to
-                # if the value['list'] is True, then there will be more
-                # than one time setting to params[key]
-                # so we need to append to a list if it exists
-                # or create a new list if it doesn't
-
-                if value["required"] and not edges:
-                    # If a required parameter is not found, raise an error
-                    raise ValueError(
-                        f"Required input {key} for module {self.vertex_type} not found"
-                    )
-                elif value["list"]:
-                    # If this is a list parameter, append all sources to a list
-                    params[key] = [edge.source for edge in edges]
-                elif edges:
-                    # If a single parameter is found, use its source
-                    params[key] = edges[0].source
-
-            elif value["required"] or value.get("value"):
-                # If value does not have value this still passes
-                # but then gives a keyError
-                # so we need to check if value has value
-                new_value = value.get("value")
-                if new_value is None:
-                    warnings.warn(f"Value for {key} in {self.vertex_type} is None. ")
-                if value.get("type") == "int":
-                    with contextlib.suppress(TypeError, ValueError):
-                        new_value = int(new_value)  # type: ignore
-                params[key] = new_value
-
+            elif value.get("type") in ["str", "prompt"] and params.get(key) is None:
+                params[key] = value.get("value")
         # Add _type to params
         self.params = params
 
@@ -195,11 +176,17 @@ class Vertex:
         # and return the instance
 
         try:
-            self._built_object = loading.instantiate_class(
+            result = loading.instantiate_class(
                 node_type=self.vertex_type,
                 base_type=self.base_type,
                 params=self.params,
             )
+            # Result could be the _built_object or
+            # (_built_object, dict) tuple
+            if isinstance(result, tuple):
+                self._built_object, self.artifacts = result
+            else:
+                self._built_object = result
         except Exception as exc:
             raise ValueError(
                 f"Error building node {self.vertex_type}: {str(exc)}"

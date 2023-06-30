@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     toolkits: List[str] = []
     textsplitters: List[str] = []
     utilities: List[str] = []
+    output_parsers: List[str] = []
     dev: bool = False
     database_url: str = "sqlite:///./langflow.db"
     cache: str = "InMemoryCache"
@@ -48,6 +49,10 @@ class Settings(BaseSettings):
         self.toolkits = new_settings.toolkits or []
         self.textsplitters = new_settings.textsplitters or []
         self.utilities = new_settings.utilities or []
+        self.embeddings = new_settings.embeddings or []
+        self.vectorstores = new_settings.vectorstores or []
+        self.documentloaders = new_settings.documentloaders or []
+        self.output_parsers = new_settings.output_parsers or []
         self.dev = dev
 
     def update_settings(self, **kwargs):

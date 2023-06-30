@@ -14,7 +14,7 @@ export type TabsContextType = {
   downloadFlow: (flow: FlowType) => void;
   downloadFlows: () => void;
   uploadFlows: () => void;
-  uploadFlow: (newFlow?: boolean) => void;
+  uploadFlow: (newFlow?: boolean, file?: File) => void;
   hardReset: () => void;
   //disable CopyPaste
   disableCopyPaste: boolean;
@@ -33,6 +33,6 @@ export type TabsContextType = {
 export type TabsState = {
   [key: string]: {
     isPending: boolean;
-    formKeysData: {input_keys?: Array<string>, memory_keys?: Array<string>};
+    formKeysData: {input_keys?: Object, memory_keys?: Array<string>, handle_keys?: Array<string>};
   };
 };
