@@ -4,7 +4,13 @@ import { alertContext } from "../../contexts/alertContext";
 import { classNames, validateNodes } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import ChatMessage from "./chatMessage";
-import { TerminalSquare, MessageSquare, Variable, Eraser } from "lucide-react";
+import {
+  TerminalSquare,
+  MessageSquare,
+  Variable,
+  Eraser,
+  MessageSquarePlus,
+} from "lucide-react";
 import { sendAllProps } from "../../types/api";
 import { ChatMessageType } from "../../types/chat";
 import ChatInput from "./chatInput";
@@ -401,17 +407,20 @@ export default function FormModal({
           <div className="flex h-[80vh] w-full mt-2 ">
             <div className="w-2/5 h-full overflow-auto scrollbar-hide flex flex-col justify-start mr-6">
               <div className="flex justify-between items-center">
-                <div className="flex py-2">
-                  <Variable className="w-6 h-6 pe-1 text-gray-700 stroke-2 dark:text-slate-200"></Variable>
+                <div className="flex py-2 items-center">
+                  <Variable className="w-6 h-6 pe-1 text-primary"></Variable>
                   <span className="text-md font-semibold text-primary">
                     Input Variables
                   </span>
                 </div>
-                <span className="mr-2 text-md font-semibold text-primary">
-                  Chat Input
-                </span>
+                <div className="flex py-2 items-center">
+                  <MessageSquarePlus className="w-6 h-6 pe-1 mr-0.5 text-primary" />
+                  <span className=" text-md font-semibold text-primary">
+                    Chat Input
+                  </span>
+                </div>
               </div>
-              <Accordion type="single" collapsible className="w-full">
+              <Accordion type="multiple" className="w-full">
                 {Object.keys(tabsState[id.current].formKeysData.input_keys).map(
                   (i, k) => (
                     <div className="flex items-start gap-3">
@@ -434,7 +443,9 @@ export default function FormModal({
                                   handleOnCheckedChange(value, i)
                                 }
                                 size="small"
-                                disabled={false}
+                                disabled={tabsState[
+                                  id.current
+                                ].formKeysData.handle_keys.some((t) => t === i)}
                               />
                             </div>
                           </div>
@@ -443,33 +454,23 @@ export default function FormModal({
                           <div className="p-1 flex flex-col gap-2">
                             {tabsState[
                               id.current
-                            ].formKeysData.handle_keys.some((t) => t === i) ? (
+                            ].formKeysData.handle_keys.some((t) => t === i) && (
                               <div className="font-normal text-muted-foreground ">
-                                Handle
+                                Source: Component
                               </div>
-                            ) : (
-                              <></>
                             )}
                             <Textarea
                               value={
                                 tabsState[id.current].formKeysData.input_keys[i]
                               }
                               onChange={(e) => {
-                                if (
-                                  !tabsState[
+                                setTabsState((old) => {
+                                  let newTabsState = _.cloneDeep(old);
+                                  newTabsState[
                                     id.current
-                                  ].formKeysData.handle_keys.some(
-                                    (t) => t === i
-                                  )
-                                )
-                                  setTabsState((old) => {
-                                    let newTabsState = _.cloneDeep(old);
-                                    newTabsState[
-                                      id.current
-                                    ].formKeysData.input_keys[i] =
-                                      e.target.value;
-                                    return newTabsState;
-                                  });
+                                  ].formKeysData.input_keys[i] = e.target.value;
+                                  return newTabsState;
+                                });
                               }}
                               disabled={chatKey === i}
                               placeholder="Enter text..."
