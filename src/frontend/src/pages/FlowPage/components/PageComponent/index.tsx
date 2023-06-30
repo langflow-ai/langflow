@@ -219,62 +219,72 @@ export default function Page({ flow }: { flow: FlowType }) {
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
+    console.log(event.dataTransfer.types);
+    if (event.dataTransfer.types.some((t) => t === "nodedata")) {
+      event.dataTransfer.dropEffect = "move";
+    } else {
+      event.dataTransfer.dropEffect = "copy";
+    }
   }, []);
 
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
-      takeSnapshot();
+      if (event.dataTransfer.types.some((t) => t === "nodedata")) {
+        takeSnapshot();
 
-      // Get the current bounds of the ReactFlow wrapper element
-      const reactflowBounds = reactFlowWrapper.current.getBoundingClientRect();
+        // Get the current bounds of the ReactFlow wrapper element
+        const reactflowBounds =
+          reactFlowWrapper.current.getBoundingClientRect();
 
-      // Extract the data from the drag event and parse it as a JSON object
-      let data: { type: string; node?: APIClassType } = JSON.parse(
-        event.dataTransfer.getData("json")
-      );
+        // Extract the data from the drag event and parse it as a JSON object
+        let data: { type: string; node?: APIClassType } = JSON.parse(
+          event.dataTransfer.getData("nodedata")
+        );
 
-      // If data type is not "chatInput" or if there are no "chatInputNode" nodes present in the ReactFlow instance, create a new node
-      // Calculate the position where the node should be created
-      const position = reactFlowInstance.project({
-        x: event.clientX - reactflowBounds.left,
-        y: event.clientY - reactflowBounds.top,
-      });
+        // If data type is not "chatInput" or if there are no "chatInputNode" nodes present in the ReactFlow instance, create a new node
+        // Calculate the position where the node should be created
+        const position = reactFlowInstance.project({
+          x: event.clientX - reactflowBounds.left,
+          y: event.clientY - reactflowBounds.top,
+        });
 
-      // Generate a unique node ID
-      let { type } = data;
-      let newId = getNodeId(type);
-      let newNode: NodeType;
+        // Generate a unique node ID
+        let { type } = data;
+        let newId = getNodeId(type);
+        let newNode: NodeType;
 
-      if (data.type !== "groupNode") {
-        // Create a new node object
-        newNode = {
-          id: newId,
-          type: "genericNode",
-          position,
-          data: {
-            ...data,
+        if (data.type !== "groupNode") {
+          // Create a new node object
+          newNode = {
             id: newId,
-            value: null,
-          },
-        };
-      } else {
-        // Create a new node object
-        newNode = {
-          id: newId,
-          type: "genericNode",
-          position,
-          data: {
-            ...data,
+            type: "genericNode",
+            position,
+            data: {
+              ...data,
+              id: newId,
+              value: null,
+            },
+          };
+        } else {
+          // Create a new node object
+          newNode = {
             id: newId,
-            value: null,
-          },
-        };
+            type: "genericNode",
+            position,
+            data: {
+              ...data,
+              id: newId,
+              value: null,
+            },
+          };
 
-        // Add the new node to the list of nodes in state
+          // Add the new node to the list of nodes in state
+        }
+        setNodes((nds) => nds.concat(newNode));
+      } else if (event.dataTransfer.types.some((t) => t === "Files")) {
+        console.log(event.dataTransfer.files.item(0));
       }
-      setNodes((nds) => nds.concat(newNode));
     },
     // Specify dependencies for useCallback
     [getNodeId, reactFlowInstance, setErrorData, setNodes, takeSnapshot]
