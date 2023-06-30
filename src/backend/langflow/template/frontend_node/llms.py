@@ -102,3 +102,11 @@ class LLMFrontendNode(FrontendNode):
             field.show = True
         if field.name == "credentials":
             field.field_type = "file"
+        if name == "VertexAI" and field.name not in [
+            "callbacks",
+            "client",
+            "stop",
+            "tags",
+            "cache",
+        ]:
+            field.show = True
