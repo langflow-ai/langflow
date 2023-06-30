@@ -6,6 +6,7 @@ from langchain.agents import agent as agent_module
 from langchain.agents.agent import AgentExecutor
 from langchain.agents.agent_toolkits.base import BaseToolkit
 from langchain.agents.tools import BaseTool
+from langflow.interface.initialize.llm import initialize_vertexai
 
 from langflow.interface.initialize.vector_store import vecstore_initializer
 
@@ -88,6 +89,14 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
         return class_object(**params)
 
 
+def instantiate_llm(node_type, class_object, params: Dict):
+    # This is a workaround so JinaChat works until streaming is implemented
+    # if "openai_api_base" in params and "jina" in params["openai_api_base"]:
+    # False if condition is True
+    if node_type == "VertexAI":
+        return initialize_vertexai(class_object=class_object, params=params)
+
+
 def instantiate_memory(node_type, class_object, params):
     try:
         return class_object(**params)
@@ -114,10 +123,6 @@ def instantiate_retriever(node_type, class_object, params):
         if class_method := getattr(class_object, method, None):
             return class_method(**params)
         raise ValueError(f"Method {method} not found in {class_object}")
-    return class_object(**params)
-
-
-def instantiate_llm(node_type, class_object, params: Dict):
     return class_object(**params)
 
 
