@@ -19,8 +19,11 @@ async def chat(client_id: str, websocket: WebSocket):
         if client_id in chat_manager.in_memory_cache:
             await chat_manager.handle_websocket(client_id, websocket)
         else:
+            # We accept the connection but close it immediately
+            # if the flow is not built yet
+            await websocket.accept()
             message = "Please, build the flow before sending messages"
-            await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason=message)
+            await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=message)
     except WebSocketException as exc:
         logger.error(exc)
         await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=str(exc))
