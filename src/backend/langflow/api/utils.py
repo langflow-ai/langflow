@@ -51,7 +51,9 @@ def build_input_keys_response(langchain_object, artifacts):
         # Add memory variables to memory_keys
         input_keys_response["memory_keys"] = langchain_object.memory.memory_variables
 
-    if hasattr(langchain_object, "prompt"):
+    if hasattr(langchain_object, "prompt") and hasattr(
+        langchain_object.prompt, "template"
+    ):
         input_keys_response["template"] = langchain_object.prompt.template
 
     return input_keys_response
