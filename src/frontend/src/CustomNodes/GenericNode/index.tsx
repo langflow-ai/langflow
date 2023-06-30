@@ -134,7 +134,7 @@ export default function GenericNode({
                   <div
                     className={classNames(
                       validationStatus && validationStatus.valid
-                        ? "w-4 h-4 rounded-full bg-status-red opacity-100"
+                        ? "w-4 h-4 rounded-full bg-status-green opacity-100"
                         : "w-4 h-4 rounded-full bg-ring opacity-0 hidden animate-spin",
                       "absolute w-4 hover:text-ring hover: transition-all ease-in-out duration-200"
                     )}
