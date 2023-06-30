@@ -40,9 +40,9 @@ export default function Dropdown({
               <Listbox.Button
                 className={
                   editNode
-                    ? "relative pr-8 placeholder:text-center block w-full pt-0.5 pb-0.5 form-input rounded-md shadow-sm sm:text-sm border-ring border-1" +
+                    ? "relative pr-8 placeholder:text-center block w-full pt-0.5 pb-0.5 form-input rounded-md shadow-sm sm:text-sm border" +
                       INPUT_STYLE
-                    : "ring-1 ring-ring placeholder:text-muted-foreground w-full py-2 pl-3 pr-10 text-left focus-visible:outline-none rounded-md border-ring shadow-sm sm:text-sm bg-background" +
+                    : "placeholder:text-muted-foreground w-full py-2 pl-3 pr-10 text-left focus-visible:outline-none rounded-md shadow-sm sm:text-sm border" +
                       INPUT_STYLE
                 }
               >

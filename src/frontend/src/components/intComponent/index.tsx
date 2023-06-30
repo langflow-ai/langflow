@@ -72,9 +72,9 @@ export default function IntComponent({
         value={myValue}
         className={
           editNode
-            ? "focus:placeholder-transparent text-center placeholder:text-center border-1 block w-full pt-0.5 pb-0.5 form-input rounded-md border-ring shadow-sm sm:text-sm placeholder:text-muted-foreground" +
+            ? "focus:placeholder-transparent text-center placeholder:text-center border block w-full pt-0.5 pb-0.5 form-input rounded-md shadow-sm sm:text-sm placeholder:text-muted-foreground" +
               INPUT_STYLE
-            : "focus:placeholder-transparent block w-full form-input bg-background rounded-md border-ring shadow-sm ring-offset-background sm:text-sm placeholder:text-muted-foreground" +
+            : "focus:placeholder-transparent block w-full form-input bg-background rounded-md shadow-sm ring-offset-background sm:text-sm placeholder:text-muted-foreground" +
               INPUT_STYLE +
               (disabled ? " bg-input" : "")
         }

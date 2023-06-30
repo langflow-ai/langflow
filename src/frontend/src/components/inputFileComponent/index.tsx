@@ -103,7 +103,7 @@ export default function InputFileComponent({
           onClick={handleButtonClick}
           className={
             editNode
-              ? "truncate placeholder:text-center text-ring block w-full pt-0.5 pb-0.5 form-input   rounded-md border-ring shadow-sm sm:text-sm border-1" +
+              ? "truncate placeholder:text-center text-ring block w-full pt-0.5 pb-0.5 form-input   rounded-md border-ring shadow-sm sm:text-sm border" +
                 INPUT_STYLE
               : "truncate block w-full text-ring  px-3 py-2 rounded-md border border-ring shadow-sm sm:text-sm" +
                 INPUT_STYLE +
