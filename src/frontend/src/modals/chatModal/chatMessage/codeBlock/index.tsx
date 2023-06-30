@@ -48,12 +48,12 @@ export const CodeBlock: FC<Props> = memo(({ language, value }) => {
   };
   return (
     <div className="codeblock font-sans text-[16px]">
-      <div className="flex items-center justify-between py-1.5 px-4">
+      <div className="flex items-center justify-between px-4 py-1.5">
         <span className="text-xs lowercase text-background">{language}</span>
 
         <div className="flex items-center">
           <button
-            className="flex gap-1.5 items-center rounded bg-none p-1 text-xs text-background"
+            className="flex items-center gap-1.5 rounded bg-none p-1 text-xs text-background"
             onClick={copyToClipboard}
           >
             {isCopied ? <IconCheck size={18} /> : <IconClipboard size={18} />}

@@ -27,11 +27,7 @@ class Edge:
         # Get what type of input the target node is expecting
 
         self.matched_type = next(
-            (
-                output
-                for output in self.source_types
-                if output in self.target_reqs
-            ),
+            (output for output in self.source_types if output in self.target_reqs),
             None,
         )
         no_matched_type = self.matched_type is None

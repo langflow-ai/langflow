@@ -57,8 +57,7 @@ export default function FloatComponent({
         className={
           editNode
             ? INPUT_EDIT_NODE
-            : INPUT_STYLE +
-              (disabled ? INPUT_DISABLE : "")
+            : INPUT_STYLE + (disabled ? INPUT_DISABLE : "")
         }
         placeholder={
           editNode ? "Number 0 to 1" : "Type a number from zero to one"

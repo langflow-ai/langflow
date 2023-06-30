@@ -103,7 +103,7 @@ export default function App() {
 
   return (
     //need parent component with width and height
-    <div className="h-full flex flex-col">
+    <div className="flex h-full flex-col">
       <ErrorBoundary
         onReset={() => {
           window.localStorage.removeItem("tabsData");
@@ -118,7 +118,7 @@ export default function App() {
       </ErrorBoundary>
       <div></div>
       <div
-        className="flex flex-col-reverse fixed bottom-5 left-5"
+        className="fixed bottom-5 left-5 flex flex-col-reverse"
         style={{ zIndex: 999 }}
       >
         {alertsList.map((alert) => (

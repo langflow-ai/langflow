@@ -36,7 +36,7 @@ export default function ModalField({
   return (
     <div
       className={classNames(
-        "flex flex-row w-full items-center justify-between",
+        "flex w-full flex-row items-center justify-between",
         display ? "" : "hidden",
         Object.keys(data.node.template).filter(
           (t) =>

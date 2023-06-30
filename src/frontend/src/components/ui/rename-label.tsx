@@ -57,7 +57,7 @@ export default function RenameLabel(props) {
           ref={inputRef}
           onInput={resizeInput}
           className={cn(
-            "px-2 bg-transparent focus:border-none active:outline hover:outline focus:outline outline-ring rounded-md",
+            "rounded-md bg-transparent px-2 outline-ring hover:outline focus:border-none focus:outline active:outline",
             props.className
           )}
           onBlur={() => {
@@ -74,7 +74,7 @@ export default function RenameLabel(props) {
       ) : (
         <div className="flex items-center gap-2">
           <span
-            className={cn("px-2 text-left truncate", props.className)}
+            className={cn("truncate px-2 text-left", props.className)}
             onDoubleClick={() => {
               setIsRename(true);
               setMyValue(props.value);
