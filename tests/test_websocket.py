@@ -43,7 +43,5 @@ def test_websocket_endpoint_after_build(client, basic_graph_data):
     # and how your chat_manager and other classes behave. The following is just an example structure.
     with pytest.raises(WebSocketDisconnect):
         with client.websocket_connect("api/v1/chat/websocket_test") as websocket:
-            websocket.send_json({"type": "test"})
-            # Perform assertions here, based on what you expect the websocket to return
-            # data = websocket.receive_json()
-            # assert ...
+            websocket.send_json({"input": "test"})
+            websocket.receive_json()
