@@ -4,13 +4,7 @@ import { alertContext } from "../../contexts/alertContext";
 import { classNames, validateNodes } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import ChatMessage from "./chatMessage";
-import {
-  TerminalSquare,
-  MessageSquare,
-  Variable,
-  Eraser,
-  MessageSquarePlus,
-} from "lucide-react";
+import { TerminalSquare, MessageSquare, Variable, Eraser } from "lucide-react";
 import { sendAllProps } from "../../types/api";
 import { ChatMessageType } from "../../types/chat";
 import ChatInput from "./chatInput";
@@ -25,7 +19,6 @@ import {
   DialogTrigger,
 } from "../../components/ui/dialog";
 import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants";
-import { Label } from "../../components/ui/label";
 import { TabsContext } from "../../contexts/tabsContext";
 import {
   Accordion,
@@ -36,14 +29,6 @@ import {
 import { Textarea } from "../../components/ui/textarea";
 import { Badge } from "../../components/ui/badge";
 import ToggleShadComponent from "../../components/toggleShadComponent";
-import Dropdown from "../../components/dropdownComponent";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../../components/ui/dropdown-menu";
-import { Button } from "../../components/ui/button";
 
 export default function FormModal({
   flow,
