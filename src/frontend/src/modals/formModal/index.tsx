@@ -40,17 +40,17 @@ export default function FormModal({
   setOpen: Function;
   flow: FlowType;
 }) {
-  const [chatValue, setChatValue] = useState("");
+  const { tabsState, setTabsState } = useContext(TabsContext);
+  const [chatValue, setChatValue] = useState(tabsState[flow.id].formKeysData.input_keys[Object.keys(tabsState[flow.id].formKeysData.input_keys).find((k) => !tabsState[flow.id].formKeysData.handle_keys.some((j) => j === k))]);
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
   const { reactFlowInstance } = useContext(typesContext);
   const { setErrorData, setNoticeData } = useContext(alertContext);
-  const { tabsState, setTabsState } = useContext(TabsContext);
   const ws = useRef<WebSocket | null>(null);
   const [lockChat, setLockChat] = useState(false);
   const isOpen = useRef(open);
   const messagesRef = useRef(null);
   const id = useRef(flow.id);
-  const [chatKey, setChatKey] = useState(0);
+  const [chatKey, setChatKey] = useState(Object.keys(tabsState[flow.id].formKeysData.input_keys).find((k) => !tabsState[flow.id].formKeysData.handle_keys.some((j) => j === k)));
 
   useEffect(() => {
     if (messagesRef.current) {
@@ -319,15 +319,7 @@ export default function FormModal({
       let nodeValidationErrors = validateNodes(reactFlowInstance);
       if (nodeValidationErrors.length === 0) {
         setLockChat(true);
-        // Message variable makes a object with the keys being the names from tabsState[flow.id].formKeysData.input_keys and the values being the keysValue of the correspondent index
-        let key = Object.keys(tabsState[id.current].formKeysData.input_keys)[chatKey];
-        setTabsState((old) => {
-          let newTabsState = _.cloneDeep(old);
-          newTabsState[id.current].formKeysData.input_keys[key] = chatValue;
-          return newTabsState;
-        })
         let inputs = tabsState[id.current].formKeysData.input_keys;
-        inputs[key] = chatValue;
         setChatValue("");
         const message = formatMessage(inputs);
         addChatHistory(message, true);
@@ -337,6 +329,11 @@ export default function FormModal({
           chatHistory,
           name: flow.name,
           description: flow.description,
+        });
+        setTabsState((old) => {
+          let newTabsState = _.cloneDeep(old);
+          newTabsState[id.current].formKeysData.input_keys[chatKey] = "";
+          return newTabsState;
         });
       } else {
         setErrorData({
@@ -361,9 +358,10 @@ export default function FormModal({
     setOpen(x);
   }
 
-  function handleOnCheckedChange(checked: boolean, index: number) {
+  function handleOnCheckedChange(checked: boolean, i: string) {
     if (checked === true) {
-      setChatKey(index);
+      setChatKey(i);
+      setChatValue(tabsState[flow.id].formKeysData.input_keys[i]);
     }
   }
   return (
@@ -383,7 +381,7 @@ export default function FormModal({
           </DialogHeader>
 
           <div className="flex h-[80vh] w-full mt-2 ">
-            <div className="w-1/4 h-full overflow-auto scrollbar-hide flex flex-col justify-start mr-6">
+            <div className="w-2/5 h-full overflow-auto scrollbar-hide flex flex-col justify-start mr-6">
               <div className="flex py-2">
                 <Variable className="w-6 h-6 pe-1 text-gray-700 stroke-2 dark:text-slate-200"></Variable>
                 <span className="text-md font-semibold text-gray-800 dark:text-white">
@@ -400,9 +398,9 @@ export default function FormModal({
                         <div className="flex items-center space-x-2">
                           <Label htmlFor="airplane-mode" className="-mt-1">From Chat</Label>
                           <ToggleShadComponent
-                            enabled={chatKey === k || tabsState[id.current].formKeysData.handle_keys.some((t) => t === i) }
+                            enabled={chatKey === i}
                             setEnabled={(value) =>
-                              handleOnCheckedChange(value, k)
+                              handleOnCheckedChange(value, i)
                             }
                             size="small"
                             disabled={false}
@@ -411,14 +409,16 @@ export default function FormModal({
                       }
                         <Textarea
                           value={tabsState[id.current].formKeysData.input_keys[i]}
-                          onChange={(e) =>
-                            setTabsState((old) => {
-                              let newTabsState = _.cloneDeep(old);
-                              newTabsState[id.current].formKeysData.input_keys[i] = e.target.value;
-                              return newTabsState;
-                            })
+                          onChange={(e) => {
+                            if(!tabsState[id.current].formKeysData.handle_keys.some((t) => t === i))
+                              setTabsState((old) => {
+                                let newTabsState = _.cloneDeep(old);
+                                newTabsState[id.current].formKeysData.input_keys[i] = e.target.value;
+                                return newTabsState;
+                              })
+                            }
                           }
-                          disabled={chatKey === k}
+                          disabled={chatKey === i}
                           placeholder="Enter text..."
                         ></Textarea>
                       </div>
@@ -486,7 +486,11 @@ export default function FormModal({
                       chatValue={chatValue}
                       lockChat={lockChat}
                       sendMessage={sendMessage}
-                      setChatValue={setChatValue}
+                      setChatValue={(value) => {setChatValue(value); setTabsState((old) => {
+                        let newTabsState = _.cloneDeep(old);
+                        newTabsState[id.current].formKeysData.input_keys[chatKey] = chatValue;
+                        return newTabsState;
+                      });}}
                       inputRef={ref}
                     />
                   </div>
