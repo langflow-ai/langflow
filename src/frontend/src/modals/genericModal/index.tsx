@@ -17,6 +17,7 @@ import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
 import { PROMPT_DIALOG_SUBTITLE, TEXT_DIALOG_SUBTITLE } from "../../constants";
 import { FileText } from "lucide-react";
+import { useEffect } from "react";
 
 export default function GenericModal({
   value,
@@ -36,6 +37,8 @@ export default function GenericModal({
   const [myModalType] = useState(type);
   const [open, setOpen] = useState(true);
   const [myValue, setMyValue] = useState(value);
+  const [highlight, setHighlight] = useState("");
+  const [wordsHighlight, setWordsHighlight] = useState([]);
   const { dark } = useContext(darkContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const { closePopUp } = useContext(PopUpContext);
@@ -46,6 +49,65 @@ export default function GenericModal({
       closePopUp();
     }
   }
+
+  const INVALID_CHARACTERS = [
+    " ",
+    ",",
+    ".",
+    ":",
+    ";",
+    "!",
+    "?",
+    "/",
+    "\\",
+    "(",
+    ")",
+    "[",
+    "]",
+  ];
+  
+
+  function checkVariables(){
+    const regex = /\{([^{}]+)\}/g;
+    const matches = [];
+    let match;
+    while ((match = regex.exec(myValue))) {
+      matches.push(`{${match[1]}}`);
+    }
+
+    let invalid_chars = [];
+    let fixed_variables = [];
+    let input_variables = matches; // Replace this with your input list of variables
+    for (let variable of input_variables) {
+      let new_var = variable;
+      for (let char of INVALID_CHARACTERS) {
+        if (variable.includes(char)) {
+          invalid_chars.push(char);
+          new_var = new_var.replace(new RegExp(char, "g"), "");
+        }
+      }
+      fixed_variables.push(new_var);
+      if (new_var !== variable) {
+        const index = input_variables.indexOf(variable);
+        if (index !== -1) {
+          input_variables.splice(index, 1, new_var);
+        }
+      }
+    }
+    console.log(fixed_variables);
+    console.log(invalid_chars);
+    setWordsHighlight(matches);
+  }
+  
+
+  useEffect(() => {
+    if(type == TypeModal.PROMPT && myValue && myValue != ""){
+      checkVariables();
+    }
+  }, []);
+
+
+
 
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
@@ -75,7 +137,8 @@ export default function GenericModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex h-full w-full mt-2">
+        <div className="h-full w-full mt-2">
+
           <Textarea
             ref={ref}
             className="form-input h-[300px] w-full rounded-lg border-ring focus-visible:ring-1"
@@ -83,6 +146,7 @@ export default function GenericModal({
             onChange={(e) => {
               setMyValue(e.target.value);
               setValue(e.target.value);
+              checkVariables();
             }}
             placeholder="Type message here."
           />
@@ -141,3 +205,4 @@ export default function GenericModal({
     </Dialog>
   );
 }
+
