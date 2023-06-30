@@ -4,13 +4,7 @@ import { alertContext } from "../../contexts/alertContext";
 import { classNames, validateNodes } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
 import ChatMessage from "./chatMessage";
-import {
-  TerminalSquare,
-  MessageSquare,
-  Variable,
-  Eraser,
-  MessageSquarePlus,
-} from "lucide-react";
+import { TerminalSquare, MessageSquare, Variable, Eraser } from "lucide-react";
 import { sendAllProps } from "../../types/api";
 import { ChatMessageType } from "../../types/chat";
 import ChatInput from "./chatInput";
@@ -25,7 +19,6 @@ import {
   DialogTrigger,
 } from "../../components/ui/dialog";
 import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants";
-import { Label } from "../../components/ui/label";
 import { TabsContext } from "../../contexts/tabsContext";
 import {
   Accordion,
@@ -36,14 +29,6 @@ import {
 import { Textarea } from "../../components/ui/textarea";
 import { Badge } from "../../components/ui/badge";
 import ToggleShadComponent from "../../components/toggleShadComponent";
-import Dropdown from "../../components/dropdownComponent";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../../components/ui/dropdown-menu";
-import { Button } from "../../components/ui/button";
 
 export default function FormModal({
   flow,
@@ -406,22 +391,18 @@ export default function FormModal({
 
           <div className="flex h-[80vh] w-full mt-2 ">
             <div className="w-2/5 h-full overflow-auto scrollbar-hide flex flex-col justify-start mr-6">
-            <div className="flex py-2 items-center">
-                  <Variable className="w-4 h-4 mr-1 text-primary"></Variable>
-                  <span className="text-md font-semibold text-primary">
-                    Input Variables
-                  </span>
-                </div>
+              <div className="flex py-2 items-center">
+                <Variable className="w-4 h-4 mr-1 text-primary"></Variable>
+                <span className="text-md font-semibold text-primary">
+                  Input Variables
+                </span>
+              </div>
               <div className="flex justify-between items-center">
-              <div className="flex mr-2.5 py-2 items-center">
-                  <span className="text-sm font-semibold text-primary">
-                    Name
-                  </span>
+                <div className="flex mr-2.5 py-2 items-center">
+                  <span className="text-sm  text-primary">Name</span>
                 </div>
                 <div className="flex mr-2.5 py-2 items-center">
-                  <span className="text-sm font-semibold text-primary">
-                    Chat Input
-                  </span>
+                  <span className="text-sm  text-primary">Chat Input</span>
                 </div>
               </div>
               <Accordion type="multiple" className="w-full">
