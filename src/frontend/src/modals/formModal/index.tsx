@@ -401,74 +401,82 @@ export default function FormModal({
           <div className="flex h-[80vh] w-full mt-2 ">
             <div className="w-2/5 h-full overflow-auto scrollbar-hide flex flex-col justify-start mr-6">
               <div className="flex justify-between items-center">
-              <div className="flex py-2">
-                <Variable className="w-6 h-6 pe-1 text-gray-700 stroke-2 dark:text-slate-200"></Variable>
-                <span className="text-md font-semibold text-gray-800 dark:text-white">
-                  Input Variables
-                </span>
-              </div>
-              <span className="mr-7 text-sm font-semibold text-gray-800 dark:text-white">
-                  Chat
+                <div className="flex py-2">
+                  <Variable className="w-6 h-6 pe-1 text-gray-700 stroke-2 dark:text-slate-200"></Variable>
+                  <span className="text-md font-semibold text-primary">
+                    Input Variables
+                  </span>
+                </div>
+                <span className="mr-2 text-md font-semibold text-primary">
+                  Chat Input
                 </span>
               </div>
               <Accordion type="single" collapsible className="w-full">
                 {Object.keys(tabsState[id.current].formKeysData.input_keys).map(
                   (i, k) => (
                     <div className="flex items-start gap-3">
-                    <AccordionItem className="w-full" key={k} value={i}>
-                      <AccordionTrigger className="flex gap-2">
-                      <div className="flex items-center w-full justify-between">
-                        <Badge variant="gray" size="md">
-                          {i}
-                        </Badge>
-                        
-                      <div className="-mb-1">
-                    <ToggleShadComponent
+                      <AccordionItem className="w-full" key={k} value={i}>
+                        <AccordionTrigger className="flex gap-2">
+                          <div className="flex items-center w-full justify-between">
+                            <Badge variant="gray" size="md">
+                              {i}
+                            </Badge>
+
+                            <div
+                              className="-mb-1"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                              }}
+                            >
+                              <ToggleShadComponent
                                 enabled={chatKey === i}
                                 setEnabled={(value) =>
                                   handleOnCheckedChange(value, i)
                                 }
                                 size="small"
                                 disabled={false}
-                              /></div>
-                      </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="p-1 flex flex-col gap-2">
-                          {tabsState[id.current].formKeysData.handle_keys.some(
-                            (t) => t === i
-                          ) ? (
-                            <div className="font-normal text-muted-foreground ">
-                              Handle
+                              />
                             </div>
-                          ) : (
-                            <></>
-                          )}
-                          <Textarea
-                            value={
-                              tabsState[id.current].formKeysData.input_keys[i]
-                            }
-                            onChange={(e) => {
-                              if (
-                                !tabsState[
-                                  id.current
-                                ].formKeysData.handle_keys.some((t) => t === i)
-                              )
-                                setTabsState((old) => {
-                                  let newTabsState = _.cloneDeep(old);
-                                  newTabsState[
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="p-1 flex flex-col gap-2">
+                            {tabsState[
+                              id.current
+                            ].formKeysData.handle_keys.some((t) => t === i) ? (
+                              <div className="font-normal text-muted-foreground ">
+                                Handle
+                              </div>
+                            ) : (
+                              <></>
+                            )}
+                            <Textarea
+                              value={
+                                tabsState[id.current].formKeysData.input_keys[i]
+                              }
+                              onChange={(e) => {
+                                if (
+                                  !tabsState[
                                     id.current
-                                  ].formKeysData.input_keys[i] = e.target.value;
-                                  return newTabsState;
-                                });
-                            }}
-                            disabled={chatKey === i}
-                            placeholder="Enter text..."
-                          ></Textarea>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                    
+                                  ].formKeysData.handle_keys.some(
+                                    (t) => t === i
+                                  )
+                                )
+                                  setTabsState((old) => {
+                                    let newTabsState = _.cloneDeep(old);
+                                    newTabsState[
+                                      id.current
+                                    ].formKeysData.input_keys[i] =
+                                      e.target.value;
+                                    return newTabsState;
+                                  });
+                              }}
+                              disabled={chatKey === i}
+                              placeholder="Enter text..."
+                            ></Textarea>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
                     </div>
                   )
                 )}
