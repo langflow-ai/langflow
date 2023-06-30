@@ -96,6 +96,7 @@ def instantiate_llm(node_type, class_object, params: Dict):
     if node_type == "VertexAI":
         return initialize_vertexai(class_object=class_object, params=params)
 
+
 def instantiate_memory(node_type, class_object, params):
     try:
         return class_object(**params)
@@ -123,9 +124,6 @@ def instantiate_retriever(node_type, class_object, params):
             return class_method(**params)
         raise ValueError(f"Method {method} not found in {class_object}")
     return class_object(**params)
-
-
-
 
 
 def instantiate_chains(node_type, class_object: Type[Chain], params: Dict):
