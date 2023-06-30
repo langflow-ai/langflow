@@ -76,7 +76,7 @@ export default function TextAreaComponent({
             );
           }}
         >
-          {!editNode && <ExternalLink strokeWidth={1.5} className="w-6 h-6 hover:text-ring " />}
+          {!editNode && <ExternalLink strokeWidth={1.5} className="w-6 h-6 hover:text-accent-foreground " />}
         </button>
       </div>
     </div>

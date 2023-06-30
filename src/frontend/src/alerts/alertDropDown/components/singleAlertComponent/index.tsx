@@ -86,7 +86,7 @@ export default function SingleAlert({
               {dropItem.link ? (
                 <Link
                   to={dropItem.link}
-                  className="whitespace-nowrap font-medium text-info-foreground hover:text-ring"
+                  className="whitespace-nowrap font-medium text-info-foreground hover:text-accent-foreground"
                 >
                   Details
                 </Link>

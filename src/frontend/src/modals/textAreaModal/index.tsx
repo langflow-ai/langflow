@@ -60,7 +60,7 @@ export default function TextAreaModal({
                 <div className=" z-50 absolute top-0 right-0 hidden pt-4 pr-4 sm:block">
                   <button
                     type="button"
-                    className="rounded-md text-ring hover:text-ring"
+                    className="rounded-md text-ring hover:text-accent-foreground"
                     onClick={() => {
                       setModalOpen(false);
                     }}
