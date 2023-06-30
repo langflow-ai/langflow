@@ -14,7 +14,7 @@ export type TabsContextType = {
   downloadFlow: (flow: FlowType) => void;
   downloadFlows: () => void;
   uploadFlows: () => void;
-  uploadFlow: (newFlow?: boolean) => void;
+  uploadFlow: (newFlow?: boolean, file?: File) => void;
   hardReset: () => void;
   //disable CopyPaste
   disableCopyPaste: boolean;

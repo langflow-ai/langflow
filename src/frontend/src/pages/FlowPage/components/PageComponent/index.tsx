@@ -37,6 +37,7 @@ const nodeTypes = {
 export default function Page({ flow }: { flow: FlowType }) {
   let {
     updateFlow,
+    uploadFlow,
     disableCopyPaste,
     addFlow,
     getNodeId,
@@ -219,7 +220,6 @@ export default function Page({ flow }: { flow: FlowType }) {
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
-    console.log(event.dataTransfer.types);
     if (event.dataTransfer.types.some((t) => t === "nodedata")) {
       event.dataTransfer.dropEffect = "move";
     } else {
@@ -283,7 +283,7 @@ export default function Page({ flow }: { flow: FlowType }) {
         }
         setNodes((nds) => nds.concat(newNode));
       } else if (event.dataTransfer.types.some((t) => t === "Files")) {
-        console.log(event.dataTransfer.files.item(0));
+        uploadFlow(false, event.dataTransfer.files.item(0))
       }
     },
     // Specify dependencies for useCallback
