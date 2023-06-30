@@ -2998,14 +2998,14 @@ test = ["psutil", "pytest", "pytest-asyncio"]
 
 [[package]]
 name = "langchainplus-sdk"
-version = "0.0.17"
+version = "0.0.18"
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
 category = "main"
 optional = false
 python-versions = ">=3.8.1,<4.0"
 files = [
-    {file = "langchainplus_sdk-0.0.17-py3-none-any.whl", hash = "sha256:899675fe850bb0829691ce7643d5c3b4425de1535b6f2d6ce1e5f5457ffb05bf"},
-    {file = "langchainplus_sdk-0.0.17.tar.gz", hash = "sha256:6520c864a23dcadbe6fb7233a117347f6acc32725a97758e59354704c50de303"},
+    {file = "langchainplus_sdk-0.0.18-py3-none-any.whl", hash = "sha256:c3daaf5bd333754ef3e6e7c1bd4638f6735f676d036fc2bfdd476dbf09690969"},
+    {file = "langchainplus_sdk-0.0.18.tar.gz", hash = "sha256:63102815c21839dd6bfa88c19b7c99c737982e8356569538ad75884b8412b711"},
 ]
 
 [package.dependencies]
