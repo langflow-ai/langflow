@@ -426,16 +426,8 @@ export default function FormModal({
                 {tabsState[id.current].formKeysData.memory_keys.map((i, k) => (
                   <AccordionItem key={k} value={i}>
                     <div className="flex flex-1 items-center justify-between py-4 font-normal transition-all group text-muted-foreground text-sm">
-                      <div className="group-hover:underline"><Badge size="md" variant="gray">{i}</Badge></div>
+                      <div className="group-hover:underline"><Badge size="md" variant="gray">{i}</Badge>{tabsState[id.current].formKeysData.handle_keys.some((t) => t === i) && <Badge size="sm" variant="secondary">Handle</Badge>}</div>
                       Used as Memory Key
-                    </div>
-                  </AccordionItem>
-                ))}
-                {tabsState[id.current].formKeysData.handle_keys.map((i, k) => (
-                  <AccordionItem key={k} value={i}>
-                    <div className="flex flex-1 items-center justify-between py-4 font-normal transition-all group text-muted-foreground text-sm">
-                      <div className="group-hover:underline"><Badge size="md" variant="gray">{i}</Badge></div>
-                      Value coming from Handle
                     </div>
                   </AccordionItem>
                 ))}
