@@ -11,7 +11,7 @@ import remarkMath from "remark-math";
 import { CodeBlock } from "./codeBlock";
 import Convert from "ansi-to-html";
 import { User2, MessageCircle } from "lucide-react";
-
+import DOMPurify from "dompurify";
 export default function ChatMessage({
   chat,
   lockChat,
@@ -77,7 +77,7 @@ export default function ChatMessage({
                 className=" text-start inline-block rounded-md text-muted-foreground  h-full border border-ring
 								bg-muted w-[95%] pb-3 pt-3 px-2 ml-3 cursor-pointer scrollbar-hide overflow-scroll"
                 dangerouslySetInnerHTML={{
-                  __html: convert.toHtml(chat.thought),
+                  __html: DOMPurify.sanitize(convert.toHtml(chat.thought)),
                 }}
               ></div>
             )}
@@ -148,12 +148,12 @@ export default function ChatMessage({
       ) : (
         <div className="w-full flex items-center">
           <div className="text-start inline-block px-3 text-muted-foreground ">
-            <span
-              className="text-muted-foreground "
-              dangerouslySetInnerHTML={{
-                __html: message.replace(/\n/g, "<br>"),
-              }}
-            ></span>
+            {message.split("\n").map((line, index) => (
+              <span key={index} className="text-muted-foreground ">
+                {line}
+                <br />
+              </span>
+            ))}
           </div>
         </div>
       )}

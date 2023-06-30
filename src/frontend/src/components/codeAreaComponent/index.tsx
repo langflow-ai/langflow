@@ -12,7 +12,9 @@ export default function CodeAreaComponent({
   disabled,
   editNode = false,
 }: TextAreaComponentType) {
-  const [myValue, setMyValue] = useState(value);
+  const [myValue, setMyValue] = useState(
+    typeof value == "string" ? value : JSON.stringify(value)
+  );
   const { openPopUp } = useContext(PopUpContext);
   useEffect(() => {
     if (disabled) {
@@ -22,7 +24,7 @@ export default function CodeAreaComponent({
   }, [disabled, onChange]);
 
   useEffect(() => {
-    setMyValue(value);
+    setMyValue(typeof value == "string" ? value : JSON.stringify(value));
   }, [value]);
 
   return (
