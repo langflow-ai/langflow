@@ -6,6 +6,21 @@ from langflow.template.frontend_node.constants import OPENAI_API_BASE_INFO
 
 
 class LLMFrontendNode(FrontendNode):
+    def add_extra_fields(self) -> None:
+        if self.template.type_name == "VertexAI":
+            # Add credentials field which should of type file.
+            self.template.add_field(
+                TemplateField(
+                    field_type="file",
+                    required=True,
+                    show=True,
+                    name="credentials",
+                    value="",
+                    suffixes=[".json"],
+                    fileTypes=["json"],
+                )
+            )
+
     @staticmethod
     def format_openai_field(field: TemplateField):
         if "openai" in field.name.lower():
@@ -81,6 +96,9 @@ class LLMFrontendNode(FrontendNode):
             "model_file",
             "model_type",
             "deployment_name",
+            "credentials",
         ]:
             field.advanced = False
             field.show = True
+        if field.name == "credentials":
+            field.field_type = "file"
