@@ -139,6 +139,7 @@ async def stream_build(flow_id: str):
             # We need to reset the chat history
             chat_manager.chat_history.empty_history(flow_id)
         except Exception as exc:
+            logger.exception(exc)
             logger.error("Error while building the flow: %s", exc)
             yield str(StreamData(event="error", data={"error": str(exc)}))
         finally:
