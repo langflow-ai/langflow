@@ -285,3 +285,6 @@ class VectorStoreFrontendNode(FrontendNode):
 
         elif field.name == "text_key":
             field.show = False
+
+        if field.name == "persist_directory":
+            field.value = False
