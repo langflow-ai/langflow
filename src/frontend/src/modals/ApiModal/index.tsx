@@ -107,7 +107,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
             </TabsList>
             <div className="float-right">
               <button
-                className="flex gap-1.5 items-center rounded bg-none p-1 text-xs text-ring "
+                className="flex gap-1.5 items-center rounded bg-none p-1 text-xs text-ring hover:text-foreground"
                 onClick={copyToClipboard}
               >
                 {isCopied ? <Check size={18} /> : <Clipboard size={15} />}
