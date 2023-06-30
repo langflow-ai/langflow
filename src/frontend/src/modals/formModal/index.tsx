@@ -413,8 +413,7 @@ export default function FormModal({
                     Input Variables
                   </span>
                 </div>
-                <div className="flex py-2 items-center">
-                  <MessageSquarePlus className="w-4 h-4 mr-1 text-primary" />
+                <div className="flex mr-2.5 py-2 items-center">
                   <span className="text-sm font-semibold text-primary">
                     Chat Input
                   </span>
