@@ -393,13 +393,13 @@ export default function FormModal({
               <Accordion type="single" collapsible className="w-full">
                 {Object.keys(tabsState[id.current].formKeysData.input_keys).map((i, k) => (
                   <AccordionItem key={k} value={i}>
-                    <AccordionTrigger><Badge variant="gray" size="md">{i}</Badge></AccordionTrigger>
+                    <AccordionTrigger className="flex gap-2"><Badge variant="gray" size="md">{i}</Badge>{tabsState[id.current].formKeysData.handle_keys.some((t) => t === i) && <Badge size="md" variant="secondary">Handle</Badge>}</AccordionTrigger>
                     <AccordionContent>
                       <div className="p-1 flex flex-col gap-2">
                         <div className="flex items-center space-x-2">
                           <Label htmlFor="airplane-mode" className="-mt-1">From Chat</Label>
                           <ToggleShadComponent
-                            enabled={chatKey === k}
+                            enabled={chatKey === k || tabsState[id.current].formKeysData.handle_keys.some((t) => t === i) }
                             setEnabled={(value) =>
                               handleOnCheckedChange(value, k)
                             }
@@ -426,7 +426,7 @@ export default function FormModal({
                 {tabsState[id.current].formKeysData.memory_keys.map((i, k) => (
                   <AccordionItem key={k} value={i}>
                     <div className="flex flex-1 items-center justify-between py-4 font-normal transition-all group text-muted-foreground text-sm">
-                      <div className="group-hover:underline"><Badge size="md" variant="gray">{i}</Badge>{tabsState[id.current].formKeysData.handle_keys.some((t) => t === i) && <Badge size="sm" variant="secondary">Handle</Badge>}</div>
+                      <div className="group-hover:underline"><Badge size="md" variant="gray">{i}</Badge></div>
                       Used as Memory Key
                     </div>
                   </AccordionItem>
