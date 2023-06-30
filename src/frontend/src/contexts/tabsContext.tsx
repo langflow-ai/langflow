@@ -467,8 +467,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           style: { stroke: "inherit" },
           className:
             targetHandle.split("|")[0] === "Text"
-              ? "stroke-gray-800 "
-              : "stroke-gray-900 ",
+              ? "stroke-muted-foreground "
+              : "stroke-foreground ",
           animated: targetHandle.split("|")[0] === "Text",
           selected: false,
         },
@@ -534,8 +534,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       edge.style = { stroke: "inherit" };
       edge.className =
         edge.targetHandle.split("|")[0] === "Text"
-          ? "stroke-gray-800 "
-          : "stroke-gray-900 ";
+          ? "stroke-muted-foreground "
+          : "stroke-foreground ";
       edge.animated = edge.targetHandle.split("|")[0] === "Text";
     });
   };

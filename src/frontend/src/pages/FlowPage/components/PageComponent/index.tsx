@@ -184,7 +184,7 @@ export default function Page({ flow }: { flow: FlowType }) {
             style: { stroke: "inherit" },
             className:
               params.targetHandle.split("|")[0] === "Text"
-                ? "stroke-foreground "
+                ? "stroke-muted-foreground "
                 : "stroke-foreground ",
             animated: params.targetHandle.split("|")[0] === "Text",
           },
