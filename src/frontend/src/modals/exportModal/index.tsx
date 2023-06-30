@@ -80,9 +80,9 @@ export default function ExportModal() {
         <DialogFooter>
           <Button
             onClick={() => {
-              if (checked) downloadFlow(flows.find((f) => f.id === tabId));
+              if (checked) downloadFlow(flows.find((f) => f.id === tabId), name);
               else
-                downloadFlow(removeApiKeys(flows.find((f) => f.id === tabId)));
+                downloadFlow(removeApiKeys(flows.find((f) => f.id === tabId)), name);
 
               closePopUp();
             }}

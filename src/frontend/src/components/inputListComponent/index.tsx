@@ -23,7 +23,7 @@ export default function InputListComponent({
     <div
       className={
         (disabled ? "pointer-events-none cursor-not-allowed" : "") +
-        "flex flex-col gap-3 py-2"
+        "flex flex-col gap-3"
       }
     >
       {inputList.map((i, idx) => (

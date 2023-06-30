@@ -268,7 +268,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   /**
    * Downloads the current flow as a JSON file
    */
-  function downloadFlow(flow: FlowType) {
+  function downloadFlow(flow: FlowType, fileName?: string) {
     // create a data URI with the current flow data
     const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
       JSON.stringify(flow)
@@ -277,7 +277,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     // create a link element and set its properties
     const link = document.createElement("a");
     link.href = jsonString;
-    link.download = `${flows.find((f) => f.id === tabId).name}.json`;
+    link.download = `${fileName && fileName != "" ? fileName : flows.find((f) => f.id === tabId).name}.json`;
 
     // simulate a click on the link element to trigger the download
     link.click();
