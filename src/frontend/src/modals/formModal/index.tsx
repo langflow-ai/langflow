@@ -30,6 +30,14 @@ import {
 import { Textarea } from "../../components/ui/textarea";
 import { Badge } from "../../components/ui/badge";
 import ToggleShadComponent from "../../components/toggleShadComponent";
+import Dropdown from "../../components/dropdownComponent";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../components/ui/dropdown-menu";
+import { Button } from "../../components/ui/button";
 
 export default function FormModal({
   flow,
@@ -41,7 +49,13 @@ export default function FormModal({
   flow: FlowType;
 }) {
   const { tabsState, setTabsState } = useContext(TabsContext);
-  const [chatValue, setChatValue] = useState(tabsState[flow.id].formKeysData.input_keys[Object.keys(tabsState[flow.id].formKeysData.input_keys).find((k) => !tabsState[flow.id].formKeysData.handle_keys.some((j) => j === k))]);
+  const [chatValue, setChatValue] = useState(
+    tabsState[flow.id].formKeysData.input_keys[
+      Object.keys(tabsState[flow.id].formKeysData.input_keys).find(
+        (k) => !tabsState[flow.id].formKeysData.handle_keys.some((j) => j === k)
+      )
+    ]
+  );
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
   const { reactFlowInstance } = useContext(typesContext);
   const { setErrorData, setNoticeData } = useContext(alertContext);
@@ -50,7 +64,11 @@ export default function FormModal({
   const isOpen = useRef(open);
   const messagesRef = useRef(null);
   const id = useRef(flow.id);
-  const [chatKey, setChatKey] = useState(Object.keys(tabsState[flow.id].formKeysData.input_keys).find((k) => !tabsState[flow.id].formKeysData.handle_keys.some((j) => j === k)));
+  const [chatKey, setChatKey] = useState(
+    Object.keys(tabsState[flow.id].formKeysData.input_keys).find(
+      (k) => !tabsState[flow.id].formKeysData.handle_keys.some((j) => j === k)
+    )
+  );
 
   useEffect(() => {
     if (messagesRef.current) {
@@ -298,7 +316,7 @@ export default function FormModal({
   }, [open]);
   function formatMessage(inputs: any): string {
     if (inputs) {
-      if(typeof inputs == "string") return inputs;
+      if (typeof inputs == "string") return inputs;
       // inputs is a object with the keys and values being input_keys and keysValue
       // so the formated message is a string with the keys and values separated by ": "
       let message = "";
@@ -382,53 +400,86 @@ export default function FormModal({
 
           <div className="flex h-[80vh] w-full mt-2 ">
             <div className="w-2/5 h-full overflow-auto scrollbar-hide flex flex-col justify-start mr-6">
+              <div className="flex justify-between items-center">
               <div className="flex py-2">
                 <Variable className="w-6 h-6 pe-1 text-gray-700 stroke-2 dark:text-slate-200"></Variable>
                 <span className="text-md font-semibold text-gray-800 dark:text-white">
                   Input Variables
                 </span>
               </div>
+              <span className="mr-7 text-sm font-semibold text-gray-800 dark:text-white">
+                  Chat
+                </span>
+              </div>
               <Accordion type="single" collapsible className="w-full">
-                {Object.keys(tabsState[id.current].formKeysData.input_keys).map((i, k) => (
-                  <AccordionItem key={k} value={i}>
-                    <AccordionTrigger className="flex gap-2"><Badge variant="gray" size="md">{i}</Badge></AccordionTrigger>
-                    <AccordionContent>
-                      <div className="p-1 flex flex-col gap-2">
-                      {tabsState[id.current].formKeysData.handle_keys.some((t) => t === i) ? <div className="font-normal text-muted-foreground ">Handle</div> :
-                        <div className="flex items-center space-x-2">
-                          <Label htmlFor="airplane-mode" className="-mt-1">From Chat</Label>
-                          <ToggleShadComponent
-                            enabled={chatKey === i}
-                            setEnabled={(value) =>
-                              handleOnCheckedChange(value, i)
-                            }
-                            size="small"
-                            disabled={false}
-                          />
-                        </div>
-                      }
-                        <Textarea
-                          value={tabsState[id.current].formKeysData.input_keys[i]}
-                          onChange={(e) => {
-                            if(!tabsState[id.current].formKeysData.handle_keys.some((t) => t === i))
-                              setTabsState((old) => {
-                                let newTabsState = _.cloneDeep(old);
-                                newTabsState[id.current].formKeysData.input_keys[i] = e.target.value;
-                                return newTabsState;
-                              })
-                            }
-                          }
-                          disabled={chatKey === i}
-                          placeholder="Enter text..."
-                        ></Textarea>
+                {Object.keys(tabsState[id.current].formKeysData.input_keys).map(
+                  (i, k) => (
+                    <div className="flex items-start gap-3">
+                    <AccordionItem className="w-full" key={k} value={i}>
+                      <AccordionTrigger className="flex gap-2">
+                      <div className="flex items-center w-full justify-between">
+                        <Badge variant="gray" size="md">
+                          {i}
+                        </Badge>
+                        
+                      <div className="-mb-1">
+                    <ToggleShadComponent
+                                enabled={chatKey === i}
+                                setEnabled={(value) =>
+                                  handleOnCheckedChange(value, i)
+                                }
+                                size="small"
+                                disabled={false}
+                              /></div>
                       </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="p-1 flex flex-col gap-2">
+                          {tabsState[id.current].formKeysData.handle_keys.some(
+                            (t) => t === i
+                          ) ? (
+                            <div className="font-normal text-muted-foreground ">
+                              Handle
+                            </div>
+                          ) : (
+                            <></>
+                          )}
+                          <Textarea
+                            value={
+                              tabsState[id.current].formKeysData.input_keys[i]
+                            }
+                            onChange={(e) => {
+                              if (
+                                !tabsState[
+                                  id.current
+                                ].formKeysData.handle_keys.some((t) => t === i)
+                              )
+                                setTabsState((old) => {
+                                  let newTabsState = _.cloneDeep(old);
+                                  newTabsState[
+                                    id.current
+                                  ].formKeysData.input_keys[i] = e.target.value;
+                                  return newTabsState;
+                                });
+                            }}
+                            disabled={chatKey === i}
+                            placeholder="Enter text..."
+                          ></Textarea>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                    
+                    </div>
+                  )
+                )}
                 {tabsState[id.current].formKeysData.memory_keys.map((i, k) => (
                   <AccordionItem key={k} value={i}>
                     <div className="flex flex-1 items-center justify-between py-4 font-normal transition-all group text-muted-foreground text-sm">
-                      <div className="group-hover:underline"><Badge size="md" variant="gray">{i}</Badge></div>
+                      <div className="group-hover:underline">
+                        <Badge size="md" variant="gray">
+                          {i}
+                        </Badge>
+                      </div>
                       Used as Memory Key
                     </div>
                   </AccordionItem>
@@ -437,14 +488,19 @@ export default function FormModal({
             </div>
             <div className="w-full">
               <div className="flex flex-col rounded-md border bg-muted w-full h-full relative">
-              <div className="absolute right-3 top-3 z-50">
-              <button disabled={lockChat} onClick={() => clearChat()}>
-                <Eraser 
-                  className={classNames("h-5 w-5", lockChat ? "text-primary animate-pulse" : "text-primary hover:text-gray-600")}
-                  aria-hidden="true"
-                />
-              </button>
-              </div>
+                <div className="absolute right-3 top-3 z-50">
+                  <button disabled={lockChat} onClick={() => clearChat()}>
+                    <Eraser
+                      className={classNames(
+                        "h-5 w-5",
+                        lockChat
+                          ? "text-primary animate-pulse"
+                          : "text-primary hover:text-gray-600"
+                      )}
+                      aria-hidden="true"
+                    />
+                  </button>
+                </div>
                 <div
                   ref={messagesRef}
                   className="w-full h-full flex-col flex items-center overflow-scroll scrollbar-hide"
@@ -486,11 +542,16 @@ export default function FormModal({
                       chatValue={chatValue}
                       lockChat={lockChat}
                       sendMessage={sendMessage}
-                      setChatValue={(value) => {setChatValue(value); setTabsState((old) => {
-                        let newTabsState = _.cloneDeep(old);
-                        newTabsState[id.current].formKeysData.input_keys[chatKey] = chatValue;
-                        return newTabsState;
-                      });}}
+                      setChatValue={(value) => {
+                        setChatValue(value);
+                        setTabsState((old) => {
+                          let newTabsState = _.cloneDeep(old);
+                          newTabsState[id.current].formKeysData.input_keys[
+                            chatKey
+                          ] = chatValue;
+                          return newTabsState;
+                        });
+                      }}
                       inputRef={ref}
                     />
                   </div>
