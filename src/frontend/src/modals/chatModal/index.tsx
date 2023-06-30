@@ -114,7 +114,7 @@ export default function ChatModal({
     const isSecureProtocol = window.location.protocol === "https:";
     const webSocketProtocol = isSecureProtocol ? "wss" : "ws";
     const host = isDevelopment ? "localhost:7860" : window.location.host;
-    const chatEndpoint = `/api/v1/chat/${chatId+1}`;
+    const chatEndpoint = `/api/v1/chat/${chatId}`;
 
     return `${isDevelopment ? "ws" : webSocketProtocol
       }://${host}${chatEndpoint}`;
