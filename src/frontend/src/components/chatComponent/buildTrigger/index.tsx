@@ -177,7 +177,7 @@ export default function BuildTrigger({
               ) : isBuilding ? (
                 <Loading strokeWidth={1.5} className="stroke-build-trigger" />
               ) : (
-                <Zap className="sh-6 w-6 fill-build-trigger stroke-1 stroke-build-trigger" />
+                <Zap strokeWidth={1.5} className="sh-6 w-6 fill-build-trigger stroke-1 stroke-build-trigger" />
               )}
             </div>
           </button>
