@@ -179,7 +179,7 @@ class Graph:
                 raise ValueError(f"Source node {edge['source']} not found")
             if target is None:
                 raise ValueError(f"Target node {edge['target']} not found")
-            edges.append(Edge(source, target))
+            edges.append(Edge(source, target, edge))
         return edges
 
     def _get_vertex_class(self, node_type: str, node_lc_type: str) -> Type[Vertex]:
