@@ -150,21 +150,21 @@ files = [
 
 [[package]]
 name = "anthropic"
-version = "0.3.1"
+version = "0.3.2"
 description = "Client library for the anthropic API"
 category = "main"
 optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "anthropic-0.3.1-py3-none-any.whl", hash = "sha256:bbb534e81018aa756fc4cc79b76b802871c99743a309aa3278f955999aa62d08"},
-    {file = "anthropic-0.3.1.tar.gz", hash = "sha256:6714ae9192721278189bc619364b52bf42fd00d35f22172b9f8e4090382399ed"},
+    {file = "anthropic-0.3.2-py3-none-any.whl", hash = "sha256:43ad86df406bf91419e3c651e20dcc69ae273c932c92c26973a1621a72ff1d86"},
+    {file = "anthropic-0.3.2.tar.gz", hash = "sha256:f968e970bb0dfa38b1ec59db7bb4162fd1e0f2bef95c3203e926effe62bfcf38"},
 ]
 
 [package.dependencies]
 anyio = ">=3.5.0"
 distro = ">=1.7.0"
 httpx = ">=0.23.0"
-pydantic = ">=1.9.0"
+pydantic = ">=1.9.0,<2.0.0"
 tokenizers = ">=0.13.0"
 typing-extensions = ">=4.1.1"
 
@@ -973,14 +973,14 @@ tests = ["pytest"]
 
 [[package]]
 name = "dataclasses-json"
-version = "0.5.8"
+version = "0.5.9"
 description = "Easily serialize dataclasses to and from JSON"
 category = "main"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "dataclasses-json-0.5.8.tar.gz", hash = "sha256:6572ac08ad9340abcb74fd8c4c8e9752db2a182a402c8e871d0a8aa119e3804e"},
-    {file = "dataclasses_json-0.5.8-py3-none-any.whl", hash = "sha256:65b167c15fdf9bde27569c09ac18dd39bf1cc5b7998525024cb4678d2653946c"},
+    {file = "dataclasses-json-0.5.9.tar.gz", hash = "sha256:e9ac87b73edc0141aafbce02b44e93553c3123ad574958f0fe52a534b6707e8e"},
+    {file = "dataclasses_json-0.5.9-py3-none-any.whl", hash = "sha256:1280542631df1c375b7bc92e5b86d39e06c44760d7e3571a537b3b8acabf2f0c"},
 ]
 
 [package.dependencies]
@@ -989,7 +989,7 @@ marshmallow-enum = ">=1.5.1,<2.0.0"
 typing-inspect = ">=0.4.0"
 
 [package.extras]
-dev = ["flake8", "hypothesis", "ipython", "mypy (>=0.710)", "portray", "pytest (>=7.2.0)", "simplejson", "types-dataclasses"]
+dev = ["flake8", "hypothesis", "ipython", "mypy (>=0.710)", "portray", "pytest (>=7.2.0)", "setuptools", "simplejson", "twine", "types-dataclasses", "wheel"]
 
 [[package]]
 name = "debugpy"
@@ -2998,14 +2998,14 @@ test = ["psutil", "pytest", "pytest-asyncio"]
 
 [[package]]
 name = "langchainplus-sdk"
-version = "0.0.17"
+version = "0.0.19"
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
 category = "main"
 optional = false
 python-versions = ">=3.8.1,<4.0"
 files = [
-    {file = "langchainplus_sdk-0.0.17-py3-none-any.whl", hash = "sha256:899675fe850bb0829691ce7643d5c3b4425de1535b6f2d6ce1e5f5457ffb05bf"},
-    {file = "langchainplus_sdk-0.0.17.tar.gz", hash = "sha256:6520c864a23dcadbe6fb7233a117347f6acc32725a97758e59354704c50de303"},
+    {file = "langchainplus_sdk-0.0.19-py3-none-any.whl", hash = "sha256:2ee028280ad87063676efa1a0da1aa7801e8becf55b340c29e95cc536c2647f3"},
+    {file = "langchainplus_sdk-0.0.19.tar.gz", hash = "sha256:8ec11f07c0ce35b164eb3bd7217bfdb9f7c20263508751b1e9e5e12c9960bf45"},
 ]
 
 [package.dependencies]
@@ -7175,14 +7175,14 @@ test = ["coverage", "pytest", "pytest-cov"]
 
 [[package]]
 name = "unstructured"
-version = "0.7.11"
+version = "0.7.12"
 description = "A library that prepares raw documents for downstream ML tasks."
 category = "main"
 optional = false
 python-versions = ">=3.7.0"
 files = [
-    {file = "unstructured-0.7.11-py3-none-any.whl", hash = "sha256:1974828f7e8b5e0935c52b468bd5879a962122ed41433db9d36ec1ccbb3b9f78"},
-    {file = "unstructured-0.7.11.tar.gz", hash = "sha256:0cd7119f2b3a5d60fa4df50c0cd8b24c9c5fbdc1baa4daf0a6d8daf05d616a2b"},
+    {file = "unstructured-0.7.12-py3-none-any.whl", hash = "sha256:6dec4f23574e213f30bccb680a4fb84c95617092ce4abf5d8955cc71af402fef"},
+    {file = "unstructured-0.7.12.tar.gz", hash = "sha256:3dcddea34f52e1070f38fd10063b3b0f64bc4cbe5b778d6b86b5d33262d625cd"},
 ]
 
 [package.dependencies]
@@ -7209,6 +7209,7 @@ xlrd = "*"
 [package.extras]
 azure = ["adlfs", "fsspec"]
 discord = ["discord-py"]
+dropbox = ["dropboxdrivefs", "fsspec"]
 gcs = ["fsspec", "gcsfs"]
 github = ["pygithub (==1.58.2)"]
 gitlab = ["python-gitlab"]
