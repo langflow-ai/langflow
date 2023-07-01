@@ -25,9 +25,6 @@ class Settings(BaseSettings):
     cache: str = "InMemoryCache"
     remove_api_keys: bool = False
 
-    # Create a root validator pre that will add the default
-    # sqlite database_url if not provided
-    # but check the DATABASE_URL env variable first
     @root_validator(pre=True)
     def set_database_url(cls, values):
         if "database_url" not in values:
