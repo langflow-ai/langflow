@@ -51,7 +51,7 @@ class VectorStoreFrontendNode(FrontendNode):
                 required=False,
                 show=True,
                 advanced=False,
-                value=True,
+                value=False,
                 display_name="Persist",
             )
             extra_fields.append(extra_field)
