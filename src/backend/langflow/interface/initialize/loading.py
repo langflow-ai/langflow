@@ -100,6 +100,8 @@ def instantiate_llm(node_type, class_object, params: Dict):
 
 def instantiate_memory(node_type, class_object, params):
     try:
+        if "retriever" in params and hasattr(params["retriever"], "as_retriever"):
+            params["retriever"] = params["retriever"].as_retriever()
         return class_object(**params)
     # I want to catch a specific attribute error that happens
     # when the object does not have a cursor attribute
