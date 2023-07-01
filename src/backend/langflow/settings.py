@@ -2,6 +2,7 @@ import os
 
 import yaml
 from pydantic import BaseSettings, root_validator
+from langflow.utils.logger import logger
 
 
 class Settings(BaseSettings):
@@ -20,9 +21,23 @@ class Settings(BaseSettings):
     textsplitters: dict = {}
     utilities: dict = {}
     dev: bool = False
-    database_url: str = "sqlite:///./langflow.db"
+    database_url: str
     cache: str = "InMemoryCache"
     remove_api_keys: bool = False
+
+    # Create a root validator pre that will add the default
+    # sqlite database_url if not provided
+    # but check the DATABASE_URL env variable first
+    @root_validator(pre=True)
+    def set_database_url(cls, values):
+        if "database_url" not in values:
+            logger.debug("No database_url provided, trying DATABASE_URL env variable")
+            if database_url := os.getenv("DATABASE_URL"):
+                values["database_url"] = database_url
+            else:
+                logger.debug("No DATABASE_URL env variable, using sqlite database")
+                values["database_url"] = "sqlite:///./langflow.db"
+        return values
 
     class Config:
         validate_assignment = True
