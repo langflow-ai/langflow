@@ -12,6 +12,12 @@ module.exports = {
     "./index.html",
     "./src/**/*.{js,ts,tsx,jsx}",
   ],
+  safelist: [
+    "bg-status-blue",
+    "bg-status-green",
+    "bg-status-red",
+    "bg-status-yellow",
+  ],
   important: true,
   theme: {
     container: {
