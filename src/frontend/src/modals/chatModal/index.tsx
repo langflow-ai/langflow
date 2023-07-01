@@ -205,25 +205,27 @@ export default function ChatModal({
         handleOnClose(event);
       };
       newWs.onerror = (ev) => {
-        getHealth().then((res) => {
-          if (res.status === 200) {
-            connectWS();
-          }
-        }).catch((err) => {
-          setErrorData({
-            // message when the backend failed
-            title: "The backend is not responding. Please try again later.",
-            // possible solution list
-            list: [
-              "Check your internet connection.",
-              "Check if the backend is running."
-            ],
+        getHealth()
+          .then((res) => {
+            if (res.status === 200) {
+              connectWS();
+            }
+          })
+          .catch((err) => {
+            setErrorData({
+              // message when the backend failed
+              title: "The backend is not responding. Please try again later.",
+              // possible solution list
+              list: [
+                "Check your internet connection.",
+                "Check if the backend is running.",
+              ],
+            });
           });
-        })
       };
       ws.current = newWs;
     } catch (error) {
-        connectWS();
+      connectWS();
       console.log(error);
     }
   }
