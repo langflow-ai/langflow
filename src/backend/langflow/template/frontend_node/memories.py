@@ -37,16 +37,17 @@ class MemoryFrontendNode(FrontendNode):
                 value="",
             )
         )
-        self.template.add_field(
-            TemplateField(
-                field_type="str",
-                required=False,
-                show=True,
-                name="output_key",
-                advanced=True,
-                value="",
+        if self.template.type_name not in {"VectorStoreRetrieverMemory"}:
+            self.template.add_field(
+                TemplateField(
+                    field_type="str",
+                    required=False,
+                    show=True,
+                    name="output_key",
+                    advanced=True,
+                    value="",
+                )
             )
-        )
 
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
