@@ -399,9 +399,7 @@ export default function FormModal({
               </div>
               <div className="flex justify-between pt-2 items-center">
                 <div className="flex mr-2.5 items-center">
-                  <span className="text-sm font-medium text-primary">
-                    Name
-                  </span>
+                  <span className="text-sm font-medium text-primary">Name</span>
                 </div>
                 <div className="flex mr-2.5 items-center">
                   <span className="text-sm font-medium text-primary">
