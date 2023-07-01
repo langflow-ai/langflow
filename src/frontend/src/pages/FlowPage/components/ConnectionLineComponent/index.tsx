@@ -11,7 +11,6 @@ const ConnectionLineComponent = ({
     <g>
       <path
         fill="none"
-        // ! Replace hash # colors here
         strokeWidth={1.5}
         className="animated stroke-muted-foreground "
         d={`M${fromX},${fromY} C ${fromX} ${toY} ${fromX} ${toY} ${toX},${toY}`}
@@ -20,10 +19,8 @@ const ConnectionLineComponent = ({
       <circle
         cx={toX}
         cy={toY}
-        fill="#fff"
         r={3}
-        stroke="#222"
-        className=""
+        className="stroke-muted-foreground fill-background"
         strokeWidth={1.5}
       />
     </g>
