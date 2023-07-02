@@ -38,11 +38,12 @@ export default function GenericModal({
   const [myValue, setMyValue] = useState(value);
   const { dark } = useContext(darkContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
-  const { closePopUp } = useContext(PopUpContext);
+  const { closePopUp, setCloseEdit } = useContext(PopUpContext);
   const ref = useRef();
   function setModalOpen(x: boolean) {
     setOpen(x);
     if (x === false) {
+      setCloseEdit("generic");
       closePopUp();
     }
   }
@@ -55,7 +56,7 @@ export default function GenericModal({
           <DialogTitle className="flex items-center">
             <span className="pr-2">{myModalTitle}</span>
             <FileText
-              className="h-6 w-6 text-primary pl-1 "
+              className="h-6 w-6 pl-1 text-primary "
               aria-hidden="true"
             />
           </DialogTitle>
@@ -75,7 +76,7 @@ export default function GenericModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex h-full w-full mt-2">
+        <div className="mt-2 flex h-full w-full">
           <Textarea
             ref={ref}
             className="form-input h-[300px] w-full rounded-lg border-ring focus-visible:ring-1"

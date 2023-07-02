@@ -6,16 +6,7 @@ import {
 } from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
 import { typesContext } from "../../contexts/typesContext";
-import {
-  useContext,
-  useState,
-  useEffect,
-  useRef,
-  ForwardRefExoticComponent,
-  ComponentType,
-  SVGProps,
-  ReactNode,
-} from "react";
+import { useContext, useState, useEffect, useRef } from "react";
 import { NodeDataType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
 import { PopUpContext } from "../../contexts/popUpContext";
@@ -23,10 +14,8 @@ import NodeModal from "../../modals/NodeModal";
 import Tooltip from "../../components/TooltipComponent";
 import { NodeToolbar } from "reactflow";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
-
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import { useSSE } from "../../contexts/SSEContext";
-import { ReactElement } from "react-markdown/lib/react-markdown";
 
 export default function GenericNode({
   data,
@@ -46,6 +35,7 @@ export default function GenericNode({
   const [validationStatus, setValidationStatus] = useState(null);
   // State for outline color
   const { sseData, isBuilding } = useSSE();
+  const refHtml = useRef(null);
 
   // useEffect(() => {
   //   if (reactFlowInstance) {
@@ -140,29 +130,29 @@ export default function GenericNode({
                   )
                 }
               >
-                <div className="w-5 h-5 relative top-[3px]">
+                <div className="relative top-[3px] h-5 w-5">
                   <div
                     className={classNames(
                       validationStatus && validationStatus.valid
-                        ? "w-4 h-4 rounded-full bg-status-red opacity-100"
-                        : "w-4 h-4 rounded-full bg-ring opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-ring hover: transition-all ease-in-out duration-200"
+                        ? "h-4 w-4 rounded-full bg-status-green opacity-100"
+                        : "hidden h-4 w-4 animate-spin rounded-full bg-ring opacity-0",
+                      "hover: absolute w-4 transition-all duration-200 ease-in-out hover:text-ring"
                     )}
                   ></div>
                   <div
                     className={classNames(
                       validationStatus && !validationStatus.valid
-                        ? "w-4 h-4 rounded-full  bg-status-red opacity-100"
-                        : "w-4 h-4 rounded-full bg-ring opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-ring hover: transition-all ease-in-out duration-200"
+                        ? "h-4 w-4 rounded-full  bg-status-red opacity-100"
+                        : "hidden h-4 w-4 animate-spin rounded-full bg-ring opacity-0",
+                      "hover: absolute w-4 transition-all duration-200 ease-in-out hover:text-ring"
                     )}
                   ></div>
                   <div
                     className={classNames(
                       !validationStatus || isBuilding
-                        ? "w-4 h-4 rounded-full  bg-status-yellow opacity-100"
-                        : "w-4 h-4 rounded-full bg-ring opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-ring transition-all ease-in-out duration-200"
+                        ? "h-4 w-4 rounded-full  bg-status-yellow opacity-100"
+                        : "hidden h-4 w-4 animate-spin rounded-full bg-ring opacity-0",
+                      "absolute w-4 transition-all duration-200 ease-in-out hover:text-ring"
                     )}
                   ></div>
                 </div>
@@ -215,6 +205,7 @@ export default function GenericNode({
                           ? toTitleCase(data.node.template[t].name)
                           : toTitleCase(t)
                       }
+                      info={data.node.template[t].info}
                       name={t}
                       tooltipTitle={data.node.template[t].type}
                       required={data.node.template[t].required}

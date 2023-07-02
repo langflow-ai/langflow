@@ -48,11 +48,11 @@ export default function FlowSettingsModal() {
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger asChild></DialogTrigger>
-      <DialogContent className="lg:max-w-[600px] h-[390px]">
+      <DialogContent className="h-[390px] lg:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Settings </span>
-            <Settings2 className="w-4 h-4 mr-2 " />
+            <Settings2 className="mr-2 h-4 w-4 " />
           </DialogTitle>
           <DialogDescription>{SETTINGS_DIALOG_SUBTITLE}</DialogDescription>
         </DialogHeader>

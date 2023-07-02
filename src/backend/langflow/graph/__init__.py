@@ -14,6 +14,7 @@ from langflow.graph.vertex.types import (
     ToolkitVertex,
     VectorStoreVertex,
     WrapperVertex,
+    RetrieverVertex,
 )
 
 __all__ = [
@@ -32,4 +33,5 @@ __all__ = [
     "ToolkitVertex",
     "VectorStoreVertex",
     "WrapperVertex",
+    "RetrieverVertex",
 ]
