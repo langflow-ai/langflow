@@ -32,6 +32,10 @@ You can install LangFlow from pip:
 
 ```shell
 pip install langflow
+# to install with dependencies for local models use:
+pip install langflow[local]
+# to install with all dependencies use:
+pip install langflow[all]
 ```
 
 Next, run:
