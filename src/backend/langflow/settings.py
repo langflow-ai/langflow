@@ -29,8 +29,8 @@ class Settings(BaseSettings):
     def set_database_url(cls, values):
         if "database_url" not in values:
             logger.debug("No database_url provided, trying DATABASE_URL env variable")
-            if database_url := os.getenv("DATABASE_URL"):
-                values["database_url"] = database_url
+            if langflow_database_url := os.getenv("langflow_database_url"):
+                values["database_url"] = langflow_database_url
             else:
                 logger.debug("No DATABASE_URL env variable, using sqlite database")
                 values["database_url"] = "sqlite:///./langflow.db"
@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     class Config:
         validate_assignment = True
         extra = "ignore"
-        env_prefix = "LANGFLOW_"
+        env_prefix = "langflow_"
 
     @root_validator(allow_reuse=True)
     def validate_lists(cls, values):
