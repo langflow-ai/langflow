@@ -14,9 +14,9 @@ export default function HomePage() {
   }, []);
   const navigate = useNavigate();
   return (
-    <div className="w-full h-full flex overflow-auto flex-col bg-muted px-16">
-      <div className="w-full flex justify-between py-12 pb-2 px-6">
-        <span className="text-2xl flex items-center justify-center gap-2 font-semibold">
+    <div className="flex h-full w-full flex-col overflow-auto bg-muted px-16">
+      <div className="flex w-full justify-between px-6 py-12 pb-2">
+        <span className="flex items-center justify-center gap-2 text-2xl font-semibold">
           <Home className="w-6" />
           {USER_PROJECTS_HEADER}
         </span>
@@ -27,7 +27,7 @@ export default function HomePage() {
               downloadFlows();
             }}
           >
-            <Download className="w-4 mr-2" />
+            <Download className="mr-2 w-4" />
             Download Collection
           </Button>
           <Button
@@ -36,7 +36,7 @@ export default function HomePage() {
               uploadFlows();
             }}
           >
-            <Upload className="w-4 mr-2" />
+            <Upload className="mr-2 w-4" />
             Upload Collection
           </Button>
           <Button
@@ -47,15 +47,15 @@ export default function HomePage() {
               });
             }}
           >
-            <Plus className="w-4 mr-2" />
+            <Plus className="mr-2 w-4" />
             New Project
           </Button>
         </div>
       </div>
-      <span className="flex pb-14 px-6 text-muted-foreground w-[60%]">
+      <span className="flex w-[60%] px-6 pb-14 text-muted-foreground">
         Manage your personal projects. Download or upload your collection.
       </span>
-      <div className="w-full p-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid w-full gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
         {flows.map((flow, idx) => (
           <CardComponent
             key={idx}
@@ -68,7 +68,7 @@ export default function HomePage() {
                   size="sm"
                   className="whitespace-nowrap "
                 >
-                  <ExternalLink className="w-4 mr-2" />
+                  <ExternalLink className="mr-2 w-4" />
                   Edit Flow
                 </Button>
               </Link>

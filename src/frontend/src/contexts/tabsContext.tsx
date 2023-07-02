@@ -275,10 +275,14 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   /**
    * Downloads the current flow as a JSON file
    */
-  function downloadFlow(flow: FlowType,flowName:string,flowDescription?:string) {
+  function downloadFlow(
+    flow: FlowType,
+    flowName: string,
+    flowDescription?: string
+  ) {
     // create a data URI with the current flow data
     const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
-      JSON.stringify({...flow, name:flowName, description:flowDescription})
+      JSON.stringify({ ...flow, name: flowName, description: flowDescription })
     )}`;
 
     // create a link element and set its properties

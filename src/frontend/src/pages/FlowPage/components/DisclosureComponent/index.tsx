@@ -12,7 +12,7 @@ export default function DisclosureComponent({
       {({ open }) => (
         <>
           <div>
-            <Disclosure.Button className="select-none bg-muted w-full flex justify-between items-center -mt-px px-3 py-2 border-y border-y-input">
+            <Disclosure.Button className="-mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-muted px-3 py-2">
               <div className="flex gap-4">
                 <Icon strokeWidth={1.5} size={22} className="text-primary " />
                 <span className="flex items-center text-sm text-primary">

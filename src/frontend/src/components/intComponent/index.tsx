@@ -32,7 +32,7 @@ export default function IntComponent({
     <div
       className={
         "w-full " +
-        (disabled ? "pointer-events-none cursor-not-allowed w-full" : "w-full")
+        (disabled ? "pointer-events-none w-full cursor-not-allowed" : "w-full")
       }
     >
       <input
@@ -72,9 +72,9 @@ export default function IntComponent({
         value={myValue}
         className={
           editNode
-            ? "focus:placeholder-transparent text-center placeholder:text-center border block w-full pt-0.5 pb-0.5 form-input rounded-md shadow-sm sm:text-sm placeholder:text-muted-foreground" +
+            ? "form-input block w-full rounded-md border pb-0.5 pt-0.5 text-center shadow-sm placeholder:text-center placeholder:text-muted-foreground focus:placeholder-transparent sm:text-sm" +
               INPUT_STYLE
-            : "focus:placeholder-transparent block w-full form-input bg-background rounded-md shadow-sm ring-offset-background sm:text-sm placeholder:text-muted-foreground" +
+            : "form-input block w-full rounded-md bg-background shadow-sm ring-offset-background placeholder:text-muted-foreground focus:placeholder-transparent sm:text-sm" +
               INPUT_STYLE +
               (disabled ? " bg-input" : "")
         }
