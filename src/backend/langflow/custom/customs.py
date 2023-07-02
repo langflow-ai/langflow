@@ -21,6 +21,9 @@ CUSTOM_NODES = {
     "utilities": {
         "SQLDatabase": frontend_node.agents.SQLDatabaseNode(),
     },
+    "memories": {
+        "PostgresChatMessageHistory": frontend_node.memories.PostgresChatMessageHistoryFrontendNode(),
+    },
     "chains": {
         "SeriesCharacterChain": frontend_node.chains.SeriesCharacterChainNode(),
         "TimeTravelGuideChain": frontend_node.chains.TimeTravelGuideChainNode(),

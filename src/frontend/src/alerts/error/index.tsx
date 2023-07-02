@@ -39,7 +39,7 @@ export default function ErrorAlert({
             removeAlert(id);
           }, 500);
         }}
-        className="rounded-md w-96 mt-6 shadow-xl bg-error-background  p-4 cursor-pointer"
+        className="mt-6 w-96 cursor-pointer rounded-md bg-error-background  p-4 shadow-xl"
       >
         <div className="flex">
           <div className="flex-shrink-0">

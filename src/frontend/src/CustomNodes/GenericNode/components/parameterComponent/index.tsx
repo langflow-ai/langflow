@@ -25,6 +25,7 @@ import { nodeColors } from "../../../../utils";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import { PopUpContext } from "../../../../contexts/popUpContext";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
+import { Info } from "lucide-react";
 
 export default function ParameterComponent({
   left,
@@ -36,9 +37,11 @@ export default function ParameterComponent({
   type,
   name = "",
   required = false,
+  info = "",
 }: ParameterComponentType) {
   const ref = useRef(null);
   const refHtml = useRef(null);
+  const infoHtml = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   const { closePopUp } = useContext(PopUpContext);
@@ -80,13 +83,25 @@ export default function ParameterComponent({
   };
 
   useEffect(() => {
+    infoHtml.current = (
+      <div className="h-full w-full break-words">
+        {info.split("\n").map((line, i) => (
+          <p key={i} className="block">
+            {line}
+          </p>
+        ))}
+      </div>
+    );
+  }, [info]);
+
+  useEffect(() => {
     const groupedObj = groupByFamily(myData, tooltipTitle);
 
     refHtml.current = groupedObj.map((item, i) => (
       <span
         key={getRandomKeyByssmm()}
         className={classNames(
-          i > 0 ? "items-center flex mt-3" : "items-center flex"
+          i > 0 ? "mt-3 flex items-center" : "flex items-center"
         )}
       >
         <div
@@ -123,12 +138,25 @@ export default function ParameterComponent({
   return (
     <div
       ref={ref}
-      className="w-full flex flex-wrap justify-between items-center bg-muted mt-1 px-5 py-2"
+      className="mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2"
     >
       <>
-        <div className={"text-sm truncate w-full " + (left ? "" : "text-end")}>
+        <div
+          className={
+            "w-full truncate text-sm" +
+            (left ? "" : " text-end") +
+            (info !== "" ? " flex items-center" : "")
+          }
+        >
           {title}
           <span className="text-destructive">{required ? " *" : ""}</span>
+          <div className="">
+            {info !== "" && (
+              <ShadTooltip content={infoHtml.current}>
+                <Info className="relative bottom-0.5 ml-2 h-3 w-3" />
+              </ShadTooltip>
+            )}
+          </div>
         </div>
         {left &&
         (type === "str" ||
@@ -144,7 +172,6 @@ export default function ParameterComponent({
             delayDuration={0}
             content={refHtml.current}
             side={left ? "left" : "right"}
-            open={refHtml?.current?.length > 0}
           >
             <Handle
               type={left ? "target" : "source"}
@@ -155,7 +182,7 @@ export default function ParameterComponent({
               }
               className={classNames(
                 left ? "-ml-0.5 " : "-mr-0.5 ",
-                "w-3 h-3 rounded-full border-2 bg-background"
+                "h-3 w-3 rounded-full border-2 bg-background"
               )}
               style={{
                 borderColor: color,
@@ -220,7 +247,7 @@ export default function ParameterComponent({
         ) : left === true &&
           type === "str" &&
           data.node.template[name].options ? (
-          <div className="w-full mt-2">
+          <div className="mt-2 w-full">
             <Dropdown
               options={data.node.template[name].options}
               onSelect={handleOnNewValue}

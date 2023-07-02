@@ -23,7 +23,8 @@ export default function ExportModal() {
   const { closePopUp } = useContext(PopUpContext);
   const ref = useRef();
   const { setErrorData } = useContext(alertContext);
-  const { flows, tabId, updateFlow, downloadFlow } = useContext(TabsContext);
+  const { flows, tabId, updateFlow, downloadFlow, saveFlow } =
+    useContext(TabsContext);
   const [isMaxLength, setIsMaxLength] = useState(false);
   function setModalOpen(x: boolean) {
     setOpen(x);
@@ -41,12 +42,12 @@ export default function ExportModal() {
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger asChild></DialogTrigger>
-      <DialogContent className="lg:max-w-[600px] h-[420px] ">
+      <DialogContent className="h-[420px] lg:max-w-[600px] ">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Export</span>
             <Download
-              className="h-6 w-6 text-foreground pl-1"
+              className="h-6 w-6 pl-1 text-foreground"
               aria-hidden="true"
             />
           </DialogTitle>
@@ -80,9 +81,18 @@ export default function ExportModal() {
         <DialogFooter>
           <Button
             onClick={() => {
-              if (checked) downloadFlow(flows.find((f) => f.id === tabId));
+              if (checked)
+                downloadFlow(
+                  flows.find((f) => f.id === tabId),
+                  name,
+                  description
+                );
               else
-                downloadFlow(removeApiKeys(flows.find((f) => f.id === tabId)));
+                downloadFlow(
+                  removeApiKeys(flows.find((f) => f.id === tabId)),
+                  name,
+                  description
+                );
 
               closePopUp();
             }}
