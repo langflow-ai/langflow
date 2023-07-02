@@ -958,7 +958,7 @@ name = "ctransformers"
 version = "0.2.10"
 description = "Python bindings for the Transformer models implemented in C/C++ using GGML library."
 category = "main"
-optional = false
+optional = true
 python-versions = "*"
 files = [
     {file = "ctransformers-0.2.10-py3-none-any.whl", hash = "sha256:912a80859bd252e2a389b4716d44b0663657148a85fbfbe6c5503a7ee69fd235"},
@@ -1520,7 +1520,7 @@ name = "fsspec"
 version = "2023.6.0"
 description = "File-system specification"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.8"
 files = [
     {file = "fsspec-2023.6.0-py3-none-any.whl", hash = "sha256:1cbad1faef3e391fba6dc005ae9b5bdcbf43005c9167ce78c915549c352c869a"},
@@ -2406,7 +2406,7 @@ name = "huggingface-hub"
 version = "0.15.1"
 description = "Client library to download and publish models, datasets and other repos on the huggingface.co hub"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.7.0"
 files = [
     {file = "huggingface_hub-0.15.1-py3-none-any.whl", hash = "sha256:05b0fb0abbf1f625dfee864648ac3049fe225ac4371c7bafaca0c2d3a2f83445"},
@@ -2836,7 +2836,7 @@ name = "jinja2"
 version = "3.1.2"
 description = "A very fast and expressive template engine."
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "Jinja2-3.1.2-py3-none-any.whl", hash = "sha256:6088930bfe239f0e6710546ab9c19c9ef35e29792895fed6e6e31a023a182a61"},
@@ -3039,7 +3039,7 @@ name = "llama-cpp-python"
 version = "0.1.55"
 description = "A Python wrapper for llama.cpp"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "llama_cpp_python-0.1.55.tar.gz", hash = "sha256:1bc749f314a979c601b2dae22eb1f2d63fe791bc1237cce24d36b4f856be8ca2"},
@@ -3260,7 +3260,7 @@ name = "markupsafe"
 version = "2.1.3"
 description = "Safely add untrusted strings to HTML/XML markup."
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "MarkupSafe-2.1.3-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:cd0f502fe016460680cd20aaa5a76d241d6f35a1c3350c474bac1273803893fa"},
@@ -5933,7 +5933,7 @@ name = "safetensors"
 version = "0.3.1"
 description = "Fast and Safe Tensor serialization"
 category = "main"
-optional = false
+optional = true
 python-versions = "*"
 files = [
     {file = "safetensors-0.3.1-cp310-cp310-macosx_10_11_x86_64.whl", hash = "sha256:2ae9b7dd268b4bae6624729dac86deb82104820e9786429b0583e5168db2f770"},
@@ -5994,7 +5994,7 @@ name = "scikit-learn"
 version = "1.3.0"
 description = "A set of python modules for machine learning and data mining"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.8"
 files = [
     {file = "scikit-learn-1.3.0.tar.gz", hash = "sha256:8be549886f5eda46436b6e555b0e4873b4f10aa21c07df45c4bc1735afbccd7a"},
@@ -6037,7 +6037,7 @@ name = "scipy"
 version = "1.11.1"
 description = "Fundamental algorithms for scientific computing in Python"
 category = "main"
-optional = false
+optional = true
 python-versions = "<3.13,>=3.9"
 files = [
     {file = "scipy-1.11.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:aec8c62fbe52914f9cf28d846cf0401dd80ab80788bbab909434eb336ed07c04"},
@@ -6102,7 +6102,7 @@ name = "sentence-transformers"
 version = "2.2.2"
 description = "Multilingual text embeddings"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.6.0"
 files = [
     {file = "sentence-transformers-2.2.2.tar.gz", hash = "sha256:dbc60163b27de21076c9a30d24b5b7b6fa05141d68cf2553fa9a77bf79a29136"},
@@ -6125,7 +6125,7 @@ name = "sentencepiece"
 version = "0.1.99"
 description = "SentencePiece python wrapper"
 category = "main"
-optional = false
+optional = true
 python-versions = "*"
 files = [
     {file = "sentencepiece-0.1.99-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:0eb528e70571b7c02723e5804322469b82fe7ea418c96051d0286c0fa028db73"},
@@ -6622,7 +6622,7 @@ name = "threadpoolctl"
 version = "3.1.0"
 description = "threadpoolctl"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.6"
 files = [
     {file = "threadpoolctl-3.1.0-py3-none-any.whl", hash = "sha256:8b99adda265feb6773280df41eece7b2e6561b772d21ffd52e372f999024907b"},
@@ -6771,7 +6771,7 @@ name = "torch"
 version = "2.0.1"
 description = "Tensors and Dynamic neural networks in Python with strong GPU acceleration"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.8.0"
 files = [
     {file = "torch-2.0.1-cp310-cp310-manylinux1_x86_64.whl", hash = "sha256:8ced00b3ba471856b993822508f77c98f48a458623596a4c43136158781e306a"},
@@ -6811,7 +6811,7 @@ name = "torchvision"
 version = "0.15.2"
 description = "image and video datasets and models for torch deep learning"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.8"
 files = [
     {file = "torchvision-0.15.2-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:7754088774e810c5672b142a45dcf20b1bd986a5a7da90f8660c43dc43fb850c"},
@@ -6908,7 +6908,7 @@ name = "transformers"
 version = "4.30.2"
 description = "State-of-the-art Machine Learning for JAX, PyTorch and TensorFlow"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.7.0"
 files = [
     {file = "transformers-4.30.2-py3-none-any.whl", hash = "sha256:c332e3a3097f9ed89ce556b403251235931c00237b8bc2d7adaa19d226c13f1d"},
@@ -7825,9 +7825,11 @@ cffi = {version = ">=1.11", markers = "platform_python_implementation == \"PyPy\
 cffi = ["cffi (>=1.11)"]
 
 [extras]
+all = []
 deploy = ["langchain-serve"]
+local = ["ctransformers", "huggingface-hub", "llama-cpp-python", "sentence-transformers"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "3b615d7e85c445b293174b2cb1d395e375edce224c0da51e03c3767c4892e662"
+content-hash = "394bf73b8a7b70448bf8112645c3526482d733d33a829dff318d836b291a3065"
