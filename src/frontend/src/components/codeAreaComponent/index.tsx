@@ -30,10 +30,10 @@ export default function CodeAreaComponent({
   return (
     <div
       className={
-        disabled ? "pointer-events-none cursor-not-allowed w-full" : "w-full"
+        disabled ? "pointer-events-none w-full cursor-not-allowed" : "w-full"
       }
     >
-      <div className="w-full flex items-center">
+      <div className="flex w-full items-center">
         <span
           onClick={() => {
             openPopUp(
@@ -48,9 +48,9 @@ export default function CodeAreaComponent({
           }}
           className={
             editNode
-              ? "truncate cursor-pointer placeholder:text-center text-ring block w-full pt-0.5 pb-0.5 form-input rounded-md border-ring border shadow-sm text-sm bg-transparent sm:text-sm" +
+              ? "form-input block w-full cursor-pointer truncate rounded-md border border-ring bg-transparent pb-0.5 pt-0.5 text-sm text-ring shadow-sm placeholder:text-center sm:text-sm" +
                 INPUT_STYLE
-              : "truncate block w-full text-ring px-3 py-2 rounded-md border border-ring shadow-sm sm:text-sm placeholder:text-muted-foreground" +
+              : "block w-full truncate rounded-md border border-ring px-3 py-2 text-ring shadow-sm placeholder:text-muted-foreground sm:text-sm" +
                 INPUT_STYLE +
                 (disabled ? " bg-input" : "")
           }
@@ -71,7 +71,7 @@ export default function CodeAreaComponent({
           }}
         >
           {!editNode && (
-            <ExternalLink className="w-6 h-6 hover:text-ring  ml-3" />
+            <ExternalLink className="ml-3 h-6 w-6  hover:text-ring" />
           )}
         </button>
       </div>

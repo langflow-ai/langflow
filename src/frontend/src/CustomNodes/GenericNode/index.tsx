@@ -130,29 +130,29 @@ export default function GenericNode({
                   )
                 }
               >
-                <div className="w-5 h-5 relative top-[3px]">
+                <div className="relative top-[3px] h-5 w-5">
                   <div
                     className={classNames(
                       validationStatus && validationStatus.valid
-                        ? "w-4 h-4 rounded-full bg-status-green opacity-100"
-                        : "w-4 h-4 rounded-full bg-ring opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-ring hover: transition-all ease-in-out duration-200"
+                        ? "h-4 w-4 rounded-full bg-status-green opacity-100"
+                        : "hidden h-4 w-4 animate-spin rounded-full bg-ring opacity-0",
+                      "hover: absolute w-4 transition-all duration-200 ease-in-out hover:text-ring"
                     )}
                   ></div>
                   <div
                     className={classNames(
                       validationStatus && !validationStatus.valid
-                        ? "w-4 h-4 rounded-full  bg-status-red opacity-100"
-                        : "w-4 h-4 rounded-full bg-ring opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-ring hover: transition-all ease-in-out duration-200"
+                        ? "h-4 w-4 rounded-full  bg-status-red opacity-100"
+                        : "hidden h-4 w-4 animate-spin rounded-full bg-ring opacity-0",
+                      "hover: absolute w-4 transition-all duration-200 ease-in-out hover:text-ring"
                     )}
                   ></div>
                   <div
                     className={classNames(
                       !validationStatus || isBuilding
-                        ? "w-4 h-4 rounded-full  bg-status-yellow opacity-100"
-                        : "w-4 h-4 rounded-full bg-ring opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-ring transition-all ease-in-out duration-200"
+                        ? "h-4 w-4 rounded-full  bg-status-yellow opacity-100"
+                        : "hidden h-4 w-4 animate-spin rounded-full bg-ring opacity-0",
+                      "absolute w-4 transition-all duration-200 ease-in-out hover:text-ring"
                     )}
                   ></div>
                 </div>

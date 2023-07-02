@@ -28,10 +28,10 @@ export default function PromptAreaComponent({
   return (
     <div
       className={
-        disabled ? "pointer-events-none cursor-not-allowed w-full" : " w-full"
+        disabled ? "pointer-events-none w-full cursor-not-allowed" : " w-full"
       }
     >
-      <div className="w-full flex items-center">
+      <div className="flex w-full items-center">
         <span
           onClick={() => {
             openPopUp(
@@ -49,9 +49,9 @@ export default function PromptAreaComponent({
           }}
           className={
             editNode
-              ? "cursor-pointer truncate placeholder:text-center text-ring border block w-full pt-0.5 pb-0.5 form-input   rounded-md border-ring shadow-sm sm:text-sm" +
+              ? "form-input block w-full cursor-pointer truncate rounded-md border border-ring pb-0.5 pt-0.5   text-ring shadow-sm placeholder:text-center sm:text-sm" +
                 INPUT_STYLE
-              : "truncate block w-full text-ring px-3 py-2 rounded-md border border-ring shadow-sm sm:text-sm" +
+              : "block w-full truncate rounded-md border border-ring px-3 py-2 text-ring shadow-sm sm:text-sm" +
                 (disabled ? " bg-input" : "")
           }
         >
@@ -73,7 +73,7 @@ export default function PromptAreaComponent({
             );
           }}
         >
-          {!editNode && <ExternalLink className="w-6 h-6 hover:text-ring " />}
+          {!editNode && <ExternalLink className="h-6 w-6 hover:text-ring " />}
         </button>
       </div>
     </div>

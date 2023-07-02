@@ -36,15 +36,15 @@ export default function InputListComponent({
       }
     >
       {inputList.map((i, idx) => (
-        <div key={idx} className="w-full flex gap-3">
+        <div key={idx} className="flex w-full gap-3">
           <input
             type="text"
             value={i}
             className={
               editNode
-                ? "border-[1px]  truncate cursor-pointer text-center placeholder:text-center text-ring block w-full pt-0.5 pb-0.5 form-input rounded-md border-ring shadow-sm sm:text-sm" +
+                ? "form-input  block w-full cursor-pointer truncate rounded-md border-[1px] border-ring pb-0.5 pt-0.5 text-center text-ring shadow-sm placeholder:text-center sm:text-sm" +
                   INPUT_STYLE
-                : "block w-full form-input bg-background rounded-md border-ring shadow-sm focus:border-ring focus:ring-ring sm:text-sm" +
+                : "form-input block w-full rounded-md border-ring bg-background shadow-sm focus:border-ring focus:ring-ring sm:text-sm" +
                   (disabled ? " bg-input" : "") +
                   "focus:placeholder-transparent"
             }
@@ -70,7 +70,7 @@ export default function InputListComponent({
                 onChange(inputList);
               }}
             >
-              <Plus className={"w-4 h-4 hover:text-ring"} />
+              <Plus className={"h-4 w-4 hover:text-ring"} />
             </button>
           ) : (
             <button
@@ -84,7 +84,7 @@ export default function InputListComponent({
                 onChange(inputList);
               }}
             >
-              <X className="w-4 h-4 hover:text-status-red" />
+              <X className="h-4 w-4 hover:text-status-red" />
             </button>
           )}
         </div>

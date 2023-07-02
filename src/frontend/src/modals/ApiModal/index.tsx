@@ -262,18 +262,18 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger></DialogTrigger>
-      <DialogContent className="lg:max-w-[850px] sm:max-w-[700px] h-[580px]">
+      <DialogContent className="h-[580px] sm:max-w-[700px] lg:max-w-[850px]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Code</span>
-            <Code2 className="h-6 w-6 text-primary pl-1 " aria-hidden="true" />
+            <Code2 className="h-6 w-6 pl-1 text-primary " aria-hidden="true" />
           </DialogTitle>
           <DialogDescription>{EXPORT_CODE_DIALOG}</DialogDescription>
         </DialogHeader>
 
         <Tabs
           value={activeTab}
-          className="w-full h-full overflow-hidden text-center bg-muted rounded-md border"
+          className="h-full w-full overflow-hidden rounded-md border bg-muted text-center"
           onValueChange={(value) => {
             setActiveTab(value);
             if (value === "3") {
@@ -291,7 +291,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
             </TabsList>
             <div className="float-right">
               <button
-                className="flex gap-1.5 items-center rounded bg-none p-1 text-xs text-ring "
+                className="flex items-center gap-1.5 rounded bg-none p-1 text-xs text-ring "
                 onClick={copyToClipboard}
               >
                 {isCopied ? <Check size={18} /> : <Clipboard size={15} />}
@@ -303,7 +303,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
           {tabs.map((tab, index) => (
             <TabsContent
               value={index.toString()}
-              className="overflow-hidden w-full h-full px-4 pb-4 -mt-1"
+              className="-mt-1 h-full w-full overflow-hidden px-4 pb-4"
               key={index} // Remember to add a unique key prop
             >
               {index < 3 ? (
@@ -316,10 +316,10 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                 </SyntaxHighlighter>
               ) : index === 3 ? (
                 <>
-                  <div className="flex w-full h-[400px] mt-2">
+                  <div className="mt-2 flex h-[400px] w-full">
                     <div
                       className={classNames(
-                        "w-full rounded-lg  bg-muted border-[1px] border-gray-200",
+                        "w-full rounded-lg  border-[1px] border-gray-200 bg-muted",
                         1 == 1
                           ? "overflow-scroll overflow-x-hidden custom-scroll"
                           : "overflow-hidden"
@@ -332,14 +332,14 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                               trigger={t["data"]["id"]}
                               open={openAccordion}
                             >
-                              <div className="flex flex-col gap-5 h-fit">
+                              <div className="flex h-fit flex-col gap-5">
                                 <Table className="table-fixed bg-muted outline-1">
-                                  <TableHeader className="border-gray-200 text-gray-500 text-xs font-medium h-10">
+                                  <TableHeader className="h-10 border-gray-200 text-xs font-medium text-gray-500">
                                     <TableRow className="dark:border-b-muted">
                                       <TableHead className="h-7 text-center">
                                         PARAM
                                       </TableHead>
-                                      <TableHead className="p-0 h-7 text-center">
+                                      <TableHead className="h-7 p-0 text-center">
                                         VALUE
                                       </TableHead>
                                     </TableRow>
@@ -373,11 +373,11 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                             key={i}
                                             className="h-10 dark:border-b-muted"
                                           >
-                                            <TableCell className="p-0 text-center text-gray-900 text-sm">
+                                            <TableCell className="p-0 text-center text-sm text-gray-900">
                                               {n}
                                             </TableCell>
-                                            <TableCell className="p-0 text-center text-gray-900 text-xs dark:text-gray-300">
-                                              <div className="w-[250px] m-auto">
+                                            <TableCell className="p-0 text-center text-xs text-gray-900 dark:text-gray-300">
+                                              <div className="m-auto w-[250px]">
                                                 {t.data.node.template[n]
                                                   .type === "str" &&
                                                 !t.data.node.template[n]

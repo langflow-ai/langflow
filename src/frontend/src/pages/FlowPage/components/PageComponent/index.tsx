@@ -348,13 +348,13 @@ export default function Page({ flow }: { flow: FlowType }) {
     <div className="flex h-full overflow-hidden">
       <ExtraSidebar />
       {/* Main area */}
-      <main className="flex-1 flex">
+      <main className="flex flex-1">
         {/* Primary column */}
-        <div className="w-full h-full">
-          <div className="w-full h-full" ref={reactFlowWrapper}>
+        <div className="h-full w-full">
+          <div className="h-full w-full" ref={reactFlowWrapper}>
             {Object.keys(templates).length > 0 &&
             Object.keys(types).length > 0 ? (
-              <div className="w-full h-full">
+              <div className="h-full w-full">
                 <ReactFlow
                   nodes={nodes}
                   onMove={() => {
@@ -403,8 +403,8 @@ export default function Page({ flow }: { flow: FlowType }) {
                 >
                   <Background className="" />
                   <Controls
-                    className="text-primary stroke-foreground [&>button]:border-b-border hover:[&>button]:bg-border
-                   fill-foreground bg-muted"
+                    className="bg-muted fill-foreground stroke-foreground text-primary
+                   [&>button]:border-b-border hover:[&>button]:bg-border"
                   ></Controls>
                 </ReactFlow>
                 <Chat flow={flow} reactFlowInstance={reactFlowInstance} />

@@ -68,15 +68,15 @@ export default function ImportModal() {
       <DialogContent
         className={classNames(
           showExamples
-            ? "lg:max-w-[650px] h-[600px]"
-            : "lg:max-w-[650px] h-[450px]"
+            ? "h-[600px] lg:max-w-[650px]"
+            : "h-[450px] lg:max-w-[650px]"
         )}
       >
         <DialogHeader>
           <DialogTitle className="flex items-center">
             {showExamples && (
               <>
-                <div className="z-50 absolute top-2 left-0 hidden pt-4 pl-4 sm:block">
+                <div className="absolute left-0 top-2 z-50 hidden pl-4 pt-4 sm:block">
                   <button
                     type="button"
                     className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
@@ -85,7 +85,7 @@ export default function ImportModal() {
                     }}
                   >
                     <ArrowLeftIcon
-                      className="h-5 w-5 text-foreground ml-1"
+                      className="ml-1 h-5 w-5 text-foreground"
                       aria-hidden="true"
                     />
                   </button>
@@ -97,7 +97,7 @@ export default function ImportModal() {
               {showExamples ? "Select an example" : "Import"}
             </span>
             <ArrowUpTrayIcon
-              className="h-5 w-5 text-foreground ml-1"
+              className="ml-1 h-5 w-5 text-foreground"
               aria-hidden="true"
             />
           </DialogTitle>
@@ -108,12 +108,12 @@ export default function ImportModal() {
           className={classNames(
             "h-full w-full overflow-y-auto scrollbar-hide",
             showExamples && !loadingExamples
-              ? "flex flex-row start justify-center items-start flex-wrap overflow-auto mx-auto"
-              : "flex flex-row justify-center items-center"
+              ? "start mx-auto flex flex-row flex-wrap items-start justify-center overflow-auto"
+              : "flex flex-row items-center justify-center"
           )}
         >
           {!showExamples && (
-            <div className="flex h-full w-full justify-evenly items-center">
+            <div className="flex h-full w-full items-center justify-evenly">
               <ButtonBox
                 size="big"
                 bgColor="bg-medium-emerald "
@@ -145,7 +145,7 @@ export default function ImportModal() {
             </div>
           )}
           {showExamples && loadingExamples && (
-            <div className="flex align-middle justify-center items-center">
+            <div className="flex items-center justify-center align-middle">
               <LoadingComponent remSize={30} />
             </div>
           )}
@@ -175,7 +175,7 @@ export default function ImportModal() {
         </div>
 
         <DialogFooter>
-          <div className="w-full flex items-center justify-center mt-2">
+          <div className="mt-2 flex w-full items-center justify-center">
             <a
               href="https://github.com/logspace-ai/langflow_examples"
               target="_blank"

@@ -40,13 +40,13 @@ export default function Dropdown({
               <Listbox.Button
                 className={
                   editNode
-                    ? "relative pr-8 placeholder:text-center block w-full pt-0.5 pb-0.5 form-input rounded-md shadow-sm sm:text-sm border" +
+                    ? "form-input relative block w-full rounded-md border pb-0.5 pr-8 pt-0.5 shadow-sm placeholder:text-center sm:text-sm" +
                       INPUT_STYLE
-                    : "placeholder:text-muted-foreground w-full py-2 pl-3 pr-10 text-left focus-visible:outline-none rounded-md shadow-sm sm:text-sm border" +
+                    : "w-full rounded-md border py-2 pl-3 pr-10 text-left shadow-sm placeholder:text-muted-foreground focus-visible:outline-none sm:text-sm" +
                       INPUT_STYLE
                 }
               >
-                <span className="block bg-background truncate w-full">
+                <span className="block w-full truncate bg-background">
                   {internalValue}
                 </span>
                 <span
@@ -71,9 +71,9 @@ export default function Dropdown({
                 <Listbox.Options
                   className={classNames(
                     editNode
-                      ? "z-10 mt-1 max-h-60 overflow-auto rounded-md bg-background py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm w-[215px]"
-                      : "nowheel z-10 mt-1 max-h-60 w-full overflow-auto overflow-y rounded-md bg-background py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm ",
-                    apiModal ? "w-[250px] mb-2" : "absolute"
+                      ? "z-10 mt-1 max-h-60 w-[215px] overflow-auto rounded-md bg-background py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm"
+                      : "nowheel overflow-y z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-background py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm ",
+                    apiModal ? "mb-2 w-[250px]" : "absolute"
                   )}
                 >
                   {options.map((option, id) => (
