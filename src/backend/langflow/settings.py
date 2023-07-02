@@ -38,16 +38,16 @@ class Settings(BaseSettings):
 
     def update_from_yaml(self, file_path: str, dev: bool = False):
         new_settings = load_settings_from_yaml(file_path)
-        self.chains = new_settings.chains or []
-        self.agents = new_settings.agents or []
-        self.prompts = new_settings.prompts or []
-        self.llms = new_settings.llms or []
-        self.tools = new_settings.tools or []
-        self.memories = new_settings.memories or []
-        self.wrappers = new_settings.wrappers or []
-        self.toolkits = new_settings.toolkits or []
-        self.textsplitters = new_settings.textsplitters or []
-        self.utilities = new_settings.utilities or []
+        self.chains = new_settings.chains
+        self.agents = new_settings.agents
+        self.prompts = new_settings.prompts
+        self.llms = new_settings.llms
+        self.tools = new_settings.tools
+        self.memories = new_settings.memories
+        self.wrappers = new_settings.wrappers
+        self.toolkits = new_settings.toolkits
+        self.textsplitters = new_settings.textsplitters
+        self.utilities = new_settings.utilities
         self.dev = dev
 
     def update_settings(self, **kwargs):
@@ -83,7 +83,7 @@ def load_settings_from_yaml(config_folder: str) -> Settings:
         component_type = component_file.stem  # Get component type from file name
 
         with open(component_file, "r") as f:
-            component_data = yaml.safe_load(f) or []
+            component_data = yaml.safe_load(f)
             components = [Component(**component) for component in component_data]
             settings_dict[component_type] = ComponentList(components=components)
 
