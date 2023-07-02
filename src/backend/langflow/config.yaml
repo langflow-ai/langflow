@@ -59,6 +59,8 @@ documentloaders:
     documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/how_to/html"
   UnstructuredMarkdownLoader:
     documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/how_to/markdown"
+  PyPDFDirectoryLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/how_to/pdf"
   PyPDFLoader:
     documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/how_to/pdf"
   UnstructuredPowerPointLoader:

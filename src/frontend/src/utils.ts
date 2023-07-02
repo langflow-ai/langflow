@@ -24,7 +24,7 @@ import { SlackIcon } from "./icons/Slack";
 import { PineconeIcon } from "./icons/Pinecone";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "./constants";
+import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "./flow_constants";
 import { ComponentType, SVGProps } from "react";
 import {
   Cpu,
