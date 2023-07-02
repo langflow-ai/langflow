@@ -1,3 +1,6 @@
 - class_object: langchain.embeddings.OpenAIEmbeddings
+  documentation: https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/openai
 - class_object: langchain.embeddings.HuggingFaceEmbeddings
+  documentation: https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/sentence_transformers
 - class_object: langchain.embeddings.CohereEmbeddings
+  documentation: https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/cohere

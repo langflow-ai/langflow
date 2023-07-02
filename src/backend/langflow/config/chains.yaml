@@ -1,23 +1,24 @@
 - class_object: langchain.chains.LLMChain
-
+  documentation: https://python.langchain.com/docs/modules/chains/foundational/llm_chain
 - class_object: langchain.chains.LLMMathChain
-
+  documentation: https://python.langchain.com/docs/modules/chains/additional/llm_math
 - class_object: langchain.chains.LLMCheckerChain
-
+  documentation: https://python.langchain.com/docs/modules/chains/additional/llm_checker
 - class_object: langchain.chains.ConversationChain
-
+  documentation: ''
 - class_object: langflow.interface.chains.custom.SeriesCharacterChain
-
+  documentation: ''
 - class_object: langflow.interface.chains.custom.MidJourneyPromptChain
-
+  documentation: ''
 - class_object: langflow.interface.chains.custom.TimeTravelGuideChain
-
+  documentation: ''
 - class_object: langchain.chains.SQLDatabaseChain
-
+  documentation: ''
 - class_object: langchain.chains.RetrievalQA
-
+  documentation: https://python.langchain.com/docs/modules/chains/popular/vector_db_qa
 - class_object: langchain.chains.RetrievalQAWithSourcesChain
-
+  documentation: ''
 - class_object: langchain.chains.ConversationalRetrievalChain
-
+  documentation: https://python.langchain.com/docs/modules/chains/popular/chat_vector_db
 - class_object: langflow.interface.chains.custom.CombineDocsChain
+  documentation: ''

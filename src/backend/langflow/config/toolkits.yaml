@@ -1,5 +1,10 @@
 - class_object: langchain.agents.agent_toolkits.OpenAPIToolkit
+  documentation: ''
 - class_object: langchain.agents.agent_toolkits.JsonToolkit
+  documentation: ''
 - class_object: langchain.agents.agent_toolkits.vectorstore.toolkit.VectorStoreInfo
+  documentation: ''
 - class_object: langchain.agents.agent_toolkits.VectorStoreRouterToolkit
+  documentation: ''
 - class_object: langchain.agents.agent_toolkits.VectorStoreToolkit
+  documentation: ''

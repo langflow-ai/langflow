@@ -1,3 +1,6 @@
 - class_object: langchain.memory.ConversationBufferMemory
+  documentation: https://python.langchain.com/docs/modules/memory/how_to/buffer
 - class_object: langchain.memory.ConversationSummaryMemory
+  documentation: https://python.langchain.com/docs/modules/memory/how_to/summary
 - class_object: langchain.memory.ConversationKGMemory
+  documentation: https://python.langchain.com/docs/modules/memory/how_to/kg

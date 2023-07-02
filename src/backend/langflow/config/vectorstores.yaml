@@ -1,7 +1,14 @@
 - class_object: langchain.vectorstores.Chroma
+  documentation: https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/chroma
 - class_object: langchain.vectorstores.Qdrant
+  documentation: https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/qdrant
 - class_object: langchain.vectorstores.Weaviate
+  documentation: https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/weaviate
 - class_object: langchain.vectorstores.FAISS
+  documentation: https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/faiss
 - class_object: langchain.vectorstores.Pinecone
+  documentation: https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/pinecone
 - class_object: langchain.vectorstores.SupabaseVectorStore
+  documentation: https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/supabase
 - class_object: langchain.vectorstores.MongoDBAtlasVectorSearch
+  documentation: https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/mongodb_atlas_vector_search

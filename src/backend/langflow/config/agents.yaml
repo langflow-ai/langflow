@@ -1,7 +1,13 @@
 - class_object: langchain.agents.ZeroShotAgent
+  documentation: https://python.langchain.com/docs/modules/agents/how_to/custom_mrkl_agent
 - class_object: langflow.interface.agents.custom.JsonAgent
+  documentation: https://python.langchain.com/docs/modules/agents/toolkits/openapi
 - class_object: langflow.interface.agents.custom.CSVAgent
+  documentation: https://python.langchain.com/docs/modules/agents/toolkits/csv
 - class_object: langflow.interface.agents.custom.InitializeAgent
 - class_object: langflow.interface.agents.custom.VectorStoreAgent
+  documentation: ''
 - class_object: langflow.interface.agents.custom.VectorStoreRouterAgent
+  documentation: ''
 - class_object: langflow.interface.agents.custom.SQLAgent
+  documentation: ''

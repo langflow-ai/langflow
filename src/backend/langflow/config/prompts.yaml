@@ -1,3 +1,5 @@
 - class_object: langchain.prompts.PromptTemplate
+  documentation: https://python.langchain.com/docs/modules/model_io/prompts/prompt_templates/
 - class_object: langchain.prompts.FewShotPromptTemplate
 - class_object: langflow.interface.prompts.custom.ZeroShotPrompt
+  documentation: https://python.langchain.com/docs/modules/agents/how_to/custom_mrkl_agent
