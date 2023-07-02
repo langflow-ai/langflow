@@ -271,7 +271,7 @@ def run_langflow(host, port, log_level, options, app):
     except KeyboardInterrupt:
         pass
     except Exception as e:
-        logger.error(e)
+        logger.exception(e)
         sys.exit(1)
 
 
