@@ -1,7 +1,7 @@
 ---
 agents: agents.yaml
 chains: chains.yaml
-documentloaders: document_loaders.yaml
+documentloaders: documentloaders.yaml
 embeddings: embeddings.yaml
 llms: llms.yaml
 memories: memories.yaml
