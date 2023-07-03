@@ -48,7 +48,7 @@ export default function NoticeAlert({
               {link !== "" ? (
                 <Link
                   to={link}
-                  className="whitespace-nowrap font-medium text-info-foreground hover:text-ring"
+                  className="whitespace-nowrap font-medium text-info-foreground hover:text-accent-foreground"
                 >
                   Details
                 </Link>

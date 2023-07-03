@@ -36,7 +36,7 @@ export default function PromptAreaComponent({
         disabled ? "pointer-events-none w-full cursor-not-allowed" : " w-full"
       }
     >
-      <div className="flex w-full items-center">
+      <div className="w-full flex items-center">
         <span
           onClick={() => {
             openPopUp(
@@ -76,7 +76,7 @@ export default function PromptAreaComponent({
             );
           }}
         >
-          {!editNode && <ExternalLink className="h-6 w-6 hover:text-ring " />}
+          {!editNode && <ExternalLink strokeWidth={1.5} className="w-6 h-6 hover:text-accent-foreground " />}
         </button>
       </div>
     </div>

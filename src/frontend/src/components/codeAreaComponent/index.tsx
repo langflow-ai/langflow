@@ -73,7 +73,7 @@ export default function CodeAreaComponent({
           }}
         >
           {!editNode && (
-            <ExternalLink className="ml-3 h-6 w-6  hover:text-ring" />
+            <ExternalLink strokeWidth={1.5} className="w-6 h-6 hover:text-accent-foreground  ml-3" />
           )}
         </button>
       </div>

@@ -266,7 +266,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Code</span>
-            <Code2 className="h-6 w-6 pl-1 text-primary " aria-hidden="true" />
+            <Code2 strokeWidth={1.5} className="h-6 w-6 text-primary pl-1 " aria-hidden="true" />
           </DialogTitle>
           <DialogDescription>{EXPORT_CODE_DIALOG}</DialogDescription>
         </DialogHeader>
@@ -291,7 +291,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
             </TabsList>
             <div className="float-right">
               <button
-                className="flex items-center gap-1.5 rounded bg-none p-1 text-xs text-ring "
+                className="flex gap-1.5 items-center rounded bg-none p-1 text-xs text-ring hover:text-foreground"
                 onClick={copyToClipboard}
               >
                 {isCopied ? <Check size={18} /> : <Clipboard size={15} />}

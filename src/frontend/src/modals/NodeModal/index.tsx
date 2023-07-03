@@ -63,7 +63,7 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
                 <div className=" absolute right-0 top-0 z-50 hidden pr-4 pt-4 sm:block">
                   <button
                     type="button"
-                    className="rounded-md text-ring hover:text-ring"
+                    className="rounded-md text-ring hover:text-accent-foreground"
                     onClick={() => {
                       setModalOpen(false);
                     }}
