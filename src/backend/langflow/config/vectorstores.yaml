@@ -8,6 +8,7 @@
   documentation: https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/faiss
 - class_object: langchain.vectorstores.Pinecone
   documentation: https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/pinecone
+  init_function: langflow.interface.vector_store.initialize.initialize_pinecone
 - class_object: langchain.vectorstores.SupabaseVectorStore
   documentation: https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/supabase
 - class_object: langchain.vectorstores.MongoDBAtlasVectorSearch

@@ -1,58 +1,58 @@
-- class_object: langchain.agents.load_tools.Search
-  documentation: ''
-- class_object: langchain.tools.PAL-MATH
-  documentation: ''
+# - class_object: langchain.agents.load_tools._get_serpapi
+#   documentation: ""
+# - class_object: langchain.tools.PAL-MATH
+#   documentation: ""
 - class_object: langchain.tools.Calculator
-  documentation: ''
-- class_object: langchain.tools.Serper Search
-  documentation: ''
+  documentation: ""
+# - class_object: langchain.tools.Serper Search
+#   documentation: ""
 - class_object: langchain.tools.Tool
-  documentation: ''
+  documentation: ""
 - class_object: langchain.tools.PythonFunctionTool
-  documentation: ''
+  documentation: ""
 - class_object: langchain.tools.PythonFunction
-  documentation: ''
+  documentation: ""
 - class_object: langchain.tools.JsonSpec
-  documentation: ''
-- class_object: langchain.tools.News API
-  documentation: ''
-- class_object: langchain.tools.TMDB API
-  documentation: ''
-- class_object: langchain.tools.Podcast API
-  documentation: ''
+  documentation: ""
+# - class_object: langchain.tools.News API
+#   documentation: ""
+# - class_object: langchain.tools.TMDB API
+#   documentation: ""
+# - class_object: langchain.tools.Podcast API
+#   documentation: ""
 - class_object: langchain.tools.QuerySQLDataBaseTool
-  documentation: ''
+  documentation: ""
 - class_object: langchain.tools.InfoSQLDatabaseTool
-  documentation: ''
+  documentation: ""
 - class_object: langchain.tools.ListSQLDatabaseTool
-  documentation: ''
+  documentation: ""
 - class_object: langchain.tools.BingSearchRun
-  documentation: ''
+  documentation: ""
 - class_object: langchain.tools.GoogleSearchRun
-  documentation: ''
+  documentation: ""
 - class_object: langchain.tools.GoogleSearchResults
-  documentation: ''
+  documentation: ""
 - class_object: langchain.tools.GoogleSerperRun
-  documentation: ''
+  documentation: ""
 - class_object: langchain.tools.JsonListKeysTool
-  documentation: ''
+  documentation: ""
 - class_object: langchain.tools.JsonGetValueTool
-  documentation: ''
+  documentation: ""
 - class_object: langchain.tools.PythonREPLTool
-  documentation: ''
+  documentation: ""
 - class_object: langchain.tools.PythonAstREPLTool
-  documentation: ''
+  documentation: ""
 - class_object: langchain.tools.RequestsGetTool
-  documentation: ''
+  documentation: ""
 - class_object: langchain.tools.RequestsPostTool
-  documentation: ''
+  documentation: ""
 - class_object: langchain.tools.RequestsPatchTool
-  documentation: ''
+  documentation: ""
 - class_object: langchain.tools.RequestsPutTool
-  documentation: ''
+  documentation: ""
 - class_object: langchain.tools.RequestsDeleteTool
-  documentation: ''
+  documentation: ""
 - class_object: langchain.tools.WikipediaQueryRun
-  documentation: ''
+  documentation: ""
 - class_object: langchain.tools.WolframAlphaQueryRun
-  documentation: ''
+  documentation: ""

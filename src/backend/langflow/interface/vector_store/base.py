@@ -1,9 +1,7 @@
 from typing import Any, Dict, List, Optional, Type
 
-from langchain import vectorstores
 
 from langflow.interface.base import LangChainTypeCreator
-from langflow.interface.importing.utils import import_class
 from langflow.settings import settings
 from langflow.template.frontend_node.vectorstores import VectorStoreFrontendNode
 from langflow.utils.logger import logger
@@ -21,10 +19,8 @@ class VectorstoreCreator(LangChainTypeCreator):
     def type_to_loader_dict(self) -> Dict:
         if self.type_dict is None:
             self.type_dict: dict[str, Any] = {
-                vectorstore_name: import_class(
-                    f"langchain.vectorstores.{vectorstore_name}"
-                )
-                for vectorstore_name in vectorstores.__all__
+                name: component.class_object
+                for name, component in settings.vectorstores
             }
         return self.type_dict
 

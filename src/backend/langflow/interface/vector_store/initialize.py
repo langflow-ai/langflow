@@ -1,7 +1,7 @@
 import json
 import os
 from typing import Any, Callable, Dict, Type
-
+from langflow.settings import settings
 
 from langchain.vectorstores import (
     FAISS,
@@ -224,9 +224,9 @@ vecstore_initializer: Dict[str, Callable[[Type[Any], dict], Any]] = {
 }
 
 
-def instantiate_vectorstore(class_object, params):
+def instantiate_vectorstore(node_type, class_object, params):
     search_kwargs = params.pop("search_kwargs", {})
-    if initializer := vecstore_initializer.get(class_object.__name__):
+    if initializer := settings.vectorstores[node_type].init_function:
         vecstore = initializer(class_object, params)
     else:
         if "texts" in params:
