@@ -13,7 +13,6 @@ engine = create_engine(settings.database_url, connect_args=connect_args)
 def create_db_and_tables():
     logger.debug("Creating database and tables")
     SQLModel.metadata.create_all(engine)
-    logger.debug("Database and tables created")
     # Now check if the table Flow exists, if not, something went wrong
     # and we need to create the tables again.
     from sqlalchemy import inspect
@@ -23,6 +22,8 @@ def create_db_and_tables():
         logger.error("Something went wrong creating the database and tables.")
         logger.error("Please check your database settings.")
         raise RuntimeError("Something went wrong creating the database and tables.")
+    else:
+        logger.debug("Database and tables created successfully")
 
 
 def get_session():
