@@ -6,16 +6,7 @@ import {
 } from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
 import { typesContext } from "../../contexts/typesContext";
-import {
-  useContext,
-  useState,
-  useEffect,
-  useRef,
-  ForwardRefExoticComponent,
-  ComponentType,
-  SVGProps,
-  ReactNode,
-} from "react";
+import { useContext, useState, useEffect, useRef } from "react";
 import { NodeDataType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
 import { PopUpContext } from "../../contexts/popUpContext";
@@ -26,7 +17,6 @@ import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarCom
 
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import { useSSE } from "../../contexts/SSEContext";
-import { ReactElement } from "react-markdown/lib/react-markdown";
 
 export default function GenericNode({
   data,
@@ -241,8 +231,8 @@ export default function GenericNode({
             <ParameterComponent
               data={data}
               color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-              title={data.type}
-              tooltipTitle={`${data.node.base_classes.join("\n")}`}
+              title={data.node.output_types ? data.node.output_types.join("|") : data.type}
+              tooltipTitle={data.node.base_classes.join("\n")}
               id={[data.type, data.id, ...data.node.base_classes].join("|")}
               type={data.node.base_classes.join("|")}
               left={false}
