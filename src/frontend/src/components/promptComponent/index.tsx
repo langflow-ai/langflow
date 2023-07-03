@@ -3,7 +3,12 @@ import { PopUpContext } from "../../contexts/popUpContext";
 import { TextAreaComponentType } from "../../types/components";
 import GenericModal from "../../modals/genericModal";
 import { TypeModal } from "../../utils";
-import { INPUT_STYLE } from "../../constants";
+import {
+  INPUT_DIALOG,
+  INPUT_DISABLE,
+  INPUT_EDIT_NODE,
+  INPUT_STYLE,
+} from "../../constants";
 import { ExternalLink } from "lucide-react";
 
 export default function PromptAreaComponent({
@@ -49,10 +54,8 @@ export default function PromptAreaComponent({
           }}
           className={
             editNode
-              ? "form-input block w-full cursor-pointer truncate rounded-md border border-ring pb-0.5 pt-0.5   text-ring shadow-sm placeholder:text-center sm:text-sm" +
-                INPUT_STYLE
-              : "block w-full truncate rounded-md border border-ring px-3 py-2 text-ring shadow-sm sm:text-sm" +
-                (disabled ? " bg-input" : "")
+              ? INPUT_EDIT_NODE + INPUT_DIALOG
+              : (disabled ? INPUT_DISABLE : "") + INPUT_STYLE + INPUT_DIALOG
           }
         >
           {myValue !== "" ? myValue : "Type your prompt here"}
