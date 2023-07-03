@@ -16,7 +16,6 @@ export default function BuildTrigger({
   open,
   flow,
   setIsBuilt,
-  isBuilt,
 }: {
   open: boolean;
   flow: FlowType;
@@ -168,7 +167,7 @@ export default function BuildTrigger({
       leaveFrom="translate-y-0"
       leaveTo="translate-y-96"
     >
-      <div className={`fixed right-4` + (isBuilt ? " bottom-20" : " bottom-4")}>
+      <div className="fixed right-4 bottom-20">
         <div
           className={`${eventClick} flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full shadow-md shadow-[#0000002a] hover:shadow-[#00000032] bg-[#E2E7EE] dark:border-gray-600 cursor-pointer`}
           onClick={() => {
