@@ -1,3 +1,4 @@
+from typing import Generator
 from pydantic import BaseModel
 from pydantic.types import PyObject
 
@@ -15,6 +16,10 @@ class ComponentList(BaseModel):
     @property
     def component_names(self) -> set[str]:
         return {component.class_object.__name__ for component in self.components}
+
+    def __iter__(self) -> Generator[tuple[str, Component], None, None]:
+        for component in self.components:
+            yield component.class_object.__name__, component
 
     # check if name is in components
     def __contains__(self, name: str):

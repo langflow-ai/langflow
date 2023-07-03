@@ -3,6 +3,7 @@ from langflow.schema import Component, ComponentList
 
 import yaml
 from pydantic import BaseSettings, root_validator
+from langflow.utils.logger import logger
 
 
 class Settings(BaseSettings):
@@ -67,10 +68,11 @@ def load_settings_from_yaml(config_folder: str) -> Settings:
 
     # Load the main config.yaml file if present
     config_file = Path(config_folder) / "config.yaml"
-    if config_file.exists():
-        with open(config_file, "r") as f:
-            settings_dict = yaml.safe_load(f) or {}
+    if not config_file.exists():
+        raise FileNotFoundError(f"Could not find config.yaml file in {config_folder}.")
 
+    with open(config_file, "r") as f:
+        settings_dict = yaml.safe_load(f) or {}
     # Load component-specific config files
     component_files = []
     for key, value in settings_dict.items():
@@ -84,7 +86,15 @@ def load_settings_from_yaml(config_folder: str) -> Settings:
 
         with open(component_file, "r") as f:
             component_data = yaml.safe_load(f)
-            components = [Component(**component) for component in component_data]
+            components = []
+            for component in component_data:
+                try:
+                    components.append(Component(**component))
+                except Exception as e:
+                    logger.error(
+                        f"Error loading component {component} from {component_file}: {e}"
+                    )
+
             settings_dict[component_type] = ComponentList(components=components)
 
     # Convert the component lists in the settings dictionary to ComponentList objects
@@ -95,4 +105,8 @@ def load_settings_from_yaml(config_folder: str) -> Settings:
     return Settings(**settings_dict)
 
 
-settings = load_settings_from_yaml("./config/config.yaml")
+# the default place of the config folder is the current working directory
+# basically, this file is in the same folder as the config folder
+# so we can use the relative path
+config_folder = Path(__file__).parent / "config"
+settings: Settings = load_settings_from_yaml(config_folder)
