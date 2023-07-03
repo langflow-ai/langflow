@@ -263,7 +263,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger></DialogTrigger>
-      <DialogContent className="lg:max-w-[850px] sm:max-w-[700px] h-[580px]">
+      <DialogContent className="lg:max-w-[80vw] h-[80vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Code</span>
@@ -314,7 +314,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
             >
               {index < 3 ? (
                 <SyntaxHighlighter
-                  className="h-[400px] w-full overflow-auto"
+                  className="w-full overflow-auto h-[60vh]"
                   language={tab.mode}
                   style={oneDark}
                 >
@@ -322,10 +322,10 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                 </SyntaxHighlighter>
               ) : index === 3 ? (
                 <>
-                  <div className="flex w-full h-[400px] mt-2">
+                  <div className="flex w-full h-full mt-2">
                     <div
                       className={classNames(
-                        "w-full rounded-lg  bg-muted border-[1px] border-gray-200",
+                        "w-full rounded-lg bg-muted h-[60vh]",
                         1 == 1
                           ? "overflow-scroll overflow-x-hidden custom-scroll"
                           : "overflow-hidden"
@@ -340,7 +340,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                             >
                               <div className="flex flex-col gap-5 h-fit">
                                 <Table className="table-fixed bg-muted outline-1">
-                                  <TableHeader className="border-gray-200 text-gray-500 text-xs font-medium h-10">
+                                  <TableHeader className="border-input text-xs font-medium text-ring h-10">
                                     <TableRow className="dark:border-b-muted">
                                       <TableHead className="h-7 text-center">
                                         PARAM
