@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "0.2.10"
+version = "0.2.11"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
@@ -23,7 +23,7 @@ langflow = "langflow.__main__:main"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
-fastapi = "^0.98.0"
+fastapi = "^0.99.0"
 uvicorn = "^0.22.0"
 beautifulsoup4 = "^4.12.2"
 google-search-results = "^2.4.1"
