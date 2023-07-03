@@ -8,7 +8,7 @@ from langflow.template.field.base import TemplateField
 from langflow.template.template.base import Template
 from langflow.utils import constants
 
-CLASSES_TO_REMOVE = ["Serializable", "BaseModel"]
+CLASSES_TO_REMOVE = ["Serializable", "BaseModel", "object"]
 
 
 class FrontendNode(BaseModel):

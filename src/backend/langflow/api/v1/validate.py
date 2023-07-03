@@ -43,7 +43,7 @@ def post_validate_prompt(prompt: ValidatePromptRequest):
                     field_type="str",
                     show=True,
                     advanced=False,
-                    input_types=["BaseLoader", "BaseOutputParser"],
+                    input_types=["Document", "BaseOutputParser"],
                 )
 
                 prompt.frontend_node.template[variable] = template_field.to_dict()
