@@ -29,23 +29,15 @@ export default function ChatTrigger({ open, setOpen, isBuilt }) {
       leaveFrom="translate-y-0"
       leaveTo="translate-y-96"
     >
-      <div className="fixed bottom-4 right-4">
-        <div
-          className="flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full shadow-md shadow-[#0000002a] hover:shadow-[#00000032]
-          bg-[#E2E7EE] dark:border-gray-600 cursor-pointer"
-          onClick={handleClick}
-        >
-          <button>
+          <button onClick={handleClick} className={ "transition-all fixed bottom-4 right-4 flex justify-center items-center py-1 px-3 w-12 h-12 rounded-full shadow-md shadow-[#0000002a] hover:shadow-[#00000032] bg-[#E2E7EE] dark:border-gray-600 "+ (!isBuilt ? "cursor-not-allowed" : "cursor-pointer")}>
             <div className="flex gap-3">
               <MessagesSquare
-                className="pth-6 w-6 fill-[#5c8be1] stroke-1 stroke-[#5c8be1]"
+                className={"h-6 w-6 transition-all " + (isBuilt ? "fill-[#5c8be1] stroke-1 stroke-[#5c8be1]" : "fill-[#a5bae0] stroke-1 stroke-[#a5bae0]")}
                 style={{ color: "white" }}
                 strokeWidth={1.5}
               />
             </div>
           </button>
-        </div>
-      </div>
     </Transition>
   );
 }
