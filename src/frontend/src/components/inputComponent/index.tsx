@@ -3,7 +3,6 @@ import { InputComponentType } from "../../types/components";
 import { classNames } from "../../utils";
 import { TabsContext } from "../../contexts/tabsContext";
 import { PopUpContext } from "../../contexts/popUpContext";
-import { INPUT_DISABLE, INPUT_EDIT_NODE, INPUT_STYLE } from "../../constants";
 
 export default function InputComponent({
   value,
@@ -47,9 +46,9 @@ export default function InputComponent({
         }}
         className={classNames(
           " pr-12 ",
-          disabled ? INPUT_DISABLE : "",
+          disabled ? " input-disable " : "",
           password && !pwdVisible && myValue !== "" ? "password" : "",
-          editNode ? INPUT_EDIT_NODE : INPUT_STYLE,
+          editNode ? " input-edit-node " : " input-primary ",
           password && editNode ? "pr-8" : "pr-3"
         )}
         placeholder={password && editNode ? "Key" : "Type something..."}

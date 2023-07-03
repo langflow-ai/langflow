@@ -15,7 +15,6 @@ import ExportModal from "../../../../modals/exportModal";
 import ApiModal from "../../../../modals/ApiModal";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { alertContext } from "../../../../contexts/alertContext";
-import { INPUT_SEARCH, INPUT_STYLE } from "../../../../constants";
 import { Separator } from "../../../../components/ui/separator";
 import { Menu } from "lucide-react";
 
@@ -124,7 +123,7 @@ export default function ExtraSidebar() {
           name="search"
           id="search"
           placeholder="Search"
-          className={INPUT_SEARCH}
+          className="input-search"
           onChange={(e) => {
             handleSearchInput(e.target.value);
             setSearch(e.target.value);

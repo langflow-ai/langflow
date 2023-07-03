@@ -3,7 +3,6 @@ import { InputListComponentType } from "../../types/components";
 import { TabsContext } from "../../contexts/tabsContext";
 
 import _ from "lodash";
-import { INPUT_DISABLE, INPUT_EDIT_NODE, INPUT_STYLE } from "../../constants";
 import { X, Plus } from "lucide-react";
 import { PopUpContext } from "../../contexts/popUpContext";
 
@@ -43,8 +42,8 @@ export default function InputListComponent({
               value={i}
               className={
                 editNode
-                  ? INPUT_EDIT_NODE
-                  : INPUT_STYLE + (disabled ? INPUT_DISABLE : "")
+                  ? "input-edit-node "
+                  : "input-primary " + (disabled ? "input-disable" : "")
               }
               placeholder="Type something..."
               onChange={(e) => {

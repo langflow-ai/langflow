@@ -138,7 +138,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
   }
 
   function startTweaks() {
-    tweak.current.push(buildTweaks(flow));
+    tweak?.current?.push(buildTweaks(flow));
   }
 
   function filterNodes() {
