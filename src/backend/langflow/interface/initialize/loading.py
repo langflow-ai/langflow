@@ -5,7 +5,9 @@ from langchain.agents import agent as agent_module
 from langchain.agents.agent import AgentExecutor
 from langchain.agents.agent_toolkits.base import BaseToolkit
 from langchain.agents.tools import BaseTool
-from langflow.interface.vector_store.initialize import instantiate_vectorstore
+from langflow.interface.vector_store.initialize import (
+    instantiate_vectorstore,
+)
 
 from pydantic import ValidationError
 
@@ -62,7 +64,7 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
     elif base_type == "embeddings":
         return instantiate_embedding(class_object, params)
     elif base_type == "vectorstores":
-        return instantiate_vectorstore(class_object, params)
+        return instantiate_vectorstore(node_type, class_object, params)
     elif base_type == "documentloaders":
         return instantiate_documentloader(class_object, params)
     elif base_type == "textsplitters":
