@@ -81,7 +81,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger asChild></DialogTrigger>
-      <DialogContent className="lg:max-w-[700px] ">
+      <DialogContent className="lg:max-w-[700px] sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">{data.type}</span>
@@ -89,16 +89,16 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
           </DialogTitle>
           <DialogDescription>
             {data.node?.description}
-            <div className="flex pt-4">
+            <div className="flex pt-3">
               <Variable className="h-5 w-5 stroke-2 pe-1 text-muted-foreground "></Variable>
-              <span className="text-sm font-semibold text-primary ">
+              <span className="text-sm font-semibold text-primary">
                 Parameters
               </span>
             </div>
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex h-fit max-h-[350px] w-full">
+        <div className="flex h-fit max-h-[400px] w-full">
           <div
             className={classNames(
               "w-full rounded-lg border-[1px] border-input bg-background",
@@ -134,8 +134,8 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                             data.node.template[t].type === "int")
                       )
                       .map((n, i) => (
-                        <TableRow key={i} className="h-10 ">
-                          <TableCell className="p-0 text-center text-sm  text-foreground">
+                        <TableRow key={i} className="h-10">
+                          <TableCell className="p-0 text-center text-sm text-foreground truncate sm:px-3">
                             {data.node.template[n].name
                               ? data.node.template[n].name
                               : data.node.template[n].display_name}

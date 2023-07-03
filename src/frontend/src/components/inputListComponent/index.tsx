@@ -32,7 +32,7 @@ export default function InputListComponent({
     <div
       className={
         (disabled ? "pointer-events-none cursor-not-allowed" : "") +
-        "flex flex-col gap-3 py-2"
+        "flex flex-col gap-3"
       }
     >
       {inputList.map((i, idx) => {
@@ -67,7 +67,7 @@ export default function InputListComponent({
                   onChange(inputList);
                 }}
               >
-                <Plus className={"h-4 w-4 hover:text-ring"} />
+                <Plus className={"h-4 w-4 hover:text-accent-foreground"} />
               </button>
             ) : (
               <button

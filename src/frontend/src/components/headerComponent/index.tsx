@@ -75,7 +75,7 @@ export default function Header() {
             href="https://github.com/logspace-ai/langflow"
             target="_blank"
             rel="noreferrer"
-            className="inline-flex h-9 items-center justify-center rounded-md border border-input px-3 pr-0 text-sm font-medium text-muted-foreground shadow-sm ring-offset-background transition-colors  hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+            className="inline-flex shadow-sm items-center justify-center text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background text-muted-foreground  border border-input hover:bg-accent hover:text-accent-foreground h-9 px-3 pr-0 rounded-md"
           >
             <FaGithub className="mr-2 h-5 w-5" />
             Star
@@ -89,7 +89,7 @@ export default function Header() {
             rel="noreferrer"
             className="text-muted-foreground"
           >
-            <FaTwitter className="h-5 w-5" />
+            <FaTwitter className="h-5 w-5 hover:text-accent-foreground" />
           </a>
           <a
             href="https://discord.gg/EqksyE2EX9"
@@ -97,12 +97,12 @@ export default function Header() {
             rel="noreferrer"
             className="text-muted-foreground"
           >
-            <FaDiscord className="h-5 w-5" />
+            <FaDiscord className="h-5 w-5 hover:text-accent-foreground" />
           </a>
 
           <Separator orientation="vertical" />
           <button
-            className="text-muted-foreground hover:text-ring "
+            className="text-muted-foreground hover:text-accent-foreground "
             onClick={() => {
               setDark(!dark);
             }}
@@ -114,7 +114,7 @@ export default function Header() {
             )}
           </button>
           <button
-            className="relative text-muted-foreground hover:text-ring"
+            className="text-muted-foreground hover:text-accent-foreground relative"
             onClick={(event: React.MouseEvent<HTMLElement>) => {
               setNotificationCenter(false);
               const { top, left } = (

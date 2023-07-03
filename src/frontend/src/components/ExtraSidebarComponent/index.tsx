@@ -41,8 +41,8 @@ export default function ExtraSidebar() {
                             className={classNames(
                               item.href.split("/")[2] === current[4]
                                 ? "text-ring"
-                                : "text-ring group-hover:text-ring",
-                              "mr-3 h-6 w-6 flex-shrink-0"
+                                : "text-ring group-hover:text-accent-foreground",
+                              "mr-3 flex-shrink-0 h-6 w-6"
                             )}
                           />
                           {item.name}
@@ -65,14 +65,14 @@ export default function ExtraSidebar() {
                               )}
                             >
                               <item.icon
-                                className="mr-3 h-6 w-6 flex-shrink-0 text-ring group-hover:text-ring"
+                                className="mr-3 h-6 w-6 flex-shrink-0 text-ring group-hover:text-accent-foreground"
                                 aria-hidden="true"
                               />
                               <span className="flex-1">{item.name}</span>
                               <svg
                                 className={classNames(
-                                  open ? "rotate-90 text-ring" : "text-ring",
-                                  "transition-rotate ml-3 h-5 w-5 flex-shrink-0 duration-150 ease-in-out group-hover:text-ring"
+                                  open ? "text-ring rotate-90" : "text-ring",
+                                  "ml-3 h-5 w-5 flex-shrink-0 transition-rotate duration-150 ease-in-out group-hover:text-accent-foreground"
                                 )}
                                 viewBox="0 0 20 20"
                                 aria-hidden="true"

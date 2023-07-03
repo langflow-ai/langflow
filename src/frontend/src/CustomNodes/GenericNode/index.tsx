@@ -86,7 +86,7 @@ export default function GenericNode({
         )}
       >
         <div className="flex w-full items-center justify-between gap-8 rounded-t-lg border-b bg-muted p-4  ">
-          <div className="flex w-full items-center gap-2 truncate text-lg">
+          <div className="flex w-full items-center truncate">
             <Icon
               strokeWidth={1.5}
               className="h-10 w-10 rounded p-1"
@@ -134,25 +134,25 @@ export default function GenericNode({
                   <div
                     className={classNames(
                       validationStatus && validationStatus.valid
-                        ? "h-4 w-4 rounded-full bg-status-green opacity-100"
-                        : "hidden h-4 w-4 animate-spin rounded-full bg-ring opacity-0",
-                      "hover: absolute w-4 transition-all duration-200 ease-in-out hover:text-ring"
+                        ? "w-4 h-4 rounded-full bg-status-red opacity-100"
+                        : "w-4 h-4 rounded-full bg-ring opacity-0 hidden animate-spin",
+                      "absolute w-4 hover:text-accent-foreground hover:transition-all ease-in-out duration-200"
                     )}
                   ></div>
                   <div
                     className={classNames(
                       validationStatus && !validationStatus.valid
-                        ? "h-4 w-4 rounded-full  bg-status-red opacity-100"
-                        : "hidden h-4 w-4 animate-spin rounded-full bg-ring opacity-0",
-                      "hover: absolute w-4 transition-all duration-200 ease-in-out hover:text-ring"
+                        ? "w-4 h-4 rounded-full  bg-status-red opacity-100"
+                        : "w-4 h-4 rounded-full bg-ring opacity-0 hidden animate-spin",
+                      "absolute w-4 hover:text-accent-foreground hover:transition-all ease-in-out duration-200"
                     )}
                   ></div>
                   <div
                     className={classNames(
                       !validationStatus || isBuilding
-                        ? "h-4 w-4 rounded-full  bg-status-yellow opacity-100"
-                        : "hidden h-4 w-4 animate-spin rounded-full bg-ring opacity-0",
-                      "absolute w-4 transition-all duration-200 ease-in-out hover:text-ring"
+                        ? "w-4 h-4 rounded-full  bg-status-yellow opacity-100"
+                        : "w-4 h-4 rounded-full bg-ring opacity-0 hidden animate-spin",
+                      "absolute w-4 hover:text-accent-foreground hover:transition-all ease-in-out duration-200"
                     )}
                   ></div>
                 </div>

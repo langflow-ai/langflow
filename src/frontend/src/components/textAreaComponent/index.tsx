@@ -36,8 +36,8 @@ export default function TextAreaComponent({
       <div
         className={
           editNode
-            ? "flex w-full items-center"
-            : "flex w-full items-center gap-3"
+            ? "w-full items-center"
+            : "w-full flex items-center gap-3"
         }
       >
         <span
@@ -79,7 +79,7 @@ export default function TextAreaComponent({
             );
           }}
         >
-          {!editNode && <ExternalLink className="h-6 w-6 hover:text-ring " />}
+          {!editNode && <ExternalLink strokeWidth={1.5} className="w-6 h-6 hover:text-accent-foreground " />}
         </button>
       </div>
     </div>
