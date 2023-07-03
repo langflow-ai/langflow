@@ -1,59 +1,257 @@
 # Loaders
 
+
 ### AZLyricsLoader
+
+
+Loader that loads AZLyrics webpages.
+
+
+- **metadata:** Defaults to `{}`
+- **web_path:**
 
 ### AirbyteJSONLoader
 
+
+Loader that loads local airbyte json files.
+
+
+- **file_path:**
+- **metadata:** Defaults to `{}`
+
 ### BSHTMLLoader
+
+
+Loader that uses beautiful soup to parse HTML files.
+
+
+- **file_path:**
+- **metadata:** Defaults to `{}`
 
 ### CSVLoader
 
+
+Loads a CSV file into a list of documents.
+
+
+- **file_path:**
+- **metadata:** Defaults to `{}`
+
 ### CoNLLULoader
+
+
+Load CoNLL-U files.
+
+
+- **file_path:**
+- **metadata:** Defaults to `{}`
 
 ### CollegeConfidentialLoader
 
+
+Loader that loads College Confidential webpages.
+
+
+- **metadata:** Defaults to `{}`
+- **web_path:**
+
 ### DirectoryLoader
+
+
+Loading logic for loading documents from a directory.
+
+
+- **glob:** Defaults to `**/*.txt`
+- load_hidden: Defaults to `True`
+- **max_concurrency:** Defaults to** **`10`
+- **metadata:** Defaults to `{}`
+- **path:**
+- **recursive:** Defaults to `True`
+- **silent_errors:** Defaults to `True`
+- **use_multithreading:** Defaults to `True`
 
 ### EverNoteLoader
 
+
+EverNote Loader.
+
+
+- **file_path:**
+- **metadata:** Defaults to `{}`
+
 ### FacebookChatLoader
+
+
+Loader that loads Facebook messages json directory dump.
+
+
+- **file_path:**
+- **metadata:** Defaults to `{}`
 
 ### GitLoader
 
+
+Loads files from a Git repository into a list of documents.
+
+**branch:**
+
+**clone_url:**
+
+**file_filter:**
+
+**metadata:** Defaults to `{}`
+
+**repo_path:**
+
 ### GitbookLoader
+
+
+Load GitBook data.
+
+
+- **metadata:** Defaults to `{}`
+- **web_path:**
 
 ### GutenbergLoader
 
+
+Loader that uses urllib to load .txt web files.
+
+
+- **file_path:**
+- **metadata:** Defaults to `{}`
+
 ### HNLoader
+
+
+Load Hacker News data from either main page results or the comments page.
+
+
+- **metadata:** Defaults to `{}`
+- **web_path:**
 
 ### iFixitLoader
 
+
+Load iFixit repair guides, device wikis and answers.
+
+
+- **metadata:** Defaults to `{}`
+- **web_path:**
+
 ### IMSDbLoader
+
+
+Loader that loads IMSDb webpages.
+
+
+- **metadata:** Defaults to `{}`
+- **web_path:**
 
 ### NotionDirectoryLoader
 
+
+Loader that loads Notion directory dump.
+
+
+- **metadata:** Defaults to `{}`
+- **path:** 
+
 ### PyPDFLoader
+
+
+Loads a PDF with pypdf and chunks at character level.
+
+
+- **file_path:**
+- **metadata:** Defaults to `{}`
 
 ### ReadTheDocsLoader
 
+
+Loader that loads ReadTheDocs documentation directory dump.
+
+
+- **metadata:** Defaults to `{}`
+- **path:** 
+
 ### SRTLoader
+
+
+Loader for .srt (subtitle) files.
+
+
+- **file_path:**
+- **metadata:** Defaults to `{}`
 
 ### SlackDirectoryLoader
 
+
+Loader for loading documents from a Slack directory dump.
+
+
+- **file_path:**
+- **metadata:** Defaults to `{}`
+
 ### TextLoader
+
+
+Load text files.
+
+
+- **file_path:**
+- **metadata:** Defaults to `{}`
 
 ### UnstructuredEmailLoader
 
+
+Loader that uses unstructured to load email files.
+
+
+- **file_path:**
+- **metadata:** Defaults to `{}`
+
 ### UnstructuredHTMLLoader
+
+
+Loader that uses unstructured to load HTML files.
+
+
+- **file_path:**
+- **metadata:** Defaults to `{}`
 
 ### UnstructuredMarkdownLoader
 
+
+Loader that uses unstructured to load markdown files.
+
+
+- **file_path:**
+- **metadata:** Defaults to `{}`
+
 ### UnstructuredPowerPointLoader
+
+
+Loader that uses unstructured to load powerpoint files.
+
+
+- **file_path:**
+- **metadata:** Defaults to `{}`
 
 ### UnstructuredWordDocumentLoader
 
-### WeBaseLoader
+
+Loader that uses unstructured to load word documents.
 
 
+- **file_path:**
+- **metadata:** Defaults to `{}`
+
+### WebBaseLoader
 
 
+Loader that uses urllib and beautiful soup to load webpages.
+
+
+- **metadata:** Defaults to `{}`
+- **web_path:**

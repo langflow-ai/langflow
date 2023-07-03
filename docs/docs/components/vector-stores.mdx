@@ -1,15 +1,96 @@
 # Vector Stores
 
+
 ### Chroma
+
+
+Create a Chroma vectorstore from a raw documents.
+
+**Params**
+
+- **collection_name:** Defaults to `langchain`
+- **persist:** Defaults to `False`
+- **persist_directory:**
+- **search_kwargs:** Defaults to `{}`
 
 ### FAISS
 
+
+Construct FAISS wrapper from raw documents.
+
+**Params**
+
+- **folder_path:**
+- **index_name:**
+- **search_kwargs:** Defaults to `{}`
+
 ### MongoDB Atlas
+
+
+Construct MongoDBAtlasVectorSearch wrapper from raw documents.
+
+**Params**
+
+- **collection_name:**
+- **db_name:**
+- **index_name:**
+- **mongodb_atlas_cluster_uri:**
+- **search_kwargs:** Defaults to `{}`
 
 ### Pinecone
 
+
+Construct Pinecone wrapper from raw documents.
+
+**Params**
+
+- **index_name:**
+- **namespace:**
+- **pinecone_api_key:**
+- **pinecone_env:**
+- **search_kwargs:** Defaults to `{}`
+
 ### Qdrant
+
+
+Construct Qdrant wrapper from a list of texts.
+
+**Params**
+
+- **api_key:**
+- **collection_name:**
+- **content_payload_key:**
+- **distance_func:** Defaults to `Cosine`
+- **grpc_port:** Defaults to `6334`
+- **host:**
+- **https:** Defaults to `False`
+- **location:** Defaults to `:memory:`
+- **metadata_payload_key:**  Defaults to `metadata`
+- **path:**
+- **port:**  Defaults to `6333`
+- **prefer_grpc:**  Defaults to `False`
+- **prefix:**
+- **search_kwargs:**  Defaults to `{}`
+- **timeout:**
+- **url:**
 
 ### Supabase
 
+
+Return VectorStore initialized from texts and embeddings.
+
+**Params**
+
+- **query_name:**
+- **search_kwargs:**  Defaults to `{}`
+- **supabase_service_key:**
+- **supabase_url:**
+- **table_name:**
+
 ### Weaviate
+
+**Params**
+
+- **client_kwargs:**  Defaults to `{}`
+- **search_kwargs:**  Defaults to `{}`
+- **weaviate_url:**  Defaults to `[http://localhost:8080](http://localhost:8080)`

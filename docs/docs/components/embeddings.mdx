@@ -1,7 +1,43 @@
 # Embeddings
 
+
 ### CohereEmbeddings
+
+
+Wrapper around Cohere embedding models.
+
+
+- **cohere_api_key:**
+- **model:** Defaults to `embed-english-v2.0`
+- **truncate:**
 
 ### HuggingFaceEmbeddings
 
+
+Wrapper around sentence_transformers embedding models.
+
+
+- **cache_folder:**
+- **encode_kwargs:**
+- **model_kwargs:**
+- **model_name:** Defaults to `sentence-transformers/all-mpnet-base-v2`
+
 ### OpenAIEmbeddings
+
+
+Wrapper around OpenAI embedding models.
+
+
+- **chunk_size:** Defaults to `1000`
+- **deployment:** Defaults to `text-embedding-ada-002`
+- **embedding_ctx_length:** Defaults to `8191`
+- **max_retries:** Defaults to `6`
+- **model:** Defaults to `text-embedding-ada-002`
+- **openai_api_base:**
+- **openai_api_key:**
+- **openai_api_type:**
+- **openai_api_version:**
+- **openai_organization:**
+- **openai_proxy:**
+- **request_timeout:**
+- **tiktoken_model_name:**

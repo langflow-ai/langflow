@@ -1,13 +1,80 @@
 # Memories
 
+
 ### ConversationBufferMemory
+
+
+Buffer for storing conversation memory.
+
+
+- **input_key:**
+- **memory_key:** Defaults to `chat_history`
+- **output_key:**
+- **return_messages:** Defaults to `False`
 
 ### ConversationBufferWindowMemory
 
+
+Buffer for storing conversation memory.
+
+
+- **input_key:**
+- **k:**
+- **memory_key:** Defaults to `chat_history`
+- **output_key:**
+- **return_messages:** Defaults to `False`
+
+### ConversationEntityMemory
+
+
+Entity extractor & summarizer memory.
+
+
+- **chat_history_key:** Defaults to `history`
+- **input_key:**
+- **k:** Defaults to `10`
+- **output_key:**
+- **return_messages:** Defaults to `False`
+
 ### ConversationKGMemory
 
-### ConversationSummary
+
+Knowledge graph memory for storing conversation memory.
+
+
+- **input_key:**
+- **k:** Defaults to `10`
+- **memory_key:** Defaults to `chat_history`
+- **output_key:**
+- **return_messages:** Defaults to `False`
+
+### ConversationSummaryMemory
+
+
+Conversation summarizer to memory.
+
+
+- **input_key:**
+- **memory_key:** Defaults to `chat_history`
+- **output_key:**
+- **return_messages:** Defaults to `False`
 
 ### PostgresChatMessageHistory
 
+
+Memory store with Postgres
+
+
+- **connection_string:** Defaults to `[postgresql://postgres:mypassword@localhost/chat_history](postgresql://postgres:mypassword@localhost/chat_history)`
+- **session_id:**
+- **table_name:** Defaults to `message_store`
+
 ### VectorRetrieverMemory
+
+
+Class for a VectorStore-backed memory object.
+
+
+- **input_key:**
+- **memory_key:** Defaults to `chat_history`
+- **return_messages:** Defaults to `False`

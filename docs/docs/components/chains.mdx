@@ -1,25 +1,97 @@
 # Chains
 
+
 ### CombineDocsChain
+
+
+Load question answering chain.
+
+
+- **chain_type:** 
 
 ### ConversationChain
 
+
+Chain to have a conversation and load context from memory.
+
+
+- **input_key:** Defaults to `input`
+- **output_key:** Defaults to `response`
+- **verbose:** Defaults to `False`
+
 ### ConversationalRetrievalChain
+
+
+Load chain from LLM.
+
+
+- **chain_type:** 
+- **return_source_documents:** Defaults to `True`
+- **verbose:** Defaults to `False`
 
 ### LLMChain
 
+
+Chain to run queries against LLMs.
+
+
+- **output_key:** Defaults to `text`
+- **verbose:** Defaults to `False`
+
 ### LLMCheckerChain
+
 
 ### LLMMathChain
 
+
+Chain that interprets a prompt and executes python code to do math.
+
+
+- **input_key:** Defaults to `question`
+- **output_key:** Defaults to `answer`
+- **verbose:** Defaults to `False`
+
 ### MidJourneyChainPromptChain
+
 
 ### RetrievalQA
 
+
+Chain for question-answering against an index.
+
+
+- **input_key:** Defaults to `query`
+- **output_key:** Defaults to `result`
+- **return_source_documents:** Defaults to `True`
+- **verbose:** Defaults to `False`
+
 ### RetrievalQAWithSourcesChain
+
+
+Question-answering with sources over an index.
+
+
+- **return_source_documents:** Defaults to `True`
+- **verbose:** Defaults to `False`
 
 ### SQLDatabaseChain
 
+
+Chain for interacting with SQL Database.
+
+
+- **input_key:** Defaults to `query`
+- **output_key:** Defaults to `result`
+- **verbose:** Defaults to `False`
+
 ### SeriesCharacterChain
 
+
+SeriesCharacterChain is a chain you can use to have a conversation with a character from a series.
+
+
+- **character:**
+- **series:**
+
 ### TimeTravelGuideChain
+

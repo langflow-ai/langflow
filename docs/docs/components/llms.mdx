@@ -1,17 +1,171 @@
 # LLMs
 
+
 ### Anthropic
+
+
+Wrapper around Anthropic's large language models.
+
+
+- **anthropic_api_key:**
+- **anthropic_api_url:**
+- **temperature:**
 
 ### CTransformers
 
+
+Wrapper around the C Transformers LLM interface.
+
+**config:** Defaults to
+
+```
+{
+
+"top_k": 40,
+
+"top_p": 0.95,
+
+"temperature": 0.8,
+
+"repetition_penalty": 1.1,
+
+"last_n_tokens": 64,
+
+"seed": -1,
+
+"max_new_tokens": 256,
+
+"stop": null,
+
+"stream": false,
+
+"reset": true,
+
+"batch_size": 8,
+
+"threads": -1,
+
+"context_length": -1,
+
+"gpu_layers": 0
+
+}
+```
+
+**model:**
+
+**model_file:**
+
+**model_type:**
+
 ### ChatAnthropic
+
+
+Wrapper around Anthropic's large language model.
+
+
+- **anthropic_api_key:**
+- **anthropic_api_url:**
+- **temperature:**
 
 ### ChatOpenAI
 
+
+Wrapper around OpenAI Chat large language models.
+
+
+- **max_tokens:**
+- **model_kwargs:**
+- **model_name:**
+- **openai_api_base:**
+- **openai_api_key:**
+- **temperature:** Defaults to `0.7`
+
 ### Cohere
+
+
+Wrapper around Cohere large language models.
+
+
+- **cohere_api_key:**
+- **max_tokens:** `256`
+- **temperature:** `0.75`
 
 ### HuggingFaceHub
 
+
+Wrapper around HuggingFaceHub models.
+
+
+- **huggingfacehub_api_token:**
+- **model_kwargs:**
+- **repo_id:** Defaults to `gpt2`
+- **task:**
+
 ### LlamaCpp
 
+
+Wrapper around the llama.cpp model.
+
+**! TODO: Info about installation?**
+
+
+- **cache:** Defaults to `False`
+- **echo:** Defaults to `False`
+- **f16_kv:** Defaults to `True`
+- **last_n_tokens_size:** Defaults to `64`
+- **logits_all:** Defaults to `False`
+- **logprobs:**
+- **lora_base:**
+- **lora_path:**
+- **max_tokens:** Defaults to `256`
+- **model_path:**
+- **n_batch:** Defaults to `8`
+- **n_ctx:** Defaults to `512`
+- **n_gpu_layers:**
+- **n_parts:** Defaults to `-1`
+- **n_threads:**
+- **repeat_penalty:** Defaults to `1.1`
+- **seed:** Defaults to `-1`
+- **stop:**
+- **streaming:** Defaults to `True`
+- **suffix:**
+- **tags:**
+- **temperature:** Defaults to `0.8`
+- **top_k:** Defaults to `40`
+- **top_p:** Defaults to `0.95`
+- **use_mlock:** Defaults to `False`
+- **use_mmap:** Defaults to `True`
+- **verbose:** Defaults to `False`
+- **vocab_only:** Defaults to `False`
+
 ### OpenAI
+
+
+Wrapper around OpenAI large language models.
+
+
+- **max_tokens:** Defaults to `256`
+- **model_kwargs:**
+- **model_name:**
+- **openai_api_base:**
+- **openai_api_key:**
+- **temperature:** Defaults to `0.7`
+
+### VertexAI
+
+
+Wrapper around Google Vertex AI large language models.
+
+
+- **credentials:**
+- **location:** Defaults to `us-central1`
+- **max_output_tokens:** Defaults to `128`
+- **model_name:** Defaults to `text-bison`
+- **project:**
+- **request_parallelism:** Defaults to `5`
+- **temperature:** Defaults to `0`
+- **top_k:** Defaults to `40`
+- **top_p:** Defaults to `0.95`
+- **tuned_model_name:**
+- **verbose:** Defaults to `False`
