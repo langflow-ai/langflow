@@ -15,7 +15,7 @@ import ExportModal from "../../../../modals/exportModal";
 import ApiModal from "../../../../modals/ApiModal";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { alertContext } from "../../../../contexts/alertContext";
-import { INPUT_STYLE } from "../../../../constants";
+import { INPUT_SEARCH, INPUT_STYLE } from "../../../../constants";
 import { Separator } from "../../../../components/ui/separator";
 import { Menu } from "lucide-react";
 
@@ -124,10 +124,7 @@ export default function ExtraSidebar() {
           name="search"
           id="search"
           placeholder="Search"
-          className={
-            INPUT_STYLE +
-            "w-full rounded-md border border border-input bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-          }
+          className={INPUT_SEARCH}
           onChange={(e) => {
             handleSearchInput(e.target.value);
             setSearch(e.target.value);
@@ -183,7 +180,7 @@ export default function ExtraSidebar() {
                               );
                             }}
                           >
-                            <div className="flex w-full items-center justify-between rounded-md rounded-l-none border border-l-0 border-dashed border-ring  bg-background px-3 py-1 text-sm">
+                            <div className="flex w-full items-center justify-between rounded-md rounded-l-none border border-l-0 border-dashed border-ring  bg-white px-3 py-1 text-sm">
                               <span className="w-full  truncate pr-1 text-xs text-foreground">
                                 {data[d][t].display_name}
                               </span>

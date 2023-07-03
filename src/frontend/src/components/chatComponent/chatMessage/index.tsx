@@ -28,7 +28,7 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
               <div
                 onClick={() => setHidden((prev) => !prev)}
                 style={{ backgroundColor: nodeColors["thought"] }}
-                className="inline-block w-full cursor-pointer px-5 pb-3 pt-3 text-start"
+                className=" inline-block w-full cursor-pointer px-5 pb-3 pt-3 text-start"
                 dangerouslySetInnerHTML={{
                   __html: DOMPurify.sanitize(convert.toHtml(chat.thought)),
                 }}
