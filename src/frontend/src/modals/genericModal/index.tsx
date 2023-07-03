@@ -80,7 +80,7 @@ export default function GenericModal({
         <div className="mt-2 flex h-full w-full">
           <Textarea
             ref={ref}
-            className="form-input h-[300px] w-full rounded-lg border-ring focus-visible:ring-1"
+            className=" h-[300px] w-full form-primary "
             value={myValue}
             onChange={(e) => {
               setMyValue(e.target.value);
