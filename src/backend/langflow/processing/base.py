@@ -51,5 +51,6 @@ async def get_result_and_steps(langchain_object, message: str, **kwargs):
         )
         thought = format_actions(intermediate_steps) if intermediate_steps else ""
     except Exception as exc:
+        logger.exception(exc)
         raise ValueError(f"Error: {str(exc)}") from exc
     return result, thought

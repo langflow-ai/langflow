@@ -28,7 +28,7 @@ export default function PromptAreaComponent({
   return (
     <div
       className={
-        disabled ? "pointer-events-none cursor-not-allowed w-full" : " w-full"
+        disabled ? "pointer-events-none w-full cursor-not-allowed" : " w-full"
       }
     >
       <div className="w-full flex items-center">
@@ -51,7 +51,7 @@ export default function PromptAreaComponent({
             editNode
               ? "cursor-pointer truncate placeholder:text-center text-ring border-1 block w-full pt-0.5 pb-0.5 form-input text-sm  rounded-md border-ring shadow-sm sm:text-sm" +
                 INPUT_STYLE
-              : "truncate block w-full text-ring px-3 py-2 rounded-md border border-ring shadow-sm sm:text-sm" +
+              : "block w-full truncate rounded-md border border-ring px-3 py-2 text-ring shadow-sm sm:text-sm" +
                 (disabled ? " bg-input" : "")
           }
         >

@@ -3,6 +3,7 @@ import { FloatComponentType } from "../../types/components";
 import { TabsContext } from "../../contexts/tabsContext";
 import { classNames } from "../../utils";
 import { INPUT_STYLE } from "../../constants";
+import { PopUpContext } from "../../contexts/popUpContext";
 
 export default function IntComponent({
   value,
@@ -14,6 +15,7 @@ export default function IntComponent({
   const [myValue, setMyValue] = useState(value ?? "");
   const { setDisableCopyPaste } = useContext(TabsContext);
   const min = 0;
+  const { closePopUp } = useContext(PopUpContext);
 
   useEffect(() => {
     if (disabled) {
@@ -24,13 +26,13 @@ export default function IntComponent({
 
   useEffect(() => {
     setMyValue(value);
-  }, [value]);
+  }, [closePopUp]);
 
   return (
     <div
       className={
         "w-full " +
-        (disabled ? "pointer-events-none cursor-not-allowed w-full" : "w-full")
+        (disabled ? "pointer-events-none w-full cursor-not-allowed" : "w-full")
       }
     >
       <input
@@ -70,9 +72,9 @@ export default function IntComponent({
         value={myValue}
         className={
           editNode
-            ? "focus:placeholder-transparent text-center placeholder:text-center border-1 block w-full pt-0.5 pb-0.5 form-input rounded-md border-ring shadow-sm sm:text-sm placeholder:text-muted-foreground" +
+            ? "form-input block w-full rounded-md border pb-0.5 pt-0.5 text-center shadow-sm placeholder:text-center placeholder:text-muted-foreground focus:placeholder-transparent sm:text-sm" +
               INPUT_STYLE
-            : "focus:placeholder-transparent block w-full form-input bg-background rounded-md border-ring shadow-sm ring-offset-background sm:text-sm placeholder:text-muted-foreground" +
+            : "form-input block w-full rounded-md bg-background shadow-sm ring-offset-background placeholder:text-muted-foreground focus:placeholder-transparent sm:text-sm" +
               INPUT_STYLE +
               (disabled ? " bg-input" : "")
         }

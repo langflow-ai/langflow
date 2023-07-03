@@ -12,6 +12,7 @@ export type APIClassType = {
   description: string;
   template: APITemplateType;
   display_name: string;
+  documentation: string;
   [key: string]: Array<string> | string | APITemplateType;
 };
 export type TemplateVariableType = {
