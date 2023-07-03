@@ -632,11 +632,19 @@ export function isValidConnection(
   reactFlowInstance: ReactFlowInstance
 ) {
   if (
-    targetHandle.split("|")[0].split(";").some((n) => n === sourceHandle.split("|")[0]) ||
+    targetHandle
+      .split("|")[0]
+      .split(";")
+      .some((n) => n === sourceHandle.split("|")[0]) ||
     sourceHandle
       .split("|")
       .slice(2)
-      .some((t) => targetHandle.split("|")[0].split(";").some((n) => n === t)) ||
+      .some((t) =>
+        targetHandle
+          .split("|")[0]
+          .split(";")
+          .some((n) => n === t)
+      ) ||
     targetHandle.split("|")[0] === "str"
   ) {
     let targetNode = reactFlowInstance.getNode(target).data.node;
@@ -830,10 +838,10 @@ export function updateIds(newFlow, getNodeId) {
   });
 }
 
-export function groupByFamily(data, baseClasses) {
+export function groupByFamily(data, baseClasses, left, type) {
+  let parentOutput: string;
   let arrOfParent: string[] = [];
   let arrOfType: { family: string; type: string }[] = [];
-
   Object.keys(data).map((d) => {
     Object.keys(data[d]).map((n) => {
       try {
@@ -844,15 +852,14 @@ export function groupByFamily(data, baseClasses) {
         ) {
           arrOfParent.push(d);
         }
+        if (n === type) {
+          parentOutput = d;
+        }
       } catch (e) {
         console.log(e);
       }
     });
   });
-
-  let uniq = arrOfParent.filter(
-    (item, index) => arrOfParent.indexOf(item) === index
-  );
 
   Object.keys(data).map((d) => {
     Object.keys(data[d]).map((n) => {
@@ -887,6 +894,11 @@ export function groupByFamily(data, baseClasses) {
       existingGroup.type += `, ${item.type}`;
     } else {
       result.push({ family: item.family, type: item.type });
+    }
+
+    if (left == false) {
+      let resFil = result.filter((group) => group.family === parentOutput);
+      result = resFil;
     }
 
     return result;
