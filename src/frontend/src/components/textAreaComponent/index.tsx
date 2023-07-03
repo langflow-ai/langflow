@@ -52,9 +52,9 @@ export default function TextAreaComponent({
           }}
           className={
             editNode
-              ? "truncate cursor-pointer placeholder:text-center text-ring border-1 block w-full pt-0.5 pb-0.5 form-input   rounded-md border-ring bg-transparent shadow-sm sm:text-sm" +
+              ? "form-input block w-full cursor-pointer truncate rounded-md border border-ring bg-transparent pb-0.5   pt-0.5 text-ring shadow-sm placeholder:text-center sm:text-sm" +
                 INPUT_STYLE
-              : "truncate block w-full text-ring px-3 py-2 rounded-md border border-ring shadow-sm sm:text-sm" +
+              : "block w-full truncate rounded-md border border-ring px-3 py-2 text-ring shadow-sm sm:text-sm" +
                 (disabled ? " bg-input" : "")
           }
         >

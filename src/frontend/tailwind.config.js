@@ -12,6 +12,12 @@ module.exports = {
     "./index.html",
     "./src/**/*.{js,ts,tsx,jsx}",
   ],
+  safelist: [
+    "bg-status-blue",
+    "bg-status-green",
+    "bg-status-red",
+    "bg-status-yellow",
+  ],
   important: true,
   theme: {
     container: {
@@ -22,6 +28,20 @@ module.exports = {
       },
     },
     extend: {
+      keyframes: {
+        "accordion-down": {
+          from: { height: 0 },
+          to: { height: "var(--radix-accordion-content-height)" },
+        },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: 0 },
+        },
+      },
+      animation: {
+        "accordion-down": "accordion-down 0.2s ease-out",
+        "accordion-up": "accordion-up 0.2s ease-out",
+      },
       colors: {
         "almost-dark-gray": "var(--almost-dark-gray)",
         "almost-light-blue": "var(--almost-light-blue)",

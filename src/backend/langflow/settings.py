@@ -1,28 +1,40 @@
 import os
-from typing import List
 
 import yaml
 from pydantic import BaseSettings, root_validator
+from langflow.utils.logger import logger
 
 
 class Settings(BaseSettings):
-    chains: List[str] = []
-    agents: List[str] = []
-    prompts: List[str] = []
-    llms: List[str] = []
-    tools: List[str] = []
-    memories: List[str] = []
-    embeddings: List[str] = []
-    vectorstores: List[str] = []
-    documentloaders: List[str] = []
-    wrappers: List[str] = []
-    toolkits: List[str] = []
-    textsplitters: List[str] = []
-    utilities: List[str] = []
+    chains: dict = {}
+    agents: dict = {}
+    prompts: dict = {}
+    llms: dict = {}
+    tools: dict = {}
+    memories: dict = {}
+    embeddings: dict = {}
+    vectorstores: dict = {}
+    documentloaders: dict = {}
+    wrappers: dict = {}
+    retrievers: dict = {}
+    toolkits: dict = {}
+    textsplitters: dict = {}
+    utilities: dict = {}
     dev: bool = False
-    database_url: str = "sqlite:///./langflow.db"
+    database_url: str
     cache: str = "InMemoryCache"
     remove_api_keys: bool = False
+
+    @root_validator(pre=True)
+    def set_database_url(cls, values):
+        if "database_url" not in values:
+            logger.debug("No database_url provided, trying DATABASE_URL env variable")
+            if database_url := os.getenv("DATABASE_URL"):
+                values["database_url"] = database_url
+            else:
+                logger.debug("No DATABASE_URL env variable, using sqlite database")
+                values["database_url"] = "sqlite:///./langflow.db"
+        return values
 
     class Config:
         validate_assignment = True
@@ -38,16 +50,21 @@ class Settings(BaseSettings):
 
     def update_from_yaml(self, file_path: str, dev: bool = False):
         new_settings = load_settings_from_yaml(file_path)
-        self.chains = new_settings.chains or []
-        self.agents = new_settings.agents or []
-        self.prompts = new_settings.prompts or []
-        self.llms = new_settings.llms or []
-        self.tools = new_settings.tools or []
-        self.memories = new_settings.memories or []
-        self.wrappers = new_settings.wrappers or []
-        self.toolkits = new_settings.toolkits or []
-        self.textsplitters = new_settings.textsplitters or []
-        self.utilities = new_settings.utilities or []
+        self.chains = new_settings.chains or {}
+        self.agents = new_settings.agents or {}
+        self.prompts = new_settings.prompts or {}
+        self.llms = new_settings.llms or {}
+        self.tools = new_settings.tools or {}
+        self.memories = new_settings.memories or {}
+        self.wrappers = new_settings.wrappers or {}
+        self.toolkits = new_settings.toolkits or {}
+        self.textsplitters = new_settings.textsplitters or {}
+        self.utilities = new_settings.utilities or {}
+        self.embeddings = new_settings.embeddings or {}
+        self.vectorstores = new_settings.vectorstores or {}
+        self.documentloaders = new_settings.documentloaders or {}
+        self.retrievers = new_settings.retrievers or {}
+
         self.dev = dev
 
     def update_settings(self, **kwargs):

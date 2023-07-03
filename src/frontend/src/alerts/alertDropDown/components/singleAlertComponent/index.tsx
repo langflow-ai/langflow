@@ -25,14 +25,14 @@ export default function SingleAlert({
     >
       {type === "error" ? (
         <div
-          className="flex bg-error-background rounded-md p-3 mb-2 mx-2"
+          className="mx-2 mb-2 flex rounded-md bg-error-background p-3"
           key={dropItem.id}
         >
           <div className="flex-shrink-0">
             <XCircle className="h-5 w-5 text-status-red" aria-hidden="true" />
           </div>
           <div className="ml-3">
-            <h3 className="text-sm break-words font-medium text-error-foreground">
+            <h3 className="break-words text-sm font-medium text-error-foreground">
               {dropItem.title}
             </h3>
             {dropItem.list ? (
@@ -72,17 +72,17 @@ export default function SingleAlert({
         </div>
       ) : type === "notice" ? (
         <div
-          className="flex rounded-md bg-info-background p-3 mb-2 mx-2"
+          className="mx-2 mb-2 flex rounded-md bg-info-background p-3"
           key={dropItem.id}
         >
           <div className="flex-shrink-0">
             <Info className="h-5 w-5 text-status-blue " aria-hidden="true" />
           </div>
           <div className="ml-3 flex-1 md:flex md:justify-between">
-            <p className="text-sm text-info-foreground font-medium">
+            <p className="text-sm font-medium text-info-foreground">
               {dropItem.title}
             </p>
-            <p className="mt-3 text-sm md:mt-0 md:ml-6">
+            <p className="mt-3 text-sm md:ml-6 md:mt-0">
               {dropItem.link ? (
                 <Link
                   to={dropItem.link}
@@ -118,7 +118,7 @@ export default function SingleAlert({
         </div>
       ) : (
         <div
-          className="flex bg-success-background p-3 mb-2 mx-2 rounded-md"
+          className="mx-2 mb-2 flex rounded-md bg-success-background p-3"
           key={dropItem.id}
         >
           <div className="flex-shrink-0">

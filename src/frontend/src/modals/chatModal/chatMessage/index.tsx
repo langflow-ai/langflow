@@ -11,7 +11,7 @@ import remarkMath from "remark-math";
 import { CodeBlock } from "./codeBlock";
 import Convert from "ansi-to-html";
 import { User2, MessageCircle } from "lucide-react";
-
+import DOMPurify from "dompurify";
 export default function ChatMessage({
   chat,
   lockChat,
@@ -31,58 +31,58 @@ export default function ChatMessage({
   return (
     <div
       className={classNames(
-        "w-full py-2 pl-2 flex",
+        "flex w-full py-2 pl-2",
         chat.isSend ? "bg-background " : "bg-input"
       )}
     >
       <div
         className={classNames(
-          "rounded-full overflow-hidden w-8 h-8 flex items-center my-3 justify-center"
+          "my-3 flex h-8 w-8 items-center justify-center overflow-hidden rounded-full"
         )}
       >
         {!chat.isSend && (
-          <div className="relative w-8 h-8">
+          <div className="relative h-8 w-8">
             <img
               className={
-                "absolute transition-opacity duration-500 scale-150 " +
+                "absolute scale-150 transition-opacity duration-500 " +
                 (lockChat ? "opacity-100" : "opacity-0")
               }
               src={lastMessage ? AiIcon : AiIconStill}
             />
             <img
               className={
-                "absolute transition-opacity duration-500 scale-150 " +
+                "absolute scale-150 transition-opacity duration-500 " +
                 (lockChat ? "opacity-0" : "opacity-100")
               }
               src={AiIconStill}
             />
           </div>
         )}
-        {chat.isSend && <User2 className="w-6 h-6 -mb-1 text-primary " />}
+        {chat.isSend && <User2 className="-mb-1 h-6 w-6 text-primary " />}
       </div>
       {!chat.isSend ? (
-        <div className="w-full text-start flex items-center">
-          <div className="w-full relative text-start inline-block text-muted-foreground  text-sm font-normal">
+        <div className="flex w-full items-center text-start">
+          <div className="relative inline-block w-full text-start text-sm  font-normal text-muted-foreground">
             {hidden && chat.thought && chat.thought !== "" && (
               <div
                 onClick={() => setHidden((prev) => !prev)}
-                className="absolute -top-1 -left-2 cursor-pointer"
+                className="absolute -left-2 -top-1 cursor-pointer"
               >
-                <MessageCircle className="w-5 h-5 animate-bounce " />
+                <MessageCircle className="h-5 w-5 animate-bounce " />
               </div>
             )}
             {chat.thought && chat.thought !== "" && !hidden && (
               <div
                 onClick={() => setHidden((prev) => !prev)}
-                className=" text-start inline-block rounded-md text-muted-foreground  h-full border border-ring
-								bg-muted w-[95%] pb-3 pt-3 px-2 ml-3 cursor-pointer scrollbar-hide overflow-scroll"
+                className=" ml-3 inline-block h-full w-[95%]  cursor-pointer overflow-scroll rounded-md
+								border border-ring bg-muted px-2 pb-3 pt-3 text-start text-muted-foreground scrollbar-hide"
                 dangerouslySetInnerHTML={{
-                  __html: convert.toHtml(chat.thought),
+                  __html: DOMPurify.sanitize(convert.toHtml(chat.thought)),
                 }}
               ></div>
             )}
             {chat.thought && chat.thought !== "" && !hidden && <br></br>}
-            <div className="w-full px-4 pb-3 pt-3 pr-8">
+            <div className="w-full px-4 pb-3 pr-8 pt-3">
               <div className="w-full">
                 <div className="w-full">
                   <ReactMarkdown
@@ -94,7 +94,7 @@ export default function ChatMessage({
                         if (children.length) {
                           if (children[0] == "▍") {
                             return (
-                              <span className="animate-pulse cursor-default mt-1">
+                              <span className="mt-1 animate-pulse cursor-default">
                                 ▍
                               </span>
                             );
@@ -146,14 +146,14 @@ export default function ChatMessage({
           </div>
         </div>
       ) : (
-        <div className="w-full flex items-center">
-          <div className="text-start inline-block px-3 text-muted-foreground ">
-            <span
-              className="text-muted-foreground "
-              dangerouslySetInnerHTML={{
-                __html: message.replace(/\n/g, "<br>"),
-              }}
-            ></span>
+        <div className="flex w-full items-center">
+          <div className="inline-block px-3 text-start text-muted-foreground ">
+            {message.split("\n").map((line, index) => (
+              <span key={index} className="text-muted-foreground ">
+                {line}
+                <br />
+              </span>
+            ))}
           </div>
         </div>
       )}

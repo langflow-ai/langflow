@@ -62,6 +62,10 @@ def update_memory_keys(langchain_object, possible_new_mem_key):
         if key not in [langchain_object.memory.memory_key, possible_new_mem_key]
     ][0]
 
-    langchain_object.memory.input_key = input_key
-    langchain_object.memory.output_key = output_key
-    langchain_object.memory.memory_key = possible_new_mem_key
+    keys = [input_key, output_key, possible_new_mem_key]
+    attrs = ["input_key", "output_key", "memory_key"]
+    for key, attr in zip(keys, attrs):
+        try:
+            setattr(langchain_object.memory, attr, key)
+        except ValueError as exc:
+            logger.debug(f"{langchain_object.memory} has no attribute {attr} ({exc})")
