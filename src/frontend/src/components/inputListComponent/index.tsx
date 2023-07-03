@@ -5,20 +5,29 @@ import { TabsContext } from "../../contexts/tabsContext";
 import _ from "lodash";
 import { INPUT_DISABLE, INPUT_EDIT_NODE, INPUT_STYLE } from "../../constants";
 import { X, Plus } from "lucide-react";
+import { PopUpContext } from "../../contexts/popUpContext";
 
 export default function InputListComponent({
   value,
   onChange,
   disabled,
   editNode = false,
+  onAddInput,
 }: InputListComponentType) {
   const [inputList, setInputList] = useState(value ?? [""]);
+  const { closePopUp } = useContext(PopUpContext);
+
   useEffect(() => {
     if (disabled) {
       setInputList([""]);
       onChange([""]);
     }
   }, [disabled, onChange]);
+
+  useEffect(() => {
+    setInputList(value);
+  }, [closePopUp]);
+
   return (
     <div
       className={

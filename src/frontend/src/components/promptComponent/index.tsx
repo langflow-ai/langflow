@@ -36,7 +36,7 @@ export default function PromptAreaComponent({
         disabled ? "pointer-events-none w-full cursor-not-allowed" : " w-full"
       }
     >
-      <div className="flex w-full items-center gap-3">
+      <div className="flex w-full items-center">
         <span
           onClick={() => {
             openPopUp(

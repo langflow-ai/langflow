@@ -78,9 +78,9 @@ export function AlertProvider({ children }: { children: ReactNode }) {
    * @param newState An object containing the new error data, including title and optional list of error messages
    */
   function setErrorData(newState: { title: string; list?: Array<string> }) {
-    setErrorDataState(newState);
-    setErrorOpen(true);
     if (newState.title && newState.title !== "") {
+      setErrorDataState(newState);
+      setErrorOpen(true);
       setNotificationCenter(true);
       pushNotificationList({
         type: "error",
@@ -95,9 +95,9 @@ export function AlertProvider({ children }: { children: ReactNode }) {
    * @param newState An object containing the title of the notice and optionally a link.
    */
   function setNoticeData(newState: { title: string; link?: string }) {
-    setNoticeDataState(newState);
-    setNoticeOpen(true);
     if (newState.title && newState.title !== "") {
+      setNoticeDataState(newState);
+      setNoticeOpen(true);
       // Add new notice to notification center
       setNotificationCenter(true);
       pushNotificationList({
@@ -113,11 +113,10 @@ export function AlertProvider({ children }: { children: ReactNode }) {
    * @param newState - A state object with a "title" property to set in the success data state.
    */
   function setSuccessData(newState: { title: string }) {
-    setSuccessDataState(newState); // update the success data state with the provided new state
-    setSuccessOpen(true); // open the success alert
-
     // If the new state has a "title" property, add a new success notification to the list
     if (newState.title && newState.title !== "") {
+      setSuccessDataState(newState); // update the success data state with the provided new state
+      setSuccessOpen(true); // open the success alert
       setNotificationCenter(true); // show the notification center
       pushNotificationList({
         // add the new notification to the list
