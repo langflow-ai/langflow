@@ -3,7 +3,7 @@ import { InputComponentType } from "../../types/components";
 import { classNames } from "../../utils";
 import { TabsContext } from "../../contexts/tabsContext";
 import { PopUpContext } from "../../contexts/popUpContext";
-import { INPUT_STYLE } from "../../constants";
+import { INPUT_DISABLE, INPUT_EDIT_NODE, INPUT_STYLE } from "../../constants";
 
 export default function InputComponent({
   value,
@@ -46,13 +46,10 @@ export default function InputComponent({
           if (disableCopyPaste) setDisableCopyPaste(false);
         }}
         className={classNames(
-          "form-input block w-full rounded-md border-ring bg-background pr-12 shadow-sm placeholder:text-muted-foreground focus:placeholder-transparent sm:text-sm",
-          disabled ? " bg-input" : "",
+          " pr-12 ",
+          disabled ? INPUT_DISABLE : "",
           password && !pwdVisible && myValue !== "" ? "password" : "",
-          editNode
-            ? "form-input block w-full rounded-md border border-ring pb-0.5 pt-0.5 text-center shadow-sm sm:text-sm" +
-                INPUT_STYLE
-            : "ring-offset-input" + INPUT_STYLE,
+          editNode ? INPUT_EDIT_NODE : INPUT_STYLE,
           password && editNode ? "pr-8" : "pr-3"
         )}
         placeholder={password && editNode ? "Key" : "Type something..."}

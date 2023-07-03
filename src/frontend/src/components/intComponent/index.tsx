@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { FloatComponentType } from "../../types/components";
 import { TabsContext } from "../../contexts/tabsContext";
 import { classNames } from "../../utils";
-import { INPUT_STYLE } from "../../constants";
+import { INPUT_DISABLE, INPUT_EDIT_NODE, INPUT_STYLE } from "../../constants";
 import { PopUpContext } from "../../contexts/popUpContext";
 
 export default function IntComponent({
@@ -72,11 +72,8 @@ export default function IntComponent({
         value={myValue}
         className={
           editNode
-            ? "form-input block w-full rounded-md border pb-0.5 pt-0.5 text-center shadow-sm placeholder:text-center placeholder:text-muted-foreground focus:placeholder-transparent sm:text-sm" +
-              INPUT_STYLE
-            : "form-input block w-full rounded-md bg-background shadow-sm ring-offset-background placeholder:text-muted-foreground focus:placeholder-transparent sm:text-sm" +
-              INPUT_STYLE +
-              (disabled ? " bg-input" : "")
+            ? INPUT_EDIT_NODE
+            : INPUT_STYLE + (disabled ? INPUT_DISABLE : "")
         }
         placeholder={editNode ? "Integer number" : "Type an integer number"}
         onChange={(e) => {

@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { alertContext } from "../../contexts/alertContext";
 import { FileComponentType } from "../../types/components";
 import { TabsContext } from "../../contexts/tabsContext";
-import { INPUT_STYLE } from "../../constants";
+import { INPUT_DISABLE, INPUT_EDIT_NODE, INPUT_STYLE } from "../../constants";
 import { FileSearch2 } from "lucide-react";
 import { uploadFile } from "../../controllers/API";
 
@@ -103,11 +103,8 @@ export default function InputFileComponent({
           onClick={handleButtonClick}
           className={
             editNode
-              ? "form-input block w-full truncate rounded-md border border-ring pb-0.5   pt-0.5 text-ring shadow-sm placeholder:text-center sm:text-sm" +
-                INPUT_STYLE
-              : "block w-full truncate rounded-md  border border-ring px-3 py-2 text-ring shadow-sm sm:text-sm" +
-                INPUT_STYLE +
-                (disabled ? " bg-input" : "")
+              ? INPUT_EDIT_NODE + INPUT_STYLE
+              : INPUT_STYLE + (disabled ? INPUT_DISABLE : "")
           }
         >
           {myValue !== "" ? myValue : "No file"}
