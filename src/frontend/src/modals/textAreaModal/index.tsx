@@ -15,12 +15,13 @@ export default function TextAreaModal({
 }) {
   const [open, setOpen] = useState(true);
   const [myValue, setMyValue] = useState(value);
-  const { closePopUp } = useContext(PopUpContext);
+  const { closePopUp, setCloseEdit } = useContext(PopUpContext);
   const ref = useRef();
   function setModalOpen(x: boolean) {
     setOpen(x);
     if (x === false) {
       setTimeout(() => {
+        setCloseEdit("textarea");
         closePopUp();
       }, 300);
     }

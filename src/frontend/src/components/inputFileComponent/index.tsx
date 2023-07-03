@@ -98,7 +98,7 @@ export default function InputFileComponent({
         disabled ? "pointer-events-none w-full cursor-not-allowed" : "w-full"
       }
     >
-      <div className="flex w-full items-center gap-2">
+      <div className="flex w-full items-center">
         <span
           onClick={handleButtonClick}
           className={
@@ -111,7 +111,7 @@ export default function InputFileComponent({
         </span>
         <button onClick={handleButtonClick}>
           {!editNode && !loading && (
-            <FileSearch2 className="h-6 w-6 hover:text-ring" />
+            <FileSearch2 className="ml-3 h-6 w-6 hover:text-ring" />
           )}
           {!editNode && loading && (
             <span className="loading loading-spinner loading-sm pointer-events-none h-8 pl-3"></span>

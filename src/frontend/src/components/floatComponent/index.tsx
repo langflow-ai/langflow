@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { FloatComponentType } from "../../types/components";
 import { TabsContext } from "../../contexts/tabsContext";
 import { INPUT_DISABLE, INPUT_EDIT_NODE, INPUT_STYLE } from "../../constants";
+import { PopUpContext } from "../../contexts/popUpContext";
 
 export default function FloatComponent({
   value,
@@ -12,6 +13,7 @@ export default function FloatComponent({
 }: FloatComponentType) {
   const [myValue, setMyValue] = useState(value ?? "");
   const { setDisableCopyPaste } = useContext(TabsContext);
+  const { closePopUp } = useContext(PopUpContext);
 
   const step = 0.1;
   const min = 0;
@@ -26,7 +28,7 @@ export default function FloatComponent({
 
   useEffect(() => {
     setMyValue(value);
-  }, [value]);
+  }, [closePopUp]);
 
   return (
     <div

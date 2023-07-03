@@ -62,7 +62,7 @@ export default function ExtraSidebar() {
   return (
     <div className="flex h-full w-52 flex-col overflow-hidden border-r scrollbar-hide">
       <div className="mb-2 mt-2 flex w-full items-center justify-between gap-2 px-2">
-        <ShadTooltip delayDuration={1000} content="Import" side="top">
+        <ShadTooltip content="Import" side="top">
           <button
             className="relative inline-flex w-full items-center justify-center rounded-md bg-background   px-2 py-2 text-foreground shadow-sm ring-1 ring-inset ring-input transition-all duration-500 ease-in-out hover:bg-muted"
             onClick={() => {
@@ -74,7 +74,7 @@ export default function ExtraSidebar() {
           </button>
         </ShadTooltip>
 
-        <ShadTooltip delayDuration={1000} content="Export" side="top">
+        <ShadTooltip content="Export" side="top">
           <button
             className={classNames(
               "relative inline-flex w-full items-center justify-center rounded-md bg-background   px-2 py-2 text-foreground shadow-sm ring-1 ring-inset  ring-input transition-all duration-500 ease-in-out hover:bg-muted"
@@ -86,7 +86,7 @@ export default function ExtraSidebar() {
             <FileDown strokeWidth={1.5} className="h-5 w-5  "></FileDown>
           </button>
         </ShadTooltip>
-        <ShadTooltip delayDuration={1000} content="Code" side="top">
+        <ShadTooltip content="Code" side="top">
           <button
             className={classNames(
               "relative inline-flex w-full items-center justify-center rounded-md bg-background   px-2 py-2 text-foreground shadow-sm ring-1 ring-inset  ring-input transition-all duration-500 ease-in-out hover:bg-muted"
@@ -99,7 +99,7 @@ export default function ExtraSidebar() {
           </button>
         </ShadTooltip>
 
-        <ShadTooltip delayDuration={1000} content="Save" side="top">
+        <ShadTooltip content="Save" side="top">
           <button
             className="relative inline-flex w-full items-center justify-center rounded-md bg-background   px-2 py-2 text-foreground shadow-sm ring-1 ring-inset  ring-input transition-all duration-500 ease-in-out hover:bg-muted"
             onClick={(event) => {
@@ -155,7 +155,6 @@ export default function ExtraSidebar() {
                     .map((t: string, k) => (
                       <ShadTooltip
                         content={data[d][t].display_name}
-                        delayDuration={1500}
                         side="right"
                         key={data[d][t].display_name}
                       >

@@ -38,11 +38,12 @@ export default function GenericModal({
   const [myValue, setMyValue] = useState(value);
   const { dark } = useContext(darkContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
-  const { closePopUp } = useContext(PopUpContext);
+  const { closePopUp, setCloseEdit } = useContext(PopUpContext);
   const ref = useRef();
   function setModalOpen(x: boolean) {
     setOpen(x);
     if (x === false) {
+      setCloseEdit("generic");
       closePopUp();
     }
   }

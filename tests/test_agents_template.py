@@ -26,6 +26,7 @@ def test_zero_shot_agent(client: TestClient):
         "type": "LLMChain",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["allowed_tools"] == {
         "required": False,
@@ -37,6 +38,7 @@ def test_zero_shot_agent(client: TestClient):
         "type": "Tool",
         "list": True,
         "advanced": False,
+        "info": "",
     }
 
 
@@ -60,6 +62,7 @@ def test_json_agent(client: TestClient):
         "type": "BaseToolkit",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["llm"] == {
         "required": True,
@@ -72,6 +75,7 @@ def test_json_agent(client: TestClient):
         "list": False,
         "advanced": False,
         "display_name": "LLM",
+        "info": "",
     }
 
 
@@ -99,6 +103,7 @@ def test_csv_agent(client: TestClient):
         "list": False,
         "file_path": None,
         "advanced": False,
+        "info": "",
     }
     assert template["llm"] == {
         "required": True,
@@ -111,6 +116,7 @@ def test_csv_agent(client: TestClient):
         "list": False,
         "advanced": False,
         "display_name": "LLM",
+        "info": "",
     }
 
 
@@ -143,6 +149,7 @@ def test_initialize_agent(client: TestClient):
         "type": "str",
         "list": True,
         "advanced": False,
+        "info": "",
     }
     assert template["memory"] == {
         "required": False,
@@ -154,6 +161,7 @@ def test_initialize_agent(client: TestClient):
         "type": "BaseChatMemory",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["tools"] == {
         "required": False,
@@ -165,6 +173,7 @@ def test_initialize_agent(client: TestClient):
         "type": "Tool",
         "list": True,
         "advanced": False,
+        "info": "",
     }
     assert template["llm"] == {
         "required": True,
@@ -177,4 +186,5 @@ def test_initialize_agent(client: TestClient):
         "list": False,
         "advanced": False,
         "display_name": "LLM",
+        "info": "",
     }

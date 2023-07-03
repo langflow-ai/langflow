@@ -2,9 +2,9 @@ import { useState } from "react";
 import { ChatMessageType } from "../../../types/chat";
 import { nodeColors } from "../../../utils";
 import Convert from "ansi-to-html";
-const convert = new Convert({ newline: true });
 import { MessageCircle } from "lucide-react";
-
+import DOMPurify from "dompurify";
+const convert = new Convert({ newline: true });
 export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
   const [hidden, setHidden] = useState(true);
   return (
@@ -23,13 +23,14 @@ export default function ChatMessage({ chat }: { chat: ChatMessageType }) {
                 <MessageCircle className="h-5 w-5 animate-bounce" />
               </div>
             )}
+
             {chat.thought && chat.thought !== "" && !hidden && (
               <div
                 onClick={() => setHidden((prev) => !prev)}
                 style={{ backgroundColor: nodeColors["thought"] }}
                 className=" inline-block w-full cursor-pointer px-5 pb-3 pt-3 text-start"
                 dangerouslySetInnerHTML={{
-                  __html: convert.toHtml(chat.thought),
+                  __html: DOMPurify.sanitize(convert.toHtml(chat.thought)),
                 }}
               ></div>
             )}

@@ -53,6 +53,8 @@ const TabsContextInitialValue: TabsContextType = {
   tabsState: {},
   setTabsState: (state: TabsState) => {},
   getNodeId: (nodeType: string) => "",
+  setTweak: (tweak: any) => {},
+  getTweak: {},
   paste: (
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }
@@ -73,6 +75,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   const { templates, reactFlowInstance } = useContext(typesContext);
   const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
   const [tabsState, setTabsState] = useState<TabsState>({});
+  const [getTweak, setTweak] = useState({});
 
   const newNodeId = useRef(uid());
   function incrementNodeId() {
@@ -198,10 +201,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       edge.style = { stroke: "#555555" };
     });
   }
+
   function updateDisplay_name(node: NodeType, template: APIClassType) {
-    node.data.node.display_name = template["display_name"]
-      ? template["display_name"]
-      : node.data.type;
+    node.data.node.display_name = template["display_name"] || node.data.type;
+  }
+
+  function updateNodeDocumentation(node: NodeType, template: APIClassType) {
+    node.data.node.documentation = template["documentation"];
   }
 
   function processFlowNodes(flow) {
@@ -218,6 +224,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         updateNodeEdges(flow, node, template);
         updateNodeDescription(node, template);
         updateNodeTemplate(node, template);
+        updateNodeDocumentation(node, template);
       }
     });
   }
@@ -268,16 +275,20 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   /**
    * Downloads the current flow as a JSON file
    */
-  function downloadFlow(flow: FlowType) {
+  function downloadFlow(
+    flow: FlowType,
+    flowName: string,
+    flowDescription?: string
+  ) {
     // create a data URI with the current flow data
     const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
-      JSON.stringify(flow)
+      JSON.stringify({ ...flow, name: flowName, description: flowDescription })
     )}`;
 
     // create a link element and set its properties
     const link = document.createElement("a");
     link.href = jsonString;
-    link.download = `${flows.find((f) => f.id === tabId).name}.json`;
+    link.download = `${flowName}.json`;
 
     // simulate a click on the link element to trigger the download
     link.click();
@@ -410,7 +421,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           y: insidePosition.y + n.position.y - minimumY,
         },
         data: {
-          ...n.data,
+          ..._.cloneDeep(n.data),
           id: newId,
         },
       };
@@ -640,6 +651,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         tabsState,
         setTabsState,
         paste,
+        getTweak,
+        setTweak,
       }}
     >
       {children}
