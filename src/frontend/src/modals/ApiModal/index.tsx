@@ -104,10 +104,11 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
   useEffect(() => {
     if (closeEdit !== "") {
       tweak.current = getTweak;
-      if (tweak.current.length > 0) {
+      if(tweak.current.length > 0){
         setActiveTab("3");
         openAccordions();
-      } else {
+      }
+      else{
         startTweaks();
       }
     } else {
@@ -249,31 +250,34 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
 
   function openAccordions() {
     let accordionsToOpen = [];
-    tweak.current.forEach((el) => {
-      Object.keys(el).forEach((key) => {
-        if (Object.keys(el[key]).length > 0) {
-          accordionsToOpen.push(key);
-          setOpenAccordion(accordionsToOpen);
-        }
+      tweak.current.forEach((el) => {
+        Object.keys(el).forEach((key) => {
+          if (Object.keys(el[key]).length > 0) {
+            accordionsToOpen.push(key);
+            setOpenAccordion(accordionsToOpen);
+          }
+        });
       });
-    });
   }
 
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger></DialogTrigger>
-      <DialogContent className="h-[580px] sm:max-w-[700px] lg:max-w-[850px]">
+      <DialogContent className="lg:max-w-[850px] sm:max-w-[700px] h-[580px]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Code</span>
-            <Code2 strokeWidth={1.5} className="h-6 w-6 text-primary pl-1 " aria-hidden="true" />
+            <Code2
+              className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
+              aria-hidden="true"
+            />
           </DialogTitle>
           <DialogDescription>{EXPORT_CODE_DIALOG}</DialogDescription>
         </DialogHeader>
 
         <Tabs
           value={activeTab}
-          className="h-full w-full overflow-hidden rounded-md border bg-muted text-center"
+          className="w-full h-full overflow-hidden text-center bg-muted rounded-md border"
           onValueChange={(value) => {
             setActiveTab(value);
             if (value === "3") {
@@ -289,21 +293,23 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                 </TabsTrigger>
               ))}
             </TabsList>
-            <div className="float-right">
-              <button
-                className="flex gap-1.5 items-center rounded bg-none p-1 text-xs text-ring hover:text-foreground"
-                onClick={copyToClipboard}
-              >
-                {isCopied ? <Check size={18} /> : <Clipboard size={15} />}
-                {isCopied ? "Copied!" : "Copy code"}
-              </button>
-            </div>
+            {Number(activeTab) < 3 && (
+              <div className="float-right">
+                <button
+                  className="flex gap-1.5 items-center rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
+                  onClick={copyToClipboard}
+                >
+                  {isCopied ? <Check size={18} /> : <Clipboard size={15} />}
+                  {isCopied ? "Copied!" : "Copy code"}
+                </button>
+              </div>
+            )}
           </div>
 
           {tabs.map((tab, index) => (
             <TabsContent
               value={index.toString()}
-              className="-mt-1 h-full w-full overflow-hidden px-4 pb-4"
+              className="overflow-hidden w-full h-full px-4 pb-4 -mt-1"
               key={index} // Remember to add a unique key prop
             >
               {index < 3 ? (
@@ -316,10 +322,10 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                 </SyntaxHighlighter>
               ) : index === 3 ? (
                 <>
-                  <div className="mt-2 flex h-[400px] w-full">
+                  <div className="flex w-full h-[400px] mt-2">
                     <div
                       className={classNames(
-                        "w-full rounded-lg  border-[1px] border-gray-200 bg-muted",
+                        "w-full rounded-lg  bg-muted border-[1px] border-gray-200",
                         1 == 1
                           ? "overflow-scroll overflow-x-hidden custom-scroll"
                           : "overflow-hidden"
@@ -332,14 +338,14 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                               trigger={t["data"]["id"]}
                               open={openAccordion}
                             >
-                              <div className="flex h-fit flex-col gap-5">
+                              <div className="flex flex-col gap-5 h-fit">
                                 <Table className="table-fixed bg-muted outline-1">
-                                  <TableHeader className="h-10 border-gray-200 text-xs font-medium text-gray-500">
+                                  <TableHeader className="border-gray-200 text-gray-500 text-xs font-medium h-10">
                                     <TableRow className="dark:border-b-muted">
                                       <TableHead className="h-7 text-center">
                                         PARAM
                                       </TableHead>
-                                      <TableHead className="h-7 p-0 text-center">
+                                      <TableHead className="p-0 h-7 text-center">
                                         VALUE
                                       </TableHead>
                                     </TableRow>
@@ -373,11 +379,11 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                             key={i}
                                             className="h-10 dark:border-b-muted"
                                           >
-                                            <TableCell className="p-0 text-center text-sm text-gray-900">
+                                            <TableCell className="p-0 text-center text-gray-900 text-sm">
                                               {n}
                                             </TableCell>
-                                            <TableCell className="p-0 text-center text-xs text-gray-900 dark:text-gray-300">
-                                              <div className="m-auto w-[250px]">
+                                            <TableCell className="p-0 text-center text-gray-900 text-xs dark:text-gray-300">
+                                              <div className="w-[250px] m-auto">
                                                 {t.data.node.template[n]
                                                   .type === "str" &&
                                                 !t.data.node.template[n]
