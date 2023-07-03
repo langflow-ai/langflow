@@ -3,7 +3,7 @@ import { InputListComponentType } from "../../types/components";
 import { TabsContext } from "../../contexts/tabsContext";
 
 import _ from "lodash";
-import { INPUT_STYLE } from "../../constants";
+import { INPUT_DISABLE, INPUT_EDIT_NODE, INPUT_STYLE } from "../../constants";
 import { X, Plus } from "lucide-react";
 import { PopUpContext } from "../../contexts/popUpContext";
 
@@ -35,60 +35,57 @@ export default function InputListComponent({
         "flex flex-col gap-3"
       }
     >
-      {inputList.map((i, idx) => (
-        <div key={idx} className="flex w-full gap-3">
-          <input
-            type="text"
-            value={i}
-            className={
-              editNode
-                ? "form-input  block w-full cursor-pointer truncate rounded-md border-[1px] border-ring pb-0.5 pt-0.5 text-center text-ring shadow-sm placeholder:text-center sm:text-sm" +
-                  INPUT_STYLE
-                : "form-input block w-full rounded-md border-ring bg-background shadow-sm focus:border-ring focus:ring-ring sm:text-sm" +
-                  (disabled ? " bg-input" : "") +
-                  "focus:placeholder-transparent"
-            }
-            placeholder="Type something..."
-            onChange={(e) => {
-              setInputList((old) => {
-                let newInputList = _.cloneDeep(old);
-                newInputList[idx] = e.target.value;
-                onChange(newInputList);
-                return newInputList;
-              });
-            }}
-          />
-          {idx === inputList.length - 1 ? (
-            <button
-              onClick={() => {
+      {inputList.map((i, idx) => {
+        return (
+          <div key={idx} className="flex w-full gap-3">
+            <input
+              type="text"
+              value={i}
+              className={
+                editNode
+                  ? INPUT_EDIT_NODE
+                  : INPUT_STYLE + (disabled ? INPUT_DISABLE : "")
+              }
+              placeholder="Type something..."
+              onChange={(e) => {
                 setInputList((old) => {
                   let newInputList = _.cloneDeep(old);
-                  newInputList.push("");
-                  onAddInput(newInputList);
+                  newInputList[idx] = e.target.value;
                   return newInputList;
                 });
                 onChange(inputList);
               }}
-            >
-              <Plus className={"w-4 h-4 hover:text-accent-foreground"} />
-            </button>
-          ) : (
-            <button
-              onClick={() => {
-                setInputList((old) => {
-                  let newInputList = _.cloneDeep(old);
-                  newInputList.splice(idx, 1);
-                  onAddInput(newInputList);
-                  return newInputList;
-                });
-                onChange(inputList);
-              }}
-            >
-              <X className="h-4 w-4 hover:text-status-red" />
-            </button>
-          )}
-        </div>
-      ))}
+            />
+            {idx === inputList.length - 1 ? (
+              <button
+                onClick={() => {
+                  setInputList((old) => {
+                    let newInputList = _.cloneDeep(old);
+                    newInputList.push("");
+                    return newInputList;
+                  });
+                  onChange(inputList);
+                }}
+              >
+                <Plus className={"h-4 w-4 hover:text-accent-foreground"} />
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setInputList((old) => {
+                    let newInputList = _.cloneDeep(old);
+                    newInputList.splice(idx, 1);
+                    return newInputList;
+                  });
+                  onChange(inputList);
+                }}
+              >
+                <X className="h-4 w-4 hover:text-status-red" />
+              </button>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
