@@ -19,6 +19,10 @@ def build_file_field(
 
 
 class DocumentLoaderFrontNode(FrontendNode):
+    def add_extra_base_classes(self) -> None:
+        self.base_classes = ["Document"]
+        self.output_types = ["Document"]
+
     file_path_templates = {
         "AirbyteJSONLoader": build_file_field(suffixes=[".json"], fileTypes=["json"]),
         "CoNLLULoader": build_file_field(suffixes=[".csv"], fileTypes=["csv"]),

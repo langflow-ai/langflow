@@ -18,6 +18,7 @@ class FrontendNode(BaseModel):
     name: str = ""
     display_name: str = ""
     custom_fields: List[str] = []
+    output_types: List[str] = []
 
     def process_base_classes(self) -> None:
         """Removes unwanted base classes from the list of base classes."""
@@ -36,6 +37,7 @@ class FrontendNode(BaseModel):
                 "base_classes": self.base_classes,
                 "display_name": self.display_name or self.name,
                 "custom_fields": self.custom_fields,
+                "output_types": self.output_types,
             },
         }
 
