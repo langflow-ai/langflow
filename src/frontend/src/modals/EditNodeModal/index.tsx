@@ -91,7 +91,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
             {data.node?.description}
             <div className="flex pt-3">
               <Variable className="h-5 w-5 stroke-2 pe-1 text-muted-foreground "></Variable>
-              <span className="text-sm font-semibold text-primary pb-3">
+              <span className="text-sm font-semibold text-primary">
                 Parameters
               </span>
             </div>
