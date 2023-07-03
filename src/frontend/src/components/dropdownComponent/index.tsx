@@ -2,7 +2,6 @@ import { Listbox, Transition } from "@headlessui/react";
 import { Fragment, useContext, useEffect, useState } from "react";
 import { DropDownComponentType } from "../../types/components";
 import { classNames } from "../../utils";
-import { INPUT_EDIT_NODE, INPUT_STYLE } from "../../constants";
 import { ChevronsUpDown, Check } from "lucide-react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
@@ -40,8 +39,8 @@ export default function Dropdown({
               <Listbox.Button
                 className={
                   editNode
-                    ? "border-1 relative pr-8" + INPUT_EDIT_NODE
-                    : "py-2 pl-3 pr-10 text-left" + INPUT_STYLE
+                    ? "border-1 relative pr-8 input-edit-node"
+                    : "py-2 pl-3 pr-10 text-left input-primary"
                 }
               >
                 <span className="block w-full truncate bg-background">
