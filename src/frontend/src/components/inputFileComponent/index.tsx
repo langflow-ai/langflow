@@ -2,7 +2,6 @@ import { useContext, useEffect, useState } from "react";
 import { alertContext } from "../../contexts/alertContext";
 import { FileComponentType } from "../../types/components";
 import { TabsContext } from "../../contexts/tabsContext";
-import { INPUT_DISABLE, INPUT_EDIT_NODE, INPUT_STYLE } from "../../constants";
 import { FileSearch2 } from "lucide-react";
 import { uploadFile } from "../../controllers/API";
 
@@ -103,8 +102,8 @@ export default function InputFileComponent({
           onClick={handleButtonClick}
           className={
             editNode
-              ? INPUT_EDIT_NODE + INPUT_STYLE
-              : INPUT_STYLE + (disabled ? INPUT_DISABLE : "")
+              ? "input-edit-node " + "input-primary "
+              : "input-primary " + (disabled ? "input-disable " : "")
           }
         >
           {myValue !== "" ? myValue : "No file"}

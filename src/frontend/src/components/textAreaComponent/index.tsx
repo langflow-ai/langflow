@@ -3,12 +3,7 @@ import { PopUpContext } from "../../contexts/popUpContext";
 import { TextAreaComponentType } from "../../types/components";
 import GenericModal from "../../modals/genericModal";
 import { TypeModal } from "../../utils";
-import {
-  INPUT_DIALOG,
-  INPUT_DISABLE,
-  INPUT_EDIT_NODE,
-  INPUT_STYLE,
-} from "../../constants";
+
 import { ExternalLink } from "lucide-react";
 
 export default function TextAreaComponent({
@@ -57,8 +52,8 @@ export default function TextAreaComponent({
           }}
           className={
             editNode
-              ? INPUT_EDIT_NODE + INPUT_DIALOG
-              : INPUT_DIALOG + "px-3 py-2" + (disabled ? INPUT_DISABLE : "")
+              ? "input-edit-node " + " input-dialog "
+              : " input_dialog " + "px-3 py-2" + (disabled ? " input-disable " : "")
           }
         >
           {myValue !== "" ? myValue : "Type something..."}
@@ -79,7 +74,7 @@ export default function TextAreaComponent({
             );
           }}
         >
-          {!editNode && <ExternalLink strokeWidth={1.5} className="w-6 h-6 hover:text-accent-foreground " />}
+          {!editNode && <ExternalLink strokeWidth={1.5} className="w-6 h-6 hover:text-accent-foreground ml-3" />}
         </button>
       </div>
     </div>

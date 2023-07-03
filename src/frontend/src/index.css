@@ -140,3 +140,25 @@ The cursor: default; property value restores the browser's default cursor style 
 .react-flow__pane {
   cursor: default;
 }
+
+
+@layer components {
+  .input-primary:focus{
+    @apply focus:placeholder-transparent focus:ring-ring focus:border-ring
+  }
+  .input-primary {
+    @apply bg-background block border-ring form-input px-3 placeholder:text-muted-foreground rounded-md shadow-sm sm:text-sm truncate w-full;
+  }
+  .input-edit-node{
+    @apply input-primary placeholder:text-center pt-0.5 pb-0.5 text-center
+  }
+  .input-search{
+    @apply input-primary pr-7 mx-2
+  }
+  .input-disable{
+    @apply bg-input
+  }
+  .input-dialog{
+    @apply text-ring cursor-pointer bg-transparent
+  }
+}
