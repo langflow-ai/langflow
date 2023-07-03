@@ -122,3 +122,13 @@ export type RadialProgressType = {
   value?: number;
   color?: string;
 };
+
+export type ShadToolTipType = {
+  content?: string;
+  side?: "top" | "right" | "bottom" | "left";
+  asChild?: boolean;
+  children?: ReactElement;
+  delayDuration?: number;
+};
+
+

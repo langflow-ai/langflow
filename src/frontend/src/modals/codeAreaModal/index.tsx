@@ -101,7 +101,7 @@ export default function CodeAreaModal({
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger></DialogTrigger>
-      <DialogContent className="lg:max-w-[700px] h-[500px]">
+      <DialogContent className="min-w-[80vw]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Edit Code</span>
@@ -113,7 +113,7 @@ export default function CodeAreaModal({
           <DialogDescription>{CODE_PROMPT_DIALOG_SUBTITLE}</DialogDescription>
         </DialogHeader>
 
-        <div className="flex h-full w-full mt-2">
+        <div className="flex h-[60vh] w-full mt-2">
           <AceEditor
             value={code}
             mode="python"
@@ -127,7 +127,7 @@ export default function CodeAreaModal({
             onChange={(value) => {
               setCode(value);
             }}
-            className="w-full rounded-lg h-[300px] custom-scroll border-[1px] border-gray-300 dark:border-gray-600"
+            className="w-full rounded-lg h-full custom-scroll border-[1px] border-gray-300 dark:border-gray-600"
           />
         </div>
 

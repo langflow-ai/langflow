@@ -1,4 +1,4 @@
-import { useContext, useRef, useState } from "react";
+import { useContext, useRef, useState, useEffect } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { darkContext } from "../../contexts/darkContext";
 import { postValidatePrompt } from "../../controllers/API";
@@ -17,6 +17,15 @@ import { Textarea } from "../../components/ui/textarea";
 import { PROMPT_DIALOG_SUBTITLE, TEXT_DIALOG_SUBTITLE } from "../../constants";
 import { FileText } from "lucide-react";
 import { APIClassType } from "../../types/api";
+import { TypeModal, getRandomKeyByssmm } from "../../utils";
+import { Badge } from "../../components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../../components/ui/tooltip"
+import ShadTooltip from "../../components/ShadTooltipComponent";
 
 export default function GenericModal({
   value,
@@ -39,7 +48,9 @@ export default function GenericModal({
   const [myModalTitle] = useState(modalTitle);
   const [myModalType] = useState(type);
   const [open, setOpen] = useState(true);
-  const [myValue, setMyValue] = useState(value);
+  const [inputValue, setInputValue] = useState(value);
+  const [wordsHighlightInvalid, setWordsHighlightInvalid] = useState([]);
+  const [wordsHighlight, setWordsHighlight] = useState([]);
   const { dark } = useContext(darkContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const { closePopUp } = useContext(PopUpContext);
@@ -51,15 +62,72 @@ export default function GenericModal({
     }
   }
 
+  const INVALID_CHARACTERS = [
+    " ",
+    ",",
+    ".",
+    ":",
+    ";",
+    "!",
+    "?",
+    "/",
+    "\\",
+    "(",
+    ")",
+    "[",
+    "]",
+  ];
+
+  function checkVariables(valueToCheck) {
+    const regex = /\{([^{}]+)\}/g;
+    const matches = [];
+    let match;
+    while ((match = regex.exec(valueToCheck))) {
+      matches.push(`{${match[1]}}`);
+    }
+
+    let invalid_chars = [];
+    let fixed_variables = [];
+    let input_variables = matches;
+    for (let variable of input_variables) {
+      let new_var = variable;
+      for (let char of INVALID_CHARACTERS) {
+        if (variable.includes(char)) {
+          invalid_chars.push(new_var);
+        }
+      }
+      fixed_variables.push(new_var);
+      if (new_var !== variable) {
+        const index = input_variables.indexOf(variable);
+        if (index !== -1) {
+          input_variables.splice(index, 1, new_var);
+        }
+      }
+    }
+    console.log(fixed_variables);
+    console.log(invalid_chars);
+
+    const filteredWordsHighlight = matches.filter((word) => !invalid_chars.includes(word));
+
+    setWordsHighlightInvalid(invalid_chars);
+    setWordsHighlight(filteredWordsHighlight);
+  }
+
+  useEffect(() => {
+    if (type == TypeModal.PROMPT && inputValue && inputValue != "") {
+      checkVariables(inputValue);
+    }
+  }, []);
+
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger></DialogTrigger>
-      <DialogContent className="lg:max-w-[700px]">
+      <DialogContent className="min-w-[80vw]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">{myModalTitle}</span>
             <FileText
-              className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
+              className="h-6 w-6 pl-1 text-gray-800 dark:text-white"
               aria-hidden="true"
             />
           </DialogTitle>
@@ -79,14 +147,33 @@ export default function GenericModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex h-full w-full mt-2">
+        
+          {type == TypeModal.PROMPT && inputValue && inputValue != "" && wordsHighlight.length > 0 && (
+            <>
+            <div>
+              <span className="">Variables: </span>
+              {wordsHighlight.map((word, index) => (
+              <ShadTooltip key={getRandomKeyByssmm()+index} content={word.replace(/[{}]/g, '')} asChild={false} delayDuration={1500}>
+                     <Badge key={index} size="lg" className="cursor-default text-sm p-2.5 m-1 truncate max-w-[40vw]">
+                    {word.replace(/[{}]/g, '').length > 59 ? word.replace(/[{}]/g, '').slice(0, 56) + '...' : word.replace(/[{}]/g, '') }
+                  </Badge>
+              </ShadTooltip>
+              ))}
+            </div>
+            </>
+          )}
+          
+
+        <div className="flex h-[60vh] w-full">
+
           <Textarea
             ref={ref}
-            className="form-input h-[300px] w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white focus-visible:ring-1"
-            value={myValue}
+            className="form-input h-full w-full rounded-lg border-gray-300 focus-visible:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+            value={inputValue}
             onChange={(e) => {
-              setMyValue(e.target.value);
+              setInputValue(e.target.value);
               setValue(e.target.value);
+              checkVariables(e.target.value);
             }}
             placeholder="Type message here."
           />
@@ -101,7 +188,7 @@ export default function GenericModal({
                   setModalOpen(false);
                   break;
                 case 2:
-                  postValidatePrompt(myValue, nodeClass)
+                  postValidatePrompt(inputValue, nodeClass)
                     .then((apiReturn) => {
                       if (apiReturn.data) {
                         setNodeClass(apiReturn.data.frontend_node);
@@ -118,7 +205,7 @@ export default function GenericModal({
                             title: "Prompt is ready",
                           });
                           setModalOpen(false);
-                          setValue(myValue);
+                          setValue(inputValue);
                         }
                       } else {
                         setErrorData({
