@@ -91,6 +91,7 @@ class DocumentLoaderVertex(Vertex):
     def _built_object_repr(self):
         # This built_object is a list of documents. Maybe we should
         # show how many documents are in the list?
+
         if self._built_object:
             return f"""{self.vertex_type}({len(self._built_object)} documents)
             Documents: {self._built_object[:3]}..."""
