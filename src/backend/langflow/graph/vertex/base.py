@@ -220,7 +220,7 @@ class Vertex:
         self.edges.append(edge)
 
     def __repr__(self) -> str:
-        return f"Node(id={self.id}, data={self.data})"
+        return f"Vertex(id={self.id}, data={self.data})"
 
     def __eq__(self, __o: object) -> bool:
         return self.id == __o.id if isinstance(__o, Vertex) else False

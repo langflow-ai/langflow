@@ -114,6 +114,8 @@ class DocumentLoaderFrontNode(FrontendNode):
             "GutenbergLoader",
         }:
             name = "web_path"
+        elif self.template.type_name in {"GutenbergLoader"}:
+            name = "file_path"
         elif self.template.type_name in {"GitbookLoader"}:
             name = "web_page"
         elif self.template.type_name in {
