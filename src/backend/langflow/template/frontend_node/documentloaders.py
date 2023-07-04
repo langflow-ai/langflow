@@ -124,29 +124,23 @@ class DocumentLoaderFrontNode(FrontendNode):
             "DirectoryLoader",
             "ReadTheDocsLoader",
             "NotionDirectoryLoader",
+            "PyPDFDirectoryLoader",
         }:
             name = "path"
             display_name = "Local directory"
         if name:
-            self.template.add_field(
-                TemplateField(
-                    field_type="str",
-                    required=True,
-                    show=True,
-                    name=name,
-                    value="",
-                    display_name=display_name,
-                )
-            )
             if self.template.type_name in {"DirectoryLoader"}:
+                for field in build_directory_loader_fields():
+                    self.template.add_field(field)
+            else:
                 self.template.add_field(
                     TemplateField(
                         field_type="str",
                         required=True,
                         show=True,
-                        name="glob",
-                        value="**/*.txt",
-                        display_name="glob",
+                        name=name,
+                        value="",
+                        display_name=display_name,
                     )
                 )
             # add a metadata field of type dict
@@ -169,3 +163,101 @@ class DocumentLoaderFrontNode(FrontendNode):
             field.show = True
             field.advanced = False
         field.show = True
+
+
+def build_directory_loader_fields():
+    # if loader_kwargs is None:
+    #         loader_kwargs = {}
+    # self.path = path
+    # self.glob = glob
+    # self.load_hidden = load_hidden
+    # self.loader_cls = loader_cls
+    # self.loader_kwargs = loader_kwargs
+    # self.silent_errors = silent_errors
+    # self.recursive = recursive
+    # self.show_progress = show_progress
+    # self.use_multithreading = use_multithreading
+    # self.max_concurrency = max_concurrency
+    # Based on the above fields, we can build the following fields:
+    # path, glob, load_hidden, silent_errors, recursive, show_progress, use_multithreading, max_concurrency
+    # path
+    path = TemplateField(
+        field_type="str",
+        required=True,
+        show=True,
+        name="path",
+        value="",
+        display_name="Local directory",
+        advanced=False,
+    )
+    # glob
+    glob = TemplateField(
+        field_type="str",
+        required=True,
+        show=True,
+        name="glob",
+        value="**/*.txt",
+        display_name="glob",
+        advanced=False,
+    )
+    # load_hidden
+    load_hidden = TemplateField(
+        field_type="bool",
+        required=False,
+        show=True,
+        name="load_hidden",
+        value="False",
+        display_name="Load hidden files",
+        advanced=True,
+    )
+    # silent_errors
+    silent_errors = TemplateField(
+        field_type="bool",
+        required=False,
+        show=True,
+        name="silent_errors",
+        value="False",
+        display_name="Silent errors",
+        advanced=True,
+    )
+    # recursive
+    recursive = TemplateField(
+        field_type="bool",
+        required=False,
+        show=True,
+        name="recursive",
+        value="True",
+        display_name="Recursive",
+        advanced=True,
+    )
+
+    # use_multithreading
+    use_multithreading = TemplateField(
+        field_type="bool",
+        required=False,
+        show=True,
+        name="use_multithreading",
+        value="True",
+        display_name="Use multithreading",
+        advanced=True,
+    )
+    # max_concurrency
+    max_concurrency = TemplateField(
+        field_type="int",
+        required=False,
+        show=True,
+        name="max_concurrency",
+        value=10,
+        display_name="Max concurrency",
+        advanced=True,
+    )
+
+    return (
+        path,
+        glob,
+        load_hidden,
+        silent_errors,
+        recursive,
+        use_multithreading,
+        max_concurrency,
+    )

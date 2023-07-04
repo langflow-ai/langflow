@@ -47,20 +47,20 @@ export const MenuBar = ({ flows, tabId }) => {
   let current_flow = flows.find((flow) => flow.id === tabId);
 
   return (
-    <div className="flex gap-2 items-center">
+    <div className="flex items-center gap-2">
       <Link to="/">
         <ChevronLeft className="w-4" />
       </Link>
-      <div className="flex items-center font-medium text-sm rounded-md py-1 px-1.5 gap-0.5">
+      <div className="flex items-center gap-0.5 rounded-md px-1.5 py-1 text-sm font-medium">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              className="gap-2 flex items-center max-w-[200px]"
+              className="flex max-w-[200px] items-center gap-2"
               variant="primary"
               size="sm"
             >
-              <div className="truncate flex-1">{current_flow.name}</div>
-              <ChevronDown className="w-4 h-4" />
+              <div className="flex-1 truncate">{current_flow.name}</div>
+              <ChevronDown className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-44">
@@ -71,7 +71,7 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="mr-2 h-4 w-4" />
               New
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -80,7 +80,7 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <Settings2 className="w-4 h-4 mr-2 dark:text-gray-300" />
+              <Settings2 className="mr-2 h-4 w-4 " />
               Settings
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -89,7 +89,7 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <Undo className="w-4 h-4 mr-2 dark:text-gray-300" />
+              <Undo className="mr-2 h-4 w-4 " />
               Undo
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -98,7 +98,7 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <Redo className="w-4 h-4 mr-2 dark:text-gray-300" />
+              <Redo className="mr-2 h-4 w-4 " />
               Redo
             </DropdownMenuItem>
             <DropdownMenuSeparator />

@@ -1,21 +1,3 @@
-import {
-  RocketLaunchIcon,
-  LinkIcon,
-  CpuChipIcon,
-  LightBulbIcon,
-  CommandLineIcon,
-  WrenchScrewdriverIcon,
-  WrenchIcon,
-  ComputerDesktopIcon,
-  GiftIcon,
-  PaperClipIcon,
-  QuestionMarkCircleIcon,
-  FingerPrintIcon,
-  ScissorsIcon,
-  CircleStackIcon,
-  Squares2X2Icon,
-  Bars3CenterLeftIcon,
-} from "@heroicons/react/24/outline";
 import { Connection, Edge, Node, ReactFlowInstance } from "reactflow";
 import { FlowType, NodeType } from "./types/flow";
 import { APITemplateType } from "./types/api";
@@ -42,7 +24,7 @@ import { SlackIcon } from "./icons/Slack";
 import { PineconeIcon } from "./icons/Pinecone";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "./constants";
+import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "./flow_constants";
 import { ComponentType, SVGProps } from "react";
 import {
   Compass,
@@ -59,12 +41,14 @@ import {
   Paperclip,
   Rocket,
   Scissors,
+  FileSearch,
   TerminalSquare,
   Wand2,
   Wrench,
 } from "lucide-react";
 import { SupabaseIcon } from "./icons/supabase";
 import { MongoDBIcon } from "./icons/MongoDB";
+import { VertexAIIcon } from "./icons/VertexAI";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -142,6 +126,7 @@ export const nodeColors: { [char: string]: string } = {
   utilities: "#31A3CC",
   output_parsers: "#E6A627",
   str: "#049524",
+  retrievers: "#e6b25a",
   unknown: "#9CA3AF",
 };
 
@@ -160,71 +145,10 @@ export const nodeNames: { [char: string]: string } = {
   toolkits: "Toolkits",
   wrappers: "Wrappers",
   textsplitters: "Text Splitters",
+  retrievers: "Retrievers",
   utilities: "Utilities",
   output_parsers: "Output Parsers",
   unknown: "Unknown",
-};
-
-export const nodeIcons: {
-  [char: string]: React.ForwardRefExoticComponent<
-    React.SVGProps<SVGSVGElement>
-  >;
-} = {
-  Chroma: ChromaIcon,
-  AirbyteJSONLoader: AirbyteIcon,
-  // SerpAPIWrapper: SerperIcon,
-  // AZLyricsLoader: AzIcon,
-  Anthropic: AnthropicIcon,
-  ChatAnthropic: AnthropicIcon,
-  BingSearchAPIWrapper: BingIcon,
-  BingSearchRun: BingIcon,
-  Cohere: CohereIcon,
-  CohereEmbeddings: CohereIcon,
-  EverNoteLoader: EvernoteIcon,
-  FacebookChatLoader: FBIcon,
-  GitbookLoader: GitBookIcon,
-  GoogleSearchAPIWrapper: GoogleIcon,
-  GoogleSearchResults: GoogleIcon,
-  GoogleSearchRun: GoogleIcon,
-  HNLoader: HackerNewsIcon,
-  HuggingFaceHub: HugginFaceIcon,
-  HuggingFaceEmbeddings: HugginFaceIcon,
-  IFixitLoader: IFixIcon,
-  Meta: MetaIcon,
-  Midjourney: MidjourneyIcon,
-  NotionDirectoryLoader: NotionIcon,
-  ChatOpenAI: OpenAiIcon,
-  OpenAI: OpenAiIcon,
-  OpenAIEmbeddings: OpenAiIcon,
-  Pinecone: PineconeIcon,
-  SupabaseVectorStore: SupabaseIcon,
-  MongoDBAtlasVectorSearch: MongoDBIcon,
-  // UnstructuredPowerPointLoader: PowerPointIcon, // word and powerpoint have differente styles
-  Qdrant: QDrantIcon,
-  // ReadTheDocsLoader: ReadTheDocsIcon, // does not work
-  Searx: SearxIcon,
-  SlackDirectoryLoader: SlackIcon,
-  // Weaviate: WeaviateIcon, // does not work
-  // WikipediaAPIWrapper: WikipediaIcon,
-  // WolframAlphaQueryRun: WolframIcon,
-  // WolframAlphaAPIWrapper: WolframIcon,
-  // UnstructuredWordDocumentLoader: WordIcon, // word and powerpoint have differente styles
-  agents: RocketLaunchIcon,
-  chains: LinkIcon,
-  memories: CpuChipIcon,
-  llms: LightBulbIcon,
-  prompts: CommandLineIcon,
-  tools: WrenchIcon,
-  advanced: ComputerDesktopIcon,
-  chat: Bars3CenterLeftIcon,
-  embeddings: FingerPrintIcon,
-  documentloaders: PaperClipIcon,
-  vectorstores: CircleStackIcon,
-  toolkits: WrenchScrewdriverIcon,
-  textsplitters: ScissorsIcon,
-  wrappers: GiftIcon,
-  utilities: Squares2X2Icon,
-  unknown: QuestionMarkCircleIcon,
 };
 
 export const nodeIconsLucide: {
@@ -322,6 +246,12 @@ export const nodeIconsLucide: {
   SupabaseVectorStore: SupabaseIcon as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
+  VertexAI: VertexAIIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  ChatVertexAI: VertexAIIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
   agents: Rocket as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
@@ -370,6 +300,9 @@ export const nodeIconsLucide: {
   output_parsers: Compass as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
+  retrievers: FileSearch as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
   unknown: HelpCircle as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
@@ -390,6 +323,23 @@ export const gradients = [
   "bg-gradient-to-br from-green-500 to-green-700",
   "bg-gradient-to-br from-rose-400 via-fuchsia-500 to-indigo-500",
   "bg-gradient-to-br from-sky-400 to-blue-500",
+  "bg-gradient-to-br from-green-200 via-green-400 to-green-500",
+  "bg-gradient-to-br from-red-400 via-gray-300 to-blue-500",
+  "bg-gradient-to-br from-gray-900 to-gray-600 bg-gradient-to-r",
+  "bg-gradient-to-br from-rose-500 via-red-400 to-red-500",
+  "bg-gradient-to-br from-fuchsia-600 to-pink-600",
+  "bg-gradient-to-br from-emerald-500 to-lime-600",
+  "bg-gradient-to-br from-rose-500 to-indigo-700",
+  "bg-gradient-to-br bg-gradient-to-tr from-violet-500 to-orange-300",
+  "bg-gradient-to-br from-gray-900 via-purple-900 to-violet-600",
+  "bg-gradient-to-br from-yellow-200 via-red-500 to-fuchsia-500",
+  "bg-gradient-to-br from-sky-400 to-indigo-900",
+  "bg-gradient-to-br from-amber-200 via-violet-600 to-sky-900",
+  "bg-gradient-to-br from-amber-700 via-orange-300 to-rose-800",
+  "bg-gradient-to-br from-gray-300 via-fuchsia-600 to-orange-600",
+  "bg-gradient-to-br from-fuchsia-500 via-red-600 to-orange-400",
+  "bg-gradient-to-br from-sky-400 via-rose-400 to-lime-400",
+  "bg-gradient-to-br from-lime-600 via-yellow-300 to-red-600",
 ];
 
 export const bgColors = {
@@ -1051,5 +1001,5 @@ export function getRandomKeyByssmm(): string {
   const now = new Date();
   const seconds = String(now.getSeconds()).padStart(2, "0");
   const milliseconds = String(now.getMilliseconds()).padStart(3, "0");
-  return seconds + milliseconds;
+  return seconds + milliseconds + Math.abs(Math.floor(Math.random() * 10001));
 }

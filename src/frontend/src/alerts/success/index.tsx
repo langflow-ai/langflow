@@ -34,17 +34,17 @@ export default function SuccessAlert({
           setShow(false);
           removeAlert(id);
         }}
-        className="rounded-md w-96 mt-6 shadow-xl bg-green-50 dark:bg-green-900 p-4"
+        className="mt-6 w-96 rounded-md bg-success-background p-4 shadow-xl"
       >
         <div className="flex">
           <div className="flex-shrink-0">
             <CheckCircle2
-              className="h-5 w-5 text-green-400 dark:text-green-50"
+              className="h-5 w-5 text-status-green"
               aria-hidden="true"
             />
           </div>
           <div className="ml-3">
-            <p className="text-sm font-medium text-green-800 dark:text-white/80">
+            <p className="text-sm font-medium text-success-foreground">
               {title}
             </p>
           </div>

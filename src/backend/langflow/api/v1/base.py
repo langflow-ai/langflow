@@ -18,6 +18,7 @@ class FrontendNodeRequest(FrontendNode):
 
 
 class ValidatePromptRequest(BaseModel):
+    name: str
     template: str
     frontend_node: FrontendNodeRequest
 

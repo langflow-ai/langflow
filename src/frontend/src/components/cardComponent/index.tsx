@@ -33,11 +33,11 @@ export const CardComponent = ({
         <CardTitle className="flex w-full items-center gap-4">
           <span
             className={
-              "rounded-full w-7 h-7 flex items-center justify-center text-2xl " +
+              "flex h-7 w-7 items-center justify-center rounded-full text-2xl " +
               gradients[parseInt(flow.id.slice(0, 12), 16) % gradients.length]
             }
           ></span>
-          <span className="flex-1 w-full inline-block truncate-doubleline break-words">
+          <span className="inline-block w-full flex-1 break-words truncate-doubleline">
             {flow.name}
           </span>
           {onDelete && (
@@ -62,7 +62,7 @@ export const CardComponent = ({
           </Dialog>
           )}
         </CardTitle>
-        <CardDescription className="pt-2 pb-2">
+        <CardDescription className="pb-2 pt-2">
           <div className="truncate-doubleline">
             {flow.description}
             {/* {flow.description} */}
@@ -71,7 +71,7 @@ export const CardComponent = ({
       </CardHeader>
 
       <CardFooter>
-        <div className="flex gap-2 w-full justify-between items-end">
+        <div className="flex w-full items-end justify-between gap-2">
           <div className="flex flex-wrap gap-2">
             {/* <Badge variant="secondary">Agent</Badge>
             <Badge variant="secondary">
