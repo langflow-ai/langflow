@@ -104,18 +104,18 @@ export default function CodeAreaModal({
     }
     else
     {
-      postCustomComponent(code, nodeClass).then((apiReturn) => {
-        const {data} = apiReturn;
-        if (data) {
-          setNodeClass(data);
-          setModalOpen(false);
-        }
-      });
+    //   postCustomComponent(code, nodeClass).then((apiReturn) => {
+    //     const {data} = apiReturn;
+    //     if (data) {
+    //       setNodeClass(data);
+    //       setModalOpen(false);
+    //     }
+    //   });
     }
-    // axios.get("/api/v1/custom_component_error").catch((err) => {
-    //   console.log(err.response.data);
-    //   setError(err.response.data);
-    // })
+    axios.get("/api/v1/custom_component_error").catch((err) => {
+      console.log(err.response.data);
+      setError(err.response.data);
+    })
 
   }
   const tabs = [{ name: "code" }, { name: "errors" }]
@@ -142,7 +142,7 @@ export default function CodeAreaModal({
           <div className="flex flex-col items-start h-72 px-2">
             <TabsList>
               {tabs.map((tab, index) => (
-                <TabsTrigger disabled={index===1&&error?.detail!==null} key={index} value={index.toString()}>{tab.name}</TabsTrigger>
+                <TabsTrigger disabled={index===1&&error?.detail===undefined} key={index} value={index.toString()}>{tab.name}</TabsTrigger>
               ))}
             </TabsList>
             {tabs.map((tab, index) => (
