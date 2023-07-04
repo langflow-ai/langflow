@@ -98,45 +98,52 @@ export default function ParameterComponent({
 
   useEffect(() => {
     const groupedObj = groupByFamily(myData, tooltipTitle, left, data.type);
-      
-  refHtml.current = groupedObj.map((item, i) => {
-    return (
-      <span
-        key={getRandomKeyByssmm() + item.family + i}
-        className={classNames(
-          i > 0 ? "mt-3 flex items-center" : "flex items-center"
-        )}
-      >
-        <div
-          className="h-6 w-6"
-          style={{
-            color: nodeColors[item.family],
-          }}
+
+    refHtml.current = groupedObj.map((item, i) => {
+      const Icon: any = nodeIconsLucide[item.family];
+      return (
+        <span
+          key={getRandomKeyByssmm() + item.family + i}
+          className={classNames(
+            i > 0 ? "mt-2 flex items-center" : "flex items-center"
+          )}
         >
-          {React.createElement(nodeIconsLucide[item.family])}
-        </div>
-        <span className="ps-2 text-foreground">
-          {nodeNames[item.family] ?? ""}{" "}
-          <span>
-            {" "}
-            -&nbsp;
-            {item.type.split(", ").length > 2
-              ? item.type.split(", ").map((el, i) => (
-                  <React.Fragment key={el + i}>
-                    <span>
-                      {i === item.type.split(", ").length - 1
-                        ? el
-                        : (el += `, `)}
-                    </span>
-                  </React.Fragment>
-                ))
-              : item.type}
+          <div
+            className="h-5 w-5"
+            style={{
+              color: nodeColors[item.family],
+            }}
+          >
+            <Icon
+            className="h-5 w-5"
+
+              strokeWidth={1.5}
+              style={{
+                color: nodeColors[item.family] ?? nodeColors.unknown,
+              }}
+            />
+          </div>
+          <span className="ps-2 text-xs text-foreground">
+            {nodeNames[item.family] ?? ""}{" "}
+            <span className="text-xs">
+              {" "}
+              -&nbsp;
+              {item.type.split(", ").length > 2
+                ? item.type.split(", ").map((el, i) => (
+                    <React.Fragment key={el + i}>
+                      <span>
+                        {i === item.type.split(", ").length - 1
+                          ? el
+                          : (el += `, `)}
+                      </span>
+                    </React.Fragment>
+                  ))
+                : item.type}
+            </span>
           </span>
         </span>
-      </span>
-    );
-  });
-  
+      );
+    });
   }, [tooltipTitle]);
 
   return (
@@ -174,7 +181,7 @@ export default function ParameterComponent({
           <></>
         ) : (
           <ShadTooltip
-            style="max-w-[40vw] max-h-[10vh] overflow-auto custom-scroll"
+            style="max-w-[30vw] max-h-[20vh] overflow-auto custom-scroll"
             delayDuration={0}
             content={refHtml.current}
             side={left ? "left" : "right"}
