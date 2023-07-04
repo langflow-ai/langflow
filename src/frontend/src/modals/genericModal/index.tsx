@@ -19,6 +19,7 @@ import { FileText } from "lucide-react";
 import { APIClassType } from "../../types/api";
 
 export default function GenericModal({
+  field_name = "",
   value,
   setValue,
   buttonText,
@@ -27,6 +28,7 @@ export default function GenericModal({
   nodeClass,
   setNodeClass,
 }: {
+  field_name?: string;
   setValue: (value: string) => void;
   value: string;
   buttonText: string;
@@ -60,8 +62,8 @@ export default function GenericModal({
           <DialogTitle className="flex items-center">
             <span className="pr-2">{myModalTitle}</span>
             <FileText
-            strokeWidth={1.5}
-              className="h-6 w-6 text-primary pl-1 "
+              strokeWidth={1.5}
+              className="h-6 w-6 pl-1 text-primary "
               aria-hidden="true"
             />
           </DialogTitle>
@@ -84,7 +86,7 @@ export default function GenericModal({
         <div className="mt-2 flex h-full w-full">
           <Textarea
             ref={ref}
-            className=" h-[300px] w-full form-primary "
+            className=" form-primary h-[300px] w-full "
             value={myValue}
             onChange={(e) => {
               setMyValue(e.target.value);
@@ -103,7 +105,8 @@ export default function GenericModal({
                   setModalOpen(false);
                   break;
                 case 2:
-                  postValidatePrompt(myValue, nodeClass)
+                  console.log("postValidatePrompt");
+                  postValidatePrompt(field_name, myValue, nodeClass)
                     .then((apiReturn) => {
                       if (apiReturn.data) {
                         setNodeClass(apiReturn.data.frontend_node);
