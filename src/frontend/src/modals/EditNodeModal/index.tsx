@@ -81,7 +81,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger asChild></DialogTrigger>
-      <DialogContent className="lg:max-w-[700px] sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] lg:max-w-[700px]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">{data.type}</span>
@@ -135,7 +135,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                       )
                       .map((n, i) => (
                         <TableRow key={i} className="h-10">
-                          <TableCell className="p-0 text-center text-sm text-foreground truncate sm:px-3">
+                          <TableCell className="truncate p-0 text-center text-sm text-foreground sm:px-3">
                             {data.node.template[n].name
                               ? data.node.template[n].name
                               : data.node.template[n].display_name}
@@ -251,6 +251,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                             ) : data.node.template[n].type === "prompt" ? (
                               <div className="mx-auto">
                                 <PromptAreaComponent
+                                  field_name={n}
                                   editNode={true}
                                   disabled={false}
                                   value={data.node.template[n].value ?? ""}
