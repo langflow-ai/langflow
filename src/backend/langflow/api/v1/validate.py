@@ -71,7 +71,7 @@ def add_new_variables_to_template(input_variables, prompt_request):
                 field_type="str",
                 show=True,
                 advanced=False,
-                input_types=["BaseLoader", "BaseOutputParser"],
+                input_types=["Document", "BaseOutputParser"],
             )
 
             prompt_request.frontend_node.template[variable] = template_field.to_dict()
