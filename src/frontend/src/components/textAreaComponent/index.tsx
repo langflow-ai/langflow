@@ -32,7 +32,7 @@ export default function TextAreaComponent({
         className={
           editNode
             ? "w-full items-center"
-            : "w-full flex items-center gap-3"
+            : "w-full flex items-center"
         }
       >
         <span
@@ -52,8 +52,8 @@ export default function TextAreaComponent({
           }}
           className={
             editNode
-              ? "input-edit-node " + " input-dialog "
-              : " input_dialog " + "px-3 py-2" + (disabled ? " input-disable " : "")
+            ? "input-edit-node input-dialog "
+            : "input-primary input-dialog " + (disabled ? "input-disable" : "")
           }
         >
           {myValue !== "" ? myValue : "Type something..."}
