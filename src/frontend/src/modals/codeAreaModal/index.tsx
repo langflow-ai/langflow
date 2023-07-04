@@ -50,7 +50,7 @@ export default function CodeAreaModal({
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const { closePopUp } = useContext(PopUpContext);
   const [activeTab, setActiveTab] = useState("0");
-  const [error, setError] = useState<{detail:string,traceback:string}>()
+  const [error, setError] = useState<{detail:string,traceback:string}>(null)
   const ref = useRef();
   function setModalOpen(x: boolean) {
     setOpen(x);
@@ -142,7 +142,7 @@ export default function CodeAreaModal({
           <div className="flex flex-col items-start h-72 px-2">
             <TabsList>
               {tabs.map((tab, index) => (
-                <TabsTrigger key={index} value={index.toString()}>{tab.name}</TabsTrigger>
+                <TabsTrigger disabled={index===1&&error?.detail!==null} key={index} value={index.toString()}>{tab.name}</TabsTrigger>
               ))}
             </TabsList>
             {tabs.map((tab, index) => (
