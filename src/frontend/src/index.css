@@ -253,4 +253,32 @@ The cursor: default; property value restores the browser's default cursor style 
   .logspace-icon-text {
     @apply mt-1
   }
+
+  .flex-max-width {
+    @apply flex w-full
+  }
+
+  .main-page-panel {
+    @apply flex-max-width h-full flex-col overflow-auto bg-muted px-16
+  }
+
+  .main-page-nav-arrangement {
+    @apply flex-max-width justify-between px-6 py-12 pb-2
+  }
+
+  .main-page-nav-title {
+    @apply flex items-center justify-center gap-2 text-2xl font-semibold
+  }
+
+  .main-page-nav-button {
+    @apply mr-2 w-4
+  }
+
+  .main-page-description-text {
+    @apply flex w-[60%] px-6 pb-14 text-muted-foreground
+  }
+
+  .main-page-flows-display {
+    @apply grid w-full gap-4 p-4 md:grid-cols-2 lg:grid-cols-4
+  }
 }
