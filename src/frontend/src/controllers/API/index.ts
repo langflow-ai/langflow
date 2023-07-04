@@ -52,16 +52,18 @@ export async function postValidateCode(
 
 /**
  * Checks the prompt for the code block by sending it to an API endpoint.
- *
+ * @param {string} name - The name of the field to check.
  * @param {string} template - The template string of the prompt to check.
  * @param {APIClassType} frontend_node - The frontend node to check.
  * @returns {Promise<AxiosResponse<PromptTypeAPI>>} A promise that resolves to an AxiosResponse containing the validation results.
  */
 export async function postValidatePrompt(
+  name: string,
   template: string,
   frontend_node: APIClassType
 ): Promise<AxiosResponse<PromptTypeAPI>> {
   return await axios.post("/api/v1/validate/prompt", {
+    name: name,
     template: template,
     frontend_node: frontend_node,
   });
