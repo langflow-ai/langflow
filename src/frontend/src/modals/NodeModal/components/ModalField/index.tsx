@@ -64,7 +64,7 @@ export default function ModalField({
               disabled={false}
               value={
                 !data.node.template[name].value ||
-                data.node.template[name].value === ""
+                  data.node.template[name].value === ""
                   ? [""]
                   : data.node.template[name].value
               }
@@ -160,6 +160,11 @@ export default function ModalField({
       ) : type === "code" ? (
         <div className="w-1/2">
           <CodeAreaComponent
+            dynamic={data.node.template[name].dynamic ?? false}
+            setNodeClass={(nodeClass) => {
+              data.node = nodeClass;
+            }}
+            nodeClass={data.node}
             disabled={false}
             value={data.node.template[name].value ?? ""}
             onChange={(t: string) => {

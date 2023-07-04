@@ -66,7 +66,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
     }
   }
 
-  useEffect(() => {}, [closePopUp, data.node.template]);
+  useEffect(() => { }, [closePopUp, data.node.template]);
 
   function changeAdvanced(node): void {
     Object.keys(data.node.template).filter((n, i) => {
@@ -142,7 +142,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                           </TableCell>
                           <TableCell className="p-0 text-center text-gray-900 text-xs w-[300px] dark:text-gray-300">
                             {data.node.template[n].type === "str" &&
-                            !data.node.template[n].options ? (
+                              !data.node.template[n].options ? (
                               <div className="mx-auto">
                                 {data.node.template[n].list ? (
                                   <InputListComponent
@@ -150,7 +150,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                     disabled={false}
                                     value={
                                       !data.node.template[n].value ||
-                                      data.node.template[n].value === ""
+                                        data.node.template[n].value === ""
                                         ? [""]
                                         : data.node.template[n].value
                                     }
@@ -262,6 +262,11 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                             ) : data.node.template[n].type === "code" ? (
                               <div className="mx-auto">
                                 <CodeAreaComponent
+                                  dynamic={data.node.template[n].dynamic ?? false}
+                                  setNodeClass={(nodeClass) => {
+                                    data.node = nodeClass;
+                                  }}
+                                  nodeClass={data.node}
                                   disabled={false}
                                   editNode={true}
                                   value={data.node.template[n].value ?? ""}
