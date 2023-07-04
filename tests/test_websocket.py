@@ -7,7 +7,7 @@ import pytest
 
 def test_init_build(client):
     response = client.post(
-        "api/v1/build/init", json={"id": "test", "data": {"key": "value"}}
+        "api/v1/build/init/test", json={"id": "test", "data": {"key": "value"}}
     )
     assert response.status_code == 201
     assert response.json() == {"flowId": "test"}
@@ -43,7 +43,5 @@ def test_websocket_endpoint_after_build(client, basic_graph_data):
     # and how your chat_manager and other classes behave. The following is just an example structure.
     with pytest.raises(WebSocketDisconnect):
         with client.websocket_connect("api/v1/chat/websocket_test") as websocket:
-            websocket.send_json({"type": "test"})
-            # Perform assertions here, based on what you expect the websocket to return
-            # data = websocket.receive_json()
-            # assert ...
+            websocket.send_json({"input": "test"})
+            websocket.receive_json()

@@ -187,8 +187,8 @@ export default function Page({ flow }: { flow: FlowType }) {
             style: { stroke: "inherit" },
             className:
               params.targetHandle.split("|")[0] === "Text"
-                ? "stroke-gray-800 dark:stroke-gray-300"
-                : "stroke-gray-900 dark:stroke-gray-200",
+                ? "stroke-foreground "
+                : "stroke-foreground ",
             animated: params.targetHandle.split("|")[0] === "Text",
           },
           eds
@@ -361,13 +361,13 @@ export default function Page({ flow }: { flow: FlowType }) {
     <div className="flex h-full overflow-hidden">
       <ExtraSidebar />
       {/* Main area */}
-      <main className="flex-1 flex">
+      <main className="flex flex-1">
         {/* Primary column */}
-        <div className="w-full h-full">
-          <div className="w-full h-full" ref={reactFlowWrapper}>
+        <div className="h-full w-full">
+          <div className="h-full w-full" ref={reactFlowWrapper}>
             {Object.keys(templates).length > 0 &&
             Object.keys(types).length > 0 ? (
-              <div className="w-full h-full">
+              <div className="h-full w-full">
                 <ReactFlow
                   nodes={nodes}
                   onMove={() => {
@@ -414,8 +414,11 @@ export default function Page({ flow }: { flow: FlowType }) {
                   minZoom={0.01}
                   maxZoom={8}
                 >
-                  <Background className="dark:bg-gray-900" />
-                  <Controls className="[&>button]:text-black  [&>button]:dark:bg-gray-800 hover:[&>button]:dark:bg-gray-700 [&>button]:dark:text-gray-400 [&>button]:dark:fill-gray-400 [&>button]:dark:border-gray-600"></Controls>
+                  <Background className="" />
+                  <Controls
+                    className="bg-muted fill-foreground stroke-foreground text-primary
+                   [&>button]:border-b-border hover:[&>button]:bg-border"
+                  ></Controls>
                 </ReactFlow>
                 <Chat flow={flow} reactFlowInstance={reactFlowInstance} />
               </div>

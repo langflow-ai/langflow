@@ -33,7 +33,7 @@ export default function ToggleShadComponent({
           transform: `scaleX(${scaleX}) scaleY(${scaleY})`,
         }}
         disabled={disabled}
-        className="data-[state=unchecked]:bg-slate-500"
+        className=""
         checked={enabled}
         onCheckedChange={(x: boolean) => {
           setEnabled(x);

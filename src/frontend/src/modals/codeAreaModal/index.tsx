@@ -39,12 +39,13 @@ export default function CodeAreaModal({
   const [loading, setLoading] = useState(false);
   const { dark } = useContext(darkContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
-  const { closePopUp } = useContext(PopUpContext);
+  const { closePopUp, setCloseEdit } = useContext(PopUpContext);
   const ref = useRef();
   function setModalOpen(x: boolean) {
     setOpen(x);
     if (x === false) {
       setTimeout(() => {
+        setCloseEdit("editcode");
         closePopUp();
       }, 300);
     }
@@ -101,19 +102,20 @@ export default function CodeAreaModal({
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger></DialogTrigger>
-      <DialogContent className="lg:max-w-[700px] h-[500px]">
+      <DialogContent className="h-[500px] lg:max-w-[700px]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Edit Code</span>
             <TerminalSquare
-              className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
+            strokeWidth={1.5}
+              className="h-6 w-6 text-primary pl-1 "
               aria-hidden="true"
             />
           </DialogTitle>
           <DialogDescription>{CODE_PROMPT_DIALOG_SUBTITLE}</DialogDescription>
         </DialogHeader>
 
-        <div className="flex h-full w-full mt-2">
+        <div className="mt-2 flex h-full w-full">
           <AceEditor
             value={code}
             mode="python"
@@ -127,7 +129,7 @@ export default function CodeAreaModal({
             onChange={(value) => {
               setCode(value);
             }}
-            className="w-full rounded-lg h-[300px] custom-scroll border-[1px] border-gray-300 dark:border-gray-600"
+            className="h-[300px] w-full rounded-lg border-[1px] border-ring custom-scroll "
           />
         </div>
 

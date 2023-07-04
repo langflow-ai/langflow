@@ -1,5 +1,9 @@
+from pathlib import Path
+from typing import Optional
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from langflow.api import router
 from langflow.database.base import create_db_and_tables
@@ -12,12 +16,12 @@ template_node = {
             "placeholder": "",
             "show": True,
             "multiline": True,
-            "value": "\ndef my_user_python_function(text: str) -> str:\n    \"\"\"This is a default python function that returns the input text\"\"\"\n    return text.upper()\n",
+            "value": '\ndef my_user_python_function(text: str) -> str:\n    """This is a default python function that returns the input text"""\n    return text.upper()\n',
             "password": False,
             "name": "code",
             "advanced": False,
             "type": "code",
-            "list": False
+            "list": False,
         },
         "lc_kwargs": {
             "required": False,
@@ -28,7 +32,7 @@ template_node = {
             "name": "lc_kwargs",
             "advanced": True,
             "type": "code",
-            "list": False
+            "list": False,
         },
         "verbose": {
             "required": False,
@@ -40,7 +44,7 @@ template_node = {
             "name": "verbose",
             "advanced": False,
             "type": "bool",
-            "list": False
+            "list": False,
         },
         "callbacks": {
             "required": False,
@@ -51,7 +55,7 @@ template_node = {
             "name": "callbacks",
             "advanced": False,
             "type": "langchain.callbacks.base.BaseCallbackHandler",
-            "list": True
+            "list": True,
         },
         "tags": {
             "required": False,
@@ -62,7 +66,7 @@ template_node = {
             "name": "tags",
             "advanced": False,
             "type": "str",
-            "list": True
+            "list": True,
         },
         "client": {
             "required": False,
@@ -73,7 +77,7 @@ template_node = {
             "name": "client",
             "advanced": False,
             "type": "Any",
-            "list": False
+            "list": False,
         },
         "model_name": {
             "required": False,
@@ -90,12 +94,12 @@ template_node = {
                 "gpt-4-0613",
                 "gpt-4-32k-0613",
                 "gpt-4",
-                "gpt-4-32k"
+                "gpt-4-32k",
             ],
             "name": "model_name",
             "advanced": False,
             "type": "str",
-            "list": True
+            "list": True,
         },
         "temperature": {
             "required": False,
@@ -107,7 +111,7 @@ template_node = {
             "name": "temperature",
             "advanced": False,
             "type": "float",
-            "list": False
+            "list": False,
         },
         "model_kwargs": {
             "required": False,
@@ -118,7 +122,7 @@ template_node = {
             "name": "model_kwargs",
             "advanced": True,
             "type": "code",
-            "list": False
+            "list": False,
         },
         "openai_api_key": {
             "required": False,
@@ -131,7 +135,7 @@ template_node = {
             "display_name": "OpenAI API Key",
             "advanced": False,
             "type": "str",
-            "list": False
+            "list": False,
         },
         "openai_api_base": {
             "required": False,
@@ -143,7 +147,7 @@ template_node = {
             "display_name": "OpenAI API Base",
             "advanced": False,
             "type": "str",
-            "list": False
+            "list": False,
         },
         "openai_organization": {
             "required": False,
@@ -155,7 +159,7 @@ template_node = {
             "display_name": "OpenAI Organization",
             "advanced": False,
             "type": "str",
-            "list": False
+            "list": False,
         },
         "openai_proxy": {
             "required": False,
@@ -167,7 +171,7 @@ template_node = {
             "display_name": "OpenAI Proxy",
             "advanced": False,
             "type": "str",
-            "list": False
+            "list": False,
         },
         "request_timeout": {
             "required": False,
@@ -178,7 +182,7 @@ template_node = {
             "name": "request_timeout",
             "advanced": False,
             "type": "float",
-            "list": False
+            "list": False,
         },
         "max_retries": {
             "required": False,
@@ -190,7 +194,7 @@ template_node = {
             "name": "max_retries",
             "advanced": False,
             "type": "int",
-            "list": False
+            "list": False,
         },
         "streaming": {
             "required": False,
@@ -202,7 +206,7 @@ template_node = {
             "name": "streaming",
             "advanced": False,
             "type": "bool",
-            "list": False
+            "list": False,
         },
         "n": {
             "required": False,
@@ -214,7 +218,7 @@ template_node = {
             "name": "n",
             "advanced": False,
             "type": "int",
-            "list": False
+            "list": False,
         },
         "max_tokens": {
             "required": False,
@@ -225,17 +229,17 @@ template_node = {
             "name": "max_tokens",
             "advanced": False,
             "type": "int",
-            "list": False
+            "list": False,
         },
-        "_type": "ChatOpenAI"
+        "_type": "ChatOpenAI",
     },
     "base_classes": [
         "BaseChatModel",
         "Serializable",
         "BaseLanguageModel",
-        "ChatOpenAI"
+        "ChatOpenAI",
     ],
-    "description": "Wrapper around OpenAI Chat large language models."
+    "description": "Wrapper around OpenAI Chat large language models.",
 }
 
 
@@ -267,6 +271,42 @@ def create_app():
     app.include_router(router)
     app.on_event("startup")(create_db_and_tables)
     app.on_event("startup")(setup_llm_caching)
+    return app
+
+
+def setup_static_files(app: FastAPI, static_files_dir: Path):
+    """
+    Setup the static files directory.
+    Args:
+        app (FastAPI): FastAPI app.
+        path (str): Path to the static files directory.
+    """
+    app.mount(
+        "/",
+        StaticFiles(directory=static_files_dir, html=True),
+        name="static",
+    )
+
+    @app.exception_handler(404)
+    async def custom_404_handler(request, __):
+        path = static_files_dir / "index.html"
+
+        if not path.exists():
+            raise RuntimeError(f"File at path {path} does not exist.")
+        return FileResponse(path)
+
+
+# app = create_app()
+# setup_static_files(app, static_files_dir)
+def setup_app(static_files_dir: Optional[Path]) -> FastAPI:
+    """Setup the FastAPI app."""
+    # get the directory of the current file
+    if not static_files_dir:
+        frontend_path = Path(__file__).parent
+        static_files_dir = frontend_path / "frontend"
+
+    app = create_app()
+    setup_static_files(app, static_files_dir)
     return app
 
 
