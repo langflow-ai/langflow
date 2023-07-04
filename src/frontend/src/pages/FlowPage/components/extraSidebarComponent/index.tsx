@@ -59,8 +59,8 @@ export default function ExtraSidebar() {
   }
 
   return (
-    <div className="flex h-full w-52 flex-col overflow-hidden border-r scrollbar-hide">
-      <div className="mb-2 mt-2 flex w-full items-center justify-between gap-2 px-2">
+    <div className="side-bar-arrangement">
+      <div className="side-bar-buttons-arrangement">
         <ShadTooltip content="Import" side="top">
           <button
             className="extra-side-bar-buttons"
@@ -69,7 +69,7 @@ export default function ExtraSidebar() {
               uploadFlow();
             }}
           >
-            <FileUp strokeWidth={1.5} className="h-5 w-5 "></FileUp>
+            <FileUp strokeWidth={1.5} className="side-bar-button-size "></FileUp>
           </button>
         </ShadTooltip>
 
@@ -82,7 +82,7 @@ export default function ExtraSidebar() {
               openPopUp(<ExportModal />);
             }}
           >
-            <FileDown strokeWidth={1.5} className="h-5 w-5  "></FileDown>
+            <FileDown strokeWidth={1.5} className="side-bar-button-size"></FileDown>
           </button>
         </ShadTooltip>
         <ShadTooltip content="Code" side="top">
@@ -94,7 +94,7 @@ export default function ExtraSidebar() {
               openPopUp(<ApiModal flow={flows.find((f) => f.id === tabId)} />);
             }}
           >
-            <Code2 strokeWidth={1.5} className="h-5 w-5  "></Code2>
+            <Code2 strokeWidth={1.5} className="side-bar-button-size"></Code2>
           </button>
         </ShadTooltip>
 
@@ -110,14 +110,14 @@ export default function ExtraSidebar() {
             <Save
               strokeWidth={1.5}
               className={
-                "h-5 w-5" + (isPending ? " " : " extra-side-bar-save-disable")
+                "side-bar-button-size" + (isPending ? " " : " extra-side-bar-save-disable")
               }
             ></Save>
           </button>
         </ShadTooltip>
       </div>
       <Separator />
-      <div className="relative mx-auto mb-2 mt-2 flex items-center">
+      <div className="side-bar-search-div-placement">
         <input
           type="text"
           name="search"
@@ -129,13 +129,13 @@ export default function ExtraSidebar() {
             setSearch(e.target.value);
           }}
         />
-        <div className="absolute inset-y-0 right-0 flex items-center py-1.5 pr-3">
+        <div className="search-icon">
           {/* ! replace hash color here */}
           <Search size={20} strokeWidth={1.5} className="text-primary" />
         </div>
       </div>
 
-      <div className="w-full overflow-auto scrollbar-hide">
+      <div className="side-bar-components-div-arrangement">
         {Object.keys(dataFilter)
           .sort()
           .map((d: keyof APIObjectType, i) =>
@@ -148,7 +148,7 @@ export default function ExtraSidebar() {
                   Icon: nodeIconsLucide[d] ?? nodeIconsLucide.unknown,
                 }}
               >
-                <div className="flex flex-col gap-2 p-2">
+                <div className="side-bar-components-gap">
                   {Object.keys(dataFilter[d])
                     .sort()
                     .map((t: string, k) => (
@@ -160,7 +160,7 @@ export default function ExtraSidebar() {
                         <div key={k} data-tooltip-id={t}>
                           <div
                             draggable
-                            className={"cursor-grab rounded-l-md border-l-8"}
+                            className={"side-bar-components-border"}
                             style={{
                               borderLeftColor:
                                 nodeColors[d] ?? nodeColors.unknown,
@@ -179,11 +179,11 @@ export default function ExtraSidebar() {
                               );
                             }}
                           >
-                            <div className="flex w-full items-center justify-between rounded-md rounded-l-none border border-l-0 border-dashed border-ring  bg-white px-3 py-1 text-sm">
-                              <span className="w-full  truncate pr-1 text-xs text-foreground">
+                            <div className="side-bar-components-div-form">
+                              <span className="side-bar-components-text">
                                 {data[d][t].display_name}
                               </span>
-                              <Menu className="h-6 w-4  text-ring " />
+                              <Menu className="side-bar-components-icon " />
                             </div>
                           </div>
                         </div>
