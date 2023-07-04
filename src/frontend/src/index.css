@@ -239,4 +239,18 @@ The cursor: default; property value restores the browser's default cursor style 
   .components-disclosure-div {
     @apply flex gap-2
   }
+  .flow-page-positioning {
+    @apply h-full w-full overflow-hidden
+  }
+  .logspace-page-icon {
+    @apply absolute bottom-2 left-7 flex h-6 cursor-pointer flex-col items-center justify-start overflow-hidden rounded-lg bg-foreground px-2 text-center font-sans text-xs tracking-wide text-secondary transition-all duration-500 ease-in-out
+  }
+
+  .logspace-page-icon:hover {
+    @apply hover:h-12
+  }
+
+  .logspace-icon-text {
+    @apply mt-1
+  }
 }
