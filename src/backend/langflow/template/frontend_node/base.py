@@ -3,13 +3,41 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-from langflow.template.frontend_node.formatter.field_formatters import FieldFormatters
+from langflow.template.frontend_node.formatter import field_formatters
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.template.field.base import TemplateField
 from langflow.template.template.base import Template
 from langflow.utils import constants
 
 CLASSES_TO_REMOVE = ["Serializable", "BaseModel", "object"]
+
+
+class FieldFormatters(BaseModel):
+    formatters = {
+        "openai_api_key": field_formatters.OpenAIAPIKeyFormatter(),
+    }
+    base_formatters = {
+        "kwargs": field_formatters.KwargsFormatter(),
+        "optional": field_formatters.RemoveOptionalFormatter(),
+        "list": field_formatters.ListTypeFormatter(),
+        "dict": field_formatters.DictTypeFormatter(),
+        "union": field_formatters.UnionTypeFormatter(),
+        "multiline": field_formatters.MultilineFieldFormatter(),
+        "show": field_formatters.ShowFieldFormatter(),
+        "password": field_formatters.PasswordFieldFormatter(),
+        "default": field_formatters.DefaultValueFormatter(),
+        "headers": field_formatters.HeadersDefaultValueFormatter(),
+        "dict_code_file": field_formatters.DictCodeFileFormatter(),
+        "model_fields": field_formatters.ModelSpecificFieldFormatter(),
+    }
+
+    def format(self, field: TemplateField, name: Optional[str] = None) -> None:
+        for key, formatter in self.base_formatters.items():
+            formatter.format(field, name)
+
+        for key, formatter in self.formatters.items():
+            if key == field.name:
+                formatter.format(field, name)
 
 
 class FrontendNode(BaseModel):
@@ -40,7 +68,6 @@ class FrontendNode(BaseModel):
     def set_documentation(self, documentation: str) -> None:
         """Sets the documentation of the frontend node."""
         self.documentation = documentation
-
 
     def to_dict(self) -> dict:
         """Returns a dict representation of the frontend node."""
