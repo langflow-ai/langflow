@@ -47,6 +47,7 @@ import { ComponentType, SVGProps } from "react";
 import {
   Compass,
   Cpu,
+  Edit,
   Fingerprint,
   Gift,
   Hammer,
@@ -373,6 +374,9 @@ export const nodeIconsLucide: {
   unknown: HelpCircle as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
+  custom: Edit as React.ForwardRefExoticComponent<
+  ComponentType<SVGProps<SVGSVGElement>>
+>,
 };
 
 export const gradients = [
