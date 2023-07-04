@@ -1,7 +1,6 @@
 import { classNames } from "../../../utils";
 import { useContext, useEffect, useRef, useState } from "react";
 import { TabsContext } from "../../../contexts/tabsContext";
-import { INPUT_STYLE } from "../../../constants";
 import { Eraser, Lock, LucideSend, Send } from "lucide-react";
 
 export default function ChatInput({
@@ -53,8 +52,7 @@ export default function ChatInput({
           lockChat
             ? " bg-input text-black dark:bg-gray-700 dark:text-gray-300"
             : "  bg-white-200 text-black dark:bg-gray-900 dark:text-gray-300",
-          "p-4 form-input block w-full custom-scroll rounded-md border-gray-300 dark:border-gray-600 pr-16 sm:text-sm" +
-            INPUT_STYLE
+          "p-4 form-input block w-full custom-scroll rounded-md border-gray-300 dark:border-gray-600 pr-16 sm:text-sm"
         )}
         placeholder={"Send a message..."}
       />

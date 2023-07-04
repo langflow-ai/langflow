@@ -1,8 +1,9 @@
 import re
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+from langflow.template.frontend_node.formatter.field_formatters import FieldFormatters
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.template.field.base import TemplateField
 from langflow.template.template.base import Template
@@ -17,8 +18,10 @@ class FrontendNode(BaseModel):
     base_classes: List[str]
     name: str = ""
     display_name: str = ""
+    documentation: str = ""
     custom_fields: List[str] = []
     output_types: List[str] = []
+    field_formatters: FieldFormatters = Field(default_factory=FieldFormatters)
 
     def process_base_classes(self) -> None:
         """Removes unwanted base classes from the list of base classes."""
@@ -28,7 +31,19 @@ class FrontendNode(BaseModel):
             if base_class not in CLASSES_TO_REMOVE
         ]
 
+    # field formatters is an instance attribute but it is not used in the class
+    # so we need to create a method to get it
+    @staticmethod
+    def get_field_formatters() -> FieldFormatters:
+        return FieldFormatters()
+
+    def set_documentation(self, documentation: str) -> None:
+        """Sets the documentation of the frontend node."""
+        self.documentation = documentation
+
+
     def to_dict(self) -> dict:
+        """Returns a dict representation of the frontend node."""
         self.process_base_classes()
         return {
             self.name: {
@@ -38,6 +53,7 @@ class FrontendNode(BaseModel):
                 "display_name": self.display_name or self.name,
                 "custom_fields": self.custom_fields,
                 "output_types": self.output_types,
+                "documentation": self.documentation,
             },
         }
 
@@ -50,33 +66,8 @@ class FrontendNode(BaseModel):
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         """Formats a given field based on its attributes and value."""
-        SPECIAL_FIELD_HANDLERS = {
-            "allowed_tools": lambda field: "Tool",
-            "max_value_length": lambda field: "int",
-        }
 
-        key = field.name
-        value = field.to_dict()
-        _type = value["type"]
-
-        _type = FrontendNode.remove_optional(_type)
-        _type, is_list = FrontendNode.check_for_list_type(_type)
-        field.is_list = is_list or field.is_list
-        _type = FrontendNode.replace_mapping_with_dict(_type)
-        _type = FrontendNode.handle_union_type(_type)
-
-        field.field_type = FrontendNode.handle_special_field(
-            field, key, _type, SPECIAL_FIELD_HANDLERS
-        )
-        field.field_type = FrontendNode.handle_dict_type(field, _type)
-        field.show = FrontendNode.should_show_field(key, field.required)
-        field.password = FrontendNode.should_be_password(key, field.show)
-        field.multiline = FrontendNode.should_be_multiline(key)
-
-        FrontendNode.replace_default_value(field, value)
-        FrontendNode.handle_specific_field_values(field, key, name)
-        FrontendNode.handle_kwargs_field(field)
-        FrontendNode.handle_api_key_field(field, key)
+        FrontendNode.get_field_formatters().format(field, name)
 
     @staticmethod
     def remove_optional(_type: str) -> str:

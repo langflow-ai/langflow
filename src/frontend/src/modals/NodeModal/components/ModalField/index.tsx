@@ -36,7 +36,7 @@ export default function ModalField({
   return (
     <div
       className={classNames(
-        "flex flex-row w-full items-center justify-between",
+        "flex w-full flex-row items-center justify-between",
         display ? "" : "hidden",
         Object.keys(data.node.template).filter(
           (t) =>
@@ -52,8 +52,8 @@ export default function ModalField({
     >
       {display && (
         <div>
-          <span className="mx-2 dark:text-gray-300">{title}</span>
-          <span className="text-red-600">{required ? " *" : ""}</span>
+          <span className="mx-2">{title}</span>
+          <span className="text-destructive">{required ? " *" : ""}</span>
         </div>
       )}
 

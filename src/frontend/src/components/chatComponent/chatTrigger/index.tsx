@@ -3,6 +3,7 @@ import { MessagesSquare } from "lucide-react";
 
 import { alertContext } from "../../../contexts/alertContext";
 import { useContext } from "react";
+import ShadTooltip from "../../ShadTooltipComponent";
 
 export default function ChatTrigger({ open, setOpen, isBuilt }) {
   const { setErrorData } = useContext(alertContext);
@@ -29,10 +30,10 @@ export default function ChatTrigger({ open, setOpen, isBuilt }) {
       leaveFrom="translate-y-0"
       leaveTo="translate-y-96"
     >
-          <button onClick={handleClick} className={ "transition-all fixed bottom-4 right-4 flex justify-center items-center py-1 px-3 w-12 h-12 rounded-full shadow-md shadow-[#0000002a] hover:shadow-[#00000032] bg-[#E2E7EE] dark:border-gray-600 "+ (!isBuilt ? "cursor-not-allowed" : "cursor-pointer")}>
+          <button onClick={handleClick} className={ "transition-all fixed bottom-4 right-4 flex justify-center items-center py-1 px-3 w-12 h-12 rounded-full shadow-md shadow-round-btn-shadow hover:shadow-round-btn-shadow bg-border"+ (!isBuilt ? "cursor-not-allowed" : "cursor-pointer")}>
             <div className="flex gap-3">
               <MessagesSquare
-                className={"h-6 w-6 transition-all " + (isBuilt ? "fill-[#5c8be1] stroke-1 stroke-[#5c8be1]" : "fill-[#a5bae0] stroke-1 stroke-[#a5bae0]")}
+                className={"h-6 w-6 transition-all " + (isBuilt ? "fill-chat-trigger stroke-chat-trigger stroke-1" : "fill-chat-trigger/40 stroke-1 stroke-chat-trigger/40")}
                 style={{ color: "white" }}
                 strokeWidth={1.5}
               />

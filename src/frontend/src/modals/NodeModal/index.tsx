@@ -6,8 +6,7 @@ import {
   classNames,
   limitScrollFieldsModal,
   nodeColors,
-  nodeIcons,
-  toNormalCase,
+  nodeIconsLucide,
   toTitleCase,
 } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
@@ -28,7 +27,7 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
     }
   }
   // any to avoid type conflict
-  const Icon: any = nodeIcons[types[data.type]];
+  const Icon: any = nodeIconsLucide[types[data.type]];
   return (
     <Transition.Root show={open} appear={true} as={Fragment}>
       <Dialog
@@ -46,7 +45,7 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-gray-500 dark:bg-gray-600 dark:bg-opacity-75 bg-opacity-75 transition-opacity" />
+          <div className="fixed inset-0 bg-ring   bg-opacity-75 transition-opacity" />
         </Transition.Child>
 
         <div className="fixed inset-0 z-10 overflow-y-auto">
@@ -60,11 +59,11 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className="relative flex flex-col justify-between transform h-[600px] overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all sm:my-8 w-[700px]">
-                <div className=" z-50 absolute top-0 right-0 hidden pt-4 pr-4 sm:block">
+              <Dialog.Panel className="relative flex h-[600px] w-[700px] transform flex-col justify-between overflow-hidden rounded-lg bg-background text-left shadow-xl transition-all sm:my-8">
+                <div className=" absolute right-0 top-0 z-50 hidden pr-4 pt-4 sm:block">
                   <button
                     type="button"
-                    className="rounded-md text-gray-400 hover:text-gray-500"
+                    className="rounded-md text-ring hover:text-accent-foreground"
                     onClick={() => {
                       setModalOpen(false);
                     }}
@@ -73,10 +72,11 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
                     <X className="h-6 w-6" aria-hidden="true" />
                   </button>
                 </div>
-                <div className="h-full w-full flex flex-col justify-center items-center">
-                  <div className="flex w-full pb-4 z-10 justify-center shadow-sm">
+                <div className="flex h-full w-full flex-col items-center justify-center">
+                  <div className="z-10 flex w-full justify-center pb-4 shadow-sm">
                     <Icon
-                      className="w-10 mt-4 h-10 p-1 rounded"
+                      strokeWidth={1.5}
+                      className="mt-4 h-10 w-10 rounded p-1"
                       style={{
                         color:
                           nodeColors[types[data.type]] ?? nodeColors.unknown,
@@ -85,17 +85,17 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
                     <div className="mt-4 text-center sm:ml-4 sm:text-left">
                       <Dialog.Title
                         as="h3"
-                        className="text-lg font-medium dark:text-white leading-10 text-gray-900"
+                        className="text-lg font-medium leading-10 text-foreground"
                       >
                         {data.type}
                       </Dialog.Title>
                     </div>
                   </div>
-                  <div className="h-full w-full bg-gray-200 dark:bg-gray-900 p-4 gap-4 flex flex-row justify-center items-center">
-                    <div className="flex w-full h-[445px]">
+                  <div className="flex h-full w-full flex-row items-center justify-center gap-4 bg-input p-4">
+                    <div className="flex h-[445px] w-full">
                       <div
                         className={classNames(
-                          "px-4 sm:p-4 w-full rounded-lg bg-white dark:bg-gray-800 shadow",
+                          "w-full rounded-lg bg-background px-4 shadow sm:p-4",
                           Object.keys(data.node.template).filter(
                             (t) =>
                               t.charAt(0) !== "_" &&
@@ -106,7 +106,7 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
                             : "overflow-hidden"
                         )}
                       >
-                        <div className="flex flex-col h-full gap-5">
+                        <div className="flex h-full flex-col gap-5">
                           {Object.keys(data.node.template)
                             .filter(
                               (t) =>
@@ -144,10 +144,10 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
                       </div>
                     </div>
                   </div>
-                  <div className="bg-gray-200 dark:bg-gray-900 w-full pb-3 flex flex-row-reverse px-4">
+                  <div className="flex w-full flex-row-reverse bg-input px-4 pb-3">
                     <button
                       type="button"
-                      className="inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:ring-offset-1 sm:ml-3 sm:w-auto sm:text-sm"
+                      className="inline-flex w-full justify-center rounded-md border border-transparent bg-status-red px-4 py-2 text-base font-medium text-background shadow-sm hover:bg-ring focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1 sm:ml-3 sm:w-auto sm:text-sm"
                       onClick={() => {
                         setModalOpen(false);
                       }}
