@@ -227,4 +227,16 @@ The cursor: default; property value restores the browser's default cursor style 
   .message-button-icon {
     @apply w-6 fill-chat-trigger stroke-chat-trigger stroke-1
   }
+  .components-disclosure-arrangement {
+    @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-muted px-3 py-2
+  }
+  .text-color {
+    @apply text-primary
+  }
+  .components-disclosure-title {
+    @apply flex items-center text-sm text-color
+  }
+  .components-disclosure-div {
+    @apply flex gap-2
+  }
 }
