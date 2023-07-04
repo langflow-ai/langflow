@@ -15,6 +15,7 @@ const ShadTooltip = (props) => {
           side={props.side}
           avoidCollisions={false}
           sticky="always"
+          className={props.class}
         >
           {props.content}
         </TooltipContent>

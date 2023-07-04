@@ -84,8 +84,9 @@ export default function ParameterComponent({
 
   useEffect(() => {
     const groupedObj = groupByFamily(myData, tooltipTitle, left, data.type);
-
-    refHtml.current = groupedObj.map((item, i) => (
+      
+  refHtml.current = groupedObj.map((item, i) => {
+    return (
       <span
         key={getRandomKeyByssmm() + item.family + i}
         className={classNames(
@@ -102,7 +103,7 @@ export default function ParameterComponent({
         </div>
         <span className="ps-2 text-gray-950">
           {nodeNames[item.family] ?? ""}{" "}
-          <span className={classNames(left ? "hidden" : "")}>
+          <span>
             {" "}
             -&nbsp;
             {item.type.split(", ").length > 2
@@ -113,14 +114,15 @@ export default function ParameterComponent({
                         ? el
                         : (el += `, `)}
                     </span>
-                    {i % 2 === 0 && i > 0 && <br />}
                   </React.Fragment>
                 ))
               : item.type}
           </span>
         </span>
       </span>
-    ));
+    );
+  });
+  
   }, [tooltipTitle]);
 
   return (
@@ -145,6 +147,7 @@ export default function ParameterComponent({
           <></>
         ) : (
           <ShadTooltip
+            class="max-w-[40vw] max-h-[10vh] overflow-auto custom-scroll"
             delayDuration={0}
             content={refHtml.current}
             side={left ? "left" : "right"}
