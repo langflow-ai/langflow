@@ -1,3 +1,4 @@
+from collections import defaultdict
 import re
 from typing import List, Optional
 
@@ -47,7 +48,7 @@ class FrontendNode(BaseModel):
     name: str = ""
     display_name: str = ""
     documentation: str = ""
-    custom_fields: List[str] = []
+    custom_fields: defaultdict = defaultdict(list)
     output_types: List[str] = []
     field_formatters: FieldFormatters = Field(default_factory=FieldFormatters)
 
