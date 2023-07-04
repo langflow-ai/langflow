@@ -317,7 +317,7 @@ export async function getBuildStatus(
 export async function postBuildInit(
   flow: FlowType
 ): Promise<AxiosResponse<InitTypeAPI>> {
-  return await axios.post(`/api/v1/build/init`, flow);
+  return await axios.post(`/api/v1/build/init/${flow.id}`, flow);
 }
 
 // fetch(`/upload/${id}`, {
