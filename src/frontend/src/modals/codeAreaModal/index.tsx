@@ -35,11 +35,13 @@ export default function CodeAreaModal({
   setValue,
   nodeClass,
   setNodeClass,
+  dynamic
 }: {
   setValue: (value: string) => void;
   value: string;
   nodeClass: APIClassType;
   setNodeClass: (Class: APIClassType) => void;
+  dynamic?: boolean;
 }) {
   const [open, setOpen] = useState(true);
   const [code, setCode] = useState(value);
@@ -61,7 +63,8 @@ export default function CodeAreaModal({
 
   function handleClick() {
     setLoading(true);
-    postValidateCode(code)
+    if(!dynamic){
+      postValidateCode(code)
       .then((apiReturn) => {
         setLoading(false);
         if (apiReturn.data) {
@@ -98,13 +101,17 @@ export default function CodeAreaModal({
           title: "There is something wrong with this code, please review it",
         });
       });
-    postCustomComponent(code, nodeClass).then((apiReturn) => {
-      const {data} = apiReturn;
-      if (data) {
-        setNodeClass(data);
-        setModalOpen(false);
-      }
-    });
+    }
+    else
+    {
+      postCustomComponent(code, nodeClass).then((apiReturn) => {
+        const {data} = apiReturn;
+        if (data) {
+          setNodeClass(data);
+          setModalOpen(false);
+        }
+      });
+    }
     // axios.get("/api/v1/custom_component_error").catch((err) => {
     //   console.log(err.response.data);
     //   setError(err.response.data);

@@ -61,6 +61,7 @@ export type CodeAreaComponentType = {
   editNode?: boolean;
   nodeClass: APIClassType;
   setNodeClass: (value: APIClassType) => void;
+  dynamic?: boolean;
 };
 
 export type FileComponentType = {

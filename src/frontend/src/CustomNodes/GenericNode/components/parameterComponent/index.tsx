@@ -234,6 +234,7 @@ export default function ParameterComponent({
           </div>
         ) : left === true && type === "code" ? (
           <CodeAreaComponent
+            dynamic = {data.node.template[name].dynamic ?? false}
             setNodeClass={(nodeClass) => {
               data.node = nodeClass;
             }}

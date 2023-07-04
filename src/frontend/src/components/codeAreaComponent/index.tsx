@@ -13,6 +13,7 @@ export default function CodeAreaComponent({
   editNode = false,
   nodeClass,
   setNodeClass,
+  dynamic,
 }: CodeAreaComponentType) {
   const [myValue, setMyValue] = useState(value);
   const { openPopUp } = useContext(PopUpContext);
@@ -38,6 +39,7 @@ export default function CodeAreaComponent({
           onClick={() => {
             openPopUp(
               <CodeAreaModal
+                dynamic={dynamic}
                 value={myValue}
                 nodeClass={nodeClass}
                 setNodeClass={setNodeClass}
@@ -63,6 +65,7 @@ export default function CodeAreaComponent({
           onClick={() => {
             openPopUp(
               <CodeAreaModal
+              dynamic={dynamic}
               setNodeClass={setNodeClass}
                 value={myValue}
                 nodeClass={nodeClass}
