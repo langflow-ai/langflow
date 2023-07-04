@@ -104,18 +104,18 @@ export default function CodeAreaModal({
     }
     else
     {
-    //   postCustomComponent(code, nodeClass).then((apiReturn) => {
-    //     const {data} = apiReturn;
-    //     if (data) {
-    //       setNodeClass(data);
-    //       setModalOpen(false);
-    //     }
-    //   });
+      postCustomComponent(code, nodeClass).then((apiReturn) => {
+        const {data} = apiReturn;
+        if (data) {
+          setNodeClass(data);
+          setModalOpen(false);
+        }
+      });
     }
-    axios.get("/api/v1/custom_component_error").catch((err) => {
-      console.log(err.response.data);
-      setError(err.response.data);
-    })
+    // axios.get("/api/v1/custom_component_error").catch((err) => {
+    //   console.log(err.response.data);
+    //   setError(err.response.data);
+    // })
 
   }
   const tabs = [{ name: "code" }, { name: "errors" }]
