@@ -1,5 +1,4 @@
-import { useContext, useState } from "react";
-import { TabsContext } from "../../../../contexts/tabsContext";
+import { useState } from "react";
 import InputListComponent from "../../../../components/inputListComponent";
 import Dropdown from "../../../../components/dropdownComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
@@ -150,6 +149,7 @@ export default function ModalField({
       ) : type === "prompt" ? (
         <div className="w-1/2">
           <PromptAreaComponent
+            field_name={name}
             disabled={false}
             value={data.node.template[name].value ?? ""}
             onChange={(t: string) => {
