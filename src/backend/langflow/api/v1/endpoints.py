@@ -104,16 +104,12 @@ async def custom_component(
     raw_code: CustomComponentCode,
 ):
     extractor = CustomComponent(code=raw_code.code)
-    data = extractor.extract_class_info()
-    valid = extractor.is_valid_class_template(data)
 
-    function_args, function_return_type = extractor.get_entrypoint_function_args_and_return_type()
+    if not extractor.is_valid:
+        print("ERROR")
+        # TODO: Raise error
 
-    return build_langchain_template_custom_component(
-        raw_code.code,
-        function_args,
-        function_return_type
-    )
+    return build_langchain_template_custom_component(extractor)
 
 
 # TODO: Just for test - will be remove

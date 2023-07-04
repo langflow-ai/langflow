@@ -12,6 +12,7 @@ from langflow.interface.utilities.base import utility_creator
 from langflow.interface.vector_store.base import vectorstore_creator
 from langflow.interface.wrappers.base import wrapper_creator
 from langflow.interface.output_parsers.base import output_parser_creator
+from langflow.interface.tools.custom import CustomComponent
 
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.tools import CustomComponentNode
@@ -60,18 +61,6 @@ def build_langchain_types_dict():  # sourcery skip: dict-assign-update-to-union
 
 
 # TODO: Move to correct place
-def find_class_type(class_name, classes_dict):
-    return next(
-        (
-            {"type": class_type, "class": class_name}
-            for class_type, class_list in classes_dict.items()
-            if class_name in class_list
-        ),
-        {"error": "class not found"},
-    )
-
-
-# TODO: Move to correct place
 def add_new_custom_field(template, field_name: str, field_type: str):
     new_field = TemplateField(
         name=field_name,
@@ -107,25 +96,27 @@ def add_code_field(template, raw_code):
     return template
 
 
-def build_langchain_template_custom_component(raw_code, function_args, function_return_type):
-    # type_list = get_type_list()
-    # type_and_class = find_class_type("Tool", type_list)
-    # node = get_custom_nodes(node_type: str)
+def build_langchain_template_custom_component(extractor: CustomComponent):
+    # Build base "CustomComponent" template
+    template = CustomComponentNode().to_dict().get(type(extractor).__name__)
 
-    # Build base CustomComponent template
-    template = CustomComponentNode().to_dict().get('CustomComponent')
+    function_args, return_type = extractor.args_and_return_type
+    raw_code = extractor.code
 
     # Add extra fields
     for extra_field in function_args:
-        if extra_field[0] != 'self':
+        def_field = extra_field[0]
+        def_type = extra_field[1]
+
+        if def_field != 'self':
             # TODO: Validate type - if possible to render into frontend
-            if not extra_field[1]:
-                extra_field[1] = 'str'
+            if not def_type:
+                def_type = 'str'
 
             template = add_new_custom_field(
                 template,
-                extra_field[0],
-                extra_field[1]
+                def_field,
+                def_type
             )
 
     template = add_code_field(
@@ -133,7 +124,13 @@ def build_langchain_template_custom_component(raw_code, function_args, function_
         raw_code
     )
 
-    # criar um vertex
-    # olhar loading.py
+    # TODO: Build a vertex - loading.py
+
+    # TODO: Get base classes from "return_type" and add to template.base_classes
+    template.get('base_classes').append("ConversationChain")
+    template.get('base_classes').append("LLMChain")
+    template.get('base_classes').append("Chain")
+    template.get('base_classes').append("Serializable")
+    template.get('base_classes').append("function")
 
     return template

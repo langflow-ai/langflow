@@ -196,3 +196,21 @@ class CustomComponent(BaseModel):
             return build_function.get("return_type") in self.return_type_valid_list
         else:
             return False
+
+    def get_function(self):
+        return validate.create_function(
+            self.code,
+            self.function_entrypoint_name
+        )
+
+    @property
+    def data(self):
+        return self.extract_class_info()
+
+    @property
+    def is_valid(self):
+        return self.is_valid_class_template(self.data)
+
+    @property
+    def args_and_return_type(self):
+        return self.get_entrypoint_function_args_and_return_type()
