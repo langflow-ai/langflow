@@ -181,7 +181,7 @@ class MyPythonClass:
             llm=llm, verbose=True, memory=ConversationBufferMemory()
         )
 
-    def build(self, name: str) -> ConversationChain:
+    def build(self, my_custom_input: str) -> ConversationChain:
         conversation = self.my_conversation()
         
         return conversation
