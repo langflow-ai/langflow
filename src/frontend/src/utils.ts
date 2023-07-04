@@ -841,26 +841,37 @@ export function updateIds(newFlow, getNodeId) {
 export function groupByFamily(data, baseClasses, left, type) {
   let parentOutput: string;
   let arrOfParent: string[] = [];
-  let arrOfType: { family: string; type: string }[] = [];
+  let arrOfType: { family: string; type: string; component: string }[] = [];
+  let arrOfLength: { length: number; type: string; }[] = [];
+  let lastType = "";
   Object.keys(data).map((d) => {
-    Object.keys(data[d]).map((n) => {
-      try {
-        if (
-          data[d][n].base_classes.some((r) =>
-            baseClasses.split("\n").includes(r)
-          )
-        ) {
-          arrOfParent.push(d);
-        }
-        if (n === type) {
-          parentOutput = d;
-        }
-      } catch (e) {
-        console.log(e);
-      }
-    });
+      Object.keys(data[d]).map((n) => {
+          try {
+              if (
+                  data[d][n].base_classes.some((r) =>
+                      baseClasses.split("\n").includes(r)
+                  )
+              ) {
+                  arrOfParent.push(d);
+              }
+              if (n === type) {
+                  parentOutput = d;
+              }
+  
+              if (d !== lastType) {
+                  arrOfLength.push({
+                      length: Object.keys(data[d]).length,
+                      type: d
+                  });
+  
+                  lastType = d;
+              }
+          } catch (e) {
+              console.log(e);
+          }
+      });
   });
-
+  
   Object.keys(data).map((d) => {
     Object.keys(data[d]).map((n) => {
       try {
@@ -870,6 +881,7 @@ export function groupByFamily(data, baseClasses, left, type) {
               arrOfType.push({
                 family: d,
                 type: data,
+                component: n
               });
             }
           });
@@ -880,29 +892,62 @@ export function groupByFamily(data, baseClasses, left, type) {
     });
   });
 
-  let groupedBy = arrOfType.filter((object, index, self) => {
-    const foundIndex = self.findIndex(
-      (o) => o.family === object.family && o.type === object.type
-    );
-    return foundIndex === index;
-  });
+  if(left == false){
+    let groupedBy = arrOfType.filter((object, index, self) => {
+      const foundIndex = self.findIndex(
+        (o) => o.family === object.family && o.type === object.type
+      );
+      return foundIndex === index;
+    });
+  
+    return groupedBy.reduce((result, item) => {
+      const existingGroup = result.find((group) => group.family === item.family);
+  
+      if (existingGroup) {
+        existingGroup.type += `, ${item.type}`;
+      } else {
+        result.push({ family: item.family, type: item.type, component: item.component });
+      }
+  
+      if (left == false) {
+        let resFil = result.filter((group) => group.family === parentOutput);
+        result = resFil;
+      }
+  
+      return result;
+    }, []);
+  }
 
-  return groupedBy.reduce((result, item) => {
-    const existingGroup = result.find((group) => group.family === item.family);
-
-    if (existingGroup) {
-      existingGroup.type += `, ${item.type}`;
-    } else {
-      result.push({ family: item.family, type: item.type });
+  else{
+    const groupedArray = [];
+    const groupedData = {};
+    
+    arrOfType.forEach((item) => {
+        const { family, type, component } = item;
+        const key = `${family}-${type}`;
+    
+        if (!groupedData[key]) {
+            groupedData[key] = { family, type, component: [component] };
+        } else {
+            groupedData[key].component.push(component);
+        }
+    });
+    
+    for (const key in groupedData) {
+        groupedArray.push(groupedData[key]);
     }
 
-    if (left == false) {
-      let resFil = result.filter((group) => group.family === parentOutput);
-      result = resFil;
-    }
-
-    return result;
-  }, []);
+    groupedArray.forEach((object, index, self) => {
+      const findObj = arrOfLength.find(x => x.type == object.family);
+      if(object.component.length == findObj.length){
+        self[index]['type'] = object.type;
+      }
+      else{
+        self[index]['type'] = object.component.join(', ');
+      }
+    })
+    return groupedArray
+  }
 }
 
 export function buildTweaks(flow) {
