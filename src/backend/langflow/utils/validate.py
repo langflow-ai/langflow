@@ -108,7 +108,8 @@ def execute_function(code, function_name, *args, **kwargs):
     try:
         exec(code_obj, exec_globals, locals())
     except Exception as exc:
-        raise ValueError("Function string does not contain a function") from exc
+        raise ValueError(
+            "Function string does not contain a function") from exc
 
     # Add the function to the exec_globals dictionary
     exec_globals[function_name] = locals()[function_name]
@@ -161,6 +162,54 @@ def create_function(code, function_name):
         return exec_globals[function_name](*args, **kwargs)
 
     return wrapped_function
+
+
+def create_class(code, class_name):
+    if not hasattr(ast, "TypeIgnore"):
+
+        class TypeIgnore(ast.AST):
+            _fields = ()
+
+        ast.TypeIgnore = TypeIgnore
+
+    module = ast.parse(code)
+    exec_globals = globals().copy()
+
+    for node in module.body:
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                try:
+                    exec_globals[alias.asname or alias.name] = importlib.import_module(
+                        alias.name
+                    )
+                except ModuleNotFoundError as e:
+                    raise ModuleNotFoundError(
+                        f"Module {alias.name} not found. Please install it and try again."
+                    ) from e
+
+    class_code = next(
+        node
+        for node in module.body
+        if isinstance(node, ast.ClassDef) and node.name == class_name
+    )
+    class_code.parent = None
+    code_obj = compile(
+        ast.Module(body=[class_code], type_ignores=[]), "<string>", "exec"
+    )
+    with contextlib.suppress(Exception):
+        exec(code_obj, exec_globals, locals())
+    exec_globals[class_name] = locals()[class_name]
+
+    # Return a function that imports necessary modules and creates an instance of the target class
+    def build(*args, **kwargs):
+        for module_name, module in exec_globals.items():
+            if isinstance(module, type(importlib)):
+                globals()[module_name] = module
+
+        instance = exec_globals[class_name](*args, **kwargs)
+        return instance
+
+    return build
 
 
 def extract_function_name(code):

@@ -50,27 +50,19 @@ def python_function(text: str) -> str:
 """
 
 DEFAULT_CUSTOM_COMPONENT_CODE = """
-from langflow.interface.chains.base import ChainCreator
-from langflow.interface.tools.base import ToolCreator
-from xyz.abc import MyClassA, MyClassB
+from langchain.chains import ConversationChain
 
 
-class MyPythonClass(MyClassA, MyClassB):
-    def __init__(self, title: str, author: str, year_published: int):
-        self.title = title
-        self.author = author
-        self.year_published = year_published
+class MyPythonClass:
+    def __init__(self, name: str, year: int):
+        self.name = name
+        self.year = year
 
     def get_details(self):
-        return f"Title: {self.title}, Author: {self.author}, Year Published: {self.year_published}"
+        return f"Name: {self.name}, Year: {self.year}"
 
-    def update_year_published(self, new_year: int):
-        self.year_published = new_year
-        print(f"The year of publication has been updated to {new_year}.")
-
-    def build(self, name: str, my_int: int, my_str: str, my_bool: bool, no_type) -> ConversationChain:
+    def build(self, name: str, year: int, true_or_false: bool, no_type) -> ConversationChain:
         # do something...
-
         return ConversationChain()
 """
 

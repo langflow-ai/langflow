@@ -166,5 +166,28 @@ def get_function(code):
 
 def get_function_custom(code):
     function_name = "build"
+    class_name = "MyPythonClass"
 
-    return validate.create_function(code, function_name)
+    code = """
+from langchain.chains import ConversationChain
+
+class MyPythonClass:
+    def __init__(self, title: str, author: str, year_published: int):
+        self.title = title
+        self.author = author
+        self.year_published = year_published
+
+    def get_details(self):
+        return f"Title: {self.title}, Author: {self.author}, Year Published: {self.year_published}"
+
+    def update_year_published(self, new_year: int):
+        self.year_published = new_year
+        print(f"The year of publication has been updated to {new_year}.")
+
+    def build(self, name, my_int, my_str, my_bool, no_type):
+        # do something...
+        print("x")
+        return ""
+    """
+
+    return validate.create_class(code, class_name)
