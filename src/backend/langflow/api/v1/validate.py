@@ -75,9 +75,15 @@ def add_new_variables_to_template(input_variables, prompt_request):
             )
 
             prompt_request.frontend_node.template[variable] = template_field.to_dict()
-            prompt_request.frontend_node.custom_fields[prompt_request.name].append(
+
+            # Check if variable is not already in the list before appending
+            if (
                 variable
-            )
+                not in prompt_request.frontend_node.custom_fields[prompt_request.name]
+            ):
+                prompt_request.frontend_node.custom_fields[prompt_request.name].append(
+                    variable
+                )
 
         except Exception as exc:
             logger.exception(exc)
@@ -90,7 +96,18 @@ def remove_old_variables_from_template(
     for variable in old_custom_fields:
         if variable not in input_variables:
             try:
+                # Remove the variable from custom_fields associated with the given name
+                if (
+                    variable
+                    in prompt_request.frontend_node.custom_fields[prompt_request.name]
+                ):
+                    prompt_request.frontend_node.custom_fields[
+                        prompt_request.name
+                    ].remove(variable)
+
+                # Remove the variable from the template
                 prompt_request.frontend_node.template.pop(variable, None)
+
             except Exception as exc:
                 logger.exception(exc)
                 raise HTTPException(status_code=500, detail=str(exc)) from exc
