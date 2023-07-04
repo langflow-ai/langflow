@@ -179,14 +179,6 @@ export const COLUMN_DIV_STYLE =
  */
 export const NAV_DISPLAY_STYLE =
   " w-full flex justify-between py-12 pb-2 px-6 ";
-
-/**
- * The base text for subtitle of code dialog
- * @constant
- */
-export const BUTTON_DIV_STYLE = " flex gap-2 ";
-(" focus:ring-1 focus:ring-offset-1 focus:ring-ring focus:outline-none ");
-
 /**
  * Header text for user projects
  * @constant
