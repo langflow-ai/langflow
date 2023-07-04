@@ -2973,13 +2973,13 @@ text-helpers = ["chardet (>=5.1.0,<6.0.0)"]
 
 [[package]]
 name = "langchain-serve"
-version = "0.0.50"
+version = "0.0.52"
 description = "Langchain Serve - serve your langchain apps on Jina AI Cloud."
 category = "main"
 optional = true
 python-versions = "*"
 files = [
-    {file = "langchain-serve-0.0.50.tar.gz", hash = "sha256:5f191d770a577c02127b79600678c407a77da672801e5784d544d7c54e1aaee1"},
+    {file = "langchain-serve-0.0.52.tar.gz", hash = "sha256:e69dcf6022423279059ab7ebda025e252aba4d9fd8e3e49776300355dbf85d1c"},
 ]
 
 [package.dependencies]
@@ -7828,4 +7828,4 @@ deploy = ["langchain-serve"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "4e742d71d346197a01f85bbea524838473f4d3d1890ba81c034256055c5e25b4"
+content-hash = "c0143f38de64a4ce537edc800380802537b6591202182e3bf9dc647ba666e8b4"
