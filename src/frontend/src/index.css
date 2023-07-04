@@ -143,6 +143,9 @@ The cursor: default; property value restores the browser's default cursor style 
 
 
 @layer components {
+  .button-div-style {
+    @apply gap-2 flex
+  }
   .input-primary:focus{
     @apply focus:placeholder-transparent focus:ring-ring focus:border-ring
   }
