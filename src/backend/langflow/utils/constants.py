@@ -50,20 +50,22 @@ def python_function(text: str) -> str:
 """
 
 DEFAULT_CUSTOM_COMPONENT_CODE = """
+from langchain.llms import OpenAI
 from langchain.chains import ConversationChain
+from langchain.memory import ConversationBufferMemory
 
 
 class MyPythonClass:
-    def __init__(self, name: str, year: int):
-        self.name = name
-        self.year = year
+    def my_conversation(self):
+        llm = OpenAI(temperature=0)
+        return ConversationChain(
+            llm=llm, verbose=True, memory=ConversationBufferMemory()
+        )
 
-    def get_details(self):
-        return f"Name: {self.name}, Year: {self.year}"
-
-    def build(self, name: str, year: int, true_or_false: bool, no_type) -> ConversationChain:
-        # do something...
-        return ConversationChain()
+    def build(self, name: str) -> ConversationChain:
+        conversation = self.my_conversation()
+        
+        return conversation
 """
 
 DIRECT_TYPES = ["str", "bool", "code", "int", "float", "Any", "prompt"]

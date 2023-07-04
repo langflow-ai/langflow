@@ -110,7 +110,7 @@ class Vertex:
                 file_path = value.get("file_path")
 
                 params[key] = file_path
-            elif value.get("type") in ["str", "prompt"] and params.get(key) is None:
+            elif value.get("type") in ["code", "str", "prompt"] and params.get(key) is None:
                 params[key] = value.get("value")
         # Add _type to params
         self.params = params
