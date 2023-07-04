@@ -5,7 +5,6 @@ import { Button } from "../../components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { CardComponent } from "../../components/cardComponent";
 import { USER_PROJECTS_HEADER } from "../../constants";
-import { BUTTON_DIV_STYLE } from "../../constants";
 export default function HomePage() {
   const { flows, setTabId, downloadFlows, uploadFlows, addFlow, removeFlow } =
     useContext(TabsContext);
@@ -20,7 +19,7 @@ export default function HomePage() {
           <Home className="w-6" />
           {USER_PROJECTS_HEADER}
         </span>
-        <div className={`${BUTTON_DIV_STYLE}`}>
+        <div className="button-div-style">
           <Button
             variant="primary"
             onClick={() => {

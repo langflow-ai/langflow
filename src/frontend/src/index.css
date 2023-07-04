@@ -143,6 +143,18 @@ The cursor: default; property value restores the browser's default cursor style 
 
 
 @layer components {
+  .extra-side-bar-save-disable {
+    @apply text-muted-foreground
+  }
+  .extra-side-bar-buttons {
+    @apply relative inline-flex w-full items-center justify-center rounded-md bg-background   px-2 py-2 text-foreground shadow-sm ring-1 ring-inset ring-input transition-all duration-500 ease-in-out
+  }
+  .extra-side-bar-buttons:hover {
+    @apply hover:bg-muted
+  }
+  .button-div-style {
+    @apply gap-2 flex
+  }
   .input-primary:focus{
     @apply focus:placeholder-transparent focus:ring-ring focus:border-ring
   }
@@ -161,4 +173,5 @@ The cursor: default; property value restores the browser's default cursor style 
   .input-dialog{
     @apply text-ring cursor-pointer bg-transparent
   }
+
 }
