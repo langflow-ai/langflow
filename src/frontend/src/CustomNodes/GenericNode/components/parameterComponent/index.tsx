@@ -25,7 +25,6 @@ import { nodeColors } from "../../../../utils";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import { PopUpContext } from "../../../../contexts/popUpContext";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
-import * as _ from "lodash";
 import { Info } from "lucide-react";
 
 export default function ParameterComponent({
@@ -261,10 +260,10 @@ export default function ParameterComponent({
         ) : left === true && type === "code" ? (
           <div className="mt-2 w-full">
             <CodeAreaComponent
-            setNodeClass={(nodeClass) => {
-              data.node = nodeClass;
-            }}
-            nodeClass={data.node}
+              setNodeClass={(nodeClass) => {
+                data.node = nodeClass;
+              }}
+              nodeClass={data.node}
               disabled={disabled}
               value={data.node.template[name].value ?? ""}
               onChange={handleOnNewValue}
@@ -296,10 +295,11 @@ export default function ParameterComponent({
         ) : left === true && type === "prompt" ? (
           <div className="mt-2 w-full">
             <PromptAreaComponent
-            setNodeClass={(nodeClass) => {
-              data.node = nodeClass;
-            }}
-            nodeClass={data.node}
+              field_name={name}
+              setNodeClass={(nodeClass) => {
+                data.node = nodeClass;
+              }}
+              nodeClass={data.node}
               disabled={disabled}
               value={data.node.template[name].value ?? ""}
               onChange={handleOnNewValue}
