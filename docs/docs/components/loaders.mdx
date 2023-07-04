@@ -1,6 +1,5 @@
 # Loaders
 
-
 ### AZLyricsLoader
 
 Loader that loads AZLyrics webpages.
@@ -9,8 +8,11 @@ The `AZLyricsLoader` is a loader that helps you get song lyrics from a website c
 Loader that loads AZLyrics webpages.
 
 **Params**
+
 - **metadata:** is used to include additional information about the content being loaded. It can provide context, source details, timestamps, or any other relevant information related to the content. The metadata extraction function allows the user to specify which information from the data source should be included in the metadata of the final document object. Defaults to `{}`.
+
 - **web_path:** is used to specify the URL of the webpage from which the lyrics will be extracted. It is a parameter that can be set when using the `AZLyricsLoader` class to load lyrics from a specific webpage.
+
 
 ### AirbyteJSONLoader
 
@@ -32,7 +34,7 @@ The `BSHTMLLoader` loads HTML documents and extracts useful information from the
 
 **Params**
 - **file_path:** is used to specify the path to the HTML file that needs to be loaded. The file_path parameter should be a string that represents the file path or URL of the HTML file.
-- **metadata:** you can set additional information about the loaded HTML document. It includes metadata such as the page title, source, and any other relevant information associated with the document.
+- **metadata:** you can set additional information about the loaded HTML document. It includes metadata such as the page title, source, and any other relevant information associated with the document. Defaults to `{}`.
 
 ### CSVLoader
 Loads a CSV file into a list of documents.
@@ -40,8 +42,9 @@ Loads a CSV file into a list of documents.
 The `CSVLoader` is a document loader that shows text data that is stored in a table-like format, such as CSV files. It takes this data and turns it into a document that you can work with. This can be helpful when you want to process and analyze text data that is organized in a structured way, like a table.
 
 **Params**
+
 - **file_path:** is used to specify the file path or URL of the CSV file that you want to load. The value of file_path should be a string that represents the location of the CSV file on your local machine or a valid URL if the CSV file is hosted online.
-- **metadata:** is used to provide additional information about the loaded data. It allows you to include any relevant metadata that you want to associate with each row in the CSV file. The metadata parameter should be a dictionary where the keys represent the metadata fields and the values represent the corresponding values for each row.
+- **metadata:** is used to provide additional information about the loaded data. It allows you to include any relevant metadata that you want to associate with each row in the CSV file. The metadata parameter should be a dictionary where the keys represent the metadata fields and the values represent the corresponding values for each row. Defaults to `{}`.
 
 ### CoNLLULoader
 
@@ -60,9 +63,12 @@ Loader that loads College Confidential webpages.
 The `CollegeConfidentialLoader` is provided by College Confidential. Imagine you're browsing the College Confidential website, which has lots of information about colleges, admissions, and discussions among students. The `CollegeConfidentialLoader` allows you to take specific webpages from that website and transform them into a document format.
 
 **Params**
-- **metadata:** it refers to optional information associated with each document that is loaded from the College Confidential website. The metadata can be useful for organizing and categorizing the documents loaded from the website based on different criteria or attributes.
+- **metadata:** it refers to optional information associated with each document that is loaded from the College Confidential website. The metadata can be useful for organizing and categorizing the documents loaded from the website based on different criteria or attributes. Defaults to `{}`.
 - **web_path:** it refers to the URL or path of the web page that you want to load data from on the College Confidential website.
-For example, you could set the web_path to "https://www.collegeconfidential.com/colleges/for-4-0-gpa/".
+For example, you could set the web_path to:
+```HTML 
+"https://www.collegeconfidential.com/colleges/for-4-0-gpa/"
+```
 
 ### DirectoryLoader
 
@@ -73,7 +79,7 @@ The `DirectoryLoader` loads many documents at once from a folder. It saves you t
 **Params**
 - **glob:** is used to specify the file pattern or pattern(s) that should be matched when loading documents from a directory. It allows you to filter the files based on their names or extensions.
 ```python
-glob="**/*.md"
+glob = "**/*.md"
 ```
 In the example above, only files with the .md extension will be loaded. Defaults to `**/*.txt`.
 
@@ -85,7 +91,7 @@ In the example above, only files with the .md extension will be loaded. Defaults
 ```python
 metadata = {"source": "example_data", "language": "Spanish"}
 ```
- In this case, we are specifying the source of the documents as "example_data" and the language as "Spanish". The dictionary can include any key-value pairs that you want to associate with the loaded documents.
+ In this case, we are specifying the source of the documents as "example_data" and the language as "Spanish". The dictionary can include any key-value pairs that you want to associate with the loaded documents. Defaults to `{}`.
 
 - **path:** is used to specify the path to the directory from which you want to load the documents.
 
@@ -95,6 +101,7 @@ metadata = {"source": "example_data", "language": "Spanish"}
 
 - **use_multithreading:** it controls whether the loader should use multithreading to load documents from the directory. When use_multithreading is set to `True`, the loader will use multiple threads to load documents concurrently, which can improve the loading speed, especially when dealing with a large number of files. When set to `False`, meaning that the loader will load documents sequentially without using multithreading. Defaults to `True`.
 
+
 ### EverNoteLoader
 
 EverNote Loader.
@@ -102,12 +109,13 @@ EverNote Loader.
 The `EverNoteLoader` is designed to help you with a type of file called Evernote export files, which have the extension ".enex". These files contain lots of notes or pieces of information. It allows you to create a document for each note in the export.
 
 **Params**
+
 - **file_path:** it specifies the path to the Evernote export file (.enex) that you want to load. It is a required parameter and should be a string representing the file path on your disk.
 - **metadata:** it is an optional parameter and should be a list of strings representing the metadata fields.
 ```python
 metadata_fields = ["title", "created", "updated"]
 ```
-The metadata_fields list is set to ["title", "created", "updated"], which specifies that you want to extract the title, creation date, and last updated date of each note. The loader will then load the notes from the export file and extract the specified metadata fields for each note.
+The metadata_fields list is set to ["title", "created", "updated"], which specifies that you want to extract the title, creation date, and last updated date of each note. The loader will then load the notes from the export file and extract the specified metadata fields for each note. Defaults to `{}`.
 
 
 ### FacebookChatLoader
@@ -117,8 +125,10 @@ Loader that loads Facebook messages json directory dump.
 The `FacebookChatLoader` acts as a helper that takes the Facebook chat data from the file and presents it to you in a more convenient way. It is specifically designed to handle Facebook Messenger chat data.
 
 **Params**
+
 - **file_path:** it specifies the path to the JSON file containing the Facebook chat data that you want to load.
-- **metadata:** is used to specify the metadata that you want to associate with the loaded documents. It is an optional parameter and should be an object representing the metadata.
+- **metadata:** is used to specify the metadata that you want to associate with the loaded documents. It is an optional parameter and should be an object representing the metadata.  Defaults to `{}`.
+
 
 ### GitLoader
 
@@ -143,150 +153,223 @@ Loads files from a Git repository into a list of documents.
 
 Load GitBook data.
 
+`GitbookLoader` load document from GitBook. GitBook is a platform that allows teams to document various things such as products, internal knowledge bases, and APIs.
 
-- **metadata:** 
-- **web_path:**
+**Params**
+
+- **metadata:** the metadata includes the source URL of the document and its title. This information can be useful for tracking the origin of the document and organizing the loaded data. Defaults to `{}`.
+
+- **web_path:** it refers to the path of the Gitbook web page that is being loaded. It is a string that represents the URL of the page.
+```python
+web_path = "https://docs.gitbook.com"
+```
 
 ### GutenbergLoader
 
-
 Loader that uses urllib to load .txt web files.
 
+`GutenbergLoader` is a loader that gets documents from Project Gutenberg. Project Gutenberg was the first provider of free electronic books, or eBooks.
 
-- **file_path:**
-- **metadata:** 
+**Params**
+
+- **web_path:** is used to specify the path of the file to be loaded. It is a string that represents the file path, including the file name and extension.
+```python
+web_path = "https://www.gutenberg.org/cache/epub/71107/pg71107.txt"
+```
+- **metadata:** provides information about the source of the eBook and any additional details associated with it. In the case of the provided example, the metadata for the Gutenberg eBook includes the source URL of the eBook, which is 
+```HTML
+https://www.gutenberg.org/cache/epub/71107/pg71107.txt
+```
+Defaults to `{}`.
+
 
 ### HNLoader
 
-
 Load Hacker News data from either main page results or the comments page.
 
+The `HNLoader` gets information from a website called Hacker News. Hacker News is a place where people share news and stories about computer science and starting businesses. The loader makes it easier for you to find and access the information you're interested in from that website.
 
-- **metadata:** 
-- **web_path:**
+**Params**
+
+- **metadata:** it provides additional information about a post or page. In the context of Hacker News, metadata includes details such as the source URL, title, and other relevant information about the post or page. Defaults to `{}`.
+
+- **web_path:** initialize with webpage path from Hacker News. It is a string that represents the URL of the page.
+
 
 ### iFixitLoader
 
-
 Load iFixit repair guides, device wikis and answers.
 
+The `IFixitLoader` is a document loader that helps you find and use repair guides and information from a website called iFixit. iFixit has lots of guides on how to fix different devices like phones, laptops, and other gadgets. With the loader, you can easily access these repair manuals, ask questions, and get answers about fixing things. It's a helpful resource if you need to repair something yourself.
 
-- **metadata:** 
-- **web_path:**
+**Params**
+
+- **metadata:** it provides additional information about a post or page. In the context of iFixit, metadata includes details such as the source URL, title, and other relevant information about the post or page. Defaults to `{}`.
+
+- **web_path:**  initialize with a web path from iFixit. It is a string that represents the URL of the page.
+
 
 ### IMSDbLoader
 
-
 Loader that loads IMSDb webpages.
 
+The `IMSDbLoader` get movie scripts from the Internet Movie Script Database (IMSDb). This website has scripts from many different movies. The loader makes it easier for you to access these scripts and use them for things like studying or analyzing the movie's dialogue and story.
 
-- **metadata:** 
-- **web_path:**
+**Params**
+
+- **metadata:** it provides additional information about a post or page. In the context of IMSDb, metadata includes details such as the source URL, title, and other relevant information about the post or page. Defaults to `{}`.
+
+- **web_path:** is used to specify the URL of the webpage that contains the script from the IMSDb.
+
 
 ### NotionDirectoryLoader
 
-
 Loader that loads Notion directory dump.
 
+The `NotionDirectoryLoader` is a document loader that helps you get documents from Notion directory. Notion is a website where people can work together on different projects. It has features like boards for organizing tasks, places to write and share information called wikis, and databases to store data. The loader makes it easier for you to access the documents and data stored in Notion's directory and use them for your work or projects.
 
-- **metadata:** 
-- **path:** 
+**Params**
+
+- **metadata:** it provides additional information about your document. In the context of Notion, metadata includes details such as the source file, title, and other relevant information about the post or page. Defaults to `{}`.
+
+- **path:** it refers to the directory path where the Notion documents are located. It specifies the location from which the loader will load the documents. The path can be a local file.
+
 
 ### PyPDFLoader
 
-
 Loads a PDF with pypdf and chunks at character level.
 
+`PyPDFLoader` helps you work with PDF files using a library called PyPDF. It allows you to open and access the content of PDFs. With `PyPDFLoader`, you can convert PDFs into a collection of separate documents. Each document represents a different page in the PDF and includes information like the text on that page and other details about it, such as the page number. It makes it easier to extract information or manipulate the content of PDFs using code.
 
-- **file_path:**
-- **metadata:** 
+**Params**
+
+- **file_path:** is used to specify the path to the PDF file that you want to load. It is a string that represents the file path on your system where the PDF file is located.
+
+- **metadata:** it refers to additional information associated with each document loaded from a PDF file. It provides details about the document, such as the page number, structure, and tags. Defaults to `{}`.
+
 
 ### ReadTheDocsLoader
 
-
 Loader that loads ReadTheDocs documentation directory dump.
 
+`ReadTheDocsLoader` load content from HTML that was generated as part of a Read-The-Docs build. This assumes that the HTML has already been scraped into a folder.
 
-- **metadata:** 
-- **path:** 
+**Params**
+
+- **metadata:** it refers to additional information associated with the document loaded from a ReadTheDocs Documentation. Defaults to `{}`.
+
+- **path:** it refers the location of pulled readthedocs folder.
+
 
 ### SRTLoader
 
-
 Loader for .srt (subtitle) files.
 
+`SRTLoader` load SubRip file format, also known as .srt, is a basic subtitle format used in multimedia containers. It contains formatted lines of plain text in groups separated by a blank line. Subtitles are numbered sequentially, starting at 1, and the timecode format used is hours:minutes:seconds,milliseconds. 
 
-- **file_path:**
-- **metadata:** 
+**Params**
+
+- **file_path:** is used to specify the path of the SRT file that you want to load. It is a string that represents the file path, including the file name and extension.
+
+- **metadata:** is specific to the subtitle file and may not include additional metadata about the content of the subtitles themselves. Defaults to `{}`.
+
 
 ### SlackDirectoryLoader
 
-
 Loader for loading documents from a Slack directory dump.
 
+`SlackDirectoryLoader` load content from an exported Slack data.
 
-- **file_path:**
-- **metadata:** 
+**Params**
+
+- **file_path:** it refers to the path or location of the file that needs to be loaded. You can do this by going to your Workspace Management page and clicking the Import/Export option ({your_slack_domain}.slack.com/services/export). Then, choose the right date range and click Start export. Slack will send you an email and a DM when the export is ready.
+
+- **metadata:** it refers to additional information associated with the document loaded from a Slack data. Defaults to `{}`.
+
 
 ### TextLoader
 
-
 Load text files.
 
+The `TextLoader` reads the file and creates a Document object. Think of the Document object as a container that holds the text from the file in a structured way, making it easier to work with.
 
-- **file_path:**
-- **metadata:** 
+**Params**
+
+- **file_path:** it is used to identify the location of the file that contains the `.txt` data to be loaded.
+
+- **metadata:** it refers to additional information associated with the document loaded from a text data. Defaults to `{}`.
+
 
 ### UnstructuredEmailLoader
 
-
 Loader that uses unstructured to load email files.
 
+The `UnstructuredEmailLoader` is a loader that uses unstructured to load email files. Works with both `.eml` and `.msg` files.
 
-- **file_path:**
-- **metadata:** 
+**Params**
+
+- **file_path:** it is used to identify the location of the email file in the file system.
+- **metadata:** it refers to additional information associated with the document loaded from a email data. Defaults to `{}`.
+
 
 ### UnstructuredHTMLLoader
 
-
 Loader that uses unstructured to load HTML files.
 
+The `UnstructuredHTMLLoader` is a loader that uses unstructured to load `.html` files.
 
-- **file_path:**
-- **metadata:** 
+**Params**
+
+- **file_path:** it is used to identify the location of the HMTL file in the file system.
+- **metadata:** it refers to additional information associated with the document loaded from a HTML data. Defaults to `{}`.
+
 
 ### UnstructuredMarkdownLoader
 
-
 Loader that uses unstructured to load markdown files.
 
+The `UnstructuredMarkdownLoader` is a loader that uses unstructured to load `.md` files.
 
-- **file_path:**
-- **metadata:** 
+**Params**
+
+- **file_path:** it is used to identify the location of the `md` file in the file system.
+- **metadata:** it refers to additional information associated with the document loaded from a `md` data. Defaults to `{}`.
+
 
 ### UnstructuredPowerPointLoader
 
-
 Loader that uses unstructured to load powerpoint files.
 
+The `UnstructuredPowerPointLoader` is a loader that uses unstructured to load `.pptx` files.
 
-- **file_path:**
-- **metadata:** 
+**Params**
+
+- **file_path:** it is used to identify the location of the `pptx` file in the file system.
+
+- **metadata:** it refers to additional information associated with the document loaded from a `pptx` data. Defaults to `{}`.
+
 
 ### UnstructuredWordDocumentLoader
 
-
 Loader that uses unstructured to load word documents.
 
+The `UnstructuredWordDocumentLoader` is a loader that uses unstructured to load `.docx` files.
 
-- **file_path:**
-- **metadata:** 
+**Params**
+
+- **file_path:** it is used to identify the location of the `docx` file in the file system.
+
+- **metadata:** it refers to additional information associated with the document loaded from a `docx` data. Defaults to `{}`.
+
 
 ### WebBaseLoader
 
-
 Loader that uses urllib and beautiful soup to load webpages.
 
+The `WebBaseLoader` gather information from a website. It's like a super-powered web browser that can automatically explore and collect data from different pages of a website. `WebBaseLoader` relies on a sitemap, which is like a map that shows all the pages on a website. You provide the WebBaseLoader with the URL (web address) of the sitemap, and it uses that information to find and visit all the pages listed in the sitemap.
 
-- **metadata:** 
-- **web_path:**
+**Params**
+
+- **metadata:** is used to include additional information about the content being loaded. It can provide context, source details, timestamps, or any other relevant information related to the content. The metadata extraction function allows the user to specify which information from the data source should be included in the metadata of the final document object. Defaults to `{}`.
+
+- **web_path:** is used to load a sitemap from a given URL and scrape and load all pages in the sitemap.
