@@ -143,6 +143,9 @@ The cursor: default; property value restores the browser's default cursor style 
 
 
 @layer components {
+  .round-buttons-position {
+    @apply fixed right-4
+  }
   .side-bar-arrangement {
     @apply flex h-full w-52 flex-col overflow-hidden border-r scrollbar-hide
   }
@@ -206,5 +209,22 @@ The cursor: default; property value restores the browser's default cursor style 
   .input-dialog{
     @apply text-ring cursor-pointer bg-transparent
   }
-
+  .round-button-form {
+    @apply flex h-12 w-12 cursor-pointer justify-center rounded-full bg-border px-3 py-1 shadow-md
+  }
+  .round-button-div {
+    @apply flex items-center gap-3
+  }
+  .build-trigger-loading-icon {
+    @apply stroke-build-trigger
+  }
+  .build-trigger-icon {
+    @apply w-6 fill-build-trigger stroke-1 stroke-build-trigger
+  }
+  .message-button-position {
+    @apply absolute bottom-4 right-3
+  }
+  .message-button-icon {
+    @apply w-6 fill-chat-trigger stroke-chat-trigger stroke-1
+  }
 }
