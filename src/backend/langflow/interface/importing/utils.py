@@ -169,25 +169,22 @@ def get_function_custom(code):
     class_name = "MyPythonClass"
 
     code = """
+from langchain.llms import OpenAI
 from langchain.chains import ConversationChain
+from langchain.memory import ConversationBufferMemory
+
 
 class MyPythonClass:
-    def __init__(self, title: str, author: str, year_published: int):
-        self.title = title
-        self.author = author
-        self.year_published = year_published
+    def my_conversation(self):
+        llm = OpenAI(temperature=0)
+        return ConversationChain(
+            llm=llm, verbose=True, memory=ConversationBufferMemory()
+        )
 
-    def get_details(self):
-        return f"Title: {self.title}, Author: {self.author}, Year Published: {self.year_published}"
-
-    def update_year_published(self, new_year: int):
-        self.year_published = new_year
-        print(f"The year of publication has been updated to {new_year}.")
-
-    def build(self, name, my_int, my_str, my_bool, no_type):
-        # do something...
-        print("x")
-        return ""
+    def build(self, name: str) -> ConversationChain:
+        conversation = self.my_conversation()
+        
+        return conversation
     """
 
     return validate.create_class(code, class_name)

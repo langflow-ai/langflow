@@ -186,6 +186,16 @@ def create_class(code, class_name):
                     raise ModuleNotFoundError(
                         f"Module {alias.name} not found. Please install it and try again."
                     ) from e
+        elif isinstance(node, ast.ImportFrom):
+            try:
+                imported_module = importlib.import_module(node.module)
+                for alias in node.names:
+                    exec_globals[alias.name] = getattr(
+                        imported_module, alias.name)
+            except ModuleNotFoundError as e:
+                raise ModuleNotFoundError(
+                    f"Module {node.module} not found. Please install it and try again."
+                ) from e
 
     class_code = next(
         node
@@ -208,6 +218,8 @@ def create_class(code, class_name):
 
         instance = exec_globals[class_name](*args, **kwargs)
         return instance
+
+    build.__globals__.update(exec_globals)
 
     return build
 
