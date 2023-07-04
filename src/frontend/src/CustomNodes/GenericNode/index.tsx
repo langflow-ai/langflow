@@ -66,7 +66,7 @@ export default function GenericNode({
     deleteNode(data.id);
     return;
   }
-
+  console.log(data);
   useEffect(() => {}, [closePopUp, data.node.template]);
   return (
     <>
@@ -233,7 +233,7 @@ export default function GenericNode({
             <ParameterComponent
               data={data}
               color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-              title={data.node.output_types ? data.node.output_types.join("|") : data.type}
+              title={data.node.output_types && data.node.output_types.length > 0 ? data.node.output_types.join("|") : data.type}
               tooltipTitle={data.node.base_classes.join("\n")}
               id={[data.type, data.id, ...data.node.base_classes].join("|")}
               type={data.node.base_classes.join("|")}
