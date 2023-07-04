@@ -65,6 +65,7 @@ class VectorStoreFrontendNode(FrontendNode):
                 show=True,
                 advanced=True,
                 multiline=False,
+                password=True,
                 value="",
             )
             extra_field2 = TemplateField(
