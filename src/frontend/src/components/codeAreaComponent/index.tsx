@@ -13,7 +13,7 @@ export default function CodeAreaComponent({
   editNode = false,
   nodeClass,
   setNodeClass,
-}: CodeAreaComponentType) {
+}: TextAreaComponentType) {
   const [myValue, setMyValue] = useState(
     typeof value == "string" ? value : JSON.stringify(value)
   );
@@ -52,7 +52,7 @@ export default function CodeAreaComponent({
           }}
           className={
             editNode
-              ? "input-edit-node input-dialog"
+              ? "input-edit-node input-dialog "
               : "input-primary input-dialog " + (disabled ? "input-disable" : "")
           }
         >
