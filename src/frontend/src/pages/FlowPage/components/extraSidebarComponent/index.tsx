@@ -63,7 +63,7 @@ export default function ExtraSidebar() {
       <div className="mb-2 mt-2 flex w-full items-center justify-between gap-2 px-2">
         <ShadTooltip content="Import" side="top">
           <button
-            className="relative inline-flex w-full items-center justify-center rounded-md bg-background   px-2 py-2 text-foreground shadow-sm ring-1 ring-inset ring-input transition-all duration-500 ease-in-out hover:bg-muted"
+            className="extra-side-bar-buttons"
             onClick={() => {
               // openPopUp(<ImportModal />);
               uploadFlow();
@@ -76,7 +76,7 @@ export default function ExtraSidebar() {
         <ShadTooltip content="Export" side="top">
           <button
             className={classNames(
-              "relative inline-flex w-full items-center justify-center rounded-md bg-background   px-2 py-2 text-foreground shadow-sm ring-1 ring-inset  ring-input transition-all duration-500 ease-in-out hover:bg-muted"
+              "extra-side-bar-buttons"
             )}
             onClick={(event) => {
               openPopUp(<ExportModal />);
@@ -88,7 +88,7 @@ export default function ExtraSidebar() {
         <ShadTooltip content="Code" side="top">
           <button
             className={classNames(
-              "relative inline-flex w-full items-center justify-center rounded-md bg-background   px-2 py-2 text-foreground shadow-sm ring-1 ring-inset  ring-input transition-all duration-500 ease-in-out hover:bg-muted"
+              "extra-side-bar-buttons"
             )}
             onClick={(event) => {
               openPopUp(<ApiModal flow={flows.find((f) => f.id === tabId)} />);
@@ -100,7 +100,7 @@ export default function ExtraSidebar() {
 
         <ShadTooltip content="Save" side="top">
           <button
-            className="relative inline-flex w-full items-center justify-center rounded-md bg-background   px-2 py-2 text-foreground shadow-sm ring-1 ring-inset  ring-input transition-all duration-500 ease-in-out hover:bg-muted"
+            className="extra-side-bar-buttons"
             onClick={(event) => {
               saveFlow(flows.find((f) => f.id === tabId));
               setSuccessData({ title: "Changes saved successfully" });
@@ -110,7 +110,7 @@ export default function ExtraSidebar() {
             <Save
               strokeWidth={1.5}
               className={
-                "h-5 w-5" + (isPending ? " " : " text-muted-foreground")
+                "h-5 w-5" + (isPending ? " " : " extra-side-bar-save-disable")
               }
             ></Save>
           </button>
