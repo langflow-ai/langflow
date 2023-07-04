@@ -143,6 +143,7 @@ class VectorStoreFrontendNode(FrontendNode):
                 show=True,
                 advanced=True,
                 multiline=False,
+                password=True,
                 value="",
             )
             extra_fields.extend((extra_field, extra_field2, extra_field3, extra_field4))
