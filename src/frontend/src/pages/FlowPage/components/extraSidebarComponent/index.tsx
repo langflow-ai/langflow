@@ -135,7 +135,7 @@ export default function ExtraSidebar() {
         </div>
       </div>
 
-      <div className="w-full overflow-auto scrollbar-hide">
+      <div className="w-full overflow-auto scrollbar-hide pb-10">
         {Object.keys(dataFilter)
           .sort()
           .map((d: keyof APIObjectType, i) =>
