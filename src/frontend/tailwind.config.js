@@ -52,6 +52,7 @@ module.exports = {
         "btn-shadow": "var(--round-btn-shadow)",
         "build-trigger": "var(--build-trigger)",
         "chat-trigger": "var(--chat-trigger)",
+        "chat-trigger-disabled": "var(--chat-trigger-disabled)",
         "blur-shared": "var(--blur-shared)",
         "dark-blue": "var(--dark-blue)",
         "dark-gray": "var(--dark-gray)",
