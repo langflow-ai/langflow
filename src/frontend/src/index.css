@@ -281,4 +281,28 @@ The cursor: default; property value restores the browser's default cursor style 
   .main-page-flows-display {
     @apply grid w-full gap-4 p-4 md:grid-cols-2 lg:grid-cols-4
   }
+
+  .community-page-arrangement {
+    @apply flex-max-width h-full flex-col overflow-auto bg-muted px-16
+  }
+
+  .community-page-nav-arrangement {
+    @apply flex-max-width justify-between px-6 py-12 pb-2
+  }
+
+  .community-page-nav-title {
+    @apply flex items-center justify-center gap-2 text-2xl font-semibold
+  }
+
+  .community-page-nav-button {
+    @apply flex gap-2
+  }
+
+  .community-page-description-text {
+    @apply flex w-[70%] px-6 pb-8 text-muted-foreground 
+  }
+
+  .community-pages-flows-panel {
+    @apply grid w-full gap-4 p-4 md:grid-cols-2 lg:grid-cols-4
+  }
 }
