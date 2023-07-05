@@ -1,4 +1,4 @@
-import { ShadTooltipProps } from "../../types/components";
+import { RadialProgressType, ShadToolTipType } from "../../types/components";
 import {
   Tooltip,
   TooltipContent,
@@ -6,20 +6,20 @@ import {
   TooltipTrigger,
 } from "../ui/tooltip";
 
-const ShadTooltip = ({
-  delayDuration = 500,
-  side,
+export default function ShadTooltip({
   content,
+  side,
+  asChild = true,
   children,
-  style,
-}: ShadTooltipProps) => {
+  delayDuration
+}: ShadToolTipType) {
+
   return (
     <TooltipProvider>
       <Tooltip delayDuration={delayDuration}>
-        <TooltipTrigger asChild>{children}</TooltipTrigger>
+        <TooltipTrigger asChild={asChild}>{children}</TooltipTrigger>
 
         <TooltipContent
-          className={style}
           side={side}
           avoidCollisions={false}
           sticky="always"
@@ -29,6 +29,5 @@ const ShadTooltip = ({
       </Tooltip>
     </TooltipProvider>
   );
-};
+}
 
-export default ShadTooltip;
