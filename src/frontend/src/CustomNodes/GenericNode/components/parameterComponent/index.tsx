@@ -101,6 +101,7 @@ export default function ParameterComponent({
 
     refHtml.current = groupedObj.map((item, i) => {
       const Icon: any = nodeIconsLucide[item.family];
+      
       return (
         <span
           key={getRandomKeyByssmm() + item.family + i}
@@ -127,7 +128,7 @@ export default function ParameterComponent({
             {nodeNames[item.family] ?? ""}{" "}
             <span className="text-xs">
               {" "}
-              -&nbsp;
+              {item.type == "" ? '' : ' - '}
               {item.type.split(", ").length > 2
                 ? item.type.split(", ").map((el, i) => (
                     <React.Fragment key={el + i}>

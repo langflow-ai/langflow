@@ -890,7 +890,7 @@ export function groupByFamily(data, baseClasses, left, type) {
     groupedArray.forEach((object, index, self) => {
       const findObj = arrOfLength.find(x => x.type == object.family);
       if(object.component.length == findObj.length){
-        self[index]['type'] = object.type;
+        self[index]['type'] = "";
       }
       else{
         self[index]['type'] = object.component.join(', ');
