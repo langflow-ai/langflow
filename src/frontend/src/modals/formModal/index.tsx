@@ -91,19 +91,20 @@ export default function FormModal({
   var isStream = false;
 
   const addChatHistory = (
-    message: string,
+    message: string | Object,
     isSend: boolean,
+    chatKey: string,
     thought?: string,
     files?: Array<any>
   ) => {
     setChatHistory((old) => {
       let newChat = _.cloneDeep(old);
       if (files) {
-        newChat.push({ message, isSend, files, thought });
+        newChat.push({ message, isSend, files, thought, chatKey });
       } else if (thought) {
-        newChat.push({ message, isSend, thought });
+        newChat.push({ message, isSend, thought, chatKey });
       } else {
-        newChat.push({ message, isSend });
+        newChat.push({ message, isSend, chatKey });
       }
       return newChat;
     });
@@ -175,6 +176,7 @@ export default function FormModal({
             is_bot: boolean;
             message: string;
             type: string;
+            chatKey: string;
             files?: Array<any>;
           }) => {
             if (chatItem.message) {
@@ -182,14 +184,16 @@ export default function FormModal({
                 chatItem.files
                   ? {
                       isSend: !chatItem.is_bot,
-                      message: formatMessage(chatItem.message),
+                      message: chatItem.message,
                       thought: chatItem.intermediate_steps,
                       files: chatItem.files,
+                      chatKey: chatItem.chatKey,
                     }
                   : {
                       isSend: !chatItem.is_bot,
-                      message: formatMessage(chatItem.message),
+                      message: chatItem.message,
                       thought: chatItem.intermediate_steps,
+                      chatKey: chatItem.chatKey,
                     }
               );
             }
@@ -199,7 +203,7 @@ export default function FormModal({
       });
     }
     if (data.type === "start") {
-      addChatHistory("", false);
+      addChatHistory("", false, chatKey);
       isStream = true;
     }
     if (data.type === "end") {
@@ -326,10 +330,6 @@ export default function FormModal({
       // so the formated message is a string with the keys and values separated by ": "
       let message = "";
       for (const [key, value] of Object.entries(inputs)) {
-        // make key bold
-        // dangerouslySetInnerHTML={{
-        //           __html: message.replace(/\n/g, "<br>"),
-        //         }}
         message += `<b>${key}</b>: ${value}\n`;
       }
       return message;
@@ -344,8 +344,8 @@ export default function FormModal({
         setLockChat(true);
         let inputs = tabsState[id.current].formKeysData.input_keys;
         setChatValue("");
-        const message = formatMessage(inputs);
-        addChatHistory(message, true);
+        const message = inputs;
+        addChatHistory(message, true, chatKey);
         sendAll({
           ...reactFlowInstance.toObject(),
           inputs: inputs,
