@@ -176,8 +176,14 @@ The cursor: default; property value restores the browser's default cursor style 
   .extra-side-bar-save-disable {
     @apply text-muted-foreground
   }
+  .extra-side-bar-save-disable:hover {
+    @apply hover:text-accent-foreground
+  }
   .side-bar-button-size {
     @apply h-5 w-5
+  }
+  .side-bar-button-size:hover {
+    @apply hover:text-accent-foreground
   }
   .side-bar-buttons-arrangement {
     @apply mb-2 mt-2 flex w-full items-center justify-between gap-2 px-2
@@ -524,5 +530,66 @@ The cursor: default; property value restores the browser's default cursor style 
 
   .float-component-pointer {
     @apply pointer-events-none cursor-not-allowed
+  }
+
+  .header-menu-bar {
+    @apply flex items-center gap-0.5 rounded-md px-1.5 py-1 text-sm font-medium
+  }
+  .header-menu-bar-display {
+    @apply flex max-w-[200px] items-center gap-2
+  }
+  .header-menu-flow-name {
+    @apply flex-1 truncate
+  }
+  .header-menu-options {
+    @apply mr-2 h-4 w-4
+  }
+
+  .header-arrangement {
+    @apply flex-max-width h-12 items-center justify-between border-b bg-muted
+  }
+  .header-start-display {
+    @apply flex w-96 items-center justify-start gap-2
+  }
+  .header-end-division {
+    @apply flex w-96 justify-end px-2
+  }
+  .header-end-display {
+    @apply ml-auto mr-2 flex items-center gap-5
+  }
+  .header-github-link {
+    @apply inline-flex shadow-sm items-center justify-center text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background text-muted-foreground  border border-input hover:bg-accent hover:text-accent-foreground h-9 px-3 pr-0 rounded-md
+  }
+  .header-github-display {
+    @apply -mr-px ml-2 flex h-9 items-center justify-center rounded-md rounded-l-none border bg-background px-2 text-sm
+  }
+  .header-notifications-box {
+    @apply fixed left-0 top-0 h-screen w-screen
+  }
+  .header-notifications {
+    @apply absolute right-[3px] h-1.5 w-1.5 rounded-full bg-destructive
+  }
+
+  .input-component-div {
+    @apply pointer-events-none relative cursor-not-allowed
+  }
+  .input-component-button {
+    @apply absolute inset-y-0 right-0 items-center text-muted-foreground
+  }
+  .input-component-true-button {
+    @apply input-component-button pr-2
+  }
+  .input-component-false-button {
+    @apply input-component-button px-4
+  }
+  .input-component-true-svg {
+    @apply absolute bottom-0.5 right-2 side-bar-button-size
+  }
+  .input-component-false-svg {
+    @apply absolute bottom-2 right-3 side-bar-button-size
+  }
+  
+  .input-file-component {
+    @apply flex-max-width items-center
   }
 }
