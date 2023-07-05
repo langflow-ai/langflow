@@ -59,7 +59,7 @@ export default function ParameterComponent({
   }, [data.id, position, updateNodeInternals]);
 
   const [enabled, setEnabled] = useState(
-    data.node.template[name]?.value ?? false
+    data.node.template[name]?.value ?? false,
   );
 
   useEffect(() => {}, [closePopUp, data.node.template]);
@@ -101,7 +101,7 @@ export default function ParameterComponent({
       <span
         key={getRandomKeyByssmm()}
         className={classNames(
-          i > 0 ? "items-center flex mt-3" : "items-center flex"
+          i > 0 ? "items-center flex mt-3" : "items-center flex",
         )}
       >
         <div
@@ -183,7 +183,7 @@ export default function ParameterComponent({
               }
               className={classNames(
                 left ? "-ml-0.5 " : "-mr-0.5 ",
-                "w-3 h-3 rounded-full border-2 bg-white dark:bg-gray-800"
+                "w-3 h-3 rounded-full border-2 bg-white dark:bg-gray-800",
               )}
               style={{
                 borderColor: color,

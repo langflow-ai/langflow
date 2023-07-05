@@ -28,7 +28,7 @@ export default function CommunityPage() {
         setErrorData({
           title: "there was an error loading examples, please try again",
           list: [error.message],
-        })
+        }),
       );
   }
   const navigate = useNavigate();
@@ -57,7 +57,7 @@ export default function CommunityPage() {
         </div>
       </div>
       <span className="flex pb-8 px-6 w-[70%] text-muted-foreground">
-        Discover and learn from shared examples by the LangFlow community. We
+        Discover and learn from shared examples by the Langflow community. We
         welcome new example contributions that can help our community explore
         new and powerful features.
       </span>

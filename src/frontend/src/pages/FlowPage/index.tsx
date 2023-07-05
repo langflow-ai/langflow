@@ -31,7 +31,7 @@ export default function FlowPage() {
         href="https://logspace.ai/"
         className="absolute left-7 bottom-2 flex h-6 cursor-pointer flex-col items-center justify-start overflow-hidden rounded-lg bg-foreground px-2 text-center font-sans text-xs tracking-wide text-secondary transition-all duration-500 ease-in-out hover:h-12"
       >
-        {version && <div className="mt-1">⛓️ LangFlow v{version}</div>}
+        {version && <div className="mt-1">⛓️ Langflow v{version}</div>}
         <div className={version ? "mt-2" : "mt-1"}>Created by Logspace</div>
       </a>
     </div>

@@ -48,6 +48,26 @@ def update_settings(
         settings.update_settings(cache=cache)
 
 
+def load_params():
+    """
+    Load the parameters from the environment variables.
+    """
+    global_vars = globals()
+
+    for key, value in global_vars.items():
+        env_key = f"LANGFLOW_{key.upper()}"
+        if env_key in os.environ:
+            if isinstance(value, bool):
+                # Handle booleans
+                global_vars[key] = os.getenv(env_key, str(value)).lower() == "true"
+            elif isinstance(value, int):
+                # Handle integers
+                global_vars[key] = int(os.getenv(env_key, str(value)))
+            elif isinstance(value, str) or value is None:
+                # Handle strings and None values
+                global_vars[key] = os.getenv(env_key, str(value))
+
+
 def serve_on_jcloud():
     """
     Deploy Langflow server on Jina AI Cloud
@@ -149,6 +169,7 @@ def serve(
     # override env variables with .env file
     if env_file:
         load_dotenv(env_file, override=True)
+        load_params()
 
     if jcloud:
         return serve_on_jcloud()
@@ -244,7 +265,7 @@ def get_free_port(port):
 def print_banner(host, port):
     # console = Console()
 
-    word = "LangFlow"
+    word = "Langflow"
     colors = ["#3300cc"]
 
     styled_word = ""

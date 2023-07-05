@@ -117,7 +117,7 @@ export default function CodeAreaModal({
                   setErrorData({
                     title:
                       "There is something wrong with this code, please review it",
-                  })
+                  }),
                 );
             }}
             type="submit"

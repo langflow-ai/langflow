@@ -1,6 +1,6 @@
-# Contributing to LangFlow
+# Contributing to Langflow
 
-Hello there! We appreciate your interest in contributing to LangFlow.
+Hello there! We appreciate your interest in contributing to Langflow.
 As an open-source project in a rapidly developing field, we are extremely open
 to contributions, whether it be in the form of a new feature, improved infra, or better documentation.
 
@@ -40,7 +40,7 @@ the system we use to tag our issues and pull requests.
 
 
 ### Local development
-You can develop LangFlow using docker compose, or locally.
+You can develop Langflow using docker compose, or locally.
 
 We provide a .vscode/launch.json file for debugging the backend in VSCode, which is a lot faster than using docker compose.
 

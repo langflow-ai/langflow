@@ -82,7 +82,7 @@ export default function GenericNode({
       <div
         className={classNames(
           selected ? "border border-ring" : "border dark:border-gray-700",
-          "prompt-node relative flex w-96 flex-col justify-center rounded-lg bg-white dark:bg-gray-900"
+          "prompt-node relative flex w-96 flex-col justify-center rounded-lg bg-white dark:bg-gray-900",
         )}
       >
         <div className="flex w-full items-center justify-between gap-8 rounded-t-lg border-b bg-muted p-4 dark:border-b-gray-700 dark:bg-gray-800 dark:text-white ">
@@ -132,7 +132,7 @@ export default function GenericNode({
                       validationStatus && validationStatus.valid
                         ? "w-4 h-4 rounded-full bg-green-500 opacity-100"
                         : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
+                      "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200",
                     )}
                   ></div>
                   <div
@@ -140,7 +140,7 @@ export default function GenericNode({
                       validationStatus && !validationStatus.valid
                         ? "w-4 h-4 rounded-full  bg-red-500 opacity-100"
                         : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
+                      "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200",
                     )}
                   ></div>
                   <div
@@ -148,7 +148,7 @@ export default function GenericNode({
                       !validationStatus || isBuilding
                         ? "w-4 h-4 rounded-full  bg-yellow-500 opacity-100"
                         : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
+                      "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200",
                     )}
                   ></div>
                 </div>
@@ -217,7 +217,7 @@ export default function GenericNode({
             <div
               className={classNames(
                 Object.keys(data.node.template).length < 1 ? "hidden" : "",
-                "flex w-full justify-center"
+                "flex w-full justify-center",
               )}
             >
               {" "}

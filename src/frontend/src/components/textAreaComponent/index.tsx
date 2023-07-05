@@ -47,7 +47,7 @@ export default function TextAreaComponent({
                   setMyValue(t);
                   onChange(t);
                 }}
-              />
+              />,
             );
           }}
           className={
@@ -73,7 +73,7 @@ export default function TextAreaComponent({
                   setMyValue(t);
                   onChange(t);
                 }}
-              />
+              />,
             );
           }}
         >

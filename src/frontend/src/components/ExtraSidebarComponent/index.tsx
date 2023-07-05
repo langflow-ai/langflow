@@ -34,7 +34,7 @@ export default function ExtraSidebar() {
                             item.href.split("/")[2] === current[4]
                               ? "bg-muted text-gray-900"
                               : "bg-white text-gray-600 hover:bg-muted hover:text-gray-900",
-                            "group w-full flex items-center pl-2 py-2 text-sm font-medium rounded-md"
+                            "group w-full flex items-center pl-2 py-2 text-sm font-medium rounded-md",
                           )}
                         >
                           <item.icon
@@ -42,7 +42,7 @@ export default function ExtraSidebar() {
                               item.href.split("/")[2] === current[4]
                                 ? "text-gray-500"
                                 : "text-gray-400 group-hover:text-gray-500",
-                              "mr-3 flex-shrink-0 h-6 w-6"
+                              "mr-3 flex-shrink-0 h-6 w-6",
                             )}
                           />
                           {item.name}
@@ -61,7 +61,7 @@ export default function ExtraSidebar() {
                                 item.href.split("/")[2] === current[4]
                                   ? "bg-muted text-gray-900"
                                   : "bg-white text-gray-600 hover:bg-muted hover:text-gray-900",
-                                "group w-full flex items-center pl-2 pr-1 py-2 text-left text-sm font-medium rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                "group w-full flex items-center pl-2 pr-1 py-2 text-left text-sm font-medium rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500",
                               )}
                             >
                               <item.icon
@@ -74,7 +74,7 @@ export default function ExtraSidebar() {
                                   open
                                     ? "text-gray-400 rotate-90"
                                     : "text-gray-300",
-                                  "ml-3 h-5 w-5 flex-shrink-0 transition-rotate duration-150 ease-in-out group-hover:text-gray-400"
+                                  "ml-3 h-5 w-5 flex-shrink-0 transition-rotate duration-150 ease-in-out group-hover:text-gray-400",
                                 )}
                                 viewBox="0 0 20 20"
                                 aria-hidden="true"
@@ -94,7 +94,7 @@ export default function ExtraSidebar() {
                                     subItem.href.split("/")[3] === current[5]
                                       ? "bg-muted text-gray-900"
                                       : "bg-white text-gray-600 hover:bg-muted hover:text-gray-900",
-                                    "group flex w-full items-center rounded-md py-2 pl-11 pr-2 text-sm font-medium"
+                                    "group flex w-full items-center rounded-md py-2 pl-11 pr-2 text-sm font-medium",
                                   )}
                                 >
                                   {subItem.name}
@@ -104,7 +104,7 @@ export default function ExtraSidebar() {
                           </>
                         )}
                       </Disclosure>
-                    )
+                    ),
                   )}
                 </nav>
               </div>

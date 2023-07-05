@@ -51,7 +51,7 @@ export default function ChatModal({
     message: string,
     isSend: boolean,
     thought?: string,
-    files?: Array<any>
+    files?: Array<any>,
   ) => {
     setChatHistory((old) => {
       let newChat = _.cloneDeep(old);
@@ -147,10 +147,10 @@ export default function ChatModal({
                       isSend: !chatItem.is_bot,
                       message: chatItem.message,
                       thought: chatItem.intermediate_steps,
-                    }
+                    },
               );
             }
-          }
+          },
         );
         return newChatHistory;
       });
@@ -189,7 +189,7 @@ export default function ChatModal({
     try {
       const urlWs = getWebSocketUrl(
         id.current,
-        process.env.NODE_ENV === "development"
+        process.env.NODE_ENV === "development",
       );
       const newWs = new WebSocket(urlWs);
       newWs.onopen = () => {
@@ -380,7 +380,7 @@ export default function ChatModal({
                       <span>
                         👋{" "}
                         <span className="text-gray-600 dark:text-gray-300 text-lg">
-                          LangFlow Chat
+                          Langflow Chat
                         </span>
                       </span>
                       <br />
