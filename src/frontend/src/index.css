@@ -230,11 +230,8 @@ The cursor: default; property value restores the browser's default cursor style 
   .components-disclosure-arrangement {
     @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-muted px-3 py-2
   }
-  .text-color {
-    @apply text-primary
-  }
   .components-disclosure-title {
-    @apply flex items-center text-sm text-color
+    @apply flex items-center text-sm text-primary
   }
   .components-disclosure-div {
     @apply flex gap-2
@@ -249,11 +246,7 @@ The cursor: default; property value restores the browser's default cursor style 
   .logspace-page-icon:hover {
     @apply hover:h-12
   }
-
-  .logspace-icon-text {
-    @apply mt-1
-  }
-
+  
   .flex-max-width {
     @apply flex w-full
   }
