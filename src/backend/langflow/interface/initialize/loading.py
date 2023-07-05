@@ -24,7 +24,6 @@ from langflow.utils import validate
 from langchain.chains.base import Chain
 from langchain.vectorstores.base import VectorStore
 from langchain.document_loaders.base import BaseLoader
-from langchain.prompts.base import BasePromptTemplate
 
 
 def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
@@ -158,7 +157,7 @@ def instantiate_agent(class_object: Type[agent_module.Agent], params: Dict):
     return load_agent_executor(class_object, params)
 
 
-def instantiate_prompt(node_type, class_object: Type[BasePromptTemplate], params: Dict):
+def instantiate_prompt(node_type, class_object, params: Dict):
     if node_type == "ZeroShotPrompt":
         if "tools" not in params:
             params["tools"] = []
@@ -284,7 +283,7 @@ def instantiate_documentloader(class_object: Type[BaseLoader], params: Dict):
         # like lambda x: x.endswith(".txt") but as we don't know
         # anything besides the string, we will simply check if the string is
         # in x and if it is, we will return True
-        file_filter = params.pop("file_filter", None)
+        file_filter = params.pop("file_filter")
         extensions = file_filter.split(",")
         params["file_filter"] = lambda x: any(
             extension.strip() in x for extension in extensions
