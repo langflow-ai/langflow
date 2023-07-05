@@ -43,8 +43,9 @@ export default function FormModal({
   const [chatValue, setChatValue] = useState(() => {
     try {
       const { formKeysData } = tabsState[flow.id];
-      if (!formKeysData) throw new Error("formKeysData is undefined");
-
+      if (!formKeysData) {
+        throw new Error("formKeysData is undefined");
+      }
       const inputKeys = formKeysData.input_keys;
       const handleKeys = formKeysData.handle_keys;
 
