@@ -15,9 +15,7 @@ export default function DisclosureComponent({
             <Disclosure.Button className="components-disclosure-arrangement">
               <div className="flex gap-4">
                 <Icon strokeWidth={1.5} size={22} className="text-primary" />
-                <span className="components-disclosure-title">
-                  {title}
-                </span>
+                <span className="components-disclosure-title">{title}</span>
               </div>
               <div className="components-disclosure-div">
                 {buttons.map((x, index) => (

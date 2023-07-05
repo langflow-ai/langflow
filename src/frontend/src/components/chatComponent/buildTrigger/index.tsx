@@ -127,7 +127,7 @@ export default function BuildTrigger({
 
   async function enforceMinimumLoadingTime(
     startTime: number,
-    minimumLoadingTime: number
+    minimumLoadingTime: number,
   ) {
     const elapsedTime = Date.now() - startTime;
     const remainingTime = minimumLoadingTime - elapsedTime;
@@ -156,7 +156,11 @@ export default function BuildTrigger({
       leaveFrom="translate-y-0"
       leaveTo="translate-y-96"
     >
-      <div className={'round-buttons-position' + (isBuilt ? " bottom-20" : " bottom-4")}>
+      <div
+        className={
+          "round-buttons-position" + (isBuilt ? " bottom-20" : " bottom-4")
+        }
+      >
         <div
           className={`${eventClick} round-button-form`}
           onClick={() => {
@@ -175,7 +179,10 @@ export default function BuildTrigger({
                   value={progress}
                 ></RadialProgressComponent>
               ) : isBuilding ? (
-                <Loading strokeWidth={1.5} className="build-trigger-loading-icon" />
+                <Loading
+                  strokeWidth={1.5}
+                  className="build-trigger-loading-icon"
+                />
               ) : (
                 <Zap strokeWidth={1.5} className="build-trigger-icon" />
               )}

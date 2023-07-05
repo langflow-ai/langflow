@@ -104,11 +104,10 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
   useEffect(() => {
     if (closeEdit !== "") {
       tweak.current = getTweak;
-      if(tweak.current.length > 0){
+      if (tweak.current.length > 0) {
         setActiveTab("3");
         openAccordions();
-      }
-      else{
+      } else {
         startTweaks();
       }
     } else {
@@ -157,7 +156,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
               t.data.node.template[n].type === "code" ||
               t.data.node.template[n].type === "prompt" ||
               t.data.node.template[n].type === "file" ||
-              t.data.node.template[n].type === "int")
+              t.data.node.template[n].type === "int"),
         )
         .map((n, i) => {
           arrNodesWithValues.push(t["id"]);
@@ -181,7 +180,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
     }
 
     const existingTweak = tweak.current.find((element) =>
-      element.hasOwnProperty(tw)
+      element.hasOwnProperty(tw),
     );
 
     if (existingTweak) {
@@ -250,25 +249,25 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
 
   function openAccordions() {
     let accordionsToOpen = [];
-      tweak.current.forEach((el) => {
-        Object.keys(el).forEach((key) => {
-          if (Object.keys(el[key]).length > 0) {
-            accordionsToOpen.push(key);
-            setOpenAccordion(accordionsToOpen);
-          }
-        });
+    tweak.current.forEach((el) => {
+      Object.keys(el).forEach((key) => {
+        if (Object.keys(el[key]).length > 0) {
+          accordionsToOpen.push(key);
+          setOpenAccordion(accordionsToOpen);
+        }
       });
+    });
   }
 
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger></DialogTrigger>
-      <DialogContent className="lg:max-w-[80vw] h-[80vh]">
+      <DialogContent className="h-[80vh] lg:max-w-[80vw]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Code</span>
             <Code2
-              className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
+              className="h-6 w-6 pl-1 text-gray-800 dark:text-white"
               aria-hidden="true"
             />
           </DialogTitle>
@@ -277,7 +276,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
 
         <Tabs
           value={activeTab}
-          className="w-full h-full overflow-hidden text-center bg-muted rounded-md border"
+          className="h-full w-full overflow-hidden rounded-md border bg-muted text-center"
           onValueChange={(value) => {
             setActiveTab(value);
             if (value === "3") {
@@ -296,7 +295,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
             {Number(activeTab) < 3 && (
               <div className="float-right">
                 <button
-                  className="flex gap-1.5 items-center rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
+                  className="flex items-center gap-1.5 rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
                   onClick={copyToClipboard}
                 >
                   {isCopied ? <Check size={18} /> : <Clipboard size={15} />}
@@ -309,12 +308,12 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
           {tabs.map((tab, index) => (
             <TabsContent
               value={index.toString()}
-              className="overflow-hidden w-full h-full px-4 pb-4 -mt-1"
+              className="-mt-1 h-full w-full overflow-hidden px-4 pb-4"
               key={index} // Remember to add a unique key prop
             >
               {index < 3 ? (
                 <SyntaxHighlighter
-                  className="w-full overflow-auto h-[60vh]"
+                  className="h-[60vh] w-full overflow-auto"
                   language={tab.mode}
                   style={oneDark}
                 >
@@ -322,13 +321,13 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                 </SyntaxHighlighter>
               ) : index === 3 ? (
                 <>
-                  <div className="flex w-full h-full mt-2">
+                  <div className="mt-2 flex h-full w-full">
                     <div
                       className={classNames(
-                        "w-full rounded-lg bg-muted h-[60vh]",
+                        "h-[60vh] w-full rounded-lg bg-muted",
                         1 == 1
                           ? "overflow-scroll overflow-x-hidden custom-scroll"
-                          : "overflow-hidden"
+                          : "overflow-hidden",
                       )}
                     >
                       {flow["data"]["nodes"].map((t: any, index) => (
@@ -338,14 +337,14 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                               trigger={t["data"]["id"]}
                               open={openAccordion}
                             >
-                              <div className="flex flex-col gap-5 h-fit">
+                              <div className="flex h-fit flex-col gap-5">
                                 <Table className="table-fixed bg-muted outline-1">
-                                  <TableHeader className="border-input text-xs font-medium text-ring h-10">
+                                  <TableHeader className="h-10 border-input text-xs font-medium text-ring">
                                     <TableRow className="dark:border-b-muted">
                                       <TableHead className="h-7 text-center">
                                         PARAM
                                       </TableHead>
-                                      <TableHead className="p-0 h-7 text-center">
+                                      <TableHead className="h-7 p-0 text-center">
                                         VALUE
                                       </TableHead>
                                     </TableRow>
@@ -369,7 +368,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                             t.data.node.template[n].type ===
                                               "file" ||
                                             t.data.node.template[n].type ===
-                                              "int")
+                                              "int"),
                                       )
                                       .map((n, i) => {
                                         //console.log(t.data.node.template[n]);
@@ -379,11 +378,11 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                             key={i}
                                             className="h-10 dark:border-b-muted"
                                           >
-                                            <TableCell className="p-0 text-center text-gray-900 text-sm">
+                                            <TableCell className="p-0 text-center text-sm text-gray-900">
                                               {n}
                                             </TableCell>
-                                            <TableCell className="p-0 text-center text-gray-900 text-xs dark:text-gray-300">
-                                              <div className="w-[250px] m-auto">
+                                            <TableCell className="p-0 text-center text-xs text-gray-900 dark:text-gray-300">
+                                              <div className="m-auto w-[250px]">
                                                 {t.data.node.template[n]
                                                   .type === "str" &&
                                                 !t.data.node.template[n]
@@ -412,7 +411,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                             t["data"]["id"],
                                                             k,
                                                             t.data.node
-                                                              .template[n]
+                                                              .template[n],
                                                           );
                                                         }}
                                                       />
@@ -423,7 +422,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                         content={buildContent(
                                                           t.data.node.template[
                                                             n
-                                                          ].value
+                                                          ].value,
                                                         )}
                                                       >
                                                         <div>
@@ -436,14 +435,14 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                                 .value,
                                                               t.data,
                                                               t.data.node
-                                                                .template[n]
+                                                                .template[n],
                                                             )}
                                                             onChange={(k) => {
                                                               buildTweakObject(
                                                                 t["data"]["id"],
                                                                 k,
                                                                 t.data.node
-                                                                  .template[n]
+                                                                  .template[n],
                                                               );
                                                             }}
                                                           />
@@ -465,14 +464,14 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                           t.data,
                                                           t.data.node.template[
                                                             n
-                                                          ]
+                                                          ],
                                                         )}
                                                         onChange={(k) => {
                                                           buildTweakObject(
                                                             t["data"]["id"],
                                                             k,
                                                             t.data.node
-                                                              .template[n]
+                                                              .template[n],
                                                           );
                                                         }}
                                                       />
@@ -497,7 +496,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                           e,
                                                           t.data.node.template[
                                                             n
-                                                          ]
+                                                          ],
                                                         );
                                                       }}
                                                       size="small"
@@ -513,8 +512,8 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                         t.data.node.template[n]
                                                           .value,
                                                         t.data,
-                                                        t.data.node.template[n]
-                                                      )
+                                                        t.data.node.template[n],
+                                                      ),
                                                     )}
                                                   >
                                                     <div className="mx-auto">
@@ -527,7 +526,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                           ].value ?? ""
                                                         }
                                                         onChange={(
-                                                          k: any
+                                                          k: any,
                                                         ) => {}}
                                                         fileTypes={
                                                           t.data.node.template[
@@ -540,7 +539,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                           ].suffixes
                                                         }
                                                         onFileChange={(
-                                                          k: any
+                                                          k: any,
                                                         ) => {}}
                                                       ></InputFileComponent>
                                                     </div>
@@ -555,7 +554,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                         t.data.node.template[n]
                                                           .value,
                                                         t.data,
-                                                        t.data.node.template[n]
+                                                        t.data.node.template[n],
                                                       )}
                                                       onChange={(k) => {
                                                         buildTweakObject(
@@ -563,7 +562,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                           k,
                                                           t.data.node.template[
                                                             n
-                                                          ]
+                                                          ],
                                                         );
                                                       }}
                                                     />
@@ -586,14 +585,14 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                           k,
                                                           t.data.node.template[
                                                             n
-                                                          ]
+                                                          ],
                                                         );
                                                       }}
                                                       value={getValue(
                                                         t.data.node.template[n]
                                                           .value,
                                                         t.data,
-                                                        t.data.node.template[n]
+                                                        t.data.node.template[n],
                                                       )}
                                                     ></Dropdown>
                                                   </div>
@@ -607,7 +606,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                         t.data.node.template[n]
                                                           .value,
                                                         t.data,
-                                                        t.data.node.template[n]
+                                                        t.data.node.template[n],
                                                       )}
                                                       onChange={(k) => {
                                                         buildTweakObject(
@@ -615,7 +614,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                           k,
                                                           t.data.node.template[
                                                             n
-                                                          ]
+                                                          ],
                                                         );
                                                       }}
                                                     />
@@ -629,8 +628,8 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                         t.data.node.template[n]
                                                           .value,
                                                         t.data,
-                                                        t.data.node.template[n]
-                                                      )
+                                                        t.data.node.template[n],
+                                                      ),
                                                     )}
                                                   >
                                                     <div className="mx-auto">
@@ -644,14 +643,14 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                           t.data,
                                                           t.data.node.template[
                                                             n
-                                                          ]
+                                                          ],
                                                         )}
                                                         onChange={(k) => {
                                                           buildTweakObject(
                                                             t["data"]["id"],
                                                             k,
                                                             t.data.node
-                                                              .template[n]
+                                                              .template[n],
                                                           );
                                                         }}
                                                       />
@@ -666,8 +665,8 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                         t.data.node.template[n]
                                                           .value,
                                                         t.data,
-                                                        t.data.node.template[n]
-                                                      )
+                                                        t.data.node.template[n],
+                                                      ),
                                                     )}
                                                   >
                                                     <div className="mx-auto">
@@ -681,14 +680,14 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                           t.data,
                                                           t.data.node.template[
                                                             n
-                                                          ]
+                                                          ],
                                                         )}
                                                         onChange={(k) => {
                                                           buildTweakObject(
                                                             t["data"]["id"],
                                                             k,
                                                             t.data.node
-                                                              .template[n]
+                                                              .template[n],
                                                           );
                                                         }}
                                                       />
