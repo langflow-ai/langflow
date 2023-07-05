@@ -96,17 +96,25 @@ def serve_on_jcloud():
 
 @app.command()
 def serve(
-    host: str = typer.Option("127.0.0.1", help="Host to bind the server to."),
-    workers: int = typer.Option(1, help="Number of worker processes."),
+    host: str = typer.Option(
+        "127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"
+    ),
+    workers: int = typer.Option(
+        1, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"
+    ),
     timeout: int = typer.Option(60, help="Worker timeout in seconds."),
-    port: int = typer.Option(7860, help="Port to listen on."),
+    port: int = typer.Option(7860, help="Port to listen on.", envvar="LANGFLOW_PORT"),
     config: str = typer.Option("config.yaml", help="Path to the configuration file."),
     # .env file param
     env_file: Path = typer.Option(
         ".env", help="Path to the .env file containing environment variables."
     ),
-    log_level: str = typer.Option("critical", help="Logging level."),
-    log_file: Path = typer.Option("logs/langflow.log", help="Path to the log file."),
+    log_level: str = typer.Option(
+        "critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"
+    ),
+    log_file: Path = typer.Option(
+        "logs/langflow.log", help="Path to the log file.", envvar="LANGFLOW_LOG_FILE"
+    ),
     cache: str = typer.Option(
         envvar="LANGFLOW_LANGCHAIN_CACHE",
         help="Type of cache to use. (InMemoryCache, SQLiteCache)",
@@ -122,12 +130,17 @@ def serve(
     path: str = typer.Option(
         None,
         help="Path to the frontend directory containing build files. This is for development purposes only.",
+        envvar="LANGFLOW_FRONTEND_PATH",
     ),
     open_browser: bool = typer.Option(
-        True, help="Open the browser after starting the server."
+        True,
+        help="Open the browser after starting the server.",
+        envvar="LANGFLOW_OPEN_BROWSER",
     ),
     remove_api_keys: bool = typer.Option(
-        False, help="Remove API keys from the projects saved in the database."
+        False,
+        help="Remove API keys from the projects saved in the database.",
+        envvar="LANGFLOW_REMOVE_API_KEYS",
     ),
 ):
     """
