@@ -1,4 +1,5 @@
 import ast
+import traceback
 
 from typing import Callable, Optional
 from langflow.interface.importing.utils import get_function
@@ -7,6 +8,14 @@ from pydantic import BaseModel, validator
 
 from langflow.utils import validate
 from langchain.agents.tools import Tool
+
+from fastapi import HTTPException
+
+
+class HTTPExceptionWithTraceback(HTTPException):
+    def __init__(self, status_code, detail=None, traceback=None):
+        super().__init__(status_code, detail)
+        self.traceback = traceback
 
 
 class Function(BaseModel):
@@ -153,7 +162,21 @@ class CustomComponent(BaseModel):
         return output_list
 
     def extract_class_info(self):
-        module = ast.parse(self.code)
+        try:
+            module = ast.parse(self.code)
+        except SyntaxError as err:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    'error': err.msg,
+                    'traceback': traceback.format_exc()
+                }
+            )
+            # raise HTTPExceptionWithTraceback(
+            #     status_code=400,
+            #     detail=err.msg,
+            #     traceback=traceback.format_exc()
+            # ) from err
 
         for node in module.body:
             if isinstance(node, (ast.Import, ast.ImportFrom)):
