@@ -7,6 +7,8 @@ Wrapper around Cohere embedding models.
 
 The `CohereEmbeddings` is used to load the Cohere Embedding module. To use this tool, you need to provide an API key. Once you have the class loaded and ready to go, you can start using it to analyze text documents. It can take a piece of text, like a sentence or a paragraph, and convert it into a special representation called an embedding. This representation captures the meaning and context of the text in a way that computers can understand.
 
+**Params**
+
 - **cohere_api_key:** is a variable that holds the API key required to authenticate with the Cohere service. It is used to access [`CohereEmbedding`](https://cohere.com/).
 
 - **model:** it refers to the language model that is used for embedding text documents and performing queries. Defaults to `embed-english-v2.0`.
@@ -20,6 +22,7 @@ Wrapper around sentence_transformers embedding models.
 
 The `HuggingFaceEmbeddings` helps you work with text embedding models provided by Hugging Face. The main purpose of this class is to create vector representations of text. When you give the class a piece of text, like a sentence or a paragraph, it will convert it into a numerical representation called a vector. This vector captures the meaning and context of the text in a way that computers can understand and work with. You can use these vectors to search for similar or related documents based on a given query.
 
+**Params**
 
 - **cache_folder:** is used to specify the folder where the embeddings will be cached. When embeddings are computed for a text, they can be stored in the cache folder so that they can be reused later without the need to recompute them. This can improve the performance of the application by avoiding redundant computations.
 
@@ -35,6 +38,8 @@ The `HuggingFaceEmbeddings` helps you work with text embedding models provided b
 Wrapper around OpenAI embedding models.
 
 The `OpenAIEmbeddings` class helps you work with text embedding models. It is designed to work with different embedding model providers, including OpenAI. These embeddings can be used for various purposes, such as understanding the meaning of the text, comparing similarities between texts, or even performing advanced tasks like question-answering.
+
+**Params**
 
 - **chunk_size:** it determines the maximum size of each chunk of text that is processed for embedding. Defaults to `1000`. The default configuration is set to 1000. If any of the texts in the texts list exceed 1000 characters, they will be split into multiple chunks of size 1000 or less before being embedded.
 
