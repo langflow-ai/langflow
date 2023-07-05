@@ -63,6 +63,7 @@ export default function CodeAreaComponent({
           onClick={() => {
             openPopUp(
               <CodeAreaModal
+              key={myValue}
               dynamic={dynamic}
               setNodeClass={setNodeClass}
                 value={myValue}
