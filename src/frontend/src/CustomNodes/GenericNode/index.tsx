@@ -93,7 +93,7 @@ export default function GenericNode({
                 color: nodeColors[types[data.type]] ?? nodeColors.unknown,
               }}
             />
-            <div className="ml-2 truncate flex-1">
+            <div className="ml-2 flex-1 truncate">
               <ShadTooltip
                 delayDuration={1500}
                 content={data.node.display_name}
@@ -133,25 +133,25 @@ export default function GenericNode({
                   <div
                     className={classNames(
                       validationStatus && validationStatus.valid
-                        ? "w-4 h-4 rounded-full bg-status-red opacity-100"
-                        : "w-4 h-4 rounded-full bg-ring opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-accent-foreground hover:transition-all ease-in-out duration-200"
+                        ? "h-4 w-4 rounded-full bg-status-green opacity-100"
+                        : "hidden h-4 w-4 animate-spin rounded-full bg-ring opacity-0",
+                      "absolute w-4 duration-200 ease-in-out hover:text-accent-foreground hover:transition-all"
                     )}
                   ></div>
                   <div
                     className={classNames(
                       validationStatus && !validationStatus.valid
-                        ? "w-4 h-4 rounded-full  bg-status-red opacity-100"
-                        : "w-4 h-4 rounded-full bg-ring opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-accent-foreground hover:transition-all ease-in-out duration-200"
+                        ? "h-4 w-4 rounded-full  bg-status-red opacity-100"
+                        : "hidden h-4 w-4 animate-spin rounded-full bg-ring opacity-0",
+                      "absolute w-4 duration-200 ease-in-out hover:text-accent-foreground hover:transition-all"
                     )}
                   ></div>
                   <div
                     className={classNames(
                       !validationStatus || isBuilding
-                        ? "w-4 h-4 rounded-full  bg-status-yellow opacity-100"
-                        : "w-4 h-4 rounded-full bg-ring opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-accent-foreground hover:transition-all ease-in-out duration-200"
+                        ? "h-4 w-4 rounded-full  bg-status-yellow opacity-100"
+                        : "hidden h-4 w-4 animate-spin rounded-full bg-ring opacity-0",
+                      "absolute w-4 duration-200 ease-in-out hover:text-accent-foreground hover:transition-all"
                     )}
                   ></div>
                 </div>
@@ -207,9 +207,19 @@ export default function GenericNode({
                       }
                       info={data.node.template[t].info}
                       name={t}
-                      tooltipTitle={data.node.template[t].input_types?.join("\n") ?? data.node.template[t].type}
+                      tooltipTitle={
+                        data.node.template[t].input_types?.join("\n") ??
+                        data.node.template[t].type
+                      }
                       required={data.node.template[t].required}
-                      id={(data.node.template[t].input_types?.join(";") ?? data.node.template[t].type) + "|" + t + "|" + data.id}
+                      id={
+                        (data.node.template[t].input_types?.join(";") ??
+                          data.node.template[t].type) +
+                        "|" +
+                        t +
+                        "|" +
+                        data.id
+                      }
                       left={true}
                       type={data.node.template[t].type}
                       optionalHandle={data.node.template[t].input_types}
@@ -233,7 +243,11 @@ export default function GenericNode({
             <ParameterComponent
               data={data}
               color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-              title={data.node.output_types && data.node.output_types.length > 0 ? data.node.output_types.join("|") : data.type}
+              title={
+                data.node.output_types && data.node.output_types.length > 0
+                  ? data.node.output_types.join("|")
+                  : data.type
+              }
               tooltipTitle={data.node.base_classes.join("\n")}
               id={[data.type, data.id, ...data.node.base_classes].join("|")}
               type={data.node.base_classes.join("|")}
