@@ -4,7 +4,6 @@ import { DropDownComponentType } from "../../types/components";
 import { classNames } from "../../utils";
 import { ChevronsUpDown, Check } from "lucide-react";
 import { PopUpContext } from "../../contexts/popUpContext";
-import { TabsContext } from "../../contexts/tabsContext";
 
 export default function Dropdown({
   value,

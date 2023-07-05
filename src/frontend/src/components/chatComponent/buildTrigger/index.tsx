@@ -127,7 +127,7 @@ export default function BuildTrigger({
 
   async function enforceMinimumLoadingTime(
     startTime: number,
-    minimumLoadingTime: number
+    minimumLoadingTime: number,
   ) {
     const elapsedTime = Date.now() - startTime;
     const remainingTime = minimumLoadingTime - elapsedTime;

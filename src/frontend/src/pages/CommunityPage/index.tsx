@@ -57,7 +57,7 @@ export default function CommunityPage() {
         </div>
       </div>
       <span className="community-page-description-text">
-        Discover and learn from shared examples by the LangFlow community. We
+        Discover and learn from shared examples by the Langflow community. We
         welcome new example contributions that can help our community explore
         new and powerful features.
       </span>

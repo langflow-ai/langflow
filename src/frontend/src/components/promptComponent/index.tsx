@@ -44,7 +44,7 @@ export default function PromptAreaComponent({
                   setMyValue(t);
                   onChange(t);
                 }}
-              />
+              />,
             );
           }}
           className={
@@ -69,7 +69,7 @@ export default function PromptAreaComponent({
                   setMyValue(t);
                   onChange(t);
                 }}
-              />
+              />,
             );
           }}
         >
