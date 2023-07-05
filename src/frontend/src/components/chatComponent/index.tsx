@@ -13,6 +13,7 @@ import * as _ from "lodash";
 export default function Chat({ flow }: ChatType) {
   const [open, setOpen] = useState(false);
   const [isBuilt, setIsBuilt] = useState(false);
+  const [canOpen, setCanOpen] = useState(false);
   const { tabsState } = useContext(TabsContext);
 
   useEffect(() => {
@@ -58,6 +59,17 @@ export default function Chat({ flow }: ChatType) {
     ) {
       setIsBuilt(false);
     }
+    if (
+      tabsState &&
+      tabsState[flow.id] &&
+      tabsState[flow.id].formKeysData &&
+      tabsState[flow.id].formKeysData.input_keys &&
+      Object.keys(tabsState[flow.id].formKeysData.input_keys).length > 0
+    ) {
+      setCanOpen(true);
+    } else {
+      setCanOpen(false);
+    }
 
     prevNodesRef.current = currentNodes;
   }, [tabsState]);
@@ -71,10 +83,15 @@ export default function Chat({ flow }: ChatType) {
           setIsBuilt={setIsBuilt}
           isBuilt={isBuilt}
         />
-        {isBuilt && (
+        {isBuilt && canOpen && (
           <FormModal key={flow.id} flow={flow} open={open} setOpen={setOpen} />
         )}
-        <ChatTrigger open={open} setOpen={setOpen} isBuilt={isBuilt} />
+        <ChatTrigger
+          canOpen={canOpen}
+          open={open}
+          setOpen={setOpen}
+          isBuilt={isBuilt}
+        />
       </div>
     </>
   );
