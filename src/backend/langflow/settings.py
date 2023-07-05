@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 
 import yaml
 from pydantic import BaseSettings, root_validator
@@ -21,7 +22,7 @@ class Settings(BaseSettings):
     textsplitters: dict = {}
     utilities: dict = {}
     dev: bool = False
-    database_url: str
+    database_url: Optional[str] = None
     cache: str = "InMemoryCache"
     remove_api_keys: bool = False
 
