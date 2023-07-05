@@ -1,7 +1,4 @@
 import { ReactNode, useEffect, useRef } from "react";
-import {
-    TerminalSquare,
-} from "lucide-react";
 
 import _ from "lodash";
 import {
@@ -13,6 +10,10 @@ import {
     DialogTrigger,
 } from "../../components/ui/dialog";
 import React from "react";
+
+type FirstProps = {children:ReactNode};
+type SecondProps = {children:ReactNode};
+type HeaderProps = {children:ReactNode,description:string};
 
 const First: React.FC<{ children: ReactNode }> = ({ children }) => {
     return (
@@ -37,20 +38,16 @@ const Header: React.FC<{ children: ReactNode, description:string }> = ({ childre
         </DialogHeader>
     )
 }
-
+interface TwoColumnsModalProps {
+    children: [React.ReactElement<FirstProps>, React.ReactElement<SecondProps>, React.ReactElement<HeaderProps>];
+    open: boolean;
+    setOpen: (open: boolean) => void;
+  }
 function TwoColumnsModal({
-    title,
-    description,
     open,
     setOpen,
     children,
-}: {
-    children: ReactNode;
-    description: string;
-    title: string;
-    open: boolean;
-    setOpen: Function;
-}, { }) {
+}: TwoColumnsModalProps) {
     const isOpen = useRef(open);
     useEffect(() => {
         isOpen.current = open;
