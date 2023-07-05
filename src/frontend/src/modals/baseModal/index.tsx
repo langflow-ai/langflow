@@ -12,19 +12,13 @@ import {
 import React from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 
-type FirstProps = {children:ReactNode};
-type SecondProps = {children:ReactNode};
+type ContentProps = {children:ReactNode};
 type HeaderProps = {children:ReactNode,description:string};
 
-const First: React.FC<{ children: ReactNode }> = ({ children }) => {
+
+const Content: React.FC<ContentProps> = ({ children }) => {
     return (
-        <div className="w-2/5 h-full">
-            {children}
-        </div>)
-}
-const Second: React.FC<{ children: ReactNode }> = ({ children }) => {
-    return (
-        <div className="w-full">
+        <div className="w-full h-full">
             {children}
         </div>)
 }
@@ -39,16 +33,16 @@ const Header: React.FC<{ children: ReactNode, description:string }> = ({ childre
         </DialogHeader>
     )
 }
-interface TwoColumnsModalProps {
-    children: [React.ReactElement<FirstProps>, React.ReactElement<SecondProps>, React.ReactElement<HeaderProps>];
+interface BaseModalProps {
+    children: [React.ReactElement<ContentProps>, React.ReactElement<HeaderProps>];
     open: boolean;
     setOpen: (open: boolean) => void;
   }
-function TwoColumnsModal({
+function BaseModal({
     open,
     setOpen,
     children,
-}: TwoColumnsModalProps) {
+}: BaseModalProps) {
    const {closePopUp, setCloseEdit} = useContext(PopUpContext)
 
     function setModalOpen(x: boolean) {
@@ -60,14 +54,10 @@ function TwoColumnsModal({
           }, 300);
         }
       }
-    const firstChild = React.Children.toArray(children).find(
-        (child) => (child as React.ReactElement).type === First
-    );
-
-    const secondChild = React.Children.toArray(children).find(
-        (child) => (child as React.ReactElement).type === Second
-    );
     const headerChild = React.Children.toArray(children).find((child) => (child as React.ReactElement).type === Header);
+    const ContentChild = React.Children.toArray(children).find(
+        (child) => (child as React.ReactElement).type === Content
+    );
     //UPDATE COLORS AND STYLE CLASSSES
     return (
         <Dialog open={open} onOpenChange={setModalOpen}>
@@ -75,15 +65,14 @@ function TwoColumnsModal({
             <DialogContent className="min-w-[80vw]">
                 {headerChild}
                 <div className="flex h-[80vh] w-full mt-2 ">
-                    {firstChild}
-                    {secondChild}
+                    {ContentChild}
                 </div>
             </DialogContent>
         </Dialog>
     );
 
 }
-TwoColumnsModal.First = First;
-TwoColumnsModal.Second = Second;
-TwoColumnsModal.Header = Header;
-export default TwoColumnsModal;
+
+BaseModal.Content = Content;
+BaseModal.Header = Header;
+export default BaseModal;
