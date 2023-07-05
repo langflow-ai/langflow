@@ -143,6 +143,9 @@ The cursor: default; property value restores the browser's default cursor style 
 
 
 @layer components {
+  .round-buttons-position {
+    @apply fixed right-4
+  }
   .side-bar-arrangement {
     @apply flex h-full w-52 flex-col overflow-hidden border-r scrollbar-hide
   }
@@ -206,5 +209,93 @@ The cursor: default; property value restores the browser's default cursor style 
   .input-dialog{
     @apply text-ring cursor-pointer bg-transparent
   }
+  .round-button-form {
+    @apply flex h-12 w-12 cursor-pointer justify-center rounded-full bg-border px-3 py-1 shadow-md
+  }
+  .round-button-div {
+    @apply flex items-center gap-3
+  }
+  .build-trigger-loading-icon {
+    @apply stroke-build-trigger
+  }
+  .build-trigger-icon {
+    @apply w-6 fill-build-trigger stroke-1 stroke-build-trigger
+  }
+  .message-button-position {
+    @apply absolute bottom-4 right-3
+  }
+  .message-button-icon {
+    @apply w-6 fill-chat-trigger stroke-chat-trigger stroke-1
+  }
+  .components-disclosure-arrangement {
+    @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-muted px-3 py-2
+  }
+  .components-disclosure-title {
+    @apply flex items-center text-sm text-primary
+  }
+  .components-disclosure-div {
+    @apply flex gap-2
+  }
+  .flow-page-positioning {
+    @apply h-full w-full overflow-hidden
+  }
+  .logspace-page-icon {
+    @apply absolute bottom-2 left-7 flex h-6 cursor-pointer flex-col items-center justify-start overflow-hidden rounded-lg bg-foreground px-2 text-center font-sans text-xs tracking-wide text-secondary transition-all duration-500 ease-in-out
+  }
 
+  .logspace-page-icon:hover {
+    @apply hover:h-12
+  }
+  
+  .flex-max-width {
+    @apply flex w-full
+  }
+
+  .main-page-panel {
+    @apply flex-max-width h-full flex-col overflow-auto bg-muted px-16
+  }
+
+  .main-page-nav-arrangement {
+    @apply flex-max-width justify-between px-6 py-12 pb-2
+  }
+
+  .main-page-nav-title {
+    @apply flex items-center justify-center gap-2 text-2xl font-semibold
+  }
+
+  .main-page-nav-button {
+    @apply mr-2 w-4
+  }
+
+  .main-page-description-text {
+    @apply flex w-[60%] px-6 pb-14 text-muted-foreground
+  }
+
+  .main-page-flows-display {
+    @apply grid w-full gap-4 p-4 md:grid-cols-2 lg:grid-cols-4
+  }
+
+  .community-page-arrangement {
+    @apply flex-max-width h-full flex-col overflow-auto bg-muted px-16
+  }
+
+  .community-page-nav-arrangement {
+    @apply flex-max-width justify-between px-6 py-12 pb-2
+  }
+
+  .community-page-nav-title {
+    @apply flex items-center justify-center gap-2 text-2xl font-semibold
+  }
+
+  .community-page-nav-button {
+    @apply flex gap-2
+  }
+
+  .community-page-description-text {
+    @apply flex w-[70%] px-6 pb-8 text-muted-foreground 
+  }
+
+  .community-pages-flows-panel {
+    @apply grid w-full gap-4 p-4 md:grid-cols-2 lg:grid-cols-4
+  }
 }

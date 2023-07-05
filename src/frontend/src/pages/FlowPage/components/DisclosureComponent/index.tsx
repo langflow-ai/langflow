@@ -12,14 +12,14 @@ export default function DisclosureComponent({
       {({ open }) => (
         <>
           <div>
-            <Disclosure.Button className="-mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-muted px-3 py-2">
+            <Disclosure.Button className="components-disclosure-arrangement">
               <div className="flex gap-4">
-                <Icon strokeWidth={1.5} size={22} className="text-primary " />
-                <span className="flex items-center text-sm text-primary">
+                <Icon strokeWidth={1.5} size={22} className="text-primary" />
+                <span className="components-disclosure-title">
                   {title}
                 </span>
               </div>
-              <div className="flex gap-2">
+              <div className="components-disclosure-div">
                 {buttons.map((x, index) => (
                   <button key={index} onClick={x.onClick}>
                     {x.Icon}
@@ -35,7 +35,7 @@ export default function DisclosureComponent({
               </div>
             </Disclosure.Button>
           </div>
-          <Disclosure.Panel as="div" className="-mt-px" static={openDisc}>
+          <Disclosure.Panel as="div" static={openDisc}>
             {children}
           </Disclosure.Panel>
         </>
