@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 import httpx
@@ -33,6 +34,10 @@ def update_settings(
     remove_api_keys: bool = False,
 ):
     """Update the settings from a config file."""
+
+    # Check for database_url in the environment variables
+    database_url = database_url or os.getenv("langflow_database_url")
+
     if config:
         settings.update_from_yaml(config, dev=dev)
     if database_url:
@@ -127,11 +132,12 @@ def serve(
     """
     Run the Langflow server.
     """
+    # override env variables with .env file
+    if env_file:
+        load_dotenv(env_file, override=True)
 
     if jcloud:
         return serve_on_jcloud()
-
-    load_dotenv(env_file)
 
     configure(log_level=log_level, log_file=log_file)
     update_settings(
