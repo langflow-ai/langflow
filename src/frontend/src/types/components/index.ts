@@ -132,3 +132,16 @@ export type ShadToolTipType = {
 };
 
 
+
+export type TextHighlightType = {
+  value?: string;
+  side?: "top" | "right" | "bottom" | "left";
+  asChild?: boolean;
+  children?: ReactElement;
+  delayDuration?: number;
+};
+
+export interface IVarHighlightType {
+  name: string
+}
+

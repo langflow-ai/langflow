@@ -17,14 +17,21 @@ import { Textarea } from "../../components/ui/textarea";
 import { PROMPT_DIALOG_SUBTITLE, TEXT_DIALOG_SUBTITLE } from "../../constants";
 import { FileText } from "lucide-react";
 import { APIClassType } from "../../types/api";
-import { TypeModal, getRandomKeyByssmm } from "../../utils";
+import {
+  INVALID_CHARACTERS,
+  TypeModal,
+  classNames,
+  getRandomKeyByssmm,
+  regexHighlight,
+  varHighlightHTML,
+} from "../../utils";
 import { Badge } from "../../components/ui/badge";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "../../components/ui/tooltip"
+} from "../../components/ui/tooltip";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 
 export default function GenericModal({
@@ -49,6 +56,7 @@ export default function GenericModal({
   const [myModalType] = useState(type);
   const [open, setOpen] = useState(true);
   const [inputValue, setInputValue] = useState(value);
+  const [isEdit, setIsEdit] = useState(true);
   const [wordsHighlightInvalid, setWordsHighlightInvalid] = useState([]);
   const [wordsHighlight, setWordsHighlight] = useState([]);
   const { dark } = useContext(darkContext);
@@ -61,22 +69,6 @@ export default function GenericModal({
       closePopUp();
     }
   }
-
-  const INVALID_CHARACTERS = [
-    " ",
-    ",",
-    ".",
-    ":",
-    ";",
-    "!",
-    "?",
-    "/",
-    "\\",
-    "(",
-    ")",
-    "[",
-    "]",
-  ];
 
   function checkVariables(valueToCheck) {
     const regex = /\{([^{}]+)\}/g;
@@ -104,10 +96,10 @@ export default function GenericModal({
         }
       }
     }
-    console.log(fixed_variables);
-    console.log(invalid_chars);
 
-    const filteredWordsHighlight = matches.filter((word) => !invalid_chars.includes(word));
+    const filteredWordsHighlight = matches.filter(
+      (word) => !invalid_chars.includes(word)
+    );
 
     setWordsHighlightInvalid(invalid_chars);
     setWordsHighlight(filteredWordsHighlight);
@@ -118,6 +110,29 @@ export default function GenericModal({
       checkVariables(inputValue);
     }
   }, []);
+
+
+  const coloredContent = (inputValue || "")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(regexHighlight, varHighlightHTML({ name: "$1" }))
+    .replace(/\n/g, "<br />");
+
+  const style =
+    "block pl-3 pr-14 py-2 w-full h-full text-sm outline-0 border-0 break-all";
+
+  const TextAreaContentView = () => {
+    return (
+      <div
+        className={style}
+        dangerouslySetInnerHTML={{ __html: coloredContent }}
+        suppressContentEditableWarning={true}
+        onClick={() => {
+          setIsEdit(true);
+        }}
+      />
+    );
+  };
 
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
@@ -147,36 +162,69 @@ export default function GenericModal({
           </DialogDescription>
         </DialogHeader>
 
-        
-          {type == TypeModal.PROMPT && inputValue && inputValue != "" && wordsHighlight.length > 0 && (
+        {type == TypeModal.PROMPT &&
+          inputValue &&
+          inputValue != "" &&
+          wordsHighlight.length > 0 && (
             <>
-            <div>
-              <span className="">Variables: </span>
-              {wordsHighlight.map((word, index) => (
-              <ShadTooltip key={getRandomKeyByssmm()+index} content={word.replace(/[{}]/g, '')} asChild={false} delayDuration={1500}>
-                     <Badge key={index} size="lg" className="cursor-default text-sm p-2.5 m-1 truncate max-w-[40vw]">
-                    {word.replace(/[{}]/g, '').length > 59 ? word.replace(/[{}]/g, '').slice(0, 56) + '...' : word.replace(/[{}]/g, '') }
-                  </Badge>
-              </ShadTooltip>
-              ))}
-            </div>
+              <div>
+                <span className="">Variables: </span>
+                {wordsHighlight.map((word, index) => (
+                  <ShadTooltip
+                    key={getRandomKeyByssmm() + index}
+                    content={word.replace(/[{}]/g, "")}
+                    asChild={false}
+                    delayDuration={1500}
+                  >
+                    <Badge
+                      key={index}
+                      size="lg"
+                      className="m-1 max-w-[40vw] cursor-default truncate p-2.5 text-sm"
+                    >
+                      {word.replace(/[{}]/g, "").length > 59
+                        ? word.replace(/[{}]/g, "").slice(0, 56) + "..."
+                        : word.replace(/[{}]/g, "")}
+                    </Badge>
+                  </ShadTooltip>
+                ))}
+              </div>
             </>
           )}
-          
 
         <div className="flex h-[60vh] w-full">
-
-          <Textarea
-            ref={ref}
-            className="form-input h-full w-full rounded-lg border-gray-300 focus-visible:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-            value={inputValue}
-            onChange={(e) => {
-              setInputValue(e.target.value);
-              setValue(e.target.value);
-              checkVariables(e.target.value);
-            }}
-            placeholder="Type message here."
-          />
+          {type == TypeModal.PROMPT && isEdit ? (
+            <Textarea
+              ref={ref}
+              className="form-input h-full w-full rounded-lg border-gray-300 focus-visible:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+              value={inputValue}
+              onBlur={() => {
+                blur();
+                setIsEdit(false);
+              }}
+              autoFocus
+              onChange={(e) => {
+                setInputValue(e.target.value);
+                setValue(e.target.value);
+                checkVariables(e.target.value);
+              }}
+              placeholder="Type message here."
+            />
+          ) : type == TypeModal.PROMPT && !isEdit ? (
+            <TextAreaContentView />
+          ) : type != TypeModal.PROMPT ? (
+            <Textarea
+              ref={ref}
+              className="form-input h-full w-full rounded-lg border-gray-300 focus-visible:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+              value={inputValue}
+              onChange={(e) => {
+                setInputValue(e.target.value);
+                setValue(e.target.value);
+              }}
+              placeholder="Type message here."
+            />
+          ) : (
+            <></>
+          )}
         </div>
 
         <DialogFooter>
