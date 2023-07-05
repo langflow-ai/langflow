@@ -1,3 +1,4 @@
+import { ShadTooltipProps } from "../../types/components";
 import {
   Tooltip,
   TooltipContent,
@@ -5,18 +6,22 @@ import {
   TooltipTrigger,
 } from "../ui/tooltip";
 
-const ShadTooltip = (props) => {
+const ShadTooltip = ({
+  delayDuration = 500,
+  side,
+  content,
+  children,
+  style
+}: ShadTooltipProps) => {
   return (
     <TooltipProvider>
-      <Tooltip delayDuration={props.delayDuration}>
-        <TooltipTrigger asChild>{props.children}</TooltipTrigger>
+      <Tooltip delayDuration={delayDuration}>
+        <TooltipTrigger asChild>{children}</TooltipTrigger>
 
-        <TooltipContent
-          side={props.side}
-          avoidCollisions={false}
-          sticky="always"
-        >
-          {props.content}
+        <TooltipContent 
+        className={style}
+        side={side} avoidCollisions={false} sticky="always">
+          {content}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

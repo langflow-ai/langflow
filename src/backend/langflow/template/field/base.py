@@ -23,6 +23,7 @@ class TemplateFieldCreator(BaseModel, ABC):
     advanced: bool = False
     input_types: list[str] = []
     dynamic: bool = False
+    info: Optional[str] = ""
 
     def to_dict(self):
         result = self.dict()

@@ -91,6 +91,7 @@ class DocumentLoaderVertex(Vertex):
     def _built_object_repr(self):
         # This built_object is a list of documents. Maybe we should
         # show how many documents are in the list?
+
         if self._built_object:
             return f"""{self.vertex_type}({len(self._built_object)} documents)
             Documents: {self._built_object[:3]}..."""
@@ -110,6 +111,11 @@ class VectorStoreVertex(Vertex):
 class MemoryVertex(Vertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="memory")
+
+
+class RetrieverVertex(Vertex):
+    def __init__(self, data: Dict):
+        super().__init__(data, base_type="retrievers")
 
 
 class TextSplitterVertex(Vertex):
@@ -184,8 +190,7 @@ class PromptVertex(Vertex):
             if "prompt" not in self.params and "messages" not in self.params:
                 for param in prompt_params:
                     prompt_text = self.params[param]
-                    variables = extract_input_variables_from_prompt(
-                        prompt_text)
+                    variables = extract_input_variables_from_prompt(prompt_text)
                     self.params["input_variables"].extend(variables)
                 self.params["input_variables"] = list(
                     set(self.params["input_variables"])
