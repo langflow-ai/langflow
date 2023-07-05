@@ -111,7 +111,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
   // function loadCookie(cookie: string) {
   //   if (cookie && Object.keys(templates).length > 0) {
-  //     let cookieObject: LangFlowState = JSON.parse(cookie);
+  //     let cookieObject: LangflowState = JSON.parse(cookie);
   //     try {
   //       cookieObject.flows.forEach((flow) => {
   //         if (!flow.data) {
@@ -288,7 +288,11 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     // create a link element and set its properties
     const link = document.createElement("a");
     link.href = jsonString;
-    link.download = `${flowName && flowName != "" ? flowName : flows.find((f) => f.id === tabId).name}.json`;
+    link.download = `${
+      flowName && flowName != ""
+        ? flowName
+        : flows.find((f) => f.id === tabId).name
+    }.json`;
 
     // simulate a click on the link element to trigger the download
     link.click();

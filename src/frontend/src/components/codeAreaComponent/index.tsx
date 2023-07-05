@@ -13,7 +13,7 @@ export default function CodeAreaComponent({
   editNode = false,
 }: TextAreaComponentType) {
   const [myValue, setMyValue] = useState(
-    typeof value == "string" ? value : JSON.stringify(value)
+    typeof value == "string" ? value : JSON.stringify(value),
   );
   const { openPopUp } = useContext(PopUpContext);
   useEffect(() => {
@@ -43,13 +43,14 @@ export default function CodeAreaComponent({
                   setMyValue(t);
                   onChange(t);
                 }}
-              />
+              />,
             );
           }}
           className={
             editNode
               ? "input-edit-node input-dialog"
-              : "input-primary input-dialog " + (disabled ? "input-disable" : "")
+              : "input-dialog input-primary " +
+                (disabled ? "input-disable" : "")
           }
         >
           {myValue !== "" ? myValue : "Type something..."}
@@ -63,7 +64,7 @@ export default function CodeAreaComponent({
                   setMyValue(t);
                   onChange(t);
                 }}
-              />
+              />,
             );
           }}
         >

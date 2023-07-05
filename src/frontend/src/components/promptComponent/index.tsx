@@ -31,7 +31,7 @@ export default function PromptAreaComponent({
         disabled ? "pointer-events-none w-full cursor-not-allowed" : " w-full"
       }
     >
-      <div className="w-full flex items-center">
+      <div className="flex w-full items-center">
         <span
           onClick={() => {
             openPopUp(
@@ -44,13 +44,15 @@ export default function PromptAreaComponent({
                   setMyValue(t);
                   onChange(t);
                 }}
-              />
+              />,
             );
           }}
           className={
             editNode
               ? " input-edit-node " + " input-dialog "
-              : (disabled ? " input-disable " : "") + " input-primary " + " input-dialog "
+              : (disabled ? " input-disable " : "") +
+                " input-primary " +
+                " input-dialog "
           }
         >
           {myValue !== "" ? myValue : "Type your prompt here"}
@@ -67,11 +69,16 @@ export default function PromptAreaComponent({
                   setMyValue(t);
                   onChange(t);
                 }}
-              />
+              />,
             );
           }}
         >
-          {!editNode && <ExternalLink strokeWidth={1.5} className="w-6 h-6 hover:text-accent-foreground ml-3" />}
+          {!editNode && (
+            <ExternalLink
+              strokeWidth={1.5}
+              className="ml-3 h-6 w-6 hover:text-accent-foreground"
+            />
+          )}
         </button>
       </div>
     </div>

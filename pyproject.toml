@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "0.2.11"
+version = "0.2.13"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
@@ -48,7 +48,7 @@ psycopg2-binary = "^2.9.6"
 pyarrow = "^12.0.0"
 tiktoken = "~0.4.0"
 wikipedia = "^1.4.0"
-langchain-serve = { version = ">0.0.47", optional = true }
+langchain-serve = { version = ">0.0.51", optional = true }
 qdrant-client = "^1.3.0"
 websockets = "^10.3"
 weaviate-client = "^3.21.0"

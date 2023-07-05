@@ -31,7 +31,7 @@ export default function FlowPage() {
         href="https://logspace.ai/"
         className="logspace-page-icon"
       >
-        {version && <div className="mt-1">⛓️ LangFlow v{version}</div>}
+        {version && <div className="mt-1">⛓️ Langflow v{version}</div>}
         <div className={version ? "mt-2" : "mt-1"}>Created by Logspace</div>
       </a>
     </div>

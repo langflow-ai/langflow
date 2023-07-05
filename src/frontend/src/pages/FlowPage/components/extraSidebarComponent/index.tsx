@@ -69,27 +69,29 @@ export default function ExtraSidebar() {
               uploadFlow();
             }}
           >
-            <FileUp strokeWidth={1.5} className="side-bar-button-size "></FileUp>
+            <FileUp
+              strokeWidth={1.5}
+              className="side-bar-button-size "
+            ></FileUp>
           </button>
         </ShadTooltip>
 
         <ShadTooltip content="Export" side="top">
           <button
-            className={classNames(
-              "extra-side-bar-buttons"
-            )}
+            className={classNames("extra-side-bar-buttons")}
             onClick={(event) => {
               openPopUp(<ExportModal />);
             }}
           >
-            <FileDown strokeWidth={1.5} className="side-bar-button-size"></FileDown>
+            <FileDown
+              strokeWidth={1.5}
+              className="side-bar-button-size"
+            ></FileDown>
           </button>
         </ShadTooltip>
         <ShadTooltip content="Code" side="top">
           <button
-            className={classNames(
-              "extra-side-bar-buttons"
-            )}
+            className={classNames("extra-side-bar-buttons")}
             onClick={(event) => {
               openPopUp(<ApiModal flow={flows.find((f) => f.id === tabId)} />);
             }}
@@ -110,7 +112,8 @@ export default function ExtraSidebar() {
             <Save
               strokeWidth={1.5}
               className={
-                "side-bar-button-size" + (isPending ? " " : " extra-side-bar-save-disable")
+                "side-bar-button-size" +
+                (isPending ? " " : " extra-side-bar-save-disable")
               }
             ></Save>
           </button>

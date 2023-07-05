@@ -118,7 +118,7 @@ export default function App() {
 
   const removeAlert = (id: string) => {
     setAlertsList((prevAlertsList) =>
-      prevAlertsList.filter((alert) => alert.id !== id)
+      prevAlertsList.filter((alert) => alert.id !== id),
     );
   };
 
