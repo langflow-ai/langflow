@@ -265,7 +265,7 @@ def get_free_port(port):
 def print_banner(host, port):
     # console = Console()
 
-    word = "LangFlow"
+    word = "Langflow"
     colors = ["#3300cc"]
 
     styled_word = ""
