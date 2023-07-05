@@ -51,6 +51,13 @@ export default function App() {
   useEffect(() => {
     // If there is an error alert open with data, add it to the alertsList
     if (errorOpen && errorData) {
+      if (
+        alertsList.length > 0 &&
+        JSON.stringify(alertsList[alertsList.length - 1].data) ===
+          JSON.stringify(errorData)
+      ) {
+        return;
+      }
       setErrorOpen(false);
       setAlertsList((old) => {
         let newAlertsList = [
@@ -62,6 +69,13 @@ export default function App() {
     }
     // If there is a notice alert open with data, add it to the alertsList
     else if (noticeOpen && noticeData) {
+      if (
+        alertsList.length > 0 &&
+        JSON.stringify(alertsList[alertsList.length - 1].data) ===
+          JSON.stringify(noticeData)
+      ) {
+        return;
+      }
       setNoticeOpen(false);
       setAlertsList((old) => {
         let newAlertsList = [
@@ -73,6 +87,13 @@ export default function App() {
     }
     // If there is a success alert open with data, add it to the alertsList
     else if (successOpen && successData) {
+      if (
+        alertsList.length > 0 &&
+        JSON.stringify(alertsList[alertsList.length - 1].data) ===
+          JSON.stringify(successData)
+      ) {
+        return;
+      }
       setSuccessOpen(false);
       setAlertsList((old) => {
         let newAlertsList = [
@@ -103,7 +124,7 @@ export default function App() {
 
   return (
     //need parent component with width and height
-    <div className="h-full flex flex-col">
+    <div className="flex h-full flex-col">
       <ErrorBoundary
         onReset={() => {
           window.localStorage.removeItem("tabsData");
@@ -118,7 +139,7 @@ export default function App() {
       </ErrorBoundary>
       <div></div>
       <div
-        className="flex flex-col-reverse fixed bottom-5 left-5"
+        className="fixed bottom-5 left-5 flex flex-col-reverse"
         style={{ zIndex: 999 }}
       >
         {alertsList.map((alert) => (

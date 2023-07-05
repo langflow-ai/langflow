@@ -25,7 +25,7 @@ import { nodeColors } from "../../../../utils";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import { PopUpContext } from "../../../../contexts/popUpContext";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
-import * as _ from "lodash";
+import { Info } from "lucide-react";
 
 export default function ParameterComponent({
   left,
@@ -38,9 +38,11 @@ export default function ParameterComponent({
   name = "",
   required = false,
   optionalHandle = null,
+  info = "",
 }: ParameterComponentType) {
   const ref = useRef(null);
   const refHtml = useRef(null);
+  const infoHtml = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   const { closePopUp } = useContext(PopUpContext);
@@ -84,72 +86,107 @@ export default function ParameterComponent({
   };
 
   useEffect(() => {
-    const groupedObj = groupByFamily(myData, tooltipTitle);
+    infoHtml.current = (
+      <div className="h-full w-full break-words">
+        {info.split("\n").map((line, i) => (
+          <p key={i} className="block">
+            {line}
+          </p>
+        ))}
+      </div>
+    );
+  }, [info]);
 
-    refHtml.current = groupedObj.map((item, i) => (
-      <span
-        key={getRandomKeyByssmm() + item.family + i}
-        className={classNames(
-          i > 0 ? "items-center flex mt-3" : "items-center flex"
-        )}
-      >
-        <div
-          className="h-6 w-6"
-          style={{
-            color: nodeColors[item.family],
-          }}
+  useEffect(() => {
+    const groupedObj = groupByFamily(myData, tooltipTitle, left, data.type);
+
+    refHtml.current = groupedObj.map((item, i) => {
+      const Icon: any = nodeIconsLucide[item.family];
+      
+      return (
+        <span
+          key={getRandomKeyByssmm() + item.family + i}
+          className={classNames(
+            i > 0 ? "mt-2 flex items-center" : "flex items-center"
+          )}
         >
-          {React.createElement(nodeIconsLucide[item.family])}
-        </div>
-        <span className="ps-2 text-gray-950">
-          {nodeNames[item.family] ?? ""}{" "}
-          <span className={classNames(left ? "hidden" : "")}>
-            {" "}
-            -&nbsp;
-            {item.type.split(", ").length > 2
-              ? item.type.split(", ").map((el, i) => (
-                  <React.Fragment key={el + i}>
-                    <span>
-                      {i === item.type.split(", ").length - 1
-                        ? el
-                        : (el += `, `)}
-                    </span>
-                    {i % 2 === 0 && i > 0 && <br />}
-                  </React.Fragment>
-                ))
-              : item.type}
+          <div
+            className="h-5 w-5"
+            style={{
+              color: nodeColors[item.family],
+            }}
+          >
+            <Icon
+            className="h-5 w-5"
+
+              strokeWidth={1.5}
+              style={{
+                color: nodeColors[item.family] ?? nodeColors.unknown,
+              }}
+            />
+          </div>
+          <span className="ps-2 text-xs text-foreground">
+            {nodeNames[item.family] ?? ""}{" "}
+            <span className="text-xs">
+              {" "}
+              {item.type == "" ? '' : ' - '}
+              {item.type.split(", ").length > 2
+                ? item.type.split(", ").map((el, i) => (
+                    <React.Fragment key={el + i}>
+                      <span>
+                        {i === item.type.split(", ").length - 1
+                          ? el
+                          : (el += `, `)}
+                      </span>
+                    </React.Fragment>
+                  ))
+                : item.type}
+            </span>
           </span>
         </span>
-      </span>
-    ));
+      );
+    });
   }, [tooltipTitle]);
 
   return (
     <div
       ref={ref}
-      className="w-full flex flex-wrap justify-between items-center bg-muted dark:bg-gray-800 dark:text-white mt-1 px-5 py-2"
+      className="mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2"
     >
       <>
-        <div className={"text-sm truncate w-full " + (left ? "" : "text-end")}>
+        <div
+          className={
+            "w-full truncate text-sm" +
+            (left ? "" : " text-end") +
+            (info !== "" ? " flex items-center" : "")
+          }
+        >
           {title}
-          <span className="text-red-600">{required ? " *" : ""}</span>
+          <span className="text-destructive">{required ? " *" : ""}</span>
+          <div className="">
+            {info !== "" && (
+              <ShadTooltip content={infoHtml.current}>
+                <Info className="relative bottom-0.5 ml-2 h-3 w-3" />
+              </ShadTooltip>
+            )}
+          </div>
         </div>
         {left &&
-        ((type === "str" ||
+        (type === "str" ||
           type === "bool" ||
           type === "float" ||
           type === "code" ||
           type === "prompt" ||
           type === "file" ||
-          type === "int") && !optionalHandle
-          ) ? (
+          type === "int") &&
+        !optionalHandle ? (
           <></>
         ) : (
           <ShadTooltip
+            style="max-w-[30vw] max-h-[20vh] overflow-auto custom-scroll"
             delayDuration={0}
             content={refHtml.current}
             side={left ? "left" : "right"}
-            open={refHtml?.current?.length > 0}
           >
             <Handle
               type={left ? "target" : "source"}
@@ -160,7 +197,7 @@ export default function ParameterComponent({
               }
               className={classNames(
                 left ? "-ml-0.5 " : "-mr-0.5 ",
-                "w-3 h-3 rounded-full border-2 bg-white dark:bg-gray-800"
+                "h-3 w-3 rounded-full border-2 bg-background"
               )}
               style={{
                 borderColor: color,
@@ -202,7 +239,7 @@ export default function ParameterComponent({
             )}
           </div>
         ) : left === true && type === "bool" ? (
-          <div className="mt-2">
+          <div className="mt-2 w-full">
             <ToggleShadComponent
               disabled={disabled}
               enabled={enabled}
@@ -225,7 +262,7 @@ export default function ParameterComponent({
         ) : left === true &&
           type === "str" &&
           data.node.template[name].options ? (
-          <div className="w-full">
+          <div className="mt-2 w-full">
             <Dropdown
               options={data.node.template[name].options}
               onSelect={handleOnNewValue}
@@ -233,28 +270,32 @@ export default function ParameterComponent({
             ></Dropdown>
           </div>
         ) : left === true && type === "code" ? (
-          <CodeAreaComponent
-            dynamic = {data.node.template[name].dynamic ?? false}
-            setNodeClass={(nodeClass) => {
-              data.node = nodeClass;
-            }}
-            nodeClass={data.node}
-            disabled={disabled}
-            value={data.node.template[name].value ?? ""}
-            onChange={handleOnNewValue}
-          />
+          <div  className="mt-2 w-full">
+            <CodeAreaComponent
+              dynamic = {data.node.template[name].dynamic ?? false}
+              setNodeClass={(nodeClass) => {
+                data.node = nodeClass;
+              }}
+              nodeClass={data.node}
+              disabled={disabled}
+              value={data.node.template[name].value ?? ""}
+              onChange={handleOnNewValue}
+            />
+          </div>
         ) : left === true && type === "file" ? (
-          <InputFileComponent
-            disabled={disabled}
-            value={data.node.template[name].value ?? ""}
-            onChange={handleOnNewValue}
-            fileTypes={data.node.template[name].fileTypes}
-            suffixes={data.node.template[name].suffixes}
-            onFileChange={(t: string) => {
-              data.node.template[name].file_path = t;
-              save();
-            }}
-          ></InputFileComponent>
+          <div className="mt-2 w-full">
+            <InputFileComponent
+              disabled={disabled}
+              value={data.node.template[name].value ?? ""}
+              onChange={handleOnNewValue}
+              fileTypes={data.node.template[name].fileTypes}
+              suffixes={data.node.template[name].suffixes}
+              onFileChange={(t: string) => {
+                data.node.template[name].file_path = t;
+                save();
+              }}
+            ></InputFileComponent>
+          </div>
         ) : left === true && type === "int" ? (
           <div className="mt-2 w-full">
             <IntComponent
@@ -265,15 +306,18 @@ export default function ParameterComponent({
             />
           </div>
         ) : left === true && type === "prompt" ? (
-          <PromptAreaComponent
-            setNodeClass={(nodeClass) => {
-              data.node = nodeClass;
-            }}
-            nodeClass={data.node}
-            disabled={disabled}
-            value={data.node.template[name].value ?? ""}
-            onChange={handleOnNewValue}
-          />
+          <div className="mt-2 w-full">
+            <PromptAreaComponent
+              field_name={name}
+              setNodeClass={(nodeClass) => {
+                data.node = nodeClass;
+              }}
+              nodeClass={data.node}
+              disabled={disabled}
+              value={data.node.template[name].value ?? ""}
+              onChange={handleOnNewValue}
+            />
+          </div>
         ) : (
           <></>
         )}

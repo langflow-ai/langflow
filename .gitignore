@@ -245,3 +245,4 @@ dmypy.json
 .testenv/*
 langflow.db
 .githooks/prepare-commit-msg
+langchain.db

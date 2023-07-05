@@ -61,7 +61,7 @@ export const TEXT_DIALOG_SUBTITLE = "Edit your text.";
  * @param {string} flowId - The id of the flow
  * @returns {string} - The python code
  */
-export const getPythonApiCode = (flow: FlowType): string => {
+export const getPythonApiCode = (flow: FlowType, tweak?): string => {
   const flowId = flow.id;
 
   // create a dictionary of node ids and the values is an empty dictionary
@@ -77,7 +77,11 @@ BASE_API_URL = "${window.location.protocol}//${
 FLOW_ID = "${flowId}"
 # You can tweak the flow by adding a tweaks dictionary
 # e.g {"OpenAI-XXXXX": {"model_name": "gpt-4"}}
-TWEAKS = ${JSON.stringify(tweaks, null, 2)}
+TWEAKS = ${
+    tweak && tweak.length > 0
+      ? buildTweakObject(tweak)
+      : JSON.stringify(tweaks, null, 2)
+  }
 
 def run_flow(message: str, flow_id: str, tweaks: dict = None) -> dict:
     """
@@ -107,7 +111,7 @@ print(run_flow("Your message", flow_id=FLOW_ID, tweaks=TWEAKS))`;
  * @param {string} flowId - The id of the flow
  * @returns {string} - The curl code
  */
-export const getCurlCode = (flow: FlowType): string => {
+export const getCurlCode = (flow: FlowType, tweak?): string => {
   const flowId = flow.id;
   const tweaks = buildTweaks(flow);
   return `curl -X POST \\
@@ -115,26 +119,45 @@ export const getCurlCode = (flow: FlowType): string => {
     window.location.host
   }/api/v1/process/${flowId} \\
   -H 'Content-Type: application/json' \\
-  -d '{"inputs": {"input": message}, "tweaks": ${JSON.stringify(
-    tweaks,
-    null,
-    2
-  )}}'`;
+  -d '{"inputs": {"input": message}, "tweaks": ${
+    tweak && tweak.length > 0
+      ? buildTweakObject(tweak)
+      : JSON.stringify(tweaks, null, 2)
+  }}'`;
 };
 /**
  * Function to get the python code for the API
  * @param {string} flowName - The name of the flow
  * @returns {string} - The python code
  */
-export const getPythonCode = (flow: FlowType): string => {
+export const getPythonCode = (flow: FlowType, tweak?): string => {
   const flowName = flow.name;
   const tweaks = buildTweaks(flow);
   return `from langflow import load_flow_from_json
-TWEAKS = ${JSON.stringify(tweaks, null, 2)}
+TWEAKS = ${
+    tweak && tweak.length > 0
+      ? buildTweakObject(tweak)
+      : JSON.stringify(tweaks, null, 2)
+  }
 flow = load_flow_from_json("${flowName}.json", tweaks=TWEAKS)
 # Now you can use it like any chain
 flow("Hey, have you heard of LangFlow?")`;
 };
+
+function buildTweakObject(tweak) {
+  tweak.forEach((el) => {
+    Object.keys(el).forEach((key) => {
+      for (let kp in el[key]) {
+        try {
+          el[key][kp] = JSON.parse(el[key][kp]);
+        } catch {}
+      }
+    });
+  });
+
+  const tweakString = JSON.stringify(tweak, null, 2);
+  return tweakString;
+}
 
 /**
  * The base text for subtitle of Import Dialog
@@ -154,11 +177,14 @@ export const EXPORT_CODE_DIALOG =
  * The base text for subtitle of code dialog
  * @constant
  */
-export const INPUT_STYLE =
-  " focus:ring-1 focus:ring-offset-1 focus:ring-ring focus:outline-none ";
+export const COLUMN_DIV_STYLE =
+  " w-full h-full flex overflow-auto flex-col bg-muted px-16 ";
+
+  export const NAV_DISPLAY_STYLE =
+  " w-full flex justify-between py-12 pb-2 px-6 ";
 
 /**
- * Default description for the flow
+ * The base text for subtitle of code dialog
  * @constant
  */
 export const DESCRIPTIONS: string[] = [
@@ -173,7 +199,7 @@ export const DESCRIPTIONS: string[] = [
   "Your Hub for Text Generation.",
   "Promptly Ingenious!",
   "Building Linguistic Labyrinths.",
-  "Create, Chain, Communicate.",
+  "LangFlow: Create, Chain, Communicate.",
   "Connect the Dots, Craft Language.",
   "Interactive Language Weaving.",
   "Generate, Innovate, Communicate.",
@@ -183,52 +209,12 @@ export const DESCRIPTIONS: string[] = [
   "Nurture NLP Nodes Here.",
   "Conversational Cartography Unlocked.",
   "Design, Develop, Dialogize.",
-  "Unleashing Linguistic Creativity.",
-  "Graph Your Way to Great Conversations.",
-  "The Power of Language at Your Fingertips.",
-  "Sculpting Language with Precision.",
-  "Where Language Meets Logic.",
-  "Building Intelligent Interactions.",
-  "Your Passport to Linguistic Landscapes.",
-  "Create, Curate, Communicate with LangFlow.",
-  "Flow into the Future of Language.",
-  "Mapping Meaningful Conversations.",
-  "Unravel the Art of Articulation.",
-  "Language Engineering Excellence.",
-  "Navigate the Networks of Conversation.",
-  "Crafting Conversations, One Node at a Time.",
-  "The Pinnacle of Prompt Generation.",
-  "Language Models, Mapped and Mastered.",
-  "Powerful Prompts, Perfectly Positioned.",
-  "Innovation in Interaction with LangFlow.",
-  "Your Toolkit for Text Generation.",
-  "Unfolding Linguistic Possibilities.",
-  "Building Powerful Solutions with Language Models.",
-  "Uncover Business Opportunities with NLP.",
-  "Harness the Power of Conversational AI.",
-  "Transform Your Business with Smart Dialogues.",
-  "Craft Meaningful Interactions, Generate Value.",
-  "Unleashing Business Potential through Language Engineering.",
-  "Empowering Enterprises with Intelligent Interactions.",
-  "Driving Innovation in Business Communication.",
-  "Catalyzing Business Growth through Conversational AI.",
-  "Text Generation Meets Business Transformation.",
-  "Navigate the Linguistic Landscape, Discover Opportunities.",
-  "Create Powerful Connections, Boost Business Value.",
-  "Empowering Communication, Enabling Opportunities.",
-  "Advanced NLP for Groundbreaking Business Solutions.",
-  "Innovation in Interaction, Revolution in Revenue.",
-  "Maximize Impact with Intelligent Conversations.",
-  "Beyond Text Generation - Unleashing Business Opportunities.",
-  "Unlock the Power of AI in Your Business Conversations.",
-  "Crafting Dialogues that Drive Business Success.",
-  "Engineered for Excellence, Built for Business.",
 ];
+export const BUTTON_DIV_STYLE = " flex gap-2 focus:ring-1 focus:ring-offset-1 focus:ring-ring focus:outline-none ";
 
 /**
- * Adjectives for the name of the flow
+ * The base text for subtitle of code dialog
  * @constant
- *
  */
 export const ADJECTIVES: string[] = [
   "admiring",

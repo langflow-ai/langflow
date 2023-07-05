@@ -5,6 +5,8 @@ all: help
 init:
 	@echo 'Installing pre-commit hooks'
 	git config core.hooksPath .githooks
+	@echo 'Making pre-commit hook executable'
+	chmod +x .githooks/pre-commit
 	@echo 'Installing backend dependencies'
 	make install_backend
 	@echo 'Installing frontend dependencies'

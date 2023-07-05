@@ -3,7 +3,7 @@ from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.template.base import Template
 from langflow.utils.constants import (
     DEFAULT_PYTHON_FUNCTION,
-    DEFAULT_CUSTOM_COMPONENT_CODE
+    DEFAULT_CUSTOM_COMPONENT_CODE,
 )
 
 
