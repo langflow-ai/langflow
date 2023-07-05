@@ -85,19 +85,11 @@ class CustomComponent(BaseModel):
     code: str
     function: Optional[Callable] = None
     function_entrypoint_name = "build"
-    return_type_valid_list = [
-        "ConversationChain",
-        "BaseLLM",
-        "Tool"
-    ]
+    return_type_valid_list = ["ConversationChain", "BaseLLM", "Tool"]
     class_template = {
         "imports": [],
-        "class": {
-            "inherited_classes": "",
-            "name": "",
-            "init": ""
-        },
-        "functions": []
+        "class": {"inherited_classes": "", "name": "", "init": ""},
+        "functions": [],
     }
 
     def __init__(self, **data):
@@ -105,15 +97,18 @@ class CustomComponent(BaseModel):
 
     def _handle_import(self, node):
         for alias in node.names:
-            module_name = getattr(node, 'module', None)
-            self.class_template['imports'].append(
-                f"{module_name}.{alias.name}" if module_name else alias.name)
+            module_name = getattr(node, "module", None)
+            self.class_template["imports"].append(
+                f"{module_name}.{alias.name}" if module_name else alias.name
+            )
 
     def _handle_class(self, node):
-        self.class_template['class'].update({
-            'name': node.name,
-            'inherited_classes': [ast.unparse(base) for base in node.bases]
-        })
+        self.class_template["class"].update(
+            {
+                "name": node.name,
+                "inherited_classes": [ast.unparse(base) for base in node.bases],
+            }
+        )
 
         for inner_node in node.body:
             if isinstance(inner_node, ast.FunctionDef):
@@ -122,20 +117,20 @@ class CustomComponent(BaseModel):
     def _handle_function(self, node):
         function_name = node.name
         function_args_str = ast.unparse(node.args)
-        function_args = function_args_str.split(
-            ", ") if function_args_str else []
+        function_args = function_args_str.split(", ") if function_args_str else []
 
         return_type = ast.unparse(node.returns) if node.returns else "None"
 
         function_data = {
             "name": function_name,
             "arguments": function_args,
-            "return_type": return_type
+            "return_type": return_type,
         }
 
         if function_name == "__init__":
-            self.class_template['class']['init'] = function_args_str.split(
-                ", ") if function_args_str else []
+            self.class_template["class"]["init"] = (
+                function_args_str.split(", ") if function_args_str else []
+            )
         else:
             self.class_template["functions"].append(function_data)
 
@@ -143,7 +138,7 @@ class CustomComponent(BaseModel):
         output_list = []
         for item in input_list:
             # Split each item on ':' to separate variable name and type
-            split_item = item.split(':')
+            split_item = item.split(":")
 
             # If there is a type, strip any leading/trailing spaces from it
             if len(split_item) > 1:
@@ -161,10 +156,7 @@ class CustomComponent(BaseModel):
         except SyntaxError as err:
             raise HTTPException(
                 status_code=400,
-                detail={
-                    'error': err.msg,
-                    'traceback': traceback.format_exc()
-                },
+                detail={"error": err.msg, "traceback": traceback.format_exc()},
             ) from err
 
         for node in module.body:
@@ -180,8 +172,7 @@ class CustomComponent(BaseModel):
         functions = data.get("functions", [])
 
         if build_function := next(
-            (f for f in functions if f["name"]
-             == self.function_entrypoint_name),
+            (f for f in functions if f["name"] == self.function_entrypoint_name),
             None,
         ):
             function_args = build_function.get("arguments", None)
@@ -201,8 +192,7 @@ class CustomComponent(BaseModel):
 
         functions = code.get("functions", [])
         if build_function := next(
-            (f for f in functions if f["name"]
-             == self.function_entrypoint_name),
+            (f for f in functions if f["name"] == self.function_entrypoint_name),
             None,
         ):
             # Check if the return type of the build function is valid
@@ -211,10 +201,7 @@ class CustomComponent(BaseModel):
             return False
 
     def get_function(self):
-        return validate.create_function(
-            self.code,
-            self.function_entrypoint_name
-        )
+        return validate.create_function(self.code, self.function_entrypoint_name)
 
     @property
     def data(self):
