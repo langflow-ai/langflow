@@ -165,26 +165,6 @@ def get_function(code):
 
 
 def get_function_custom(code):
-    function_name = "build"
-    class_name = "MyPythonClass"
-
-    code = """
-from langchain.llms import OpenAI
-from langchain.chains import ConversationChain
-from langchain.memory import ConversationBufferMemory
-
-
-class MyPythonClass:
-    def my_conversation(self):
-        llm = OpenAI(temperature=0)
-        return ConversationChain(
-            llm=llm, verbose=True, memory=ConversationBufferMemory()
-        )
-
-    def build(self, my_custom_input: str) -> ConversationChain:
-        conversation = self.my_conversation()
-        
-        return conversation
-    """
+    class_name = validate.extract_class_name(code)
 
     return validate.create_class(code, class_name)
