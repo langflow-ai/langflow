@@ -53,7 +53,7 @@ export default function InputComponent({
             ? "border-1 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm text-center" +
                 INPUT_STYLE
             : "ring-offset-gray-200" + INPUT_STYLE,
-          password && editNode ? "pr-8" : "pr-3"
+          password && editNode ? "pr-8" : "pr-3",
         )}
         placeholder={password && editNode ? "Key" : "Type something..."}
         onChange={(e) => {
@@ -66,7 +66,7 @@ export default function InputComponent({
           className={classNames(
             editNode
               ? "absolute inset-y-0 right-0 pr-2 items-center text-gray-600"
-              : "absolute inset-y-0 right-0 items-center px-4 text-gray-600"
+              : "absolute inset-y-0 right-0 items-center px-4 text-gray-600",
           )}
           onClick={() => {
             setPwdVisible(!pwdVisible);
@@ -83,7 +83,7 @@ export default function InputComponent({
                 className={classNames(
                   editNode
                     ? "w-5 h-5 absolute bottom-0.5 right-2"
-                    : "w-5 h-5 absolute bottom-2 right-3"
+                    : "w-5 h-5 absolute bottom-2 right-3",
                 )}
               >
                 <path
@@ -102,7 +102,7 @@ export default function InputComponent({
                 className={classNames(
                   editNode
                     ? "w-5 h-5 absolute bottom-0.5 right-2"
-                    : "w-5 h-5 absolute bottom-2 right-3"
+                    : "w-5 h-5 absolute bottom-2 right-3",
                 )}
               >
                 <path

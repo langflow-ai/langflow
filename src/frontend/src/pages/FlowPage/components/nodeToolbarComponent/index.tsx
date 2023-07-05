@@ -19,8 +19,8 @@ const NodeToolbarComponent = (props) => {
           props.data.node.template[t].type === "prompt" ||
           props.data.node.template[t].type === "file" ||
           props.data.node.template[t].type === "Any" ||
-          props.data.node.template[t].type === "int")
-    ).length
+          props.data.node.template[t].type === "int"),
+    ).length,
   );
 
   const { setLastCopiedSelection, paste } = useContext(TabsContext);
@@ -43,7 +43,7 @@ const NodeToolbarComponent = (props) => {
           <ShadTooltip content="Duplicate" side="top">
             <button
               className={classNames(
-                "hover:dark:hover:bg-[#242f47] text-foreground transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-muted-foreground shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-muted focus:z-10"
+                "hover:dark:hover:bg-[#242f47] text-foreground transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-muted-foreground shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-muted focus:z-10",
               )}
               onClick={(event) => {
                 event.preventDefault();
@@ -58,7 +58,7 @@ const NodeToolbarComponent = (props) => {
                     y: 10,
                     paneX: reactFlowInstance.getNode(props.data.id).position.x,
                     paneY: reactFlowInstance.getNode(props.data.id).position.y,
-                  }
+                  },
                 );
               }}
             >
@@ -79,7 +79,7 @@ const NodeToolbarComponent = (props) => {
                 "hover:dark:hover:bg-[#242f47]  transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-muted-foreground shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-muted focus:z-10" +
                   (props.data.node.documentation === ""
                     ? " text-muted-foreground"
-                    : " text-foreground")
+                    : " text-foreground"),
               )}
               target="_blank"
               rel="noopener noreferrer"
@@ -101,7 +101,7 @@ const NodeToolbarComponent = (props) => {
                 "hover:dark:hover:bg-[#242f47]  transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-muted-foreground shadow-md relative -ml-px inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-muted focus:z-10 rounded-r-md" +
                   (nodeLength == 0
                     ? " text-muted-foreground"
-                    : " text-foreground")
+                    : " text-foreground"),
               )}
               onClick={(event) => {
                 if (nodeLength == 0) {

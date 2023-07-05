@@ -18,7 +18,7 @@ export default function AccordionComponent({
   open = [],
 }: AccordionComponentType) {
   const [value, setValue] = useState(
-    open.length == 0 ? "" : getOpenAccordion()
+    open.length == 0 ? "" : getOpenAccordion(),
   );
 
   function getOpenAccordion() {

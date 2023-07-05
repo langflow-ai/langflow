@@ -53,7 +53,7 @@ export default function ImportModal() {
         setErrorData({
           title: "there was an error loading examples, please try again",
           list: [error.message],
-        })
+        }),
       );
   }
 
@@ -64,7 +64,7 @@ export default function ImportModal() {
         className={classNames(
           showExamples
             ? "lg:max-w-[650px] h-[600px]"
-            : "lg:max-w-[650px] h-[450px]"
+            : "lg:max-w-[650px] h-[450px]",
         )}
       >
         <DialogHeader>
@@ -104,7 +104,7 @@ export default function ImportModal() {
             "h-full w-full dark:bg-gray-900 overflow-y-auto scrollbar-hide",
             showExamples && !loadingExamples
               ? "flex flex-row start justify-center items-start flex-wrap overflow-auto mx-auto"
-              : "flex flex-row justify-center items-center"
+              : "flex flex-row justify-center items-center",
           )}
         >
           {!showExamples && (
