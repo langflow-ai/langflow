@@ -351,4 +351,40 @@ The cursor: default; property value restores the browser's default cursor style 
   .generic-node-desc-text {
     @apply w-full px-5 pb-3 text-sm text-muted-foreground
   }
+
+  .alert-icon {
+    @apply h-5 w-5
+  } /*error-build-message-circle*/
+  .alert-font-size {
+    @apply text-sm font-medium
+  }
+
+  .error-build-message {
+    @apply mt-6 w-96 cursor-pointer rounded-md bg-error-background  p-4 shadow-xl
+  }
+  .error-build-message-circle {
+    @apply text-status-red alert-icon
+  }
+  .error-build-text {
+    @apply text-error-foreground
+  }
+  .error-build-foreground {
+    @apply error-build-text alert-font-size
+  }
+  .error-build-message-div {
+    @apply mt-2 text-sm error-build-text
+  }
+  .error-build-message-list {
+    @apply list-disc space-y-1 pl-5
+  }
+
+  .success-alert {
+    @apply mt-6 w-96 rounded-md bg-success-background p-4 shadow-xl
+  }
+  .success-alert-icon {
+    @apply alert-icon text-status-green
+  }
+  .success-alert-message {
+    @apply alert-font-size text-success-foreground
+  }
 }
