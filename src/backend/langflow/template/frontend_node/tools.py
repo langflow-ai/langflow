@@ -156,6 +156,7 @@ class CustomComponentNode(FrontendNode):
                 value=DEFAULT_CUSTOM_COMPONENT_CODE,
                 name="code",
                 advanced=False,
+                dynamic=True,
             )
         ],
     )
