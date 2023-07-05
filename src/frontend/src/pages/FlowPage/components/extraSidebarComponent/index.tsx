@@ -30,7 +30,7 @@ export default function ExtraSidebar() {
   const isPending = tabsState[tabId]?.isPending;
   function onDragStart(
     event: React.DragEvent<any>,
-    data: { type: string; node?: APIClassType }
+    data: { type: string; node?: APIClassType },
   ) {
     //start drag event
     var crt = event.currentTarget.cloneNode(true);
@@ -49,7 +49,7 @@ export default function ExtraSidebar() {
       Object.keys(data).forEach((d: keyof APIObjectType, i) => {
         ret[d] = {};
         let keys = Object.keys(data[d]).filter((nd) =>
-          nd.toLowerCase().includes(e.toLowerCase())
+          nd.toLowerCase().includes(e.toLowerCase()),
         );
         keys.forEach((element) => {
           ret[d][element] = data[d][element];
@@ -77,7 +77,7 @@ export default function ExtraSidebar() {
         <ShadTooltip content="Export" side="top">
           <button
             className={classNames(
-              "hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
+              "hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md",
             )}
             onClick={(event) => {
               openPopUp(<ExportModal />);
@@ -89,7 +89,7 @@ export default function ExtraSidebar() {
         <ShadTooltip content="Code" side="top">
           <button
             className={classNames(
-              "hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
+              "hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md",
             )}
             onClick={(event) => {
               openPopUp(<ApiModal flow={flows.find((f) => f.id === tabId)} />);
@@ -176,8 +176,8 @@ export default function ExtraSidebar() {
                             onDragEnd={() => {
                               document.body.removeChild(
                                 document.getElementsByClassName(
-                                  "cursor-grabbing"
-                                )[0]
+                                  "cursor-grabbing",
+                                )[0],
                               );
                             }}
                           >
@@ -195,7 +195,7 @@ export default function ExtraSidebar() {
               </DisclosureComponent>
             ) : (
               <div key={i}></div>
-            )
+            ),
           )}
       </div>
     </div>

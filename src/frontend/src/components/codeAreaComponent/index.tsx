@@ -13,7 +13,7 @@ export default function CodeAreaComponent({
   editNode = false,
 }: TextAreaComponentType) {
   const [myValue, setMyValue] = useState(
-    typeof value == "string" ? value : JSON.stringify(value)
+    typeof value == "string" ? value : JSON.stringify(value),
   );
   const { openPopUp } = useContext(PopUpContext);
   useEffect(() => {
@@ -43,7 +43,7 @@ export default function CodeAreaComponent({
                   setMyValue(t);
                   onChange(t);
                 }}
-              />
+              />,
             );
           }}
           className={
@@ -67,7 +67,7 @@ export default function CodeAreaComponent({
                   setMyValue(t);
                   onChange(t);
                 }}
-              />
+              />,
             );
           }}
         >

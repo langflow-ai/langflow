@@ -99,10 +99,10 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
                             (t) =>
                               t.charAt(0) !== "_" &&
                               data.node.template[t].advanced &&
-                              data.node.template[t].show
+                              data.node.template[t].show,
                           ).length > limitScrollFieldsModal
                             ? "overflow-scroll overflow-x-hidden custom-scroll"
-                            : "overflow-hidden"
+                            : "overflow-hidden",
                         )}
                       >
                         <div className="flex flex-col h-full gap-5">
@@ -111,7 +111,7 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
                               (t) =>
                                 t.charAt(0) !== "_" &&
                                 data.node.template[t].advanced &&
-                                data.node.template[t].show
+                                data.node.template[t].show,
                             )
                             .map((t: string, idx) => {
                               return (

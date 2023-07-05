@@ -52,7 +52,7 @@ export function UndoRedoProvider({ children }) {
   const [past, setPast] = useState<HistoryItem[][]>(flows.map(() => []));
   const [future, setFuture] = useState<HistoryItem[][]>(flows.map(() => []));
   const [tabIndex, setTabIndex] = useState(
-    flows.findIndex((f) => f.id === tabId)
+    flows.findIndex((f) => f.id === tabId),
   );
 
   useEffect(() => {
@@ -70,7 +70,7 @@ export function UndoRedoProvider({ children }) {
       let newPast = cloneDeep(old);
       newPast[tabIndex] = old[tabIndex].slice(
         old[tabIndex].length - defaultOptions.maxHistorySize + 1,
-        old[tabIndex].length
+        old[tabIndex].length,
       );
       newPast[tabIndex].push({ nodes: getNodes(), edges: getEdges() });
       return newPast;

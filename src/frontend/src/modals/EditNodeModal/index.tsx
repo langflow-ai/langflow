@@ -47,8 +47,8 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
           data.node.template[t].type === "code" ||
           data.node.template[t].type === "prompt" ||
           data.node.template[t].type === "file" ||
-          data.node.template[t].type === "int")
-    ).length
+          data.node.template[t].type === "int"),
+    ).length,
   );
   const [nodeValue, setNodeValue] = useState(null);
   const { closePopUp } = useContext(PopUpContext);
@@ -104,7 +104,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
               "w-full rounded-lg bg-white dark:bg-gray-800 border-[1px] border-gray-200",
               nodeLength > limitScrollFieldsModal
                 ? "overflow-scroll overflow-x-hidden custom-scroll"
-                : "overflow-hidden"
+                : "overflow-hidden",
             )}
           >
             {nodeLength > 0 && (
@@ -131,7 +131,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                             data.node.template[t].type === "code" ||
                             data.node.template[t].type === "prompt" ||
                             data.node.template[t].type === "file" ||
-                            data.node.template[t].type === "int")
+                            data.node.template[t].type === "int"),
                       )
                       .map((n, i) => (
                         <TableRow key={i} className="h-10 dark:border-b-muted">

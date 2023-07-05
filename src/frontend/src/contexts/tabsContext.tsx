@@ -57,12 +57,12 @@ const TabsContextInitialValue: TabsContextType = {
   getTweak: {},
   paste: (
     selection: { nodes: any; edges: any },
-    position: { x: number; y: number; paneX?: number; paneY?: number }
+    position: { x: number; y: number; paneX?: number; paneY?: number },
   ) => {},
 };
 
 export const TabsContext = createContext<TabsContextType>(
-  TabsContextInitialValue
+  TabsContextInitialValue,
 );
 
 export function TabsProvider({ children }: { children: ReactNode }) {
@@ -104,7 +104,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       });
       window.localStorage.setItem(
         "tabsData",
-        JSON.stringify({ tabId, flows: Saveflows, id })
+        JSON.stringify({ tabId, flows: Saveflows, id }),
       );
     }
   }
@@ -236,7 +236,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   function updateNodeEdges(
     flow: FlowType,
     node: NodeType,
-    template: APIClassType
+    template: APIClassType,
   ) {
     flow.data.edges.forEach((edge) => {
       if (edge.source === node.id) {
@@ -256,7 +256,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   function updateNodeTemplate(node: NodeType, template: APIClassType) {
     node.data.node.template = updateTemplate(
       template["template"] as unknown as APITemplateType,
-      node.data.node.template as APITemplateType
+      node.data.node.template as APITemplateType,
     );
   }
 
@@ -278,7 +278,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   function downloadFlow(flow: FlowType) {
     // create a data URI with the current flow data
     const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
-      JSON.stringify(flow)
+      JSON.stringify(flow),
     )}`;
 
     // create a link element and set its properties
@@ -296,7 +296,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   function downloadFlows() {
     downloadFlowsFromDatabase().then((flows) => {
       const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
-        JSON.stringify(flows)
+        JSON.stringify(flows),
       )}`;
 
       // create a link element and set its properties
@@ -383,7 +383,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
   function paste(
     selectionInstance,
-    position: { x: number; y: number; paneX?: number; paneY?: number }
+    position: { x: number; y: number; paneX?: number; paneY?: number },
   ) {
     let minimumX = Infinity;
     let minimumY = Infinity;
@@ -464,7 +464,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           animated: targetHandle.split("|")[0] === "Text",
           selected: false,
         },
-        edges.map((e) => ({ ...e, selected: false }))
+        edges.map((e) => ({ ...e, selected: false })),
       );
     });
     reactFlowInstance.setEdges(edges);
@@ -472,7 +472,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
   const addFlow = async (
     flow?: FlowType,
-    newProject?: Boolean
+    newProject?: Boolean,
   ): Promise<String> => {
     if (newProject) {
       let flowData = extractDataFromFlow(flow);
@@ -503,7 +503,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     } else {
       paste(
         { nodes: flow.data.nodes, edges: flow.data.edges },
-        { x: 10, y: 10 }
+        { x: 10, y: 10 },
       );
     }
   };
@@ -553,7 +553,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         node.data.node.description = template["description"];
         node.data.node.template = updateTemplate(
           template["template"] as unknown as APITemplateType,
-          node.data.node.template as APITemplateType
+          node.data.node.template as APITemplateType,
         );
       }
     });

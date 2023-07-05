@@ -28,7 +28,7 @@ export default function CommunityPage() {
         setErrorData({
           title: "there was an error loading examples, please try again",
           list: [error.message],
-        })
+        }),
       );
   }
   const navigate = useNavigate();
