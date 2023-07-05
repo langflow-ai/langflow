@@ -8,6 +8,8 @@ from langflow.template.field.base import TemplateField
 from langflow.template.template.base import Template
 from langflow.utils import constants
 
+CLASSES_TO_REMOVE = ["Serializable", "BaseModel"]
+
 
 class FrontendNode(BaseModel):
     template: Template
@@ -17,7 +19,17 @@ class FrontendNode(BaseModel):
     display_name: str = ""
     custom_fields: List[str] = []
 
+    def process_base_classes(self) -> None:
+        """Removes unwanted base classes from the list of base classes."""
+        self.base_classes = [
+            base_class
+            for base_class in self.base_classes
+            if base_class not in CLASSES_TO_REMOVE
+        ]
+
     def to_dict(self) -> dict:
+        """Returns a dict representation of the frontend node."""
+        self.process_base_classes()
         return {
             self.name: {
                 "template": self.template.to_dict(self.format_field),
