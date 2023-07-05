@@ -18,6 +18,13 @@ from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.tools import CustomComponentNode
 from langflow.interface.retrievers.base import retriever_creator
 
+from langflow.utils.util import get_base_classes
+
+from fastapi import HTTPException
+import traceback
+
+# Used to get the base_classes list
+
 
 def get_type_list():
     """Get a list of all langchain types"""
@@ -117,12 +124,18 @@ def build_langchain_template_custom_component(extractor: CustomComponent):
 
     template = add_code_field(template, raw_code)
 
-    # TODO: Get base classes from "return_type" and add to template.base_classes
-    template.get("base_classes").append("ConversationChain")
-    template.get("base_classes").append("LLMChain")
-    template.get("base_classes").append("Chain")
-    template.get("base_classes").append("Serializable")
-    template.get("base_classes").append("function")
+    # Get base classes from "return_type" and add to template.base_classes
+    try:
+        return_type_instance = globals()[return_type]
+        base_classes = get_base_classes(return_type_instance)
+    except (KeyError, AttributeError) as err:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": type(err).__name__, "traceback": traceback.format_exc()},
+        ) from err
+
+    for base_class in base_classes:
+        template.get("base_classes").append(base_class)
 
     return template
 

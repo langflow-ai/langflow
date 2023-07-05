@@ -185,10 +185,16 @@ class CustomComponent(BaseModel):
 
         return function_args, return_type
 
-    def is_valid_class_template(self, code: dict):
+    def _class_template_validation(self, code: dict):
         class_name = code.get("class", {}).get("name", None)
         if not class_name:  # this will also check for None, empty string, etc.
-            return False
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "The main class must have a valid name.",
+                    "traceback": "",
+                },
+            )
 
         functions = code.get("functions", [])
         if build_function := next(
@@ -198,7 +204,13 @@ class CustomComponent(BaseModel):
             # Check if the return type of the build function is valid
             return build_function.get("return_type") in self.return_type_valid_list
         else:
-            return False
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": f"The class return [{str(build_function.get('return_type'))}] needs to be an item from this list. [{str(self.return_type_valid_list)}]",
+                    "traceback": "",
+                },
+            )
 
     def get_function(self):
         return validate.create_function(self.code, self.function_entrypoint_name)
@@ -209,7 +221,7 @@ class CustomComponent(BaseModel):
 
     @property
     def is_valid(self):
-        return self.is_valid_class_template(self.data)
+        return self._class_template_validation(self.data)
 
     @property
     def args_and_return_type(self):
