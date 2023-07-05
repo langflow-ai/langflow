@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from "react";
 import { FloatComponentType } from "../../types/components";
 import { TabsContext } from "../../contexts/tabsContext";
-import { INPUT_STYLE } from "../../constants";
+import { PopUpContext } from "../../contexts/popUpContext";
 
 export default function FloatComponent({
   value,
@@ -12,6 +12,7 @@ export default function FloatComponent({
 }: FloatComponentType) {
   const [myValue, setMyValue] = useState(value ?? "");
   const { setDisableCopyPaste } = useContext(TabsContext);
+  const { closePopUp } = useContext(PopUpContext);
 
   const step = 0.1;
   const min = 0;
@@ -26,7 +27,7 @@ export default function FloatComponent({
 
   useEffect(() => {
     setMyValue(value);
-  }, [value]);
+  }, [closePopUp]);
 
   return (
     <div
@@ -56,11 +57,8 @@ export default function FloatComponent({
         value={myValue}
         className={
           editNode
-            ? "focus:placeholder-transparent text-center placeholder:text-center border-1 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm" +
-              INPUT_STYLE
-            : "focus:placeholder-transparent block w-full form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm ring-offset-gray-200 sm:text-sm" +
-              INPUT_STYLE +
-              (disabled ? " bg-gray-200 dark:bg-gray-700" : "")
+            ? "input-edit-node"
+            : "input-primary" + (disabled ? " input-disable " : "")
         }
         placeholder={
           editNode ? "Number 0 to 1" : "Type a number from zero to one"

@@ -33,12 +33,7 @@ class Edge:
         # Get what type of input the target node is expecting
 
         self.matched_type = next(
-            (
-                output
-                for output in self.source_types
-                for target_req in self.target_reqs
-                if output in target_req
-            ),
+            (output for output in self.source_types if output in self.target_reqs),
             None,
         )
         no_matched_type = self.matched_type is None
@@ -53,6 +48,16 @@ class Edge:
 
     def __repr__(self) -> str:
         return (
-            f"Edge(source={self.source.id}, target={self.target.id}, valid={self.valid}"
+            f"Edge(source={self.source.id}, target={self.target.id}, target_param={self.target_param}"
             f", matched_type={self.matched_type})"
+        )
+
+    def __hash__(self) -> int:
+        return hash(self.__repr__())
+
+    def __eq__(self, __value: object) -> bool:
+        return (
+            self.__repr__() == __value.__repr__()
+            if isinstance(__value, Edge)
+            else False
         )

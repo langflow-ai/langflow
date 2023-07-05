@@ -79,9 +79,9 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
   }
 
   return (
-    <Dialog open={true} onOpenChange={setModalOpen} >
+    <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger asChild></DialogTrigger>
-      <DialogContent className="lg:max-w-[700px] ">
+      <DialogContent className="sm:max-w-[600px] lg:max-w-[700px]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">{data.type}</span>
@@ -89,34 +89,34 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
           </DialogTitle>
           <DialogDescription>
             {data.node?.description}
-            <div className="flex pt-4">
-              <Variable className="w-5 h-5 pe-1 text-gray-700 stroke-2 dark:text-slate-200"></Variable>
-              <span className="text-sm font-semibold text-gray-800 dark:text-white">
+            <div className="flex pt-3">
+              <Variable className="h-5 w-5 stroke-2 pe-1 text-muted-foreground "></Variable>
+              <span className="text-sm font-semibold text-primary">
                 Parameters
               </span>
             </div>
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex w-full max-h-[350px] h-fit">
+        <div className="flex h-fit max-h-[400px] w-full">
           <div
             className={classNames(
-              "w-full rounded-lg bg-white dark:bg-gray-800 border-[1px] border-gray-200",
+              "w-full rounded-lg border-[1px] border-input bg-background",
               nodeLength > limitScrollFieldsModal
                 ? "overflow-scroll overflow-x-hidden custom-scroll"
                 : "overflow-hidden"
             )}
           >
             {nodeLength > 0 && (
-              <div className="flex flex-col gap-5 h-fit">
+              <div className="flex h-fit flex-col gap-5">
                 <Table className="table-fixed bg-muted outline-1">
-                  <TableHeader className="border-gray-200 text-gray-500 text-xs font-medium h-10">
-                    <TableRow className="dark:border-b-muted">
+                  <TableHeader className="h-10 border-input text-xs font-medium text-ring">
+                    <TableRow className="">
                       <TableHead className="h-7 text-center">PARAM</TableHead>
-                      <TableHead className="p-0 h-7 text-center">
+                      <TableHead className="h-7 p-0 text-center">
                         VALUE
                       </TableHead>
-                      <TableHead className="text-center h-7">SHOW</TableHead>
+                      <TableHead className="h-7 text-center">SHOW</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody className="p-0">
@@ -134,13 +134,13 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                             data.node.template[t].type === "int")
                       )
                       .map((n, i) => (
-                        <TableRow key={i} className="h-10 dark:border-b-muted">
-                          <TableCell className="p-0 text-center text-gray-900 dark:text-gray-300 text-sm">
+                        <TableRow key={i} className="h-10">
+                          <TableCell className="truncate p-0 text-center text-sm text-foreground sm:px-3">
                             {data.node.template[n].name
                               ? data.node.template[n].name
                               : data.node.template[n].display_name}
                           </TableCell>
-                          <TableCell className="p-0 text-center text-gray-900 text-xs w-[300px] dark:text-gray-300">
+                          <TableCell className="w-[300px] p-0 text-center text-xs text-foreground ">
                             {data.node.template[n].type === "str" &&
                               !data.node.template[n].options ? (
                               <div className="mx-auto">
@@ -251,6 +251,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                             ) : data.node.template[n].type === "prompt" ? (
                               <div className="mx-auto">
                                 <PromptAreaComponent
+                                  field_name={n}
                                   editNode={true}
                                   disabled={false}
                                   value={data.node.template[n].value ?? ""}

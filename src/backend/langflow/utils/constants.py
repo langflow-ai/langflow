@@ -25,7 +25,6 @@ ANTHROPIC_MODELS = [
     "claude-instant-v1",
     # Like claude-instant-v1 with a 100,000 token context window but retains its performance.
     "claude-instant-v1-100k",
-
     # Specific sub-versions of the above models:
     # Vs claude-v1.2: better instruction-following, code, and non-English dialogue and writing.
     "claude-v1.3",

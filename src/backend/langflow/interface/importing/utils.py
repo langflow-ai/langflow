@@ -29,8 +29,7 @@ def import_module(module_path: str) -> Any:
 def import_by_type(_type: str, name: str) -> Any:
     """Import class by type and name"""
     if _type is None:
-        raise ValueError(
-            f"Type cannot be None. Check if {name} is in the config file.")
+        raise ValueError(f"Type cannot be None. Check if {name} is in the config file.")
     func_dict = {
         "agents": import_agent,
         "prompts": import_prompt,
@@ -46,6 +45,7 @@ def import_by_type(_type: str, name: str) -> Any:
         "textsplitters": import_textsplitter,
         "utilities": import_utility,
         "output_parsers": import_output_parser,
+        "retrievers": import_retriever,
     }
     if _type == "llms":
         key = "chat" if "chat" in name.lower() else "llm"
@@ -64,6 +64,11 @@ def import_output_parser(output_parser: str) -> Any:
 def import_chat_llm(llm: str) -> BaseChatModel:
     """Import chat llm from llm name"""
     return import_class(f"langchain.chat_models.{llm}")
+
+
+def import_retriever(retriever: str) -> Any:
+    """Import retriever from retriever name"""
+    return import_module(f"from langchain.retrievers import {retriever}")
 
 
 def import_memory(memory: str) -> Any:

@@ -1,8 +1,18 @@
+from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from langflow.database.models.flow import FlowCreate, FlowRead
 from pydantic import BaseModel, Field, validator
 import json
+
+
+class BuildStatus(Enum):
+    """Status of the build."""
+
+    SUCCESS = "success"
+    FAILURE = "failure"
+    STARTED = "started"
+    IN_PROGRESS = "in_progress"
 
 
 class GraphData(BaseModel):
@@ -58,8 +68,7 @@ class ChatResponse(ChatMessage):
     @validator("type")
     def validate_message_type(cls, v):
         if v not in ["start", "stream", "end", "error", "info", "file"]:
-            raise ValueError(
-                "type must be start, stream, end, error, info, or file")
+            raise ValueError("type must be start, stream, end, error, info, or file")
         return v
 
 
