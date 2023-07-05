@@ -40,13 +40,26 @@ export default function FormModal({
   flow: FlowType;
 }) {
   const { tabsState, setTabsState } = useContext(TabsContext);
-  const [chatValue, setChatValue] = useState(
-    tabsState[flow.id].formKeysData.input_keys[
-      Object.keys(tabsState[flow.id].formKeysData.input_keys).find(
-        (k) => !tabsState[flow.id].formKeysData.handle_keys.some((j) => j === k)
-      )
-    ]
-  );
+  const [chatValue, setChatValue] = useState(() => {
+    try {
+      const { formKeysData } = tabsState[flow.id];
+      if (!formKeysData) throw new Error("formKeysData is undefined");
+
+      const inputKeys = formKeysData.input_keys;
+      const handleKeys = formKeysData.handle_keys;
+
+      const keyToUse = Object.keys(inputKeys).find(
+        (k) => !handleKeys.some((j) => j === k)
+      );
+
+      return inputKeys[keyToUse];
+    } catch (error) {
+      console.error(error);
+      // return a sensible default or `undefined` if no default is possible
+      return undefined;
+    }
+  });
+
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
   const { reactFlowInstance } = useContext(typesContext);
   const { setErrorData, setNoticeData } = useContext(alertContext);
@@ -382,26 +395,26 @@ export default function FormModal({
             <DialogTitle className="flex items-center">
               <span className="pr-2">Chat</span>
               <TerminalSquare
-                className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
+                className="h-6 w-6 pl-1 text-gray-800 dark:text-white"
                 aria-hidden="true"
               />
             </DialogTitle>
             <DialogDescription>{CHAT_FORM_DIALOG_SUBTITLE}</DialogDescription>
           </DialogHeader>
 
-          <div className="flex h-[80vh] w-full mt-2 ">
-            <div className="w-2/5 h-full overflow-auto scrollbar-hide flex flex-col justify-start mr-6">
-              <div className="flex py-2 items-center">
-                <Variable className=" -ml-px w-4 h-4 mr-1 text-primary"></Variable>
+          <div className="mt-2 flex h-[80vh] w-full ">
+            <div className="mr-6 flex h-full w-2/5 flex-col justify-start overflow-auto scrollbar-hide">
+              <div className="flex items-center py-2">
+                <Variable className=" -ml-px mr-1 h-4 w-4 text-primary"></Variable>
                 <span className="text-md font-semibold text-primary">
                   Input Variables
                 </span>
               </div>
-              <div className="flex justify-between pt-2 items-center">
-                <div className="flex mr-2.5 items-center">
+              <div className="flex items-center justify-between pt-2">
+                <div className="mr-2.5 flex items-center">
                   <span className="text-sm font-medium text-primary">Name</span>
                 </div>
-                <div className="flex mr-2.5 items-center">
+                <div className="mr-2.5 flex items-center">
                   <span className="text-sm font-medium text-primary">
                     Chat Input
                   </span>
@@ -413,7 +426,7 @@ export default function FormModal({
                     <div className="flex items-start gap-3" key={k}>
                       <AccordionItem className="w-full" key={k} value={i}>
                         <AccordionTrigger className="flex gap-2">
-                          <div className="flex items-center w-full justify-between">
+                          <div className="flex w-full items-center justify-between">
                             <Badge variant="gray" size="md">
                               {i}
                             </Badge>
@@ -438,7 +451,7 @@ export default function FormModal({
                           </div>
                         </AccordionTrigger>
                         <AccordionContent>
-                          <div className="p-1 flex flex-col gap-2">
+                          <div className="flex flex-col gap-2 p-1">
                             {tabsState[
                               id.current
                             ].formKeysData.handle_keys.some((t) => t === i) && (
@@ -470,7 +483,7 @@ export default function FormModal({
                 )}
                 {tabsState[id.current].formKeysData.memory_keys.map((i, k) => (
                   <AccordionItem key={k} value={i}>
-                    <div className="flex flex-1 items-center justify-between py-4 font-normal transition-all group text-muted-foreground text-sm">
+                    <div className="group flex flex-1 items-center justify-between py-4 text-sm font-normal text-muted-foreground transition-all">
                       <div className="group-hover:underline">
                         <Badge size="md" variant="gray">
                           {i}
@@ -483,14 +496,14 @@ export default function FormModal({
               </Accordion>
             </div>
             <div className="w-full">
-              <div className="flex flex-col rounded-md border bg-muted w-full h-full relative">
+              <div className="relative flex h-full w-full flex-col rounded-md border bg-muted">
                 <div className="absolute right-3 top-3 z-50">
                   <button disabled={lockChat} onClick={() => clearChat()}>
                     <Eraser
                       className={classNames(
                         "h-5 w-5",
                         lockChat
-                          ? "text-primary animate-pulse"
+                          ? "animate-pulse text-primary"
                           : "text-primary hover:text-gray-600"
                       )}
                       aria-hidden="true"
@@ -499,7 +512,7 @@ export default function FormModal({
                 </div>
                 <div
                   ref={messagesRef}
-                  className="w-full h-full flex-col flex items-center overflow-scroll scrollbar-hide"
+                  className="flex h-full w-full flex-col items-center overflow-scroll scrollbar-hide"
                 >
                   {chatHistory.length > 0 ? (
                     chatHistory.map((c, i) => (
@@ -511,19 +524,19 @@ export default function FormModal({
                       />
                     ))
                   ) : (
-                    <div className="flex flex-col h-full text-center justify-center w-full items-center align-middle">
+                    <div className="flex h-full w-full flex-col items-center justify-center text-center align-middle">
                       <span>
                         👋{" "}
-                        <span className="text-gray-600 dark:text-gray-300 text-lg">
+                        <span className="text-lg text-gray-600 dark:text-gray-300">
                           LangFlow Chat
                         </span>
                       </span>
                       <br />
-                      <div className="bg-muted dark:bg-gray-900 rounded-md w-2/4 px-6 py-8 border border-gray-200 dark:border-gray-700">
+                      <div className="w-2/4 rounded-md border border-gray-200 bg-muted px-6 py-8 dark:border-gray-700 dark:bg-gray-900">
                         <span className="text-base text-gray-500">
                           Start a conversation and click the agent's thoughts{" "}
                           <span>
-                            <MessageSquare className="w-5 h-5 inline animate-bounce mx-1 " />
+                            <MessageSquare className="mx-1 inline h-5 w-5 animate-bounce " />
                           </span>{" "}
                           to inspect the chaining process.
                         </span>
@@ -532,7 +545,7 @@ export default function FormModal({
                   )}
                   <div ref={ref}></div>
                 </div>
-                <div className="w-full px-8 pb-6 flex-col flex items-center justify-between">
+                <div className="flex w-full flex-col items-center justify-between px-8 pb-6">
                   <div className="relative w-full rounded-md shadow-sm">
                     <ChatInput
                       chatValue={chatValue}
