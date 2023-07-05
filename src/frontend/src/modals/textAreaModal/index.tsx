@@ -92,7 +92,7 @@ export default function TextAreaModal({
                       <div className="w-full overflow-hidden rounded-lg bg-background px-4 py-5 shadow sm:p-6">
                         <textarea
                           ref={ref}
-                          className="form-input h-full w-full form-primary"
+                          className="form-primary form-input h-full w-full"
                           value={myValue}
                           onChange={(e) => {
                             setMyValue(e.target.value);
