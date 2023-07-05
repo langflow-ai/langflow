@@ -380,7 +380,7 @@ export default function ChatModal({
                       <span>
                         👋{" "}
                         <span className="text-gray-600 dark:text-gray-300 text-lg">
-                          LangFlow Chat
+                          Langflow Chat
                         </span>
                       </span>
                       <br />
