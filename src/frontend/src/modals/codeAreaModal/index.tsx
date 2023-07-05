@@ -50,7 +50,7 @@ export default function CodeAreaModal({
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const { closePopUp } = useContext(PopUpContext);
   const [activeTab, setActiveTab] = useState("0");
-  const [error, setError] = useState<{detail:string,traceback:string}>(null)
+  const [error, setError] = useState<{ detail: { error: string, traceback: string } }>(null)
   const ref = useRef();
   function setModalOpen(x: boolean) {
     setOpen(x);
@@ -64,54 +64,56 @@ export default function CodeAreaModal({
 
   function handleClick() {
     setLoading(true);
-    if(!dynamic){
+    if (!dynamic) {
       postValidateCode(code)
-      .then((apiReturn) => {
-        setLoading(false);
-        if (apiReturn.data) {
-          let importsErrors = apiReturn.data.imports.errors;
-          let funcErrors = apiReturn.data.function.errors;
-          if (funcErrors.length === 0 && importsErrors.length === 0) {
-            setSuccessData({
-              title: "Code is ready to run",
-            });
-            // setValue(code);
+        .then((apiReturn) => {
+          setLoading(false);
+          if (apiReturn.data) {
+            let importsErrors = apiReturn.data.imports.errors;
+            let funcErrors = apiReturn.data.function.errors;
+            if (funcErrors.length === 0 && importsErrors.length === 0) {
+              setSuccessData({
+                title: "Code is ready to run",
+              });
+              // setValue(code);
+            } else {
+              if (funcErrors.length !== 0) {
+                setErrorData({
+                  title: "There is an error in your function",
+                  list: funcErrors,
+                });
+              }
+              if (importsErrors.length !== 0) {
+                setErrorData({
+                  title: "There is an error in your imports",
+                  list: importsErrors,
+                });
+              }
+            }
           } else {
-            if (funcErrors.length !== 0) {
-              setErrorData({
-                title: "There is an error in your function",
-                list: funcErrors,
-              });
-            }
-            if (importsErrors.length !== 0) {
-              setErrorData({
-                title: "There is an error in your imports",
-                list: importsErrors,
-              });
-            }
+            setErrorData({
+              title: "Something went wrong, please try again",
+            });
           }
-        } else {
+        })
+        .catch((_) => {
+          setLoading(false);
           setErrorData({
-            title: "Something went wrong, please try again",
+            title: "There is something wrong with this code, please review it",
           });
-        }
-      })
-      .catch((_) => {
-        setLoading(false);
-        setErrorData({
-          title: "There is something wrong with this code, please review it",
         });
-      });
     }
-    else
-    {
+    else {
       postCustomComponent(code, nodeClass).then((apiReturn) => {
-        const {data} = apiReturn;
+        const { data } = apiReturn;
         if (data) {
           setNodeClass(data);
           setModalOpen(false);
         }
       }).catch((err) => {
+        setErrorData({
+          title: "There is something wrong with this code, please see the error on the errors tab",
+        });
         console.log(err.response.data);
         setError(err.response.data);
       });
@@ -145,7 +147,8 @@ export default function CodeAreaModal({
           <div className="flex flex-col items-start h-72 px-2">
             <TabsList>
               {tabs.map((tab, index) => (
-                <TabsTrigger disabled={index===1&&error?.detail===undefined} key={index} value={index.toString()}>{tab.name}</TabsTrigger>
+                <TabsTrigger disabled={index === 1 && error?.detail.error === undefined} key={index} value={index.toString()}>
+                  <span className={error?.detail.error !== undefined && index===1 ? "text-destructive" : ""}>{tab.name}</span></TabsTrigger>
               ))}
             </TabsList>
             {tabs.map((tab, index) => (
@@ -170,10 +173,10 @@ export default function CodeAreaModal({
                     className="w-full rounded-lg h-full custom-scroll border-[1px] border-gray-300 dark:border-gray-600"
                   />
                 </div> : <div className="w-full h-full  bg-red-200 p-2 flex flex-col overflow-scroll custom-scroll text-left">
-                  <h1 className="text-red-600 text-lg">{error?.detail}</h1>
+                  <h1 className="text-red-600 text-lg">{error?.detail?.error}</h1>
                   <span className="border border-red-300 w-full"></span>
-                  <div className="text-red-500 text-sm">{error?.traceback}</div>
-                  </div>}
+                  <div className="text-red-500 text-sm">{error?.detail?.traceback}</div>
+                </div>}
               </TabsContent>))
             }
           </div>
