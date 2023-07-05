@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useRef } from "react";
+import { ReactNode, useContext, useEffect, useRef } from "react";
 
 import _ from "lodash";
 import {
@@ -10,6 +10,7 @@ import {
     DialogTrigger,
 } from "../../components/ui/dialog";
 import React from "react";
+import { PopUpContext } from "../../contexts/popUpContext";
 
 type FirstProps = {children:ReactNode};
 type SecondProps = {children:ReactNode};
@@ -48,14 +49,17 @@ function TwoColumnsModal({
     setOpen,
     children,
 }: TwoColumnsModalProps) {
-    const isOpen = useRef(open);
-    useEffect(() => {
-        isOpen.current = open;
-    }, [open]);
+   const {closePopUp, setCloseEdit} = useContext(PopUpContext)
 
     function setModalOpen(x: boolean) {
         setOpen(x);
-    }
+        if (x === false) {
+          setTimeout(() => {
+            setCloseEdit("editcode");
+            closePopUp();
+          }, 300);
+        }
+      }
     const firstChild = React.Children.toArray(children).find(
         (child) => (child as React.ReactElement).type === First
     );

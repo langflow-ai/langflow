@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
-import CodeAreaModal from "../../modals/codeAreaModal";
+import CodeAreaModal from "../../modals/codeAreaModal/v2";
 import TextAreaModal from "../../modals/textAreaModal";
 import { CodeAreaComponentType, TextAreaComponentType } from "../../types/components";
 
