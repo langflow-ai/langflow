@@ -230,3 +230,11 @@ def extract_function_name(code):
         if isinstance(node, ast.FunctionDef):
             return node.name
     raise ValueError("No function definition found in the code string")
+
+
+def extract_class_name(code):
+    module = ast.parse(code)
+    for node in module.body:
+        if isinstance(node, ast.ClassDef):
+            return node.name
+    raise ValueError("No class definition found in the code string")

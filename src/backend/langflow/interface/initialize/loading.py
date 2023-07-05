@@ -178,8 +178,8 @@ def instantiate_tool(node_type, class_object, params):
         params["func"] = get_function(params.get("code"))
         return class_object(**params)
     elif node_type == "CustomComponent":
-        params["func"] = get_function_custom(params.get("code"))
-        return class_object(**params)
+        class_object = get_function_custom(params.pop("code"))
+        return class_object().build(**params)
     # For backward compatibility
     elif node_type == "PythonFunction":
         function_string = params["code"]

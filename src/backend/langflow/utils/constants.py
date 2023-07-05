@@ -57,7 +57,10 @@ from langchain.memory import ConversationBufferMemory
 
 class MyPythonClass:
     def my_conversation(self):
-        llm = OpenAI(temperature=0)
+        llm = OpenAI(
+            openai_api_key='',
+            temperature=0
+        )
         return ConversationChain(
             llm=llm, verbose=True, memory=ConversationBufferMemory()
         )

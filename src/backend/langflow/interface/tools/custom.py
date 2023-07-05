@@ -84,6 +84,7 @@ class CustomComponent(BaseModel):
     function_entrypoint_name = "build"
     return_type_valid_list = [
         "ConversationChain",
+        "BaseLLM",
         "Tool"
     ]
     class_template = {
