@@ -18,13 +18,13 @@ export default function ExtraSidebar() {
       <aside
         className={` ${
           isStackedOpen ? "w-52" : "w-0 "
-        } flex flex-shrink-0 flex-col overflow-hidden border-r  transition-all duration-500`}
+        } unused-side-bar-aside`}
       >
-        <div className="flex h-full  w-52 flex-col items-start overflow-y-auto border bg-background scrollbar-hide">
-          <div className="flex w-full flex-grow flex-col">
+        <div className="unused-side-bar-arrangement">
+          <div className="unused-side-bar-division">
             {extraNavigation.options ? (
               <div className="p-4">
-                <nav className="flex-1 space-y-1">
+                <nav className="unused-side-bar-nav">
                   {extraNavigation.options.map((item) =>
                     !item.children ? (
                       <div key={item.name}>
@@ -32,17 +32,17 @@ export default function ExtraSidebar() {
                           to={item.href}
                           className={classNames(
                             item.href.split("/")[2] === current[4]
-                              ? "bg-muted text-foreground"
-                              : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
-                            "group flex w-full items-center rounded-md py-2 pl-2 text-sm font-medium"
+                              ? "unused-side-bar-link-colors-true"
+                              : "unused-side-bar-link-colors-false",
+                            "unused-side-bar-link"
                           )}
                         >
                           <item.icon
                             className={classNames(
                               item.href.split("/")[2] === current[4]
                                 ? "text-ring"
-                                : "text-ring group-hover:text-accent-foreground",
-                              "mr-3 flex-shrink-0 h-6 w-6"
+                                : "unused-side-bar-icon-false",
+                              "unused-side-bar-icon"
                             )}
                           />
                           {item.name}
@@ -59,20 +59,20 @@ export default function ExtraSidebar() {
                             <Disclosure.Button
                               className={classNames(
                                 item.href.split("/")[2] === current[4]
-                                  ? "bg-muted text-foreground"
-                                  : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
-                                "group flex w-full items-center rounded-md py-2 pl-2 pr-1 text-left text-sm font-medium focus:outline-none focus:ring-1 focus:ring-ring"
+                                  ? "unused-side-bar-link-colors-true"
+                                  : "unused-side-bar-link-colors-false",
+                                "unused-side-bar-disclosure"
                               )}
                             >
                               <item.icon
-                                className="mr-3 h-6 w-6 flex-shrink-0 text-ring group-hover:text-accent-foreground"
+                                className="unused-side-bar-disclosure-icon"
                                 aria-hidden="true"
                               />
                               <span className="flex-1">{item.name}</span>
                               <svg
                                 className={classNames(
-                                  open ? "text-ring rotate-90" : "text-ring",
-                                  "ml-3 h-5 w-5 flex-shrink-0 transition-rotate duration-150 ease-in-out group-hover:text-accent-foreground"
+                                  open ? "unused-side-bar-svg-true" : "text-ring",
+                                  "unused-side-bar-svg"
                                 )}
                                 viewBox="0 0 20 20"
                                 aria-hidden="true"
@@ -90,9 +90,9 @@ export default function ExtraSidebar() {
                                   to={subItem.href}
                                   className={classNames(
                                     subItem.href.split("/")[3] === current[5]
-                                      ? "bg-muted text-foreground"
-                                      : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
-                                    "group flex w-full items-center rounded-md py-2 pl-11 pr-2 text-sm font-medium"
+                                      ? "unused-side-bar-link-colors-true"
+                                      : "unused-side-bar-link-colors-false",
+                                    "unused-side-bar-disclosure-panel"
                                   )}
                                 >
                                   {subItem.name}

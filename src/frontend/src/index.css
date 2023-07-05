@@ -354,7 +354,7 @@ The cursor: default; property value restores the browser's default cursor style 
 
   .alert-icon {
     @apply h-5 w-5
-  } /*error-build-message-circle*/
+  }
   .alert-font-size {
     @apply text-sm font-medium
   }
@@ -386,5 +386,79 @@ The cursor: default; property value restores the browser's default cursor style 
   }
   .success-alert-message {
     @apply alert-font-size text-success-foreground
+  }
+
+  .card-component-title-display {
+    @apply round-button-div flex-max-width
+  }
+  .card-component-image {
+    @apply flex h-7 w-7 items-center justify-center rounded-full text-2xl
+  }
+  .card-component-title-size {
+    @apply inline-block w-full flex-1 break-words truncate-doubleline
+  }
+  .card-component-delete-button {
+    @apply flex self-start
+  }
+  .card-component-delete-icon {
+    @apply h-4 w-4 text-primary opacity-0 transition-all group-hover:opacity-100
+  }
+  .card-component-desc {
+    @apply pb-2 pt-2
+  }
+  .card-component-desc-text {
+    @apply truncate-doubleline
+  }
+  .card-component-footer-arrangement {
+    @apply flex-max-width items-end justify-between gap-2
+  }
+  .card-component-footer {
+    @apply flex flex-wrap gap-2
+  }
+
+  .unused-side-bar-aside {
+    @apply flex flex-shrink-0 flex-col overflow-hidden border-r  transition-all duration-500
+  }
+  .unused-side-bar-arrangement {
+    @apply flex h-full  w-52 flex-col items-start overflow-y-auto border bg-background scrollbar-hide
+  }
+  .unused-side-bar-division {
+    @apply flex-max-width flex-grow flex-col
+  }
+  .unused-side-bar-nav {
+    @apply flex-1 space-y-1
+  }
+  .unused-side-bar-link {
+    @apply flex-max-width items-center rounded-md py-2 pl-2 text-sm font-medium
+  }
+  .unused-side-bar-link-colors-true {
+    @apply bg-muted text-foreground
+  }
+  .unused-side-bar-link-colors-false {
+    @apply bg-background text-muted-foreground hover:bg-muted hover:text-foreground
+  }
+  .unused-side-bar-icon {
+    @apply mr-3 flex-shrink-0 h-6 w-6
+  }
+  .unused-side-bar-icon-false {
+    @apply text-ring group-hover:text-accent-foreground
+  }
+  .unused-side-bar-disclosure {
+    @apply unused-side-bar-link pr-1 text-left
+  }
+  .unused-side-bar-disclosure:focus {
+    @apply focus:outline-none focus:ring-1 focus:ring-ring
+  }
+  .unused-side-bar-disclosure-icon {
+    @apply unused-side-bar-icon text-ring group-hover:text-accent-foreground
+  }
+  .unused-side-bar-svg-true {
+    @apply text-ring rotate-90
+  }
+  .unused-side-bar-svg {
+    @apply ml-3 h-5 w-5 flex-shrink-0 duration-150 ease-in-out group-hover:text-accent-foreground
+  }
+  .unused-side-bar-disclosure-panel {
+    @apply flex w-full items-center rounded-md py-2 pl-11 pr-2 text-sm font-medium
   }
 }
