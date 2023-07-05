@@ -1,6 +1,6 @@
 <!-- Title -->
 
-# ⛓️ LangFlow
+# ⛓️ Langflow
 
 ~ An effortless way to experiment and prototype [LangChain](https://github.com/hwchase17/langchain) pipelines ~
 
@@ -16,7 +16,7 @@
 
 <p>
 <a href="https://discord.gg/EqksyE2EX9"><img alt="Discord Server" src="https://dcbadge.vercel.app/api/server/EqksyE2EX9?compact=true&style=flat"/></a>
-<a href="https://huggingface.co/spaces/Logspace/LangFlow"><img src="https://huggingface.co/datasets/huggingface/badges/raw/main/open-in-hf-spaces-sm.svg" alt="HuggingFace Spaces"></a>
+<a href="https://huggingface.co/spaces/Logspace/Langflow"><img src="https://huggingface.co/datasets/huggingface/badges/raw/main/open-in-hf-spaces-sm.svg" alt="HuggingFace Spaces"></a>
 </p>
 
 <a href="https://github.com/logspace-ai/langflow">
@@ -27,6 +27,8 @@
 </p>
 
 # Table of Contents
+- [⛓️ Langflow](#️-langflow)
+- [Table of Contents](#table-of-contents)
 - [📦 Installation](#-installation)
     - [Locally](#locally)
 - [🖥️ Command Line Interface (CLI)](#️-command-line-interface-cli)
@@ -36,14 +38,14 @@
     - [Deploy Langflow on Google Cloud Platform](#deploy-langflow-on-google-cloud-platform)
     - [Deploy Langflow on Jina AI Cloud](#deploy-langflow-on-jina-ai-cloud)
       - [API Usage](#api-usage)
-- [🎨 Creating Flows](#-creating-flows)
-- [👋 Contributing](#-contributing)
-- [📄 License](#-license)
+  - [🎨 Creating Flows](#-creating-flows)
+  - [👋 Contributing](#-contributing)
+  - [📄 License](#-license)
 
 
 # 📦 Installation
 ### <b>Locally</b>
-You can install LangFlow from pip:
+You can install Langflow from pip:
 
 ```shell
 pip install langflow
@@ -220,7 +222,7 @@ print(run_flow("Your message", flow_id=FLOW_ID, tweaks=TWEAKS))
 
 ## 🎨 Creating Flows
 
-Creating flows with LangFlow is easy. Simply drag sidebar components onto the canvas and connect them together to create your pipeline. LangFlow provides a range of [LangChain components](https://api.python.langchain.com/en/latest/index.html) to choose from, including LLMs, prompt serializers, agents, and chains.
+Creating flows with Langflow is easy. Simply drag sidebar components onto the canvas and connect them together to create your pipeline. Langflow provides a range of [LangChain components](https://langchain.readthedocs.io/en/latest/reference.html) to choose from, including LLMs, prompt serializers, agents, and chains.
 
 Explore by editing prompt parameters, link chains and agents, track an agent's thought process, and export your flow.
 
@@ -233,13 +235,13 @@ from langflow import load_flow_from_json
 
 flow = load_flow_from_json("path/to/flow.json")
 # Now you can use it like any chain
-flow("Hey, have you heard of LangFlow?")
+flow("Hey, have you heard of Langflow?")
 ```
 
 
 ## 👋 Contributing
 
-We welcome contributions from developers of all levels to our open-source project on GitHub. If you'd like to contribute, please check our [contributing guidelines](./CONTRIBUTING.md) and help make LangFlow more accessible.
+We welcome contributions from developers of all levels to our open-source project on GitHub. If you'd like to contribute, please check our [contributing guidelines](./CONTRIBUTING.md) and help make Langflow more accessible.
 
 
 Join our [Discord](https://discord.com/invite/EqksyE2EX9) server to ask questions, make suggestions and showcase your projects! 🦾
@@ -252,4 +254,4 @@ Join our [Discord](https://discord.com/invite/EqksyE2EX9) server to ask question
 
 ## 📄 License
 
-LangFlow is released under the MIT License. See the LICENSE file for details.
+Langflow is released under the MIT License. See the LICENSE file for details.
