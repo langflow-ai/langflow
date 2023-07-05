@@ -14,7 +14,11 @@ import {
 } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
-import { HIGHLIGH_CSS, PROMPT_DIALOG_SUBTITLE, TEXT_DIALOG_SUBTITLE } from "../../constants";
+import {
+  HIGHLIGH_CSS,
+  PROMPT_DIALOG_SUBTITLE,
+  TEXT_DIALOG_SUBTITLE,
+} from "../../constants";
 import { FileText } from "lucide-react";
 import { APIClassType } from "../../types/api";
 import {
@@ -33,6 +37,8 @@ import {
   TooltipTrigger,
 } from "../../components/ui/tooltip";
 import ShadTooltip from "../../components/ShadTooltipComponent";
+import { set } from "lodash";
+import DOMPurify from "dompurify";
 
 export default function GenericModal({
   value,
@@ -111,19 +117,17 @@ export default function GenericModal({
     }
   }, []);
 
-
   const coloredContent = (inputValue || "")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(regexHighlight, varHighlightHTML({ name: "$1" }))
     .replace(/\n/g, "<br />");
 
-
   const TextAreaContentView = () => {
     return (
       <div
         className={HIGHLIGH_CSS}
-        dangerouslySetInnerHTML={{ __html: coloredContent }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(coloredContent) }}
         suppressContentEditableWarning={true}
         onClick={() => {
           setIsEdit(true);
@@ -131,6 +135,44 @@ export default function GenericModal({
       />
     );
   };
+
+  function validatePrompt(closeModal: boolean) {
+    postValidatePrompt(inputValue, nodeClass)
+      .then((apiReturn) => {
+        if (apiReturn.data) {
+          setNodeClass(apiReturn.data.frontend_node);
+          setModalOpen(closeModal);
+
+          let inputVariables = apiReturn.data.input_variables;
+          if (inputVariables.length === 0) {
+            setIsEdit(true);
+            setErrorData({
+              title:
+                "The template you are attempting to use does not contain any variables for data entry.",
+            });
+          } else {
+            setIsEdit(false);
+            setSuccessData({
+              title: "Prompt is ready",
+            });
+            setModalOpen(closeModal);
+            setValue(inputValue);
+          }
+        } else {
+          setIsEdit(true);
+          setErrorData({
+            title: "Something went wrong, please try again",
+          });
+        }
+      })
+      .catch((error) => {
+        setIsEdit(true);
+        return setErrorData({
+          title: "There is something wrong with this prompt, please review it",
+          list: [error.response.data.detail],
+        });
+      });
+  }
 
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
@@ -179,9 +221,13 @@ export default function GenericModal({
                       size="lg"
                       className="m-1 max-w-[40vw] cursor-default truncate p-2.5 text-sm"
                     >
-                      {word.replace(/[{}]/g, "").length > 59
-                        ? word.replace(/[{}]/g, "").slice(0, 56) + "..."
-                        : word.replace(/[{}]/g, "")}
+                      <div className="relative bottom-[1px]">
+                        <span>
+                          {word.replace(/[{}]/g, "").length > 59
+                            ? word.replace(/[{}]/g, "").slice(0, 56) + "..."
+                            : word.replace(/[{}]/g, "")}
+                        </span>
+                      </div>
                     </Badge>
                   </ShadTooltip>
                 ))}
@@ -189,7 +235,12 @@ export default function GenericModal({
             </>
           )}
 
-        <div className="flex h-[60vh] w-full">
+        <div
+          className={classNames(
+            !isEdit ? "rounded-lg border" : "",
+            "flex h-[60vh] w-full"
+          )}
+        >
           {type == TypeModal.PROMPT && isEdit ? (
             <Textarea
               ref={ref}
@@ -197,7 +248,7 @@ export default function GenericModal({
               value={inputValue}
               onBlur={() => {
                 blur();
-                setIsEdit(false);
+                validatePrompt(true);
               }}
               autoFocus
               onChange={(e) => {
@@ -234,38 +285,7 @@ export default function GenericModal({
                   setModalOpen(false);
                   break;
                 case 2:
-                  postValidatePrompt(inputValue, nodeClass)
-                    .then((apiReturn) => {
-                      if (apiReturn.data) {
-                        setNodeClass(apiReturn.data.frontend_node);
-                        setModalOpen(false);
-
-                        let inputVariables = apiReturn.data.input_variables;
-                        if (inputVariables.length === 0) {
-                          setErrorData({
-                            title:
-                              "The template you are attempting to use does not contain any variables for data entry.",
-                          });
-                        } else {
-                          setSuccessData({
-                            title: "Prompt is ready",
-                          });
-                          setModalOpen(false);
-                          setValue(inputValue);
-                        }
-                      } else {
-                        setErrorData({
-                          title: "Something went wrong, please try again",
-                        });
-                      }
-                    })
-                    .catch((error) => {
-                      return setErrorData({
-                        title:
-                          "There is something wrong with this prompt, please review it",
-                        list: [error.response.data.detail],
-                      });
-                    });
+                  validatePrompt(false);
                   break;
 
                 default:

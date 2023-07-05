@@ -1019,8 +1019,6 @@ export const regexHighlight = /\{([^}]+)\}/g;
 
 
 export const varHighlightHTML = ({ name }: IVarHighlightType) => {
-  console.log(name);
-  
   const html = `<div class="inline-flex items-center justify-center rounded-md font-medium text-primary bg-muted pb-1">
   <span class='opacity-60 pl-1'>{</span>
   <span>${name}</span>
