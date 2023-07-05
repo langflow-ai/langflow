@@ -211,7 +211,7 @@ def create_class(code, class_name):
     exec_globals[class_name] = locals()[class_name]
 
     # Return a function that imports necessary modules and creates an instance of the target class
-    def build(*args, **kwargs):
+    def build_my_class(*args, **kwargs):
         for module_name, module in exec_globals.items():
             if isinstance(module, type(importlib)):
                 globals()[module_name] = module
@@ -219,9 +219,9 @@ def create_class(code, class_name):
         instance = exec_globals[class_name](*args, **kwargs)
         return instance
 
-    build.__globals__.update(exec_globals)
+    build_my_class.__globals__.update(exec_globals)
 
-    return build
+    return build_my_class
 
 
 def extract_function_name(code):
