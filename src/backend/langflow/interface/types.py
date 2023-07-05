@@ -66,6 +66,7 @@ def add_new_custom_field(template, field_name: str, field_type: str):
         name=field_name,
         field_type=field_type,
         show=True,
+        required=True,
         advanced=False
     )
     template.get('template')[field_name] = new_field.to_dict()
@@ -109,7 +110,7 @@ def build_langchain_template_custom_component(extractor: CustomComponent):
         def_type = extra_field[1]
 
         if def_field != 'self':
-            # TODO: Validate type - if possible to render into frontend
+            # TODO: Validate type - if is possible to render into frontend
             if not def_type:
                 def_type = 'str'
 
