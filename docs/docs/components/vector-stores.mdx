@@ -3,12 +3,18 @@
 
 ### Chroma
 
+Create a `Chroma` vectorstore from a raw documents.
 
-Create a Chroma vectorstore from a raw documents.
+`Chroma` is an AI-native open-source vector database. The purpose of `Chroma` is to make it easier and more efficient for software developers to work with large amounts of data.
+
+It offers several useful features for developers. For example, it allows them to add new data, retrieve existing data, update data that already exists, combine adding and updating data (called upserting), delete data, and search for specific data based on certain criteria.
+
+One of the key features of `Chroma` is its similarity search capability. This means that you can use `Chroma` to find items in the database that are similar to a given item. The similarity is determined using a mathematical concept called cosine distance. A lower score on the cosine distance indicates a better match between two items.
 
 **Params**
 
-- **collection_name:** Defaults to `langchain`
+- **collection_name:** it refers to the name of a collection of documents within the Chroma database. It is used to organize and manage the documents stored in Chroma. The collection_name is also used to identify and access the specific collection when performing operations such as adding, updating, or deleting documents. Defaults to `langchain`.
+
 - **persist:** Defaults to `False`
 - **persist_directory:**
 - **search_kwargs:** Defaults to `{}`

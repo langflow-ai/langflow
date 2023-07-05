@@ -4,8 +4,13 @@
 
 Lightweight wrapper around requests library.
 
-**TODO: Why, when and where is it used?**
+This class is designed to work with the Python Requests module, which is a popular tool for making web requests. The `TextRequestsWrapper` class acts as a wrapper around this module, which means it simplifies and streamlines the process of fetching data from a particular website.
+
+To use this class, you provide it with the URL (web address) of the website you want to fetch data from. Then, using the Python Requests module under the hood, the `TextRequestsWrapper` class sends a request to that URL and retrieves the data from it.
+
 
 **Params**
 
-- **header:** Component of the HTTP request that contains additional information about the client or the requested resource. Defaults to `{'Authorization': 'Bearer <token>'}`
+- **header:**  the parameter is used to specify the headers to be included in the HTTP request made by the wrapper. Headers are key-value pairs that provide additional information about the request or the client making the request. 
+
+    Headers can be used to send authentication credentials, specify the content type of the request, set cookies, and more. They allow the client and the server to communicate additional information beyond the basic request. Defaults to `{'Authorization': 'Bearer <token>'}`.
