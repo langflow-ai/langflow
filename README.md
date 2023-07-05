@@ -26,7 +26,22 @@
 <p>
 </p>
 
-## 📦 Installation
+# Table of Contents
+- [📦 Installation](#-installation)
+    - [Locally](#locally)
+- [🖥️ Command Line Interface (CLI)](#️-command-line-interface-cli)
+    - [Usage](#usage)
+    - [Environment Variables](#environment-variables)
+- [Deployment](#deployment)
+    - [Deploy Langflow on Google Cloud Platform](#deploy-langflow-on-google-cloud-platform)
+    - [Deploy Langflow on Jina AI Cloud](#deploy-langflow-on-jina-ai-cloud)
+      - [API Usage](#api-usage)
+- [🎨 Creating Flows](#-creating-flows)
+- [👋 Contributing](#-contributing)
+- [📄 License](#-license)
+
+
+# 📦 Installation
 ### <b>Locally</b>
 You can install LangFlow from pip:
 
@@ -45,11 +60,11 @@ langflow # or langflow --help
 ```
 
 
-# Command Line Interface (CLI)
+# 🖥️ Command Line Interface (CLI)
 
-Langflow provides a command-line interface (CLI) for easy management and configuration of the server.
+Langflow provides a command-line interface (CLI) for easy management and configuration.
 
-## CLI Usage
+### Usage
 
 You can run the Langflow using the following command:
 
@@ -78,12 +93,13 @@ Each option is detailed below:
 - `--install-completion [bash|zsh|fish|powershell|pwsh]`: Installs completion for the specified shell.
 - `--show-completion [bash|zsh|fish|powershell|pwsh]`: Shows completion for the specified shell, allowing you to copy it or customize the installation.
 
-## Environment Variables
+### Environment Variables
 
 You can configure many of the CLI options using environment variables. These can be exported in your operating system or added to a `.env` file and loaded using the `--env-file` option.
 
 A sample `.env` file named `.env.example` is included with the project. Copy this file to a new file named `.env` and replace the example values with your actual settings. If you're setting values in both your OS and the `.env` file, the `.env` settings will take precedence.
 
+# Deployment
 
 ### Deploy Langflow on Google Cloud Platform
 
