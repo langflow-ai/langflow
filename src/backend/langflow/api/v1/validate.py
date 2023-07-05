@@ -73,12 +73,14 @@ def add_new_variables_to_template(input_variables, prompt_request):
                 advanced=False,
                 multiline=True,
                 input_types=["Document", "BaseOutputParser"],
+                value="",  # Set the value to empty string
             )
             if variable in prompt_request.frontend_node.template:
                 # Set the new field with the old value
                 template_field.value = prompt_request.frontend_node.template[variable][
                     "value"
                 ]
+
             prompt_request.frontend_node.template[variable] = template_field.to_dict()
 
             # Check if variable is not already in the list before appending
