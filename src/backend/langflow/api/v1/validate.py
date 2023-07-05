@@ -71,6 +71,7 @@ def add_new_variables_to_template(input_variables, prompt_request):
                 field_type="str",
                 show=True,
                 advanced=False,
+                multiline=True,
                 input_types=["Document", "BaseOutputParser"],
             )
 
