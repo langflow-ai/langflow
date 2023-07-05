@@ -49,6 +49,7 @@ import {
 import { SupabaseIcon } from "./icons/supabase";
 import { MongoDBIcon } from "./icons/MongoDB";
 import { VertexAIIcon } from "./icons/VertexAI";
+import { IVarHighlightType } from "./types/components";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -1005,4 +1006,33 @@ export function getRandomKeyByssmm(): string {
   const seconds = String(now.getSeconds()).padStart(2, "0");
   const milliseconds = String(now.getMilliseconds()).padStart(3, "0");
   return seconds + milliseconds + Math.abs(Math.floor(Math.random() * 10001));
+}
+
+
+export const INVALID_CHARACTERS = [
+  " ",
+  ",",
+  ".",
+  ":",
+  ";",
+  "!",
+  "?",
+  "/",
+  "\\",
+  "(",
+  ")",
+  "[",
+  "]",
+];
+
+export const regexHighlight = /\{([^}]+)\}/g;
+
+
+export const varHighlightHTML = ({ name }: IVarHighlightType) => {
+  const html = `<div class="inline-flex items-center justify-center rounded-md font-medium text-primary bg-muted pb-1">
+  <span class='opacity-60 pl-1'>{</span>
+  <span>${name}</span>
+  <span class='opacity-60 pr-1'>}</span>
+</div>`
+  return html
 }
