@@ -521,4 +521,8 @@ The cursor: default; property value restores the browser's default cursor style 
   .edit-flow-span {
     @apply ml-10 animate-pulse text-status-red
   }
+
+  .float-component-pointer {
+    @apply pointer-events-none cursor-not-allowed
+  }
 }
