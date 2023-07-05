@@ -12,12 +12,6 @@ from langchain.agents.tools import Tool
 from fastapi import HTTPException
 
 
-class HTTPExceptionWithTraceback(HTTPException):
-    def __init__(self, status_code, detail=None, traceback=None):
-        super().__init__(status_code, detail)
-        self.traceback = traceback
-
-
 class Function(BaseModel):
     code: str
     function: Optional[Callable] = None
@@ -170,13 +164,8 @@ class CustomComponent(BaseModel):
                 detail={
                     'error': err.msg,
                     'traceback': traceback.format_exc()
-                }
-            )
-            # raise HTTPExceptionWithTraceback(
-            #     status_code=400,
-            #     detail=err.msg,
-            #     traceback=traceback.format_exc()
-            # ) from err
+                },
+            ) from err
 
         for node in module.body:
             if isinstance(node, (ast.Import, ast.ImportFrom)):
