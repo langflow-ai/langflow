@@ -160,7 +160,13 @@ async def stream_build(flow_id: str):
                 input_keys_response = build_input_keys_response(
                     langchain_object, artifacts
                 )
-                yield str(StreamData(event="message", data=input_keys_response))
+            else:
+                input_keys_response = {
+                    "input_keys": {},
+                    "memory_keys": [],
+                    "handle_keys": [],
+                }
+            yield str(StreamData(event="message", data=input_keys_response))
 
             chat_manager.set_cache(flow_id, langchain_object)
             # We need to reset the chat history
