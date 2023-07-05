@@ -16,7 +16,6 @@ class FrontendNode(BaseModel):
     name: str = ""
     display_name: str = ""
     custom_fields: List[str] = []
-    dynamic: bool = False
 
     def to_dict(self) -> dict:
         return {
@@ -26,7 +25,6 @@ class FrontendNode(BaseModel):
                 "base_classes": self.base_classes,
                 "display_name": self.display_name or self.name,
                 "custom_fields": self.custom_fields,
-                "dynamic": self.dynamic,
             },
         }
 

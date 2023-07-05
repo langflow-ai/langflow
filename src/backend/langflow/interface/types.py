@@ -80,6 +80,7 @@ def add_code_field(template, raw_code):
     # Field with the Python code to allow update
     code_field = {
         "code": {
+            "dynamic": True,
             "required": True,
             "placeholder": "",
             "show": True,
