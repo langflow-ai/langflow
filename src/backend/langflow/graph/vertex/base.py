@@ -95,7 +95,7 @@ class Vertex:
                     if param_key not in params:
                         params[param_key] = []
                     params[param_key].append(edge.source)
-                else:
+                elif edge.target.id == self.id:
                     params[param_key] = edge.source
 
         for key, value in template_dict.items():
@@ -204,7 +204,8 @@ class Vertex:
         return self._built_object
 
     def add_edge(self, edge: "Edge") -> None:
-        self.edges.append(edge)
+        if edge not in self.edges:
+            self.edges.append(edge)
 
     def __repr__(self) -> str:
         return f"Node(id={self.id}, data={self.data})"
