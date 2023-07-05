@@ -161,6 +161,7 @@ class CustomComponentNode(FrontendNode):
     )
     description: str = "Python Class to be executed."
     base_classes: list[str] = []
+    dynamic: bool = True
 
     def to_dict(self):
         return super().to_dict()
