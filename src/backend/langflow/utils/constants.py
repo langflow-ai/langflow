@@ -56,19 +56,17 @@ from langchain.memory import ConversationBufferMemory
 
 
 class MyPythonClass:
-    def my_conversation(self):
+    def my_conversation(self, openai_api_key):
         llm = OpenAI(
-            openai_api_key='',
+            openai_api_key=openai_api_key,
             temperature=0
         )
         return ConversationChain(
             llm=llm, verbose=True, memory=ConversationBufferMemory()
         )
 
-    def build(self, my_custom_input: str) -> ConversationChain:
-        conversation = self.my_conversation()
-        
-        return conversation
+    def build(self, openai_api_key: str) -> ConversationChain:
+        return self.my_conversation(openai_api_key)
 """
 
 DIRECT_TYPES = ["str", "bool", "code", "int", "float", "Any", "prompt"]
