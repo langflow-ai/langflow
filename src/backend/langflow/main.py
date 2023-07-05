@@ -61,7 +61,7 @@ def setup_static_files(app: FastAPI, static_files_dir: Path):
 
 # app = create_app()
 # setup_static_files(app, static_files_dir)
-def setup_app(static_files_dir: Optional[Path]) -> FastAPI:
+def setup_app(static_files_dir: Optional[Path] = None) -> FastAPI:
     """Setup the FastAPI app."""
     # get the directory of the current file
     if not static_files_dir:
