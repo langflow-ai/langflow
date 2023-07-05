@@ -11,16 +11,19 @@ const ShadTooltip = ({
   side,
   content,
   children,
-  style
+  style,
 }: ShadTooltipProps) => {
   return (
     <TooltipProvider>
       <Tooltip delayDuration={delayDuration}>
         <TooltipTrigger asChild>{children}</TooltipTrigger>
 
-        <TooltipContent 
-        className={style}
-        side={side} avoidCollisions={false} sticky="always">
+        <TooltipContent
+          className={style}
+          side={side}
+          avoidCollisions={false}
+          sticky="always"
+        >
           {content}
         </TooltipContent>
       </Tooltip>
