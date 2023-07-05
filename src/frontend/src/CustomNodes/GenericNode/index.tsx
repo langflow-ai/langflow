@@ -76,7 +76,7 @@ export default function GenericNode({
     deleteNode(data.id);
     return;
   }
-
+  console.log(data.node.template);
   useEffect(() => {}, [closePopUp, data.node.template]);
   return (
     <>
