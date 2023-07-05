@@ -11,7 +11,11 @@ export type TabsContextType = {
   addFlow: (flowData?: FlowType, newProject?: boolean) => Promise<String>;
   updateFlow: (newFlow: FlowType) => void;
   incrementNodeId: () => string;
-  downloadFlow: (flow: FlowType) => void;
+  downloadFlow: (
+    flow: FlowType,
+    flowName: string,
+    flowDescription?: string
+  ) => void;
   downloadFlows: () => void;
   uploadFlows: () => void;
   uploadFlow: (newFlow?: boolean, file?: File) => void;
@@ -28,6 +32,8 @@ export type TabsContextType = {
   ) => void;
   lastCopiedSelection: { nodes: any; edges: any };
   setLastCopiedSelection: (selection: { nodes: any; edges: any }) => void;
+  setTweak: (tweak: any) => void;
+  getTweak: any;
 };
 
 export type TabsState = {

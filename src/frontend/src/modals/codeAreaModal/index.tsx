@@ -48,14 +48,15 @@ export default function CodeAreaModal({
   const [loading, setLoading] = useState(false);
   const { dark } = useContext(darkContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
-  const { closePopUp } = useContext(PopUpContext);
   const [activeTab, setActiveTab] = useState("0");
   const [error, setError] = useState<{ detail: { error: string, traceback: string } }>(null)
+  const { closePopUp, setCloseEdit } = useContext(PopUpContext);
   const ref = useRef();
   function setModalOpen(x: boolean) {
     setOpen(x);
     if (x === false) {
       setTimeout(() => {
+        setCloseEdit("editcode");
         closePopUp();
       }, 300);
     }
@@ -128,12 +129,13 @@ export default function CodeAreaModal({
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger></DialogTrigger>
-      <DialogContent className="lg:max-w-[700px] h-[500px]">
+      <DialogContent className="h-[500px] lg:max-w-[700px]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Edit Code</span>
             <TerminalSquare
-              className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
+            strokeWidth={1.5}
+              className="h-6 w-6 text-primary pl-1 "
               aria-hidden="true"
             />
           </DialogTitle>
@@ -181,9 +183,6 @@ export default function CodeAreaModal({
             }
           </div>
         </Tabs>
-
-
-
         <DialogFooter>
           <Button className="mt-3" onClick={handleClick} type="submit">
             {/* {loading?(<Loading/>):'Check & Save'} */}

@@ -1,5 +1,4 @@
-import { useContext, useState } from "react";
-import { TabsContext } from "../../../../contexts/tabsContext";
+import { useState } from "react";
 import InputListComponent from "../../../../components/inputListComponent";
 import Dropdown from "../../../../components/dropdownComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
@@ -36,7 +35,7 @@ export default function ModalField({
   return (
     <div
       className={classNames(
-        "flex flex-row w-full items-center justify-between",
+        "flex w-full flex-row items-center justify-between",
         display ? "" : "hidden",
         Object.keys(data.node.template).filter(
           (t) =>
@@ -52,8 +51,8 @@ export default function ModalField({
     >
       {display && (
         <div>
-          <span className="mx-2 dark:text-gray-300">{title}</span>
-          <span className="text-red-600">{required ? " *" : ""}</span>
+          <span className="mx-2">{title}</span>
+          <span className="text-destructive">{required ? " *" : ""}</span>
         </div>
       )}
 
@@ -150,6 +149,7 @@ export default function ModalField({
       ) : type === "prompt" ? (
         <div className="w-1/2">
           <PromptAreaComponent
+            field_name={name}
             disabled={false}
             value={data.node.template[name].value ?? ""}
             onChange={(t: string) => {

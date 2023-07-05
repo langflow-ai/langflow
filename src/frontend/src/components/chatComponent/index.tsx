@@ -13,7 +13,7 @@ import * as _ from "lodash";
 export default function Chat({ flow }: ChatType) {
   const [open, setOpen] = useState(false);
   const [isBuilt, setIsBuilt] = useState(false);
-  const {tabsState} = useContext(TabsContext);
+  const { tabsState } = useContext(TabsContext);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -47,12 +47,14 @@ export default function Chat({ flow }: ChatType) {
   const nodes = useNodes();
   useEffect(() => {
     const prevNodes = prevNodesRef.current;
-    const currentNodes = nodes.map(
-      (node: NodeType) => _.cloneDeep(node.data.node.template)
-      );
+    const currentNodes = nodes.map((node: NodeType) =>
+      _.cloneDeep(node.data.node.template)
+    );
     if (
-      tabsState && tabsState[flow.id] && tabsState[flow.id].isPending
-      && JSON.stringify(prevNodes) !== JSON.stringify(currentNodes)
+      tabsState &&
+      tabsState[flow.id] &&
+      tabsState[flow.id].isPending &&
+      JSON.stringify(prevNodes) !== JSON.stringify(currentNodes)
     ) {
       setIsBuilt(false);
     }
@@ -62,25 +64,18 @@ export default function Chat({ flow }: ChatType) {
 
   return (
     <>
-      {isBuilt ? (
-        <div>
-          <BuildTrigger
-            open={open}
-            flow={flow}
-            setIsBuilt={setIsBuilt}
-            isBuilt={isBuilt}
-          />
-          <FormModal key={flow.id} flow={flow} open={open} setOpen={setOpen} />
-          <ChatTrigger open={open} setOpen={setOpen} isBuilt={isBuilt} />
-        </div>
-      ) : (
+      <div>
         <BuildTrigger
           open={open}
           flow={flow}
           setIsBuilt={setIsBuilt}
           isBuilt={isBuilt}
         />
-      )}
+        {isBuilt && (
+          <FormModal key={flow.id} flow={flow} open={open} setOpen={setOpen} />
+        )}
+        <ChatTrigger open={open} setOpen={setOpen} isBuilt={isBuilt} />
+      </div>
     </>
   );
 }

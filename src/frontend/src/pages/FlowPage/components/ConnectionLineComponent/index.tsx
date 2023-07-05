@@ -11,9 +11,10 @@ const ConnectionLineComponent = ({
     <g>
       <path
         fill="none"
+        // ! Replace hash # colors here
         stroke="#222"
         strokeWidth={1.5}
-        className="animated dark:stroke-gray-400"
+        className="animated "
         d={`M${fromX},${fromY} C ${fromX} ${toY} ${fromX} ${toY} ${toX},${toY}`}
         style={connectionLineStyle}
       />
@@ -23,7 +24,7 @@ const ConnectionLineComponent = ({
         fill="#fff"
         r={3}
         stroke="#222"
-        className="dark:stroke-gray-400 dark:fill-gray-800"
+        className=""
         strokeWidth={1.5}
       />
     </g>
