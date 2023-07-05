@@ -11,6 +11,12 @@ import remarkMath from "remark-math";
 import { CodeBlock } from "./codeBlock";
 import Convert from "ansi-to-html";
 import { User2, MessageSquare } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "../../../components/ui/accordion";
 
 export default function ChatMessage({
   chat,
@@ -22,16 +28,11 @@ export default function ChatMessage({
   lastMessage: boolean;
 }) {
   const convert = new Convert({ newline: true });
-  const [message, setMessage] = useState("");
-  const imgRef = useRef(null);
-  useEffect(() => {
-    setMessage(chat.message);
-  }, [chat.message]);
   const [hidden, setHidden] = useState(true);
   return (
     <div
       className={classNames(
-        "flex w-full px-2 py-2 pl-4 pr-9",
+        "flex w-full px-2 py-6 pl-4 pr-9",
         chat.isSend ? " bg-border" : " "
       )}
     >
@@ -77,14 +78,14 @@ export default function ChatMessage({
               <div
                 onClick={() => setHidden((prev) => !prev)}
                 className=" ml-3 inline-block h-full w-[95%] cursor-pointer overflow-scroll rounded-md border
-								border-gray-300 bg-muted px-2 pb-3 pt-3 text-start text-primary scrollbar-hide dark:border-gray-500 dark:bg-gray-800"
+								border-gray-300 bg-muted px-2 text-start text-primary scrollbar-hide dark:border-gray-500 dark:bg-gray-800"
                 dangerouslySetInnerHTML={{
                   __html: convert.toHtml(chat.thought),
                 }}
               ></div>
             )}
             {chat.thought && chat.thought !== "" && !hidden && <br></br>}
-            <div className="w-full pb-3 pt-3">
+            <div className="w-full">
               <div className="w-full dark:text-white">
                 <div className="w-full">
                   <ReactMarkdown
@@ -125,7 +126,7 @@ export default function ChatMessage({
                       },
                     }}
                   >
-                    {message}
+                    {chat.message.toString()}
                   </ReactMarkdown>
                 </div>
                 {chat.files && (
@@ -148,14 +149,24 @@ export default function ChatMessage({
           </div>
         </div>
       ) : (
-        <div className="flex w-full items-center">
+        <div className="flex w-full flex-1 items-center">
           <div className="inline-block text-start">
-            <span
-              className="text-primary"
-              dangerouslySetInnerHTML={{
-                __html: message.replace(/\n/g, "<br>"),
-              }}
-            ></span>
+            <span className="text-primary">
+              <Accordion
+                type="multiple"
+                className="my-2 w-full rounded-md bg-muted p-2"
+              >
+                {Object.keys(chat.message)
+                  .filter((key) => key !== chat.chatKey)
+                  .map((key) => (
+                    <AccordionItem value={key}>
+                      <AccordionTrigger>{key}</AccordionTrigger>
+                      <AccordionContent>{chat.message[key]}</AccordionContent>
+                    </AccordionItem>
+                  ))}
+              </Accordion>
+              {chat.message[chat.chatKey]}
+            </span>
           </div>
         </div>
       )}
