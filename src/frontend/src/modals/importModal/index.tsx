@@ -160,7 +160,10 @@ export default function ImportModal() {
                     bgColor="bg-medium-emerald "
                     description={example.description ?? "Prebuilt Examples"}
                     icon={
-                      <DocumentDuplicateIcon strokeWidth={1.5} className="h-6 w-6 flex-shrink-0" />
+                      <DocumentDuplicateIcon
+                        strokeWidth={1.5}
+                        className="h-6 w-6 flex-shrink-0"
+                      />
                     }
                     onClick={() => {
                       addFlow(example, false);
