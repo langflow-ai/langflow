@@ -1,22 +1,18 @@
 import {
-  XMarkIcon,
-  ArrowDownTrayIcon,
   DocumentDuplicateIcon,
   ComputerDesktopIcon,
   ArrowUpTrayIcon,
   ArrowLeftIcon,
-  CommandLineIcon,
 } from "@heroicons/react/24/outline";
-import { Fragment, useContext, useRef, useState } from "react";
+import { useContext, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import ButtonBox from "./buttonBox";
 import { getExamples } from "../../controllers/API";
-import { error } from "console";
 import { alertContext } from "../../contexts/alertContext";
 import LoadingComponent from "../../components/loadingComponent";
 import { FlowType } from "../../types/flow";
-import { classNames, snakeToSpaces, toNormalCase } from "../../utils";
+import { classNames } from "../../utils";
 import {
   Dialog,
   DialogContent,
@@ -26,7 +22,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-import { Button } from "../../components/ui/button";
 import { IMPORT_DIALOG_SUBTITLE } from "../../constants";
 
 export default function ImportModal() {
@@ -58,7 +53,7 @@ export default function ImportModal() {
         setErrorData({
           title: "there was an error loading examples, please try again",
           list: [error.message],
-        })
+        }),
       );
   }
 
@@ -69,7 +64,7 @@ export default function ImportModal() {
         className={classNames(
           showExamples
             ? "lg:max-w-[650px] h-[600px]"
-            : "lg:max-w-[650px] h-[450px]"
+            : "lg:max-w-[650px] h-[450px]",
         )}
       >
         <DialogHeader>
@@ -109,7 +104,7 @@ export default function ImportModal() {
             "h-full w-full dark:bg-gray-900 overflow-y-auto scrollbar-hide",
             showExamples && !loadingExamples
               ? "flex flex-row start justify-center items-start flex-wrap overflow-auto mx-auto"
-              : "flex flex-row justify-center items-center"
+              : "flex flex-row justify-center items-center",
           )}
         >
           {!showExamples && (
@@ -194,7 +189,7 @@ export default function ImportModal() {
                   fill="currentColor"
                 />
               </svg>
-              <span className="ml-2 ">LangFlow Examples</span>
+              <span className="ml-2 ">Langflow Examples</span>
             </a>
           </div>
         </DialogFooter>

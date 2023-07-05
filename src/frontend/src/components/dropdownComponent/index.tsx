@@ -18,7 +18,7 @@ export default function Dropdown({
   const { closePopUp } = useContext(PopUpContext);
 
   let [internalValue, setInternalValue] = useState(
-    value === "" || !value ? "Choose an option" : value
+    value === "" || !value ? "Choose an option" : value,
   );
 
   useEffect(() => {
@@ -71,7 +71,7 @@ export default function Dropdown({
                     editNode
                       ? "z-10 mt-1 max-h-60 overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm w-[215px]"
                       : "nowheel z-10 mt-1 max-h-60 w-full overflow-auto overflow-y rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm ",
-                    apiModal ? "w-[250px] mb-2" : "absolute"
+                    apiModal ? "w-[250px] mb-2" : "absolute",
                   )}
                 >
                   {options.map((option, id) => (
@@ -84,7 +84,7 @@ export default function Dropdown({
                             : "",
                           editNode
                             ? "relative cursor-default select-none py-0.5 pl-3 pr-12 dark:text-gray-300 dark:bg-gray-800"
-                            : "relative cursor-default select-none py-2 pl-3 pr-9 dark:text-gray-300 dark:bg-gray-800"
+                            : "relative cursor-default select-none py-2 pl-3 pr-9 dark:text-gray-300 dark:bg-gray-800",
                         )
                       }
                       value={option}
@@ -94,7 +94,7 @@ export default function Dropdown({
                           <span
                             className={classNames(
                               selected ? "font-semibold" : "font-normal",
-                              "block truncate "
+                              "block truncate ",
                             )}
                           >
                             {option}
@@ -104,7 +104,7 @@ export default function Dropdown({
                             <span
                               className={classNames(
                                 active ? "text-white dark:text-black" : "",
-                                "absolute inset-y-0 right-0 flex items-center pr-4"
+                                "absolute inset-y-0 right-0 flex items-center pr-4",
                               )}
                             >
                               <Check

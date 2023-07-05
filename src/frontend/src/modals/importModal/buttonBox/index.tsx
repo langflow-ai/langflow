@@ -81,7 +81,7 @@ export default function ButtonBox({
           bgColor,
           height,
           width,
-          padding
+          padding,
         )}
       >
         <div
@@ -98,7 +98,7 @@ export default function ButtonBox({
             className={classNames(
               "w-full font-semibold break-words text-white dark:text-white/80 truncate-multiline",
               titleFontSize,
-              marginTop
+              marginTop,
             )}
           >
             {title}

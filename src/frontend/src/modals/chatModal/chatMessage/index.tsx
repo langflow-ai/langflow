@@ -34,12 +34,12 @@ export default function ChatMessage({
         "w-full py-2 pl-2 flex",
         chat.isSend
           ? "bg-background dark:bg-gray-900 "
-          : "bg-input  dark:bg-gray-800"
+          : "bg-input  dark:bg-gray-800",
       )}
     >
       <div
         className={classNames(
-          "rounded-full overflow-hidden w-8 h-8 flex items-center my-3 justify-center"
+          "rounded-full overflow-hidden w-8 h-8 flex items-center my-3 justify-center",
         )}
       >
         {!chat.isSend && (
@@ -105,7 +105,7 @@ export default function ChatMessage({
 
                           children[0] = (children[0] as string).replace(
                             "`▍`",
-                            "▍"
+                            "▍",
                           );
                         }
 

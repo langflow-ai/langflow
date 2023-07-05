@@ -22,7 +22,7 @@ export default function ToggleComponent({
         }}
         className={classNames(
           enabled ? "bg-primary" : "bg-gray-200",
-          "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-1 focus:ring-primary focus:ring-offset-1"
+          "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-1 focus:ring-primary focus:ring-offset-1",
         )}
       >
         <span className="sr-only">Use setting</span>
@@ -32,7 +32,7 @@ export default function ToggleComponent({
             "pointer-events-none relative inline-block h-5 w-5 transform rounded-full  shadow ring-0 transition duration-200 ease-in-out",
             disabled
               ? "bg-gray-200 dark:bg-gray-600"
-              : "bg-white dark:bg-gray-800"
+              : "bg-white dark:bg-gray-800",
           )}
         >
           <span
@@ -40,7 +40,7 @@ export default function ToggleComponent({
               enabled
                 ? "opacity-0 ease-out duration-100"
                 : "opacity-100 ease-in duration-200",
-              "absolute inset-0 flex h-full w-full items-center justify-center transition-opacity"
+              "absolute inset-0 flex h-full w-full items-center justify-center transition-opacity",
             )}
             aria-hidden="true"
           ></span>
@@ -49,7 +49,7 @@ export default function ToggleComponent({
               enabled
                 ? "opacity-100 ease-in duration-200"
                 : "opacity-0 ease-out duration-100",
-              "absolute inset-0 flex h-full w-full items-center justify-center transition-opacity"
+              "absolute inset-0 flex h-full w-full items-center justify-center transition-opacity",
             )}
             aria-hidden="true"
           ></span>
