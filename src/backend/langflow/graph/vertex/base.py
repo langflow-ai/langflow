@@ -1,5 +1,6 @@
 from langflow.interface.initialize import loading
 from langflow.interface.listing import ALL_TYPES_DICT
+from langflow.utils.constants import DIRECT_TYPES
 from langflow.utils.logger import logger
 from langflow.utils.util import sync_to_async
 
@@ -110,8 +111,14 @@ class Vertex:
                 file_path = value.get("file_path")
 
                 params[key] = file_path
-            elif value.get("type") in ["str", "prompt"] and params.get(key) is None:
+            elif value.get("type") in DIRECT_TYPES and params.get(key) is None:
                 params[key] = value.get("value")
+
+            if not value.get("required") and params.get(key) is None:
+                if value.get("default"):
+                    params[key] = value.get("default")
+                else:
+                    params.pop(key, None)
         # Add _type to params
         self.params = params
 
@@ -176,6 +183,8 @@ class Vertex:
         # and return the instance
 
         try:
+            if self.base_type is None:
+                raise ValueError(f"Base type for node {self.vertex_type} not found")
             result = loading.instantiate_class(
                 node_type=self.vertex_type,
                 base_type=self.base_type,
