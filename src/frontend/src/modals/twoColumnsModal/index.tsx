@@ -1,17 +1,7 @@
-import { useContext, useEffect, useRef, useState } from "react";
-import { FlowType } from "../../types/flow";
-import { alertContext } from "../../contexts/alertContext";
-import { classNames, validateNodes } from "../../utils";
-import { typesContext } from "../../contexts/typesContext";
+import { ReactNode, useEffect, useRef } from "react";
 import {
     TerminalSquare,
-    MessageSquare,
-    Variable,
-    Eraser,
-    MessageSquarePlus,
 } from "lucide-react";
-import { sendAllProps } from "../../types/api";
-import { ChatMessageType } from "../../types/chat";
 
 import _ from "lodash";
 import {
@@ -22,38 +12,45 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "../../components/ui/dialog";
-import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants";
-import { Label } from "../../components/ui/label";
-import { TabsContext } from "../../contexts/tabsContext";
-import {
-    Accordion,
-    AccordionContent,
-    AccordionItem,
-    AccordionTrigger,
-} from "../../components/ui/accordion";
-import { Textarea } from "../../components/ui/textarea";
-import { Badge } from "../../components/ui/badge";
-import ToggleShadComponent from "../../components/toggleShadComponent";
-import Dropdown from "../../components/dropdownComponent";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "../../components/ui/dropdown-menu";
-import { Button } from "../../components/ui/button";
+import React from "react";
 
-export default function TwoColumnsModal({
+const First: React.FC<{ children: ReactNode }> = ({ children }) => {
+    return (
+        <div className="w-2/5 h-full">
+            {children}
+        </div>)
+}
+const Second: React.FC<{ children: ReactNode }> = ({ children }) => {
+    return (
+        <div className="w-full">
+            {children}
+        </div>)
+}
+
+const Header: React.FC<{ children: ReactNode, description:string }> = ({ children,description }) => {
+    return (
+        <DialogHeader>
+            <DialogTitle className="flex items-center">
+                {children}
+            </DialogTitle>
+            <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+    )
+}
+
+function TwoColumnsModal({
     title,
     description,
     open,
     setOpen,
+    children,
 }: {
+    children: ReactNode;
     description: string;
     title: string;
     open: boolean;
     setOpen: Function;
-}) {
+}, { }) {
     const isOpen = useRef(open);
     useEffect(() => {
         isOpen.current = open;
@@ -62,32 +59,30 @@ export default function TwoColumnsModal({
     function setModalOpen(x: boolean) {
         setOpen(x);
     }
+    const firstChild = React.Children.toArray(children).find(
+        (child) => (child as React.ReactElement).type === First
+    );
+
+    const secondChild = React.Children.toArray(children).find(
+        (child) => (child as React.ReactElement).type === Second
+    );
+    const headerChild = React.Children.toArray(children).find((child) => (child as React.ReactElement).type === Header);
     //UPDATE COLORS AND STYLE CLASSSES
     return (
         <Dialog open={open} onOpenChange={setModalOpen}>
             <DialogTrigger className="hidden"></DialogTrigger>
             <DialogContent className="min-w-[80vw]">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center">
-                        <span className="pr-2">{title}</span>
-                        <TerminalSquare
-                            className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
-                            aria-hidden="true"
-                        />
-                    </DialogTitle>
-                    <DialogDescription>{description}</DialogDescription>
-                </DialogHeader>
-
+                {headerChild}
                 <div className="flex h-[80vh] w-full mt-2 ">
-                    <div className="w-2/5 h-full">
-                    </div>
-                    <div className="w-full">
-                    </div>
+                    {firstChild}
+                    {secondChild}
                 </div>
             </DialogContent>
         </Dialog>
     );
 
 }
-TwoColumnsModal.first = ({children})=><div>{children}</div>
-TwoColumnsModal.second = ({children})=><div>{children}</div>
+TwoColumnsModal.First = First;
+TwoColumnsModal.Second = Second;
+TwoColumnsModal.Header = Header;
+export default TwoColumnsModal;
