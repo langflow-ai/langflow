@@ -60,6 +60,7 @@ export default function CodeAreaModal({
       }, 300);
     }
   }
+  console.log(dynamic);
 
   function handleClick() {
     setLoading(true);
