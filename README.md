@@ -41,8 +41,49 @@ python -m langflow
 ```
 or
 ```shell
-langflow
+langflow # or langflow --help
 ```
+
+
+# Command Line Interface (CLI)
+
+Langflow provides a command-line interface (CLI) for easy management and configuration of the server.
+
+## CLI Usage
+
+You can run the Langflow using the following command:
+
+```shell
+langflow [OPTIONS]
+```
+
+Each option is detailed below:
+
+- `--help`: Displays all available options.
+- `--host`: Defines the host to bind the server to. Can be set using the `LANGFLOW_HOST` environment variable. The default is `127.0.0.1`.
+- `--workers`: Sets the number of worker processes. Can be set using the `LANGFLOW_WORKERS` environment variable. The default is `1`.
+- `--timeout`: Sets the worker timeout in seconds. The default is `60`.
+- `--port`: Sets the port to listen on. Can be set using the `LANGFLOW_PORT` environment variable. The default is `7860`.
+- `--config`: Defines the path to the configuration file. The default is `config.yaml`.
+- `--env-file`: Specifies the path to the .env file containing environment variables. The default is `.env`.
+- `--log-level`: Defines the logging level. Can be set using the `LANGFLOW_LOG_LEVEL` environment variable. The default is `critical`.
+- `--log-file`: Specifies the path to the log file. Can be set using the `LANGFLOW_LOG_FILE` environment variable. The default is `logs/langflow.log`.
+- `--cache`: Selects the type of cache to use. Options are `InMemoryCache` and `SQLiteCache`. Can be set using the `LANGFLOW_LANGCHAIN_CACHE` environment variable. The default is `SQLiteCache`.
+- `--jcloud/--no-jcloud`: Toggles the option to deploy on Jina AI Cloud. The default is `no-jcloud`.
+- `--dev/--no-dev`: Toggles the development mode. The default is `no-dev`.
+- `--database-url`: Sets the database URL to connect to. If not provided, a local SQLite database will be used. Can be set using the `LANGFLOW_DATABASE_URL` environment variable.
+- `--path`: Specifies the path to the frontend directory containing build files. This option is for development purposes only. Can be set using the `LANGFLOW_FRONTEND_PATH` environment variable.
+- `--open-browser/--no-open-browser`: Toggles the option to open the browser after starting the server. Can be set using the `LANGFLOW_OPEN_BROWSER` environment variable. The default is `open-browser`.
+- `--remove-api-keys/--no-remove-api-keys`: Toggles the option to remove API keys from the projects saved in the database. Can be set using the `LANGFLOW_REMOVE_API_KEYS` environment variable. The default is `no-remove-api-keys`.
+- `--install-completion [bash|zsh|fish|powershell|pwsh]`: Installs completion for the specified shell.
+- `--show-completion [bash|zsh|fish|powershell|pwsh]`: Shows completion for the specified shell, allowing you to copy it or customize the installation.
+
+## Environment Variables
+
+You can configure many of the CLI options using environment variables. These can be exported in your operating system or added to a `.env` file and loaded using the `--env-file` option.
+
+A sample `.env` file named `.env.example` is included with the project. Copy this file to a new file named `.env` and replace the example values with your actual settings. If you're setting values in both your OS and the `.env` file, the `.env` settings will take precedence.
+
 
 ### Deploy Langflow on Google Cloud Platform
 
