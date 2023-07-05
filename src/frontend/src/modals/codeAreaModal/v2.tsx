@@ -109,7 +109,7 @@ export default function CodeAreaModal({
   const tabs = [{ name: "code" }, { name: "errors" }]
 
   return (
-    <TwoColumnsModal open={open} setOpen={setOpen}>
+    <TwoColumnsModal open={true} setOpen={setOpen}>
         <TwoColumnsModal.Header description={CODE_PROMPT_DIALOG_SUBTITLE}>{"A"}</TwoColumnsModal.Header>
         <TwoColumnsModal.First>{"A"}</TwoColumnsModal.First>
         <TwoColumnsModal.Second>{"B"}</TwoColumnsModal.Second>
