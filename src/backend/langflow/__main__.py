@@ -107,8 +107,8 @@ def serve(
     ),
     log_level: str = typer.Option("critical", help="Logging level."),
     log_file: Path = typer.Option("logs/langflow.log", help="Path to the log file."),
-    cache: str = typer.Argument(
-        envvar="LANGCHAIN_CACHE",
+    cache: str = typer.Option(
+        envvar="LANGFLOW_LANGCHAIN_CACHE",
         help="Type of cache to use. (InMemoryCache, SQLiteCache)",
         default="SQLiteCache",
     ),
@@ -117,6 +117,7 @@ def serve(
     database_url: str = typer.Option(
         None,
         help="Database URL to connect to. If not provided, a local SQLite database will be used.",
+        envvar="LANGFLOW_DATABASE_URL",
     ),
     path: str = typer.Option(
         None,
