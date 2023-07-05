@@ -94,10 +94,10 @@ export default function InputFileComponent({
   return (
     <div
       className={
-        disabled ? "pointer-events-none w-full cursor-not-allowed" : "w-full"
+        disabled ? "input-component-div" : "w-full"
       }
     >
-      <div className="flex w-full items-center">
+      <div className="input-file-component">
         <span
           onClick={handleButtonClick}
           className={

@@ -32,7 +32,7 @@ export default function InputComponent({
     <div
       className={
         disabled
-          ? "pointer-events-none relative cursor-not-allowed"
+          ? "input-component-div"
           : "relative"
       }
     >
@@ -61,8 +61,8 @@ export default function InputComponent({
         <button
           className={classNames(
             editNode
-              ? "absolute inset-y-0 right-0 items-center pr-2 text-muted-foreground"
-              : "absolute inset-y-0 right-0 items-center px-4 text-muted-foreground"
+              ? "input-component-true-button"
+              : "input-component-false-button"
           )}
           onClick={() => {
             setPwdVisible(!pwdVisible);
@@ -78,8 +78,8 @@ export default function InputComponent({
                 stroke="currentColor"
                 className={classNames(
                   editNode
-                    ? "absolute bottom-0.5 right-2 h-5 w-5"
-                    : "absolute bottom-2 right-3 h-5 w-5"
+                    ? "input-component-true-svg"
+                    : "input-component-false-svg"
                 )}
               >
                 <path
@@ -97,8 +97,8 @@ export default function InputComponent({
                 stroke="currentColor"
                 className={classNames(
                   editNode
-                    ? "absolute bottom-0.5 right-2 h-5 w-5"
-                    : "absolute bottom-2 right-3 h-5 w-5"
+                    ? "input-component-true-svg"
+                    : "input-component-false-svg"
                 )}
               >
                 <path
