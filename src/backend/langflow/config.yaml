@@ -189,8 +189,6 @@ tools:
     documentation: ""
   Calculator:
     documentation: ""
-  CustomComponent:
-    documentation: ""
   Serper Search:
     documentation: ""
   Tool:
@@ -289,3 +287,6 @@ output_parsers:
     documentation: "https://python.langchain.com/docs/modules/model_io/output_parsers/structured"
   ResponseSchema:
     documentation: "https://python.langchain.com/docs/modules/model_io/output_parsers/structured"
+custom:
+  CustomComponent:
+    documentation: ""
