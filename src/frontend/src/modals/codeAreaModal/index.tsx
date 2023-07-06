@@ -61,7 +61,7 @@ export default function CodeAreaModal({
           <DialogDescription>{CODE_PROMPT_DIALOG_SUBTITLE}</DialogDescription>
         </DialogHeader>
 
-        <div className="mt-2 flex h-full w-full">
+        <div className="code-area-modal-editor-div">
           <AceEditor
             value={code}
             mode="python"

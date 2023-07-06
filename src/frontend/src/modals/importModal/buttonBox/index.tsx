@@ -77,7 +77,7 @@ export default function ButtonBox({
     <button disabled={deactivate} onClick={onClick}>
       <div
         className={classNames(
-          "flex transform flex-col items-center justify-center rounded-lg border border-ring text-center shadow hover:scale-105 hover:shadow-lg",
+          "button-box-modal-div",
           bgColor,
           height,
           width,

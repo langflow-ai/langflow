@@ -139,7 +139,7 @@ export default function App() {
       </ErrorBoundary>
       <div></div>
       <div
-        className="fixed bottom-5 left-5 flex flex-col-reverse"
+        className="app-div"
         style={{ zIndex: 999 }}
       >
         {alertsList.map((alert) => (

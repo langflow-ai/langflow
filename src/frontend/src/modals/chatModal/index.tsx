@@ -333,11 +333,11 @@ export default function ChatModal({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black bg-opacity-80   backdrop-blur-sm transition-opacity" />
+          <div className="send-message-modal-transition" />
         </Transition.Child>
 
-        <div className="fixed inset-0 z-10 overflow-y-auto">
-          <div className="flex h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+        <div className="chat-modal-box">
+          <div className="chat-modal-box-div">
             <Transition.Child
               as={Fragment}
               enter="ease-out duration-300"
@@ -347,24 +347,24 @@ export default function ChatModal({
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className=" relative flex h-[95%] w-[690px] transform flex-col justify-between overflow-hidden rounded-lg bg-background text-left shadow-xl drop-shadow-2xl transition-all">
-                <div className="relative w-full p-4">
+              <Dialog.Panel className=" chat-modal-dialog-panel">
+                <div className="chat-modal-dialog-panel-div">
                   <button
                     onClick={() => clearChat()}
-                    className="absolute right-10 top-2 z-30 text-muted-foreground hover:text-status-red"
+                    className="chat-modal-dialog-trash-panel"
                   >
                     <Eraser className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => setModalOpen(false)}
-                    className="absolute right-2 top-1.5 z-30 text-muted-foreground hover:text-status-red"
+                    className="chat-modal-dialog-x-panel"
                   >
                     <X className="h-5 w-5" />
                   </button>
                 </div>
                 <div
                   ref={messagesRef}
-                  className="flex h-full w-full flex-col  items-center overflow-scroll border-t bg-background scrollbar-hide"
+                  className="chat-modal-dialog-history"
                 >
                   {chatHistory.length > 0 ? (
                     chatHistory.map((c, i) => (
@@ -376,7 +376,7 @@ export default function ChatModal({
                       />
                     ))
                   ) : (
-                    <div className="flex h-full w-full flex-col items-center justify-center text-center align-middle">
+                    <div className="chat-modal-dialog-span-box">
                       <span>
                         👋{" "}
                         <span className="text-lg  text-muted-foreground">
@@ -384,7 +384,7 @@ export default function ChatModal({
                         </span>
                       </span>
                       <br />
-                      <div className="w-2/4 rounded-md border border-input bg-muted px-6 py-8">
+                      <div className="chat-modal-dialog-desc">
                         <span className="text-base text-ring">
                           Start a conversation and click the agent’s thoughts{" "}
                           <span>
@@ -397,8 +397,8 @@ export default function ChatModal({
                   )}
                   <div ref={ref}></div>
                 </div>
-                <div className="flex w-full flex-col  items-center justify-between border-t bg-background p-3">
-                  <div className="relative mt-1  w-full rounded-md shadow-sm">
+                <div className="chat-modal-input-div">
+                  <div className="chat-modal-input">
                     <ChatInput
                       chatValue={chatValue}
                       lockChat={lockChat}
