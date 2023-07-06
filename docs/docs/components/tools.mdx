@@ -3,85 +3,218 @@
 
 ### BigSearchRun
 
+A wrapper around Bing Search. Useful for when you need to answer.questions about current events. Input should be a search query. 
+
+Bing Search is a web search engine owned and operated by Microsoft. It provides search results for various types of content, including web pages, images, videos, and news articles. Bing Search uses a combination of algorithms and human editors to deliver relevant and accurate search results to users.
+
+
+**Params**
+
+- **Api Wrapper**: Wrapper for Bing Search API.
+
 
 ### Calculator
+
+Useful for when you need to answer questions about math.
+
+**Params**
+
+- **LLM**: Language Model to use in the calculation.
 
 
 ### GoogleSearchResults
 
+A wrapper around Google Search. Useful for when you need to answer questions about current events. Input should be a search query. Output is a JSON array of the query results.
+
+**Params**
+
+- **Api Wrapper**: Wrapper for Google Search API.
+
 
 ### GoogleSearchRun
+
+A wrapper around Google Search. Useful for when you need to answer questions about current events. Input should be a search query.
+
+**Params**
+
+- **Api Wrapper**: Wrapper for Google Search API.
 
 
 ### GoogleSerperRun
 
+A low-cost Google Search API. Useful for when you need to answer questions about current events. Input should be a search query.
+
+**Params**
+
+- **Api Wrapper**: Wrapper around the Serper.dev Google Search API.
+
 
 ### InfoSQLDatabaseTool
 
+Tool for getting metadata about a SQL database. Input this tool is a comma-separated list of tables, output is the schema and sample rows for those tables. Example Input: `“table1`, `table2`, `table3”`.
+
+**Params**
+
+- **Db:** SQLDatabase to query.
 
 ### JsonGetValueTool
+
+Can be used to see value in string format at a given path. Before calling this you should be SURE that the path to this exists. The input is a text representation of the path to the dict in Python syntax (e.g. data["key1"][0]["key2"]).
+
+**Params**
+
+- **Spec:** Getting a value in a JSON spec.
 
 
 ### JsonListKeysTool
 
+Tool for listing keys in a JSON spec. Input is an empty string, output is a comma separated list of tables in the database.
+
+**Params**
+
+- **Spec:** Getting a value in a JSON spec.
+
 
 ### JsonSpec
+
+The `JsonSpec` class is the base class for the JSON spec. It is used to interact with large JSON/dict objects and answer questions about them.
+
+**Params**
+
+- **Path:** The parameter refers to the key or keys that are used to access a specific value within a JSON/dict object. It is used to navigate through the structure of the JSON object and locate the desired information. 
+
+- **Max Value Length:** This parameter refers to the maximum allowed length of a value in a JSON document. It is a parameter that can be set to limit the size of values in order to prevent excessively large values from being stored or transmitted.
 
 
 ### ListSQLDatabaseTool
 
+Tool for getting tables names. Input is an empty string, output is a comma separated list of tables in the database.
+
+**Params**
+
+- **Db:** SQLDatabase to query.
+
 
 ### News API
-
 
 Use this when you want to get information about the top headlines of current news stories. The input should be a question in natural language that this API can answer.
 
 **Params**
 
-- **news_api_key:**
+- **LLM:** Language Model to use in the `News API`.
+
+- **news_api_key:** It refers to the API key that is required to access and authenticate requests to the `News API`. The news_api_key acts as a security measure to ensure that only authorized users can access the `News API` and retrieve news data. [Get your API key here](https://newsapi.org/).
+
 
 ### PAL-MATH
 
+A language model that is really good at solving complex word math problems. Input should be a fully worded hard word math problem. 
+
+**Params**
+
+- **LLM:** Language Model to use in the `PAL-MATH`.
+
 
 ### Podcast API
-
 
 Use the Listen Notes Podcast API to search all podcasts or episodes. The input should be a question in natural language that this API can answer.
 
 **Params**
 
-- **listen_api_key:**
+- **listen_api_key:** It is a parameter used in the Podcast API to authenticate and authorize access to the API. It is a unique key assigned to each user or developer who wants to use the Podcast API. [Get your API key here](https://www.listennotes.com/api/).
 
 
 ### PythonAstREPLTool
 
+A Python shell. Use this to execute python commands. Input should be a valid python command. When using this tool, sometimes output is abbreviated - make sure it does not look abbreviated before using it in your answer.
+
+
+### PythonFunction
+
+Python function to be execute. 
+
+It allows you to create a customized tool using the `PythonFunction` connected to a Tool component.
+
+**Params**
+
+- **code**: The parameter refers to the code that is used to create a customized tool using the `PythonFunction`. Make sure that your function returns a string.
+
+
+### PythonFunctionTool
+
+Python function to be execute. 
+
+**Params**
+
+- **code**: The parameter refers to the code that is used to create a customized tool using the `PythonFunction`. Make sure that your function returns a string.
+
+- **description:** The parameter refers to the description of the `PythonFunctionTool`.
+
+- **name:** The parameter refers to the name of the `PythonFunctionTool`.
+
+- **return_direct:** The parameter refers to the return_direct of the `PythonFunctionTool`.
+
 
 ### QuerySQLDataBaseTool
+
+Input to this tool is a detailed and correct SQL query, output is a result from the database. If the query is not correct, an error message will be returned. If an error is returned, rewrite the query, check the query, and try again.
+
+**Params**
+
+- **Db:** SQLDatabase to query.
 
 
 ### RequestsDeleteTool
 
+A portal to the internet. Use this when you need to make a DELETE request to a URL. Input should be a specific url, and the output will be the text response of the DELETE request.
+
+**Params**
+
+- **Requests Wrapper:** Lightweight wrapper around requests library `(TextRequestsWrapper)`.
+
 
 ### RequestsGetTool
+
+A portal to the internet. Use this when you need to get specific content from a website. Input should be a url `(i.e. https://www.google.com)`. The output will be the text response of the GET request.
+
+**Params**
+
+- **Requests Wrapper:** Lightweight wrapper around requests library `(TextRequestsWrapper)`.
 
 
 ### RequestsPatchTool
 
+Use this when you want to PATCH to a website. Input should be a json string with two keys: "url" and "data". The value of "url" should be a string, and the value of "data" should be a dictionary of key-value pairs you want to PATCH to the url. Be careful to always use double quotes for strings in the json string The output will be the text response of the 
+PATCH request.
+
+**Params**
+
+- **Requests Wrapper:** Lightweight wrapper around requests library `(TextRequestsWrapper)`.
 
 ### RequestsPostTool
 
+Use this when you want to POST to a website. Input should be a json string with two keys: "url" and "data". The value of "url" should be a string, and the value of "data" should be a dictionary of key-value pairs you want to POST to the url. Be careful to always use double quotes for strings in the json string The output will be the text response of the 
+POST request.
+
+**Params**
+
+- **Requests Wrapper:** Lightweight wrapper around requests library `(TextRequestsWrapper)`.
 
 ### RequestsPutTool
 
+Use this when you want to PUT to a website. Input should be a json string with two keys: "url" and "data". The value of "url" should be a string, and the value of "data" should be a dictionary of key-value pairs you want to PUT to the url. Be careful to always use double quotes for strings in the json string. The output will be the text response of the 
+PUT request. 
+
+- **Requests Wrapper:** Lightweight wrapper around requests library `(TextRequestsWrapper)`.
+
 
 ### Search
-
 
 A search engine. Useful for when you need to answer questions about current events. Input should be a search query.
 
 **Params**
 
-- **serpapi_api_key:**
+- **serpapi_api_key:** This parameter is used to authenticate and authorize API requests to the SerpAPI service. The API key acts as a unique identifier for the user and allows them to access the SerpAPI functionality. [Get your API key here](https://serpapi.com/).
 
 
 ### TMDB API
@@ -91,20 +224,37 @@ Useful for when you want to get information from The Movie Database. The input s
 
 **Params**
 
-- **tmdb_bearer_token:**
+- **LLM:** Language Model to use in the `TMDB API`.
+
+- **tmdb_bearer_token:** It is an authentication token used in the TMDB API. It is used to authorize API requests to the TMDB service. By setting the tmdb_bearer_token in the API request headers, users can make requests to the TMDB API and retrieve information about movies, TV shows, actors, and more. [Get your API key here](https://developers.themoviedb.org/3/getting-started/introduction).
+
 
 ### Tool
 
-Converts a chain, agent or function into a tool.
+Converts a chain, agent or function into a tool. It allows you to define custom tools that can be used by the agent to perform specific tasks.
 
 **Params**
 
-- **description:**
-- **name:**
-- **return_direct:** Defaults to `False`
+- **description:**  A description of the tool and its purpose.
+
+- **name:** The name of the tool.
+
+- **return_direct:** The parameter refers to the return_direct of the `Tool`. Defaults to `False`.
+
 
 ### WikipediaQueryRun
+
+A wrapper around Wikipedia. Useful for when you need to answer general questions about people, places, companies, facts, historical events, or other subjects. Input should be a search query.
+
+**Params**
+
+- **Api Wrapper:** Wrapper around Wikipedia API `(WikipediaApiWrapper)`.
 
 
 ### WolframAlphaQueryRun
 
+A wrapper around Wolfram Alpha. Useful for when you need to answer questions about Math, Science, Technology, Culture, Society and Everyday Life. Input should be a search query.
+
+**Params**
+
+- **Api Wrapper:** Wrapper for Wolfram Alpha. `(WolframAlphaApiWrapper)`.
