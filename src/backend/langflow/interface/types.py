@@ -24,6 +24,9 @@ from fastapi import HTTPException
 import traceback
 
 # Used to get the base_classes list
+from langchain.chains import ConversationChain  # noqa: F401
+from langchain.llms.base import BaseLLM  # noqa: F401
+from langchain.tools import Tool  # noqa: F401
 
 
 def get_type_list():
