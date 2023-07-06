@@ -404,7 +404,7 @@ export default function FormModal({
           </DialogHeader>
 
           <div className="mt-2 flex h-[80vh] w-full ">
-            <div className="mr-6 flex h-full w-2/5 flex-col justify-start overflow-auto scrollbar-hide">
+            <div className="mr-6 flex h-full w-2/6 flex-col justify-start overflow-auto scrollbar-hide">
               <div className="flex items-center py-2">
                 <Variable className=" -ml-px mr-1 h-4 w-4 text-primary"></Variable>
                 <span className="text-md font-semibold text-primary">
@@ -496,7 +496,7 @@ export default function FormModal({
                 ))}
               </Accordion>
             </div>
-            <div className="w-full">
+            <div className="flex w-full flex-1 flex-col">
               <div className="relative flex h-full w-full flex-col rounded-md border bg-muted">
                 <div className="absolute right-3 top-3 z-50">
                   <button disabled={lockChat} onClick={() => clearChat()}>
