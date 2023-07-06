@@ -23,7 +23,7 @@ async def process_graph(
     try:
         logger.debug("Generating result and thought")
         result, intermediate_steps = await get_result_and_steps(
-            langchain_object, chat_inputs.message or "", websocket=websocket
+            langchain_object, chat_inputs.message, websocket=websocket
         )
         logger.debug("Generated result and intermediate_steps")
         return result, intermediate_steps
