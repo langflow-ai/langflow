@@ -37,9 +37,9 @@ export default function FileCard({ fileName, content, fileType }) {
         />
         {isHovered && (
           <div
-            className={`absolute right-0 top-0 rounded-bl-lg bg-muted px-1 text-sm font-bold text-foreground `}
+            className={`file-card-modal-image-div `}
           >
-            <button className="px-2 py-1 text-ring " onClick={handleDownload}>
+            <button className="file-card-modal-image-button " onClick={handleDownload}>
               <DownloadCloud className="h-5 w-5 text-current hover:scale-110" />
             </button>
           </div>
@@ -51,9 +51,9 @@ export default function FileCard({ fileName, content, fileType }) {
   return (
     <button
       onClick={handleDownload}
-      className="flex w-1/2 items-center justify-between rounded border border-ring bg-muted px-2 py-2 text-foreground shadow hover:drop-shadow-lg"
+      className="file-card-modal-button"
     >
-      <div className="mr-2 flex w-full items-center gap-2 text-current">
+      <div className="file-card-modal-div">
         {" "}
         {fileType === "image" ? (
           <img
@@ -64,10 +64,10 @@ export default function FileCard({ fileName, content, fileType }) {
         ) : (
           <File className="h-8 w-8" />
         )}
-        <div className="flex flex-col items-start">
+        <div className="file-card-modal-footer">
           {" "}
-          <div className="truncate text-sm text-current">{fileName}</div>
-          <div className="truncate text-xs  text-ring">{fileType}</div>
+          <div className="file-card-modal-name">{fileName}</div>
+          <div className="file-card-modal-type">{fileType}</div>
         </div>
         <DownloadCloud className="ml-auto h-6 w-6 text-current" />
       </div>
