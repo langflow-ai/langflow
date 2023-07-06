@@ -44,10 +44,10 @@ export const EditFlowSettings: React.FC<InputProps> = ({
   return (
     <>
       <Label>
-        <div className="flex justify-between">
+        <div className="edit-flow-arrangement">
           <span className="font-medium">Name</span>{" "}
           {isMaxLength && (
-            <span className="ml-10 animate-pulse text-status-red">
+            <span className="edit-flow-span">
               Character limit reached
             </span>
           )}

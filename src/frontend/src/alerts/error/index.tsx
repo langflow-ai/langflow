@@ -39,19 +39,19 @@ export default function ErrorAlert({
             removeAlert(id);
           }, 500);
         }}
-        className="mt-6 w-96 cursor-pointer rounded-md bg-error-background  p-4 shadow-xl"
+        className="error-build-message"
       >
         <div className="flex">
           <div className="flex-shrink-0">
-            <XCircle className="h-5 w-5 text-status-red" aria-hidden="true" />
+            <XCircle className="error-build-message-circle" aria-hidden="true" />
           </div>
           <div className="ml-3">
-            <h3 className="text-sm font-medium text-error-foreground">
+            <h3 className="error-build-foreground">
               {title}
             </h3>
             {list.length !== 0 ? (
-              <div className="mt-2 text-sm text-error-foreground">
-                <ul className="list-disc space-y-1 pl-5">
+              <div className="error-build-message-div">
+                <ul className="error-build-message-list">
                   {list.map((item, index) => (
                     <li key={index}>{item}</li>
                   ))}

@@ -30,10 +30,10 @@ export default function CodeAreaComponent({
   return (
     <div
       className={
-        disabled ? "pointer-events-none w-full cursor-not-allowed" : "w-full"
+        disabled ? "code-area-component" : "w-full"
       }
     >
-      <div className="flex w-full items-center">
+      <div className="code-area-input-positioning">
         <span
           onClick={() => {
             openPopUp(
@@ -69,10 +69,7 @@ export default function CodeAreaComponent({
           }}
         >
           {!editNode && (
-            <ExternalLink
-              strokeWidth={1.5}
-              className="ml-3 h-6 w-6  hover:text-accent-foreground"
-            />
+            <ExternalLink strokeWidth={1.5} className="code-area-external-link" />
           )}
         </button>
       </div>

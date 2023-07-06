@@ -28,24 +28,24 @@ export const CardComponent = ({
   return (
     <Card className="group">
       <CardHeader>
-        <CardTitle className="flex w-full items-center gap-4">
+        <CardTitle className="card-component-title-display">
           <span
             className={
-              "flex h-7 w-7 items-center justify-center rounded-full text-2xl " +
+              "card-component-image " +
               gradients[parseInt(flow.id.slice(0, 12), 16) % gradients.length]
             }
           ></span>
-          <span className="inline-block w-full flex-1 break-words truncate-doubleline">
+          <span className="card-component-title-size">
             {flow.name}
           </span>
           {onDelete && (
-            <button className="flex self-start" onClick={onDelete}>
-              <Trash2 className="h-4 w-4 text-primary opacity-0 transition-all group-hover:opacity-100" />
+            <button className="card-component-delete-button" onClick={onDelete}>
+              <Trash2 className="card-component-delete-icon" />
             </button>
           )}
         </CardTitle>
-        <CardDescription className="pb-2 pt-2">
-          <div className="truncate-doubleline">
+        <CardDescription className="card-component-desc">
+          <div className="card-component-desc-text">
             {flow.description}
             {/* {flow.description} */}
           </div>
@@ -53,8 +53,8 @@ export const CardComponent = ({
       </CardHeader>
 
       <CardFooter>
-        <div className="flex w-full items-end justify-between gap-2">
-          <div className="flex flex-wrap gap-2">
+        <div className="card-component-footer-arrangement">
+          <div className="card-component-footer">
             {/* <Badge variant="secondary">Agent</Badge>
             <Badge variant="secondary">
               <div className="w-3">
