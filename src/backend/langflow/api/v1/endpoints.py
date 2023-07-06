@@ -100,9 +100,6 @@ async def custom_component(
     raw_code: CustomComponentCode,
 ):
     extractor = CustomComponent(code=raw_code.code)
-
-    if not extractor.is_valid:
-        print("ERROR")
-        # TODO: Raise error
+    extractor.is_check_valid()
 
     return build_langchain_template_custom_component(extractor)
