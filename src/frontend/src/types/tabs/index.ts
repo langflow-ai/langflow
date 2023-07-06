@@ -40,6 +40,7 @@ export type TabsState = {
   [key: string]: {
     isPending: boolean;
     formKeysData: {
+      template?: string;
       input_keys?: Object;
       memory_keys?: Array<string>;
       handle_keys?: Array<string>;
