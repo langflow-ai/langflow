@@ -94,6 +94,7 @@ export default function FormModal({
     message: string | Object,
     isSend: boolean,
     chatKey: string,
+    template?: string,
     thought?: string,
     files?: Array<any>
   ) => {
@@ -103,6 +104,8 @@ export default function FormModal({
         newChat.push({ message, isSend, files, thought, chatKey });
       } else if (thought) {
         newChat.push({ message, isSend, thought, chatKey });
+      } else if (template) {
+        newChat.push({ message, isSend, chatKey, template });
       } else {
         newChat.push({ message, isSend, chatKey });
       }
@@ -175,6 +178,7 @@ export default function FormModal({
             intermediate_steps?: string;
             is_bot: boolean;
             message: string;
+            template: string;
             type: string;
             chatKey: string;
             files?: Array<any>;
@@ -185,6 +189,7 @@ export default function FormModal({
                   ? {
                       isSend: !chatItem.is_bot,
                       message: chatItem.message,
+                      template: chatItem.template,
                       thought: chatItem.intermediate_steps,
                       files: chatItem.files,
                       chatKey: chatItem.chatKey,
@@ -192,6 +197,7 @@ export default function FormModal({
                   : {
                       isSend: !chatItem.is_bot,
                       message: chatItem.message,
+                      template: chatItem.template,
                       thought: chatItem.intermediate_steps,
                       chatKey: chatItem.chatKey,
                     }
@@ -323,19 +329,6 @@ export default function FormModal({
       ref.current.focus();
     }
   }, [open]);
-  function formatMessage(inputs: any): string {
-    if (inputs) {
-      if (typeof inputs == "string") return inputs;
-      // inputs is a object with the keys and values being input_keys and keysValue
-      // so the formated message is a string with the keys and values separated by ": "
-      let message = "";
-      for (const [key, value] of Object.entries(inputs)) {
-        message += `<b>${key}</b>: ${value}\n`;
-      }
-      return message;
-    }
-    return "";
-  }
 
   function sendMessage() {
     if (chatValue !== "") {
@@ -345,7 +338,12 @@ export default function FormModal({
         let inputs = tabsState[id.current].formKeysData.input_keys;
         setChatValue("");
         const message = inputs;
-        addChatHistory(message, true, chatKey);
+        addChatHistory(
+          message,
+          true,
+          chatKey,
+          tabsState[flow.id].formKeysData.template
+        );
         sendAll({
           ...reactFlowInstance.toObject(),
           inputs: inputs,

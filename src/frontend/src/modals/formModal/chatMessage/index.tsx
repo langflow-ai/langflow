@@ -17,6 +17,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "../../../components/ui/accordion";
+import { Badge } from "../../../components/ui/badge";
 
 export default function ChatMessage({
   chat,
@@ -29,6 +30,7 @@ export default function ChatMessage({
 }) {
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
+  const [template, setTemplate] = useState(chat.template);
   return (
     <div
       className={classNames(
@@ -141,13 +143,51 @@ export default function ChatMessage({
                   className=" rounded-md border border-ring/60 bg-muted px-4"
                   value="prompt"
                 >
-                  <AccordionTrigger className="flex gap-4 font-semibold">
+                  <AccordionTrigger className="flex gap-4 text-base font-semibold">
                     Initial Prompt
                   </AccordionTrigger>
-                  <AccordionContent className="max-h-96 overflow-auto break-all p-2">
-                    {Object.keys(chat.message)
-                      .filter((key) => key !== chat.chatKey)
-                      .map((key) => chat.message[key])}
+                  <AccordionContent className="max-h-96 overflow-auto break-all p-2 text-base">
+                    {
+                      // Make all the variables that are inside curly braces bold
+                      template.split("\n").map((line, index) => {
+                        const regex = /{([^}]+)}/g;
+                        let match;
+                        let parts = [];
+                        let lastIndex = 0;
+                        while ((match = regex.exec(line)) !== null) {
+                          // Push text up to the match
+                          if (match.index !== lastIndex) {
+                            parts.push(line.substring(lastIndex, match.index));
+                          }
+                          // Push div with matched text
+                          parts.push(
+                            <div>
+                              <div className="my-1 inline-block rounded-md bg-indigo-100 px-2">
+                                <span key={match.index}>
+                                  <span className=" text-xs font-semibold text-high-indigo">
+                                    {match[1]}
+                                  </span>
+                                  {chat.message[match[1]] ? (
+                                    <span>
+                                      &nbsp;&nbsp;{chat.message[match[1]]}
+                                    </span>
+                                  ) : (
+                                    ""
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                          // Update last index
+                          lastIndex = regex.lastIndex;
+                        }
+                        // Push text after the last match
+                        if (lastIndex !== line.length) {
+                          parts.push(line.substring(lastIndex));
+                        }
+                        return <p>{parts}</p>;
+                      })
+                    }
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>

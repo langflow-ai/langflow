@@ -55,7 +55,6 @@ export default function GenericModal({
   const [myButtonText] = useState(buttonText);
   const [myModalTitle] = useState(modalTitle);
   const [myModalType] = useState(type);
-  const [open, setOpen] = useState(true);
   const [inputValue, setInputValue] = useState(value);
   const [isEdit, setIsEdit] = useState(true);
   const [wordsHighlightInvalid, setWordsHighlightInvalid] = useState([]);
@@ -66,7 +65,6 @@ export default function GenericModal({
   const { closePopUp, setCloseEdit } = useContext(PopUpContext);
   const ref = useRef();
   function setModalOpen(x: boolean) {
-    setOpen(x);
     if (x === false) {
       setCloseEdit("generic");
       closePopUp();
@@ -138,7 +136,6 @@ export default function GenericModal({
       .then((apiReturn) => {
         if (apiReturn.data) {
           setNodeClass(apiReturn.data.frontend_node);
-          setModalOpen(closeModal);
 
           let inputVariables = apiReturn.data.input_variables;
           if (inputVariables.length === 0) {
