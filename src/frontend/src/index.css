@@ -482,10 +482,10 @@ The cursor: default; property value restores the browser's default cursor style 
   }
 
   .dropdown-component-outline {
-    @apply relative pr-8 input-edit-node
+    @apply border-1 input-edit-node relative pr-8
   }
   .dropdown-component-false-outline {
-    @apply py-2 pl-3 pr-10 text-left input-primary
+    @apply input-primary py-2 pl-3 pr-10 text-left
   }
   .dropdown-component-display {
     @apply block w-full truncate bg-background

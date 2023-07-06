@@ -484,7 +484,7 @@ export function cn(...inputs: ClassValue[]) {
 export function measureTextHeight(
   text: string,
   width: number,
-  fontSize: number
+  fontSize: number,
 ) {
   const charHeight = fontSize;
   const lineHeight = charHeight * 1.5;
@@ -511,7 +511,7 @@ export function toCamelCase(str: string) {
     .map((word, index) =>
       index === 0
         ? word.toLowerCase()
-        : word[0].toUpperCase() + word.slice(1).toLowerCase()
+        : word[0].toUpperCase() + word.slice(1).toLowerCase(),
     )
     .join("");
 }
@@ -572,7 +572,7 @@ export function getConnectedNodes(edge: Edge, nodes: Array<Node>): Array<Node> {
 
 export function isValidConnection(
   { source, target, sourceHandle, targetHandle }: Connection,
-  reactFlowInstance: ReactFlowInstance
+  reactFlowInstance: ReactFlowInstance,
 ) {
   if (
     sourceHandle.split("|")[0] === targetHandle.split("|")[0] ||
@@ -619,7 +619,7 @@ export function removeApiKeys(flow: FlowType): FlowType {
 
 export function updateObject<T extends Record<string, any>>(
   reference: T,
-  objectToUpdate: T
+  objectToUpdate: T,
 ): T {
   let clonedObject = _.cloneDeep(objectToUpdate);
   // Loop through each key in the object to update
@@ -650,7 +650,7 @@ export function debounce(func, wait) {
 
 export function updateTemplate(
   reference: APITemplateType,
-  objectToUpdate: APITemplateType
+  objectToUpdate: APITemplateType,
 ): APITemplateType {
   let clonedObject: APITemplateType = _.cloneDeep(reference);
 
@@ -708,7 +708,7 @@ export function toTitleCase(str: string) {
     .map((word, index) => {
       if (index === 0) {
         return checkUpperWords(
-          word[0].toUpperCase() + word.slice(1).toLowerCase()
+          word[0].toUpperCase() + word.slice(1).toLowerCase(),
         );
       }
       return checkUpperWords(word.toLowerCase());
@@ -720,7 +720,7 @@ export function toTitleCase(str: string) {
     .map((word, index) => {
       if (index === 0) {
         return checkUpperWords(
-          word[0].toUpperCase() + word.slice(1).toLowerCase()
+          word[0].toUpperCase() + word.slice(1).toLowerCase(),
         );
       }
       return checkUpperWords(word.toLowerCase());
@@ -789,7 +789,7 @@ export function groupByFamily(data, baseClasses) {
   });
 
   let uniq = arrOfParent.filter(
-    (item, index) => arrOfParent.indexOf(item) === index
+    (item, index) => arrOfParent.indexOf(item) === index,
   );
 
   Object.keys(data).map((d) => {
@@ -809,7 +809,7 @@ export function groupByFamily(data, baseClasses) {
 
   let groupedBy = arrOfType.filter((object, index, self) => {
     const foundIndex = self.findIndex(
-      (o) => o.family === object.family && o.type === object.type
+      (o) => o.family === object.family && o.type === object.type,
     );
     return foundIndex === index;
   });
@@ -835,7 +835,7 @@ export function buildTweaks(flow) {
 }
 export function validateNode(
   n: NodeType,
-  reactFlowInstance: ReactFlowInstance
+  reactFlowInstance: ReactFlowInstance,
 ): Array<string> {
   if (!n.data?.node?.template || !Object.keys(n.data.node.template)) {
     return [
@@ -861,16 +861,16 @@ export function validateNode(
             .some(
               (e) =>
                 e.targetHandle.split("|")[1] === t &&
-                e.targetHandle.split("|")[2] === n.id
+                e.targetHandle.split("|")[2] === n.id,
             )
           ? [
               `${type} is missing ${
                 template.display_name || toNormalCase(template[t].name)
               }.`,
             ]
-          : []
+          : [],
       ),
-    [] as string[]
+    [] as string[],
   );
 }
 
@@ -895,7 +895,7 @@ export function getRandomDescription(): string {
 export function getRandomName(
   retry: number = 0,
   noSpace: boolean = false,
-  maxRetries: number = 3
+  maxRetries: number = 3,
 ): string {
   const left: string[] = ADJECTIVES;
   const right: string[] = NOUNS;

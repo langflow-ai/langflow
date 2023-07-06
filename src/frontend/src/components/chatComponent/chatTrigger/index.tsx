@@ -31,10 +31,7 @@ export default function ChatTrigger({ open, setOpen, isBuilt }) {
       leaveTo="translate-y-96"
     >
       <div className="message-button-position">
-        <div
-          className="round-button-form"
-          onClick={handleClick}
-        >
+        <div className="round-button-form" onClick={handleClick}>
           <button>
             <div className="round-button-div">
               <MessagesSquare
