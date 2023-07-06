@@ -36,7 +36,7 @@ export default function ChatMessage({
         chat.isSend ? " bg-border" : " "
       )}
     >
-      <div className={classNames("my-3 ml-3 mr-6 ")}>
+      <div className={classNames("mb-3 ml-3 mr-6 mt-1 ")}>
         {!chat.isSend ? (
           <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-[#afe6ef] p-5 text-2xl ">
             🤖
