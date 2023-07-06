@@ -141,9 +141,9 @@ export default function CodeAreaModal({
                         />
                     </div>
                     <div className={"w-full transition-all delay-500 " + (error?.detail.error !== undefined ? "h-2/6" : "h-0")}>
-                        <div className="w-full h-full overflow-auto custom-scroll text-left mt-1">
+                        <div className="w-full h-full overflow-y-scroll overflow-x-clip custom-scroll text-left mt-1">
                             <h1 className="text-destructive text-lg">{error?.detail?.error}</h1>
-                            <div className="text-status-red text-sm ml-2"><pre>{error?.detail?.traceback}</pre></div>
+                            <div className="text-status-red text-sm ml-2 w-full break-all"><pre className="w-full break-all whitespace-pre-wrap">{error?.detail?.traceback}</pre></div>
                         </div>
                     </div>
                     <div className="h-fit w-full flex justify-end">
