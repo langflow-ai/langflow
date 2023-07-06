@@ -6,20 +6,24 @@
 
 Implementation of splitting text that looks at characters.
 
+`CharacterTextSplitter` is a text splitter module that splits text based on characters. It is the simplest method of text splitting and measures the chunk size by the number of characters.
+
 **Params**
 
-- **chunk_overlap:** Defaults to `200`
-- **chunk_size:** Defaults to `1000`
-- **separator:** Defaults to `.`
+- **chunk_overlap:** Overlap in characters between chunks. Defaults to `200`
+- **chunk_size:** Maximum size of chunks to return. Defaults to `1000`
+- **separator:** Separator used to split the text. Defaults to `.`
 
 ### RecursiveCharacterTextSplitter
 
 
 Implementation of splitting text that looks at characters.
 
+`RecursiveCharacterTextSplitter` is another text splitter module that is used to split text into smaller chunks. It recursively splits the text by the specified characters and measures the chunk size by the number of characters. This module is useful for dividing long documents into smaller chunks for further processing and analysis.
+
 **Params**
 
-- **chunk_overlap:** Defaults to `200`
-- **chunk_size:** Defaults to `1000`
+- **chunk_overlap:** Overlap in characters between chunks. Defaults to `200`
+- **chunk_size:** Maximum size of chunks to return. Defaults to `1000`
 - **separator_type:** Defaults to `Text`
-- **separators:** Defaults to `.`
+- **separators:** Separator used to split the text. Defaults to `.`
