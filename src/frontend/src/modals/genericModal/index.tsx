@@ -282,9 +282,9 @@ export default function GenericModal({
           <Button
             className="mt-3"
             onClick={() => {
-              setValue(inputValue);
               switch (myModalType) {
                 case 1:
+                  setValue(inputValue);
                   setModalOpen(false);
                   break;
                 case 2:
