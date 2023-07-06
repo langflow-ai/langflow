@@ -252,7 +252,7 @@ export default function GenericModal({
               value={inputValue}
               onBlur={() => {
                 blur();
-                validatePrompt(true);
+                setIsEdit(false);
               }}
               autoFocus
               onChange={(e) => {
