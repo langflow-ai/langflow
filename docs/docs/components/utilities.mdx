@@ -6,28 +6,31 @@
 
 Wrapper for Bing Search API.
 
+`BingSearchAPIWrapper` provides a simplified interface and handles the underlying HTTP requests and responses for querying the Bing search engine.
+
 **Params**
 
-- **bing_search_url:**
-- **bing_subscription_key:**
+- **bing_search_url:** This parameter is a variable that stores the URL endpoint for the Bing Search API. It is used in the `BingSearchAPIWrapper` to make requests to the Bing API and retrieve search results.
+
+- **bing_subscription_key:** It is used in the `BingSearchAPIWrapper` to authenticate and authorize the requests made to the Bing API. The API key is obtained when setting up the Bing Search API and is necessary for making requests to the API.
+
 
 ### GoogleSearchAPIWrapper
-
 
 Wrapper for Google Search API.
 
 **Params**
 
-- **google_api_key:**
+- **google_api_key:** This parameter is a variable that stores the API key for accessing the Google Search API. It is used in the GoogleSearchAPIWrapper to authenticate and authorize the requests made to the Google API. 
+
 
 ### GoogleSerperAPIWrapper
-
 
 Wrapper around the Serper.dev Google Search API.
 
 **Params**
 
-- **result_key_for_type:** Defaults to
+- **result_key_for_type:** This parameter in the `GoogleSerperAPIWrapper` is used to specify the type of result that you want to retrieve from the Google Search Engine Results Page (SERP). It allows you to filter the results based on their type, such as web pages, images, videos, news articles, etc.  Defaults to:
 ```
 {
 "news": "news",
@@ -37,16 +40,17 @@ Wrapper around the Serper.dev Google Search API.
 }
 ```
 
-- **serper_api_key:**
+- **serper_api_key:** This parameter is used to authenticate and authorize API requests to the SerpAPI service. The API key acts as a unique identifier for the user and allows them to access the SerpAPI functionality. [Get your API key here](https://serpapi.com/).
+
 
 ### SearxSearchWrapper
-
 
 Wrapper for Searx API.
 
 **Params**
 
 - **headers:** `{'Authorization': 'Bearer <token>'}`
+
 
 ### SerpAPIWrapper
 
@@ -55,14 +59,13 @@ Wrapper around SerpAPI.
 
 **Params**
 
-- **serpapi_api_key:**
+- **serpapi_api_key:** This parameter is used to authenticate and authorize API requests to the SerpAPI service. The API key acts as a unique identifier for the user and allows them to access the SerpAPI functionality. [Get your API key here](https://serpapi.com/).
+
 
 ### WikipediaAPIWrapper
 
+Wrapper around WikipediaAPI. This wrapper will use the Wikipedia API to conduct searches and fetch page summaries.
 
-Wrapper around WikipediaAPI.
-
-**Params**
 
 ### WolframAlphaAPIWrapper
 
