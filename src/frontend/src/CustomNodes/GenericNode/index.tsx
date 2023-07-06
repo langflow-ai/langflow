@@ -66,7 +66,6 @@ export default function GenericNode({
     deleteNode(data.id);
     return;
   }
-  console.log(data);
   useEffect(() => {}, [closePopUp, data.node.template]);
   return (
     <>
@@ -121,10 +120,11 @@ export default function GenericNode({
                     "Validating..."
                   ) : (
                     <div className="max-h-96 overflow-auto">
-                      {validationStatus.params ||
-                        ""
-                          .split("\n")
-                          .map((line, index) => <div key={index}>{line}</div>)}
+                      {validationStatus.params
+                        ? validationStatus.params
+                            .split("\n")
+                            .map((line, index) => <div key={index}>{line}</div>)
+                        : ""}
                     </div>
                   )
                 }

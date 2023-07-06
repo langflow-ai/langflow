@@ -8,7 +8,6 @@ import { useSSE } from "../../../contexts/SSEContext";
 import { typesContext } from "../../../contexts/typesContext";
 import { alertContext } from "../../../contexts/alertContext";
 import { postBuildInit } from "../../../controllers/API";
-import ShadTooltip from "../../ShadTooltipComponent";
 
 import RadialProgressComponent from "../../RadialProgress";
 import { TabsContext } from "../../../contexts/tabsContext";
@@ -76,7 +75,6 @@ export default function BuildTrigger({
     const eventSource = new EventSource(apiUrl);
 
     eventSource.onmessage = (event) => {
-      console.log(event);
       // If the event is parseable, return
       if (!event.data) {
         return;
