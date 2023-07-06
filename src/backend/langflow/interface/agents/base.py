@@ -32,7 +32,10 @@ class AgentCreator(LangChainTypeCreator):
 
     def get_signature(self, name: str) -> Optional[Dict]:
         try:
-            if name in get_custom_nodes(self.type_name).keys():
+            if (
+                name in get_custom_nodes(self.type_name).keys()
+                and name in settings.agents
+            ):
                 return get_custom_nodes(self.type_name)[name]
             elif name in self.from_method_nodes:
                 return build_template_from_method(

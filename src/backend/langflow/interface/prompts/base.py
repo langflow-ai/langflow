@@ -40,7 +40,10 @@ class PromptCreator(LangChainTypeCreator):
 
     def get_signature(self, name: str) -> Optional[Dict]:
         try:
-            if name in get_custom_nodes(self.type_name).keys():
+            if (
+                name in get_custom_nodes(self.type_name).keys()
+                and name in settings.prompts
+            ):
                 return get_custom_nodes(self.type_name)[name]
             return build_template_from_class(name, self.type_to_loader_dict)
         except ValueError as exc:
