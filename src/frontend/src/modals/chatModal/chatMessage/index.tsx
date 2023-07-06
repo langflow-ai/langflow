@@ -31,27 +31,27 @@ export default function ChatMessage({
   return (
     <div
       className={classNames(
-        "flex w-full py-2 pl-2",
+        "chat-message-modal",
         chat.isSend ? "bg-background " : "bg-input"
       )}
     >
       <div
         className={classNames(
-          "my-3 flex h-8 w-8 items-center justify-center overflow-hidden rounded-full"
+          "chat-message-modal-div"
         )}
       >
         {!chat.isSend && (
           <div className="relative h-8 w-8">
             <img
               className={
-                "absolute scale-150 transition-opacity duration-500 " +
+                "chat-message-modal-img " +
                 (lockChat ? "opacity-100" : "opacity-0")
               }
               src={lastMessage ? AiIcon : AiIconStill}
             />
             <img
               className={
-                "absolute scale-150 transition-opacity duration-500 " +
+                "chat-message-modal-img " +
                 (lockChat ? "opacity-0" : "opacity-100")
               }
               src={AiIconStill}
@@ -61,12 +61,12 @@ export default function ChatMessage({
         {chat.isSend && <User2 className="-mb-1 h-6 w-6 text-primary " />}
       </div>
       {!chat.isSend ? (
-        <div className="flex w-full items-center text-start">
-          <div className="relative inline-block w-full text-start text-sm  font-normal text-muted-foreground">
+        <div className="chat-message-modal-display">
+          <div className="chat-message-modal-text">
             {hidden && chat.thought && chat.thought !== "" && (
               <div
                 onClick={() => setHidden((prev) => !prev)}
-                className="absolute -left-2 -top-1 cursor-pointer"
+                className="chat-message-modal-icon-div"
               >
                 <MessageCircle className="h-5 w-5 animate-bounce " />
               </div>
@@ -74,15 +74,14 @@ export default function ChatMessage({
             {chat.thought && chat.thought !== "" && !hidden && (
               <div
                 onClick={() => setHidden((prev) => !prev)}
-                className=" ml-3 inline-block h-full w-[95%]  cursor-pointer overflow-scroll rounded-md
-								border border-ring bg-muted px-2 pb-3 pt-3 text-start text-muted-foreground scrollbar-hide"
+                className=" chat-message-modal-thought"
                 dangerouslySetInnerHTML={{
                   __html: DOMPurify.sanitize(convert.toHtml(chat.thought)),
                 }}
               ></div>
             )}
             {chat.thought && chat.thought !== "" && !hidden && <br></br>}
-            <div className="w-full px-4 pb-3 pr-8 pt-3">
+            <div className="chat-message-modal-markdown">
               <div className="w-full">
                 <div className="w-full">
                   <ReactMarkdown
@@ -94,7 +93,7 @@ export default function ChatMessage({
                         if (children.length) {
                           if (children[0] == "▍") {
                             return (
-                              <span className="mt-1 animate-pulse cursor-default">
+                              <span className="chat-message-modal-markdown-span">
                                 ▍
                               </span>
                             );
@@ -147,7 +146,7 @@ export default function ChatMessage({
         </div>
       ) : (
         <div className="flex w-full items-center">
-          <div className="inline-block px-3 text-start text-muted-foreground ">
+          <div className="chat-message-modal-alert ">
             {message.split("\n").map((line, index) => (
               <span key={index} className="text-muted-foreground ">
                 {line}

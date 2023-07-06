@@ -276,7 +276,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
 
         <Tabs
           value={activeTab}
-          className="h-full w-full overflow-hidden rounded-md border bg-muted text-center"
+          className="api-modal-tabs"
           onValueChange={(value) => {
             setActiveTab(value);
             if (value === "3") {
@@ -284,7 +284,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
             }
           }}
         >
-          <div className="flex items-center justify-between px-2">
+          <div className="api-modal-tablist-div">
             <TabsList>
               {tabs.map((tab, index) => (
                 <TabsTrigger key={index} value={index.toString()}>
@@ -308,7 +308,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
           {tabs.map((tab, index) => (
             <TabsContent
               value={index.toString()}
-              className="-mt-1 h-full w-full overflow-hidden px-4 pb-4"
+              className="api-modal-tabs-content"
               key={index} // Remember to add a unique key prop
             >
               {index < 3 ? (
@@ -321,7 +321,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                 </SyntaxHighlighter>
               ) : index === 3 ? (
                 <>
-                  <div className="mt-2 flex h-full w-full">
+                  <div className="api-modal-according-display">
                     <div
                       className={classNames(
                         "h-[60vh] w-full rounded-lg bg-muted",
@@ -337,7 +337,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                               trigger={t["data"]["id"]}
                               open={openAccordion}
                             >
-                              <div className="flex h-fit flex-col gap-5">
+                              <div className="api-modal-table-arrangement">
                                 <Table className="table-fixed bg-muted outline-1">
                                   <TableHeader className="h-10 border-input text-xs font-medium text-ring">
                                     <TableRow className="dark:border-b-muted">
