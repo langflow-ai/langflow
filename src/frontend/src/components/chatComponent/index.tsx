@@ -45,7 +45,7 @@ export default function Chat({ flow }: ChatType) {
   useEffect(() => {
     const prevNodes = prevNodesRef.current;
     const currentNodes = nodes.map(
-      (node: NodeType) => node.data.node.template.value
+      (node: NodeType) => node.data.node.template.value,
     );
 
     if (

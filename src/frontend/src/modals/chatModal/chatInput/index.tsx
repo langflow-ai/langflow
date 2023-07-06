@@ -1,6 +1,5 @@
 import { classNames } from "../../../utils";
-import { useContext, useEffect, useRef, useState } from "react";
-import { TabsContext } from "../../../contexts/tabsContext";
+import { useEffect } from "react";
 import { Lock, Send } from "lucide-react";
 
 export default function ChatInput({

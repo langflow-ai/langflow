@@ -1,4 +1,4 @@
-import { BellIcon, Home, MoonIcon, SunIcon, Users2 } from "lucide-react";
+import { Home, MoonIcon, SunIcon, Users2 } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
 import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
 import { Button } from "../ui/button";

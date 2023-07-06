@@ -30,9 +30,7 @@ export default function TextAreaComponent({
     <div className={disabled ? "pointer-events-none cursor-not-allowed" : ""}>
       <div
         className={
-          editNode
-            ? "w-full items-center"
-            : "w-full flex items-center gap-3"
+          editNode ? "w-full items-center" : "flex w-full items-center gap-3"
         }
       >
         <span
@@ -47,13 +45,15 @@ export default function TextAreaComponent({
                   setMyValue(t);
                   onChange(t);
                 }}
-              />
+              />,
             );
           }}
           className={
             editNode
               ? "input-edit-node " + " input-dialog "
-              : " input_dialog " + "px-3 py-2" + (disabled ? " input-disable " : "")
+              : " input_dialog " +
+                "px-3 py-2" +
+                (disabled ? " input-disable " : "")
           }
         >
           {myValue !== "" ? myValue : "Type something..."}
@@ -70,11 +70,16 @@ export default function TextAreaComponent({
                   setMyValue(t);
                   onChange(t);
                 }}
-              />
+              />,
             );
           }}
         >
-          {!editNode && <ExternalLink strokeWidth={1.5} className="w-6 h-6 hover:text-accent-foreground ml-3" />}
+          {!editNode && (
+            <ExternalLink
+              strokeWidth={1.5}
+              className="ml-3 h-6 w-6 hover:text-accent-foreground"
+            />
+          )}
         </button>
       </div>
     </div>
