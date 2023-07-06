@@ -208,7 +208,7 @@ class PromptVertex(Vertex):
             # with the variables filled in
             return self._built_object.format(**self.artifacts)
         else:
-            super()._built_object_repr()
+            return super()._built_object_repr()
 
 
 class OutputParserVertex(Vertex):

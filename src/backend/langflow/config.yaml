@@ -164,8 +164,6 @@ memories:
 prompts:
   PromptTemplate:
     documentation: "https://python.langchain.com/docs/modules/model_io/prompts/prompt_templates/"
-  ZeroShotPrompt:
-    documentation: "https://python.langchain.com/docs/modules/agents/how_to/custom_mrkl_agent"
 textsplitters:
   CharacterTextSplitter:
     documentation: "https://python.langchain.com/docs/modules/data_connection/document_transformers/text_splitters/character_text_splitter"
