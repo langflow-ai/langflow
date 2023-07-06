@@ -297,7 +297,7 @@
     "components/memories": {
       "id": "components/memories",
       "title": "Memories",
-      "description": "ConversationBufferMemory",
+      "description": "Chains and Agents typically function without maintaining a state, treating each incoming query as a separate request, much like the underlying language models and chat models.",
       "sidebar": "docs"
     },
     "components/prompts": {

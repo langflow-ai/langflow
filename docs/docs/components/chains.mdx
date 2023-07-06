@@ -46,9 +46,9 @@ This type of chain is really useful for building chatbots or virtual assistants 
 - **Memory:** Default memory store.
 
 
-- **input_key:** is used to specify the key under which the user input will be stored in the conversation memory. It allows you to provide the user's input to the chain for processing and generating a response. *List[str]* - Defines the input keys.
-- **output_key:** is used to specify the key under which the generated response will be stored in the conversation memory. It allows you to retrieve the response using the specified key. *List[str]* - Defines the output keys.
-- **verbose:**  is used to control the level of detail in the output of the chain. When set to True, it will print out some internal states of the chain while it is being run, which can be helpful for debugging and understanding the chain's behavior. If set to False, it will suppress the verbose output. Defaults to `False`.
+- **input_key:** This parameter is used to specify the key under which the user input will be stored in the conversation memory. It allows you to provide the user's input to the chain for processing and generating a response. *List[str]* - Defines the input keys.
+- **output_key:** This parameter is used to specify the key under which the generated response will be stored in the conversation memory. It allows you to retrieve the response using the specified key. *List[str]* - Defines the output keys.
+- **verbose:**  This parameter is used to control the level of detail in the output of the chain. When set to True, it will print out some internal states of the chain while it is being run, which can be helpful for debugging and understanding the chain's behavior. If set to False, it will suppress the verbose output. Defaults to `False`.
 
 ### ConversationalRetrievalChain
 
@@ -102,7 +102,7 @@ Chain to run queries against LLMs.
 
 - **Prompt**: Prompt object to use in the chain.
 
-- **output_key:** is used to specify which key in the LLM output dictionary should be returned as the final output. By default, the `LLMChain` returns both the input and output key values. Defaults to *str* = `text`.
+- **output_key:** This parameter is used to specify which key in the LLM output dictionary should be returned as the final output. By default, the `LLMChain` returns both the input and output key values. Defaults to *str* = `text`.
 - **verbose:** Whether or not run in verbose mode. In verbose mode, some intermediate logs will be printed to the console. Defaults to `False`.
 
 ### LLMCheckerChain
@@ -129,9 +129,9 @@ Chain that interprets a prompt and executes python code to do math.
 - **Memory:** Default memory store.
 
 
-- **input_key:** is used to specify the input value for the mathematical calculation. It allows you to provide the specific values or variables that you want to use in the calculation. Defaults to *str* = `question`.
-- **output_key:** is used to specify the key under which the output of the mathematical calculation will be stored. It allows you to retrieve the result of the calculation using the specified key. Defaults to *str* = `answer`
-- **verbose:** is used to control the level of detail in the output of the chain. When set to `True`, it will print out some internal states of the chain while it is being run, which can be helpful for debugging and understanding the chain's behavior. If set to `False`, it will suppress the verbose output. Defaults to `False`
+- **input_key:** This parameter is used to specify the input value for the mathematical calculation. It allows you to provide the specific values or variables that you want to use in the calculation. Defaults to *str* = `question`.
+- **output_key:** This parameter is used to specify the key under which the output of the mathematical calculation will be stored. It allows you to retrieve the result of the calculation using the specified key. Defaults to *str* = `answer`
+- **verbose:** This parameter is used to control the level of detail in the output of the chain. When set to `True`, it will print out some internal states of the chain while it is being run, which can be helpful for debugging and understanding the chain's behavior. If set to `False`, it will suppress the verbose output. Defaults to `False`
 
 ### MidJourneyChainPromptChain
 
@@ -153,10 +153,10 @@ Chain for question-answering against an index.
 - ** Memory:** Default memory store.
 - ** Retriever**:  Chain for question-answering against an index.
 
-- **input_key:** is used to specify the key in the input data that contains the question. It is used to retrieve the question from the input data and pass it to the question answering model for generating the answer. Defaults to `query`.
-- **output_key:** is used to specify the key in the output data where the generated answer will be stored. It is used to retrieve the answer from the output data after the question answering model has generated it. Defaults to `result`.
-- **return_source_documents:** is used to specify whether or not to include the source documents that were used to answer the question in the output. When set to `True`, the source documents will be included in the output along with the generated answer. This can be useful for providing additional context or references to the user. Defaults to `True`.
-- **verbose:** is used to control the level of verbosity or detail in the output. When set to `True`, it provides additional information and details about the retrieval process and the documents that were considered for answering the question. Defaults to `False`.
+- **input_key:** This parameter is used to specify the key in the input data that contains the question. It is used to retrieve the question from the input data and pass it to the question answering model for generating the answer. Defaults to `query`.
+- **output_key:** This parameter is used to specify the key in the output data where the generated answer will be stored. It is used to retrieve the answer from the output data after the question answering model has generated it. Defaults to `result`.
+- **return_source_documents:** This parameter is used to specify whether or not to include the source documents that were used to answer the question in the output. When set to `True`, the source documents will be included in the output along with the generated answer. This can be useful for providing additional context or references to the user. Defaults to `True`.
+- **verbose:** This parameter is used to control the level of verbosity or detail in the output. When set to `True`, it provides additional information and details about the retrieval process and the documents that were considered for answering the question. Defaults to `False`.
 
 ### RetrievalQAWithSourcesChain
 
@@ -170,8 +170,8 @@ The `RetrievalQAWithSourcesChain` is a chain that helps us answer questions usin
 - ** Memory:** Default memory store.
 - ** Retriever**:  Chain for question-answering against an index.
 
-- **return_source_documents:** this allows you to easily return the source documents that were retrieved from the index. This is useful when you want to inspect the documents that were used to answer the question. By setting return_source_documents to `True`, you can access the source documents as part of the output of the chain. Defaults to `True`.
-- **verbose:** controls whether or not internal states of the chain are printed out while it is being run. By setting verbose to `True`, you can see additional information about the chain's execution, which can be helpful for debugging and understanding how the chain is processing the input. Defaults to `False`.
+- **return_source_documents:** This parameter allows you to easily return the source documents that were retrieved from the index. This is useful when you want to inspect the documents that were used to answer the question. By setting return_source_documents to `True`, you can access the source documents as part of the output of the chain. Defaults to `True`.
+- **verbose:** This parameter controls whether or not internal states of the chain are printed out while it is being run. By setting verbose to `True`, you can see additional information about the chain's execution, which can be helpful for debugging and understanding how the chain is processing the input. Defaults to `False`.
 
 ### SQLDatabaseChain
 
@@ -187,9 +187,9 @@ The `SQLDatabaseChain` is a chain that helps you find answers to questions using
 - **Memory:** Default memory store.
 - **Prompt:** Prompt to use to translate natural language to SQL.
 
-- **input_key:** is used to specify the key in the input object that contains the SQL query to be executed. It allows you to pass the SQL query as part of the input object when calling the `SQLDatabaseChain`. The value of the input_key should be a string that matches the key in the input object where the SQL query is located. Defaults to `query`.
-- **output_key:** is used to specify the key in the output object where the result of the SQL query will be stored. The value of the output_key should be a string that represents the desired key in the output object. Defaults to `result`.
-- **verbose:** is used to enable or disable verbose mode for the chain. When verbose is set to `True`, the chain will log events and information to the console, providing more detailed output for debugging purposes. Defaults to `False`.
+- **input_key:** This parameter is used to specify the key in the input object that contains the SQL query to be executed. It allows you to pass the SQL query as part of the input object when calling the `SQLDatabaseChain`. The value of the input_key should be a string that matches the key in the input object where the SQL query is located. Defaults to `query`.
+- **output_key:** This parameter is used to specify the key in the output object where the result of the SQL query will be stored. The value of the output_key should be a string that represents the desired key in the output object. Defaults to `result`.
+- **verbose:** This parameter is used to enable or disable verbose mode for the chain. When verbose is set to `True`, the chain will log events and information to the console, providing more detailed output for debugging purposes. Defaults to `False`.
 
 ### SeriesCharacterChain
 
@@ -199,8 +199,8 @@ The `SQLDatabaseChain` is a chain that helps you find answers to questions using
 **Params**
 - **LLM:** Language Model to use in the chain.
 
-- **character:** is used to specify the character that you want to have a conversation with.
-- **series:** is used to specify the series that the character belongs to.
+- **character:** This parameter is used to specify the character that you want to have a conversation with.
+- **series:** This parameter is used to specify the series that the character belongs to.
 
 ### TimeTravelGuideChain
 

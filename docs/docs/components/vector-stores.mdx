@@ -13,90 +13,162 @@ One of the key features of `Chroma` is its similarity search capability. This me
 
 **Params**
 
-- **collection_name:** it refers to the name of a collection of documents within the Chroma database. It is used to organize and manage the documents stored in Chroma. The collection_name is also used to identify and access the specific collection when performing operations such as adding, updating, or deleting documents. Defaults to `langchain`.
+- **Documents**: Documents to add to the vectorstore.
+- **Embeddings**: Used to represent documents as numerical vectors in a high-dimensional space.
 
-- **persist:** Defaults to `False`
-- **persist_directory:**
-- **search_kwargs:** Defaults to `{}`
+
+- **collection_name:** It refers to the name of a collection of documents within the Chroma database. It is used to organize and manage the documents stored in Chroma. The collection_name is also used to identify and access the specific collection when performing operations such as adding, updating, or deleting documents. Defaults to `langchain`.
+
+- **persist:** This parameter  is used to control whether the data stored in the vector database should be persisted to disk or not. When persist is set to `True`, the data will be saved to disk, allowing it to be accessed even after the program or server is restarted. On the other hand, when persist is set to `False`, the data will be transient and will not be saved to disk. This means that the data will only be available during the current session and will be lost once the program or server is closed. Defaults to `False`.
+
+- **persist_directory:** This parameter is used to specify the directory where the data should be saved when using the persistence feature. When initializing the Chroma client and setting persist_directory, the data will be automatically saved to the specified directory on disk. This allows the data to be stored persistently and accessed even after the program or server is restarted.
+
+- **search_kwargs:** The parameter is used to specify additional search options or filters when querying the database. It allows you to customize the search behavior and retrieve more specific results. Defaults to `{}`.
 
 ### FAISS
 
-
 Construct FAISS wrapper from raw documents.
+
+`FAISS` - Facebook AI Similarity Search is a versatile and powerful library that provides efficient solutions for similarity search and clustering of dense vectors. Its ability to handle large datasets, along with its supporting functionalities, makes it a valuable tool for various applications involving high-dimensional data analysis and retrieval.
 
 **Params**
 
-- **folder_path:**
-- **index_name:**
-- **search_kwargs:** Defaults to `{}`
+- **Documents**: Documents to add to the vectorstore.
+- **Embeddings**: Used to represent documents as numerical vectors in a high-dimensional space.
+
+- **folder_path:** Folder path to save index, docstore, and index_to_docstore_id to.
+- **index_name:** The index_name parameter allows you to give a unique identifier to the index, which can be useful when working with multiple indexes or when saving and loading indexes from disk.
+- **search_kwargs:** The parameter is used to specify additional search options or filters when querying the database. It allows you to customize the search behavior and retrieve more specific results. Defaults to `{}`.
+
 
 ### MongoDB Atlas
 
-
 Construct MongoDBAtlasVectorSearch wrapper from raw documents.
+
+`MongoDB Atlas` is a cloud-based, fully-managed database service provided by MongoDB. It is available on popular cloud platforms like AWS (Amazon Web Services), Azure (Microsoft Azure), and GCP (Google Cloud Platform). MongoDB Atlas allows you to deploy, manage, and scale MongoDB databases without the need for extensive infrastructure management.
 
 **Params**
 
-- **collection_name:**
-- **db_name:**
-- **index_name:**
-- **mongodb_atlas_cluster_uri:**
-- **search_kwargs:** Defaults to `{}`
+- **Documents**: Documents to add to the vectorstore.
+- **Embeddings**: Used to represent documents as numerical vectors in a high-dimensional space.
+
+- **collection_name:** This parameter refers to the name of the collection where the documents will be stored. 
+
+- **db_name:** It refers to the name of the database that you want to connect to or perform operations on. When working with MongoDB Atlas, you need to specify the name of the database in order to access its collections and perform CRUD (Create, Read, Update, Delete) operations.
+
+- **index_name:** This parameter refers to the name given to the vector search index that is created on your MongoDB cluster. It is used to uniquely identify the index and is used when performing operations such as inserting documents with their embeddings and performing similarity searches.
+
+
+- **mongodb_atlas_cluster_uri:** This parameter is a configuration parameter or variable that represents the connection string or URI (Uniform Resource Identifier) used to connect to a MongoDB Atlas cluster.
+
+- **search_kwargs:** This parameter is used to specify additional search options or filters when querying the database. It allows you to customize the search behavior and retrieve more specific results. Defaults to `{}`.
+
 
 ### Pinecone
 
-
 Construct Pinecone wrapper from raw documents.
+
+Pinecone is a vector database with broad functionality. It is used for creating and managing vector search indexes. The Pinecone package allows you to create a VectorStore and seed it with data.
 
 **Params**
 
-- **index_name:**
-- **namespace:**
-- **pinecone_api_key:**
-- **pinecone_env:**
-- **search_kwargs:** Defaults to `{}`
+- **Documents**: Documents to add to the vectorstore.
+- **Embeddings**: Used to represent documents as numerical vectors in a high-dimensional space.
+
+- **index_name:** The index_name parameter allows you to give a unique identifier to the index, which can be useful when working with multiple indexes or when saving and loading indexes from disk.
+
+- **namespace:** Optional pinecone namespace to add the texts to.
+
+- **pinecone_api_key:** The parameter is used to authenticate and authorize access to the Pinecone vector database. Find at [app.pinecone.io].
+
+- **pinecone_env:** It is used to specify the environment in which the Pinecone vector database is hosted. This allows users to have different environments for different purposes, such as development, testing, and production. 
+
+- **search_kwargs:** This parameter is used to specify additional search options or filters when querying the database. It allows you to customize the search behavior and retrieve more specific results. Defaults to `{}`.
 
 ### Qdrant
 
-
 Construct Qdrant wrapper from a list of texts.
+
+`Qdrant` is a vector similarity search engine that provides a user-friendly API to store, search, and manage vectors along with associated metadata. It is designed to excel in tasks such as neural network matching, semantic-based search, and faceted search, making it a valuable tool for various applications that require advanced filtering and search capabilities.
 
 **Params**
 
-- **api_key:**
-- **collection_name:**
-- **content_payload_key:**
-- **distance_func:** Defaults to `Cosine`
-- **grpc_port:** Defaults to `6334`
-- **host:**
-- **https:** Defaults to `False`
-- **location:** Defaults to `:memory:`
-- **metadata_payload_key:**  Defaults to `metadata`
-- **path:**
-- **port:**  Defaults to `6333`
-- **prefer_grpc:**  Defaults to `False`
-- **prefix:**
-- **search_kwargs:**  Defaults to `{}`
-- **timeout:**
-- **url:**
+- **Documents**: Documents to add to the vectorstore.
+- **Embeddings**: Used to represent documents as numerical vectors in a high-dimensional space.
+
+- **api_key:**This parameter is used to secure your deployment and prevent unauthorized access to your Qdrant cluster. When using a managed version of Qdrant, such as Qdrant Cloud, you need to provide an API key to authenticate and access your deployment. This API key acts as a security measure to ensure that only authorized users can interact with your Qdrant cluster.
+
+- **collection_name:** It is used to identify and organize the data stored in Qdrant. When creating a new collection or accessing an existing one, you need to specify the collection_name to perform operations on that specific collection. It allows you to manage and query the vectors and metadata within that collection.
+
+
+- **content_payload_key:** This parameter refers to the key used to store the page content or text of a document in the payload structure. By default, the key is set to "page_content", but you have the option to customize it and use a different key if desired. This is useful if you already have a collection with a different key for the page content and want to reuse it.
+
+- **distance_func:** The parameter refers to the function used to calculate the distance or similarity between vectors. Qdrant supports various distance functions, such as Euclidean distance, cosine distance, and others. The distance function determines how vectors are compared and ranked in similarity searches. Defaults to `Cosine`.
+
+- **grpc_port:** This refers to the port number used for gRPC communication with the Qdrant server. gRPC is a high-performance, open-source framework that allows remote procedure calls between client and server applications. By specifying the grpc_port, you can establish a connection to the Qdrant server using the gRPC protocol. Defaults to `6334`.
+
+- **host:** The parameter refers to the location where the Qdrant server is running. It can be either a local machine or a remote server. The host URL is used to establish a connection and interact with the Qdrant vector store.
+
+- **https:** If true - use HTTPS(SSL) protocol. Defaults to `False`.
+
+- **location:** This parameter refers to the storage location of the vector data. In the context of Qdrant, there are two possible locations for storing vectors: in-memory and on-disk. Defaults to `:memory:`.
+
+    - In-memory storage: In some testing scenarios and quick experiments, it may be preferred to keep all the data in memory only. This means that the vector data is stored in the computer's RAM and will be lost when the Qdrant client is destroyed. This option is suitable for storing a small amount of vectors and is often used for testing and debugging purposes.
+
+    - On-disk storage: Qdrant also supports storing vectors on disk, which allows the data to be persisted between runs. This means that even if the Qdrant client is destroyed, the vector data will still be available when the client is restarted. On-disk storage is useful when working with larger amounts of vector data that need to be preserved for future use.
+
+- **metadata_payload_key:** The parameter refers to the key used to store metadata in the payload structure of a document. If you want to use a different key for the metadata, you can set the "metadata_payload_key" to a desired value. This allows you to store and retrieve specific metadata associated with each document in the Qdrant vector store. Defaults to `metadata`.
+
+- **path:** Path in which the vectors will be stored while using local mode. 
+
+- **port:** It refers to the network port that is used to establish a connection with the Qdrant server. The specific port number will depend on how Qdrant is deployed and configured. When connecting to a local Qdrant server, the port can be specified in the URL used to establish the connection. Defaults to `6333`.
+
+- **prefer_grpc:** This parameter determines the preferred communication protocol to use when connecting to the Qdrant server. GRPC (Google Remote Procedure Call) is a high-performance, language-agnostic framework for remote procedure calls. When prefer_grpc is set to `True`, the Qdrant client will attempt to use the GRPC protocol for communication with the server. If GRPC is not available or not supported, the client will fall back to other available protocols. This parameter allows for flexibility in choosing the communication protocol based on the specific requirements and capabilities of the Qdrant deployment.  Defaults to `False`.
+
+- **prefix:** It allows you to add a prefix to the REST URL path when making API requests. By specifying a prefix, you can customize the URL structure for the REST API endpoints. For example, if you set the prefix parameter to "service/v1", the resulting URL for the REST API would be:
+```HTML
+"http://localhost:6333/service/v1/{qdrant-endpoint}"
+```
+This can be useful for organizing and categorizing different API endpoints within your application.
+
+- **search_kwargs:** This parameter is used to specify additional search options or filters when querying the database. It allows you to customize the search behavior and retrieve more specific results. Defaults to {}.  Defaults to `{}`.
+
+- **timeout:** It is used to specify the maximum time in seconds that a request can take before it times out. If a request takes longer than the specified timeout, it will be canceled and an error will be returned. This parameter is useful for controlling the maximum waiting time for a request and preventing it from blocking indefinitely.
+
+- **url:** This parameter specify the URL of the Qdrant service that you want to connect to. It is required to provide the URL in order to establish a connection with the Qdrant server. The URL should point to the location where the Qdrant service is running, whether it is a local instance, an on-premise server, or a Qdrant Cloud cluster. The URL parameter allows you to connect to the desired Qdrant instance and access its functionality through the API.
 
 ### Supabase
 
-
 Return VectorStore initialized from texts and embeddings.
+
+`Supabase` is an open-source Firebase platform for building modern applications with real-time capabilities, authentication, and storage services. It combines the flexibility of PostgreSQL with the simplicity of a familiar API. This enables building reactive and collaborative applications without the need for additional infrastructure or complex setup.
 
 **Params**
 
-- **query_name:**
-- **search_kwargs:**  Defaults to `{}`
-- **supabase_service_key:**
-- **supabase_url:**
-- **table_name:**
+- **Documents**: Documents to add to the vectorstore.
+- **Embeddings**: Used to represent documents as numerical vectors in a high-dimensional space.
+
+- **query_name:** By setting the type of query_name, it implies that the variable can either store a string or be assigned None. 
+
+- **search_kwargs:** This parameter is used to specify additional search options or filters when querying the database. It allows you to customize the search behavior and retrieve more specific results. Defaults to {}.
+
+- **supabase_service_key:** It is used to authenticate and authorize access to the `Supabase` service. It acts as a security measure to ensure that only authorized users can interact with the `Supabase` database and perform operations such as querying, inserting, updating, and deleting data. 
+
+- **supabase_url:** This parameter is a URL that specifies the endpoint for the Supabase service. It is used to establish a connection between the client application and the Supabase service. The supabase_url acts as the base URL for all API requests made to the Supabase service, allowing the application to interact with the Supabase database and perform operations such as querying, inserting, updating, and deleting data.
+
+- **table_name:** This is refers to the name of a specific table in the Supabase database. The parameter is essential in constructing SQL queries and specifying the target table for the desired operation. It allows the client application to interact with the specific table within the Supabase database and manipulate the data stored in that table. 
 
 ### Weaviate
 
+`Weaviate`  is an open-source, cloud-native, vector search engine. It provides a flexible and scalable solution for handling unstructured data and extracting meaningful insights.
+
 **Params**
 
-- **client_kwargs:**  Defaults to `{}`
-- **search_kwargs:**  Defaults to `{}`
-- **weaviate_url:**  Defaults to `[http://localhost:8080](http://localhost:8080)`
+- **Documents**: Documents to add to the vectorstore.
+- **Embeddings**: Used to represent documents as numerical vectors in a high-dimensional space.
+
+- **client_kwargs:** The parameter is used to pass additional keyword arguments to the `Weaviate` client. It allows you to customize the behavior of the client by providing specific arguments. Defaults to `{}`.
+
+- **search_kwargs:**This parameter is used to specify additional search options or filters when querying the database. It allows you to customize the search behavior and retrieve more specific results. Defaults to {}.
+
+- **weaviate_url:** This parameter is used to specify the URL of the `Weaviate` server that you want to connect to. It allows you to establish a connection to the specific `Weaviate` instance where your data is stored. By providing the URL, you can ensure that the `Weaviate` client knows where to send requests and retrieve data from. Defaults to `(http://localhost:8080)`.

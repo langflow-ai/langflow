@@ -9,9 +9,9 @@ Loader that loads AZLyrics webpages.
 
 **Params**
 
-- **metadata:** is used to include additional information about the content being loaded. It can provide context, source details, timestamps, or any other relevant information related to the content. The metadata extraction function allows the user to specify which information from the data source should be included in the metadata of the final document object. Defaults to `{}`.
+- **metadata:** The parameter is used to include additional information about the content being loaded. It can provide context, source details, timestamps, or any other relevant information related to the content. The metadata extraction function allows the user to specify which information from the data source should be included in the metadata of the final document object. Defaults to `{}`.
 
-- **web_path:** is used to specify the URL of the webpage from which the lyrics will be extracted. It is a parameter that can be set when using the `AZLyricsLoader` class to load lyrics from a specific webpage.
+- **web_path:** The parameter is used to specify the URL of the webpage from which the lyrics will be extracted. It is a parameter that can be set when using the `AZLyricsLoader` class to load lyrics from a specific webpage.
 
 
 ### AirbyteJSONLoader
@@ -23,8 +23,8 @@ Loader that loads local airbyte json files.
 When you use the `AirbyteJSONLoader`, you can load documents from Airbyte into your system. These documents can contain information from various sources, like data warehouses and databases.
 
 **Params**
-- **file_path:** specifies the path to the JSON file that contains the data loaded from Airbyte. 
-- **metadata:** it refers to the additional information or attributes associated with a document or data. They are used to extract and include specific information from JSON files into the created documents. Defaults to `{}`.
+- **file_path:** It specifies the path to the JSON file that contains the data loaded from Airbyte. 
+- **metadata:** It refers to the additional information or attributes associated with a document or data. They are used to extract and include specific information from JSON files into the created documents. Defaults to `{}`.
 
 ### BSHTMLLoader
 
@@ -33,8 +33,8 @@ Loader that uses beautiful soup to parse HTML files.
 The `BSHTMLLoader` loads HTML documents and extracts useful information from them. It uses a library called BeautifulSoup4 to do this. When you use the `BSHTMLLoader`, it takes an HTML document and looks inside it. It finds the text on the page and puts it into a field called "page_content". This is like taking all the words on a webpage and gathering them together.
 
 **Params**
-- **file_path:** is used to specify the path to the HTML file that needs to be loaded. The file_path parameter should be a string that represents the file path or URL of the HTML file.
-- **metadata:** you can set additional information about the loaded HTML document. It includes metadata such as the page title, source, and any other relevant information associated with the document. Defaults to `{}`.
+- **file_path:** The parameter is used to specify the path to the HTML file that needs to be loaded. The file_path parameter should be a string that represents the file path or URL of the HTML file.
+- **metadata:** You can set additional information about the loaded HTML document. It includes metadata such as the page title, source, and any other relevant information associated with the document. Defaults to `{}`.
 
 ### CSVLoader
 Loads a CSV file into a list of documents.
@@ -43,8 +43,8 @@ The `CSVLoader` is a document loader that shows text data that is stored in a ta
 
 **Params**
 
-- **file_path:** is used to specify the file path or URL of the CSV file that you want to load. The value of file_path should be a string that represents the location of the CSV file on your local machine or a valid URL if the CSV file is hosted online.
-- **metadata:** is used to provide additional information about the loaded data. It allows you to include any relevant metadata that you want to associate with each row in the CSV file. The metadata parameter should be a dictionary where the keys represent the metadata fields and the values represent the corresponding values for each row. Defaults to `{}`.
+- **file_path:** The parameter is used to specify the file path or URL of the CSV file that you want to load. The value of file_path should be a string that represents the location of the CSV file on your local machine or a valid URL if the CSV file is hosted online.
+- **metadata:** The parameter is used to provide additional information about the loaded data. It allows you to include any relevant metadata that you want to associate with each row in the CSV file. The metadata parameter should be a dictionary where the keys represent the metadata fields and the values represent the corresponding values for each row. Defaults to `{}`.
 
 ### CoNLLULoader
 
@@ -53,8 +53,8 @@ Load CoNLL-U files.
 `CoNLLULoader` is a specific way of writing down annotations or notes in plain text files. The annotations are written using a specific character encoding called UTF-8. This helps ensure that different languages and special characters can be properly represented. It uses specific rules for encoding and organizing the annotations, with different types of lines representing different things like words, sentence boundaries, and comments.
 
 **Params**
-- **file_path:** is used to specify the path of the file that you want to load. It is passed as an argument to the `CoNLLULoader` class when creating an instance of the loader (e.g., "example_data/conllu.conllu", which is the path of the CoNLL-U file that you want to load).
-- **metadata:** the CoNLL-U format only includes annotations for words/tokens in the text. The format consists of word lines, blank lines marking sentence boundaries, and comment lines starting with a hash (#) symbol. Defaults to `{}`.
+- **file_path:** It is used to specify the path of the file that you want to load. It is passed as an argument to the `CoNLLULoader` class when creating an instance of the loader (e.g., "example_data/conllu.conllu", which is the path of the CoNLL-U file that you want to load).
+- **metadata:** The CoNLL-U format only includes annotations for words/tokens in the text. The format consists of word lines, blank lines marking sentence boundaries, and comment lines starting with a hash (#) symbol. Defaults to `{}`.
 
 ### CollegeConfidentialLoader
 
@@ -63,8 +63,8 @@ Loader that loads College Confidential webpages.
 The `CollegeConfidentialLoader` is provided by College Confidential. Imagine you're browsing the College Confidential website, which has lots of information about colleges, admissions, and discussions among students. The `CollegeConfidentialLoader` allows you to take specific webpages from that website and transform them into a document format.
 
 **Params**
-- **metadata:** it refers to optional information associated with each document that is loaded from the College Confidential website. The metadata can be useful for organizing and categorizing the documents loaded from the website based on different criteria or attributes. Defaults to `{}`.
-- **web_path:** it refers to the URL or path of the web page that you want to load data from on the College Confidential website.
+- **metadata:** The parameter  refers to optional information associated with each document that is loaded from the College Confidential website. The metadata can be useful for organizing and categorizing the documents loaded from the website based on different criteria or attributes. Defaults to `{}`.
+- **web_path:** It refers to the URL or path of the web page that you want to load data from on the College Confidential website.
 For example, you could set the web_path to:
 ```HTML 
 "https://www.collegeconfidential.com/colleges/for-4-0-gpa/"
@@ -77,29 +77,29 @@ Loading logic for loading documents from a directory.
 The `DirectoryLoader` loads many documents at once from a folder. It saves you time and effort by automatically gathering all the documents in the folder and making them available for you to access.
 
 **Params**
-- **glob:** is used to specify the file pattern or pattern(s) that should be matched when loading documents from a directory. It allows you to filter the files based on their names or extensions.
+- **glob:** This parameter is used to specify the file pattern or pattern(s) that should be matched when loading documents from a directory. It allows you to filter the files based on their names or extensions.
 ```python
 glob = "**/*.md"
 ```
 In the example above, only files with the .md extension will be loaded. Defaults to `**/*.txt`.
 
-- **load_hidden**: it controls whether hidden files should be loaded or not. Hidden files are files that have a filename starting with a dot (e.g., .file.txt). By default, the load_hidden parameter is set to False, which means that hidden files will not be loaded. If you want to load hidden files as well, you can set the load_hidden parameter to True. Defaults to `True`.
+- **load_hidden**: This parameter controls whether hidden files should be loaded or not. Hidden files are files that have a filename starting with a dot (e.g., .file.txt). By default, the load_hidden parameter is set to False, which means that hidden files will not be loaded. If you want to load hidden files as well, you can set the load_hidden parameter to True. Defaults to `True`.
 
-- **max_concurrency:** it determines the maximum number of concurrent requests that can be made to load the documents from the directory. If you exceed this number, the loader will automatically queue up the requests and send them as previous requests complete. This can be useful when dealing with rate limits or when you want to control the number of concurrent requests being made. Defaults to** **`10`.
+- **max_concurrency:** This parameter determines the maximum number of concurrent requests that can be made to load the documents from the directory. If you exceed this number, the loader will automatically queue up the requests and send them as previous requests complete. This can be useful when dealing with rate limits or when you want to control the number of concurrent requests being made. Defaults to** **`10`.
 
-- **metadata:** it allows you to specify additional metadata that should be associated with the loaded documents. This metadata can be used to provide context or additional information about the documents.
+- **metadata:** It allows you to specify additional metadata that should be associated with the loaded documents. This metadata can be used to provide context or additional information about the documents.
 ```python
 metadata = {"source": "example_data", "language": "Spanish"}
 ```
  In this case, we are specifying the source of the documents as "example_data" and the language as "Spanish". The dictionary can include any key-value pairs that you want to associate with the loaded documents. Defaults to `{}`.
 
-- **path:** is used to specify the path to the directory from which you want to load the documents.
+- **path:** This parameter is used to specify the path to the directory from which you want to load the documents.
 
-- **recursive:** it controls whether the loader should recursively search for documents in subdirectories of the specified directory. When is set to `False` means that only the files in the specified directory will be loaded. If you want to load documents from subdirectories as well, you can set the recursive parameter to `True`. Defaults to `True`.
+- **recursive:** This parameter controls whether the loader should recursively search for documents in subdirectories of the specified directory. When is set to `False` means that only the files in the specified directory will be loaded. If you want to load documents from subdirectories as well, you can set the recursive parameter to `True`. Defaults to `True`.
 
-- **silent_errors:** it controls whether errors encountered during the loading process should be raised or silently ignored. When parameter is set to False means that any errors will be raised and potentially interrupt the loading process. If you want to ignore errors and continue loading the remaining documents, you can set the silent_errors parameter to True. Defaults to `True`.
+- **silent_errors:** It controls whether errors encountered during the loading process should be raised or silently ignored. When parameter is set to False means that any errors will be raised and potentially interrupt the loading process. If you want to ignore errors and continue loading the remaining documents, you can set the silent_errors parameter to True. Defaults to `True`.
 
-- **use_multithreading:** it controls whether the loader should use multithreading to load documents from the directory. When use_multithreading is set to `True`, the loader will use multiple threads to load documents concurrently, which can improve the loading speed, especially when dealing with a large number of files. When set to `False`, meaning that the loader will load documents sequentially without using multithreading. Defaults to `True`.
+- **use_multithreading:** This parameter controls whether the loader should use multithreading to load documents from the directory. When use_multithreading is set to `True`, the loader will use multiple threads to load documents concurrently, which can improve the loading speed, especially when dealing with a large number of files. When set to `False`, meaning that the loader will load documents sequentially without using multithreading. Defaults to `True`.
 
 
 ### EverNoteLoader
@@ -110,8 +110,8 @@ The `EverNoteLoader` is designed to help you with a type of file called Evernote
 
 **Params**
 
-- **file_path:** it specifies the path to the Evernote export file (.enex) that you want to load. It is a required parameter and should be a string representing the file path on your disk.
-- **metadata:** it is an optional parameter and should be a list of strings representing the metadata fields.
+- **file_path:** It specifies the path to the Evernote export file (.enex) that you want to load. It is a required parameter and should be a string representing the file path on your disk.
+- **metadata:** This parameter is an optional parameter and should be a list of strings representing the metadata fields.
 ```python
 metadata_fields = ["title", "created", "updated"]
 ```
@@ -126,8 +126,8 @@ The `FacebookChatLoader` acts as a helper that takes the Facebook chat data from
 
 **Params**
 
-- **file_path:** it specifies the path to the JSON file containing the Facebook chat data that you want to load.
-- **metadata:** is used to specify the metadata that you want to associate with the loaded documents. It is an optional parameter and should be an object representing the metadata.  Defaults to `{}`.
+- **file_path:** It specifies the path to the JSON file containing the Facebook chat data that you want to load.
+- **metadata:** This parameter is used to specify the metadata that you want to associate with the loaded documents. It is an optional parameter and should be an object representing the metadata.  Defaults to `{}`.
 
 
 ### GitLoader
@@ -138,15 +138,15 @@ Loads files from a Git repository into a list of documents.
 
 **Params**
 
-**branch:** it specifies the branch of the repository that should be loaded.
+**branch:** It specifies the branch of the repository that should be loaded.
 
-**clone_url:** is used to specify the URL of the Git repository that should be cloned. 
+**clone_url:** This parameter is used to specify the URL of the Git repository that should be cloned. 
 
-**file_filter:** is used to specify a filter function that determines which files should be loaded from the Git repository. This allows you to selectively load only certain types of files based on specific criteria.
+**file_filter:** This parameter is used to specify a filter function that determines which files should be loaded from the Git repository. This allows you to selectively load only certain types of files based on specific criteria.
 
-**metadata:** it provides additional information about the files and their changes. It includes details such as the file path, file name, file type, commit history, author information, and timestamps. Defaults to `{}`.
+**metadata:** It provides additional information about the files and their changes. It includes details such as the file path, file name, file type, commit history, author information, and timestamps. Defaults to `{}`.
 
-**repo_path:** it refers to the path where the repository is located on the local machine. It specifies the directory where the Git repository is cloned or initialized.
+**repo_path:** This parameter refers to the path where the repository is located on the local machine. It specifies the directory where the Git repository is cloned or initialized.
 
 
 ### GitbookLoader
@@ -157,9 +157,9 @@ Load GitBook data.
 
 **Params**
 
-- **metadata:** the metadata includes the source URL of the document and its title. This information can be useful for tracking the origin of the document and organizing the loaded data. Defaults to `{}`.
+- **metadata:** The metadata includes the source URL of the document and its title. This information can be useful for tracking the origin of the document and organizing the loaded data. Defaults to `{}`.
 
-- **web_path:** it refers to the path of the Gitbook web page that is being loaded. It is a string that represents the URL of the page.
+- **web_path:** It refers to the path of the Gitbook web page that is being loaded. It is a string that represents the URL of the page.
 ```python
 web_path = "https://docs.gitbook.com"
 ```
@@ -172,11 +172,11 @@ Loader that uses urllib to load .txt web files.
 
 **Params**
 
-- **web_path:** is used to specify the path of the file to be loaded. It is a string that represents the file path, including the file name and extension.
+- **web_path:** This parameter is used to specify the path of the file to be loaded. It is a string that represents the file path, including the file name and extension.
 ```python
 web_path = "https://www.gutenberg.org/cache/epub/71107/pg71107.txt"
 ```
-- **metadata:** provides information about the source of the eBook and any additional details associated with it. In the case of the provided example, the metadata for the Gutenberg eBook includes the source URL of the eBook, which is 
+- **metadata:** This parameter provides information about the source of the eBook and any additional details associated with it. In the case of the provided example, the metadata for the Gutenberg eBook includes the source URL of the eBook, which is 
 ```HTML
 https://www.gutenberg.org/cache/epub/71107/pg71107.txt
 ```
@@ -191,9 +191,9 @@ The `HNLoader` gets information from a website called Hacker News. Hacker News i
 
 **Params**
 
-- **metadata:** it provides additional information about a post or page. In the context of Hacker News, metadata includes details such as the source URL, title, and other relevant information about the post or page. Defaults to `{}`.
+- **metadata:** It provides additional information about a post or page. In the context of Hacker News, metadata includes details such as the source URL, title, and other relevant information about the post or page. Defaults to `{}`.
 
-- **web_path:** initialize with webpage path from Hacker News. It is a string that represents the URL of the page.
+- **web_path:** This parameter initialize with webpage path from Hacker News. It is a string that represents the URL of the page.
 
 
 ### iFixitLoader
@@ -204,9 +204,9 @@ The `IFixitLoader` is a document loader that helps you find and use repair guide
 
 **Params**
 
-- **metadata:** it provides additional information about a post or page. In the context of iFixit, metadata includes details such as the source URL, title, and other relevant information about the post or page. Defaults to `{}`.
+- **metadata:** This parameter  provides additional information about a post or page. In the context of iFixit, metadata includes details such as the source URL, title, and other relevant information about the post or page. Defaults to `{}`.
 
-- **web_path:**  initialize with a web path from iFixit. It is a string that represents the URL of the page.
+- **web_path:**  Initialize with a web path from iFixit. It is a string that represents the URL of the page.
 
 
 ### IMSDbLoader
@@ -217,9 +217,9 @@ The `IMSDbLoader` get movie scripts from the Internet Movie Script Database (IMS
 
 **Params**
 
-- **metadata:** it provides additional information about a post or page. In the context of IMSDb, metadata includes details such as the source URL, title, and other relevant information about the post or page. Defaults to `{}`.
+- **metadata:** This parameter provides additional information about a post or page. In the context of IMSDb, metadata includes details such as the source URL, title, and other relevant information about the post or page. Defaults to `{}`.
 
-- **web_path:** is used to specify the URL of the webpage that contains the script from the IMSDb.
+- **web_path:** This parameter is used to specify the URL of the webpage that contains the script from the IMSDb.
 
 
 ### NotionDirectoryLoader
@@ -230,9 +230,9 @@ The `NotionDirectoryLoader` is a document loader that helps you get documents fr
 
 **Params**
 
-- **metadata:** it provides additional information about your document. In the context of Notion, metadata includes details such as the source file, title, and other relevant information about the post or page. Defaults to `{}`.
+- **metadata:** It provides additional information about your document. In the context of Notion, metadata includes details such as the source file, title, and other relevant information about the post or page. Defaults to `{}`.
 
-- **path:** it refers to the directory path where the Notion documents are located. It specifies the location from which the loader will load the documents. The path can be a local file.
+- **path:** It refers to the directory path where the Notion documents are located. It specifies the location from which the loader will load the documents. The path can be a local file.
 
 
 ### PyPDFLoader
@@ -243,9 +243,9 @@ Loads a PDF with pypdf and chunks at character level.
 
 **Params**
 
-- **file_path:** is used to specify the path to the PDF file that you want to load. It is a string that represents the file path on your system where the PDF file is located.
+- **file_path:** This parameter is used to specify the path to the PDF file that you want to load. It is a string that represents the file path on your system where the PDF file is located.
 
-- **metadata:** it refers to additional information associated with each document loaded from a PDF file. It provides details about the document, such as the page number, structure, and tags. Defaults to `{}`.
+- **metadata:** This parameter refers to additional information associated with each document loaded from a PDF file. It provides details about the document, such as the page number, structure, and tags. Defaults to `{}`.
 
 
 ### ReadTheDocsLoader
@@ -256,9 +256,9 @@ Loader that loads ReadTheDocs documentation directory dump.
 
 **Params**
 
-- **metadata:** it refers to additional information associated with the document loaded from a ReadTheDocs Documentation. Defaults to `{}`.
+- **metadata:** This parameter refers to additional information associated with the document loaded from a ReadTheDocs Documentation. Defaults to `{}`.
 
-- **path:** it refers the location of pulled readthedocs folder.
+- **path:** It refers the location of pulled readthedocs folder.
 
 
 ### SRTLoader
@@ -269,9 +269,9 @@ Loader for .srt (subtitle) files.
 
 **Params**
 
-- **file_path:** is used to specify the path of the SRT file that you want to load. It is a string that represents the file path, including the file name and extension.
+- **file_path:** This parameter is used to specify the path of the SRT file that you want to load. It is a string that represents the file path, including the file name and extension.
 
-- **metadata:** is specific to the subtitle file and may not include additional metadata about the content of the subtitles themselves. Defaults to `{}`.
+- **metadata:** This parameter is specific to the subtitle file and may not include additional metadata about the content of the subtitles themselves. Defaults to `{}`.
 
 
 ### SlackDirectoryLoader
@@ -282,9 +282,9 @@ Loader for loading documents from a Slack directory dump.
 
 **Params**
 
-- **file_path:** it refers to the path or location of the file that needs to be loaded. You can do this by going to your Workspace Management page and clicking the Import/Export option ({your_slack_domain}.slack.com/services/export). Then, choose the right date range and click Start export. Slack will send you an email and a DM when the export is ready.
+- **file_path:** This parameter refers to the path or location of the file that needs to be loaded. You can do this by going to your Workspace Management page and clicking the Import/Export option ({your_slack_domain}.slack.com/services/export). Then, choose the right date range and click Start export. Slack will send you an email and a DM when the export is ready.
 
-- **metadata:** it refers to additional information associated with the document loaded from a Slack data. Defaults to `{}`.
+- **metadata:** It refers to additional information associated with the document loaded from a Slack data. Defaults to `{}`.
 
 
 ### TextLoader
@@ -295,9 +295,9 @@ The `TextLoader` reads the file and creates a Document object. Think of the Docu
 
 **Params**
 
-- **file_path:** it is used to identify the location of the file that contains the `.txt` data to be loaded.
+- **file_path:** This parameter is used to identify the location of the file that contains the `.txt` data to be loaded.
 
-- **metadata:** it refers to additional information associated with the document loaded from a text data. Defaults to `{}`.
+- **metadata:** This parameter refers to additional information associated with the document loaded from a text data. Defaults to `{}`.
 
 
 ### UnstructuredEmailLoader
@@ -308,8 +308,8 @@ The `UnstructuredEmailLoader` is a loader that uses unstructured to load email f
 
 **Params**
 
-- **file_path:** it is used to identify the location of the email file in the file system.
-- **metadata:** it refers to additional information associated with the document loaded from a email data. Defaults to `{}`.
+- **file_path:** It is used to identify the location of the email file in the file system.
+- **metadata:** This parameter refers to additional information associated with the document loaded from a email data. Defaults to `{}`.
 
 
 ### UnstructuredHTMLLoader
@@ -320,8 +320,8 @@ The `UnstructuredHTMLLoader` is a loader that uses unstructured to load `.html` 
 
 **Params**
 
-- **file_path:** it is used to identify the location of the HMTL file in the file system.
-- **metadata:** it refers to additional information associated with the document loaded from a HTML data. Defaults to `{}`.
+- **file_path:** This parameter is used to identify the location of the HMTL file in the file system.
+- **metadata:** This parameter refers to additional information associated with the document loaded from a HTML data. Defaults to `{}`.
 
 
 ### UnstructuredMarkdownLoader
@@ -332,8 +332,8 @@ The `UnstructuredMarkdownLoader` is a loader that uses unstructured to load `.md
 
 **Params**
 
-- **file_path:** it is used to identify the location of the `md` file in the file system.
-- **metadata:** it refers to additional information associated with the document loaded from a `md` data. Defaults to `{}`.
+- **file_path:** This parameter is used to identify the location of the `md` file in the file system.
+- **metadata:** This parameter refers to additional information associated with the document loaded from a `md` data. Defaults to `{}`.
 
 
 ### UnstructuredPowerPointLoader
@@ -344,9 +344,9 @@ The `UnstructuredPowerPointLoader` is a loader that uses unstructured to load `.
 
 **Params**
 
-- **file_path:** it is used to identify the location of the `pptx` file in the file system.
+- **file_path:** It is used to identify the location of the `pptx` file in the file system.
 
-- **metadata:** it refers to additional information associated with the document loaded from a `pptx` data. Defaults to `{}`.
+- **metadata:** It refers to additional information associated with the document loaded from a `pptx` data. Defaults to `{}`.
 
 
 ### UnstructuredWordDocumentLoader
@@ -357,9 +357,9 @@ The `UnstructuredWordDocumentLoader` is a loader that uses unstructured to load 
 
 **Params**
 
-- **file_path:** it is used to identify the location of the `docx` file in the file system.
+- **file_path:** This parameter is used to identify the location of the `docx` file in the file system.
 
-- **metadata:** it refers to additional information associated with the document loaded from a `docx` data. Defaults to `{}`.
+- **metadata:** This parameter refers to additional information associated with the document loaded from a `docx` data. Defaults to `{}`.
 
 
 ### WebBaseLoader
@@ -370,6 +370,6 @@ The `WebBaseLoader` gather information from a website. It's like a super-powered
 
 **Params**
 
-- **metadata:** is used to include additional information about the content being loaded. It can provide context, source details, timestamps, or any other relevant information related to the content. The metadata extraction function allows the user to specify which information from the data source should be included in the metadata of the final document object. Defaults to `{}`.
+- **metadata:** This parameter used to include additional information about the content being loaded. It can provide context, source details, timestamps, or any other relevant information related to the content. The metadata extraction function allows the user to specify which information from the data source should be included in the metadata of the final document object. Defaults to `{}`.
 
-- **web_path:** is used to load a sitemap from a given URL and scrape and load all pages in the sitemap.
+- **web_path:** This parameter used to load a sitemap from a given URL and scrape and load all pages in the sitemap.
