@@ -197,20 +197,31 @@ class CustomComponent(BaseModel):
             )
 
         functions = code.get("functions", [])
-        if build_function := next(
+        build_function = next(
             (f for f in functions if f["name"] == self.function_entrypoint_name),
             None,
-        ):
-            # Check if the return type of the build function is valid
-            return build_function.get("return_type") in self.return_type_valid_list
-        else:
+        )
+
+        if not build_function:
             raise HTTPException(
                 status_code=400,
                 detail={
-                    "error": f"The class return [{str(build_function.get('return_type'))}] needs to be an item from this list. [{str(self.return_type_valid_list)}]",
-                    "traceback": "",
+                    "error": "Invalid entrypoint function name",
+                    "traceback": f"There needs to be at least one entrypoint function named '{self.function_entrypoint_name}' and it needs to return one of the types from this list {str(self.return_type_valid_list)}.",
                 },
             )
+
+        return_type = build_function.get("return_type")
+        if return_type not in self.return_type_valid_list:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "Invalid entrypoint function return",
+                    "traceback": f"The entrypoint function return '{return_type}' needs to be an item from this list {str(self.return_type_valid_list)}.",
+                },
+            )
+
+        return True
 
     def get_function(self):
         return validate.create_function(self.code, self.function_entrypoint_name)
@@ -219,8 +230,7 @@ class CustomComponent(BaseModel):
     def data(self):
         return self.extract_class_info()
 
-    @property
-    def is_valid(self):
+    def is_check_valid(self):
         return self._class_template_validation(self.data)
 
     @property
