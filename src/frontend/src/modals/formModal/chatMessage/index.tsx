@@ -36,31 +36,15 @@ export default function ChatMessage({
         chat.isSend ? " bg-border" : " "
       )}
     >
-      <div
-        className={classNames(
-          "mx-3 my-3 flex h-8 w-8 items-center justify-center overflow-hidden rounded-full"
-        )}
-      >
-        {!chat.isSend && (
-          <div className="relative h-8 w-8">
-            <img
-              className={
-                "absolute scale-150 transition-opacity duration-500 " +
-                (lockChat ? "opacity-100" : "opacity-0")
-              }
-              src={lastMessage ? AiIcon : AiIconStill}
-            />
-            <img
-              className={
-                "absolute scale-150 transition-opacity duration-500 " +
-                (lockChat ? "opacity-0" : "opacity-100")
-              }
-              src={AiIconStill}
-            />
+      <div className={classNames("my-3 ml-3 mr-6 ")}>
+        {!chat.isSend ? (
+          <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-[#afe6ef] p-5 text-2xl ">
+            🤖
           </div>
-        )}
-        {chat.isSend && (
-          <User2 className="h-6 w-6 text-gray-800 dark:text-gray-200" />
+        ) : (
+          <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-[#aface9] p-5 text-2xl ">
+            👨‍💻
+          </div>
         )}
       </div>
       {!chat.isSend ? (
@@ -150,22 +134,22 @@ export default function ChatMessage({
         </div>
       ) : (
         <div className="flex w-full items-center">
-          <div className="inline-block w-full text-start">
-            <span className="w-full break-all text-primary">
-              <Accordion
-                type="multiple"
-                className="my-2 w-full rounded-md bg-muted p-2"
-              >
-                {Object.keys(chat.message)
-                  .filter((key) => key !== chat.chatKey)
-                  .map((key) => (
-                    <AccordionItem value={key}>
-                      <AccordionTrigger>{key}</AccordionTrigger>
-                      <AccordionContent className="max-h-96 overflow-auto break-all">
-                        {chat.message[key]}
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
+          <div className="inline-block text-start">
+            <span className=" break-all text-primary">
+              <Accordion type="single" collapsible className="mb-4">
+                <AccordionItem
+                  className=" rounded-md border border-ring/60 bg-muted px-4"
+                  value="prompt"
+                >
+                  <AccordionTrigger className="flex gap-4 font-semibold">
+                    Initial Prompt
+                  </AccordionTrigger>
+                  <AccordionContent className="max-h-96 overflow-auto break-all p-2">
+                    {Object.keys(chat.message)
+                      .filter((key) => key !== chat.chatKey)
+                      .map((key) => chat.message[key])}
+                  </AccordionContent>
+                </AccordionItem>
               </Accordion>
               {chat.message[chat.chatKey]}
             </span>
