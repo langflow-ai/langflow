@@ -6,16 +6,21 @@
 
 Schema to represent a prompt for an LLM.
 
+A `PromptTemplate` refers to a reproducible way to generate a prompt. It contains a text string called "the template" that can take in a set of parameters from the end user and generates a prompt. A prompt template can include instructions to the language model, a set of few-shot examples to help the language model generate a better response, and a question to the language model. It provides a flexible way to create prompts for language models.
 
-- **template:**
+
+- **template:** Template used to format an individual request.
 
 ### ZeroShotPrompt
 
 
 Prompt template for Zero Shot Agent.
 
+Similar to the `PromptTemplate`, the `ZeroShotPrompt` is a template specific to interact with Zero Shot Agents. The template can contain instructions to the language model, few-shot examples to help the model generate a better response, and a question to the model. It provides a flexible way to create prompts for the Zero Shot Agent.
 
-- **format_instructions:** Defaults to
+- **format_instructions:** The format of the prompt template. It can have custom format, which will pass instruction to the language model.
+
+Defaults to
 
 ```
 Use the following format:
@@ -38,14 +43,18 @@ Final Answer: the final answer to the original input question
 ```
 
 
-- **prefix:** Defaults to
+- **prefix:** A prompt template string to put before the examples.
+
+Defaults to
 
 ```
 Answer the following questions as best you can. You have access to the following tools:
 ```
 
 
-- **suffix:** Defaults to
+- **suffix:** A prompt template string to put after the examples.
+
+Defaults to
 
 ```
 Begin!
