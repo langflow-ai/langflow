@@ -30,14 +30,7 @@ import {
   varHighlightHTML,
 } from "../../utils";
 import { Badge } from "../../components/ui/badge";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "../../components/ui/tooltip";
 import ShadTooltip from "../../components/ShadTooltipComponent";
-import { set } from "lodash";
 import DOMPurify from "dompurify";
 
 export default function GenericModal({
@@ -68,7 +61,8 @@ export default function GenericModal({
   const [wordsHighlightInvalid, setWordsHighlightInvalid] = useState([]);
   const [wordsHighlight, setWordsHighlight] = useState([]);
   const { dark } = useContext(darkContext);
-  const { setErrorData, setSuccessData } = useContext(alertContext);
+  const { setErrorData, setSuccessData, setNoticeData } =
+    useContext(alertContext);
   const { closePopUp, setCloseEdit } = useContext(PopUpContext);
   const ref = useRef();
   function setModalOpen(x: boolean) {
@@ -149,9 +143,8 @@ export default function GenericModal({
           let inputVariables = apiReturn.data.input_variables;
           if (inputVariables.length === 0) {
             setIsEdit(true);
-            setErrorData({
-              title:
-                "The template you are attempting to use does not contain any variables for data entry.",
+            setNoticeData({
+              title: "Your template does not have any variables.",
             });
           } else {
             setIsEdit(false);
