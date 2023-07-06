@@ -141,3 +141,25 @@ export type ShadTooltipProps = {
   children: ReactNode;
   style?: string;
 };
+export type ShadToolTipType = {
+  content?: string;
+  side?: "top" | "right" | "bottom" | "left";
+  asChild?: boolean;
+  children?: ReactElement;
+  delayDuration?: number;
+};
+
+
+
+export type TextHighlightType = {
+  value?: string;
+  side?: "top" | "right" | "bottom" | "left";
+  asChild?: boolean;
+  children?: ReactElement;
+  delayDuration?: number;
+};
+
+export interface IVarHighlightType {
+  name: string
+}
+
