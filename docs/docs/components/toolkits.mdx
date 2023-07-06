@@ -3,21 +3,48 @@
 
 ### JsonToolkit
 
+Toolkit for interacting with a JSON spec.
+
+**Params**
+
+- **spec:** `object` - The JSON spec to interact with.
+
 
 ### OpenAIToolkit
+
+Toolkit for interacting with a OpenAPI api.
+
+**Params**
+
+- **Json Agent:**  Interact with large JSON/dict objects.
+- **Requests Wrapper:**  Wrapper around requests library `(TextRequestsWrapper)`.
 
 
 ### VectorStoreInfo
 
+Information about a vectorstore. A vector store takes care of storing embedded data and performing vector search for you.
 
-Information about a vectorstore.
+**Params**
 
+- ** VectorStore:**  The vectorstore to get information about.
 
-- **description:**
-- **name:**
+- **description:** A description of the vectorstore.
+- **name:**  The name of the vectorstore.
+
 
 ### VectorStoreRouterToolkit
+
+Toolkit for routing between vector stores.
+
+**Params**
+
+- **VectorStores:**  Information about the vectorstores to route to.
 
 
 ### VectorStoreToolkit
 
+Toolkit for interacting with a vector store.
+
+**Params**
+
+- **Vectorstore Info:**  Information about the vectorstore to interact with.

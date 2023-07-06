@@ -3,23 +3,39 @@
 
 ### CharacterTextSplitter
 
-
 Implementation of splitting text that looks at characters.
+
+`CharacterTextSplitter` splits a given text into individual characters. It can be used to separate a string into its constituent characters. This can be useful in various scenarios, such as counting the number of characters in a text, analyzing the frequency of each character, or performing specific operations on individual characters.
 
 **Params**
 
-- **chunk_overlap:** Defaults to `200`
-- **chunk_size:** Defaults to `1000`
-- **separator:** Defaults to `.`
+- **chunk_overlap:** This parameter determines the number of characters that overlap between consecutive chunks when splitting a text. It specifies how much of the previous chunk should be included in the next chunk.
+
+    For example, if the `chunk_overlap` is set to 20 and the `chunk_size` is set to 100, the splitter will create chunks of 100 characters each, but the last 20 characters of each chunk will overlap with the first 20 characters of the next chunk. This allows for a smoother transition between chunks and ensures that no information is lost. Defaults to `200`.
+
+- **chunk_size:** This parameter determines the maximum number of characters in each chunk when splitting a text. It specifies the size or length of each chunk.
+
+    For example, if the chunk_size is set to 100, the splitter will create chunks of 100 characters each. If the text is longer than 100 characters, it will be divided into multiple chunks of equal size, except for the last chunk which may be smaller if there are remaining characters. Defaults to `1000`.
+
+- **separator:** This parameter is used to specify the character or sequence of characters that will be used to split the text into chunks. Defaults to `.`, which means that the text will be split at every `.`
+
 
 ### RecursiveCharacterTextSplitter
 
+Implementation of splitting text that looks at characters. 
 
-Implementation of splitting text that looks at characters.
+The `RecursiveCharacterTextSplitter` is a text splitter that splits text based on a list of characters. It recursively tries to split the text using different characters until it finds one that works.
 
 **Params**
 
-- **chunk_overlap:** Defaults to `200`
-- **chunk_size:** Defaults to `1000`
-- **separator_type:** Defaults to `Text`
-- **separators:** Defaults to `.`
+- **chunk_overlap:** The parameter determines the maximum overlap between chunks when splitting the text. It can be useful to have some overlap between chunks to maintain continuity and context.
+
+    For example, if the chunk_size is set to 100 characters and the chunk_overlap is set to 20 characters, the splitter will create chunks of 100 characters each, but the last 20 characters of each chunk will overlap with the first 20 characters of the next chunk. This ensures that important information is not lost at the boundaries of the chunks. Defaults to `200`.
+
+- **chunk_size:** This parameter determines the maximum size of each chunk when splitting the text. It specifies the number of characters that each chunk should contain.
+
+    For example, if the chunk_size is set to 100 characters, the splitter will create chunks of 100 characters each. If the text is longer than 100 characters, it will be split into multiple chunks of 100 characters each. Defaults to `1000`.
+
+- **separator_type:** The parameter allows you to split your code with multiple language support. It supports various languages such as Text, Ruby, Python, Solidity, Java, and more. Defaults to `Text`.
+
+- **separators:** The `separators` in RecursiveCharacterTextSplitter are the characters used to split the text into chunks. The text splitter tries to create chunks based on splitting on the first character in the list of `separators`. If any chunks are too large, it moves on to the next character in the list and continues splitting. Defaults to `.`
