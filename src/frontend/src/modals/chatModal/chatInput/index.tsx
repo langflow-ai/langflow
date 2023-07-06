@@ -52,21 +52,21 @@ export default function ChatInput({
           lockChat
             ? " bg-input text-foreground "
             : "  bg-background text-foreground ",
-          "form-input block w-full rounded-md border-ring pr-10  custom-scroll sm:text-sm" +
+          "chat-input-modal-txtarea" +
             " input-primary "
         )}
         placeholder={"Send a message..."}
       />
-      <div className="absolute bottom-0.5 right-3">
+      <div className="chat-input-modal-div">
         <button disabled={lockChat} onClick={() => sendMessage()}>
           {lockChat ? (
             <Lock
-              className="h-5 w-5 animate-pulse   text-ring"
+              className="chat-input-modal-lock"
               aria-hidden="true"
             />
           ) : (
             <Send
-              className="h-5 w-5 text-ring hover:text-muted-foreground "
+              className="chat-input-modal-send "
               aria-hidden="true"
             />
           )}

@@ -90,27 +90,27 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
           <DialogDescription>
             {data.node?.description}
             <div className="flex pt-3">
-              <Variable className="h-5 w-5 stroke-2 pe-1 text-muted-foreground "></Variable>
-              <span className="text-sm font-semibold text-primary">
+              <Variable className="edit-node-modal-variable "></Variable>
+              <span className="edit-node-modal-span">
                 Parameters
               </span>
             </div>
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex h-fit max-h-[400px] w-full">
+        <div className="edit-node-modal-arrangement">
           <div
             className={classNames(
-              "w-full rounded-lg border-[1px] border-input bg-background",
+              "edit-node-modal-box",
               nodeLength > limitScrollFieldsModal
                 ? "overflow-scroll overflow-x-hidden custom-scroll"
                 : "overflow-hidden"
             )}
           >
             {nodeLength > 0 && (
-              <div className="flex h-fit flex-col gap-5">
+              <div className="edit-node-modal-table">
                 <Table className="table-fixed bg-muted outline-1">
-                  <TableHeader className="h-10 border-input text-xs font-medium text-ring">
+                  <TableHeader className="edit-node-modal-table-header">
                     <TableRow className="">
                       <TableHead className="h-7 text-center">PARAM</TableHead>
                       <TableHead className="h-7 p-0 text-center">
