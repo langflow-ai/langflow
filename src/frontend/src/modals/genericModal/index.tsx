@@ -90,7 +90,6 @@ export default function GenericModal({
             value={myValue}
             onChange={(e) => {
               setMyValue(e.target.value);
-              setValue(e.target.value);
             }}
             placeholder="Type message here."
           />
@@ -100,6 +99,7 @@ export default function GenericModal({
           <Button
             className="mt-3"
             onClick={() => {
+              setValue(myValue);
               switch (myModalType) {
                 case 1:
                   setModalOpen(false);
