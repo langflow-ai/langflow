@@ -47,19 +47,19 @@ export const MenuBar = ({ flows, tabId }) => {
   let current_flow = flows.find((flow) => flow.id === tabId);
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="round-button-div">
       <Link to="/">
         <ChevronLeft className="w-4" />
       </Link>
-      <div className="flex items-center gap-0.5 rounded-md px-1.5 py-1 text-sm font-medium">
+      <div className="header-menu-bar">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              className="flex max-w-[200px] items-center gap-2"
+              className="header-menu-bar-display"
               variant="primary"
               size="sm"
             >
-              <div className="flex-1 truncate">{current_flow.name}</div>
+              <div className="header-menu-flow-name">{current_flow.name}</div>
               <ChevronDown className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -71,7 +71,7 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="header-menu-options" />
               New
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -80,7 +80,7 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <Settings2 className="mr-2 h-4 w-4 " />
+              <Settings2 className="header-menu-options " />
               Settings
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -89,7 +89,7 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <Undo className="mr-2 h-4 w-4 " />
+              <Undo className="header-menu-options " />
               Undo
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -98,7 +98,7 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <Redo className="mr-2 h-4 w-4 " />
+              <Redo className="header-menu-options " />
               Redo
             </DropdownMenuItem>
             <DropdownMenuSeparator />

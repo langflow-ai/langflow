@@ -176,8 +176,14 @@ The cursor: default; property value restores the browser's default cursor style 
   .extra-side-bar-save-disable {
     @apply text-muted-foreground
   }
+  .extra-side-bar-save-disable:hover {
+    @apply hover:text-accent-foreground
+  }
   .side-bar-button-size {
     @apply h-5 w-5
+  }
+  .side-bar-button-size:hover {
+    @apply hover:text-accent-foreground
   }
   .side-bar-buttons-arrangement {
     @apply mb-2 mt-2 flex w-full items-center justify-between gap-2 px-2
@@ -297,5 +303,293 @@ The cursor: default; property value restores the browser's default cursor style 
 
   .community-pages-flows-panel {
     @apply grid w-full gap-4 p-4 md:grid-cols-2 lg:grid-cols-4
+  }
+  .generic-node-div {
+    @apply relative flex w-96 flex-col justify-center rounded-lg bg-background
+  }
+  .generic-node-div-title {
+    @apply flex w-full items-center justify-between gap-8 rounded-t-lg border-b bg-muted p-4
+  }
+  .generic-node-title-arrangement {
+    @apply flex-max-width items-center truncate
+  }
+  .generic-node-icon {
+    @apply h-10 w-10 rounded p-1
+  }
+  .generic-node-tooltip-div {
+    @apply ml-2 truncate
+  }
+  .generic-node-validation-div {
+    @apply max-h-96 overflow-auto
+  }
+
+  .generic-node-status-position {
+    @apply relative top-[3px] h-5 w-5
+  }
+
+  .generic-node-status-animation {
+    @apply hidden h-4 w-4 animate-spin rounded-full bg-ring opacity-0
+  }
+  .generic-node-status {
+    @apply h-4 w-4 rounded-full opacity-100
+  }
+  .green-status {
+    @apply generic-node-status bg-status-green
+  }
+  .red-status {
+    @apply generic-node-status bg-status-red
+  }
+  .yellow-status {
+    @apply generic-node-status bg-status-yellow
+  }
+  .status-build-animation {
+    @apply hidden h-4 w-4 animate-spin rounded-full bg-ring opacity-0
+  }
+  .status-div {
+    @apply absolute w-4 duration-200 ease-in-out
+  }
+  .status-div:hover {
+    @apply hover:text-accent-foreground hover:transition-all
+  }
+  .generic-node-desc {
+    @apply h-full w-full py-5 text-foreground
+  }
+  .generic-node-desc-text {
+    @apply w-full px-5 pb-3 text-sm text-muted-foreground
+  }
+
+  .alert-icon {
+    @apply h-5 w-5
+  }
+  .alert-font-size {
+    @apply text-sm font-medium
+  }
+
+  .error-build-message {
+    @apply mt-6 w-96 cursor-pointer rounded-md bg-error-background  p-4 shadow-xl
+  }
+  .error-build-message-circle {
+    @apply text-status-red alert-icon
+  }
+  .error-build-text {
+    @apply text-error-foreground
+  }
+  .error-build-foreground {
+    @apply error-build-text alert-font-size
+  }
+  .error-build-message-div {
+    @apply mt-2 text-sm error-build-text
+  }
+  .error-build-message-list {
+    @apply list-disc space-y-1 pl-5
+  }
+
+  .success-alert {
+    @apply mt-6 w-96 rounded-md bg-success-background p-4 shadow-xl
+  }
+  .success-alert-icon {
+    @apply alert-icon text-status-green
+  }
+  .success-alert-message {
+    @apply alert-font-size text-success-foreground
+  }
+
+  .card-component-title-display {
+    @apply round-button-div flex-max-width
+  }
+  .card-component-image {
+    @apply flex h-7 w-7 items-center justify-center rounded-full text-2xl
+  }
+  .card-component-title-size {
+    @apply inline-block w-full flex-1 break-words truncate-doubleline
+  }
+  .card-component-delete-button {
+    @apply flex self-start
+  }
+  .card-component-delete-icon {
+    @apply h-4 w-4 text-primary opacity-0 transition-all group-hover:opacity-100
+  }
+  .card-component-desc {
+    @apply pb-2 pt-2
+  }
+  .card-component-desc-text {
+    @apply truncate-doubleline
+  }
+  .card-component-footer-arrangement {
+    @apply flex-max-width items-end justify-between gap-2
+  }
+  .card-component-footer {
+    @apply flex flex-wrap gap-2
+  }
+
+  .unused-side-bar-aside {
+    @apply flex flex-shrink-0 flex-col overflow-hidden border-r  transition-all duration-500
+  }
+  .unused-side-bar-arrangement {
+    @apply flex h-full  w-52 flex-col items-start overflow-y-auto border bg-background scrollbar-hide
+  }
+  .unused-side-bar-division {
+    @apply flex-max-width flex-grow flex-col
+  }
+  .unused-side-bar-nav {
+    @apply flex-1 space-y-1
+  }
+  .unused-side-bar-link {
+    @apply flex-max-width items-center rounded-md py-2 pl-2 text-sm font-medium
+  }
+  .unused-side-bar-link-colors-true {
+    @apply bg-muted text-foreground
+  }
+  .unused-side-bar-link-colors-false {
+    @apply bg-background text-muted-foreground hover:bg-muted hover:text-foreground
+  }
+  .unused-side-bar-icon {
+    @apply mr-3 flex-shrink-0 h-6 w-6
+  }
+  .unused-side-bar-icon-false {
+    @apply text-ring group-hover:text-accent-foreground
+  }
+  .unused-side-bar-disclosure {
+    @apply unused-side-bar-link pr-1 text-left
+  }
+  .unused-side-bar-disclosure:focus {
+    @apply focus:outline-none focus:ring-1 focus:ring-ring
+  }
+  .unused-side-bar-disclosure-icon {
+    @apply unused-side-bar-icon text-ring group-hover:text-accent-foreground
+  }
+  .unused-side-bar-svg-true {
+    @apply text-ring rotate-90
+  }
+  .unused-side-bar-svg {
+    @apply ml-3 h-5 w-5 flex-shrink-0 duration-150 ease-in-out group-hover:text-accent-foreground
+  }
+  .unused-side-bar-disclosure-panel {
+    @apply flex w-full items-center rounded-md py-2 pl-11 pr-2 text-sm font-medium
+  }
+
+  .code-area-component {
+    @apply pointer-events-none w-full cursor-not-allowed
+  }
+  .code-area-input-positioning {
+    @apply flex-max-width items-center
+  }
+  .code-area-external-link {
+    @apply w-6 h-6 ml-3
+  }
+  .code-area-external-link:hover {
+    @apply hover:text-accent-foreground
+  }
+
+  .dropdown-component-outline {
+    @apply border-1 input-edit-node relative pr-8
+  }
+  .dropdown-component-false-outline {
+    @apply input-primary py-2 pl-3 pr-10 text-left
+  }
+  .dropdown-component-display {
+    @apply block w-full truncate bg-background
+  }
+  .dropdown-component-arrow {
+    @apply pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2
+  }
+  .dropdown-component-arrow-color {
+    @apply h-5 w-5 extra-side-bar-save-disable
+  }
+  .dropdown-component-options {
+    @apply z-10 mt-1 max-h-60 overflow-auto rounded-md bg-background py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm
+  }
+  .dropdown-component-true-options {
+    @apply dropdown-component-options w-[215px]
+  }
+  .dropdown-component-false-options {
+    @apply dropdown-component-options w-full
+  }
+  .dropdown-component-option {
+    @apply relative cursor-default select-none
+  }
+  .dropdown-component-false-option {
+    @apply dropdown-component-option py-0.5 pl-3 pr-12
+  }
+  .dropdown-component-true-option {
+    @apply dropdown-component-option py-2 pl-3 pr-9
+  }
+  .dropdown-component-choosal {
+    @apply absolute inset-y-0 right-0 flex items-center pr-4
+  }
+  .dropdown-component-check-icon {
+    @apply h-5 w-5 text-black
+  }
+
+  .edit-flow-arrangement {
+    @apply flex justify-between
+  }
+  .edit-flow-span {
+    @apply ml-10 animate-pulse text-status-red
+  }
+
+  .float-component-pointer {
+    @apply pointer-events-none cursor-not-allowed
+  }
+
+  .header-menu-bar {
+    @apply flex items-center gap-0.5 rounded-md px-1.5 py-1 text-sm font-medium
+  }
+  .header-menu-bar-display {
+    @apply flex max-w-[200px] items-center gap-2
+  }
+  .header-menu-flow-name {
+    @apply flex-1 truncate
+  }
+  .header-menu-options {
+    @apply mr-2 h-4 w-4
+  }
+
+  .header-arrangement {
+    @apply flex-max-width h-12 items-center justify-between border-b bg-muted
+  }
+  .header-start-display {
+    @apply flex w-96 items-center justify-start gap-2
+  }
+  .header-end-division {
+    @apply flex w-96 justify-end px-2
+  }
+  .header-end-display {
+    @apply ml-auto mr-2 flex items-center gap-5
+  }
+  .header-github-link {
+    @apply inline-flex h-9 items-center justify-center rounded-md border border-input px-3 pr-0 text-sm font-medium text-muted-foreground shadow-sm ring-offset-background  hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50
+  }
+  .header-github-display {
+    @apply -mr-px ml-2 flex h-9 items-center justify-center rounded-md rounded-l-none border bg-background px-2 text-sm
+  }
+  .header-notifications-box {
+    @apply fixed left-0 top-0 h-screen w-screen
+  }
+  .header-notifications {
+    @apply absolute right-[3px] h-1.5 w-1.5 rounded-full bg-destructive
+  }
+
+  .input-component-div {
+    @apply pointer-events-none relative cursor-not-allowed
+  }
+  .input-component-button {
+    @apply absolute inset-y-0 right-0 items-center text-muted-foreground
+  }
+  .input-component-true-button {
+    @apply input-component-button pr-2
+  }
+  .input-component-false-button {
+    @apply input-component-button px-4
+  }
+  .input-component-true-svg {
+    @apply absolute bottom-0.5 right-2 side-bar-button-size
+  }
+  .input-component-false-svg {
+    @apply absolute bottom-2 right-3 side-bar-button-size
+  }
+  
+  .input-file-component {
+    @apply flex-max-width items-center
   }
 }
