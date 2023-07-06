@@ -11,7 +11,7 @@ export default function TextAreaModal({
   setValue,
 }: {
   setValue: (value: string) => void;
-  value: string | string[];
+  value: string;
 }) {
   const [open, setOpen] = useState(true);
   const [myValue, setMyValue] = useState(value);
@@ -96,7 +96,6 @@ export default function TextAreaModal({
                           value={myValue}
                           onChange={(e) => {
                             setMyValue(e.target.value);
-                            setValue(e.target.value);
                           }}
                         />
                       </div>
@@ -107,6 +106,7 @@ export default function TextAreaModal({
                       type="button"
                       className="inline-flex w-full justify-center rounded-md border border-transparent px-4 py-2 text-base font-medium text-background shadow-sm hover:bg-ring focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1 sm:ml-3 sm:w-auto sm:text-sm"
                       onClick={() => {
+                        setValue(myValue);
                         setModalOpen(false);
                       }}
                     >
