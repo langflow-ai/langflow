@@ -32,10 +32,7 @@ class MemoryCreator(LangChainTypeCreator):
     def get_signature(self, name: str) -> Optional[Dict]:
         """Get the signature of a memory."""
         try:
-            if (
-                name in get_custom_nodes(self.type_name).keys()
-                and name in settings.memories
-            ):
+            if name in get_custom_nodes(self.type_name).keys():
                 return get_custom_nodes(self.type_name)[name]
             elif name in self.from_method_nodes:
                 return build_template_from_method(
