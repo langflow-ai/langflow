@@ -149,9 +149,9 @@ export default function ChatMessage({
           </div>
         </div>
       ) : (
-        <div className="flex w-full flex-1 items-center">
-          <div className="inline-block text-start">
-            <span className="text-primary">
+        <div className="flex w-full items-center">
+          <div className="inline-block w-full text-start">
+            <span className="w-full break-all text-primary">
               <Accordion
                 type="multiple"
                 className="my-2 w-full rounded-md bg-muted p-2"
@@ -161,7 +161,9 @@ export default function ChatMessage({
                   .map((key) => (
                     <AccordionItem value={key}>
                       <AccordionTrigger>{key}</AccordionTrigger>
-                      <AccordionContent>{chat.message[key]}</AccordionContent>
+                      <AccordionContent className="max-h-96 overflow-auto break-all">
+                        {chat.message[key]}
+                      </AccordionContent>
                     </AccordionItem>
                   ))}
               </Accordion>
