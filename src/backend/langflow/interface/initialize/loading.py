@@ -111,6 +111,12 @@ def instantiate_llm(node_type, class_object, params: Dict):
 
 
 def instantiate_memory(node_type, class_object, params):
+    # process input_key and output_key to remove them if
+    # they are empty strings
+    for key in ["input_key", "output_key"]:
+        if key in params and not params[key]:
+            params.pop(key)
+
     try:
         if "retriever" in params and hasattr(params["retriever"], "as_retriever"):
             params["retriever"] = params["retriever"].as_retriever()
