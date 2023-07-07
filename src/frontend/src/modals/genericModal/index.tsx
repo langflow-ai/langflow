@@ -206,7 +206,7 @@ export default function GenericModal({
           {type == TypeModal.PROMPT && isEdit ? (
             <Textarea
               ref={ref}
-              className="form-input h-full w-full rounded-lg border-gray-300 focus-visible:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white custom-scroll"
+              className="form-input h-full w-full rounded-lg border-gray-300 custom-scroll focus-visible:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
               value={inputValue}
               onBlur={() => {
                 blur();
@@ -236,15 +236,14 @@ export default function GenericModal({
           )}
         </div>
 
-        
         {type == TypeModal.PROMPT && (
-            <>
-              <div className="h-[6vh] overflow-y-auto custom-scroll">
-              <div className="items-center flex flex-wrap">
-                <Variable className=" -ml-px mr-1 h-4 w-4 text-primary flex"></Variable>
+          <>
+            <div className="h-[6vh] overflow-y-auto custom-scroll">
+              <div className="flex flex-wrap items-center">
+                <Variable className=" -ml-px mr-1 flex h-4 w-4 text-primary"></Variable>
                 <span className="text-md font-semibold text-primary">
-                  Input Variables: {wordsHighlight &&
-          wordsHighlight.length == 0 ? '-' : ''}
+                  Input Variables:{" "}
+                  {wordsHighlight && wordsHighlight.length == 0 ? "-" : ""}
                 </span>
 
                 {wordsHighlight.map((word, index) => (
@@ -256,7 +255,8 @@ export default function GenericModal({
                   >
                     <Badge
                       key={index}
-                      variant="gray" size="md"
+                      variant="gray"
+                      size="md"
                       className="m-1 max-w-[40vw] cursor-default truncate p-2.5 text-sm"
                     >
                       <div className="relative bottom-[1px]">
@@ -269,11 +269,10 @@ export default function GenericModal({
                     </Badge>
                   </ShadTooltip>
                 ))}
-
               </div>
-              </div>
-            </>
-          )}
+            </div>
+          </>
+        )}
 
         <DialogFooter>
           <Button
@@ -282,7 +281,7 @@ export default function GenericModal({
               switch (myModalType) {
                 case 1:
                   setValue(inputValue);
-                    setModalOpen(false);
+                  setModalOpen(false);
                   break;
                 case 2:
                   validatePrompt(false);
