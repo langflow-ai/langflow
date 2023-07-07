@@ -60,7 +60,7 @@ export default function TextAreaComponent({
                   setMyValue(t);
                   onChange(t);
                 }}
-              />,
+              />
             );
           }}
         >

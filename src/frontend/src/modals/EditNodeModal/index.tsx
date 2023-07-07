@@ -47,8 +47,8 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
           data.node.template[t].type === "code" ||
           data.node.template[t].type === "prompt" ||
           data.node.template[t].type === "file" ||
-          data.node.template[t].type === "int"),
-    ).length,
+          data.node.template[t].type === "int")
+    ).length
   );
   const [nodeValue, setNodeValue] = useState(null);
   const { closePopUp } = useContext(PopUpContext);
@@ -91,9 +91,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
             {data.node?.description}
             <div className="flex pt-3">
               <Variable className="edit-node-modal-variable "></Variable>
-              <span className="edit-node-modal-span">
-                Parameters
-              </span>
+              <span className="edit-node-modal-span">Parameters</span>
             </div>
           </DialogDescription>
         </DialogHeader>
@@ -104,7 +102,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
               "edit-node-modal-box",
               nodeLength > limitScrollFieldsModal
                 ? "overflow-scroll overflow-x-hidden custom-scroll"
-                : "overflow-hidden",
+                : "overflow-hidden"
             )}
           >
             {nodeLength > 0 && (
@@ -131,7 +129,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                             data.node.template[t].type === "code" ||
                             data.node.template[t].type === "prompt" ||
                             data.node.template[t].type === "file" ||
-                            data.node.template[t].type === "int"),
+                            data.node.template[t].type === "int")
                       )
                       .map((n, i) => (
                         <TableRow key={i} className="h-10">

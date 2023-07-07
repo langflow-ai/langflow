@@ -36,10 +36,11 @@ export default function FileCard({ fileName, content, fileType }) {
           className="h-full  w-full rounded-lg"
         />
         {isHovered && (
-          <div
-            className={`file-card-modal-image-div `}
-          >
-            <button className="file-card-modal-image-button " onClick={handleDownload}>
+          <div className={`file-card-modal-image-div `}>
+            <button
+              className="file-card-modal-image-button "
+              onClick={handleDownload}
+            >
               <DownloadCloud className="h-5 w-5 text-current hover:scale-110" />
             </button>
           </div>
@@ -49,10 +50,7 @@ export default function FileCard({ fileName, content, fileType }) {
   }
 
   return (
-    <button
-      onClick={handleDownload}
-      className="file-card-modal-button"
-    >
+    <button onClick={handleDownload} className="file-card-modal-button">
       <div className="file-card-modal-div">
         {" "}
         {fileType === "image" ? (

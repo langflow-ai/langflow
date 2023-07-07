@@ -112,10 +112,10 @@ export default function Page({ flow }: { flow: FlowType }) {
   const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
   const { setErrorData } = useContext(alertContext);
   const [nodes, setNodes, onNodesChange] = useNodesState(
-    flow.data?.nodes ?? [],
+    flow.data?.nodes ?? []
   );
   const [edges, setEdges, onEdgesChange] = useEdgesState(
-    flow.data?.edges ?? [],
+    flow.data?.edges ?? []
   );
   const { setViewport } = useReactFlow();
   const edgeUpdateSuccessful = useRef(true);
@@ -158,7 +158,7 @@ export default function Page({ flow }: { flow: FlowType }) {
         };
       });
     },
-    [onEdgesChange, setNodes, setTabsState, tabId],
+    [onEdgesChange, setNodes, setTabsState, tabId]
   );
 
   const onNodesChangeMod = useCallback(
@@ -174,7 +174,7 @@ export default function Page({ flow }: { flow: FlowType }) {
         };
       });
     },
-    [onNodesChange, setTabsState, tabId],
+    [onNodesChange, setTabsState, tabId]
   );
 
   const onConnect = useCallback(
@@ -191,15 +191,15 @@ export default function Page({ flow }: { flow: FlowType }) {
                 : "stroke-foreground ",
             animated: params.targetHandle.split("|")[0] === "Text",
           },
-          eds,
-        ),
+          eds
+        )
       );
       setNodes((x) => {
         let newX = _.cloneDeep(x);
         return newX;
       });
     },
-    [setEdges, setNodes, takeSnapshot],
+    [setEdges, setNodes, takeSnapshot]
   );
 
   const onNodeDragStart: NodeDragHandler = useCallback(() => {
@@ -288,7 +288,7 @@ export default function Page({ flow }: { flow: FlowType }) {
       }
     },
     // Specify dependencies for useCallback
-    [getNodeId, reactFlowInstance, setErrorData, setNodes, takeSnapshot],
+    [getNodeId, reactFlowInstance, setErrorData, setNodes, takeSnapshot]
   );
 
   useEffect(() => {
@@ -304,12 +304,11 @@ export default function Page({ flow }: { flow: FlowType }) {
       takeSnapshot();
       setEdges(
         edges.filter(
-          (ns) =>
-            !mynodes.some((n) => ns.source === n.id || ns.target === n.id),
-        ),
+          (ns) => !mynodes.some((n) => ns.source === n.id || ns.target === n.id)
+        )
       );
     },
-    [takeSnapshot, edges, setEdges],
+    [takeSnapshot, edges, setEdges]
   );
 
   const onEdgeUpdateStart = useCallback(() => {
@@ -323,7 +322,7 @@ export default function Page({ flow }: { flow: FlowType }) {
         setEdges((els) => updateEdge(oldEdge, newConnection, els));
       }
     },
-    [],
+    []
   );
 
   const onEdgeUpdateEnd = useCallback((_, edge) => {

@@ -43,12 +43,13 @@ export default function ErrorAlert({
       >
         <div className="flex">
           <div className="flex-shrink-0">
-            <XCircle className="error-build-message-circle" aria-hidden="true" />
+            <XCircle
+              className="error-build-message-circle"
+              aria-hidden="true"
+            />
           </div>
           <div className="ml-3">
-            <h3 className="error-build-foreground">
-              {title}
-            </h3>
+            <h3 className="error-build-foreground">{title}</h3>
             {list.length !== 0 ? (
               <div className="error-build-message-div">
                 <ul className="error-build-message-list">

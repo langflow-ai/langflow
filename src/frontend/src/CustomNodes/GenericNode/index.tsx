@@ -169,9 +169,7 @@ export default function GenericNode({
         </div>
 
         <div className="generic-node-desc">
-          <div className="generic-node-desc-text">
-            {data.node.description}
-          </div>
+          <div className="generic-node-desc-text">{data.node.description}</div>
 
           <>
             {Object.keys(data.node.template)

@@ -21,7 +21,7 @@ export default function ModalField({
   index,
 }) {
   const [enabled, setEnabled] = useState(
-    data.node.template[name]?.value ?? false,
+    data.node.template[name]?.value ?? false
   );
   const display =
     type === "str" ||
@@ -41,12 +41,12 @@ export default function ModalField({
           (t) =>
             t.charAt(0) !== "_" &&
             data.node.template[t].advanced &&
-            data.node.template[t].show,
+            data.node.template[t].show
         ).length -
           1 ===
           index
           ? "pb-4"
-          : "",
+          : ""
       )}
     >
       {display && (
