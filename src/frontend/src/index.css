@@ -217,6 +217,10 @@ The cursor: default; property value restores the browser's default cursor style 
   .input-dialog{
     @apply text-ring cursor-pointer bg-transparent
   }
+  .message-button {
+    @apply message-button-position flex h-12 w-12 items-center justify-center rounded-full bg-border px-3 py-1 shadow-md transition-all
+  }
+  
   .round-button-form {
     @apply flex h-12 w-12 cursor-pointer justify-center rounded-full bg-border px-3 py-1 shadow-md
   }
@@ -230,10 +234,13 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply w-6 fill-build-trigger stroke-1 stroke-build-trigger
   }
   .message-button-position {
-    @apply absolute bottom-4 right-3
+    @apply fixed bottom-4 right-4
   }
   .message-button-icon {
-    @apply w-6 fill-chat-trigger stroke-chat-trigger stroke-1
+    @apply fill-chat-trigger stroke-chat-trigger stroke-1
+  }
+  .disabled-message-button-icon {
+    @apply fill-chat-trigger-disabled stroke-chat-trigger-disabled stroke-1
   }
   .components-disclosure-arrangement {
     @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-muted px-3 py-2
