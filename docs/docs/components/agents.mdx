@@ -3,12 +3,14 @@
 
 ### AgentInitializer
 
-
 Construct a zero shot agent from an LLM and tools.
 
 The `AgentInitializer` component is a quick way to construct an agent from the model and tools.
 
 
+- **LLM:** Language Model to use in the chain.
+- **Memory:** Default memory store.
+- **Tools:** Tools that the agent will have access to.
 - **agent:** The agent to be instantiated. Current supported: zero-shot-react-description, react-docstore, self-ask-with-search,conversational-react-description and openai-functions.
 
 ### CSVAgent
@@ -20,11 +22,14 @@ Provides a convenient interface for working with CSV data by utilizing a languag
 
 
 - **path:** The file path to the CSV data.
+- **LLM:** Language Model to use in the chain.
 
 ### JSONAgent
 
 It is another custom agent that deals with JSON (JavaScript Object Notation) data. Similar to the CSVAgent, it also works with a language model (LLM) and a toolkit of tools specifically designed for JSON manipulation.
 
+- **LLM:** Language Model to use in the agent.
+- **Toolkit:** Toolkit that the agent will have access to.
 
 ### SQLAgent
 
@@ -33,6 +38,7 @@ Construct an SQL agent from an LLM and tools.
 
 The `SQLAgent` class provides a convenient interface for interacting with SQL databases by utilizing a language model and a toolkit of SQL-specific tools. Users can perform SQL queries, retrieve information, and execute various operations on the connected database using this agent.
 
+- **LLM:** Language Model to use in the chain.
 - **database_uri:** A string representing the connection URI for the SQL database.
 
 ### VectorStoreAgent
@@ -48,4 +54,6 @@ The `VectorStoreRouterAgent` is a custom agent that serves as a router for vecto
 
 The `ZeroShotAgent` takes the `LLMChain` and the `Search` tool as inputs, using the tool to find information when necessary.
 
+- **Allowed Tools:** Tools that the agent will have access to.
+- **LLM Chain:** LLM Chain to be used by the agent.
 
