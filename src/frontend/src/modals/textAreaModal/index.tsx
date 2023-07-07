@@ -79,10 +79,7 @@ export default function TextAreaModal({
                       />
                     </div>
                     <div className="node-modal-title-div">
-                      <Dialog.Title
-                        as="h3"
-                        className="node-modal-title"
-                      >
+                      <Dialog.Title as="h3" className="node-modal-title">
                         Edit text
                       </Dialog.Title>
                     </div>

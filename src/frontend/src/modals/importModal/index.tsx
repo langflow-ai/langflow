@@ -113,9 +113,7 @@ export default function ImportModal() {
                 size="big"
                 bgColor="bg-medium-emerald "
                 description="Prebuilt Examples"
-                icon={
-                  <DocumentDuplicateIcon className="document-icon" />
-                }
+                icon={<DocumentDuplicateIcon className="document-icon" />}
                 onClick={() => {
                   setShowExamples(true);
                   handleExamples();
@@ -127,9 +125,7 @@ export default function ImportModal() {
                 size="big"
                 bgColor="bg-almost-dark-blue "
                 description="Import from Local"
-                icon={
-                  <ComputerDesktopIcon className="document-icon" />
-                }
+                icon={<ComputerDesktopIcon className="document-icon" />}
                 onClick={() => {
                   uploadFlow();
                   setModalOpen(false);

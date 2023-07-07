@@ -35,11 +35,7 @@ export default function ChatMessage({
         chat.isSend ? "bg-background " : "bg-input"
       )}
     >
-      <div
-        className={classNames(
-          "chat-message-modal-div"
-        )}
-      >
+      <div className={classNames("chat-message-modal-div")}>
         {!chat.isSend && (
           <div className="relative h-8 w-8">
             <img

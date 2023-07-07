@@ -80,10 +80,7 @@ export default function PromptAreaModal({
                       />
                     </div>
                     <div className="node-modal-title-div ">
-                      <Dialog.Title
-                        as="h3"
-                        className="node-modal-title"
-                      >
+                      <Dialog.Title as="h3" className="node-modal-title">
                         Edit Prompt
                       </Dialog.Title>
                     </div>

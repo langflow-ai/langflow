@@ -30,11 +30,7 @@ export default function FloatComponent({
   }, [closePopUp]);
 
   return (
-    <div
-      className={
-        "w-full " + (disabled ? "float-component-pointer" : "")
-      }
-    >
+    <div className={"w-full " + (disabled ? "float-component-pointer" : "")}>
       <input
         onFocus={() => {
           if (disableCopyPaste) setDisableCopyPaste(true);

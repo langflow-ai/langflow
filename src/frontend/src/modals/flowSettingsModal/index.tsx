@@ -27,7 +27,7 @@ export default function FlowSettingsModal() {
   const maxLength = 50;
   const [name, setName] = useState(flows.find((f) => f.id === tabId).name);
   const [description, setDescription] = useState(
-    flows.find((f) => f.id === tabId).description,
+    flows.find((f) => f.id === tabId).description
   );
   function setModalOpen(x: boolean) {
     setOpen(x);

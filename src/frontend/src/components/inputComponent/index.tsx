@@ -29,13 +29,7 @@ export default function InputComponent({
   }, [closePopUp]);
 
   return (
-    <div
-      className={
-        disabled
-          ? "input-component-div"
-          : "relative"
-      }
-    >
+    <div className={disabled ? "input-component-div" : "relative"}>
       <input
         value={myValue}
         onFocus={() => {

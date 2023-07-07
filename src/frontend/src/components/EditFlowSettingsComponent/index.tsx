@@ -47,9 +47,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
         <div className="edit-flow-arrangement">
           <span className="font-medium">Name</span>{" "}
           {isMaxLength && (
-            <span className="edit-flow-span">
-              Character limit reached
-            </span>
+            <span className="edit-flow-span">Character limit reached</span>
           )}
         </div>
         <Input

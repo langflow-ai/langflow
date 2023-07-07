@@ -45,15 +45,16 @@ export const CardComponent = ({
               gradients[parseInt(flow.id.slice(0, 12), 16) % gradients.length]
             }
           ></span>
-          <span className="card-component-title-size">
-            {flow.name}
-          </span>
+          <span className="card-component-title-size">{flow.name}</span>
           {onDelete && (
             <Dialog>
               <DialogTrigger asChild>
-              <button className="card-component-delete-button" onClick={onDelete}>
-                <Trash2 className="card-component-delete-icon" />
-              </button>
+                <button
+                  className="card-component-delete-button"
+                  onClick={onDelete}
+                >
+                  <Trash2 className="card-component-delete-icon" />
+                </button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>

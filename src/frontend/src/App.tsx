@@ -118,7 +118,7 @@ export default function App() {
 
   const removeAlert = (id: string) => {
     setAlertsList((prevAlertsList) =>
-      prevAlertsList.filter((alert) => alert.id !== id),
+      prevAlertsList.filter((alert) => alert.id !== id)
     );
   };
 
@@ -138,10 +138,7 @@ export default function App() {
         <Router />
       </ErrorBoundary>
       <div></div>
-      <div
-        className="app-div"
-        style={{ zIndex: 999 }}
-      >
+      <div className="app-div" style={{ zIndex: 999 }}>
         {alertsList.map((alert) => (
           <div key={alert.id}>
             {alert.type === "error" ? (

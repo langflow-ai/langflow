@@ -79,9 +79,7 @@ export default function Header() {
           >
             <FaGithub className="mr-2 h-5 w-5" />
             Star
-            <div className="header-github-display">
-              {stars}
-            </div>
+            <div className="header-github-display">{stars}</div>
           </a>
           <a
             href="https://twitter.com/logspace_ai"
@@ -133,9 +131,7 @@ export default function Header() {
               );
             }}
           >
-            {notificationCenter && (
-              <div className="header-notifications"></div>
-            )}
+            {notificationCenter && <div className="header-notifications"></div>}
             <Bell className="side-bar-button-size" aria-hidden="true" />
           </button>
         </div>

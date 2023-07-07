@@ -25,7 +25,7 @@ const GITHUB_API_URL = "https://api.github.com";
 export async function getRepoStars(owner, repo) {
   try {
     const response = await axios.get(
-      `${GITHUB_API_URL}/repos/${owner}/${repo}`,
+      `${GITHUB_API_URL}/repos/${owner}/${repo}`
     );
     return response.data.stargazers_count;
   } catch (error) {
@@ -45,7 +45,7 @@ export async function sendAll(data: sendAllProps) {
 }
 
 export async function postValidateCode(
-  code: string,
+  code: string
 ): Promise<AxiosResponse<errorsTypeAPI>> {
   return await axios.post("/api/v1/validate/code", { code });
 }
@@ -128,7 +128,7 @@ export async function saveFlowToDatabase(newFlow: {
  * @throws Will throw an error if the update fails.
  */
 export async function updateFlowInDatabase(
-  updatedFlow: FlowType,
+  updatedFlow: FlowType
 ): Promise<FlowType> {
   try {
     const response = await axios.patch(`/api/v1/flows/${updatedFlow.id}`, {
@@ -304,7 +304,7 @@ export async function getHealth() {
  *
  */
 export async function getBuildStatus(
-  flowId: string,
+  flowId: string
 ): Promise<BuildStatusTypeAPI> {
   return await axios.get(`/api/v1/build/${flowId}/status`);
 }
@@ -317,7 +317,7 @@ export async function getBuildStatus(
  *
  */
 export async function postBuildInit(
-  flow: FlowType,
+  flow: FlowType
 ): Promise<AxiosResponse<InitTypeAPI>> {
   return await axios.post(`/api/v1/build/init/${flow.id}`, flow);
 }
@@ -333,7 +333,7 @@ export async function postBuildInit(
  */
 export async function uploadFile(
   file: File,
-  id: string,
+  id: string
 ): Promise<AxiosResponse<UploadFileTypeAPI>> {
   const formData = new FormData();
   formData.append("file", file);

@@ -45,11 +45,7 @@ export default function Dropdown({
                 <span className="dropdown-component-display">
                   {internalValue}
                 </span>
-                <span
-                  className={
-                    "dropdown-component-arrow"
-                  }
-                >
+                <span className={"dropdown-component-arrow"}>
                   <ChevronsUpDown
                     className="dropdown-component-arrow-color"
                     aria-hidden="true"

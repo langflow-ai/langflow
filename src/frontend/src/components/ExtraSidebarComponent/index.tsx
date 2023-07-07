@@ -16,9 +16,7 @@ export default function ExtraSidebar() {
   return (
     <>
       <aside
-        className={` ${
-          isStackedOpen ? "w-52" : "w-0 "
-        } unused-side-bar-aside`}
+        className={` ${isStackedOpen ? "w-52" : "w-0 "} unused-side-bar-aside`}
       >
         <div className="unused-side-bar-arrangement">
           <div className="unused-side-bar-division">
@@ -71,7 +69,9 @@ export default function ExtraSidebar() {
                               <span className="flex-1">{item.name}</span>
                               <svg
                                 className={classNames(
-                                  open ? "unused-side-bar-svg-true" : "text-ring",
+                                  open
+                                    ? "unused-side-bar-svg-true"
+                                    : "text-ring",
                                   "unused-side-bar-svg"
                                 )}
                                 viewBox="0 0 20 20"

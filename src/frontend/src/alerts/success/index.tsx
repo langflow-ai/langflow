@@ -38,15 +38,10 @@ export default function SuccessAlert({
       >
         <div className="flex">
           <div className="flex-shrink-0">
-            <CheckCircle2
-              className="success-alert-icon"
-              aria-hidden="true"
-            />
+            <CheckCircle2 className="success-alert-icon" aria-hidden="true" />
           </div>
           <div className="ml-3">
-            <p className="success-alert-message">
-              {title}
-            </p>
+            <p className="success-alert-message">{title}</p>
           </div>
         </div>
       </div>

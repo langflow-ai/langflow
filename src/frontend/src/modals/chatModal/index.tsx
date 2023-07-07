@@ -362,10 +362,7 @@ export default function ChatModal({
                     <X className="h-5 w-5" />
                   </button>
                 </div>
-                <div
-                  ref={messagesRef}
-                  className="chat-modal-dialog-history"
-                >
+                <div ref={messagesRef} className="chat-modal-dialog-history">
                   {chatHistory.length > 0 ? (
                     chatHistory.map((c, i) => (
                       <ChatMessage

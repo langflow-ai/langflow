@@ -132,7 +132,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
   function removeFromNotificationList(index: string) {
     // set the notification list to a new array that filters out the alert with the matching id
     setNotificationList((prevAlertsList) =>
-      prevAlertsList.filter((alert) => alert.id !== index),
+      prevAlertsList.filter((alert) => alert.id !== index)
     );
   }
   return (

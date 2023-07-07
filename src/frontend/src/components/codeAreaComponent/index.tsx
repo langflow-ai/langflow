@@ -15,7 +15,7 @@ export default function CodeAreaComponent({
   setNodeClass,
 }: TextAreaComponentType) {
   const [myValue, setMyValue] = useState(
-    typeof value == "string" ? value : JSON.stringify(value),
+    typeof value == "string" ? value : JSON.stringify(value)
   );
   const { openPopUp } = useContext(PopUpContext);
   useEffect(() => {

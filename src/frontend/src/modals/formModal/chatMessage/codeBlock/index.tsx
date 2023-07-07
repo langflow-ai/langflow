@@ -52,17 +52,11 @@ export const CodeBlock: FC<Props> = memo(({ language, value }) => {
         <span className="code-block-modal-span">{language}</span>
 
         <div className="flex items-center">
-          <button
-            className="code-block-modal-button"
-            onClick={copyToClipboard}
-          >
+          <button className="code-block-modal-button" onClick={copyToClipboard}>
             {isCopied ? <IconCheck size={18} /> : <IconClipboard size={18} />}
             {isCopied ? "Copied!" : "Copy code"}
           </button>
-          <button
-            className="code-block-modal-button"
-            onClick={downloadAsFile}
-          >
+          <button className="code-block-modal-button" onClick={downloadAsFile}>
             <IconDownload size={18} />
           </button>
         </div>
