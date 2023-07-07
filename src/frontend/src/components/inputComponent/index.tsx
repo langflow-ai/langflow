@@ -39,11 +39,10 @@ export default function InputComponent({
           if (disableCopyPaste) setDisableCopyPaste(false);
         }}
         className={classNames(
-          " pr-9 ",
           disabled ? " input-disable " : "",
-          password && !pwdVisible && myValue !== "" ? "password" : "",
+          password && !pwdVisible && myValue !== "" ? " password text-clip " : "",
           editNode ? " input-edit-node " : " input-primary ",
-          password && editNode ? "pr-8" : "pr-3"
+          password && editNode ? "pr-8" : "pr-10"
         )}
         placeholder={password && editNode ? "Key" : "Type something..."}
         onChange={(e) => {
