@@ -1,14 +1,14 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { useNodes } from "reactflow";
 import { ChatType } from "../../types/chat";
-import ChatTrigger from "./chatTrigger";
 import BuildTrigger from "./buildTrigger";
+import ChatTrigger from "./chatTrigger";
 
-import { getBuildStatus } from "../../controllers/API";
-import { NodeType } from "../../types/flow";
-import FormModal from "../../modals/formModal";
-import { TabsContext } from "../../contexts/tabsContext";
 import * as _ from "lodash";
+import { TabsContext } from "../../contexts/tabsContext";
+import { getBuildStatus } from "../../controllers/API";
+import FormModal from "../../modals/formModal";
+import { NodeType } from "../../types/flow";
 
 export default function Chat({ flow }: ChatType) {
   const [open, setOpen] = useState(false);

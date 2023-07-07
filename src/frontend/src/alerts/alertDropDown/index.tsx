@@ -1,10 +1,10 @@
-import { useContext, useEffect, useRef } from "react";
+import { Trash2, X } from "lucide-react";
+import { useContext, useRef } from "react";
 import { alertContext } from "../../contexts/alertContext";
-import SingleAlert from "./components/singleAlertComponent";
-import { AlertDropdownType } from "../../types/alerts";
 import { PopUpContext } from "../../contexts/popUpContext";
+import { AlertDropdownType } from "../../types/alerts";
 import { useOnClickOutside } from "../hooks/useOnClickOutside";
-import { X, Trash2 } from "lucide-react";
+import SingleAlert from "./components/singleAlertComponent";
 
 export default function AlertDropdown({}: AlertDropdownType) {
   const { closePopUp } = useContext(PopUpContext);

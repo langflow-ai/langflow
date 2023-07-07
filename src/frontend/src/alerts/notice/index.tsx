@@ -1,8 +1,8 @@
 import { Transition } from "@headlessui/react";
+import { Info } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { NoticeAlertType } from "../../types/alerts";
-import { Info } from "lucide-react";
 
 export default function NoticeAlert({
   title,

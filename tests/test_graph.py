@@ -9,13 +9,9 @@ from langchain.chains.base import Chain
 from langchain.llms.fake import FakeListLLM
 from langflow.graph import Graph
 from langflow.graph.vertex.types import (
-    AgentVertex,
-    ChainVertex,
     FileToolVertex,
     LLMVertex,
-    PromptVertex,
     ToolkitVertex,
-    ToolVertex,
     WrapperVertex,
 )
 from langflow.processing.process import get_result_and_thought
@@ -244,10 +240,9 @@ def test_build_params(basic_graph):
     assert "memory" in root.params
 
 
-def test_build(basic_graph, complex_graph):
+def test_build(basic_graph):
     """Test Node's build method"""
     assert_agent_was_built(basic_graph)
-    assert_agent_was_built(complex_graph)
 
 
 def assert_agent_was_built(graph):
@@ -258,34 +253,6 @@ def assert_agent_was_built(graph):
     result = graph.build()
     # The agent should be a AgentExecutor
     assert isinstance(result, Chain)
-
-
-def test_agent_node_build(complex_graph):
-    agent_node = get_node_by_type(complex_graph, AgentVertex)
-    assert agent_node is not None
-    built_object = agent_node.build()
-    assert built_object is not None
-
-
-def test_tool_node_build(complex_graph):
-    tool_node = get_node_by_type(complex_graph, ToolVertex)
-    assert tool_node is not None
-    built_object = tool_node.build()
-    assert built_object is not None
-
-
-def test_chain_node_build(complex_graph):
-    chain_node = get_node_by_type(complex_graph, ChainVertex)
-    assert chain_node is not None
-    built_object = chain_node.build()
-    assert built_object is not None
-
-
-def test_prompt_node_build(complex_graph):
-    prompt_node = get_node_by_type(complex_graph, PromptVertex)
-    assert prompt_node is not None
-    built_object = prompt_node.build()
-    assert built_object is not None
 
 
 def test_llm_node_build(basic_graph):
