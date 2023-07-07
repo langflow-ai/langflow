@@ -36,22 +36,28 @@ export default function ChatMessage({
     <div
       className={classNames(
         "flex w-full px-2 py-6 pl-4 pr-9",
-        chat.isSend ? " bg-border" : " "
+        chat.isSend ? "" : " "
       )}
     >
-      <div className={classNames("mb-3 ml-3 mr-6 mt-1 ")}>
+      <div className={classNames("mb-3 mr-3 mt-1 w-20 ")}>
         {!chat.isSend ? (
-          <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-[#afe6ef] p-5 text-2xl ">
-            🤖
+          <div className="flex flex-col items-center gap-1">
+            <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-[#afe6ef] p-5 text-2xl ">
+              🤖
+            </div>
+            <span className="text-xs">Chatbot</span>
           </div>
         ) : (
-          <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-[#aface9] p-5 text-2xl ">
-            👨‍💻
+          <div className="flex flex-col items-center gap-1">
+            <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-[#aface9] p-5 text-2xl ">
+              👨‍💻
+            </div>
+            <span className="text-xs">User</span>
           </div>
         )}
       </div>
       {!chat.isSend ? (
-        <div className="flex w-full items-center text-start">
+        <div className="flex w-full flex-1 items-center text-start">
           <div className="relative inline-block w-full text-start text-sm font-normal text-primary">
             {hidden && chat.thought && chat.thought !== "" && (
               <div
@@ -78,7 +84,8 @@ export default function ChatMessage({
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm, remarkMath]}
                     rehypePlugins={[rehypeMathjax]}
-                    className="markdown prose max-w-full text-primary dark:prose-invert"
+                    className="markdown prose inline-block break-words text-primary
+                     dark:prose-invert"
                     components={{
                       code({ node, inline, className, children, ...props }) {
                         if (children.length) {
@@ -138,7 +145,7 @@ export default function ChatMessage({
       ) : (
         <div>
           <button
-            className="mb-2 flex items-center gap-4 rounded-md border border-ring/60 bg-muted px-4 py-3 text-base font-semibold"
+            className="mb-2 flex items-center gap-4 rounded-md border border-ring/60 bg-background px-4 py-3 text-base font-semibold"
             onClick={() => {
               setPromptOpen((old) => !old);
             }}
