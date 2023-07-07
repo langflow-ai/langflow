@@ -5,7 +5,6 @@ import { TabsContext } from "../../../../contexts/tabsContext";
 import { useReactFlow } from "reactflow";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
-import { EllipsisVerticalIcon } from "@heroicons/react/24/outline";
 
 const NodeToolbarComponent = (props) => {
   const [nodeLength, setNodeLength] = useState(

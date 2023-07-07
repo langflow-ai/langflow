@@ -4,7 +4,6 @@ import { DropDownComponentType } from "../../types/components";
 import { classNames } from "../../utils";
 import { ChevronsUpDown, Check } from "lucide-react";
 import { PopUpContext } from "../../contexts/popUpContext";
-import { TabsContext } from "../../contexts/tabsContext";
 
 export default function Dropdown({
   value,
@@ -39,20 +38,20 @@ export default function Dropdown({
               <Listbox.Button
                 className={
                   editNode
-                    ? "border-1 input-edit-node relative pr-8"
-                    : "input-primary py-2 pl-3 pr-10 text-left"
+                    ? "dropdown-component-outline"
+                    : "dropdown-component-false-outline"
                 }
               >
-                <span className="block w-full truncate bg-background">
+                <span className="dropdown-component-display">
                   {internalValue}
                 </span>
                 <span
                   className={
-                    "pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
+                    "dropdown-component-arrow"
                   }
                 >
                   <ChevronsUpDown
-                    className="h-5 w-5 text-muted-foreground"
+                    className="dropdown-component-arrow-color"
                     aria-hidden="true"
                   />
                 </span>
@@ -68,8 +67,8 @@ export default function Dropdown({
                 <Listbox.Options
                   className={classNames(
                     editNode
-                      ? "z-10 mt-1 max-h-60 w-[215px] overflow-auto rounded-md bg-background py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm"
-                      : "nowheel overflow-y z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-background py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm ",
+                      ? "dropdown-component-true-options "
+                      : "dropdown-component-false-options ",
                     apiModal ? "mb-2 w-[250px]" : "absolute"
                   )}
                 >
@@ -80,8 +79,8 @@ export default function Dropdown({
                         classNames(
                           active ? " bg-accent" : "",
                           editNode
-                            ? "relative cursor-default select-none py-0.5 pl-3 pr-12"
-                            : "relative cursor-default select-none py-2 pl-3 pr-9"
+                            ? "dropdown-component-false-option"
+                            : "dropdown-component-true-option"
                         )
                       }
                       value={option}
@@ -101,14 +100,14 @@ export default function Dropdown({
                             <span
                               className={classNames(
                                 active ? "text-background " : "",
-                                "absolute inset-y-0 right-0 flex items-center pr-4"
+                                "dropdown-component-choosal"
                               )}
                             >
                               <Check
                                 className={
                                   active
-                                    ? "h-5 w-5 text-black"
-                                    : "h-5 w-5 text-black"
+                                    ? "dropdown-component-check-icon"
+                                    : "dropdown-component-check-icon"
                                 }
                                 aria-hidden="true"
                               />

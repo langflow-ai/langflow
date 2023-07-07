@@ -15,7 +15,7 @@ export default function CodeAreaComponent({
   setNodeClass,
 }: TextAreaComponentType) {
   const [myValue, setMyValue] = useState(
-    typeof value == "string" ? value : JSON.stringify(value)
+    typeof value == "string" ? value : JSON.stringify(value),
   );
   const { openPopUp } = useContext(PopUpContext);
   useEffect(() => {
@@ -80,7 +80,7 @@ export default function CodeAreaComponent({
               <ExternalLink
                 strokeWidth={1.5}
                 className={
-                  "ml-3 h-6 w-6" +
+                  "icons-parameters-comp" +
                   (disabled ? " text-ring" : " hover:text-accent-foreground")
                 }
               />

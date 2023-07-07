@@ -5,7 +5,6 @@ import { Button } from "../../components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { CardComponent } from "../../components/cardComponent";
 import { USER_PROJECTS_HEADER } from "../../constants";
-import { BUTTON_DIV_STYLE } from "../../constants";
 export default function HomePage() {
   const { flows, setTabId, downloadFlows, uploadFlows, addFlow, removeFlow } =
     useContext(TabsContext);
@@ -14,20 +13,20 @@ export default function HomePage() {
   }, []);
   const navigate = useNavigate();
   return (
-    <div className="flex h-full w-full flex-col overflow-auto bg-muted px-16">
-      <div className="flex w-full justify-between px-6 py-12 pb-2">
-        <span className="flex items-center justify-center gap-2 text-2xl font-semibold">
+    <div className="main-page-panel">
+      <div className="main-page-nav-arrangement">
+        <span className="main-page-nav-title">
           <Home className="w-6" />
           {USER_PROJECTS_HEADER}
         </span>
-        <div className={`${BUTTON_DIV_STYLE}`}>
+        <div className="button-div-style">
           <Button
             variant="primary"
             onClick={() => {
               downloadFlows();
             }}
           >
-            <Download className="mr-2 w-4" />
+            <Download className="main-page-nav-button" />
             Download Collection
           </Button>
           <Button
@@ -36,7 +35,7 @@ export default function HomePage() {
               uploadFlows();
             }}
           >
-            <Upload className="mr-2 w-4" />
+            <Upload className="main-page-nav-button" />
             Upload Collection
           </Button>
           <Button
@@ -47,15 +46,15 @@ export default function HomePage() {
               });
             }}
           >
-            <Plus className="mr-2 w-4" />
+            <Plus className="main-page-nav-button" />
             New Project
           </Button>
         </div>
       </div>
-      <span className="flex w-[60%] px-6 pb-14 text-muted-foreground">
+      <span className="main-page-description-text">
         Manage your personal projects. Download or upload your collection.
       </span>
-      <div className="grid w-full gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="main-page-flows-display">
         {flows.map((flow, idx) => (
           <CardComponent
             key={idx}
@@ -68,7 +67,7 @@ export default function HomePage() {
                   size="sm"
                   className="whitespace-nowrap "
                 >
-                  <ExternalLink className="mr-2 w-4" />
+                  <ExternalLink className="main-page-nav-button" />
                   Edit Flow
                 </Button>
               </Link>

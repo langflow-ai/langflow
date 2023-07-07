@@ -23,7 +23,7 @@ class GraphData(BaseModel):
 
 
 class ExportedFlow(BaseModel):
-    """Exported flow from LangFlow."""
+    """Exported flow from Langflow."""
 
     description: str
     name: str

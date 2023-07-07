@@ -33,7 +33,6 @@ class DocumentLoaderFrontNode(FrontendNode):
         "SlackDirectoryLoader": build_file_field(suffixes=[".zip"], fileTypes=["zip"]),
         "EverNoteLoader": build_file_field(suffixes=[".xml"], fileTypes=["xml"]),
         "FacebookChatLoader": build_file_field(suffixes=[".json"], fileTypes=["json"]),
-        "GutenbergLoader": build_file_field(suffixes=[".txt"], fileTypes=["txt"]),
         "BSHTMLLoader": build_file_field(suffixes=[".html"], fileTypes=["html"]),
         "UnstructuredHTMLLoader": build_file_field(
             suffixes=[".html"], fileTypes=["html"]
@@ -116,8 +115,11 @@ class DocumentLoaderFrontNode(FrontendNode):
             "HNLoader",
             "IFixitLoader",
             "IMSDbLoader",
+            "GutenbergLoader",
         }:
             name = "web_path"
+        elif self.template.type_name in {"GutenbergLoader"}:
+            name = "file_path"
         elif self.template.type_name in {"GitbookLoader"}:
             name = "web_page"
         elif self.template.type_name in {
