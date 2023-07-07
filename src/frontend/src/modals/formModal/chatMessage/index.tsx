@@ -3,6 +3,8 @@ import { ChatMessageType } from "../../../types/chat";
 import { classNames } from "../../../utils";
 import AiIcon from "../../../assets/Gooey Ring-5s-271px.svg";
 import AiIconStill from "../../../assets/froze-flow.png";
+import Robot from "../../../assets/robot.png";
+import MaleTechnology from "../../../assets/male-technologist.png";
 import FileCard from "../fileComponent";
 import ReactMarkdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
@@ -10,7 +12,13 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { CodeBlock } from "./codeBlock";
 import Convert from "ansi-to-html";
-import { User2, MessageSquare, ChevronDown } from "lucide-react";
+import {
+  User2,
+  MessageSquare,
+  ChevronDown,
+  MessageCircle,
+  MessageSquareDashed,
+} from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -18,6 +26,7 @@ import {
   AccordionTrigger,
 } from "../../../components/ui/accordion";
 import { Badge } from "../../../components/ui/badge";
+import { THOUGHTS_ICON } from "../../../constants";
 
 export default function ChatMessage({
   chat,
@@ -39,32 +48,30 @@ export default function ChatMessage({
         chat.isSend ? "" : " "
       )}
     >
-      <div className={classNames("mb-3 mr-3 mt-1 w-20 ")}>
+      <div className={classNames("mb-3 ml-3 mr-6 mt-1 ")}>
         {!chat.isSend ? (
           <div className="flex flex-col items-center gap-1">
-            <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-[#afe6ef] p-5 text-2xl ">
-              🤖
+            <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-[#afe6ef] p-5 text-2xl ">
+              <img src={Robot} className="absolute scale-[60%]" />
             </div>
-            <span className="text-xs">Chatbot</span>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-1">
-            <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-[#aface9] p-5 text-2xl ">
-              👨‍💻
+            <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-[#aface9] p-5 text-2xl ">
+              <img src={MaleTechnology} className="absolute scale-[60%]" />
             </div>
-            <span className="text-xs">User</span>
           </div>
         )}
       </div>
       {!chat.isSend ? (
-        <div className="flex w-full flex-1 items-center text-start">
+        <div className="flex w-full flex-1 text-start">
           <div className="relative inline-block w-full text-start text-sm font-normal text-muted-foreground">
-            {hidden && (
+            {hidden && chat.thought && chat.thought !== "" && (
               <div
                 onClick={() => setHidden((prev) => !prev)}
-                className="absolute -left-8 -top-5 cursor-pointer"
+                className="absolute -left-8 -top-3 cursor-pointer"
               >
-                <MessageSquare className="h-5 w-5 animate-bounce dark:text-white" />
+                <THOUGHTS_ICON className="h-4 w-4 animate-bounce dark:text-white" />
               </div>
             )}
             {chat.thought && chat.thought !== "" && !hidden && (
@@ -145,7 +152,7 @@ export default function ChatMessage({
       ) : (
         <div>
           <button
-            className="mb-2 flex items-center gap-4 rounded-md border border-ring/60 bg-background px-4 py-3 text-base font-semibold"
+            className="mb-2 flex items-center gap-4 rounded-md border border-ring/60 bg-background px-4 py-2 text-base font-semibold"
             onClick={() => {
               setPromptOpen((old) => !old);
             }}
