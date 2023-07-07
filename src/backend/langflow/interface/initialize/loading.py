@@ -19,6 +19,8 @@ from langflow.interface.importing.utils import (
     import_by_type,
 )
 from langflow.interface.custom_lists import CUSTOM_NODES
+from langflow.interface.importing.utils import get_function, import_by_type
+from langflow.interface.agents.base import agent_creator
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.chains.base import chain_creator
 from langflow.interface.output_parsers.base import output_parser_creator
@@ -65,7 +67,7 @@ def convert_kwargs(params):
 
 def instantiate_based_on_type(class_object, base_type, node_type, params):
     if base_type == "agents":
-        return instantiate_agent(class_object, params)
+        return instantiate_agent(node_type, class_object, params)
     elif base_type == "prompts":
         return instantiate_prompt(node_type, class_object, params)
     elif base_type == "tools":
@@ -122,6 +124,12 @@ def instantiate_llm(node_type, class_object, params: Dict):
 
 
 def instantiate_memory(node_type, class_object, params):
+    # process input_key and output_key to remove them if
+    # they are empty strings
+    for key in ["input_key", "output_key"]:
+        if key in params and not params[key]:
+            params.pop(key)
+
     try:
         if "retriever" in params and hasattr(params["retriever"], "as_retriever"):
             params["retriever"] = params["retriever"].as_retriever()
@@ -164,7 +172,16 @@ def instantiate_chains(node_type, class_object: Type[Chain], params: Dict):
     return class_object(**params)
 
 
-def instantiate_agent(class_object: Type[agent_module.Agent], params: Dict):
+def instantiate_agent(node_type, class_object: Type[agent_module.Agent], params: Dict):
+    if node_type in agent_creator.from_method_nodes:
+        method = agent_creator.from_method_nodes[node_type]
+        if class_method := getattr(class_object, method, None):
+            agent = class_method(**params)
+            tools = params.get("tools", [])
+            return AgentExecutor.from_agent_and_tools(
+                agent=agent,
+                tools=tools,
+            )
     return load_agent_executor(class_object, params)
 
 

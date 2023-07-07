@@ -91,19 +91,23 @@ export default function FormModal({
   var isStream = false;
 
   const addChatHistory = (
-    message: string,
+    message: string | Object,
     isSend: boolean,
+    chatKey: string,
+    template?: string,
     thought?: string,
     files?: Array<any>
   ) => {
     setChatHistory((old) => {
       let newChat = _.cloneDeep(old);
       if (files) {
-        newChat.push({ message, isSend, files, thought });
+        newChat.push({ message, isSend, files, thought, chatKey });
       } else if (thought) {
-        newChat.push({ message, isSend, thought });
+        newChat.push({ message, isSend, thought, chatKey });
+      } else if (template) {
+        newChat.push({ message, isSend, chatKey, template });
       } else {
-        newChat.push({ message, isSend });
+        newChat.push({ message, isSend, chatKey });
       }
       return newChat;
     });
@@ -174,7 +178,9 @@ export default function FormModal({
             intermediate_steps?: string;
             is_bot: boolean;
             message: string;
+            template: string;
             type: string;
+            chatKey: string;
             files?: Array<any>;
           }) => {
             if (chatItem.message) {
@@ -182,14 +188,18 @@ export default function FormModal({
                 chatItem.files
                   ? {
                       isSend: !chatItem.is_bot,
-                      message: formatMessage(chatItem.message),
+                      message: chatItem.message,
+                      template: chatItem.template,
                       thought: chatItem.intermediate_steps,
                       files: chatItem.files,
+                      chatKey: chatItem.chatKey,
                     }
                   : {
                       isSend: !chatItem.is_bot,
-                      message: formatMessage(chatItem.message),
+                      message: chatItem.message,
+                      template: chatItem.template,
                       thought: chatItem.intermediate_steps,
+                      chatKey: chatItem.chatKey,
                     }
               );
             }
@@ -199,7 +209,7 @@ export default function FormModal({
       });
     }
     if (data.type === "start") {
-      addChatHistory("", false);
+      addChatHistory("", false, chatKey);
       isStream = true;
     }
     if (data.type === "end") {
@@ -319,23 +329,6 @@ export default function FormModal({
       ref.current.focus();
     }
   }, [open]);
-  function formatMessage(inputs: any): string {
-    if (inputs) {
-      if (typeof inputs == "string") return inputs;
-      // inputs is a object with the keys and values being input_keys and keysValue
-      // so the formated message is a string with the keys and values separated by ": "
-      let message = "";
-      for (const [key, value] of Object.entries(inputs)) {
-        // make key bold
-        // dangerouslySetInnerHTML={{
-        //           __html: message.replace(/\n/g, "<br>"),
-        //         }}
-        message += `<b>${key}</b>: ${value}\n`;
-      }
-      return message;
-    }
-    return "";
-  }
 
   function sendMessage() {
     if (chatValue !== "") {
@@ -344,8 +337,13 @@ export default function FormModal({
         setLockChat(true);
         let inputs = tabsState[id.current].formKeysData.input_keys;
         setChatValue("");
-        const message = formatMessage(inputs);
-        addChatHistory(message, true);
+        const message = inputs;
+        addChatHistory(
+          message,
+          true,
+          chatKey,
+          tabsState[flow.id].formKeysData.template
+        );
         sendAll({
           ...reactFlowInstance.toObject(),
           inputs: inputs,
@@ -404,7 +402,7 @@ export default function FormModal({
           </DialogHeader>
 
           <div className="mt-2 flex h-[80vh] w-full ">
-            <div className="mr-6 flex h-full w-2/5 flex-col justify-start overflow-auto scrollbar-hide">
+            <div className="mr-6 flex h-full w-2/6 flex-col justify-start overflow-auto scrollbar-hide">
               <div className="flex items-center py-2">
                 <Variable className=" -ml-px mr-1 h-4 w-4 text-primary"></Variable>
                 <span className="text-md font-semibold text-primary">
@@ -496,7 +494,7 @@ export default function FormModal({
                 ))}
               </Accordion>
             </div>
-            <div className="w-full">
+            <div className="flex w-full flex-1 flex-col">
               <div className="relative flex h-full w-full flex-col rounded-md border bg-muted">
                 <div className="absolute right-3 top-3 z-50">
                   <button disabled={lockChat} onClick={() => clearChat()}>

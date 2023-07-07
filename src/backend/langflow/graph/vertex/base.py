@@ -183,6 +183,8 @@ class Vertex:
         # and return the instance
 
         try:
+            if self.base_type is None:
+                raise ValueError(f"Base type for node {self.vertex_type} not found")
             result = loading.instantiate_class(
                 node_type=self.vertex_type,
                 base_type=self.base_type,
@@ -224,4 +226,5 @@ class Vertex:
         return id(self)
 
     def _built_object_repr(self):
-        return repr(self._built_object)
+        # Add a message with an emoji, stars for sucess,
+        return "Built sucessfully ✨" if self._built_object else "Failed to build 😵‍💫"

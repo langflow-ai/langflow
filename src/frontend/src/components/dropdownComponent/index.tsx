@@ -39,8 +39,8 @@ export default function Dropdown({
               <Listbox.Button
                 className={
                   editNode
-                    ? "border-1 relative pr-8 input-edit-node"
-                    : "py-2 pl-3 pr-10 text-left input-primary"
+                    ? "border-1 input-edit-node relative pr-8"
+                    : "input-primary py-2 pl-3 pr-10 text-left"
                 }
               >
                 <span className="block w-full truncate bg-background">

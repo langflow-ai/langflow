@@ -50,6 +50,15 @@ export const CODE_PROMPT_DIALOG_SUBTITLE =
 export const PROMPT_DIALOG_SUBTITLE =
   "Create your prompt. Prompts can help guide the behavior of a Language Model.";
 
+export const CHAT_CANNOT_OPEN_TITLE = "Chat Cannot Open";
+
+export const CHAT_CANNOT_OPEN_DESCRIPTION = "This is not a chat flow.";
+
+export const FLOW_NOT_BUILT_TITLE = "Flow not built";
+
+export const FLOW_NOT_BUILT_DESCRIPTION =
+  "Please build the flow before chatting.";
+
 /**
  * The base text for subtitle of Text Dialog
  * @constant
@@ -180,7 +189,7 @@ export const EXPORT_CODE_DIALOG =
 export const COLUMN_DIV_STYLE =
   " w-full h-full flex overflow-auto flex-col bg-muted px-16 ";
 
-  export const NAV_DISPLAY_STYLE =
+export const NAV_DISPLAY_STYLE =
   " w-full flex justify-between py-12 pb-2 px-6 ";
 
 /**
@@ -210,7 +219,8 @@ export const DESCRIPTIONS: string[] = [
   "Conversational Cartography Unlocked.",
   "Design, Develop, Dialogize.",
 ];
-export const BUTTON_DIV_STYLE = " flex gap-2 focus:ring-1 focus:ring-offset-1 focus:ring-ring focus:outline-none ";
+export const BUTTON_DIV_STYLE =
+  " flex gap-2 focus:ring-1 focus:ring-offset-1 focus:ring-ring focus:outline-none ";
 
 /**
  * The base text for subtitle of code dialog
@@ -513,3 +523,10 @@ export const NOUNS: string[] = [
  *
  */
 export const USER_PROJECTS_HEADER = "My Collection";
+/**
+ * CSS for highlight HTML
+ * @constant
+ *
+ */
+export const HIGHLIGH_CSS =
+  "block pl-3 pr-14 py-2 w-full h-full text-sm outline-0 border-0 break-all";

@@ -5,7 +5,7 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 import "ace-builds/src-noconflict/ext-language_tools";
-import 'ace-builds/src-noconflict/ace';
+import "ace-builds/src-noconflict/ace";
 // import "ace-builds/webpack-resolver";
 import { darkContext } from "../../contexts/darkContext";
 import { postCustomComponent, postValidateCode } from "../../controllers/API";
@@ -29,14 +29,13 @@ import {
   TabsList,
   TabsTrigger,
 } from "../../components/ui/tabs";
-import axios from "axios";
 
 export default function CodeAreaModal({
   value,
   setValue,
   nodeClass,
   setNodeClass,
-  dynamic
+  dynamic,
 }: {
   setValue: (value: string) => void;
   value: string;
@@ -50,7 +49,9 @@ export default function CodeAreaModal({
   const { dark } = useContext(darkContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [activeTab, setActiveTab] = useState("0");
-  const [error, setError] = useState<{ detail: { error: string, traceback: string } }>(null)
+  const [error, setError] = useState<{
+    detail: { error: string; traceback: string };
+  }>(null);
   const { closePopUp, setCloseEdit } = useContext(PopUpContext);
   const ref = useRef();
   function setModalOpen(x: boolean) {
@@ -64,9 +65,9 @@ export default function CodeAreaModal({
   }
   console.log(dynamic);
 
-  useEffect(()=>{
+  useEffect(() => {
     setValue(code);
-  },[code,setValue])
+  }, [code, setValue]);
 
   function handleClick() {
     setLoading(true);
@@ -108,39 +109,40 @@ export default function CodeAreaModal({
             title: "There is something wrong with this code, please review it",
           });
         });
-    }
-    else {
-      postCustomComponent(code, nodeClass).then((apiReturn) => {
-        const { data } = apiReturn;
-        if (data) {
-          setNodeClass(data);
-          setModalOpen(false);
-        }
-      }).catch((err) => {
-        setErrorData({
-          title: "There is something wrong with this code, please see the error on the errors tab",
+    } else {
+      postCustomComponent(code, nodeClass)
+        .then((apiReturn) => {
+          const { data } = apiReturn;
+          if (data) {
+            setNodeClass(data);
+            setModalOpen(false);
+          }
+        })
+        .catch((err) => {
+          setErrorData({
+            title:
+              "There is something wrong with this code, please see the error on the errors tab",
+          });
+          console.log(err.response.data);
+          setError(err.response.data);
         });
-        console.log(err.response.data);
-        setError(err.response.data);
-      });
     }
     // axios.get("/api/v1/custom_component_error").catch((err) => {
 
     // })
-
   }
-  const tabs = [{ name: "code" }, { name: "errors" }]
+  const tabs = [{ name: "code" }, { name: "errors" }];
 
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger></DialogTrigger>
-      <DialogContent className="h-[500px] lg:max-w-[700px]">
+      <DialogContent className="min-w-[80vw]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Edit Code</span>
             <TerminalSquare
-            strokeWidth={1.5}
-              className="h-6 w-6 text-primary pl-1 "
+              strokeWidth={1.5}
+              className="h-6 w-6 pl-1 text-primary "
               aria-hidden="true"
             />
           </DialogTitle>
@@ -148,44 +150,65 @@ export default function CodeAreaModal({
         </DialogHeader>
         <Tabs
           defaultValue={"0"}
-          className="w-full h-full overflow-hidden text-center bg-muted rounded-md border"
+          className="h-full w-full overflow-hidden rounded-md border bg-muted text-center"
           onValueChange={(value) => setActiveTab(value)}
         >
-          <div className="flex flex-col items-start h-72 px-2">
+          <div className="flex h-72 flex-col items-start px-2">
             <TabsList>
               {tabs.map((tab, index) => (
-                <TabsTrigger disabled={index === 1 && error?.detail.error === undefined} key={index} value={index.toString()}>
-                  <span className={error?.detail.error !== undefined && index===1 ? "text-destructive" : ""}>{tab.name}</span></TabsTrigger>
+                <TabsTrigger
+                  disabled={index === 1 && error?.detail.error === undefined}
+                  key={index}
+                  value={index.toString()}
+                >
+                  <span
+                    className={
+                      error?.detail.error !== undefined && index === 1
+                        ? "text-destructive"
+                        : ""
+                    }
+                  >
+                    {tab.name}
+                  </span>
+                </TabsTrigger>
               ))}
             </TabsList>
             {tabs.map((tab, index) => (
               <TabsContent
                 value={index.toString()}
-                className="overflow-hidden w-full h-full px-4 pb-4 mt-1"
+                className="mt-1 h-full w-full overflow-hidden px-4 pb-4"
               >
-                {tab.name === "code" ? <div className="h-full w-full">
-                  <AceEditor
-                    value={code}
-                    mode="python"
-                    highlightActiveLine={true}
-                    showPrintMargin={false}
-                    fontSize={14}
-                    showGutter
-                    enableLiveAutocompletion
-                    theme={dark ? "twilight" : "github"}
-                    name="CodeEditor"
-                    onChange={(value) => {
-                      setCode(value);
-                    }}
-                    className="w-full rounded-lg h-full custom-scroll border-[1px] border-gray-300 dark:border-gray-600"
-                  />
-                </div> : <div className="w-full h-full  bg-red-200 p-2 flex flex-col overflow-scroll custom-scroll text-left">
-                  <h1 className="text-red-600 text-lg">{error?.detail?.error}</h1>
-                  <span className="border border-red-300 w-full"></span>
-                  <div className="text-red-500 text-sm">{error?.detail?.traceback}</div>
-                </div>}
-              </TabsContent>))
-            }
+                {tab.name === "code" ? (
+                  <div className="h-full w-full">
+                    <AceEditor
+                      value={code}
+                      mode="python"
+                      highlightActiveLine={true}
+                      showPrintMargin={false}
+                      fontSize={14}
+                      showGutter
+                      enableLiveAutocompletion
+                      theme={dark ? "twilight" : "github"}
+                      name="CodeEditor"
+                      onChange={(value) => {
+                        setCode(value);
+                      }}
+                      className="h-full w-full rounded-lg border-[1px] border-gray-300 custom-scroll dark:border-gray-600"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex h-full  w-full flex-col overflow-scroll bg-red-200 p-2 text-left custom-scroll">
+                    <h1 className="text-lg text-red-600">
+                      {error?.detail?.error}
+                    </h1>
+                    <span className="w-full border border-red-300"></span>
+                    <div className="text-sm text-red-500">
+                      {error?.detail?.traceback}
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+            ))}
           </div>
         </Tabs>
         <DialogFooter>

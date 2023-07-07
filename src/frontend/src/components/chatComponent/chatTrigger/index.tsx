@@ -3,18 +3,30 @@ import { MessagesSquare } from "lucide-react";
 
 import { alertContext } from "../../../contexts/alertContext";
 import { useContext } from "react";
-import ShadTooltip from "../../ShadTooltipComponent";
+import {
+  CHAT_CANNOT_OPEN_DESCRIPTION,
+  CHAT_CANNOT_OPEN_TITLE,
+  FLOW_NOT_BUILT_DESCRIPTION,
+  FLOW_NOT_BUILT_TITLE,
+} from "../../../constants";
 
-export default function ChatTrigger({ open, setOpen, isBuilt }) {
+export default function ChatTrigger({ open, setOpen, isBuilt, canOpen }) {
   const { setErrorData } = useContext(alertContext);
 
   function handleClick() {
     if (isBuilt) {
-      setOpen(true);
+      if (canOpen) {
+        setOpen(true);
+      } else {
+        setErrorData({
+          title: CHAT_CANNOT_OPEN_TITLE,
+          list: [CHAT_CANNOT_OPEN_DESCRIPTION],
+        });
+      }
     } else {
       setErrorData({
-        title: "Flow not built",
-        list: ["Please build the flow before chatting"],
+        title: FLOW_NOT_BUILT_TITLE,
+        list: [FLOW_NOT_BUILT_DESCRIPTION],
       });
     }
   }
@@ -30,15 +42,26 @@ export default function ChatTrigger({ open, setOpen, isBuilt }) {
       leaveFrom="translate-y-0"
       leaveTo="translate-y-96"
     >
-          <button onClick={handleClick} className={ "transition-all fixed bottom-4 right-4 flex justify-center items-center py-1 px-3 w-12 h-12 rounded-full shadow-md shadow-round-btn-shadow hover:shadow-round-btn-shadow bg-border "+ (!isBuilt ? "cursor-not-allowed" : "cursor-pointer")}>
-            <div className="flex gap-3">
-              <MessagesSquare
-                className={"h-6 w-6 transition-all " + (isBuilt ? "fill-chat-trigger stroke-chat-trigger stroke-1" : "fill-chat-trigger-disabled stroke-1 stroke-chat-trigger-disabled")}
-                style={{ color: "white" }}
-                strokeWidth={1.5}
-              />
-            </div>
-          </button>
+      <button
+        onClick={handleClick}
+        className={
+          "shadow-round-btn-shadow hover:shadow-round-btn-shadow fixed bottom-4 right-4 flex h-12 w-12 items-center justify-center rounded-full bg-border px-3 py-1 shadow-md transition-all " +
+          (!isBuilt || !canOpen ? "cursor-not-allowed" : "cursor-pointer")
+        }
+      >
+        <div className="flex gap-3">
+          <MessagesSquare
+            className={
+              "h-6 w-6 transition-all " +
+              (isBuilt && canOpen
+                ? "fill-chat-trigger stroke-chat-trigger stroke-1"
+                : "fill-chat-trigger-disabled stroke-chat-trigger-disabled stroke-1")
+            }
+            style={{ color: "white" }}
+            strokeWidth={1.5}
+          />
+        </div>
+      </button>
     </Transition>
   );
 }
