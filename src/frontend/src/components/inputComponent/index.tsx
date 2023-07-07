@@ -42,7 +42,8 @@ export default function InputComponent({
           disabled ? " input-disable " : "",
           password && !pwdVisible && myValue !== "" ? " password text-clip " : "",
           editNode ? " input-edit-node " : " input-primary ",
-          password && editNode ? "pr-8" : "pr-10"
+          password && editNode ? "pr-8" : "",
+          password && !editNode ? "pr-10" : ""
         )}
         placeholder={password && editNode ? "Key" : "Type something..."}
         onChange={(e) => {
