@@ -1,18 +1,19 @@
-import { Bell, Home, MoonIcon, SunIcon, Users2 } from "lucide-react";
+import { Home, MoonIcon, SunIcon, Users2 } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
 import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Button } from "../ui/button";
+import { TabsContext } from "../../contexts/tabsContext";
 import AlertDropdown from "../../alerts/alertDropDown";
-import { USER_PROJECTS_HEADER } from "../../constants";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
 import { PopUpContext } from "../../contexts/popUpContext";
-import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
-import { getRepoStars } from "../../controllers/API";
-import { Button } from "../ui/button";
-import { Separator } from "../ui/separator";
 import MenuBar from "./components/menuBar";
+import { Link, useLocation, useParams } from "react-router-dom";
+import { USER_PROJECTS_HEADER } from "../../constants";
+import { getRepoStars } from "../../controllers/API";
+import { Separator } from "../ui/separator";
+import { Bell } from "lucide-react";
 
 export default function Header() {
   const { flows, addFlow, tabId } = useContext(TabsContext);

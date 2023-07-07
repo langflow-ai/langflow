@@ -1,6 +1,7 @@
 import { Transition } from "@headlessui/react";
 import { MessagesSquare } from "lucide-react";
 
+import { alertContext } from "../../../contexts/alertContext";
 import { useContext } from "react";
 import {
   CHAT_CANNOT_OPEN_DESCRIPTION,
@@ -8,7 +9,6 @@ import {
   FLOW_NOT_BUILT_DESCRIPTION,
   FLOW_NOT_BUILT_TITLE,
 } from "../../../constants";
-import { alertContext } from "../../../contexts/alertContext";
 
 export default function ChatTrigger({ open, setOpen, isBuilt, canOpen }) {
   const { setErrorData } = useContext(alertContext);

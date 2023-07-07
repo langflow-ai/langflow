@@ -1,8 +1,9 @@
+import React from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
 import App from "./App";
-import ContextWrapper from "./contexts";
 import reportWebVitals from "./reportWebVitals";
+import { BrowserRouter } from "react-router-dom";
+import ContextWrapper from "./contexts";
 
 import "./index.css";
 

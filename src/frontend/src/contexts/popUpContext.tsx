@@ -1,4 +1,5 @@
-import React, { createContext, useState } from "react";
+import { createContext } from "react";
+import React, { useState } from "react";
 
 // context to set JSX element on the DOM
 export const PopUpContext = createContext({

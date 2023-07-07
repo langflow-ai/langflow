@@ -1,6 +1,6 @@
 import * as base64js from "base64-js";
-import { DownloadCloud, File } from "lucide-react";
 import { useState } from "react";
+import { DownloadCloud, File } from "lucide-react";
 
 export default function FileCard({ fileName, content, fileType }) {
   const handleDownload = () => {

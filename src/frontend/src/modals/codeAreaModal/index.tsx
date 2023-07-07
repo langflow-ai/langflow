@@ -1,13 +1,14 @@
-import "ace-builds/src-noconflict/ext-language_tools";
+import { useContext, useRef, useState } from "react";
+import { PopUpContext } from "../../contexts/popUpContext";
+import AceEditor from "react-ace";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
-import { useContext, useRef, useState } from "react";
-import AceEditor from "react-ace";
-import { PopUpContext } from "../../contexts/popUpContext";
+import "ace-builds/src-noconflict/ext-language_tools";
 // import "ace-builds/webpack-resolver";
-import { TerminalSquare } from "lucide-react";
-import { Button } from "../../components/ui/button";
+import { darkContext } from "../../contexts/darkContext";
+import { postValidateCode } from "../../controllers/API";
+import { alertContext } from "../../contexts/alertContext";
 import {
   Dialog,
   DialogContent,
@@ -17,10 +18,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
+import { Button } from "../../components/ui/button";
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants";
-import { alertContext } from "../../contexts/alertContext";
-import { darkContext } from "../../contexts/darkContext";
-import { postValidateCode } from "../../controllers/API";
+import { TerminalSquare } from "lucide-react";
 import { APIClassType } from "../../types/api";
 
 export default function CodeAreaModal({

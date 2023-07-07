@@ -1,7 +1,7 @@
-import React, { ChangeEvent, useState } from "react";
-import { Input } from "../../components/ui/input";
-import { Label } from "../../components/ui/label";
+import React, { useState, ChangeEvent } from "react";
 import { Textarea } from "../../components/ui/textarea";
+import { Label } from "../../components/ui/label";
+import { Input } from "../../components/ui/input";
 
 type InputProps = {
   name: string | null;
