@@ -1,5 +1,5 @@
 // organize-imports-ignore
-import { useContext, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import AceEditor from "react-ace";
 import "ace-builds/src-noconflict/ext-language_tools";
@@ -23,7 +23,7 @@ import {
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
-import { postValidateCode } from "../../controllers/API";
+import { postCustomComponent, postValidateCode } from "../../controllers/API";
 import { APIClassType } from "../../types/api";
 import {
   Tabs,
