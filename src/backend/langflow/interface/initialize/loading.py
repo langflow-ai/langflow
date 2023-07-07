@@ -115,7 +115,7 @@ def instantiate_memory(node_type, class_object, params):
     # process input_key and output_key to remove them if
     # they are empty strings
     for key in ["input_key", "output_key"]:
-        if key in params and not params[key]:
+        if key in params and (params[key] == "" or not params[key]):
             params.pop(key)
 
     try:
