@@ -138,15 +138,15 @@ export default function ChatMessage({
         <div className="flex w-full items-center">
           <div className="inline-block text-start">
             <span className=" break-all text-primary">
-              <Accordion type="single" collapsible className="mb-4">
+              <Accordion type="single" collapsible className="mb-2 flex">
                 <AccordionItem
                   className=" rounded-md border border-ring/60 bg-muted px-4"
                   value="prompt"
                 >
-                  <AccordionTrigger className="flex gap-4 text-base font-semibold">
+                  <AccordionTrigger className="gap-4 text-base font-semibold">
                     Initial Prompt
                   </AccordionTrigger>
-                  <AccordionContent className="max-h-96 overflow-auto break-all p-2 text-base">
+                  <AccordionContent className="max-h-96 overflow-auto break-all p-2">
                     {
                       // Make all the variables that are inside curly braces bold
                       template.split("\n").map((line, index) => {
@@ -160,24 +160,14 @@ export default function ChatMessage({
                             parts.push(line.substring(lastIndex, match.index));
                           }
                           // Push div with matched text
-                          parts.push(
-                            <div>
-                              <div className="my-1 inline-block rounded-md bg-indigo-100 px-2">
-                                <span key={match.index}>
-                                  <span className=" text-xs font-semibold text-high-indigo">
-                                    {match[1]}
-                                  </span>
-                                  {chat.message[match[1]] ? (
-                                    <span>
-                                      &nbsp;&nbsp;{chat.message[match[1]]}
-                                    </span>
-                                  ) : (
-                                    ""
-                                  )}
-                                </span>
-                              </div>
-                            </div>
-                          );
+                          if (chat.message[match[1]]) {
+                            parts.push(
+                              <span className="my-1 rounded-md bg-indigo-100">
+                                {chat.message[match[1]]}
+                              </span>
+                            );
+                          }
+
                           // Update last index
                           lastIndex = regex.lastIndex;
                         }
@@ -191,7 +181,9 @@ export default function ChatMessage({
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
-              {chat.message[chat.chatKey]}
+              <span className="prose text-primary dark:prose-invert">
+                {chat.message[chat.chatKey]}
+              </span>
             </span>
           </div>
         </div>
