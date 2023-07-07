@@ -1,8 +1,9 @@
-import { useContext, useRef, useState, useEffect } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
-import { darkContext } from "../../contexts/darkContext";
-import { postValidatePrompt } from "../../controllers/API";
-import { alertContext } from "../../contexts/alertContext";
+import DOMPurify from "dompurify";
+import { FileText, Variable } from "lucide-react";
+import { useContext, useEffect, useRef, useState } from "react";
+import ShadTooltip from "../../components/ShadTooltipComponent";
+import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -12,14 +13,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
 import {
   HIGHLIGH_CSS,
   PROMPT_DIALOG_SUBTITLE,
   TEXT_DIALOG_SUBTITLE,
 } from "../../constants";
-import { FileText } from "lucide-react";
+import { alertContext } from "../../contexts/alertContext";
+import { darkContext } from "../../contexts/darkContext";
+import { PopUpContext } from "../../contexts/popUpContext";
+import { postValidatePrompt } from "../../controllers/API";
 import { APIClassType } from "../../types/api";
 import {
   INVALID_CHARACTERS,
@@ -29,9 +32,6 @@ import {
   regexHighlight,
   varHighlightHTML,
 } from "../../utils";
-import { Badge } from "../../components/ui/badge";
-import ShadTooltip from "../../components/ShadTooltipComponent";
-import DOMPurify from "dompurify";
 
 export default function GenericModal({
   field_name = "",
@@ -170,7 +170,7 @@ export default function GenericModal({
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger></DialogTrigger>
-      <DialogContent className="min-w-[80vw]">
+      <DialogContent className="min-w-[80vw] gap-2">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">{myModalTitle}</span>
@@ -196,49 +196,16 @@ export default function GenericModal({
           </DialogDescription>
         </DialogHeader>
 
-        {type == TypeModal.PROMPT &&
-          inputValue &&
-          inputValue != "" &&
-          wordsHighlight.length > 0 && (
-            <>
-              <div>
-                <span className="">Variables: </span>
-                {wordsHighlight.map((word, index) => (
-                  <ShadTooltip
-                    key={getRandomKeyByssmm() + index}
-                    content={word.replace(/[{}]/g, "")}
-                    asChild={false}
-                    delayDuration={1500}
-                  >
-                    <Badge
-                      key={index}
-                      size="lg"
-                      className="m-1 max-w-[40vw] cursor-default truncate p-2.5 text-sm"
-                    >
-                      <div className="relative bottom-[1px]">
-                        <span>
-                          {word.replace(/[{}]/g, "").length > 59
-                            ? word.replace(/[{}]/g, "").slice(0, 56) + "..."
-                            : word.replace(/[{}]/g, "")}
-                        </span>
-                      </div>
-                    </Badge>
-                  </ShadTooltip>
-                ))}
-              </div>
-            </>
-          )}
-
         <div
           className={classNames(
             !isEdit ? "rounded-lg border" : "",
-            "flex h-[60vh] w-full"
+            "flex h-[55vh] w-full"
           )}
         >
           {type == TypeModal.PROMPT && isEdit ? (
             <Textarea
               ref={ref}
-              className="form-input h-full w-full rounded-lg border-gray-300 focus-visible:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+              className="form-input h-full w-full rounded-lg border-gray-300 custom-scroll focus-visible:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
               value={inputValue}
               onBlur={() => {
                 blur();
@@ -268,16 +235,55 @@ export default function GenericModal({
           )}
         </div>
 
+        {type == TypeModal.PROMPT && (
+          <>
+            <div className="sm:6/6 mr-28 mt-3 h-[60px] overflow-y-auto custom-scroll">
+              <div className="flex flex-wrap items-center">
+                <Variable className=" -ml-px mr-1 flex h-4 w-4 text-primary"></Variable>
+                <span className="text-md font-semibold text-primary">
+                  Input Variables:
+                </span>
+
+                {wordsHighlight.map((word, index) => (
+                  <ShadTooltip
+                    key={getRandomKeyByssmm() + index}
+                    content={word.replace(/[{}]/g, "")}
+                    asChild={false}
+                  >
+                    <Badge
+                      key={index}
+                      variant="gray"
+                      size="md"
+                      className="m-1 max-w-[40vw] cursor-default truncate p-2.5 text-sm"
+                    >
+                      <div className="relative bottom-[1px]">
+                        <span>
+                          {word.replace(/[{}]/g, "").length > 59
+                            ? word.replace(/[{}]/g, "").slice(0, 56) + "..."
+                            : word.replace(/[{}]/g, "")}
+                        </span>
+                      </div>
+                    </Badge>
+                  </ShadTooltip>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
         <DialogFooter>
           <Button
             className="mt-3"
             onClick={() => {
               switch (myModalType) {
                 case 1:
+                  setValue(inputValue);
                   setModalOpen(false);
                   break;
                 case 2:
-                  validatePrompt(false);
+                  !inputValue || inputValue == ""
+                    ? setModalOpen(false)
+                    : validatePrompt(false);
                   break;
 
                 default:

@@ -1,16 +1,16 @@
-import { useContext, useState } from "react";
 import { Transition } from "@headlessui/react";
 import { Zap } from "lucide-react";
-import { validateNodes } from "../../../utils";
-import { FlowType } from "../../../types/flow";
+import { useContext, useState } from "react";
 import Loading from "../../../components/ui/loading";
 import { useSSE } from "../../../contexts/SSEContext";
-import { typesContext } from "../../../contexts/typesContext";
 import { alertContext } from "../../../contexts/alertContext";
+import { typesContext } from "../../../contexts/typesContext";
 import { postBuildInit } from "../../../controllers/API";
+import { FlowType } from "../../../types/flow";
+import { validateNodes } from "../../../utils";
 
-import RadialProgressComponent from "../../RadialProgress";
 import { TabsContext } from "../../../contexts/tabsContext";
+import RadialProgressComponent from "../../RadialProgress";
 
 export default function BuildTrigger({
   open,
@@ -168,7 +168,7 @@ export default function BuildTrigger({
     >
       <div className="fixed bottom-20 right-4">
         <div
-          className={`${eventClick} align-center shadow-round-btn-shadow hover:shadow-round-btn-shadow flex h-12 w-12 cursor-pointer justify-center rounded-full bg-border px-3 py-1 shadow-md`}
+          className={`${eventClick} round-button-form`}
           onClick={() => {
             handleBuild(flow);
           }}
@@ -176,7 +176,7 @@ export default function BuildTrigger({
           onMouseLeave={handleMouseLeave}
         >
           <button>
-            <div className="flex items-center gap-3">
+            <div className="round-button-div">
               {isBuilding && progress < 1 ? (
                 // Render your loading animation here when isBuilding is true
                 <RadialProgressComponent
@@ -185,7 +185,10 @@ export default function BuildTrigger({
                   value={progress}
                 ></RadialProgressComponent>
               ) : isBuilding ? (
-                <Loading strokeWidth={1.5} className="stroke-build-trigger" />
+                <Loading
+                  strokeWidth={1.5}
+                  className="build-trigger-loading-icon"
+                />
               ) : (
                 <Zap
                   strokeWidth={1.5}

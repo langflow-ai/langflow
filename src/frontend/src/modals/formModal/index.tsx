@@ -1,15 +1,23 @@
+import { Eraser, TerminalSquare, Variable } from "lucide-react";
 import { useContext, useEffect, useRef, useState } from "react";
-import { FlowType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
-import { classNames, validateNodes } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
-import ChatMessage from "./chatMessage";
-import { TerminalSquare, MessageSquare, Variable, Eraser } from "lucide-react";
 import { sendAllProps } from "../../types/api";
 import { ChatMessageType } from "../../types/chat";
+import { FlowType } from "../../types/flow";
+import { classNames, validateNodes } from "../../utils";
 import ChatInput from "./chatInput";
+import ChatMessage from "./chatMessage";
 
 import _ from "lodash";
+import ToggleShadComponent from "../../components/toggleShadComponent";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "../../components/ui/accordion";
+import { Badge } from "../../components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -18,17 +26,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants";
-import { TabsContext } from "../../contexts/tabsContext";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "../../components/ui/accordion";
 import { Textarea } from "../../components/ui/textarea";
-import { Badge } from "../../components/ui/badge";
-import ToggleShadComponent from "../../components/toggleShadComponent";
+import { CHAT_FORM_DIALOG_SUBTITLE, THOUGHTS_ICON } from "../../constants";
+import { TabsContext } from "../../contexts/tabsContext";
 
 export default function FormModal({
   flow,
@@ -535,7 +535,7 @@ export default function FormModal({
                         <span className="text-base text-gray-500">
                           Start a conversation and click the agent's thoughts{" "}
                           <span>
-                            <MessageSquare className="mx-1 inline h-5 w-5 animate-bounce " />
+                            <THOUGHTS_ICON className="mx-1 inline h-5 w-5 animate-bounce " />
                           </span>{" "}
                           to inspect the chaining process.
                         </span>

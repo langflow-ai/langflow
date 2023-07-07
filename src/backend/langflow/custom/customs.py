@@ -23,6 +23,7 @@ CUSTOM_NODES = {
     },
     "memories": {
         "PostgresChatMessageHistory": frontend_node.memories.PostgresChatMessageHistoryFrontendNode(),
+        "MongoDBChatMessageHistory": frontend_node.memories.MongoDBChatMessageHistoryFrontendNode(),
     },
     "chains": {
         "SeriesCharacterChain": frontend_node.chains.SeriesCharacterChainNode(),

@@ -1,7 +1,7 @@
 import { ReactElement, ReactNode } from "react";
+import { APIClassType } from "../api";
 import { NodeDataType } from "../flow/index";
 import { typesContextType } from "../typesContext";
-import { APIClassType } from "../api";
 export type InputComponentType = {
   value: string;
   disabled?: boolean;
@@ -143,11 +143,12 @@ export type ShadTooltipProps = {
   style?: string;
 };
 export type ShadToolTipType = {
-  content?: string;
+  content?: ReactNode;
   side?: "top" | "right" | "bottom" | "left";
   asChild?: boolean;
   children?: ReactElement;
   delayDuration?: number;
+  style?: string;
 };
 
 export type TextHighlightType = {

@@ -1,6 +1,6 @@
-# LangFlow Demo Codespace Readme
+# Langflow Demo Codespace Readme
 
-These instructions will walk you through the process of running a LangFlow demo via GitHub Codespaces.
+These instructions will walk you through the process of running a Langflow demo via GitHub Codespaces.
 
 ## Setup
 

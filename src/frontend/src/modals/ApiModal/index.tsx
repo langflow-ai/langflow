@@ -1,42 +1,15 @@
-import { useContext, useEffect, useRef, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
+import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
-import "ace-builds/src-noconflict/ext-language_tools";
+import { useContext, useEffect, useRef, useState } from "react";
+import { PopUpContext } from "../../contexts/popUpContext";
 // import "ace-builds/webpack-resolver";
-import { darkContext } from "../../contexts/darkContext";
+import { Check, Clipboard, Code2 } from "lucide-react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "../../components/ui/dialog";
-import { FlowType } from "../../types/flow/index";
-import { getCurlCode, getPythonApiCode, getPythonCode } from "../../constants";
-import { EXPORT_CODE_DIALOG } from "../../constants";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "../../components/ui/tabs";
-import { Check, Clipboard, Code2 } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../components/ui/table";
-import { buildTweaks, classNames, limitScrollFieldsModal } from "../../utils";
 import AccordionComponent from "../../components/AccordionComponent";
+import ShadTooltip from "../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../components/codeAreaComponent";
 import Dropdown from "../../components/dropdownComponent";
 import FloatComponent from "../../components/floatComponent";
@@ -47,9 +20,38 @@ import IntComponent from "../../components/intComponent";
 import PromptAreaComponent from "../../components/promptComponent";
 import TextAreaComponent from "../../components/textAreaComponent";
 import ToggleShadComponent from "../../components/toggleShadComponent";
-import ShadTooltip from "../../components/ShadTooltipComponent";
-import { cloneDeep, filter } from "lodash";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../../components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../components/ui/table";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../../components/ui/tabs";
+import {
+  EXPORT_CODE_DIALOG,
+  getCurlCode,
+  getPythonApiCode,
+  getPythonCode,
+} from "../../constants";
+import { darkContext } from "../../contexts/darkContext";
 import { TabsContext } from "../../contexts/tabsContext";
+import { FlowType } from "../../types/flow/index";
+import { buildTweaks, classNames } from "../../utils";
 
 export default function ApiModal({ flow }: { flow: FlowType }) {
   const [open, setOpen] = useState(true);
@@ -61,7 +63,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
   const [openAccordion, setOpenAccordion] = useState([]);
   const tweak = useRef([]);
   const tweaksList = useRef([]);
-  const { setTweak, getTweak } = useContext(TabsContext);
+  const { setTweak, getTweak, tabsState } = useContext(TabsContext);
   const copyToClipboard = () => {
     if (!navigator.clipboard || !navigator.clipboard.writeText) {
       return;
@@ -75,9 +77,9 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
       }, 2000);
     });
   };
-  const pythonApiCode = getPythonApiCode(flow, tweak.current);
-  const curl_code = getCurlCode(flow, tweak.current);
-  const pythonCode = getPythonCode(flow, tweak.current);
+  const pythonApiCode = getPythonApiCode(flow, tweak.current, tabsState);
+  const curl_code = getCurlCode(flow, tweak.current, tabsState);
+  const pythonCode = getPythonCode(flow, tweak.current, tabsState);
   const tweaksCode = buildTweaks(flow);
   const tabs = [
     {
@@ -111,7 +113,9 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
         startTweaks();
       }
     } else {
-      startTweaks();
+      if (tweak?.current) {
+        startTweaks();
+      }
     }
   }, [closeEdit]);
 
@@ -276,7 +280,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
 
         <Tabs
           value={activeTab}
-          className="h-full w-full overflow-hidden rounded-md border bg-muted text-center"
+          className="api-modal-tabs"
           onValueChange={(value) => {
             setActiveTab(value);
             if (value === "3") {
@@ -284,7 +288,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
             }
           }}
         >
-          <div className="flex items-center justify-between px-2">
+          <div className="api-modal-tablist-div">
             <TabsList>
               {tabs.map((tab, index) => (
                 <TabsTrigger key={index} value={index.toString()}>
@@ -308,12 +312,12 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
           {tabs.map((tab, index) => (
             <TabsContent
               value={index.toString()}
-              className="-mt-1 h-full w-full overflow-hidden px-4 pb-4"
+              className="api-modal-tabs-content"
               key={index} // Remember to add a unique key prop
             >
               {index < 3 ? (
                 <SyntaxHighlighter
-                  className="h-[60vh] w-full overflow-auto"
+                  className="h-[60vh] w-full overflow-auto custom-scroll"
                   language={tab.mode}
                   style={oneDark}
                 >
@@ -321,7 +325,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                 </SyntaxHighlighter>
               ) : index === 3 ? (
                 <>
-                  <div className="mt-2 flex h-full w-full">
+                  <div className="api-modal-according-display">
                     <div
                       className={classNames(
                         "h-[60vh] w-full rounded-lg bg-muted",
@@ -337,7 +341,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                               trigger={t["data"]["id"]}
                               open={openAccordion}
                             >
-                              <div className="flex h-fit flex-col gap-5">
+                              <div className="api-modal-table-arrangement">
                                 <Table className="table-fixed bg-muted outline-1">
                                   <TableHeader className="h-10 border-input text-xs font-medium text-ring">
                                     <TableRow className="dark:border-b-muted">
@@ -418,7 +422,6 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                     ) : t.data.node.template[n]
                                                         .multiline ? (
                                                       <ShadTooltip
-                                                        delayDuration={1000}
                                                         content={buildContent(
                                                           t.data.node.template[
                                                             n
@@ -506,7 +509,6 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                 ) : t.data.node.template[n]
                                                     .type === "file" ? (
                                                   <ShadTooltip
-                                                    delayDuration={1000}
                                                     content={buildContent(
                                                       getValue(
                                                         t.data.node.template[n]
@@ -622,7 +624,6 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                 ) : t.data.node.template[n]
                                                     .type === "prompt" ? (
                                                   <ShadTooltip
-                                                    delayDuration={1000}
                                                     content={buildContent(
                                                       getValue(
                                                         t.data.node.template[n]
@@ -659,7 +660,6 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                                 ) : t.data.node.template[n]
                                                     .type === "code" ? (
                                                   <ShadTooltip
-                                                    delayDuration={1000}
                                                     content={buildContent(
                                                       getValue(
                                                         t.data.node.template[n]
@@ -720,7 +720,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                         </div>
                       ))}
 
-                      {/* 
+                      {/*
                       <div className="flex flex-col gap-5 bg-muted">
                         <Table className="table-fixed bg-muted outline-1">
                           <TableHeader className="border-gray-200 text-gray-500 text-xs font-medium h-10">

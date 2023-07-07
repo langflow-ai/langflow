@@ -19,8 +19,7 @@ class AgentFrontendNode(FrontendNode):
         if field.name in ["suffix", "prefix"]:
             field.show = True
         if field.name == "Tools" and name == "ZeroShotAgent":
-            # field.
-            field.type_name = "BaseTool"
+            field.field_type = "BaseTool"
             field.is_list = True
 
 

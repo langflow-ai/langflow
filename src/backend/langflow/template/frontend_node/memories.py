@@ -4,6 +4,10 @@ from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.template.base import Template
 from langchain.memory.chat_message_histories.postgres import DEFAULT_CONNECTION_STRING
+from langchain.memory.chat_message_histories.mongodb import (
+    DEFAULT_COLLECTION_NAME,
+    DEFAULT_DBNAME,
+)
 
 
 class MemoryFrontendNode(FrontendNode):
@@ -120,3 +124,56 @@ class PostgresChatMessageHistoryFrontendNode(MemoryFrontendNode):
     )
     description: str = "Memory store with Postgres"
     base_classes: list[str] = ["PostgresChatMessageHistory", "BaseChatMessageHistory"]
+
+
+class MongoDBChatMessageHistoryFrontendNode(MemoryFrontendNode):
+    name: str = "MongoDBChatMessageHistory"
+    template: Template = Template(
+        # langchain/memory/chat_message_histories/mongodb.py
+        # connection_string: str,
+        #     session_id: str,
+        #     database_name: str = DEFAULT_DBNAME,
+        #     collection_name: str = DEFAULT_COLLECTION_NAME,
+        type_name="MongoDBChatMessageHistory",
+        fields=[
+            TemplateField(
+                field_type="str",
+                required=True,
+                placeholder="",
+                is_list=False,
+                show=True,
+                multiline=False,
+                name="session_id",
+            ),
+            TemplateField(
+                field_type="str",
+                required=True,
+                show=True,
+                name="connection_string",
+                value="",
+                info="MongoDB connection string (e.g mongodb://mongo_user:password123@mongo:27017)",
+            ),
+            TemplateField(
+                field_type="str",
+                required=True,
+                placeholder="",
+                is_list=False,
+                show=True,
+                multiline=False,
+                value=DEFAULT_DBNAME,
+                name="database_name",
+            ),
+            TemplateField(
+                field_type="str",
+                required=True,
+                placeholder="",
+                is_list=False,
+                show=True,
+                multiline=False,
+                value=DEFAULT_COLLECTION_NAME,
+                name="collection_name",
+            ),
+        ],
+    )
+    description: str = "Memory store with MongoDB"
+    base_classes: list[str] = ["MongoDBChatMessageHistory", "BaseChatMessageHistory"]

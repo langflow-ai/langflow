@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
-import { TextAreaComponentType } from "../../types/components";
 import GenericModal from "../../modals/genericModal";
+import { TextAreaComponentType } from "../../types/components";
 import { TypeModal } from "../../utils";
 
 import { ExternalLink } from "lucide-react";
@@ -30,34 +30,23 @@ export default function TextAreaComponent({
     <div className={disabled ? "cursor-not-allowed" : ""}>
       <div
         className={
-          (editNode ? "w-full items-center" : "flex w-full items-center") +
+          (editNode ? "relative top-2 w-full" : "flex w-full items-center") +
           (disabled ? " pointer-events-none" : "")
         }
       >
-        <span
-          onClick={() => {
-            openPopUp(
-              <GenericModal
-                type={TypeModal.TEXT}
-                buttonText="Finishing Editing"
-                modalTitle="Edit Text"
-                value={myValue}
-                setValue={(t: string) => {
-                  setMyValue(t);
-                  onChange(t);
-                }}
-              />
-            );
-          }}
+        <input
+          value={myValue}
           className={
             editNode
-              ? "input-edit-node input-dialog "
-              : "input-dialog input-primary " +
-                (disabled ? "input-disable" : "")
+              ? "input-edit-node"
+              : "input-primary" + (disabled ? " input-disable " : "")
           }
-        >
-          {myValue !== "" ? myValue : "Type something..."}
-        </span>
+          placeholder={"Type something..."}
+          onChange={(e) => {
+            setMyValue(e.target.value);
+            onChange(e.target.value);
+          }}
+        />
 
         <button
           onClick={() => {
@@ -79,7 +68,7 @@ export default function TextAreaComponent({
             <ExternalLink
               strokeWidth={1.5}
               className={
-                "ml-3 h-6 w-6" +
+                "icons-parameters-comp" +
                 (disabled ? " text-ring" : " hover:text-accent-foreground")
               }
             />
