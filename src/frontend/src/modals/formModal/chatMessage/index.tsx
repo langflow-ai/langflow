@@ -35,21 +35,21 @@ export default function ChatMessage({
   return (
     <div
       className={classNames(
-        "flex w-full px-2 py-6 pl-4 pr-9",
+        "form-modal-chat-position",
         chat.isSend ? "" : " "
       )}
     >
-      <div className={classNames("mb-3 mr-3 mt-1 w-20 ")}>
+      <div className={classNames("form-modal-chatbot-icon ")}>
         {!chat.isSend ? (
-          <div className="flex flex-col items-center gap-1">
-            <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-[#afe6ef] p-5 text-2xl ">
+          <div className="form-modal-chat-image">
+            <div className="form-modal-chat-bot-icon ">
               🤖
             </div>
             <span className="text-xs">Chatbot</span>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-1">
-            <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-[#aface9] p-5 text-2xl ">
+          <div className="form-modal-chat-image">
+            <div className="form-modal-chat-user-icon ">
               👨‍💻
             </div>
             <span className="text-xs">User</span>
@@ -57,21 +57,20 @@ export default function ChatMessage({
         )}
       </div>
       {!chat.isSend ? (
-        <div className="flex w-full flex-1 items-center text-start">
-          <div className="relative inline-block w-full text-start text-sm font-normal text-muted-foreground">
+        <div className="form-modal-chat-text-position">
+          <div className="form-modal-chat-text">
             {hidden && (
               <div
                 onClick={() => setHidden((prev) => !prev)}
-                className="absolute -left-8 -top-5 cursor-pointer"
+                className="form-modal-chat-icon-div"
               >
-                <MessageSquare className="h-5 w-5 animate-bounce dark:text-white" />
+                <MessageSquare className="form-modal-chat-icon" />
               </div>
             )}
             {chat.thought && chat.thought !== "" && !hidden && (
               <div
                 onClick={() => setHidden((prev) => !prev)}
-                className=" ml-3 inline-block h-full w-[95%] cursor-pointer overflow-scroll rounded-md border
-								border-gray-300 bg-muted px-2 text-start text-primary scrollbar-hide dark:border-gray-500 dark:bg-gray-800"
+                className=" form-modal-chat-thought "
                 dangerouslySetInnerHTML={{
                   __html: convert.toHtml(chat.thought),
                 }}
@@ -91,7 +90,7 @@ export default function ChatMessage({
                         if (children.length) {
                           if (children[0] == "▍") {
                             return (
-                              <span className="mt-1 animate-pulse cursor-default">
+                              <span className="form-modal-markdown-span">
                                 ▍
                               </span>
                             );
@@ -145,7 +144,7 @@ export default function ChatMessage({
       ) : (
         <div>
           <button
-            className="mb-2 flex items-center gap-4 rounded-md border border-ring/60 bg-background px-4 py-3 text-base font-semibold"
+            className="form-modal-initial-prompt-btn"
             onClick={() => {
               setPromptOpen((old) => !old);
             }}

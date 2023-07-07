@@ -913,5 +913,138 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply ml-3 h-6 w-6
   }
 
+  .form-modal-lock-true {
+    @apply bg-input text-black dark:bg-gray-700 dark:text-gray-300
+  }
+  .form-modal-lock-false {
+    @apply bg-white text-black dark:bg-gray-900 dark:text-gray-300
+  }
+  .form-modal-lockchat {
+    @apply form-input block w-full rounded-md border-gray-300 p-4 pr-16 custom-scroll dark:border-gray-600 sm:text-sm
+  }
+  .form-modal-send-icon-position {
+    @apply absolute bottom-2 right-4
+  }
+  .form-modal-send-button {
+    @apply rounded-md p-2 px-1 transition-all duration-300
+  }
+  .form-modal-lock-icon {
+    @apply ml-1 mr-1 h-5 w-5 animate-pulse
+  }
+  .form-modal-send-icon {
+    @apply mr-2 h-5 w-5 rotate-[44deg]
+  }
+  .form-modal-chat-position {
+    @apply flex-max-width px-2 py-6 pl-4 pr-9
+  }
+  .form-modal-chatbot-icon {
+    @apply mb-3 mr-3 mt-1 w-20
+  }
+  .form-modal-chat-image {
+    @apply flex flex-col items-center gap-1
+  }
+  .form-modal-chat-img-box {
+    @apply flex h-8 w-8 items-center justify-center overflow-hidden rounded-md p-5 text-2xl
+  }
+  .form-modal-chat-bot-icon {
+    @apply form-modal-chat-img-box bg-[#afe6ef]
+  }
+  .form-modal-chat-user-icon {
+    @apply form-modal-chat-img-box bg-[#aface9]
+  }
+  .form-modal-chat-text-position {
+    @apply flex w-full flex-1 items-center text-start
+  }
+  .form-modal-chat-text {
+    @apply relative inline-block w-full text-start text-sm font-normal text-muted-foreground
+  }
+  .form-modal-chat-icon-div {
+    @apply absolute -left-8 -top-5 cursor-pointer
+  }
+  .form-modal-chat-icon {
+    @apply h-5 w-5 animate-bounce dark:text-white
+  }
+  .form-modal-chat-thought-border {
+    @apply rounded-md border border-gray-300
+  }
+  .form-modal-chat-thought-size {
+    @apply inline-block h-full w-[95%]
+  }
+  .form-modal-chat-thought {
+    @apply ml-3 cursor-pointer overflow-scroll  bg-muted px-2 text-start text-primary scrollbar-hide dark:border-gray-500 dark:bg-gray-800 form-modal-chat-thought-border form-modal-chat-thought-size
+  }
+  .form-modal-markdown-span {
+    @apply mt-1 animate-pulse cursor-default
+  }
+  .form-modal-initial-prompt-btn {
+    @apply mb-2 flex items-center gap-4 rounded-md border border-ring/60 bg-background px-4 py-3 text-base font-semibold
+  }
+  .form-modal-iv-box {
+    @apply mt-2 flex-max-width h-[80vh]
+  }
+  .form-modal-iv-size {
+    @apply mr-6 flex h-full w-2/6 flex-col justify-start overflow-auto scrollbar-hide
+  }
+  .file-component-arrangement {
+    @apply flex items-center py-2
+  }
+  .file-component-variable {
+    @apply -ml-px mr-1 h-4 w-4 text-primary
+  }
+  .file-component-variables-span {
+    @apply font-semibold text-primary
+  }
+  .file-component-variables-title {
+    @apply flex items-center justify-between pt-2
+  }
+  .file-component-variables-div {
+    @apply mr-2.5 flex items-center
+  }
+  .file-component-variables-title-txt {
+    @apply text-sm font-medium text-primary
+  }
+  .file-component-accordion-div {
+    @apply flex items-start gap-3
+  }
+  .file-component-badge-div {
+    @apply flex-max-width items-center justify-between
+  }
+  .file-component-tab-column {
+    @apply flex flex-col gap-2 p-1
+  }
+  .tab-accordion-badge-div {
+    @apply flex flex-1 items-center justify-between py-4 text-sm font-normal text-muted-foreground transition-all
+  }
+  .eraser-column-arrangement {
+    @apply flex-max-width flex-1 flex-col
+  }
+  .eraser-size {
+    @apply relative flex h-full w-full flex-col rounded-md border bg-muted
+  }
+  .eraser-position {
+    @apply absolute right-3 top-3 z-50
+  }
+  .chat-message-div {
+    @apply flex-max-width h-full flex-col items-center overflow-scroll scrollbar-hide
+  }
+  .chat-alert-box {
+    @apply flex-max-width h-full flex-col items-center justify-center text-center align-middle
+  }
+  .langflow-chat-span {
+    @apply text-lg text-gray-600 dark:text-gray-300
+  }
+  .langflow-chat-desc {
+    @apply w-2/4 rounded-md border border-gray-200 bg-muted px-6 py-8 dark:border-gray-700 dark:bg-gray-900
+  }
+  .langflow-chat-desc-span {
+    @apply text-base text-gray-500
+  }
+  .langflow-chat-input-div {
+    @apply flex-max-width flex-col items-center justify-between px-8 pb-6
+  }
+  .langflow-chat-input {
+    @apply relative w-full rounded-md shadow-sm
+  }
+
 
 }
