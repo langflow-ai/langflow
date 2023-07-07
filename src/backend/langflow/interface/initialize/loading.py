@@ -193,7 +193,7 @@ def instantiate_prompt(node_type, class_object, params: Dict):
 
     prompt = class_object(**params)
 
-    format_kwargs = {}
+    format_kwargs: Dict[str, Any] = {}
     for input_variable in prompt.input_variables:
         if input_variable in params:
             variable = params[input_variable]
