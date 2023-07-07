@@ -16,6 +16,7 @@ import { NodeToolbar } from "reactflow";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import { useSSE } from "../../contexts/SSEContext";
+import { Zap } from "lucide-react";
 
 export default function GenericNode({
   data,
@@ -117,7 +118,8 @@ export default function GenericNode({
               <Tooltip
                 title={
                   !validationStatus ? (
-                    "Validating..."
+                      <span className="flex">Build <Zap className="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1" strokeWidth={1.5} /> flow to validate status.</span>
+                    
                   ) : (
                     <div className="max-h-96 overflow-auto">
                       {validationStatus.params

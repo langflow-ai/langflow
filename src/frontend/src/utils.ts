@@ -1022,6 +1022,7 @@ export const INVALID_CHARACTERS = [
   ")",
   "[",
   "]",
+  "\n"
 ];
 
 export const regexHighlight = /\{([^}]+)\}/g;
