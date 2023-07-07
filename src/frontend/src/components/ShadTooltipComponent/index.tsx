@@ -1,4 +1,4 @@
-import { RadialProgressType, ShadToolTipType } from "../../types/components";
+import { ShadToolTipType } from "../../types/components";
 import {
   Tooltip,
   TooltipContent,

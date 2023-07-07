@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { ToggleComponentType } from "../../types/components";
 import { Switch } from "../ui/switch";
 

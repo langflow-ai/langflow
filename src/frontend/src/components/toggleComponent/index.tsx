@@ -1,7 +1,7 @@
 import { Switch } from "@headlessui/react";
-import { classNames } from "../../utils";
 import { useEffect } from "react";
 import { ToggleComponentType } from "../../types/components";
+import { classNames } from "../../utils";
 
 export default function ToggleComponent({
   enabled,

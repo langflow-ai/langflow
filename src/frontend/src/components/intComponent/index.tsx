@@ -1,8 +1,7 @@
 import { useContext, useEffect, useState } from "react";
-import { FloatComponentType } from "../../types/components";
-import { TabsContext } from "../../contexts/tabsContext";
-import { classNames } from "../../utils";
 import { PopUpContext } from "../../contexts/popUpContext";
+import { TabsContext } from "../../contexts/tabsContext";
+import { FloatComponentType } from "../../types/components";
 
 export default function IntComponent({
   value,
