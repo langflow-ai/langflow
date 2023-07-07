@@ -1,10 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-} from "react";
+import { createContext, useCallback, useContext, useState } from "react";
 
 const initialValue = {
   updateSSEData: ({}) => {},
