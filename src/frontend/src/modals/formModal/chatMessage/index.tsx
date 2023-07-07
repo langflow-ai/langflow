@@ -58,11 +58,11 @@ export default function ChatMessage({
       </div>
       {!chat.isSend ? (
         <div className="flex w-full flex-1 items-center text-start">
-          <div className="relative inline-block w-full text-start text-sm font-normal text-primary">
-            {hidden && chat.thought && chat.thought !== "" && (
+          <div className="relative inline-block w-full text-start text-sm font-normal text-muted-foreground">
+            {hidden && (
               <div
                 onClick={() => setHidden((prev) => !prev)}
-                className="absolute -left-2 -top-1 cursor-pointer"
+                className="absolute -left-8 -top-5 cursor-pointer"
               >
                 <MessageSquare className="h-5 w-5 animate-bounce dark:text-white" />
               </div>
