@@ -15,8 +15,8 @@ from pydantic import ValidationError
 
 from langflow.interface.importing.utils import (
     get_function,
-    import_by_type,
     get_function_custom,
+    import_by_type,
 )
 from langflow.interface.custom_lists import CUSTOM_NODES
 from langflow.interface.toolkits.base import toolkits_creator
@@ -92,8 +92,15 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
         return instantiate_retriever(node_type, class_object, params)
     elif base_type == "memory":
         return instantiate_memory(node_type, class_object, params)
+    elif base_type == "custom_components":
+        return instantiate_custom_component(node_type, class_object, params)
     else:
         return class_object(**params)
+
+
+def instantiate_custom_component(node_type, class_object, params):
+    class_object = get_function_custom(params.pop("code"))
+    return class_object().build(**params)
 
 
 def instantiate_output_parser(node_type, class_object, params):
@@ -229,9 +236,6 @@ def instantiate_tool(node_type, class_object: Type[BaseTool], params: Dict):
     elif node_type == "PythonFunctionTool":
         params["func"] = get_function(params.get("code"))
         return class_object(**params)
-    elif node_type == "CustomComponent":
-        class_object = get_function_custom(params.pop("code"))
-        return class_object().build(**params)
     # For backward compatibility
     elif node_type == "PythonFunction":
         function_string = params["code"]
@@ -322,6 +326,8 @@ def instantiate_textsplitter(
 ):
     try:
         documents = params.pop("documents")
+        if not isinstance(documents, list):
+            documents = [documents]
     except KeyError as exc:
         raise ValueError(
             "The source you provided did not load correctly or was empty."
