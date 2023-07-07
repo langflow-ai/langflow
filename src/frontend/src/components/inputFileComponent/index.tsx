@@ -91,7 +91,6 @@ export default function InputFileComponent({
     input.click();
   };
 
-
   return (
     <div className={disabled ? "input-component-div" : "w-full"}>
       <div className="input-file-component">
