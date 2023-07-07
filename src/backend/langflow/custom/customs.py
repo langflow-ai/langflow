@@ -8,7 +8,6 @@ CUSTOM_NODES = {
     "tools": {
         "PythonFunctionTool": frontend_node.tools.PythonFunctionToolNode(),
         "PythonFunction": frontend_node.tools.PythonFunctionNode(),
-        "CustomComponent": frontend_node.tools.CustomComponentNode(),
         "Tool": frontend_node.tools.ToolNode(),
     },
     "agents": {
@@ -30,6 +29,9 @@ CUSTOM_NODES = {
         "TimeTravelGuideChain": frontend_node.chains.TimeTravelGuideChainNode(),
         "MidJourneyPromptChain": frontend_node.chains.MidJourneyPromptChainNode(),
         "load_qa_chain": frontend_node.chains.CombineDocsChainNode(),
+    },
+    "custom_components": {
+        "CustomComponent": frontend_node.custom_components.CustomComponentFrontendNode(),
     },
 }
 
