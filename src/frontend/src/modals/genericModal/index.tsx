@@ -238,7 +238,7 @@ export default function GenericModal({
 
         {type == TypeModal.PROMPT && (
           <>
-          <div className="h-[60px] overflow-y-auto custom-scroll md:w-5/6 sm:6/6 mt-3">
+          <div className="h-[60px] overflow-y-auto custom-scroll sm:6/6 mt-3 mr-28">
             <div className="flex flex-wrap items-center">
               <Variable className=" -ml-px mr-1 flex h-4 w-4 text-primary"></Variable>
               <span className="text-md font-semibold text-primary">
