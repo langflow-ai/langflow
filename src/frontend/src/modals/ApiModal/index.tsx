@@ -61,7 +61,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
   const [openAccordion, setOpenAccordion] = useState([]);
   const tweak = useRef([]);
   const tweaksList = useRef([]);
-  const { setTweak, getTweak } = useContext(TabsContext);
+  const { setTweak, getTweak, tabsState } = useContext(TabsContext);
   const copyToClipboard = () => {
     if (!navigator.clipboard || !navigator.clipboard.writeText) {
       return;
@@ -75,9 +75,9 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
       }, 2000);
     });
   };
-  const pythonApiCode = getPythonApiCode(flow, tweak.current);
-  const curl_code = getCurlCode(flow, tweak.current);
-  const pythonCode = getPythonCode(flow, tweak.current);
+  const pythonApiCode = getPythonApiCode(flow, tweak.current, tabsState);
+  const curl_code = getCurlCode(flow, tweak.current, tabsState);
+  const pythonCode = getPythonCode(flow, tweak.current, tabsState);
   const tweaksCode = buildTweaks(flow);
   const tabs = [
     {
