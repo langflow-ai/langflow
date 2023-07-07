@@ -85,6 +85,7 @@ export const getPythonApiCode = (
   const tweaks = buildTweaks(flow);
   const inputs = buildInputs(tabsState, flow.id);
   return `import requests
+from typing import Optional
 
 BASE_API_URL = "${window.location.protocol}//${
     window.location.host
@@ -98,7 +99,7 @@ TWEAKS = ${
       : JSON.stringify(tweaks, null, 2)
   }
 
-def run_flow(message: str, flow_id: str, tweaks: dict = None) -> dict:
+def run_flow(inputs: dict, flow_id: str, tweaks: Optional[dict] = None) -> dict:
     """
     Run a flow with a given message and optional tweaks.
 
@@ -109,7 +110,7 @@ def run_flow(message: str, flow_id: str, tweaks: dict = None) -> dict:
     """
     api_url = f"{BASE_API_URL}/{flow_id}"
 
-    payload = {"inputs": ${inputs}}
+    payload = {"inputs": inputs}
 
     if tweaks:
         payload["tweaks"] = tweaks
@@ -118,8 +119,8 @@ def run_flow(message: str, flow_id: str, tweaks: dict = None) -> dict:
     return response.json()
 
 # Setup any tweaks you want to apply to the flow
-
-print(run_flow("Your message", flow_id=FLOW_ID, tweaks=TWEAKS))`;
+inputs = ${inputs}
+print(run_flow(inputs, flow_id=FLOW_ID, tweaks=TWEAKS))`;
 };
 /**
  * Function to get the curl code for the API
@@ -134,6 +135,7 @@ export const getCurlCode = (
   const flowId = flow.id;
   const tweaks = buildTweaks(flow);
   const inputs = buildInputs(tabsState, flow.id);
+
   return `curl -X POST \\
   ${window.location.protocol}//${
     window.location.host
@@ -166,7 +168,8 @@ TWEAKS = ${
   }
 flow = load_flow_from_json("${flowName}.json", tweaks=TWEAKS)
 # Now you can use it like any chain
-flow(${inputs})`;
+inputs = ${inputs}
+flow(inputs)`;
 };
 
 function buildTweakObject(tweak) {
