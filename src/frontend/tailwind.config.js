@@ -199,7 +199,7 @@ module.exports = {
         ".custom-scroll": {
           "&::-webkit-scrollbar": {
             width: "8px",
-            height: "8px"
+            height: "8px",
           },
           "&::-webkit-scrollbar-track": {
             backgroundColor: "#f1f1f1",
