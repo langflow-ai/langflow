@@ -4,7 +4,7 @@
 
 Loader that loads AZLyrics webpages.
 
-The `AZLyricsLoader` is a loader that helps you get song lyrics from a website called AZLyrics. You can use the `AZLyricsLoader` for different things, like finding lyrics for a song.
+The `AZLyricsLoader` is a loader that get song lyrics from a website called AZLyrics. You can use the `AZLyricsLoader` for different things, like finding lyrics for a song.
 Loader that loads AZLyrics webpages.
 
 **Params**
@@ -18,7 +18,7 @@ Loader that loads AZLyrics webpages.
 
 Loader that loads local airbyte json files.
 
- `AirbyteJSONLoader` helps you bring in documents from a platform called Airbyte. Airbyte is a system that helps connect and transfer data between different places.
+ `AirbyteJSONLoader` bring in documents from a platform called Airbyte. Airbyte is a system that helps connect and transfer data between different places.
 
 When you use the `AirbyteJSONLoader`, you can load documents from Airbyte into your system. These documents can contain information from various sources, like data warehouses and databases.
 
@@ -60,15 +60,14 @@ Load CoNLL-U files.
 
 Loader that loads College Confidential webpages.
 
-The `CollegeConfidentialLoader` is provided by College Confidential. Imagine you're browsing the College Confidential website, which has lots of information about colleges, admissions, and discussions among students. The `CollegeConfidentialLoader` allows you to take specific webpages from that website and transform them into a document format.
+The `CollegeConfidentialLoader` is provided by College Confidential. You're browsing the College Confidential website, which has lots of information about colleges, admissions, and discussions among students. The `CollegeConfidentialLoader` allows you to take specific webpages from that website and transform them into a document format.
 
 **Params**
 - **metadata:** The parameter  refers to optional information associated with each document that is loaded from the College Confidential website. The metadata can be useful for organizing and categorizing the documents loaded from the website based on different criteria or attributes. Defaults to `{}`.
 - **web_path:** It refers to the URL or path of the web page that you want to load data from on the College Confidential website.
-For example, you could set the web_path to:
-```HTML 
-"https://www.collegeconfidential.com/colleges/for-4-0-gpa/"
-```
+For example, you could set the web_path to: 
+`https://www.collegeconfidential.com/colleges/for-4-0-gpa/`.
+
 
 ### DirectoryLoader
 
@@ -77,21 +76,22 @@ Loading logic for loading documents from a directory.
 The `DirectoryLoader` loads many documents at once from a folder. It saves you time and effort by automatically gathering all the documents in the folder and making them available for you to access.
 
 **Params**
-- **glob:** This parameter is used to specify the file pattern or pattern(s) that should be matched when loading documents from a directory. It allows you to filter the files based on their names or extensions.
-```python
-glob = "**/*.md"
-```
-In the example above, only files with the .md extension will be loaded. Defaults to `**/*.txt`.
+
+- **glob:** This parameter is used to specify the file pattern or pattern(s) that should be matched when loading documents from a directory. It allows you to filter the files based on their names or extensions. In the example below, only files with the .md extension will be loaded. Defaults to `**/*.txt`.
+
+    ```python
+    glob = "**/*.md"
+    ```
 
 - **load_hidden**: This parameter controls whether hidden files should be loaded or not. Hidden files are files that have a filename starting with a dot (e.g., .file.txt). By default, the load_hidden parameter is set to False, which means that hidden files will not be loaded. If you want to load hidden files as well, you can set the load_hidden parameter to True. Defaults to `True`.
 
 - **max_concurrency:** This parameter determines the maximum number of concurrent requests that can be made to load the documents from the directory. If you exceed this number, the loader will automatically queue up the requests and send them as previous requests complete. This can be useful when dealing with rate limits or when you want to control the number of concurrent requests being made. Defaults to** **`10`.
 
 - **metadata:** It allows you to specify additional metadata that should be associated with the loaded documents. This metadata can be used to provide context or additional information about the documents.
-```python
-metadata = {"source": "example_data", "language": "Spanish"}
-```
- In this case, we are specifying the source of the documents as "example_data" and the language as "Spanish". The dictionary can include any key-value pairs that you want to associate with the loaded documents. Defaults to `{}`.
+    ```python
+    metadata = {"source": "example_data", "language": "Spanish"}
+    ```
+    In this case, we are specifying the source of the documents as "example_data" and the language as "Spanish". The dictionary can include any key-value pairs that you want to associate with the loaded documents. Defaults to `{}`.
 
 - **path:** This parameter is used to specify the path to the directory from which you want to load the documents.
 
@@ -112,10 +112,10 @@ The `EverNoteLoader` is designed to help you with a type of file called Evernote
 
 - **file_path:** It specifies the path to the Evernote export file (.enex) that you want to load. It is a required parameter and should be a string representing the file path on your disk.
 - **metadata:** This parameter is an optional parameter and should be a list of strings representing the metadata fields.
-```python
-metadata_fields = ["title", "created", "updated"]
-```
-The metadata_fields list is set to ["title", "created", "updated"], which specifies that you want to extract the title, creation date, and last updated date of each note. The loader will then load the notes from the export file and extract the specified metadata fields for each note. Defaults to `{}`.
+    ```python
+    metadata_fields = ["title", "created", "updated"]
+    ```
+    The metadata_fields list is set to ["title", "created", "updated"], which specifies that you want to extract the title, creation date, and last updated date of each note. The loader will then load the notes from the export file and extract the specified metadata fields for each note. Defaults to `{}`.
 
 
 ### FacebookChatLoader
@@ -160,9 +160,10 @@ Load GitBook data.
 - **metadata:** The metadata includes the source URL of the document and its title. This information can be useful for tracking the origin of the document and organizing the loaded data. Defaults to `{}`.
 
 - **web_path:** It refers to the path of the Gitbook web page that is being loaded. It is a string that represents the URL of the page.
-```python
-web_path = "https://docs.gitbook.com"
-```
+
+    ```python
+    web_path = "https://docs.gitbook.com"
+    ```
 
 ### GutenbergLoader
 
@@ -173,14 +174,16 @@ Loader that uses urllib to load .txt web files.
 **Params**
 
 - **web_path:** This parameter is used to specify the path of the file to be loaded. It is a string that represents the file path, including the file name and extension.
-```python
-web_path = "https://www.gutenberg.org/cache/epub/71107/pg71107.txt"
-```
+
+    ```python
+    web_path = "https://www.gutenberg.org/cache/epub/71107/pg71107.txt"
+    ```
 - **metadata:** This parameter provides information about the source of the eBook and any additional details associated with it. In the case of the provided example, the metadata for the Gutenberg eBook includes the source URL of the eBook, which is 
-```HTML
-https://www.gutenberg.org/cache/epub/71107/pg71107.txt
-```
-Defaults to `{}`.
+
+    ```HTML
+    https://www.gutenberg.org/cache/epub/71107/pg71107.txt
+    ```
+    Defaults to `{}`.
 
 
 ### HNLoader

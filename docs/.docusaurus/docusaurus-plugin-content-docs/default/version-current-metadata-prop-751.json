@@ -28,6 +28,12 @@
           },
           {
             "type": "link",
+            "label": "🖥️ Command Line Interface (CLI)",
+            "href": "/getting-started/cli",
+            "docId": "getting-started/cli"
+          },
+          {
+            "type": "link",
             "label": "🤗 HuggingFace Spaces",
             "href": "/getting-started/hugging-face-spaces",
             "docId": "getting-started/hugging-face-spaces"
@@ -424,6 +430,12 @@
       "id": "examples/serp-api-tool",
       "title": "Serp API Tool",
       "description": "The Serp API (Search Engine Results Page) allows developers to scrape results from search engines such as Google, Bing and Yahoo, and can be used as in LangFlow through the Search component.",
+      "sidebar": "docs"
+    },
+    "getting-started/cli": {
+      "id": "getting-started/cli",
+      "title": "🖥️ Command Line Interface (CLI)",
+      "description": "Langflow provides a command-line interface (CLI) for easy management and configuration.",
       "sidebar": "docs"
     },
     "getting-started/creating-flows": {

@@ -146,6 +146,11 @@
               "sidebar": "docs"
             },
             {
+              "id": "getting-started/cli",
+              "path": "/getting-started/cli",
+              "sidebar": "docs"
+            },
+            {
               "id": "getting-started/creating-flows",
               "path": "/getting-started/creating-flows",
               "sidebar": "docs"

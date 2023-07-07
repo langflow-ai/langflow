@@ -44,7 +44,7 @@ export default [
   },
   {
     path: '/',
-    component: ComponentCreator('/', '89c'),
+    component: ComponentCreator('/', '4e6'),
     routes: [
       {
         path: '/',
@@ -211,6 +211,12 @@ export default [
       {
         path: '/examples/serp-api-tool',
         component: ComponentCreator('/examples/serp-api-tool', '9d4'),
+        exact: true,
+        sidebar: "docs"
+      },
+      {
+        path: '/getting-started/cli',
+        component: ComponentCreator('/getting-started/cli', 'def'),
         exact: true,
         sidebar: "docs"
       },

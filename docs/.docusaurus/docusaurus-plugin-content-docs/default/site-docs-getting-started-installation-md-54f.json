@@ -17,7 +17,7 @@
     "permalink": "/"
   },
   "next": {
-    "title": "🤗 HuggingFace Spaces",
-    "permalink": "/getting-started/hugging-face-spaces"
+    "title": "🖥️ Command Line Interface (CLI)",
+    "permalink": "/getting-started/cli"
   }
 }

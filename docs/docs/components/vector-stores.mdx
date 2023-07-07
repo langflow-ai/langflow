@@ -36,6 +36,7 @@ Construct FAISS wrapper from raw documents.
 - **Documents**: Documents to add to the vectorstore.
 - **Embeddings**: Used to represent documents as numerical vectors in a high-dimensional space.
 
+
 - **folder_path:** Folder path to save index, docstore, and index_to_docstore_id to.
 - **index_name:** The index_name parameter allows you to give a unique identifier to the index, which can be useful when working with multiple indexes or when saving and loading indexes from disk.
 - **search_kwargs:** The parameter is used to specify additional search options or filters when querying the database. It allows you to customize the search behavior and retrieve more specific results. Defaults to `{}`.
@@ -51,6 +52,7 @@ Construct MongoDBAtlasVectorSearch wrapper from raw documents.
 
 - **Documents**: Documents to add to the vectorstore.
 - **Embeddings**: Used to represent documents as numerical vectors in a high-dimensional space.
+
 
 - **collection_name:** This parameter refers to the name of the collection where the documents will be stored. 
 
@@ -75,6 +77,7 @@ Pinecone is a vector database with broad functionality. It is used for creating 
 - **Documents**: Documents to add to the vectorstore.
 - **Embeddings**: Used to represent documents as numerical vectors in a high-dimensional space.
 
+
 - **index_name:** The index_name parameter allows you to give a unique identifier to the index, which can be useful when working with multiple indexes or when saving and loading indexes from disk.
 
 - **namespace:** Optional pinecone namespace to add the texts to.
@@ -95,6 +98,7 @@ Construct Qdrant wrapper from a list of texts.
 
 - **Documents**: Documents to add to the vectorstore.
 - **Embeddings**: Used to represent documents as numerical vectors in a high-dimensional space.
+
 
 - **api_key:**This parameter is used to secure your deployment and prevent unauthorized access to your Qdrant cluster. When using a managed version of Qdrant, such as Qdrant Cloud, you need to provide an API key to authenticate and access your deployment. This API key acts as a security measure to ensure that only authorized users can interact with your Qdrant cluster.
 
@@ -126,10 +130,12 @@ Construct Qdrant wrapper from a list of texts.
 - **prefer_grpc:** This parameter determines the preferred communication protocol to use when connecting to the Qdrant server. GRPC (Google Remote Procedure Call) is a high-performance, language-agnostic framework for remote procedure calls. When prefer_grpc is set to `True`, the Qdrant client will attempt to use the GRPC protocol for communication with the server. If GRPC is not available or not supported, the client will fall back to other available protocols. This parameter allows for flexibility in choosing the communication protocol based on the specific requirements and capabilities of the Qdrant deployment.  Defaults to `False`.
 
 - **prefix:** It allows you to add a prefix to the REST URL path when making API requests. By specifying a prefix, you can customize the URL structure for the REST API endpoints. For example, if you set the prefix parameter to "service/v1", the resulting URL for the REST API would be:
-```HTML
-"http://localhost:6333/service/v1/{qdrant-endpoint}"
-```
-This can be useful for organizing and categorizing different API endpoints within your application.
+
+    ```HTML
+    "http://localhost:6333/service/v1/{qdrant-endpoint}"
+    ```
+
+    This can be useful for organizing and categorizing different API endpoints within your application.
 
 - **search_kwargs:** This parameter is used to specify additional search options or filters when querying the database. It allows you to customize the search behavior and retrieve more specific results. Defaults to {}.  Defaults to `{}`.
 
@@ -147,6 +153,7 @@ Return VectorStore initialized from texts and embeddings.
 
 - **Documents**: Documents to add to the vectorstore.
 - **Embeddings**: Used to represent documents as numerical vectors in a high-dimensional space.
+
 
 - **query_name:** By setting the type of query_name, it implies that the variable can either store a string or be assigned None. 
 
@@ -166,6 +173,7 @@ Return VectorStore initialized from texts and embeddings.
 
 - **Documents**: Documents to add to the vectorstore.
 - **Embeddings**: Used to represent documents as numerical vectors in a high-dimensional space.
+
 
 - **client_kwargs:** The parameter is used to pass additional keyword arguments to the `Weaviate` client. It allows you to customize the behavior of the client by providing specific arguments. Defaults to `{}`.
 

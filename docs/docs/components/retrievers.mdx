@@ -3,12 +3,15 @@
 
 ### MultiQueryRetriever
 
-Initialize from llm using default template. It is used for retrieving multiple queries from a given input.
+Initialize from llm using default template. 
+
+ `MultiQueryRetriever` automates the process of generating multiple queries, retrieves relevant documents for each query, and combines the results to provide a more extensive and diverse set of potentially relevant documents. This approach enhances the effectiveness of the retrieval process and helps overcome limitations of traditional distance-based retrieval methods.
 
 **Params**
 
 - **LLM:** Language Model to use in the `MultiQueryRetriever`.
 - **Prompt:** Schema to represent a prompt for an LLM.
 - **Retriever:** The retriever to use to fetch relevant documents from.
+
 
 - **parser_key:** This parameter is used to specify the key or attribute name of the parsed output that will be used for retrieval. It determines how the results from the language model are split into a list of queries. Defaults to `lines`, which means that the output from the language model will be split into a list of lines of text. This allows the retriever to retrieve relevant documents based on each line of text separately.

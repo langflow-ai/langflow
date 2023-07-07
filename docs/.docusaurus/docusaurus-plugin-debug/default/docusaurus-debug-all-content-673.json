@@ -635,6 +635,29 @@
               }
             },
             {
+              "unversionedId": "getting-started/cli",
+              "id": "getting-started/cli",
+              "title": "🖥️ Command Line Interface (CLI)",
+              "description": "Langflow provides a command-line interface (CLI) for easy management and configuration.",
+              "source": "@site/docs/getting-started/cli.mdx",
+              "sourceDirName": "getting-started",
+              "slug": "/getting-started/cli",
+              "permalink": "/getting-started/cli",
+              "draft": false,
+              "tags": [],
+              "version": "current",
+              "frontMatter": {},
+              "sidebar": "docs",
+              "previous": {
+                "title": "📦 How to install?",
+                "permalink": "/getting-started/installation"
+              },
+              "next": {
+                "title": "🤗 HuggingFace Spaces",
+                "permalink": "/getting-started/hugging-face-spaces"
+              }
+            },
+            {
               "unversionedId": "getting-started/creating-flows",
               "id": "getting-started/creating-flows",
               "title": "🎨 Creating Flows",
@@ -672,8 +695,8 @@
               "frontMatter": {},
               "sidebar": "docs",
               "previous": {
-                "title": "📦 How to install?",
-                "permalink": "/getting-started/installation"
+                "title": "🖥️ Command Line Interface (CLI)",
+                "permalink": "/getting-started/cli"
               },
               "next": {
                 "title": "🎨 Creating Flows",
@@ -699,8 +722,8 @@
                 "permalink": "/"
               },
               "next": {
-                "title": "🤗 HuggingFace Spaces",
-                "permalink": "/getting-started/hugging-face-spaces"
+                "title": "🖥️ Command Line Interface (CLI)",
+                "permalink": "/getting-started/cli"
               }
             },
             {
@@ -807,6 +830,10 @@
                   {
                     "type": "doc",
                     "id": "getting-started/installation"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "getting-started/cli"
                   },
                   {
                     "type": "doc",

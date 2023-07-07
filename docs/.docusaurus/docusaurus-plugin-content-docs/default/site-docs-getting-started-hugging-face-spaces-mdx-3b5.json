@@ -13,8 +13,8 @@
   "frontMatter": {},
   "sidebar": "docs",
   "previous": {
-    "title": "📦 How to install?",
-    "permalink": "/getting-started/installation"
+    "title": "🖥️ Command Line Interface (CLI)",
+    "permalink": "/getting-started/cli"
   },
   "next": {
     "title": "🎨 Creating Flows",
