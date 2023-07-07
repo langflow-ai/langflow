@@ -1,6 +1,6 @@
 import { Disclosure } from "@headlessui/react";
-import { DisclosureComponentType } from "../../../../types/components";
 import { ChevronRight } from "lucide-react";
+import { DisclosureComponentType } from "../../../../types/components";
 
 export default function DisclosureComponent({
   button: { title, Icon, buttons = [] },

@@ -1,10 +1,9 @@
 // src/constants.tsx
 
-import { MessageSquareDashed } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { FlowType } from "./types/flow";
 import { TabsState } from "./types/tabs";
 import { buildInputs, buildTweaks } from "./utils";
-import { MessageSquare } from "lucide-react";
 
 /**
  * The base text for subtitle of Export Dialog (Toolbar)

@@ -1,9 +1,9 @@
+import { FileSearch2 } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
 import { alertContext } from "../../contexts/alertContext";
-import { FileComponentType } from "../../types/components";
 import { TabsContext } from "../../contexts/tabsContext";
-import { FileSearch2 } from "lucide-react";
 import { uploadFile } from "../../controllers/API";
+import { FileComponentType } from "../../types/components";
 
 export default function InputFileComponent({
   value,
@@ -90,7 +90,6 @@ export default function InputFileComponent({
     // Trigger the file selection dialog
     input.click();
   };
-
 
   return (
     <div className={disabled ? "input-component-div" : "w-full"}>

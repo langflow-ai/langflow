@@ -1,26 +1,17 @@
+import { Variable } from "lucide-react";
 import { useContext, useEffect, useRef, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
-import { NodeDataType } from "../../types/flow";
-import { classNames, limitScrollFieldsModal } from "../../utils";
-import { typesContext } from "../../contexts/typesContext";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../components/ui/table";
-import ToggleShadComponent from "../../components/toggleShadComponent";
-import InputListComponent from "../../components/inputListComponent";
-import TextAreaComponent from "../../components/textAreaComponent";
-import InputComponent from "../../components/inputComponent";
-import FloatComponent from "../../components/floatComponent";
-import Dropdown from "../../components/dropdownComponent";
-import IntComponent from "../../components/intComponent";
-import InputFileComponent from "../../components/inputFileComponent";
-import PromptAreaComponent from "../../components/promptComponent";
 import CodeAreaComponent from "../../components/codeAreaComponent";
+import Dropdown from "../../components/dropdownComponent";
+import FloatComponent from "../../components/floatComponent";
+import InputComponent from "../../components/inputComponent";
+import InputFileComponent from "../../components/inputFileComponent";
+import InputListComponent from "../../components/inputListComponent";
+import IntComponent from "../../components/intComponent";
+import PromptAreaComponent from "../../components/promptComponent";
+import TextAreaComponent from "../../components/textAreaComponent";
+import ToggleShadComponent from "../../components/toggleShadComponent";
+import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -30,10 +21,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-import { Button } from "../../components/ui/button";
-import { Badge } from "../../components/ui/badge";
-import { Variable } from "lucide-react";
 import { TabsContext } from "../../contexts/tabsContext";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../components/ui/table";
+import { PopUpContext } from "../../contexts/popUpContext";
+import { typesContext } from "../../contexts/typesContext";
+import { NodeDataType } from "../../types/flow";
+import { classNames, limitScrollFieldsModal } from "../../utils";
 
 export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const [open, setOpen] = useState(true);

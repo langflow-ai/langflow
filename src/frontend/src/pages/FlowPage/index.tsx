@@ -1,8 +1,8 @@
 import { useContext, useEffect, useState } from "react";
-import Page from "./components/PageComponent";
-import { TabsContext } from "../../contexts/tabsContext";
 import { useParams } from "react-router-dom";
+import { TabsContext } from "../../contexts/tabsContext";
 import { getVersion } from "../../controllers/API";
+import Page from "./components/PageComponent";
 
 export default function FlowPage() {
   const { flows, tabId, setTabId } = useContext(TabsContext);

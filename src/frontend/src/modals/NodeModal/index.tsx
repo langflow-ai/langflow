@@ -1,6 +1,8 @@
 import { Dialog, Transition } from "@headlessui/react";
+import { X } from "lucide-react";
 import { Fragment, useContext, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
+import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
 import {
   classNames,
@@ -9,9 +11,7 @@ import {
   nodeIconsLucide,
   toTitleCase,
 } from "../../utils";
-import { typesContext } from "../../contexts/typesContext";
 import ModalField from "./components/ModalField";
-import { X } from "lucide-react";
 
 export default function NodeModal({ data }: { data: NodeDataType }) {
   const [open, setOpen] = useState(true);
