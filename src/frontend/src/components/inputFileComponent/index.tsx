@@ -112,7 +112,7 @@ export default function InputFileComponent({
           {!editNode && !loading && (
             <FileSearch2
               strokeWidth={1.5}
-              className="h-6 w-6 hover:text-accent-foreground ml-3"
+              className="ml-3 h-6 w-6 hover:text-accent-foreground"
             />
           )}
           {!editNode && loading && (

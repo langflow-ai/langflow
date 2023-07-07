@@ -118,8 +118,14 @@ export default function GenericNode({
               <Tooltip
                 title={
                   !validationStatus ? (
-                      <span className="flex">Build <Zap className="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1" strokeWidth={1.5} /> flow to validate status.</span>
-                    
+                    <span className="flex">
+                      Build{" "}
+                      <Zap
+                        className="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1"
+                        strokeWidth={1.5}
+                      />{" "}
+                      flow to validate status.
+                    </span>
                   ) : (
                     <div className="max-h-96 overflow-auto">
                       {validationStatus.params

@@ -30,24 +30,23 @@ export default function TextAreaComponent({
     <div className={disabled ? "cursor-not-allowed" : ""}>
       <div
         className={
-          (editNode ? "w-full relative top-2" : "flex w-full items-center") +
+          (editNode ? "relative top-2 w-full" : "flex w-full items-center") +
           (disabled ? " pointer-events-none" : "")
         }
       >
-
         <input
-        value={myValue}
-        className={
-          editNode
-            ? "input-edit-node"
-            : "input-primary" + (disabled ? " input-disable " : "")
-        }
-        placeholder={"Type something..."}
-        onChange={(e) => {
-          setMyValue(e.target.value);
-          onChange(e.target.value);
-        }}
-      />
+          value={myValue}
+          className={
+            editNode
+              ? "input-edit-node"
+              : "input-primary" + (disabled ? " input-disable " : "")
+          }
+          placeholder={"Type something..."}
+          onChange={(e) => {
+            setMyValue(e.target.value);
+            onChange(e.target.value);
+          }}
+        />
 
         <button
           onClick={() => {
