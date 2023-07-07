@@ -12,13 +12,11 @@ from langflow.interface.importing.utils import import_class
 from langflow.interface.tools.custom import (
     PythonFunctionTool,
     PythonFunction,
-    CustomComponent,
 )
 
 FILE_TOOLS = {"JsonSpec": JsonSpec}
 CUSTOM_TOOLS = {
     "Tool": Tool,
-    "CustomComponent": CustomComponent,
     "PythonFunctionTool": PythonFunctionTool,
     "PythonFunction": PythonFunction,
 }
