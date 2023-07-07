@@ -1,15 +1,26 @@
-import { Trash2 } from "lucide-react";
+import { Trash2, ExternalLink } from "lucide-react";
 import { useContext } from "react";
+import { Link } from "react-router-dom";
 import { TabsContext } from "../../contexts/tabsContext";
 import { FlowType } from "../../types/flow";
 import { gradients } from "../../utils";
 import {
-  Card,
+  CardTitle,
   CardDescription,
   CardFooter,
+  Card,
   CardHeader,
-  CardTitle,
 } from "../ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../ui/dialog";
+import { Button } from "@mui/material";
 
 export const CardComponent = ({
   flow,

@@ -1,7 +1,7 @@
 import { Transition } from "@headlessui/react";
-import { XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ErrorAlertType } from "../../types/alerts";
+import { XCircle } from "lucide-react";
 
 export default function ErrorAlert({
   title,

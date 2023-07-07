@@ -1,4 +1,3 @@
-import { cloneDeep } from "lodash";
 import {
   createContext,
   useCallback,
@@ -7,6 +6,7 @@ import {
   useState,
 } from "react";
 import { Edge, Node, useReactFlow } from "reactflow";
+import { cloneDeep } from "lodash";
 import { TabsContext } from "./tabsContext";
 
 type undoRedoContextType = {

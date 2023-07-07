@@ -1,19 +1,20 @@
-import _ from "lodash";
-import { useContext, useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
 import "reactflow/dist/style.css";
+import { useState, useEffect, useContext } from "react";
 import "./App.css";
+import { useLocation } from "react-router-dom";
+import _ from "lodash";
 
-import { ErrorBoundary } from "react-error-boundary";
 import ErrorAlert from "./alerts/error";
 import NoticeAlert from "./alerts/notice";
 import SuccessAlert from "./alerts/success";
-import CrashErrorComponent from "./components/CrashErrorComponent";
-import Header from "./components/headerComponent";
 import { alertContext } from "./contexts/alertContext";
 import { locationContext } from "./contexts/locationContext";
+import { ErrorBoundary } from "react-error-boundary";
+import CrashErrorComponent from "./components/CrashErrorComponent";
 import { TabsContext } from "./contexts/tabsContext";
+import { getVersion } from "./controllers/API";
 import Router from "./routes";
+import Header from "./components/headerComponent";
 
 export default function App() {
   let { setCurrent, setShowSideBar, setIsStackedOpen } =

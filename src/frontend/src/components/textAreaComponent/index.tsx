@@ -1,8 +1,8 @@
 import { useContext, useEffect, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
-import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
-import { TypeModal } from "../../utils";
+import GenericModal from "../../modals/genericModal";
+import { TypeModal, classNames } from "../../utils";
 
 import { ExternalLink } from "lucide-react";
 

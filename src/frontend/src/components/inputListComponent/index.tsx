@@ -1,8 +1,9 @@
 import { useContext, useEffect, useState } from "react";
 import { InputListComponentType } from "../../types/components";
+import { TabsContext } from "../../contexts/tabsContext";
 
 import _ from "lodash";
-import { Plus, X } from "lucide-react";
+import { X, Plus } from "lucide-react";
 import { PopUpContext } from "../../contexts/popUpContext";
 
 export default function InputListComponent({
