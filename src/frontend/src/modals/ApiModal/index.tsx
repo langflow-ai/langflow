@@ -111,7 +111,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
         startTweaks();
       }
     } else {
-      if(tweak?.current){
+      if (tweak?.current) {
         startTweaks();
       }
     }
