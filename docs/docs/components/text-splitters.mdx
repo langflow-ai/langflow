@@ -9,6 +9,7 @@ Implementation of splitting text that looks at characters.
 
 **Params**
 
+- **documents:** The documents that will be use by the text splitter.
 - **chunk_overlap:** This parameter determines the number of characters that overlap between consecutive chunks when splitting a text. It specifies how much of the previous chunk should be included in the next chunk.
 
     For example, if the `chunk_overlap` is set to 20 and the `chunk_size` is set to 100, the splitter will create chunks of 100 characters each, but the last 20 characters of each chunk will overlap with the first 20 characters of the next chunk. This allows for a smoother transition between chunks and ensures that no information is lost. Defaults to `200`.
@@ -28,6 +29,7 @@ The `RecursiveCharacterTextSplitter` is a text splitter that splits text based o
 
 **Params**
 
+- **documents:** The documents that will be use by the text splitter.
 - **chunk_overlap:** The parameter determines the maximum overlap between chunks when splitting the text. It can be useful to have some overlap between chunks to maintain continuity and context.
 
     For example, if the chunk_size is set to 100 characters and the chunk_overlap is set to 20 characters, the splitter will create chunks of 100 characters each, but the last 20 characters of each chunk will overlap with the first 20 characters of the next chunk. This ensures that important information is not lost at the boundaries of the chunks. Defaults to `200`.
