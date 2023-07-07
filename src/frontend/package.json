@@ -106,6 +106,7 @@
     "daisyui": "^3.1.1",
     "postcss": "^8.4.23",
     "prettier": "^2.8.8",
+    "prettier-plugin-organize-imports": "^3.2.2",
     "prettier-plugin-tailwindcss": "^0.3.0",
     "tailwindcss": "^3.3.2",
     "typescript": "^5.0.2",
