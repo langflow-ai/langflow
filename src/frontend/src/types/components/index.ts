@@ -147,6 +147,7 @@ export type ShadToolTipType = {
   asChild?: boolean;
   children?: ReactElement;
   delayDuration?: number;
+  style?: string;
 };
 
 export type TextHighlightType = {
