@@ -10,7 +10,13 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { CodeBlock } from "./codeBlock";
 import Convert from "ansi-to-html";
-import { User2, MessageSquare, ChevronDown } from "lucide-react";
+import {
+  User2,
+  MessageSquare,
+  ChevronDown,
+  MessageCircle,
+  MessageSquareDashed,
+} from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -18,6 +24,7 @@ import {
   AccordionTrigger,
 } from "../../../components/ui/accordion";
 import { Badge } from "../../../components/ui/badge";
+import { THOUGHTS_ICON } from "../../../constants";
 
 export default function ChatMessage({
   chat,
@@ -45,26 +52,24 @@ export default function ChatMessage({
             <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-[#afe6ef] p-5 text-2xl ">
               🤖
             </div>
-            <span className="text-xs">Chatbot</span>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-1">
             <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-[#aface9] p-5 text-2xl ">
               👨‍💻
             </div>
-            <span className="text-xs">User</span>
           </div>
         )}
       </div>
       {!chat.isSend ? (
-        <div className="flex w-full flex-1 items-center text-start">
+        <div className="flex w-full flex-1 text-start">
           <div className="relative inline-block w-full text-start text-sm font-normal text-muted-foreground">
-            {hidden && (
+            {hidden && chat.thought && chat.thought !== "" && (
               <div
                 onClick={() => setHidden((prev) => !prev)}
-                className="absolute -left-8 -top-5 cursor-pointer"
+                className="absolute -left-8 -top-3 cursor-pointer"
               >
-                <MessageSquare className="h-5 w-5 animate-bounce dark:text-white" />
+                <THOUGHTS_ICON className="h-4 w-4 animate-bounce dark:text-white" />
               </div>
             )}
             {chat.thought && chat.thought !== "" && !hidden && (

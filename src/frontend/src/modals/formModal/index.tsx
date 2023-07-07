@@ -18,7 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants";
+import { CHAT_FORM_DIALOG_SUBTITLE, THOUGHTS_ICON } from "../../constants";
 import { TabsContext } from "../../contexts/tabsContext";
 import {
   Accordion,
@@ -535,7 +535,7 @@ export default function FormModal({
                         <span className="text-base text-gray-500">
                           Start a conversation and click the agent's thoughts{" "}
                           <span>
-                            <MessageSquare className="mx-1 inline h-5 w-5 animate-bounce " />
+                            <THOUGHTS_ICON className="mx-1 inline h-5 w-5 animate-bounce " />
                           </span>{" "}
                           to inspect the chaining process.
                         </span>
