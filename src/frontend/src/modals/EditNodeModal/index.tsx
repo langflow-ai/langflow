@@ -55,7 +55,6 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const { closePopUp } = useContext(PopUpContext);
   const { types } = useContext(typesContext);
   const ref = useRef();
-  const [enabled, setEnabled] = useState(null);
   const { setTabsState, tabId, save } = useContext(TabsContext);
   const { reactFlowInstance } = useContext(typesContext);
 
@@ -202,10 +201,9 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                 {" "}
                                 <ToggleShadComponent
                                   disabled={disabled}
-                                  enabled={enabled}
+                                  enabled={data.node.template[n].value}
                                   setEnabled={(t) => {
                                     handleOnNewValue(t, n);
-                                    setEnabled(t);
                                   }}
                                   size="small"
                                 />
