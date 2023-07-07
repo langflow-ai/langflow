@@ -1,15 +1,16 @@
-import { useContext, useEffect, useRef, useState } from "react";
+// organize-imports-ignore
+import { useContext, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import AceEditor from "react-ace";
+import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/ace";
 // import "ace-builds/webpack-resolver";
-import { darkContext } from "../../contexts/darkContext";
-import { postCustomComponent, postValidateCode } from "../../controllers/API";
-import { alertContext } from "../../contexts/alertContext";
+import { TerminalSquare } from "lucide-react";
+import { Button } from "../../components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -19,9 +20,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-import { Button } from "../../components/ui/button";
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants";
-import { TerminalSquare } from "lucide-react";
+import { alertContext } from "../../contexts/alertContext";
+import { darkContext } from "../../contexts/darkContext";
+import { postValidateCode } from "../../controllers/API";
 import { APIClassType } from "../../types/api";
 import {
   Tabs,

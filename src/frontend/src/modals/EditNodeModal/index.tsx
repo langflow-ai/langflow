@@ -1,26 +1,17 @@
+import { Variable } from "lucide-react";
 import { useContext, useEffect, useRef, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
-import { NodeDataType } from "../../types/flow";
-import { classNames, limitScrollFieldsModal } from "../../utils";
-import { typesContext } from "../../contexts/typesContext";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../components/ui/table";
-import ToggleShadComponent from "../../components/toggleShadComponent";
-import InputListComponent from "../../components/inputListComponent";
-import TextAreaComponent from "../../components/textAreaComponent";
-import InputComponent from "../../components/inputComponent";
-import FloatComponent from "../../components/floatComponent";
-import Dropdown from "../../components/dropdownComponent";
-import IntComponent from "../../components/intComponent";
-import InputFileComponent from "../../components/inputFileComponent";
-import PromptAreaComponent from "../../components/promptComponent";
 import CodeAreaComponent from "../../components/codeAreaComponent";
+import Dropdown from "../../components/dropdownComponent";
+import FloatComponent from "../../components/floatComponent";
+import InputComponent from "../../components/inputComponent";
+import InputFileComponent from "../../components/inputFileComponent";
+import InputListComponent from "../../components/inputListComponent";
+import IntComponent from "../../components/intComponent";
+import PromptAreaComponent from "../../components/promptComponent";
+import TextAreaComponent from "../../components/textAreaComponent";
+import ToggleShadComponent from "../../components/toggleShadComponent";
+import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -30,9 +21,18 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-import { Button } from "../../components/ui/button";
-import { Badge } from "../../components/ui/badge";
-import { Variable } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../components/ui/table";
+import { PopUpContext } from "../../contexts/popUpContext";
+import { typesContext } from "../../contexts/typesContext";
+import { NodeDataType } from "../../types/flow";
+import { classNames, limitScrollFieldsModal } from "../../utils";
 
 export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const [open, setOpen] = useState(true);
@@ -90,27 +90,25 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
           <DialogDescription>
             {data.node?.description}
             <div className="flex pt-3">
-              <Variable className="h-5 w-5 stroke-2 pe-1 text-muted-foreground "></Variable>
-              <span className="text-sm font-semibold text-primary">
-                Parameters
-              </span>
+              <Variable className="edit-node-modal-variable "></Variable>
+              <span className="edit-node-modal-span">Parameters</span>
             </div>
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex h-fit max-h-[400px] w-full">
+        <div className="edit-node-modal-arrangement">
           <div
             className={classNames(
-              "w-full rounded-lg border-[1px] border-input bg-background",
+              "edit-node-modal-box",
               nodeLength > limitScrollFieldsModal
                 ? "overflow-scroll overflow-x-hidden custom-scroll"
                 : "overflow-hidden"
             )}
           >
             {nodeLength > 0 && (
-              <div className="flex h-fit flex-col gap-5">
+              <div className="edit-node-modal-table">
                 <Table className="table-fixed bg-muted outline-1">
-                  <TableHeader className="h-10 border-input text-xs font-medium text-ring">
+                  <TableHeader className="edit-node-modal-table-header">
                     <TableRow className="">
                       <TableHead className="h-7 text-center">PARAM</TableHead>
                       <TableHead className="h-7 p-0 text-center">

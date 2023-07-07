@@ -1,15 +1,15 @@
-import {
-  BuildStatusTypeAPI,
-  errorsTypeAPI,
-  InitTypeAPI,
-  UploadFileTypeAPI,
-  APIClassType,
-  PromptTypeAPI,
-} from "./../../types/api/index";
-import { APIObjectType, sendAllProps } from "../../types/api/index";
 import axios, { AxiosResponse } from "axios";
-import { FlowStyleType, FlowType } from "../../types/flow";
 import { ReactFlowJsonObject } from "reactflow";
+import { APIObjectType, sendAllProps } from "../../types/api/index";
+import { FlowStyleType, FlowType } from "../../types/flow";
+import {
+  APIClassType,
+  BuildStatusTypeAPI,
+  InitTypeAPI,
+  PromptTypeAPI,
+  UploadFileTypeAPI,
+  errorsTypeAPI,
+} from "./../../types/api/index";
 
 /**
  * Fetches all objects from the API endpoint.
@@ -338,11 +338,4 @@ export async function uploadFile(
   const formData = new FormData();
   formData.append("file", file);
   return await axios.post(`/api/v1/upload/${id}`, formData);
-}
-
-export async function postCustomComponent(
-  code: string,
-  apiClass: APIClassType
-): Promise<AxiosResponse<APIClassType>> {
-  return await axios.post(`/api/v1/custom_component`, { code });
 }

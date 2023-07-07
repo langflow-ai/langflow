@@ -1,3 +1,15 @@
+import { Zap } from "lucide-react";
+import { useContext, useEffect, useRef, useState } from "react";
+import { NodeToolbar } from "reactflow";
+import ShadTooltip from "../../components/ShadTooltipComponent";
+import Tooltip from "../../components/TooltipComponent";
+import { useSSE } from "../../contexts/SSEContext";
+import { alertContext } from "../../contexts/alertContext";
+import { PopUpContext } from "../../contexts/popUpContext";
+import { typesContext } from "../../contexts/typesContext";
+import NodeModal from "../../modals/NodeModal";
+import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
+import { NodeDataType } from "../../types/flow";
 import {
   classNames,
   nodeColors,
@@ -5,17 +17,6 @@ import {
   toTitleCase,
 } from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
-import { typesContext } from "../../contexts/typesContext";
-import { useContext, useState, useEffect, useRef } from "react";
-import { NodeDataType } from "../../types/flow";
-import { alertContext } from "../../contexts/alertContext";
-import { PopUpContext } from "../../contexts/popUpContext";
-import NodeModal from "../../modals/NodeModal";
-import Tooltip from "../../components/TooltipComponent";
-import { NodeToolbar } from "reactflow";
-import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
-import ShadTooltip from "../../components/ShadTooltipComponent";
-import { useSSE } from "../../contexts/SSEContext";
 
 export default function GenericNode({
   data,
@@ -80,30 +81,27 @@ export default function GenericNode({
       <div
         className={classNames(
           selected ? "border border-ring" : "border",
-          "prompt-node relative flex w-96 flex-col justify-center rounded-lg bg-background"
+          "generic-node-div"
         )}
       >
-        <div className="flex w-full items-center justify-between gap-8 rounded-t-lg border-b bg-muted p-4  ">
-          <div className="flex w-full items-center truncate">
+        <div className="generic-node-div-title">
+          <div className="generic-node-title-arrangement">
             <Icon
               strokeWidth={1.5}
-              className="h-10 w-10 rounded p-1"
+              className="generic-node-icon"
               style={{
                 color: nodeColors[types[data.type]] ?? nodeColors.unknown,
               }}
             />
-            <div className="ml-2 flex-1 truncate">
-              <ShadTooltip
-                delayDuration={1500}
-                content={data.node.display_name}
-              >
-                <div className="ml-2 truncate text-primary">
+            <div className="generic-node-tooltip-div">
+              <ShadTooltip content={data.node.display_name}>
+                <div className="generic-node-tooltip-div text-primary">
                   {data.node.display_name}
                 </div>
               </ShadTooltip>
             </div>
           </div>
-          <div className="flex gap-3">
+          <div className="round-button-div">
             <button
               className="relative"
               onClick={(event) => {
@@ -112,12 +110,19 @@ export default function GenericNode({
               }}
             ></button>
           </div>
-          <div className="flex gap-3">
+          <div className="round-button-div">
             <div>
               <Tooltip
                 title={
                   !validationStatus ? (
-                    "Validating..."
+                    <span className="flex">
+                      Build{" "}
+                      <Zap
+                        className="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1"
+                        strokeWidth={1.5}
+                      />{" "}
+                      flow to validate status.
+                    </span>
                   ) : (
                     <div className="max-h-96 overflow-auto">
                       {validationStatus.params
@@ -129,29 +134,29 @@ export default function GenericNode({
                   )
                 }
               >
-                <div className="relative top-[3px] h-5 w-5">
+                <div className="generic-node-status-position">
                   <div
                     className={classNames(
                       validationStatus && validationStatus.valid
-                        ? "h-4 w-4 rounded-full bg-status-green opacity-100"
-                        : "hidden h-4 w-4 animate-spin rounded-full bg-ring opacity-0",
-                      "absolute w-4 duration-200 ease-in-out hover:text-accent-foreground hover:transition-all"
+                        ? "green-status"
+                        : "status-build-animation",
+                      "status-div"
                     )}
                   ></div>
                   <div
                     className={classNames(
                       validationStatus && !validationStatus.valid
-                        ? "h-4 w-4 rounded-full  bg-status-red opacity-100"
-                        : "hidden h-4 w-4 animate-spin rounded-full bg-ring opacity-0",
-                      "absolute w-4 duration-200 ease-in-out hover:text-accent-foreground hover:transition-all"
+                        ? "red-status"
+                        : "status-build-animation",
+                      "status-div"
                     )}
                   ></div>
                   <div
                     className={classNames(
                       !validationStatus || isBuilding
-                        ? "h-4 w-4 rounded-full  bg-status-yellow opacity-100"
-                        : "hidden h-4 w-4 animate-spin rounded-full bg-ring opacity-0",
-                      "absolute w-4 duration-200 ease-in-out hover:text-accent-foreground hover:transition-all"
+                        ? "yellow-status"
+                        : "status-build-animation",
+                      "status-div"
                     )}
                   ></div>
                 </div>
@@ -160,10 +165,8 @@ export default function GenericNode({
           </div>
         </div>
 
-        <div className="h-full w-full py-5 text-foreground">
-          <div className="w-full px-5 pb-3 text-sm text-muted-foreground">
-            {data.node.description}
-          </div>
+        <div className="generic-node-desc">
+          <div className="generic-node-desc-text">{data.node.description}</div>
 
           <>
             {Object.keys(data.node.template)
@@ -232,7 +235,7 @@ export default function GenericNode({
             <div
               className={classNames(
                 Object.keys(data.node.template).length < 1 ? "hidden" : "",
-                "flex w-full justify-center"
+                "flex-max-width justify-center"
               )}
             >
               {" "}

@@ -1,22 +1,21 @@
-import DisclosureComponent from "../DisclosureComponent";
+import { Code2, FileDown, FileUp, Menu, Save, Search } from "lucide-react";
+import { useContext, useState } from "react";
+import ShadTooltip from "../../../../components/ShadTooltipComponent";
+import { Separator } from "../../../../components/ui/separator";
+import { alertContext } from "../../../../contexts/alertContext";
+import { PopUpContext } from "../../../../contexts/popUpContext";
+import { TabsContext } from "../../../../contexts/tabsContext";
+import { typesContext } from "../../../../contexts/typesContext";
+import ApiModal from "../../../../modals/ApiModal";
+import ExportModal from "../../../../modals/exportModal";
+import { APIClassType, APIObjectType } from "../../../../types/api";
 import {
   classNames,
   nodeColors,
   nodeIconsLucide,
   nodeNames,
 } from "../../../../utils";
-import { useContext, useState } from "react";
-import { typesContext } from "../../../../contexts/typesContext";
-import { APIClassType, APIObjectType } from "../../../../types/api";
-import ShadTooltip from "../../../../components/ShadTooltipComponent";
-import { Code2, FileDown, FileUp, Save, Search } from "lucide-react";
-import { PopUpContext } from "../../../../contexts/popUpContext";
-import ExportModal from "../../../../modals/exportModal";
-import ApiModal from "../../../../modals/ApiModal";
-import { TabsContext } from "../../../../contexts/tabsContext";
-import { alertContext } from "../../../../contexts/alertContext";
-import { Separator } from "../../../../components/ui/separator";
-import { Menu } from "lucide-react";
+import DisclosureComponent from "../DisclosureComponent";
 
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);
@@ -59,48 +58,50 @@ export default function ExtraSidebar() {
   }
 
   return (
-    <div className="flex h-full w-52 flex-col overflow-hidden border-r scrollbar-hide">
-      <div className="mb-2 mt-2 flex w-full items-center justify-between gap-2 px-2">
+    <div className="side-bar-arrangement">
+      <div className="side-bar-buttons-arrangement">
         <ShadTooltip content="Import" side="top">
           <button
-            className="relative inline-flex w-full items-center justify-center rounded-md bg-background   px-2 py-2 text-foreground shadow-sm ring-1 ring-inset ring-input transition-all duration-500 ease-in-out hover:bg-muted"
+            className="extra-side-bar-buttons"
             onClick={() => {
               // openPopUp(<ImportModal />);
               uploadFlow();
             }}
           >
-            <FileUp strokeWidth={1.5} className="h-5 w-5 "></FileUp>
+            <FileUp
+              strokeWidth={1.5}
+              className="side-bar-button-size "
+            ></FileUp>
           </button>
         </ShadTooltip>
 
         <ShadTooltip content="Export" side="top">
           <button
-            className={classNames(
-              "relative inline-flex w-full items-center justify-center rounded-md bg-background   px-2 py-2 text-foreground shadow-sm ring-1 ring-inset  ring-input transition-all duration-500 ease-in-out hover:bg-muted"
-            )}
+            className={classNames("extra-side-bar-buttons")}
             onClick={(event) => {
               openPopUp(<ExportModal />);
             }}
           >
-            <FileDown strokeWidth={1.5} className="h-5 w-5  "></FileDown>
+            <FileDown
+              strokeWidth={1.5}
+              className="side-bar-button-size"
+            ></FileDown>
           </button>
         </ShadTooltip>
         <ShadTooltip content="Code" side="top">
           <button
-            className={classNames(
-              "relative inline-flex w-full items-center justify-center rounded-md bg-background   px-2 py-2 text-foreground shadow-sm ring-1 ring-inset  ring-input transition-all duration-500 ease-in-out hover:bg-muted"
-            )}
+            className={classNames("extra-side-bar-buttons")}
             onClick={(event) => {
               openPopUp(<ApiModal flow={flows.find((f) => f.id === tabId)} />);
             }}
           >
-            <Code2 strokeWidth={1.5} className="h-5 w-5  "></Code2>
+            <Code2 strokeWidth={1.5} className="side-bar-button-size"></Code2>
           </button>
         </ShadTooltip>
 
         <ShadTooltip content="Save" side="top">
           <button
-            className="relative inline-flex w-full items-center justify-center rounded-md bg-background   px-2 py-2 text-foreground shadow-sm ring-1 ring-inset  ring-input transition-all duration-500 ease-in-out hover:bg-muted"
+            className="extra-side-bar-buttons"
             onClick={(event) => {
               saveFlow(flows.find((f) => f.id === tabId));
               setSuccessData({ title: "Changes saved successfully" });
@@ -110,14 +111,15 @@ export default function ExtraSidebar() {
             <Save
               strokeWidth={1.5}
               className={
-                "h-5 w-5" + (isPending ? " " : " text-muted-foreground")
+                "side-bar-button-size" +
+                (isPending ? " " : " extra-side-bar-save-disable")
               }
             ></Save>
           </button>
         </ShadTooltip>
       </div>
       <Separator />
-      <div className="relative mx-auto mb-2 mt-2 flex items-center">
+      <div className="side-bar-search-div-placement">
         <input
           type="text"
           name="search"
@@ -129,13 +131,13 @@ export default function ExtraSidebar() {
             setSearch(e.target.value);
           }}
         />
-        <div className="absolute inset-y-0 right-0 flex items-center py-1.5 pr-3">
+        <div className="search-icon">
           {/* ! replace hash color here */}
           <Search size={20} strokeWidth={1.5} className="text-primary" />
         </div>
       </div>
 
-      <div className="w-full overflow-auto pb-10 scrollbar-hide">
+      <div className="side-bar-components-div-arrangement">
         {Object.keys(dataFilter)
           .sort()
           .map((d: keyof APIObjectType, i) =>
@@ -148,7 +150,7 @@ export default function ExtraSidebar() {
                   Icon: nodeIconsLucide[d] ?? nodeIconsLucide.unknown,
                 }}
               >
-                <div className="flex flex-col gap-2 p-2">
+                <div className="side-bar-components-gap">
                   {Object.keys(dataFilter[d])
                     .sort()
                     .map((t: string, k) => (
@@ -160,7 +162,7 @@ export default function ExtraSidebar() {
                         <div key={k} data-tooltip-id={t}>
                           <div
                             draggable
-                            className={"cursor-grab rounded-l-md border-l-8"}
+                            className={"side-bar-components-border"}
                             style={{
                               borderLeftColor:
                                 nodeColors[d] ?? nodeColors.unknown,
@@ -179,11 +181,11 @@ export default function ExtraSidebar() {
                               );
                             }}
                           >
-                            <div className="flex w-full items-center justify-between rounded-md rounded-l-none border border-l-0 border-dashed border-ring  bg-white px-3 py-1 text-sm">
-                              <span className="w-full  truncate pr-1 text-xs text-foreground">
+                            <div className="side-bar-components-div-form">
+                              <span className="side-bar-components-text">
                                 {data[d][t].display_name}
                               </span>
-                              <Menu className="h-6 w-4  text-ring " />
+                              <Menu className="side-bar-components-icon " />
                             </div>
                           </div>
                         </div>

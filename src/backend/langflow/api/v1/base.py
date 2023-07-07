@@ -14,7 +14,7 @@ class Code(BaseModel):
 
 
 class FrontendNodeRequest(FrontendNode):
-    template: dict
+    template: dict  # type: ignore
 
 
 class ValidatePromptRequest(BaseModel):

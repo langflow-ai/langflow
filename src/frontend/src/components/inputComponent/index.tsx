@@ -1,8 +1,8 @@
 import { useContext, useEffect, useState } from "react";
+import { PopUpContext } from "../../contexts/popUpContext";
+import { TabsContext } from "../../contexts/tabsContext";
 import { InputComponentType } from "../../types/components";
 import { classNames } from "../../utils";
-import { TabsContext } from "../../contexts/tabsContext";
-import { PopUpContext } from "../../contexts/popUpContext";
 
 export default function InputComponent({
   value,
@@ -29,13 +29,7 @@ export default function InputComponent({
   }, [closePopUp]);
 
   return (
-    <div
-      className={
-        disabled
-          ? "pointer-events-none relative cursor-not-allowed"
-          : "relative"
-      }
-    >
+    <div className={disabled ? "input-component-div" : "relative"}>
       <input
         value={myValue}
         onFocus={() => {
@@ -45,7 +39,7 @@ export default function InputComponent({
           if (disableCopyPaste) setDisableCopyPaste(false);
         }}
         className={classNames(
-          " pr-12 ",
+          " pr-9 ",
           disabled ? " input-disable " : "",
           password && !pwdVisible && myValue !== "" ? "password" : "",
           editNode ? " input-edit-node " : " input-primary ",
@@ -61,8 +55,8 @@ export default function InputComponent({
         <button
           className={classNames(
             editNode
-              ? "absolute inset-y-0 right-0 items-center pr-2 text-muted-foreground"
-              : "absolute inset-y-0 right-0 items-center px-4 text-muted-foreground"
+              ? "input-component-true-button"
+              : "input-component-false-button"
           )}
           onClick={() => {
             setPwdVisible(!pwdVisible);
@@ -78,8 +72,8 @@ export default function InputComponent({
                 stroke="currentColor"
                 className={classNames(
                   editNode
-                    ? "absolute bottom-0.5 right-2 h-5 w-5"
-                    : "absolute bottom-2 right-3 h-5 w-5"
+                    ? "input-component-true-svg"
+                    : "input-component-false-svg"
                 )}
               >
                 <path
@@ -97,8 +91,8 @@ export default function InputComponent({
                 stroke="currentColor"
                 className={classNames(
                   editNode
-                    ? "absolute bottom-0.5 right-2 h-5 w-5"
-                    : "absolute bottom-2 right-3 h-5 w-5"
+                    ? "input-component-true-svg"
+                    : "input-component-false-svg"
                 )}
               >
                 <path

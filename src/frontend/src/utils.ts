@@ -1,35 +1,10 @@
-import { Connection, Edge, Node, ReactFlowInstance } from "reactflow";
-import { FlowType, NodeType } from "./types/flow";
-import { APITemplateType } from "./types/api";
-import _ from "lodash";
-import { ChromaIcon } from "./icons/ChromaIcon";
-import { AnthropicIcon } from "./icons/Anthropic";
-import { AirbyteIcon } from "./icons/Airbyte";
-import { BingIcon } from "./icons/Bing";
-import { CohereIcon } from "./icons/Cohere";
-import { EvernoteIcon } from "./icons/Evernote";
-import { FBIcon } from "./icons/FacebookMessenger";
-import { GitBookIcon } from "./icons/GitBook";
-import { GoogleIcon } from "./icons/Google";
-import { HackerNewsIcon } from "./icons/hackerNews";
-import { HugginFaceIcon } from "./icons/HuggingFace";
-import { IFixIcon } from "./icons/IFixIt";
-import { MetaIcon } from "./icons/Meta";
-import { MidjourneyIcon } from "./icons/Midjorney";
-import { NotionIcon } from "./icons/Notion";
-import { OpenAiIcon } from "./icons/OpenAi";
-import { QDrantIcon } from "./icons/QDrant";
-import { SearxIcon } from "./icons/Searx";
-import { SlackIcon } from "./icons/Slack";
-import { PineconeIcon } from "./icons/Pinecone";
 import clsx, { ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
-import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "./flow_constants";
-import { ComponentType, SVGProps } from "react";
+import _ from "lodash";
 import {
   Compass,
   Cpu,
   Edit,
+  FileSearch,
   Fingerprint,
   Gift,
   Hammer,
@@ -42,16 +17,41 @@ import {
   Paperclip,
   Rocket,
   Scissors,
-  FileSearch,
   TerminalSquare,
   Wand2,
   Wrench,
   Sparkles,
 } from "lucide-react";
-import { SupabaseIcon } from "./icons/supabase";
+import { ComponentType, SVGProps } from "react";
+import { Connection, Edge, Node, ReactFlowInstance } from "reactflow";
+import { twMerge } from "tailwind-merge";
+import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "./flow_constants";
+import { AirbyteIcon } from "./icons/Airbyte";
+import { AnthropicIcon } from "./icons/Anthropic";
+import { BingIcon } from "./icons/Bing";
+import { ChromaIcon } from "./icons/ChromaIcon";
+import { CohereIcon } from "./icons/Cohere";
+import { EvernoteIcon } from "./icons/Evernote";
+import { FBIcon } from "./icons/FacebookMessenger";
+import { GitBookIcon } from "./icons/GitBook";
+import { GoogleIcon } from "./icons/Google";
+import { HugginFaceIcon } from "./icons/HuggingFace";
+import { IFixIcon } from "./icons/IFixIt";
+import { MetaIcon } from "./icons/Meta";
+import { MidjourneyIcon } from "./icons/Midjorney";
 import { MongoDBIcon } from "./icons/MongoDB";
+import { NotionIcon } from "./icons/Notion";
+import { OpenAiIcon } from "./icons/OpenAi";
+import { PineconeIcon } from "./icons/Pinecone";
+import { QDrantIcon } from "./icons/QDrant";
+import { SearxIcon } from "./icons/Searx";
+import { SlackIcon } from "./icons/Slack";
 import { VertexAIIcon } from "./icons/VertexAI";
+import { HackerNewsIcon } from "./icons/hackerNews";
+import { SupabaseIcon } from "./icons/supabase";
+import { APITemplateType } from "./types/api";
 import { IVarHighlightType } from "./types/components";
+import { FlowType, NodeType } from "./types/flow";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -914,6 +914,16 @@ export function groupByFamily(data, baseClasses, left, type) {
   }
 }
 
+export function buildInputs(tabsState, id) {
+  return tabsState &&
+    tabsState[id] &&
+    tabsState[id].formKeysData &&
+    tabsState[id].formKeysData.input_keys &&
+    Object.keys(tabsState[id].formKeysData.input_keys).length > 0
+    ? JSON.stringify(tabsState[id].formKeysData.input_keys)
+    : '{"input": "message"}';
+}
+
 export function buildTweaks(flow) {
   return flow.data.nodes.reduce((acc, node) => {
     acc[node.data.id] = {};
@@ -1032,6 +1042,7 @@ export const INVALID_CHARACTERS = [
   ")",
   "[",
   "]",
+  "\n",
 ];
 
 export const regexHighlight = /\{([^}]+)\}/g;

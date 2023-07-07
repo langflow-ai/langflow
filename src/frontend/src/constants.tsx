@@ -1,7 +1,9 @@
 // src/constants.tsx
 
+import { MessageSquare } from "lucide-react";
 import { FlowType } from "./types/flow";
-import { buildTweaks } from "./utils";
+import { TabsState } from "./types/tabs";
+import { buildInputs, buildTweaks } from "./utils";
 
 /**
  * The base text for subtitle of Export Dialog (Toolbar)
@@ -56,6 +58,8 @@ export const CHAT_CANNOT_OPEN_DESCRIPTION = "This is not a chat flow.";
 
 export const FLOW_NOT_BUILT_TITLE = "Flow not built";
 
+export const THOUGHTS_ICON = MessageSquare;
+
 export const FLOW_NOT_BUILT_DESCRIPTION =
   "Please build the flow before chatting.";
 
@@ -70,7 +74,11 @@ export const TEXT_DIALOG_SUBTITLE = "Edit your text.";
  * @param {string} flowId - The id of the flow
  * @returns {string} - The python code
  */
-export const getPythonApiCode = (flow: FlowType, tweak?): string => {
+export const getPythonApiCode = (
+  flow: FlowType,
+  tweak?: any[],
+  tabsState?: TabsState
+): string => {
   const flowId = flow.id;
 
   // create a dictionary of node ids and the values is an empty dictionary
@@ -78,7 +86,9 @@ export const getPythonApiCode = (flow: FlowType, tweak?): string => {
   //   node.data.id
   // }
   const tweaks = buildTweaks(flow);
+  const inputs = buildInputs(tabsState, flow.id);
   return `import requests
+from typing import Optional
 
 BASE_API_URL = "${window.location.protocol}//${
     window.location.host
@@ -92,7 +102,7 @@ TWEAKS = ${
       : JSON.stringify(tweaks, null, 2)
   }
 
-def run_flow(message: str, flow_id: str, tweaks: dict = None) -> dict:
+def run_flow(inputs: dict, flow_id: str, tweaks: Optional[dict] = None) -> dict:
     """
     Run a flow with a given message and optional tweaks.
 
@@ -103,7 +113,7 @@ def run_flow(message: str, flow_id: str, tweaks: dict = None) -> dict:
     """
     api_url = f"{BASE_API_URL}/{flow_id}"
 
-    payload = {"inputs": {"input": message}}
+    payload = {"inputs": inputs}
 
     if tweaks:
         payload["tweaks"] = tweaks
@@ -112,23 +122,29 @@ def run_flow(message: str, flow_id: str, tweaks: dict = None) -> dict:
     return response.json()
 
 # Setup any tweaks you want to apply to the flow
-
-print(run_flow("Your message", flow_id=FLOW_ID, tweaks=TWEAKS))`;
+inputs = ${inputs}
+print(run_flow(inputs, flow_id=FLOW_ID, tweaks=TWEAKS))`;
 };
 /**
  * Function to get the curl code for the API
  * @param {string} flowId - The id of the flow
  * @returns {string} - The curl code
  */
-export const getCurlCode = (flow: FlowType, tweak?): string => {
+export const getCurlCode = (
+  flow: FlowType,
+  tweak?: any[],
+  tabsState?: TabsState
+): string => {
   const flowId = flow.id;
   const tweaks = buildTweaks(flow);
+  const inputs = buildInputs(tabsState, flow.id);
+
   return `curl -X POST \\
   ${window.location.protocol}//${
     window.location.host
   }/api/v1/process/${flowId} \\
   -H 'Content-Type: application/json' \\
-  -d '{"inputs": {"input": message}, "tweaks": ${
+  -d '{"inputs": ${inputs}, "tweaks": ${
     tweak && tweak.length > 0
       ? buildTweakObject(tweak)
       : JSON.stringify(tweaks, null, 2)
@@ -139,9 +155,14 @@ export const getCurlCode = (flow: FlowType, tweak?): string => {
  * @param {string} flowName - The name of the flow
  * @returns {string} - The python code
  */
-export const getPythonCode = (flow: FlowType, tweak?): string => {
+export const getPythonCode = (
+  flow: FlowType,
+  tweak?: any[],
+  tabsState?: TabsState
+): string => {
   const flowName = flow.name;
   const tweaks = buildTweaks(flow);
+  const inputs = buildInputs(tabsState, flow.id);
   return `from langflow import load_flow_from_json
 TWEAKS = ${
     tweak && tweak.length > 0
@@ -150,7 +171,8 @@ TWEAKS = ${
   }
 flow = load_flow_from_json("${flowName}.json", tweaks=TWEAKS)
 # Now you can use it like any chain
-flow("Hey, have you heard of LangFlow?")`;
+inputs = ${inputs}
+flow(inputs)`;
 };
 
 function buildTweakObject(tweak) {
@@ -529,4 +551,4 @@ export const USER_PROJECTS_HEADER = "My Collection";
  *
  */
 export const HIGHLIGH_CSS =
-  "block pl-3 pr-14 py-2 w-full h-full text-sm outline-0 border-0 break-all";
+  "block pl-3 pr-14 py-2 w-full h-full text-sm outline-0 border-0 break-all overflow-y-hidden max-w-[75vw]";
