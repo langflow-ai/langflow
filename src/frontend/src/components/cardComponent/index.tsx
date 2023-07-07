@@ -47,30 +47,9 @@ export const CardComponent = ({
           ></span>
           <span className="card-component-title-size">{flow.name}</span>
           {onDelete && (
-            <Dialog>
-              <DialogTrigger asChild>
-                <button
-                  className="card-component-delete-button"
-                  onClick={onDelete}
-                >
-                  <Trash2 className="card-component-delete-icon" />
-                </button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Are you sure absolutely sure?</DialogTitle>
-                  <DialogDescription>
-                    This action cannot be undone. Are you sure you want to
-                    permanently delete this file from our servers?
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                  <Button type="submit" onClick={onDelete}>
-                    Confirm
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <button className="card-component-delete-button" onClick={onDelete}>
+              <Trash2 className="card-component-delete-icon" />
+            </button>
           )}
         </CardTitle>
         <CardDescription className="card-component-desc">
