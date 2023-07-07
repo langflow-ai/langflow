@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TextAreaComponentType } from "../../types/components";
 import GenericModal from "../../modals/genericModal";
-import { TypeModal } from "../../utils";
+import { TypeModal, classNames } from "../../utils";
 
 import { ExternalLink } from "lucide-react";
 
@@ -30,34 +30,24 @@ export default function TextAreaComponent({
     <div className={disabled ? "cursor-not-allowed" : ""}>
       <div
         className={
-          (editNode ? "w-full items-center" : "flex w-full items-center") +
+          (editNode ? "w-full relative top-2" : "flex w-full items-center") +
           (disabled ? " pointer-events-none" : "")
         }
       >
-        <span
-          onClick={() => {
-            openPopUp(
-              <GenericModal
-                type={TypeModal.TEXT}
-                buttonText="Finishing Editing"
-                modalTitle="Edit Text"
-                value={myValue}
-                setValue={(t: string) => {
-                  setMyValue(t);
-                  onChange(t);
-                }}
-              />
-            );
-          }}
-          className={
-            editNode
-              ? "input-edit-node input-dialog "
-              : "input-dialog input-primary " +
-                (disabled ? "input-disable" : "")
-          }
-        >
-          {myValue !== "" ? myValue : "Type something..."}
-        </span>
+
+        <input
+        value={myValue}
+        className={
+          editNode
+            ? "input-edit-node"
+            : "input-primary" + (disabled ? " input-disable " : "")
+        }
+        placeholder={"Type something..."}
+        onChange={(e) => {
+          setMyValue(e.target.value);
+          onChange(e.target.value);
+        }}
+      />
 
         <button
           onClick={() => {
