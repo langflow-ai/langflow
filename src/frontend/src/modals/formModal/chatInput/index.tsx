@@ -50,16 +50,16 @@ export default function ChatInput({
         }}
         className={classNames(
           lockChat
-            ? " bg-input text-black dark:bg-gray-700 dark:text-gray-300"
-            : "  bg-white-200 text-black dark:bg-gray-900 dark:text-gray-300",
-          "form-input block w-full rounded-md border-gray-300 p-4 pr-16 custom-scroll dark:border-gray-600 sm:text-sm"
+            ? " form-modal-lock-true"
+            : " form-modal-lock-false",
+          "form-modal-lockchat"
         )}
         placeholder={"Send a message..."}
       />
-      <div className="absolute bottom-2 right-4">
+      <div className="form-modal-send-icon-position">
         <button
           className={classNames(
-            "rounded-md p-2 px-1 transition-all duration-300",
+            "form-modal-send-button",
             chatValue == "" ? "text-primary" : " bg-indigo-600 text-background"
           )}
           disabled={lockChat}
@@ -67,12 +67,12 @@ export default function ChatInput({
         >
           {lockChat ? (
             <Lock
-              className="ml-1 mr-1 h-5 w-5 animate-pulse"
+              className="form-modal-lock-icon"
               aria-hidden="true"
             />
           ) : (
             <LucideSend
-              className="mr-2 h-5 w-5 rotate-[44deg] "
+              className="form-modal-send-icon "
               aria-hidden="true"
             />
           )}
