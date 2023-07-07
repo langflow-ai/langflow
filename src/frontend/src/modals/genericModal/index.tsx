@@ -32,6 +32,7 @@ import {
 import { Badge } from "../../components/ui/badge";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import DOMPurify from "dompurify";
+import { Variable } from "lucide-react";
 
 export default function GenericModal({
   field_name = "",
@@ -196,39 +197,6 @@ export default function GenericModal({
           </DialogDescription>
         </DialogHeader>
 
-        {type == TypeModal.PROMPT &&
-          inputValue &&
-          inputValue != "" &&
-          wordsHighlight.length > 0 && (
-            <>
-              <div>
-                <span className="">Variables: </span>
-                {wordsHighlight.map((word, index) => (
-                  <ShadTooltip
-                    key={getRandomKeyByssmm() + index}
-                    content={word.replace(/[{}]/g, "")}
-                    asChild={false}
-                    delayDuration={1500}
-                  >
-                    <Badge
-                      key={index}
-                      size="lg"
-                      className="m-1 max-w-[40vw] cursor-default truncate p-2.5 text-sm"
-                    >
-                      <div className="relative bottom-[1px]">
-                        <span>
-                          {word.replace(/[{}]/g, "").length > 59
-                            ? word.replace(/[{}]/g, "").slice(0, 56) + "..."
-                            : word.replace(/[{}]/g, "")}
-                        </span>
-                      </div>
-                    </Badge>
-                  </ShadTooltip>
-                ))}
-              </div>
-            </>
-          )}
-
         <div
           className={classNames(
             !isEdit ? "rounded-lg border" : "",
@@ -238,7 +206,7 @@ export default function GenericModal({
           {type == TypeModal.PROMPT && isEdit ? (
             <Textarea
               ref={ref}
-              className="form-input h-full w-full rounded-lg border-gray-300 focus-visible:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+              className="form-input h-full w-full rounded-lg border-gray-300 focus-visible:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white custom-scroll"
               value={inputValue}
               onBlur={() => {
                 blur();
@@ -267,6 +235,45 @@ export default function GenericModal({
             <></>
           )}
         </div>
+
+        
+        {type == TypeModal.PROMPT && (
+            <>
+              <div className="">
+              <div className="items-center flex flex-wrap">
+                <Variable className=" -ml-px mr-1 h-4 w-4 text-primary flex"></Variable>
+                <span className="text-md font-semibold text-primary">
+                  Input Variables: {wordsHighlight &&
+          wordsHighlight.length == 0 ? '-' : ''}
+                </span>
+
+                {wordsHighlight.map((word, index) => (
+                  <ShadTooltip
+                    key={getRandomKeyByssmm() + index}
+                    content={word.replace(/[{}]/g, "")}
+                    asChild={false}
+                    delayDuration={1500}
+                  >
+                    <Badge
+                      key={index}
+                      variant="gray" size="md"
+                      className="m-1 max-w-[40vw] cursor-default truncate p-2.5 text-sm"
+                    >
+                      <div className="relative bottom-[1px]">
+                        <span>
+                          {word.replace(/[{}]/g, "").length > 59
+                            ? word.replace(/[{}]/g, "").slice(0, 56) + "..."
+                            : word.replace(/[{}]/g, "")}
+                        </span>
+                      </div>
+                    </Badge>
+                  </ShadTooltip>
+                ))}
+
+              </div>
+              </div>
+            </>
+          )}
 
         <DialogFooter>
           <Button

@@ -111,7 +111,9 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
         startTweaks();
       }
     } else {
-      startTweaks();
+      if(tweak?.current){
+        startTweaks();
+      }
     }
   }, [closeEdit]);
 
@@ -313,7 +315,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
             >
               {index < 3 ? (
                 <SyntaxHighlighter
-                  className="h-[60vh] w-full overflow-auto"
+                  className="h-[60vh] w-full overflow-auto custom-scroll"
                   language={tab.mode}
                   style={oneDark}
                 >

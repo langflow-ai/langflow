@@ -222,7 +222,7 @@ export default function ParameterComponent({
               />
             ) : data.node.template[name].multiline ? (
               <TextAreaComponent
-                disabled={disabled}
+                disabled={false}
                 value={data.node.template[name].value ?? ""}
                 onChange={handleOnNewValue}
               />
