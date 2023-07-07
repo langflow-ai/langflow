@@ -20,6 +20,7 @@ from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.chains.base import chain_creator
 from langflow.interface.output_parsers.base import output_parser_creator
 from langflow.interface.retrievers.base import retriever_creator
+from langflow.interface.wrappers.base import wrapper_creator
 from langflow.interface.utils import load_file_into_dict
 from langflow.utils import validate
 from langchain.chains.base import Chain
@@ -89,8 +90,19 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
         return instantiate_retriever(node_type, class_object, params)
     elif base_type == "memory":
         return instantiate_memory(node_type, class_object, params)
+    elif base_type == "wrappers":
+        return instantiate_wrapper(node_type, class_object, params)
     else:
         return class_object(**params)
+
+
+def instantiate_wrapper(node_type, class_object, params):
+    if node_type in wrapper_creator.from_method_nodes:
+        method = wrapper_creator.from_method_nodes[node_type]
+        if class_method := getattr(class_object, method, None):
+            return class_method(**params)
+        raise ValueError(f"Method {method} not found in {class_object}")
+    return class_object(**params)
 
 
 def instantiate_output_parser(node_type, class_object, params):
