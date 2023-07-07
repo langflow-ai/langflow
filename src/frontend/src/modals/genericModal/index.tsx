@@ -239,7 +239,7 @@ export default function GenericModal({
         
         {type == TypeModal.PROMPT && (
             <>
-              <div className="">
+              <div className="h-[6vh] overflow-y-auto custom-scroll">
               <div className="items-center flex flex-wrap">
                 <Variable className=" -ml-px mr-1 h-4 w-4 text-primary flex"></Variable>
                 <span className="text-md font-semibold text-primary">
@@ -281,7 +281,8 @@ export default function GenericModal({
             onClick={() => {
               switch (myModalType) {
                 case 1:
-                  setModalOpen(false);
+                  setValue(inputValue);
+                    setModalOpen(false);
                   break;
                 case 2:
                   validatePrompt(false);
