@@ -88,6 +88,14 @@ class CustomComponent(BaseModel):
             # If there isn't a type, append None
             else:
                 split_item.append(None)
+            for i in range(len(split_item)):
+                try:
+                    # Try to evaluate the item
+                    split_item[i] = ast.literal_eval(split_item[i])
+                except ValueError:
+                    # If it fails, just pass
+                    pass
+
             output_list.append(split_item)
 
         return output_list
