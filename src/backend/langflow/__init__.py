@@ -1,6 +1,7 @@
 from importlib import metadata
 from langflow.cache import cache_manager
 from langflow.processing.process import load_flow_from_json
+from langflow.utils.types import Prompt
 
 try:
     __version__ = metadata.version(__package__)
@@ -9,4 +10,4 @@ except metadata.PackageNotFoundError:
     __version__ = ""
 del metadata  # optional, avoids polluting the results of dir(__package__)
 
-__all__ = ["load_flow_from_json", "cache_manager"]
+__all__ = ["load_flow_from_json", "cache_manager", "Prompt"]
