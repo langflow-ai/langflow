@@ -33,6 +33,7 @@ import {
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
 import { Variable } from "lucide-react";
+import { TabsContext } from "../../contexts/tabsContext";
 
 export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const [open, setOpen] = useState(true);
@@ -55,6 +56,11 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const { types } = useContext(typesContext);
   const ref = useRef();
   const [enabled, setEnabled] = useState(null);
+  const { setTabsState, tabId, save } = useContext(TabsContext);
+  const { reactFlowInstance } = useContext(typesContext);
+
+  let disabled =
+  reactFlowInstance?.getEdges().some((e) => e.targetHandle === data.id) ?? false;
   if (nodeLength == 0) {
     closePopUp();
   }
@@ -66,8 +72,6 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
     }
   }
 
-  useEffect(() => {}, [closePopUp, data.node.template]);
-
   function changeAdvanced(node): void {
     Object.keys(data.node.template).filter((n, i) => {
       if (n === node.name) {
@@ -77,6 +81,20 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
     });
     setNodeValue(!nodeValue);
   }
+
+  const handleOnNewValue = (newValue: any, name) => {
+    data.node.template[name].value = newValue;
+    // Set state to pending
+    setTabsState((prev) => {
+      return {
+        ...prev,
+        [tabId]: {
+          ...prev[tabId],
+          isPending: true,
+        },
+      };
+    });
+  };
 
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
@@ -153,7 +171,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                         : data.node.template[n].value
                                     }
                                     onChange={(t: string[]) => {
-                                      data.node.template[n].value = t;
+                                      handleOnNewValue(t, n);
                                     }}
                                   />
                                 ) : data.node.template[n].multiline ? (
@@ -162,7 +180,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                     editNode={true}
                                     value={data.node.template[n].value ?? ""}
                                     onChange={(t: string) => {
-                                      data.node.template[n].value = t;
+                                      handleOnNewValue(t, n);
                                     }}
                                   />
                                 ) : (
@@ -174,7 +192,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                     }
                                     value={data.node.template[n].value ?? ""}
                                     onChange={(t) => {
-                                      data.node.template[n].value = t;
+                                      handleOnNewValue(t, n);
                                     }}
                                   />
                                 )}
@@ -183,13 +201,13 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                               <div className="ml-auto">
                                 {" "}
                                 <ToggleShadComponent
-                                  enabled={data.node.template[n].value}
-                                  setEnabled={(e) => {
-                                    data.node.template[n].value = e;
-                                    setEnabled(e);
+                                  disabled={disabled}
+                                  enabled={enabled}
+                                  setEnabled={(t) => {
+                                    handleOnNewValue(t, n);
+                                    setEnabled(t);
                                   }}
                                   size="small"
-                                  disabled={false}
                                 />
                               </div>
                             ) : data.node.template[n].type === "float" ? (
@@ -210,8 +228,8 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                   numberOfOptions={nodeLength}
                                   editNode={true}
                                   options={data.node.template[n].options}
-                                  onSelect={(newValue) =>
-                                    (data.node.template[n].value = newValue)
+                                  onSelect={(t) =>
+                                    (handleOnNewValue(t, n))
                                   }
                                   value={
                                     data.node.template[n].value ??
@@ -226,7 +244,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                   editNode={true}
                                   value={data.node.template[n].value ?? ""}
                                   onChange={(t) => {
-                                    data.node.template[n].value = t;
+                                    handleOnNewValue(t, n);
                                   }}
                                 />
                               </div>
@@ -237,12 +255,12 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                   disabled={false}
                                   value={data.node.template[n].value ?? ""}
                                   onChange={(t: string) => {
-                                    data.node.template[n].value = t;
+                                    handleOnNewValue(t, n);
                                   }}
                                   fileTypes={data.node.template[n].fileTypes}
                                   suffixes={data.node.template[n].suffixes}
                                   onFileChange={(t: string) => {
-                                    data.node.template[n].content = t;
+                                    handleOnNewValue(t, n);
                                   }}
                                 ></InputFileComponent>
                               </div>
@@ -254,7 +272,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                   disabled={false}
                                   value={data.node.template[n].value ?? ""}
                                   onChange={(t: string) => {
-                                    data.node.template[n].value = t;
+                                    handleOnNewValue(t, n);
                                   }}
                                 />
                               </div>
@@ -265,7 +283,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                   editNode={true}
                                   value={data.node.template[n].value ?? ""}
                                   onChange={(t: string) => {
-                                    data.node.template[n].value = t;
+                                    handleOnNewValue(t, n);
                                   }}
                                 />
                               </div>
