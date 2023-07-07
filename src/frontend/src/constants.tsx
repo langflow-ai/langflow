@@ -1,7 +1,8 @@
 // src/constants.tsx
 
 import { FlowType } from "./types/flow";
-import { buildTweaks } from "./utils";
+import { TabsState } from "./types/tabs";
+import { buildInputs, buildTweaks } from "./utils";
 
 /**
  * The base text for subtitle of Export Dialog (Toolbar)
@@ -70,7 +71,11 @@ export const TEXT_DIALOG_SUBTITLE = "Edit your text.";
  * @param {string} flowId - The id of the flow
  * @returns {string} - The python code
  */
-export const getPythonApiCode = (flow: FlowType, tweak?): string => {
+export const getPythonApiCode = (
+  flow: FlowType,
+  tweak?: any[],
+  tabsState?: TabsState
+): string => {
   const flowId = flow.id;
 
   // create a dictionary of node ids and the values is an empty dictionary
@@ -78,6 +83,7 @@ export const getPythonApiCode = (flow: FlowType, tweak?): string => {
   //   node.data.id
   // }
   const tweaks = buildTweaks(flow);
+  const inputs = buildInputs(tabsState, flow.id);
   return `import requests
 
 BASE_API_URL = "${window.location.protocol}//${
@@ -103,7 +109,7 @@ def run_flow(message: str, flow_id: str, tweaks: dict = None) -> dict:
     """
     api_url = f"{BASE_API_URL}/{flow_id}"
 
-    payload = {"inputs": {"input": message}}
+    payload = {"inputs": ${inputs}}
 
     if tweaks:
         payload["tweaks"] = tweaks
@@ -120,15 +126,20 @@ print(run_flow("Your message", flow_id=FLOW_ID, tweaks=TWEAKS))`;
  * @param {string} flowId - The id of the flow
  * @returns {string} - The curl code
  */
-export const getCurlCode = (flow: FlowType, tweak?): string => {
+export const getCurlCode = (
+  flow: FlowType,
+  tweak?: any[],
+  tabsState?: TabsState
+): string => {
   const flowId = flow.id;
   const tweaks = buildTweaks(flow);
+  const inputs = buildInputs(tabsState, flow.id);
   return `curl -X POST \\
   ${window.location.protocol}//${
     window.location.host
   }/api/v1/process/${flowId} \\
   -H 'Content-Type: application/json' \\
-  -d '{"inputs": {"input": message}, "tweaks": ${
+  -d '{"inputs": ${inputs}, "tweaks": ${
     tweak && tweak.length > 0
       ? buildTweakObject(tweak)
       : JSON.stringify(tweaks, null, 2)
@@ -139,9 +150,14 @@ export const getCurlCode = (flow: FlowType, tweak?): string => {
  * @param {string} flowName - The name of the flow
  * @returns {string} - The python code
  */
-export const getPythonCode = (flow: FlowType, tweak?): string => {
+export const getPythonCode = (
+  flow: FlowType,
+  tweak?: any[],
+  tabsState?: TabsState
+): string => {
   const flowName = flow.name;
   const tweaks = buildTweaks(flow);
+  const inputs = buildInputs(tabsState, flow.id);
   return `from langflow import load_flow_from_json
 TWEAKS = ${
     tweak && tweak.length > 0

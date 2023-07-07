@@ -904,6 +904,17 @@ export function groupByFamily(data, baseClasses, left, type) {
   }
 }
 
+export function buildInputs(tabsState, id) {
+  console.log(tabsState, id);
+  return tabsState &&
+    tabsState[id] &&
+    tabsState[id].formKeysData &&
+    tabsState[id].formKeysData.input_keys &&
+    Object.keys(tabsState[id].formKeysData.input_keys).length > 0
+    ? JSON.stringify(tabsState[id].formKeysData.input_keys)
+    : '{"input": message}';
+}
+
 export function buildTweaks(flow) {
   return flow.data.nodes.reduce((acc, node) => {
     acc[node.data.id] = {};
