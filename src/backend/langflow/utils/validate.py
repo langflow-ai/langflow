@@ -204,8 +204,9 @@ def create_class(code, class_name):
     code_obj = compile(
         ast.Module(body=[class_code], type_ignores=[]), "<string>", "exec"
     )
-    with contextlib.suppress(Exception):
-        exec(code_obj, exec_globals, locals())
+    # This suppresses import errors
+    # with contextlib.suppress(Exception):
+    exec(code_obj, exec_globals, locals())
     exec_globals[class_name] = locals()[class_name]
 
     # Return a function that imports necessary modules and creates an instance of the target class
