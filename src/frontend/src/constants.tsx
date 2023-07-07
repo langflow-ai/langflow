@@ -1,8 +1,10 @@
 // src/constants.tsx
 
+import { MessageSquareDashed } from "lucide-react";
 import { FlowType } from "./types/flow";
 import { TabsState } from "./types/tabs";
 import { buildInputs, buildTweaks } from "./utils";
+import { MessageSquare } from "lucide-react";
 
 /**
  * The base text for subtitle of Export Dialog (Toolbar)
@@ -56,6 +58,8 @@ export const CHAT_CANNOT_OPEN_TITLE = "Chat Cannot Open";
 export const CHAT_CANNOT_OPEN_DESCRIPTION = "This is not a chat flow.";
 
 export const FLOW_NOT_BUILT_TITLE = "Flow not built";
+
+export const THOUGHTS_ICON = MessageSquare;
 
 export const FLOW_NOT_BUILT_DESCRIPTION =
   "Please build the flow before chatting.";
