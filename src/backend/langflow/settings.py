@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     textsplitters: dict = {}
     utilities: dict = {}
     output_parsers: dict = {}
+    custom_components: dict = {}
+
     dev: bool = False
     database_url: str
     cache: str = "InMemoryCache"
@@ -66,6 +68,7 @@ class Settings(BaseSettings):
         self.documentloaders = new_settings.documentloaders or {}
         self.retrievers = new_settings.retrievers or {}
         self.output_parsers = new_settings.output_parsers or {}
+        self.custom_components = new_settings.custom_components or {}
         self.dev = dev
 
     def update_settings(self, **kwargs):
