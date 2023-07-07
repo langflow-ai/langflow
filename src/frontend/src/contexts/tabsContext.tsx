@@ -108,7 +108,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
   // function loadCookie(cookie: string) {
   //   if (cookie && Object.keys(templates).length > 0) {
-  //     let cookieObject: LangFlowState = JSON.parse(cookie);
+  //     let cookieObject: LangflowState = JSON.parse(cookie);
   //     try {
   //       cookieObject.flows.forEach((flow) => {
   //         if (!flow.data) {

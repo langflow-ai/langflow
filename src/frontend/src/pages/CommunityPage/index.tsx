@@ -37,31 +37,31 @@ export default function CommunityPage() {
     handleExamples();
   }, []);
   return (
-    <div className="flex h-full w-full flex-col overflow-auto bg-muted px-16">
-      <div className="flex w-full justify-between px-6 py-12 pb-2">
-        <span className="flex items-center justify-center gap-2 text-2xl font-semibold">
+    <div className="community-page-arrangement">
+      <div className="community-page-nav-arrangement">
+        <span className="community-page-nav-title">
           <Users2 className="w-6" />
           Community Examples
         </span>
-        <div className="flex gap-2">
+        <div className="community-page-nav-button">
           <a
             href="https://github.com/logspace-ai/langflow_examples"
             target="_blank"
             rel="noreferrer"
           >
             <Button variant="primary">
-              <GithubIcon className="mr-2 w-4" />
+              <GithubIcon className="main-page-nav-button" />
               Add Your Example
             </Button>
           </a>
         </div>
       </div>
-      <span className="flex w-[70%] px-6 pb-8 text-muted-foreground">
-        Discover and learn from shared examples by the LangFlow community. We
+      <span className="community-page-description-text">
+        Discover and learn from shared examples by the Langflow community. We
         welcome new example contributions that can help our community explore
         new and powerful features.
       </span>
-      <div className="grid w-full gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="community-pages-flows-panel">
         {!loadingExamples &&
           examples.map((flow, idx) => (
             <CardComponent
@@ -79,7 +79,7 @@ export default function CommunityPage() {
                     });
                   }}
                 >
-                  <GitFork className="mr-2 w-4" />
+                  <GitFork className="main-page-nav-button" />
                   Fork Example
                 </Button>
               }

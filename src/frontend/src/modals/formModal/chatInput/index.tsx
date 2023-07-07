@@ -1,7 +1,7 @@
 import { classNames } from "../../../utils";
 import { useContext, useEffect, useRef, useState } from "react";
 import { TabsContext } from "../../../contexts/tabsContext";
-import { Eraser, Lock, LucideSend, Send } from "lucide-react";
+import { Eraser, Lock, LucideSend } from "lucide-react";
 
 export default function ChatInput({
   lockChat,

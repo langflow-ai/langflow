@@ -32,7 +32,7 @@ export default function FloatComponent({
   return (
     <div
       className={
-        "w-full " + (disabled ? "pointer-events-none cursor-not-allowed" : "")
+        "w-full " + (disabled ? "float-component-pointer" : "")
       }
     >
       <input

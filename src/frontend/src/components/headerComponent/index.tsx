@@ -1,4 +1,4 @@
-import { BellIcon, Home, MoonIcon, SunIcon, Users2 } from "lucide-react";
+import { Home, MoonIcon, SunIcon, Users2 } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
 import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
 import { Button } from "../ui/button";
@@ -36,8 +36,8 @@ export default function Header() {
     fetchStars();
   }, []);
   return (
-    <div className="flex h-12 w-full items-center justify-between border-b bg-muted">
-      <div className="flex w-96 items-center justify-start gap-2">
+    <div className="header-arrangement">
+      <div className="header-start-display">
         <Link to="/">
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
@@ -45,7 +45,7 @@ export default function Header() {
           <MenuBar flows={flows} tabId={tabId} />
         )}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="round-button-div">
         <Link to="/">
           <Button
             className="gap-2"
@@ -69,17 +69,17 @@ export default function Header() {
           </Button>
         </Link>
       </div>
-      <div className="flex w-96 justify-end px-2">
-        <div className="ml-auto mr-2 flex items-center gap-5">
+      <div className="header-end-division">
+        <div className="header-end-display">
           <a
             href="https://github.com/logspace-ai/langflow"
             target="_blank"
             rel="noreferrer"
-            className="inline-flex h-9 items-center justify-center rounded-md border border-input px-3 pr-0 text-sm font-medium text-muted-foreground shadow-sm ring-offset-background  hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+            className="header-github-link"
           >
             <FaGithub className="mr-2 h-5 w-5" />
             Star
-            <div className="-mr-px ml-2 flex h-9 items-center justify-center rounded-md rounded-l-none border bg-background px-2 text-sm">
+            <div className="header-github-display">
               {stars}
             </div>
           </a>
@@ -89,7 +89,7 @@ export default function Header() {
             rel="noreferrer"
             className="text-muted-foreground"
           >
-            <FaTwitter className="h-5 w-5 hover:text-accent-foreground" />
+            <FaTwitter className="side-bar-button-size" />
           </a>
           <a
             href="https://discord.gg/EqksyE2EX9"
@@ -97,24 +97,24 @@ export default function Header() {
             rel="noreferrer"
             className="text-muted-foreground"
           >
-            <FaDiscord className="h-5 w-5 hover:text-accent-foreground" />
+            <FaDiscord className="side-bar-button-size" />
           </a>
 
           <Separator orientation="vertical" />
           <button
-            className="text-muted-foreground hover:text-accent-foreground "
+            className="extra-side-bar-save-disable"
             onClick={() => {
               setDark(!dark);
             }}
           >
             {dark ? (
-              <SunIcon className="h-5 w-5" />
+              <SunIcon className="side-bar-button-size" />
             ) : (
-              <MoonIcon className="h-5 w-5" />
+              <MoonIcon className="side-bar-button-size" />
             )}
           </button>
           <button
-            className="relative text-muted-foreground hover:text-accent-foreground"
+            className="extra-side-bar-save-disable relative"
             onClick={(event: React.MouseEvent<HTMLElement>) => {
               setNotificationCenter(false);
               const { top, left } = (
@@ -128,15 +128,15 @@ export default function Header() {
                   >
                     <AlertDropdown />
                   </div>
-                  <div className="fixed left-0 top-0 h-screen w-screen"></div>
+                  <div className="header-notifications-box"></div>
                 </>
               );
             }}
           >
             {notificationCenter && (
-              <div className="absolute right-[3px] h-1.5 w-1.5 rounded-full bg-destructive"></div>
+              <div className="header-notifications"></div>
             )}
-            <Bell className="h-5 w-5" aria-hidden="true" />
+            <Bell className="side-bar-button-size" aria-hidden="true" />
           </button>
         </div>
       </div>

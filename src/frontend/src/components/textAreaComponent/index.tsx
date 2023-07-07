@@ -61,7 +61,7 @@ export default function TextAreaComponent({
                   setMyValue(t);
                   onChange(t);
                 }}
-              />
+              />,
             );
           }}
         >
@@ -69,7 +69,7 @@ export default function TextAreaComponent({
             <ExternalLink
               strokeWidth={1.5}
               className={
-                "ml-3 h-6 w-6" +
+                "icons-parameters-comp" +
                 (disabled ? " text-ring" : " hover:text-accent-foreground")
               }
             />

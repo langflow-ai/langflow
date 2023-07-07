@@ -8,13 +8,13 @@ import ContextWrapper from "./contexts";
 import "./index.css";
 
 const root = ReactDOM.createRoot(
-  document.getElementById("root") as HTMLElement
+  document.getElementById("root") as HTMLElement,
 );
 root.render(
   <ContextWrapper>
     <BrowserRouter>
       <App />
     </BrowserRouter>
-  </ContextWrapper>
+  </ContextWrapper>,
 );
 reportWebVitals();

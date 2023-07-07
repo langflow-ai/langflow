@@ -28,7 +28,7 @@ export type TabsContextType = {
   setTabsState: Dispatch<SetStateAction<TabsState>>;
   paste: (
     selection: { nodes: any; edges: any },
-    position: { x: number; y: number; paneX?: number; paneY?: number }
+    position: { x: number; y: number; paneX?: number; paneY?: number },
   ) => void;
   lastCopiedSelection: { nodes: any; edges: any };
   setLastCopiedSelection: (selection: { nodes: any; edges: any }) => void;

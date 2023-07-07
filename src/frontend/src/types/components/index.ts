@@ -142,7 +142,7 @@ export type ShadTooltipProps = {
   style?: string;
 };
 export type ShadToolTipType = {
-  content?: string;
+  content?: ReactNode;
   side?: "top" | "right" | "bottom" | "left";
   asChild?: boolean;
   children?: ReactElement;

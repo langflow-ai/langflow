@@ -1,22 +1,18 @@
 import {
-  XMarkIcon,
-  ArrowDownTrayIcon,
   DocumentDuplicateIcon,
   ComputerDesktopIcon,
   ArrowUpTrayIcon,
   ArrowLeftIcon,
-  CommandLineIcon,
 } from "@heroicons/react/24/outline";
-import { Fragment, useContext, useRef, useState } from "react";
+import { useContext, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import ButtonBox from "./buttonBox";
 import { getExamples } from "../../controllers/API";
-import { error } from "console";
 import { alertContext } from "../../contexts/alertContext";
 import LoadingComponent from "../../components/loadingComponent";
 import { FlowType } from "../../types/flow";
-import { classNames, snakeToSpaces, toNormalCase } from "../../utils";
+import { classNames } from "../../utils";
 import {
   Dialog,
   DialogContent,
@@ -26,7 +22,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-import { Button } from "../../components/ui/button";
 import { IMPORT_DIALOG_SUBTITLE } from "../../constants";
 
 export default function ImportModal() {
@@ -76,10 +71,10 @@ export default function ImportModal() {
           <DialogTitle className="flex items-center">
             {showExamples && (
               <>
-                <div className="absolute left-0 top-2 z-50 hidden pl-4 pt-4 sm:block">
+                <div className="dialog-header-modal-div">
                   <button
                     type="button"
-                    className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+                    className="dialog-header-modal-button disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
                     onClick={() => {
                       setShowExamples(false);
                     }}
@@ -106,20 +101,20 @@ export default function ImportModal() {
 
         <div
           className={classNames(
-            "h-full w-full overflow-y-auto scrollbar-hide",
+            "dialog-modal-examples-div",
             showExamples && !loadingExamples
-              ? "start mx-auto flex flex-row flex-wrap items-start justify-center overflow-auto"
-              : "flex flex-row items-center justify-center"
+              ? "dialog-modal-example-true"
+              : "dialog-modal-example-false"
           )}
         >
           {!showExamples && (
-            <div className="flex h-full w-full items-center justify-evenly">
+            <div className="dialog-modal-button-box-div">
               <ButtonBox
                 size="big"
                 bgColor="bg-medium-emerald "
                 description="Prebuilt Examples"
                 icon={
-                  <DocumentDuplicateIcon className="h-10 w-10 flex-shrink-0" />
+                  <DocumentDuplicateIcon className="document-icon" />
                 }
                 onClick={() => {
                   setShowExamples(true);
@@ -133,7 +128,7 @@ export default function ImportModal() {
                 bgColor="bg-almost-dark-blue "
                 description="Import from Local"
                 icon={
-                  <ComputerDesktopIcon className="h-10 w-10 flex-shrink-0" />
+                  <ComputerDesktopIcon className="document-icon" />
                 }
                 onClick={() => {
                   uploadFlow();
@@ -145,7 +140,7 @@ export default function ImportModal() {
             </div>
           )}
           {showExamples && loadingExamples && (
-            <div className="flex items-center justify-center align-middle">
+            <div className="loading-component-div">
               <LoadingComponent remSize={30} />
             </div>
           )}
@@ -178,11 +173,11 @@ export default function ImportModal() {
         </div>
 
         <DialogFooter>
-          <div className="mt-2 flex w-full items-center justify-center">
+          <div className="dialog-modal-footer">
             <a
               href="https://github.com/logspace-ai/langflow_examples"
               target="_blank"
-              className="flex items-center justify-center text-muted-foreground "
+              className="dialog-modal-footer-link "
               rel="noreferrer"
             >
               <svg
@@ -197,7 +192,7 @@ export default function ImportModal() {
                   fill="currentColor"
                 />
               </svg>
-              <span className="ml-2 ">LangFlow Examples</span>
+              <span className="ml-2 ">Langflow Examples</span>
             </a>
           </div>
         </DialogFooter>

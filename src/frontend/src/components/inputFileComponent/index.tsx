@@ -94,10 +94,10 @@ export default function InputFileComponent({
   return (
     <div
       className={
-        disabled ? "pointer-events-none w-full cursor-not-allowed" : "w-full"
+        disabled ? "input-component-div" : "w-full"
       }
     >
-      <div className="flex w-full items-center">
+      <div className="input-file-component">
         <span
           onClick={handleButtonClick}
           className={
@@ -112,7 +112,10 @@ export default function InputFileComponent({
           {!editNode && !loading && (
             <FileSearch2
               strokeWidth={1.5}
-              className="h-6 w-6 hover:text-accent-foreground ml-3"
+              className={
+                "icons-parameters-comp" +
+                (disabled ? " text-ring " : " hover:text-accent-foreground")
+              }
             />
           )}
           {!editNode && loading && (

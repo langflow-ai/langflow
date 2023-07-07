@@ -100,7 +100,7 @@ export default function PromptAreaComponent({
               <ExternalLink
                 strokeWidth={1.5}
                 className={
-                  "ml-3 h-6 w-6" +
+                  "icons-parameters-comp" +
                   (disabled ? " text-ring" : " hover:text-accent-foreground")
                 }
               />
