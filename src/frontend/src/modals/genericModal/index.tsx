@@ -171,7 +171,7 @@ export default function GenericModal({
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger></DialogTrigger>
-      <DialogContent className="min-w-[80vw]">
+      <DialogContent className="min-w-[80vw] gap-2">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">{myModalTitle}</span>
@@ -200,7 +200,7 @@ export default function GenericModal({
         <div
           className={classNames(
             !isEdit ? "rounded-lg border" : "",
-            "flex h-[60vh] w-full"
+            "flex h-[55vh] w-full"
           )}
         >
           {type == TypeModal.PROMPT && isEdit ? (
@@ -238,40 +238,40 @@ export default function GenericModal({
 
         {type == TypeModal.PROMPT && (
           <>
-            <div className="h-[6vh] overflow-y-auto custom-scroll">
-              <div className="flex flex-wrap items-center">
-                <Variable className=" -ml-px mr-1 flex h-4 w-4 text-primary"></Variable>
-                <span className="text-md font-semibold text-primary">
-                  Input Variables:{" "}
-                  {wordsHighlight && wordsHighlight.length == 0 ? "-" : ""}
-                </span>
+          <div className="h-[60px] overflow-y-auto custom-scroll md:w-5/6 sm:6/6 mt-3">
+            <div className="flex flex-wrap items-center">
+              <Variable className=" -ml-px mr-1 flex h-4 w-4 text-primary"></Variable>
+              <span className="text-md font-semibold text-primary">
+                Input Variables:{" "}
+                {wordsHighlight && wordsHighlight.length == 0 ? "-" : ""}
+              </span>
 
-                {wordsHighlight.map((word, index) => (
-                  <ShadTooltip
-                    key={getRandomKeyByssmm() + index}
-                    content={word.replace(/[{}]/g, "")}
-                    asChild={false}
-                    delayDuration={1500}
+              {wordsHighlight.map((word, index) => (
+                <ShadTooltip
+                  key={getRandomKeyByssmm() + index}
+                  content={word.replace(/[{}]/g, "")}
+                  asChild={false}
+                  delayDuration={1500}
+                >
+                  <Badge
+                    key={index}
+                    variant="gray"
+                    size="md"
+                    className="m-1 max-w-[40vw] cursor-default truncate p-2.5 text-sm"
                   >
-                    <Badge
-                      key={index}
-                      variant="gray"
-                      size="md"
-                      className="m-1 max-w-[40vw] cursor-default truncate p-2.5 text-sm"
-                    >
-                      <div className="relative bottom-[1px]">
-                        <span>
-                          {word.replace(/[{}]/g, "").length > 59
-                            ? word.replace(/[{}]/g, "").slice(0, 56) + "..."
-                            : word.replace(/[{}]/g, "")}
-                        </span>
-                      </div>
-                    </Badge>
-                  </ShadTooltip>
-                ))}
-              </div>
+                    <div className="relative bottom-[1px]">
+                      <span>
+                        {word.replace(/[{}]/g, "").length > 59
+                          ? word.replace(/[{}]/g, "").slice(0, 56) + "..."
+                          : word.replace(/[{}]/g, "")}
+                      </span>
+                    </div>
+                  </Badge>
+                </ShadTooltip>
+              ))}
             </div>
-          </>
+          </div>
+        </>
         )}
 
         <DialogFooter>
@@ -284,7 +284,9 @@ export default function GenericModal({
                   setModalOpen(false);
                   break;
                 case 2:
-                  validatePrompt(false);
+                  !inputValue || inputValue == ""
+                    ? setModalOpen(false)
+                    : validatePrompt(false);
                   break;
 
                 default:
