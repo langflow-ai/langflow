@@ -7,7 +7,7 @@ import "ace-builds/src-noconflict/theme-twilight";
 import "ace-builds/src-noconflict/ext-language_tools";
 // import "ace-builds/webpack-resolver";
 import { darkContext } from "../../contexts/darkContext";
-import { postCustomComponent, postValidateCode } from "../../controllers/API";
+import { postValidateCode } from "../../controllers/API";
 import { alertContext } from "../../contexts/alertContext";
 import {
   Dialog,
@@ -63,7 +63,8 @@ export default function CodeAreaModal({
             setSuccessData({
               title: "Code is ready to run",
             });
-            // setValue(code);
+            setValue(code);
+            setModalOpen(false);
           } else {
             if (funcErrors.length !== 0) {
               setErrorData({
@@ -90,13 +91,6 @@ export default function CodeAreaModal({
           title: "There is something wrong with this code, please review it",
         });
       });
-    postCustomComponent(code, nodeClass).then((apiReturn) => {
-      const data = apiReturn.data;
-      if (data) {
-        setNodeClass(data);
-        setModalOpen(false);
-      }
-    });
   }
 
   return (
