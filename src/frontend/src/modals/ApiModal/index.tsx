@@ -1,42 +1,15 @@
-import { useContext, useEffect, useRef, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
+import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
-import "ace-builds/src-noconflict/ext-language_tools";
+import { useContext, useEffect, useRef, useState } from "react";
+import { PopUpContext } from "../../contexts/popUpContext";
 // import "ace-builds/webpack-resolver";
-import { darkContext } from "../../contexts/darkContext";
+import { Check, Clipboard, Code2 } from "lucide-react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "../../components/ui/dialog";
-import { FlowType } from "../../types/flow/index";
-import { getCurlCode, getPythonApiCode, getPythonCode } from "../../constants";
-import { EXPORT_CODE_DIALOG } from "../../constants";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "../../components/ui/tabs";
-import { Check, Clipboard, Code2 } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../components/ui/table";
-import { buildTweaks, classNames, limitScrollFieldsModal } from "../../utils";
 import AccordionComponent from "../../components/AccordionComponent";
+import ShadTooltip from "../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../components/codeAreaComponent";
 import Dropdown from "../../components/dropdownComponent";
 import FloatComponent from "../../components/floatComponent";
@@ -47,9 +20,38 @@ import IntComponent from "../../components/intComponent";
 import PromptAreaComponent from "../../components/promptComponent";
 import TextAreaComponent from "../../components/textAreaComponent";
 import ToggleShadComponent from "../../components/toggleShadComponent";
-import ShadTooltip from "../../components/ShadTooltipComponent";
-import { cloneDeep, filter } from "lodash";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../../components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../components/ui/table";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../../components/ui/tabs";
+import {
+  EXPORT_CODE_DIALOG,
+  getCurlCode,
+  getPythonApiCode,
+  getPythonCode,
+} from "../../constants";
+import { darkContext } from "../../contexts/darkContext";
 import { TabsContext } from "../../contexts/tabsContext";
+import { FlowType } from "../../types/flow/index";
+import { buildTweaks, classNames } from "../../utils";
 
 export default function ApiModal({ flow }: { flow: FlowType }) {
   const [open, setOpen] = useState(true);

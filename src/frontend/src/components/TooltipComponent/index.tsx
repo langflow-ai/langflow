@@ -1,6 +1,5 @@
-import { ReactElement } from "react";
-import { LightTooltip } from "../LightTooltipComponent";
 import { TooltipComponentType } from "../../types/components";
+import { LightTooltip } from "../LightTooltipComponent";
 
 export default function Tooltip({
   children,

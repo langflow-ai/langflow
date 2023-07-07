@@ -1,21 +1,21 @@
-import _, { set } from "lodash";
-import { useContext, useRef, useState, useEffect, useCallback } from "react";
+import _ from "lodash";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import ReactFlow, {
-  OnSelectionChangeParams,
-  useNodesState,
-  useEdgesState,
-  useReactFlow,
-  EdgeChange,
-  Connection,
-  addEdge,
-  NodeDragHandler,
-  SelectionDragHandler,
-  OnEdgesDelete,
-  Edge,
-  updateEdge,
   Background,
+  Connection,
   Controls,
+  Edge,
+  EdgeChange,
   NodeChange,
+  NodeDragHandler,
+  OnEdgesDelete,
+  OnSelectionChangeParams,
+  SelectionDragHandler,
+  addEdge,
+  updateEdge,
+  useEdgesState,
+  useNodesState,
+  useReactFlow,
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import Chat from "../../../../components/chatComponent";
@@ -23,12 +23,12 @@ import { alertContext } from "../../../../contexts/alertContext";
 import { locationContext } from "../../../../contexts/locationContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
+import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import { APIClassType } from "../../../../types/api";
 import { FlowType, NodeType } from "../../../../types/flow";
 import { isValidConnection } from "../../../../utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import ExtraSidebar from "../extraSidebarComponent";
-import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 
 const nodeTypes = {
   genericNode: GenericNode,

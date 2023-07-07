@@ -1,10 +1,10 @@
 import { Dialog, Transition } from "@headlessui/react";
-import { XMarkIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
+import { DocumentTextIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useRef, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
-import { darkContext } from "../../contexts/darkContext";
-import { checkPrompt } from "../../controllers/API";
 import { alertContext } from "../../contexts/alertContext";
+import { darkContext } from "../../contexts/darkContext";
+import { PopUpContext } from "../../contexts/popUpContext";
+import { checkPrompt } from "../../controllers/API";
 export default function PromptAreaModal({
   value,
   setValue,
