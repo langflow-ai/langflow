@@ -1,8 +1,8 @@
-import { Link } from "react-router-dom";
 import { Transition } from "@headlessui/react";
+import { CheckCircle2, Info, X, XCircle } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { SingleAlertComponentType } from "../../../../types/alerts";
-import { X, CheckCircle2, Info, XCircle } from "lucide-react";
 
 export default function SingleAlert({
   dropItem,

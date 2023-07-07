@@ -1,7 +1,7 @@
 import { Transition } from "@headlessui/react";
+import { CheckCircle2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { SuccessAlertType } from "../../types/alerts";
-import { CheckCircle2 } from "lucide-react";
 
 export default function SuccessAlert({
   title,

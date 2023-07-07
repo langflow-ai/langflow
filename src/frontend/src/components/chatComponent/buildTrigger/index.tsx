@@ -1,16 +1,16 @@
-import { useContext, useState } from "react";
 import { Transition } from "@headlessui/react";
 import { Zap } from "lucide-react";
-import { validateNodes } from "../../../utils";
-import { FlowType } from "../../../types/flow";
+import { useContext, useState } from "react";
 import Loading from "../../../components/ui/loading";
 import { useSSE } from "../../../contexts/SSEContext";
-import { typesContext } from "../../../contexts/typesContext";
 import { alertContext } from "../../../contexts/alertContext";
+import { typesContext } from "../../../contexts/typesContext";
 import { postBuildInit } from "../../../controllers/API";
+import { FlowType } from "../../../types/flow";
+import { validateNodes } from "../../../utils";
 
-import RadialProgressComponent from "../../RadialProgress";
 import { TabsContext } from "../../../contexts/tabsContext";
+import RadialProgressComponent from "../../RadialProgress";
 
 export default function BuildTrigger({
   open,
