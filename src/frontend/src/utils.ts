@@ -911,7 +911,7 @@ export function buildInputs(tabsState, id) {
     tabsState[id].formKeysData.input_keys &&
     Object.keys(tabsState[id].formKeysData.input_keys).length > 0
     ? JSON.stringify(tabsState[id].formKeysData.input_keys)
-    : '{"input": message}';
+    : '{"input": "message"}';
 }
 
 export function buildTweaks(flow) {
