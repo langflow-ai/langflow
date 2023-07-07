@@ -76,12 +76,20 @@ def build_langchain_types_dict():  # sourcery skip: dict-assign-update-to-union
 def add_new_custom_field(
     template, field_name: str, field_type: str, field_config: dict
 ):
+    # Check field_config if any of the keys are in it
+    # if it is, update the value
+    name = field_config.pop("name", field_name)
+    field_type = field_config.pop("field_type", field_type)
+    required = field_config.pop("required", True)
+    placeholder = field_config.pop("placeholder", "")
+
     new_field = TemplateField(
-        name=field_name,
+        name=name,
         field_type=field_type,
         show=True,
-        required=True,
+        required=required,
         advanced=False,
+        placeholder=placeholder,
         **field_config,
     )
     template.get("template")[field_name] = new_field.to_dict()
@@ -121,6 +129,8 @@ def build_langchain_template_custom_component(extractor: CustomComponent):
 
     if "display_name" in template_config and frontend_node is not None:
         frontend_node["display_name"] = template_config["display_name"]
+    if "description" in template_config and frontend_node is not None:
+        frontend_node["description"] = template_config["description"]
     raw_code = extractor.code
     field_config = template_config.get("field_config", {})
     if function_args is not None:
