@@ -45,7 +45,7 @@ export default function ChatTrigger({ open, setOpen, isBuilt, canOpen }) {
       <button
         onClick={handleClick}
         className={
-          "shadow-round-btn-shadow hover:shadow-round-btn-shadow fixed bottom-4 right-4 flex h-12 w-12 items-center justify-center rounded-full bg-border px-3 py-1 shadow-md transition-all " +
+          "shadow-round-btn-shadow hover:shadow-round-btn-shadow message-button " +
           (!isBuilt || !canOpen ? "cursor-not-allowed" : "cursor-pointer")
         }
       >
@@ -54,8 +54,8 @@ export default function ChatTrigger({ open, setOpen, isBuilt, canOpen }) {
             className={
               "h-6 w-6 transition-all " +
               (isBuilt && canOpen
-                ? "fill-chat-trigger stroke-chat-trigger stroke-1"
-                : "fill-chat-trigger-disabled stroke-chat-trigger-disabled stroke-1")
+                ? "message-button-icon"
+                : "disabled-message-button-icon")
             }
             style={{ color: "white" }}
             strokeWidth={1.5}
