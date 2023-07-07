@@ -242,8 +242,7 @@ export default function GenericModal({
             <div className="flex flex-wrap items-center">
               <Variable className=" -ml-px mr-1 flex h-4 w-4 text-primary"></Variable>
               <span className="text-md font-semibold text-primary">
-                Input Variables:{" "}
-                {wordsHighlight && wordsHighlight.length == 0 ? "-" : ""}
+                Input Variables:
               </span>
 
               {wordsHighlight.map((word, index) => (

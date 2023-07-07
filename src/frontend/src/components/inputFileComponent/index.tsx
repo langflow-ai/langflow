@@ -91,6 +91,7 @@ export default function InputFileComponent({
     input.click();
   };
 
+
   return (
     <div className={disabled ? "input-component-div" : "w-full"}>
       <div className="input-file-component">
@@ -98,8 +99,10 @@ export default function InputFileComponent({
           onClick={handleButtonClick}
           className={
             editNode
-              ? "input-edit-node " + "input-primary "
-              : "input-primary " + (disabled ? "input-disable " : "")
+              ? " input-edit-node " + " input-dialog "
+              : (disabled ? " input-disable " : "") +
+                " input-primary " +
+                " input-dialog "
           }
         >
           {myValue !== "" ? myValue : "No file"}
