@@ -1,7 +1,7 @@
 import { Dialog, Transition } from "@headlessui/react";
 import {
-  ClipboardDocumentListIcon,
   XMarkIcon,
+  ClipboardDocumentListIcon,
 } from "@heroicons/react/24/outline";
 import { Fragment, useContext, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";

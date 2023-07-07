@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import React, { ReactNode } from "react";
 import { classNames } from "../../../utils";
 
 export default function ButtonBox({

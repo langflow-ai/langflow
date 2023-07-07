@@ -1,6 +1,7 @@
 import { useContext, useEffect, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import CodeAreaModal from "../../modals/codeAreaModal";
+import TextAreaModal from "../../modals/textAreaModal";
 import { TextAreaComponentType } from "../../types/components";
 
 import { ExternalLink } from "lucide-react";

@@ -1,9 +1,9 @@
 import { Listbox, Transition } from "@headlessui/react";
-import { Check, ChevronsUpDown } from "lucide-react";
 import { Fragment, useContext, useEffect, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
 import { DropDownComponentType } from "../../types/components";
 import { classNames } from "../../utils";
+import { ChevronsUpDown, Check } from "lucide-react";
+import { PopUpContext } from "../../contexts/popUpContext";
 
 export default function Dropdown({
   value,

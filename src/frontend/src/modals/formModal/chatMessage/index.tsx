@@ -1,17 +1,32 @@
-import Convert from "ansi-to-html";
-import { ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ChatMessageType } from "../../../types/chat";
+import { classNames } from "../../../utils";
+import AiIcon from "../../../assets/Gooey Ring-5s-271px.svg";
+import AiIconStill from "../../../assets/froze-flow.png";
+import Robot from "../../../assets/robot.png";
+import MaleTechnology from "../../../assets/male-technologist.png";
+import FileCard from "../fileComponent";
 import ReactMarkdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
-import MaleTechnology from "../../../assets/male-technologist.png";
-import Robot from "../../../assets/robot.png";
-import { THOUGHTS_ICON } from "../../../constants";
-import { ChatMessageType } from "../../../types/chat";
-import { classNames } from "../../../utils";
-import FileCard from "../fileComponent";
 import { CodeBlock } from "./codeBlock";
+import Convert from "ansi-to-html";
+import {
+  User2,
+  MessageSquare,
+  ChevronDown,
+  MessageCircle,
+  MessageSquareDashed,
+} from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "../../../components/ui/accordion";
+import { Badge } from "../../../components/ui/badge";
+import { THOUGHTS_ICON } from "../../../constants";
 
 export default function ChatMessage({
   chat,

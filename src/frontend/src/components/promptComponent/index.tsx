@@ -1,13 +1,13 @@
 import { useContext, useEffect, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
-import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
+import GenericModal from "../../modals/genericModal";
 import { TypeModal } from "../../utils";
 
-import * as _ from "lodash";
 import { ExternalLink } from "lucide-react";
-import { typesContext } from "../../contexts/typesContext";
 import { postValidatePrompt } from "../../controllers/API";
+import { typesContext } from "../../contexts/typesContext";
+import * as _ from "lodash";
 
 export default function PromptAreaComponent({
   field_name,
