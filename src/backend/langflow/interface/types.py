@@ -72,6 +72,10 @@ def build_langchain_types_dict():  # sourcery skip: dict-assign-update-to-union
     return all_types
 
 
+def process_type(field_type: str):
+    return "prompt" if field_type == "Prompt" else field_type
+
+
 # TODO: Move to correct place
 def add_new_custom_field(
     template, field_name: str, field_type: str, field_config: dict
@@ -80,6 +84,8 @@ def add_new_custom_field(
     # if it is, update the value
     name = field_config.pop("name", field_name)
     field_type = field_config.pop("field_type", field_type)
+    field_type = process_type(field_type)
+
     required = field_config.pop("required", True)
     placeholder = field_config.pop("placeholder", "")
 
