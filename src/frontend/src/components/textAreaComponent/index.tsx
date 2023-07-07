@@ -27,12 +27,11 @@ export default function TextAreaComponent({
   }, [closePopUp]);
 
   return (
-    <div className={disabled ? "pointer-events-none cursor-not-allowed" : ""}>
+    <div className={disabled ? "cursor-not-allowed" : ""}>
       <div
         className={
-          editNode
-            ? "w-full items-center"
-            : "w-full flex items-center"
+          (editNode ? "w-full items-center" : "flex w-full items-center") +
+          (disabled ? " pointer-events-none" : "")
         }
       >
         <span
@@ -52,12 +51,14 @@ export default function TextAreaComponent({
           }}
           className={
             editNode
-            ? "input-edit-node input-dialog "
-            : "input-primary input-dialog " + (disabled ? "input-disable" : "")
+              ? "input-edit-node input-dialog "
+              : "input-dialog input-primary " +
+                (disabled ? "input-disable" : "")
           }
         >
           {myValue !== "" ? myValue : "Type something..."}
         </span>
+
         <button
           onClick={() => {
             openPopUp(
@@ -74,7 +75,15 @@ export default function TextAreaComponent({
             );
           }}
         >
-          {!editNode && <ExternalLink strokeWidth={1.5} className="w-6 h-6 hover:text-accent-foreground ml-3" />}
+          {!editNode && (
+            <ExternalLink
+              strokeWidth={1.5}
+              className={
+                "ml-3 h-6 w-6" +
+                (disabled ? " text-ring" : " hover:text-accent-foreground")
+              }
+            />
+          )}
         </button>
       </div>
     </div>

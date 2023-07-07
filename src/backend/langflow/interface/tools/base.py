@@ -90,7 +90,7 @@ class ToolCreator(LangChainTypeCreator):
     def get_signature(self, name: str) -> Optional[Dict]:
         """Get the signature of a tool."""
 
-        base_classes = ["Tool"]
+        base_classes = ["Tool", "BaseTool"]
         fields = []
         params = []
         tool_params = {}

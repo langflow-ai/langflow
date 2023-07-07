@@ -201,6 +201,15 @@ class PromptVertex(Vertex):
             self._build()
         return self._built_object
 
+    def _built_object_repr(self):
+        if self.artifacts and hasattr(self._built_object, "format"):
+            # We'll build the prompt with the artifacts
+            # to show the user what the prompt looks like
+            # with the variables filled in
+            return self._built_object.format(**self.artifacts)
+        else:
+            return super()._built_object_repr()
+
 
 class OutputParserVertex(Vertex):
     def __init__(self, data: Dict):

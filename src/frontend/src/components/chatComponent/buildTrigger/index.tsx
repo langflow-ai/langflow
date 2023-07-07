@@ -8,7 +8,6 @@ import { useSSE } from "../../../contexts/SSEContext";
 import { typesContext } from "../../../contexts/typesContext";
 import { alertContext } from "../../../contexts/alertContext";
 import { postBuildInit } from "../../../controllers/API";
-import ShadTooltip from "../../ShadTooltipComponent";
 
 import RadialProgressComponent from "../../RadialProgress";
 import { TabsContext } from "../../../contexts/tabsContext";
@@ -96,10 +95,9 @@ export default function BuildTrigger({
             [flowId]: {
               ...old[flowId],
               formKeysData: parsedData,
-            
-            }
+            },
           };
-        })
+        });
       } else {
         // Otherwise, process the data
         const isValid = processStreamResult(parsedData);
@@ -168,7 +166,7 @@ export default function BuildTrigger({
       leaveFrom="translate-y-0"
       leaveTo="translate-y-96"
     >
-      <div className="fixed right-4 bottom-20">
+      <div className="fixed bottom-20 right-4">
         <div
           className={`${eventClick} align-center shadow-round-btn-shadow hover:shadow-round-btn-shadow flex h-12 w-12 cursor-pointer justify-center rounded-full bg-border px-3 py-1 shadow-md`}
           onClick={() => {
@@ -189,7 +187,10 @@ export default function BuildTrigger({
               ) : isBuilding ? (
                 <Loading strokeWidth={1.5} className="stroke-build-trigger" />
               ) : (
-                <Zap strokeWidth={1.5} className="sh-6 w-6 fill-build-trigger stroke-1 stroke-build-trigger" />
+                <Zap
+                  strokeWidth={1.5}
+                  className="sh-6 w-6 fill-build-trigger stroke-build-trigger stroke-1"
+                />
               )}
             </div>
           </button>

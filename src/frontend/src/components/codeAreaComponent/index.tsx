@@ -1,9 +1,7 @@
 import { useContext, useEffect, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import CodeAreaModal from "../../modals/codeAreaModal/v2";
-import TextAreaModal from "../../modals/textAreaModal";
-import { CodeAreaComponentType, TextAreaComponentType } from "../../types/components";
-
+import { CodeAreaComponentType } from "../../types/components";
 
 import { ExternalLink } from "lucide-react";
 
@@ -54,7 +52,8 @@ export default function CodeAreaComponent({
           className={
             editNode
               ? "input-edit-node input-dialog "
-              : "input-primary input-dialog " + (disabled ? "input-disable" : "")
+              : "input-dialog input-primary " +
+                (disabled ? "input-disable" : "")
           }
         >
           {myValue !== "" ? myValue : "Type something..."}
@@ -63,9 +62,9 @@ export default function CodeAreaComponent({
           onClick={() => {
             openPopUp(
               <CodeAreaModal
-              key={myValue}
-              dynamic={dynamic}
-              setNodeClass={setNodeClass}
+                key={myValue}
+                dynamic={dynamic}
+                setNodeClass={setNodeClass}
                 value={myValue}
                 nodeClass={nodeClass}
                 setValue={(t: string) => {
@@ -77,7 +76,10 @@ export default function CodeAreaComponent({
           }}
         >
           {!editNode && (
-            <ExternalLink strokeWidth={1.5} className="w-6 h-6 hover:text-accent-foreground  ml-3" />
+            <ExternalLink
+              strokeWidth={1.5}
+              className="ml-3 h-6 w-6  hover:text-accent-foreground"
+            />
           )}
         </button>
       </div>
