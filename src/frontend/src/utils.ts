@@ -46,6 +46,7 @@ import {
   TerminalSquare,
   Wand2,
   Wrench,
+  Sparkles,
 } from "lucide-react";
 import { SupabaseIcon } from "./icons/supabase";
 import { MongoDBIcon } from "./icons/MongoDB";
@@ -128,6 +129,7 @@ export const nodeColors: { [char: string]: string } = {
   output_parsers: "#E6A627",
   str: "#049524",
   retrievers: "#e6b25a",
+  custom_components: "#ab11ab",
   unknown: "#9CA3AF",
 };
 
@@ -149,6 +151,7 @@ export const nodeNames: { [char: string]: string } = {
   retrievers: "Retrievers",
   utilities: "Utilities",
   output_parsers: "Output Parsers",
+  custom_components: "Custom",
   unknown: "Unknown",
 };
 
@@ -304,12 +307,15 @@ export const nodeIconsLucide: {
   retrievers: FileSearch as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
+  custom_components: Sparkles as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
   unknown: HelpCircle as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
   custom: Edit as React.ForwardRefExoticComponent<
-  ComponentType<SVGProps<SVGSVGElement>>
->,
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
 };
 
 export const gradients = [
@@ -796,36 +802,36 @@ export function groupByFamily(data, baseClasses, left, type) {
   let parentOutput: string;
   let arrOfParent: string[] = [];
   let arrOfType: { family: string; type: string; component: string }[] = [];
-  let arrOfLength: { length: number; type: string; }[] = [];
+  let arrOfLength: { length: number; type: string }[] = [];
   let lastType = "";
   Object.keys(data).map((d) => {
-      Object.keys(data[d]).map((n) => {
-          try {
-              if (
-                  data[d][n].base_classes.some((r) =>
-                      baseClasses.split("\n").includes(r)
-                  )
-              ) {
-                  arrOfParent.push(d);
-              }
-              if (n === type) {
-                  parentOutput = d;
-              }
-  
-              if (d !== lastType) {
-                  arrOfLength.push({
-                      length: Object.keys(data[d]).length,
-                      type: d
-                  });
-  
-                  lastType = d;
-              }
-          } catch (e) {
-              console.log(e);
-          }
-      });
+    Object.keys(data[d]).map((n) => {
+      try {
+        if (
+          data[d][n].base_classes.some((r) =>
+            baseClasses.split("\n").includes(r)
+          )
+        ) {
+          arrOfParent.push(d);
+        }
+        if (n === type) {
+          parentOutput = d;
+        }
+
+        if (d !== lastType) {
+          arrOfLength.push({
+            length: Object.keys(data[d]).length,
+            type: d,
+          });
+
+          lastType = d;
+        }
+      } catch (e) {
+        console.log(e);
+      }
+    });
   });
-  
+
   Object.keys(data).map((d) => {
     Object.keys(data[d]).map((n) => {
       try {
@@ -835,7 +841,7 @@ export function groupByFamily(data, baseClasses, left, type) {
               arrOfType.push({
                 family: d,
                 type: data,
-                component: n
+                component: n,
               });
             }
           });
@@ -846,61 +852,64 @@ export function groupByFamily(data, baseClasses, left, type) {
     });
   });
 
-  if(left == false){
+  if (left == false) {
     let groupedBy = arrOfType.filter((object, index, self) => {
       const foundIndex = self.findIndex(
         (o) => o.family === object.family && o.type === object.type
       );
       return foundIndex === index;
     });
-  
+
     return groupedBy.reduce((result, item) => {
-      const existingGroup = result.find((group) => group.family === item.family);
-  
+      const existingGroup = result.find(
+        (group) => group.family === item.family
+      );
+
       if (existingGroup) {
         existingGroup.type += `, ${item.type}`;
       } else {
-        result.push({ family: item.family, type: item.type, component: item.component });
+        result.push({
+          family: item.family,
+          type: item.type,
+          component: item.component,
+        });
       }
-  
+
       if (left == false) {
         let resFil = result.filter((group) => group.family === parentOutput);
         result = resFil;
       }
-  
+
       return result;
     }, []);
-  }
-
-  else{
+  } else {
     const groupedArray = [];
     const groupedData = {};
-    
+
     arrOfType.forEach((item) => {
-        const { family, type, component } = item;
-        const key = `${family}-${type}`;
-    
-        if (!groupedData[key]) {
-            groupedData[key] = { family, type, component: [component] };
-        } else {
-            groupedData[key].component.push(component);
-        }
+      const { family, type, component } = item;
+      const key = `${family}-${type}`;
+
+      if (!groupedData[key]) {
+        groupedData[key] = { family, type, component: [component] };
+      } else {
+        groupedData[key].component.push(component);
+      }
     });
-    
+
     for (const key in groupedData) {
-        groupedArray.push(groupedData[key]);
+      groupedArray.push(groupedData[key]);
     }
 
     groupedArray.forEach((object, index, self) => {
-      const findObj = arrOfLength.find(x => x.type == object.family);
-      if(object.component.length == findObj.length){
-        self[index]['type'] = "";
+      const findObj = arrOfLength.find((x) => x.type == object.family);
+      if (object.component.length == findObj.length) {
+        self[index]["type"] = "";
+      } else {
+        self[index]["type"] = object.component.join(", ");
       }
-      else{
-        self[index]['type'] = object.component.join(', ');
-      }
-    })
-    return groupedArray
+    });
+    return groupedArray;
   }
 }
 
