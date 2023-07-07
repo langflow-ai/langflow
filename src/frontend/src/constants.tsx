@@ -166,7 +166,7 @@ TWEAKS = ${
   }
 flow = load_flow_from_json("${flowName}.json", tweaks=TWEAKS)
 # Now you can use it like any chain
-flow("Hey, have you heard of Langflow?")`;
+flow(${inputs})`;
 };
 
 function buildTweakObject(tweak) {
