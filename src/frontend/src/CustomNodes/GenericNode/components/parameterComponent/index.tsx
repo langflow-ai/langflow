@@ -245,6 +245,7 @@ export default function ParameterComponent({
                 handleOnNewValue(t);
                 setEnabled(t);
               }}
+              
               size="large"
             />
           </div>
