@@ -10,7 +10,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { CodeBlock } from "./codeBlock";
 import Convert from "ansi-to-html";
-import { User2, MessageSquare } from "lucide-react";
+import { User2, MessageSquare, ChevronDown } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -31,6 +31,7 @@ export default function ChatMessage({
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
   const [template, setTemplate] = useState(chat.template);
+  const [promptOpen, setPromptOpen] = useState(false);
   return (
     <div
       className={classNames(
@@ -135,57 +136,52 @@ export default function ChatMessage({
           </div>
         </div>
       ) : (
-        <div className="flex w-full items-center">
-          <div className="inline-block text-start">
-            <span className=" break-all text-primary">
-              <Accordion type="single" collapsible className="mb-2 flex">
-                <AccordionItem
-                  className=" rounded-md border border-ring/60 bg-muted px-4"
-                  value="prompt"
-                >
-                  <AccordionTrigger className="gap-4 text-base font-semibold">
-                    Initial Prompt
-                  </AccordionTrigger>
-                  <AccordionContent className="max-h-96 overflow-auto break-all p-2">
-                    {
-                      // Make all the variables that are inside curly braces bold
-                      template.split("\n").map((line, index) => {
-                        const regex = /{([^}]+)}/g;
-                        let match;
-                        let parts = [];
-                        let lastIndex = 0;
-                        while ((match = regex.exec(line)) !== null) {
-                          // Push text up to the match
-                          if (match.index !== lastIndex) {
-                            parts.push(line.substring(lastIndex, match.index));
-                          }
-                          // Push div with matched text
-                          if (chat.message[match[1]]) {
-                            parts.push(
-                              <span className="my-1 rounded-md bg-indigo-100">
-                                {chat.message[match[1]]}
-                              </span>
-                            );
-                          }
-
-                          // Update last index
-                          lastIndex = regex.lastIndex;
-                        }
-                        // Push text after the last match
-                        if (lastIndex !== line.length) {
-                          parts.push(line.substring(lastIndex));
-                        }
-                        return <p>{parts}</p>;
-                      })
+        <div>
+          <button
+            className="mb-2 flex items-center gap-4 rounded-md border border-ring/60 bg-muted px-4 py-3 text-base font-semibold"
+            onClick={() => {
+              setPromptOpen((old) => !old);
+            }}
+          >
+            Initial Prompt
+            <ChevronDown
+              className={
+                "h-3 w-3 transition-all " + (promptOpen ? "rotate-180" : "")
+              }
+            />
+          </button>
+          <span className="prose inline-block break-words text-primary dark:prose-invert">
+            {promptOpen
+              ? template.split("\n").map((line, index) => {
+                  const regex = /{([^}]+)}/g;
+                  let match;
+                  let parts = [];
+                  let lastIndex = 0;
+                  while ((match = regex.exec(line)) !== null) {
+                    // Push text up to the match
+                    if (match.index !== lastIndex) {
+                      parts.push(line.substring(lastIndex, match.index));
                     }
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-              <span className="prose text-primary dark:prose-invert">
-                {chat.message[chat.chatKey]}
-              </span>
-            </span>
-          </div>
+                    // Push div with matched text
+                    if (chat.message[match[1]]) {
+                      parts.push(
+                        <span className="my-1 rounded-md bg-indigo-100">
+                          {chat.message[match[1]]}
+                        </span>
+                      );
+                    }
+
+                    // Update last index
+                    lastIndex = regex.lastIndex;
+                  }
+                  // Push text after the last match
+                  if (lastIndex !== line.length) {
+                    parts.push(line.substring(lastIndex));
+                  }
+                  return <p>{parts}</p>;
+                })
+              : chat.message[chat.chatKey]}
+          </span>
         </div>
       )}
     </div>
