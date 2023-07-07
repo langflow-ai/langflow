@@ -905,7 +905,6 @@ export function groupByFamily(data, baseClasses, left, type) {
 }
 
 export function buildInputs(tabsState, id) {
-  console.log(tabsState, id);
   return tabsState &&
     tabsState[id] &&
     tabsState[id].formKeysData &&
