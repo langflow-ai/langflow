@@ -47,6 +47,7 @@ export default function ParameterComponent({
   const { closePopUp } = useContext(PopUpContext);
   const { setTabsState, tabId, save } = useContext(TabsContext);
 
+
   useEffect(() => {
     if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
       setPosition(ref.current.offsetTop + ref.current.clientHeight / 2);
@@ -58,11 +59,11 @@ export default function ParameterComponent({
     updateNodeInternals(data.id);
   }, [data.id, position, updateNodeInternals]);
 
-  const [enabled, setEnabled] = useState(
-    data.node.template[name]?.value ?? false
-  );
 
-  useEffect(() => {}, [closePopUp, data.node.template]);
+  useEffect(() => {
+    
+  }, [closePopUp, data.node.template]);
+
 
   const { reactFlowInstance } = useContext(typesContext);
   let disabled =
@@ -239,12 +240,10 @@ export default function ParameterComponent({
           <div className="mt-2 w-full">
             <ToggleShadComponent
               disabled={disabled}
-              enabled={enabled}
+              enabled={data.node.template[name].value}
               setEnabled={(t) => {
                 handleOnNewValue(t);
-                setEnabled(t);
               }}
-              
               size="large"
             />
           </div>
