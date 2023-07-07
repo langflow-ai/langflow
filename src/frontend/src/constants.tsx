@@ -85,7 +85,7 @@ export const getPythonApiCode = (
   const tweaks = buildTweaks(flow);
   const inputs = buildInputs(tabsState, flow.id);
   return `import requests
-  from typing import Optional
+from typing import Optional
 
 BASE_API_URL = "${window.location.protocol}//${
     window.location.host
