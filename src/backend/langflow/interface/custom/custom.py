@@ -46,6 +46,10 @@ class CustomComponent(BaseModel):
                     if isinstance(target, ast.Name):  # A simple variable
                         # Add the attribute and its value to the dictionary
                         attributes[target.id] = ast.unparse(inner_node.value)
+            elif isinstance(inner_node, ast.AnnAssign):  # An annotated assignment
+                if isinstance(inner_node.target, ast.Name) and inner_node.value:
+                    attributes[inner_node.target.id] = ast.unparse(inner_node.value)
+
             elif isinstance(inner_node, ast.FunctionDef):
                 self._handle_function(inner_node)
 
@@ -134,6 +138,8 @@ class CustomComponent(BaseModel):
             template_config["display_name"] = ast.literal_eval(
                 attributes["display_name"]
             )
+        if "description" in attributes:
+            template_config["description"] = ast.literal_eval(attributes["description"])
         return template_config
 
     def _class_template_validation(self, code: dict):
