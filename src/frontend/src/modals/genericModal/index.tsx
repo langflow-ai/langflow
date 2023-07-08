@@ -1,6 +1,6 @@
-import DOMPurify from "dompurify";
 import { FileText, Variable } from "lucide-react";
 import { useContext, useEffect, useRef, useState } from "react";
+import SanitizedHTMLWrapper from "../../components/SanitizedDiv";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -15,7 +15,7 @@ import {
 } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
 import {
-  HIGHLIGH_CSS,
+  HIGHLIGHT_CSS,
   PROMPT_DIALOG_SUBTITLE,
   TEXT_DIALOG_SUBTITLE,
 } from "../../constants";
@@ -120,13 +120,13 @@ export default function GenericModal({
 
   const TextAreaContentView = () => {
     return (
-      <div
-        className={HIGHLIGH_CSS}
-        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(coloredContent) }}
-        suppressContentEditableWarning={true}
+      <SanitizedHTMLWrapper
+        className={HIGHLIGHT_CSS}
+        content={coloredContent}
         onClick={() => {
           setIsEdit(true);
         }}
+        suppressWarning={true}
       />
     );
   };
