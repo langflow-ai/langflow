@@ -254,12 +254,14 @@ def instantiate_prompt(node_type, class_object, params: Dict):
 
 def instantiate_tool(node_type, class_object: Type[BaseTool], params: Dict):
     if node_type == "JsonSpec":
-        params["dict_"] = load_file_into_dict(params.pop("path"))
+        if file_dict := load_file_into_dict(params.pop("path")):
+            params["dict_"] = file_dict
+        else:
+            raise ValueError("Invalid file")
         return class_object(**params)
     elif node_type == "PythonFunctionTool":
         params["func"] = get_function(params.get("code"))
         return class_object(**params)
-    # For backward compatibility
     elif node_type == "PythonFunction":
         function_string = params["code"]
         if isinstance(function_string, str):
