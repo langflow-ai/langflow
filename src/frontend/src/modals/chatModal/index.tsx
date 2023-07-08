@@ -86,12 +86,15 @@ export default function ChatModal({
         if (end) {
           newChat[newChat.length - 1].message = str;
         } else {
-          newChat[newChat.length - 1].message =
-            newChat[newChat.length - 1].message + str;
+          newChat[newChat.length - 1].message += str;
         }
       }
       if (thought) {
-        newChat[newChat.length - 1].thought = thought;
+        if (end) {
+          newChat[newChat.length - 1].thought = thought;
+        } else {
+          newChat[newChat.length - 1].thought += thought;
+        }
       }
       if (files) {
         newChat[newChat.length - 1].files = files;
