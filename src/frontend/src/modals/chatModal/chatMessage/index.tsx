@@ -10,8 +10,8 @@ import AiIcon from "../../../assets/Gooey Ring-5s-271px.svg";
 import AiIconStill from "../../../assets/froze-flow.png";
 import { ChatMessageType } from "../../../types/chat";
 import { classNames } from "../../../utils";
-import FileCard from "../fileComponent";
-import { CodeBlock } from "./codeBlock";
+import { CodeBlock } from "../../formModal/chatMessage/codeBlock";
+import FileCard from "../../formModal/fileComponent";
 export default function ChatMessage({
   chat,
   lockChat,
