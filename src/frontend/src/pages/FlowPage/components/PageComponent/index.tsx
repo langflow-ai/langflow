@@ -371,10 +371,11 @@ export default function Page({ flow }: { flow: FlowType }) {
                 <ReactFlow
                   nodes={nodes}
                   onMove={() => {
-                    updateFlow({
-                      ...flow,
-                      data: reactFlowInstance.toObject(),
-                    });
+                    if (reactFlowInstance)
+                      updateFlow({
+                        ...flow,
+                        data: reactFlowInstance.toObject(),
+                      });
                   }}
                   edges={edges}
                   onPaneClick={() => {
