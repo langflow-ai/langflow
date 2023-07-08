@@ -269,6 +269,10 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                   field_name={n}
                                   editNode={true}
                                   disabled={false}
+                                  nodeClass={data.node}
+                                  setNodeClass={(nodeClass) => {
+                                    data.node = nodeClass;
+                                  }}
                                   value={data.node.template[n].value ?? ""}
                                   onChange={(t: string) => {
                                     handleOnNewValue(t, n);
