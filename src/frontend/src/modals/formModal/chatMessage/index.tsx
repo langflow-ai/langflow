@@ -147,7 +147,7 @@ export default function ChatMessage({
           </button>
           <span className="prose inline-block break-words text-primary dark:prose-invert">
             {promptOpen
-              ? template.split("\n").map((line, index) => {
+              ? template?.split("\n")?.map((line, index) => {
                   const regex = /{([^}]+)}/g;
                   let match;
                   let parts = [];
