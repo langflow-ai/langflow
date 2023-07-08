@@ -545,7 +545,7 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply flex items-center gap-0.5 rounded-md px-1.5 py-1 text-sm font-medium
   }
   .header-menu-bar-display {
-    @apply flex max-w-[200px] items-center gap-2
+    @apply flex max-w-[200px] items-center gap-2 cursor-pointer
   }
   .header-menu-flow-name {
     @apply flex-1 truncate
