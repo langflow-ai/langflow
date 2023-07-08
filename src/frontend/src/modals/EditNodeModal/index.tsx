@@ -105,11 +105,13 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
             <span className="pr-2">{data.type}</span>
             <Badge variant="secondary">ID: {data.id}</Badge>
           </DialogTitle>
-          <DialogDescription>
-            {data.node?.description}
-            <div className="flex pt-3">
-              <Variable className="edit-node-modal-variable "></Variable>
-              <span className="edit-node-modal-span">Parameters</span>
+          <DialogDescription asChild>
+            <div>
+              {data.node?.description}
+              <div className="flex pt-3">
+                <Variable className="edit-node-modal-variable "></Variable>
+                <span className="edit-node-modal-span">Parameters</span>
+              </div>
             </div>
           </DialogDescription>
         </DialogHeader>
