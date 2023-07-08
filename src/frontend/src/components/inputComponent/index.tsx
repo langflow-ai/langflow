@@ -40,7 +40,9 @@ export default function InputComponent({
         }}
         className={classNames(
           disabled ? " input-disable " : "",
-          password && !pwdVisible && myValue !== "" ? " password text-clip " : "",
+          password && !pwdVisible && myValue !== ""
+            ? " text-clip password "
+            : "",
           editNode ? " input-edit-node " : " input-primary ",
           password && editNode ? "pr-8" : "",
           password && !editNode ? "pr-10" : ""

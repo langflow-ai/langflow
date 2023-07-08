@@ -47,7 +47,6 @@ export default function ParameterComponent({
   const { closePopUp } = useContext(PopUpContext);
   const { setTabsState, tabId, save } = useContext(TabsContext);
 
-
   useEffect(() => {
     if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
       setPosition(ref.current.offsetTop + ref.current.clientHeight / 2);
@@ -59,11 +58,7 @@ export default function ParameterComponent({
     updateNodeInternals(data.id);
   }, [data.id, position, updateNodeInternals]);
 
-
-  useEffect(() => {
-    
-  }, [closePopUp, data.node.template]);
-
+  useEffect(() => {}, [closePopUp, data.node.template]);
 
   const { reactFlowInstance } = useContext(typesContext);
   let disabled =
