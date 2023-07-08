@@ -50,7 +50,7 @@ export default function ChatMessage({
       </div>
       {!chat.isSend ? (
         <div className="flex w-full flex-1 text-start">
-          <div className="relative inline-block flex w-full flex-col text-start text-sm font-normal text-muted-foreground">
+          <div className="relative flex w-full flex-col text-start text-sm font-normal text-muted-foreground">
             {hidden && chat.thought && chat.thought !== "" && (
               <div
                 onClick={() => setHidden((prev) => !prev)}

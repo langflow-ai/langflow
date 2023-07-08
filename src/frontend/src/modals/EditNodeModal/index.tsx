@@ -1,5 +1,5 @@
 import { Variable } from "lucide-react";
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useRef, useState } from "react";
 import CodeAreaComponent from "../../components/codeAreaComponent";
 import Dropdown from "../../components/dropdownComponent";
 import FloatComponent from "../../components/floatComponent";
@@ -21,7 +21,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-import { TabsContext } from "../../contexts/tabsContext";
 import {
   Table,
   TableBody,
@@ -31,6 +30,7 @@ import {
   TableRow,
 } from "../../components/ui/table";
 import { PopUpContext } from "../../contexts/popUpContext";
+import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
 import { classNames, limitScrollFieldsModal } from "../../utils";
@@ -59,7 +59,8 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const { reactFlowInstance } = useContext(typesContext);
 
   let disabled =
-  reactFlowInstance?.getEdges().some((e) => e.targetHandle === data.id) ?? false;
+    reactFlowInstance?.getEdges().some((e) => e.targetHandle === data.id) ??
+    false;
   if (nodeLength == 0) {
     closePopUp();
   }
@@ -226,9 +227,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                   numberOfOptions={nodeLength}
                                   editNode={true}
                                   options={data.node.template[n].options}
-                                  onSelect={(t) =>
-                                    (handleOnNewValue(t, n))
-                                  }
+                                  onSelect={(t) => handleOnNewValue(t, n)}
                                   value={
                                     data.node.template[n].value ??
                                     "Choose an option"
