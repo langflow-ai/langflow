@@ -3,8 +3,9 @@ services:
   - type: web
     name: langflow
     runtime: docker
+    instanceType: free
     dockerfilePath: ./Dockerfile
     repo: https://github.com/logspace-ai/langflow
-    branch: form_io
+    branch: main
     healthCheckPath: /health
     autoDeploy: false
