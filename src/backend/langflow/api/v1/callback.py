@@ -4,12 +4,14 @@ from langchain.callbacks.base import AsyncCallbackHandler, BaseCallbackHandler
 
 from langflow.api.v1.schemas import ChatResponse
 
+from typing import Any, Dict
 
 from typing import Any, Dict, List, Union
 from fastapi import WebSocket
 
 
 from langchain.schema import AgentAction, LLMResult, AgentFinish
+from langflow.utils.logger import logger
 
 
 # https://github.com/hwchase17/chat-langchain/blob/master/callback.py
@@ -62,12 +64,23 @@ class AsyncStreamingLLMCallbackHandler(AsyncCallbackHandler):
 
     async def on_tool_end(self, output: str, **kwargs: Any) -> Any:
         """Run when tool ends running."""
+        observation_prefix = kwargs.get("observation_prefix", "Tool output: ")
+
+        # Create a formatted message.
+        intermediate_steps = f"{observation_prefix}{output}"
+
+        # Create a ChatResponse instance.
         resp = ChatResponse(
             message="",
             type="stream",
-            intermediate_steps=f"Tool output: {output}",
+            intermediate_steps=intermediate_steps,
         )
-        await self.websocket.send_json(resp.dict())
+
+        # Try to send the response, handle potential errors.
+        try:
+            await self.websocket.send_json(resp.dict())
+        except Exception as e:
+            logger.error(e)
 
     async def on_tool_error(
         self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
