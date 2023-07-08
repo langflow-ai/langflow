@@ -211,7 +211,11 @@ class PromptVertex(Vertex):
         return self._built_object
 
     def _built_object_repr(self):
-        if self.artifacts and hasattr(self._built_object, "format"):
+        if (
+            self.artifacts
+            and self._built_object is not None
+            and hasattr(self._built_object, "format")
+        ):
             # We'll build the prompt with the artifacts
             # to show the user what the prompt looks like
             # with the variables filled in
