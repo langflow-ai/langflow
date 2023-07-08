@@ -1,31 +1,30 @@
+import { Info } from "lucide-react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
+import ShadTooltip from "../../../../components/ShadTooltipComponent";
+import CodeAreaComponent from "../../../../components/codeAreaComponent";
+import Dropdown from "../../../../components/dropdownComponent";
+import FloatComponent from "../../../../components/floatComponent";
+import InputComponent from "../../../../components/inputComponent";
+import InputFileComponent from "../../../../components/inputFileComponent";
+import InputListComponent from "../../../../components/inputListComponent";
+import IntComponent from "../../../../components/intComponent";
+import PromptAreaComponent from "../../../../components/promptComponent";
+import TextAreaComponent from "../../../../components/textAreaComponent";
+import ToggleShadComponent from "../../../../components/toggleShadComponent";
+import { PopUpContext } from "../../../../contexts/popUpContext";
+import { TabsContext } from "../../../../contexts/tabsContext";
+import { typesContext } from "../../../../contexts/typesContext";
+import { ParameterComponentType } from "../../../../types/components";
 import {
   classNames,
   getRandomKeyByssmm,
   groupByFamily,
   isValidConnection,
+  nodeColors,
   nodeIconsLucide,
+  nodeNames,
 } from "../../../../utils";
-import { useContext, useEffect, useRef, useState } from "react";
-import InputComponent from "../../../../components/inputComponent";
-import InputListComponent from "../../../../components/inputListComponent";
-import TextAreaComponent from "../../../../components/textAreaComponent";
-import { typesContext } from "../../../../contexts/typesContext";
-import { ParameterComponentType } from "../../../../types/components";
-import FloatComponent from "../../../../components/floatComponent";
-import Dropdown from "../../../../components/dropdownComponent";
-import CodeAreaComponent from "../../../../components/codeAreaComponent";
-import InputFileComponent from "../../../../components/inputFileComponent";
-import { TabsContext } from "../../../../contexts/tabsContext";
-import IntComponent from "../../../../components/intComponent";
-import PromptAreaComponent from "../../../../components/promptComponent";
-import { nodeNames } from "../../../../utils";
-import React from "react";
-import { nodeColors } from "../../../../utils";
-import ShadTooltip from "../../../../components/ShadTooltipComponent";
-import { PopUpContext } from "../../../../contexts/popUpContext";
-import ToggleShadComponent from "../../../../components/toggleShadComponent";
-import { Info } from "lucide-react";
 
 export default function ParameterComponent({
   left,
@@ -58,10 +57,6 @@ export default function ParameterComponent({
   useEffect(() => {
     updateNodeInternals(data.id);
   }, [data.id, position, updateNodeInternals]);
-
-  const [enabled, setEnabled] = useState(
-    data.node.template[name]?.value ?? false
-  );
 
   useEffect(() => {}, [closePopUp, data.node.template]);
 
@@ -240,10 +235,9 @@ export default function ParameterComponent({
           <div className="mt-2 w-full">
             <ToggleShadComponent
               disabled={disabled}
-              enabled={enabled}
+              enabled={data.node.template[name].value}
               setEnabled={(t) => {
                 handleOnNewValue(t);
-                setEnabled(t);
               }}
               size="large"
             />

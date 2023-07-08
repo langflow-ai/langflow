@@ -173,7 +173,7 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply w-full overflow-auto scrollbar-hide
   }
   .search-icon {
-    @apply absolute inset-y-0 right-0 flex items-center py-1.5 pr-3
+    @apply absolute inset-y-0 right-0 flex items-center py-1.5 pr-5
   }
   .extra-side-bar-save-disable {
     @apply text-muted-foreground
@@ -938,13 +938,13 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply flex-max-width px-2 py-6 pl-4 pr-9
   }
   .form-modal-chatbot-icon {
-    @apply mb-3 mr-3 mt-1 w-20
+    @apply mb-3 ml-3 mr-6 mt-1
   }
   .form-modal-chat-image {
     @apply flex flex-col items-center gap-1
   }
   .form-modal-chat-img-box {
-    @apply flex h-8 w-8 items-center justify-center overflow-hidden rounded-md p-5 text-2xl
+    @apply relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md p-5 text-2xl
   }
   .form-modal-chat-bot-icon {
     @apply form-modal-chat-img-box bg-[#afe6ef]
@@ -952,17 +952,20 @@ The cursor: default; property value restores the browser's default cursor style 
   .form-modal-chat-user-icon {
     @apply form-modal-chat-img-box bg-[#aface9]
   }
+  .form-modal-chat-icon-img {
+    @apply absolute scale-[60%]
+  }
   .form-modal-chat-text-position {
-    @apply flex w-full flex-1 items-center text-start
+    @apply flex w-full flex-1 text-start
   }
   .form-modal-chat-text {
-    @apply relative inline-block w-full text-start text-sm font-normal text-muted-foreground
+    @apply relative flex w-full flex-col text-start text-sm font-normal text-muted-foreground
   }
   .form-modal-chat-icon-div {
-    @apply absolute -left-8 -top-5 cursor-pointer
+    @apply absolute -left-6 -top-3 cursor-pointer
   }
   .form-modal-chat-icon {
-    @apply h-5 w-5 animate-bounce dark:text-white
+    @apply h-4 w-4 animate-bounce dark:text-white
   }
   .form-modal-chat-thought-border {
     @apply rounded-md border border-gray-300
@@ -977,7 +980,7 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply mt-1 animate-pulse cursor-default
   }
   .form-modal-initial-prompt-btn {
-    @apply mb-2 flex items-center gap-4 rounded-md border border-ring/60 bg-background px-4 py-3 text-base font-semibold
+    @apply mb-2 flex items-center gap-4 rounded-md border border-ring/60 bg-background px-4 py-2 text-base font-semibold
   }
   .form-modal-iv-box {
     @apply mt-2 flex-max-width h-[80vh]

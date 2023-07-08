@@ -1,7 +1,6 @@
+import { Lock, LucideSend } from "lucide-react";
+import { useEffect } from "react";
 import { classNames } from "../../../utils";
-import { useContext, useEffect, useRef, useState } from "react";
-import { TabsContext } from "../../../contexts/tabsContext";
-import { Eraser, Lock, LucideSend } from "lucide-react";
 
 export default function ChatInput({
   lockChat,
@@ -49,9 +48,7 @@ export default function ChatInput({
           setChatValue(e.target.value);
         }}
         className={classNames(
-          lockChat
-            ? " form-modal-lock-true"
-            : " form-modal-lock-false",
+          lockChat ? " form-modal-lock-true" : " form-modal-lock-false",
           "form-modal-lockchat"
         )}
         placeholder={"Send a message..."}
@@ -66,15 +63,9 @@ export default function ChatInput({
           onClick={() => sendMessage()}
         >
           {lockChat ? (
-            <Lock
-              className="form-modal-lock-icon"
-              aria-hidden="true"
-            />
+            <Lock className="form-modal-lock-icon" aria-hidden="true" />
           ) : (
-            <LucideSend
-              className="form-modal-send-icon "
-              aria-hidden="true"
-            />
+            <LucideSend className="form-modal-send-icon " aria-hidden="true" />
           )}
         </button>
       </div>

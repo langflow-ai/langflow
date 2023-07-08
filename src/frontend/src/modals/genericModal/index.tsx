@@ -1,8 +1,9 @@
-import { useContext, useRef, useState, useEffect } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
-import { darkContext } from "../../contexts/darkContext";
-import { postValidatePrompt } from "../../controllers/API";
-import { alertContext } from "../../contexts/alertContext";
+import DOMPurify from "dompurify";
+import { FileText, Variable } from "lucide-react";
+import { useContext, useEffect, useRef, useState } from "react";
+import ShadTooltip from "../../components/ShadTooltipComponent";
+import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -12,14 +13,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
 import {
   HIGHLIGH_CSS,
   PROMPT_DIALOG_SUBTITLE,
   TEXT_DIALOG_SUBTITLE,
 } from "../../constants";
-import { FileText } from "lucide-react";
+import { alertContext } from "../../contexts/alertContext";
+import { darkContext } from "../../contexts/darkContext";
+import { PopUpContext } from "../../contexts/popUpContext";
+import { postValidatePrompt } from "../../controllers/API";
 import { APIClassType } from "../../types/api";
 import {
   INVALID_CHARACTERS,
@@ -29,10 +32,6 @@ import {
   regexHighlight,
   varHighlightHTML,
 } from "../../utils";
-import { Badge } from "../../components/ui/badge";
-import ShadTooltip from "../../components/ShadTooltipComponent";
-import DOMPurify from "dompurify";
-import { Variable } from "lucide-react";
 
 export default function GenericModal({
   field_name = "",
@@ -171,7 +170,7 @@ export default function GenericModal({
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger></DialogTrigger>
-      <DialogContent className="min-w-[80vw]">
+      <DialogContent className="min-w-[80vw] gap-2">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">{myModalTitle}</span>
@@ -200,7 +199,7 @@ export default function GenericModal({
         <div
           className={classNames(
             !isEdit ? "rounded-lg border" : "",
-            "flex h-[60vh] w-full"
+            "flex h-[55vh] w-full"
           )}
         >
           {type == TypeModal.PROMPT && isEdit ? (
@@ -238,12 +237,11 @@ export default function GenericModal({
 
         {type == TypeModal.PROMPT && (
           <>
-            <div className="h-[6vh] overflow-y-auto custom-scroll">
+            <div className="sm:6/6 mr-28 mt-3 h-[60px] overflow-y-auto custom-scroll">
               <div className="flex flex-wrap items-center">
                 <Variable className=" -ml-px mr-1 flex h-4 w-4 text-primary"></Variable>
                 <span className="text-md font-semibold text-primary">
-                  Input Variables:{" "}
-                  {wordsHighlight && wordsHighlight.length == 0 ? "-" : ""}
+                  Input Variables:
                 </span>
 
                 {wordsHighlight.map((word, index) => (
@@ -251,7 +249,6 @@ export default function GenericModal({
                     key={getRandomKeyByssmm() + index}
                     content={word.replace(/[{}]/g, "")}
                     asChild={false}
-                    delayDuration={1500}
                   >
                     <Badge
                       key={index}
@@ -284,7 +281,9 @@ export default function GenericModal({
                   setModalOpen(false);
                   break;
                 case 2:
-                  validatePrompt(false);
+                  !inputValue || inputValue == ""
+                    ? setModalOpen(false)
+                    : validatePrompt(false);
                   break;
 
                 default:

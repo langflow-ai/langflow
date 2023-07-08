@@ -1,23 +1,17 @@
-import { useEffect, useRef, useState } from "react";
-import { ChatMessageType } from "../../../types/chat";
-import { classNames } from "../../../utils";
-import AiIcon from "../../../assets/Gooey Ring-5s-271px.svg";
-import AiIconStill from "../../../assets/froze-flow.png";
-import FileCard from "../fileComponent";
+import Convert from "ansi-to-html";
+import { ChevronDown } from "lucide-react";
+import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
+import MaleTechnology from "../../../assets/male-technologist.png";
+import Robot from "../../../assets/robot.png";
+import { THOUGHTS_ICON } from "../../../constants";
+import { ChatMessageType } from "../../../types/chat";
+import { classNames } from "../../../utils";
+import FileCard from "../fileComponent";
 import { CodeBlock } from "./codeBlock";
-import Convert from "ansi-to-html";
-import { User2, MessageSquare, ChevronDown } from "lucide-react";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "../../../components/ui/accordion";
-import { Badge } from "../../../components/ui/badge";
 
 export default function ChatMessage({
   chat,
@@ -34,25 +28,20 @@ export default function ChatMessage({
   const [promptOpen, setPromptOpen] = useState(false);
   return (
     <div
-      className={classNames(
-        "form-modal-chat-position",
-        chat.isSend ? "" : " "
-      )}
+      className={classNames("form-modal-chat-position", chat.isSend ? "" : " ")}
     >
       <div className={classNames("form-modal-chatbot-icon ")}>
         {!chat.isSend ? (
           <div className="form-modal-chat-image">
             <div className="form-modal-chat-bot-icon ">
-              🤖
+              <img src={Robot} className="form-modal-chat-icon-img" />
             </div>
-            <span className="text-xs">Chatbot</span>
           </div>
         ) : (
           <div className="form-modal-chat-image">
             <div className="form-modal-chat-user-icon ">
-              👨‍💻
+              <img src={MaleTechnology} className="form-modal-chat-icon-img" />
             </div>
-            <span className="text-xs">User</span>
           </div>
         )}
       </div>
@@ -64,7 +53,7 @@ export default function ChatMessage({
                 onClick={() => setHidden((prev) => !prev)}
                 className="form-modal-chat-icon-div"
               >
-                <MessageSquare className="form-modal-chat-icon" />
+                <THOUGHTS_ICON className="form-modal-chat-icon" />
               </div>
             )}
             {chat.thought && chat.thought !== "" && !hidden && (

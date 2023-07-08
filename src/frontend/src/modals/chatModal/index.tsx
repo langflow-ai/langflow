@@ -1,14 +1,14 @@
 import { Dialog, Transition } from "@headlessui/react";
+import { Eraser, MessagesSquare, X } from "lucide-react";
 import { Fragment, useContext, useEffect, useRef, useState } from "react";
-import { FlowType } from "../../types/flow";
 import { alertContext } from "../../contexts/alertContext";
-import { validateNodes } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
-import ChatMessage from "./chatMessage";
-import { X, MessagesSquare, Eraser } from "lucide-react";
 import { sendAllProps } from "../../types/api";
 import { ChatMessageType } from "../../types/chat";
+import { FlowType } from "../../types/flow";
+import { validateNodes } from "../../utils";
 import ChatInput from "./chatInput";
+import ChatMessage from "./chatMessage";
 
 import _ from "lodash";
 import { getHealth } from "../../controllers/API";

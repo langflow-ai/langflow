@@ -1,8 +1,8 @@
 import { useContext, useEffect, useState } from "react";
+import { PopUpContext } from "../../contexts/popUpContext";
+import { TabsContext } from "../../contexts/tabsContext";
 import { InputComponentType } from "../../types/components";
 import { classNames } from "../../utils";
-import { TabsContext } from "../../contexts/tabsContext";
-import { PopUpContext } from "../../contexts/popUpContext";
 
 export default function InputComponent({
   value,
@@ -39,11 +39,13 @@ export default function InputComponent({
           if (disableCopyPaste) setDisableCopyPaste(false);
         }}
         className={classNames(
-          " pr-12 ",
           disabled ? " input-disable " : "",
-          password && !pwdVisible && myValue !== "" ? "password" : "",
+          password && !pwdVisible && myValue !== ""
+            ? " text-clip password "
+            : "",
           editNode ? " input-edit-node " : " input-primary ",
-          password && editNode ? "pr-8" : "pr-3"
+          password && editNode ? "pr-8" : "",
+          password && !editNode ? "pr-10" : ""
         )}
         placeholder={password && editNode ? "Key" : "Type something..."}
         onChange={(e) => {
