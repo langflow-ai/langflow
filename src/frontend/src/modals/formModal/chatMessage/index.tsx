@@ -1,4 +1,5 @@
 import Convert from "ansi-to-html";
+import DOMPurify from "dompurify";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
@@ -12,7 +13,6 @@ import { ChatMessageType } from "../../../types/chat";
 import { classNames } from "../../../utils";
 import FileCard from "../fileComponent";
 import { CodeBlock } from "./codeBlock";
-
 export default function ChatMessage({
   chat,
   lockChat,
@@ -61,7 +61,7 @@ export default function ChatMessage({
                 onClick={() => setHidden((prev) => !prev)}
                 className=" form-modal-chat-thought "
                 dangerouslySetInnerHTML={{
-                  __html: convert.toHtml(chat.thought),
+                  __html: DOMPurify.sanitize(convert.toHtml(chat.thought)),
                 }}
               ></div>
             )}
