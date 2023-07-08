@@ -121,14 +121,11 @@ def instantiate_llm(node_type, class_object, params: Dict):
     if node_type == "VertexAI":
         return initialize_vertexai(class_object=class_object, params=params)
     # max_tokens sometimes is a string and should be an int
-    if (
-        "max_tokens" in params
-        and isinstance(params["max_tokens"], str)
-        and params["max_tokens"].isdigit()
-    ):
-        params["max_tokens"] = int(params["max_tokens"])
-    elif not isinstance(params["max_tokens"], int):
-        params.pop("max_tokens", None)
+    if "max_tokens" in params:
+        if isinstance(params["max_tokens"], str) and params["max_tokens"].isdigit():
+            params["max_tokens"] = int(params["max_tokens"])
+        elif not isinstance(params.get("max_tokens"), int):
+            params.pop("max_tokens", None)
     return class_object(**params)
 
 
