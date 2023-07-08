@@ -4,7 +4,6 @@ import { Fragment, useContext, useRef, useState } from "react";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
 import { PopUpContext } from "../../contexts/popUpContext";
-import { checkPrompt } from "../../controllers/API";
 export default function PromptAreaModal({
   value,
   setValue,
@@ -105,36 +104,6 @@ export default function PromptAreaModal({
                       type="button"
                       className="node-modal-button"
                       onClick={() => {
-                        checkPrompt(myValue)
-                          .then((apiReturn) => {
-                            if (apiReturn.data) {
-                              let inputVariables =
-                                apiReturn.data.input_variables;
-                              if (inputVariables.length === 0) {
-                                setErrorData({
-                                  title:
-                                    "The template you are attempting to use does not contain any variables for data entry.",
-                                });
-                              } else {
-                                setSuccessData({
-                                  title: "Prompt is ready",
-                                });
-                                setModalOpen(false);
-                                setValue(myValue);
-                              }
-                            } else {
-                              setErrorData({
-                                title: "Something went wrong, please try again",
-                              });
-                            }
-                          })
-                          .catch((error) => {
-                            return setErrorData({
-                              title:
-                                "There is something wrong with this prompt, please review it",
-                              list: [error.response.data.detail],
-                            });
-                          });
                       }}
                     >
                       Check & Save
