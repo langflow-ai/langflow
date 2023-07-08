@@ -93,7 +93,11 @@ class DocumentLoaderVertex(Vertex):
         # show how many documents are in the list?
 
         if self._built_object:
+            avg_length = sum(len(doc.page_content) for doc in self._built_object) / len(
+                self._built_object
+            )
             return f"""{self.vertex_type}({len(self._built_object)} documents)
+            \nAvg. Document Length (characters): {avg_length}
             Documents: {self._built_object[:3]}..."""
         return f"{self.vertex_type}()"
 
@@ -125,8 +129,13 @@ class TextSplitterVertex(Vertex):
     def _built_object_repr(self):
         # This built_object is a list of documents. Maybe we should
         # show how many documents are in the list?
+
         if self._built_object:
+            avg_length = sum(len(doc.page_content) for doc in self._built_object) / len(
+                self._built_object
+            )
             return f"""{self.vertex_type}({len(self._built_object)} documents)
+            \nAvg. Document Length (characters): {avg_length}
             \nDocuments: {self._built_object[:3]}..."""
         return f"{self.vertex_type}()"
 
