@@ -968,19 +968,19 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply h-4 w-4 animate-bounce dark:text-white
   }
   .form-modal-chat-thought-border {
-    @apply rounded-md border border-gray-300
+    @apply rounded-md border border-ring/60
   }
   .form-modal-chat-thought-size {
     @apply inline-block h-full w-[95%]
   }
   .form-modal-chat-thought {
-    @apply ml-3 cursor-pointer overflow-scroll  bg-muted px-2 text-start text-primary scrollbar-hide dark:border-gray-500 dark:bg-gray-800 form-modal-chat-thought-border form-modal-chat-thought-size
+    @apply cursor-pointer overflow-scroll bg-background text-start text-primary scrollbar-hide form-modal-chat-thought-border form-modal-chat-thought-size py-2 px-2
   }
   .form-modal-markdown-span {
     @apply mt-1 animate-pulse cursor-default
   }
   .form-modal-initial-prompt-btn {
-    @apply mb-2 flex items-center gap-4 rounded-md border border-ring/60 bg-background px-4 py-2 text-base font-semibold
+    @apply mb-2 flex items-center gap-2 rounded-md border border-border bg-background shadow-sm px-4 py-2 text-sm font-semibold
   }
   .form-modal-iv-box {
     @apply mt-2 flex-max-width h-[80vh]

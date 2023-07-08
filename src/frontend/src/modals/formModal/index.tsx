@@ -488,7 +488,7 @@ export default function FormModal({
                           {i}
                         </Badge>
                       </div>
-                      Used as Memory Key
+                      Used as memory key
                     </div>
                   </AccordionItem>
                 ))}
