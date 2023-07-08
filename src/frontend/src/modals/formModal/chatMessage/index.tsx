@@ -138,7 +138,7 @@ export default function ChatMessage({
               setPromptOpen((old) => !old);
             }}
           >
-            Initial Prompt
+            Display Prompt
             <ChevronDown
               className={
                 "h-3 w-3 transition-all " + (promptOpen ? "rotate-180" : "")
