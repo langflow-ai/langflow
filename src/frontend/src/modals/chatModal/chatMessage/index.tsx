@@ -1,5 +1,4 @@
 import Convert from "ansi-to-html";
-import DOMPurify from "dompurify";
 import { MessageCircle, User2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
@@ -8,6 +7,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import AiIcon from "../../../assets/Gooey Ring-5s-271px.svg";
 import AiIconStill from "../../../assets/froze-flow.png";
+import SanitizedHTMLWrapper from "../../../components/SanitizedDiv";
 import { ChatMessageType } from "../../../types/chat";
 import { classNames } from "../../../utils";
 import { CodeBlock } from "../../formModal/chatMessage/codeBlock";
@@ -68,13 +68,12 @@ export default function ChatMessage({
               </div>
             )}
             {chat.thought && chat.thought !== "" && !hidden && (
-              <div
-                onClick={() => setHidden((prev) => !prev)}
+              <SanitizedHTMLWrapper
                 className=" chat-message-modal-thought"
-                dangerouslySetInnerHTML={{
-                  __html: DOMPurify.sanitize(convert.toHtml(chat.thought)),
-                }}
-              ></div>
+                content={convert.toHtml(chat.thought)}
+                suppressWarning={false}
+                onClick={() => setHidden((prev) => !prev)}
+              />
             )}
             {chat.thought && chat.thought !== "" && !hidden && <br></br>}
             <div className="chat-message-modal-markdown">

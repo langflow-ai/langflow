@@ -1,5 +1,4 @@
 import Convert from "ansi-to-html";
-import DOMPurify from "dompurify";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
@@ -8,6 +7,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import MaleTechnology from "../../../assets/male-technologist.png";
 import Robot from "../../../assets/robot.png";
+import SanitizedHTMLWrapper from "../../../components/SanitizedDiv";
 import { THOUGHTS_ICON } from "../../../constants";
 import { ChatMessageType } from "../../../types/chat";
 import { classNames } from "../../../utils";
@@ -57,13 +57,11 @@ export default function ChatMessage({
               </div>
             )}
             {chat.thought && chat.thought !== "" && !hidden && (
-              <div
+              <SanitizedHTMLWrapper
+                className=" form-modal-chat-thought"
+                content={convert.toHtml(chat.thought)}
                 onClick={() => setHidden((prev) => !prev)}
-                className=" form-modal-chat-thought "
-                dangerouslySetInnerHTML={{
-                  __html: DOMPurify.sanitize(convert.toHtml(chat.thought)),
-                }}
-              ></div>
+              />
             )}
             {chat.thought && chat.thought !== "" && !hidden && <br></br>}
             <div className="w-full">
