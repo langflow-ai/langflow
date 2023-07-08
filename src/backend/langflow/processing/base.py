@@ -39,7 +39,11 @@ async def get_result_and_steps(langchain_object, inputs: Union[dict, str], **kwa
             if isinstance(output, dict)
             else output
         )
-        thought = format_actions(intermediate_steps) if intermediate_steps else ""
+        try:
+            thought = format_actions(intermediate_steps) if intermediate_steps else ""
+        except Exception as exc:
+            logger.exception(exc)
+            thought = ""
     except Exception as exc:
         logger.exception(exc)
         raise ValueError(f"Error: {str(exc)}") from exc
