@@ -48,7 +48,7 @@ export default function ChatMessage({
       {!chat.isSend ? (
         <div className="form-modal-chat-text-position">
           <div className="form-modal-chat-text">
-            {hidden && (
+            {hidden && chat.thought && chat.thought !== "" && (
               <div
                 onClick={() => setHidden((prev) => !prev)}
                 className="form-modal-chat-icon-div"
