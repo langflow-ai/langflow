@@ -1,26 +1,17 @@
-import { useContext, useEffect, useRef, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
-import { NodeDataType } from "../../types/flow";
-import { classNames, limitScrollFieldsModal } from "../../utils";
-import { typesContext } from "../../contexts/typesContext";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../components/ui/table";
-import ToggleShadComponent from "../../components/toggleShadComponent";
-import InputListComponent from "../../components/inputListComponent";
-import TextAreaComponent from "../../components/textAreaComponent";
-import InputComponent from "../../components/inputComponent";
-import FloatComponent from "../../components/floatComponent";
-import Dropdown from "../../components/dropdownComponent";
-import IntComponent from "../../components/intComponent";
-import InputFileComponent from "../../components/inputFileComponent";
-import PromptAreaComponent from "../../components/promptComponent";
+import { Variable } from "lucide-react";
+import { useContext, useRef, useState } from "react";
 import CodeAreaComponent from "../../components/codeAreaComponent";
+import Dropdown from "../../components/dropdownComponent";
+import FloatComponent from "../../components/floatComponent";
+import InputComponent from "../../components/inputComponent";
+import InputFileComponent from "../../components/inputFileComponent";
+import InputListComponent from "../../components/inputListComponent";
+import IntComponent from "../../components/intComponent";
+import PromptAreaComponent from "../../components/promptComponent";
+import TextAreaComponent from "../../components/textAreaComponent";
+import ToggleShadComponent from "../../components/toggleShadComponent";
+import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -30,9 +21,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-import { Button } from "../../components/ui/button";
-import { Badge } from "../../components/ui/badge";
-import { Variable } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../components/ui/table";
+import { PopUpContext } from "../../contexts/popUpContext";
+import { TabsContext } from "../../contexts/tabsContext";
+import { typesContext } from "../../contexts/typesContext";
+import { NodeDataType } from "../../types/flow";
+import { classNames, limitScrollFieldsModal } from "../../utils";
 
 export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const [open, setOpen] = useState(true);
@@ -54,7 +55,12 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const { closePopUp } = useContext(PopUpContext);
   const { types } = useContext(typesContext);
   const ref = useRef();
-  const [enabled, setEnabled] = useState(null);
+  const { setTabsState, tabId, save } = useContext(TabsContext);
+  const { reactFlowInstance } = useContext(typesContext);
+
+  let disabled =
+    reactFlowInstance?.getEdges().some((e) => e.targetHandle === data.id) ??
+    false;
   if (nodeLength == 0) {
     closePopUp();
   }
@@ -66,8 +72,6 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
     }
   }
 
-  useEffect(() => {}, [closePopUp, data.node.template]);
-
   function changeAdvanced(node): void {
     Object.keys(data.node.template).filter((n, i) => {
       if (n === node.name) {
@@ -77,6 +81,20 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
     });
     setNodeValue(!nodeValue);
   }
+
+  const handleOnNewValue = (newValue: any, name) => {
+    data.node.template[name].value = newValue;
+    // Set state to pending
+    setTabsState((prev) => {
+      return {
+        ...prev,
+        [tabId]: {
+          ...prev[tabId],
+          isPending: true,
+        },
+      };
+    });
+  };
 
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
@@ -153,7 +171,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                         : data.node.template[n].value
                                     }
                                     onChange={(t: string[]) => {
-                                      data.node.template[n].value = t;
+                                      handleOnNewValue(t, n);
                                     }}
                                   />
                                 ) : data.node.template[n].multiline ? (
@@ -162,7 +180,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                     editNode={true}
                                     value={data.node.template[n].value ?? ""}
                                     onChange={(t: string) => {
-                                      data.node.template[n].value = t;
+                                      handleOnNewValue(t, n);
                                     }}
                                   />
                                 ) : (
@@ -174,7 +192,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                     }
                                     value={data.node.template[n].value ?? ""}
                                     onChange={(t) => {
-                                      data.node.template[n].value = t;
+                                      handleOnNewValue(t, n);
                                     }}
                                   />
                                 )}
@@ -183,13 +201,12 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                               <div className="ml-auto">
                                 {" "}
                                 <ToggleShadComponent
+                                  disabled={disabled}
                                   enabled={data.node.template[n].value}
-                                  setEnabled={(e) => {
-                                    data.node.template[n].value = e;
-                                    setEnabled(e);
+                                  setEnabled={(t) => {
+                                    handleOnNewValue(t, n);
                                   }}
                                   size="small"
-                                  disabled={false}
                                 />
                               </div>
                             ) : data.node.template[n].type === "float" ? (
@@ -210,9 +227,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                   numberOfOptions={nodeLength}
                                   editNode={true}
                                   options={data.node.template[n].options}
-                                  onSelect={(newValue) =>
-                                    (data.node.template[n].value = newValue)
-                                  }
+                                  onSelect={(t) => handleOnNewValue(t, n)}
                                   value={
                                     data.node.template[n].value ??
                                     "Choose an option"
@@ -226,7 +241,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                   editNode={true}
                                   value={data.node.template[n].value ?? ""}
                                   onChange={(t) => {
-                                    data.node.template[n].value = t;
+                                    handleOnNewValue(t, n);
                                   }}
                                 />
                               </div>
@@ -237,12 +252,12 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                   disabled={false}
                                   value={data.node.template[n].value ?? ""}
                                   onChange={(t: string) => {
-                                    data.node.template[n].value = t;
+                                    handleOnNewValue(t, n);
                                   }}
                                   fileTypes={data.node.template[n].fileTypes}
                                   suffixes={data.node.template[n].suffixes}
                                   onFileChange={(t: string) => {
-                                    data.node.template[n].content = t;
+                                    handleOnNewValue(t, n);
                                   }}
                                 ></InputFileComponent>
                               </div>
@@ -254,7 +269,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                   disabled={false}
                                   value={data.node.template[n].value ?? ""}
                                   onChange={(t: string) => {
-                                    data.node.template[n].value = t;
+                                    handleOnNewValue(t, n);
                                   }}
                                 />
                               </div>
@@ -265,7 +280,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                   editNode={true}
                                   value={data.node.template[n].value ?? ""}
                                   onChange={(t: string) => {
-                                    data.node.template[n].value = t;
+                                    handleOnNewValue(t, n);
                                   }}
                                 />
                               </div>

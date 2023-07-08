@@ -1,7 +1,7 @@
+import { Settings2 } from "lucide-react";
 import { useContext, useRef, useState } from "react";
-import { alertContext } from "../../contexts/alertContext";
-import { PopUpContext } from "../../contexts/popUpContext";
-import { TabsContext } from "../../contexts/tabsContext";
+import EditFlowSettings from "../../components/EditFlowSettingsComponent";
+import { Button } from "../../components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,11 +11,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-import { Button } from "../../components/ui/button";
 import { SETTINGS_DIALOG_SUBTITLE } from "../../constants";
-import EditFlowSettings from "../../components/EditFlowSettingsComponent";
-import { Settings2 } from "lucide-react";
-import { updateFlowInDatabase } from "../../controllers/API";
+import { alertContext } from "../../contexts/alertContext";
+import { PopUpContext } from "../../contexts/popUpContext";
+import { TabsContext } from "../../contexts/tabsContext";
 
 export default function FlowSettingsModal() {
   const [open, setOpen] = useState(true);

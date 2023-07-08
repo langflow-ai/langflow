@@ -1,17 +1,17 @@
+import Convert from "ansi-to-html";
+import DOMPurify from "dompurify";
+import { MessageCircle, User2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { ChatMessageType } from "../../../types/chat";
-import { classNames } from "../../../utils";
-import AiIcon from "../../../assets/Gooey Ring-5s-271px.svg";
-import AiIconStill from "../../../assets/froze-flow.png";
-import FileCard from "../fileComponent";
 import ReactMarkdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
-import { CodeBlock } from "./codeBlock";
-import Convert from "ansi-to-html";
-import { User2, MessageCircle } from "lucide-react";
-import DOMPurify from "dompurify";
+import AiIcon from "../../../assets/Gooey Ring-5s-271px.svg";
+import AiIconStill from "../../../assets/froze-flow.png";
+import { ChatMessageType } from "../../../types/chat";
+import { classNames } from "../../../utils";
+import { CodeBlock } from "../../formModal/chatMessage/codeBlock";
+import FileCard from "../../formModal/fileComponent";
 export default function ChatMessage({
   chat,
   lockChat,

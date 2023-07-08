@@ -1,4 +1,4 @@
-import { Node, Edge, Viewport } from "reactflow";
+import { Edge, Node, Viewport } from "reactflow";
 //kind and class are just representative names to represent the actual structure of the object received by the API
 
 export type APIObjectType = { kind: APIKindType; [key: string]: APIKindType };

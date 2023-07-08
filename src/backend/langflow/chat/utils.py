@@ -21,6 +21,10 @@ async def process_graph(
 
     # Generate result and thought
     try:
+        if not chat_inputs.message:
+            logger.debug("No message provided")
+            raise ValueError("No message provided")
+
         logger.debug("Generating result and thought")
         result, intermediate_steps = await get_result_and_steps(
             langchain_object, chat_inputs.message, websocket=websocket

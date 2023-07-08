@@ -1,16 +1,11 @@
-import { ReactElement, useContext, useEffect, useRef, useState } from "react";
-import {
-  AccordionComponentType,
-  ProgressBarType,
-} from "../../types/components";
-import { Progress } from "../../components/ui/progress";
-import { setInterval } from "timers/promises";
+import { useState } from "react";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "../../components/ui/accordion";
+import { AccordionComponentType } from "../../types/components";
 
 export default function AccordionComponent({
   trigger,
