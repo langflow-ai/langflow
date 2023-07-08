@@ -7,7 +7,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import MaleTechnology from "../../../assets/male-technologist.png";
 import Robot from "../../../assets/robot.png";
-import SanitizedHTMLWrapper from "../../../components/SanitizedDiv";
+import SanitizedHTMLWrapper from "../../../components/SanitizedHTMLWrapper";
 import { THOUGHTS_ICON } from "../../../constants";
 import { ChatMessageType } from "../../../types/chat";
 import { classNames } from "../../../utils";
