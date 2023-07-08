@@ -54,7 +54,7 @@ export default function ChatMessage({
             {hidden && chat.thought && chat.thought !== "" && (
               <div
                 onClick={() => setHidden((prev) => !prev)}
-                className="absolute -left-8 -top-3 cursor-pointer"
+                className="absolute -left-6 -top-3 cursor-pointer"
               >
                 <THOUGHTS_ICON className="h-4 w-4 animate-bounce dark:text-white" />
               </div>
