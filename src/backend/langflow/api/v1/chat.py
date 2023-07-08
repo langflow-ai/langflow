@@ -115,13 +115,6 @@ async def stream_build(flow_id: str):
 
             number_of_nodes = len(graph.nodes)
             flow_data_store[flow_id]["status"] = BuildStatus.IN_PROGRESS
-            # To deal with the ZeroShotAgent case
-            # we need to build the root node first
-            # and then the rest of the graph
-            # This is a big problem because certain nodes require
-            # params that are not connected to it.
-            # We should consider connecting the tools to the ZeroShotPrompt
-            graph.build()
 
             for i, vertex in enumerate(graph.generator_build(), 1):
                 try:
