@@ -7,7 +7,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import AiIcon from "../../../assets/Gooey Ring-5s-271px.svg";
 import AiIconStill from "../../../assets/froze-flow.png";
-import SanitizedHTMLWrapper from "../../../components/SanitizedDiv";
+import SanitizedHTMLWrapper from "../../../components/SanitizedHTMLWrapper";
 import { ChatMessageType } from "../../../types/chat";
 import { classNames } from "../../../utils";
 import { CodeBlock } from "../../formModal/chatMessage/codeBlock";

@@ -1,6 +1,6 @@
 import { FileText, Variable } from "lucide-react";
 import { useContext, useEffect, useRef, useState } from "react";
-import SanitizedHTMLWrapper from "../../components/SanitizedDiv";
+import SanitizedHTMLWrapper from "../../components/SanitizedHTMLWrapper";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
