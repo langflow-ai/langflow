@@ -3,7 +3,7 @@ services:
   - type: web
     name: langflow
     runtime: docker
-    instanceType: free
+    plan: free
     dockerfilePath: ./Dockerfile
     repo: https://github.com/logspace-ai/langflow
     branch: main
