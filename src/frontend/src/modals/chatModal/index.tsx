@@ -184,7 +184,10 @@ export default function ChatModal({
       isStream = false;
     }
     if (data.type === "stream" && isStream) {
-      updateLastMessage({ str: data.message });
+      updateLastMessage({
+        str: data.message,
+        thought: data.intermediate_steps,
+      });
     }
   }
 
