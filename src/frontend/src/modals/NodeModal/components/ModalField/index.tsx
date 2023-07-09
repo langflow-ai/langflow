@@ -63,7 +63,7 @@ export default function ModalField({
               disabled={false}
               value={
                 !data.node.template[name].value ||
-                  data.node.template[name].value === ""
+                data.node.template[name].value === ""
                   ? [""]
                   : data.node.template[name].value
               }
