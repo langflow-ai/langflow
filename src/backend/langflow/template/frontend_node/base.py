@@ -52,14 +52,6 @@ class FrontendNode(BaseModel):
     output_types: List[str] = []
     field_formatters: FieldFormatters = Field(default_factory=FieldFormatters)
 
-    def process_base_classes(self) -> None:
-        """Removes unwanted base classes from the list of base classes."""
-        self.base_classes = [
-            base_class
-            for base_class in self.base_classes
-            if base_class not in CLASSES_TO_REMOVE
-        ]
-
     # field formatters is an instance attribute but it is not used in the class
     # so we need to create a method to get it
     @staticmethod
