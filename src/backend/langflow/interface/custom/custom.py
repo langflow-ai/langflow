@@ -172,7 +172,10 @@ class CustomComponent(BaseModel):
                 status_code=400,
                 detail={
                     "error": "Invalid entrypoint function name",
-                    "traceback": f"There needs to be at least one entrypoint function named '{self.function_entrypoint_name}' and it needs to return one of the types from this list {str(self.return_type_valid_list)}.",
+                    "traceback": (
+                        f"There needs to be at least one entrypoint function named '{self.function_entrypoint_name}'"
+                        f" and it needs to return one of the types from this list {str(self.return_type_valid_list)}.",
+                    ),
                 },
             )
 
@@ -182,7 +185,10 @@ class CustomComponent(BaseModel):
                 status_code=400,
                 detail={
                     "error": "Invalid entrypoint function return",
-                    "traceback": f"The entrypoint function return '{return_type}' needs to be an item from this list {str(self.return_type_valid_list)}.",
+                    "traceback": (
+                        f"The entrypoint function return '{return_type}' needs to be an item "
+                        f"from this list {str(self.return_type_valid_list)}."
+                    ),
                 },
             )
 
