@@ -104,8 +104,14 @@ class ChatManager:
 
     async def close_connection(self, client_id: str, code: int, reason: str):
         if websocket := self.active_connections[client_id]:
-            await websocket.close(code=code, reason=reason)
-            self.disconnect(client_id)
+            try:
+                await websocket.close(code=code, reason=reason)
+                self.disconnect(client_id)
+            except RuntimeError as exc:
+                # This is to catch the following error:
+                #  Unexpected ASGI message 'websocket.close', after sending 'websocket.close'
+                if "after sending" in str(exc):
+                    logger.error(exc)
 
     async def process_message(
         self, client_id: str, payload: Dict, langchain_object: Any
