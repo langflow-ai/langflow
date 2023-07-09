@@ -1,3 +1,4 @@
+import ast
 from typing import Any, Dict, List, Optional, Union
 
 from langflow.graph.vertex.base import Vertex
@@ -79,7 +80,7 @@ class WrapperVertex(Vertex):
     def build(self, force: bool = False) -> Any:
         if not self._built or force:
             if "headers" in self.params:
-                self.params["headers"] = eval(self.params["headers"])
+                self.params["headers"] = ast.literal_eval(self.params["headers"])
             self._build()
         return self._built_object
 
