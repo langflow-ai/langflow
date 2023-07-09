@@ -21,7 +21,7 @@ from langflow.template.frontend_node.tools import CustomComponentNode
 from langflow.interface.retrievers.base import retriever_creator
 
 from langflow.utils.util import get_base_classes
-
+import warnings
 from fastapi import HTTPException
 import traceback
 
@@ -82,20 +82,26 @@ def add_new_custom_field(
 ):
     # Check field_config if any of the keys are in it
     # if it is, update the value
-    name = field_config.pop("name", field_name)
+    display_name = field_config.pop("display_name", field_name)
     field_type = field_config.pop("field_type", field_type)
     field_type = process_type(field_type)
+    if "name" in field_config:
+        warnings.warn(
+            "The 'name' key in field_config is used to build the object and can't be changed."
+        )
+        field_config.pop("name", None)
 
     required = field_config.pop("required", True)
     placeholder = field_config.pop("placeholder", "")
 
     new_field = TemplateField(
-        name=name,
+        name=field_name,
         field_type=field_type,
         show=True,
         required=required,
         advanced=False,
         placeholder=placeholder,
+        display_name=display_name,
         **field_config,
     )
     template.get("template")[field_name] = new_field.to_dict()
