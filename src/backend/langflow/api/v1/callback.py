@@ -65,9 +65,11 @@ class AsyncStreamingLLMCallbackHandler(AsyncCallbackHandler):
     async def on_tool_end(self, output: str, **kwargs: Any) -> Any:
         """Run when tool ends running."""
         observation_prefix = kwargs.get("observation_prefix", "Tool output: ")
-
+        split_output = output.split()
+        first_word = split_output[0]
+        rest_of_output = split_output[1:]
         # Create a formatted message.
-        intermediate_steps = f"{observation_prefix}{output}"
+        intermediate_steps = f"{observation_prefix}{first_word}"
 
         # Create a ChatResponse instance.
         resp = ChatResponse(
@@ -75,10 +77,21 @@ class AsyncStreamingLLMCallbackHandler(AsyncCallbackHandler):
             type="stream",
             intermediate_steps=intermediate_steps,
         )
-
+        rest_of_resps = [
+            ChatResponse(
+                message="",
+                type="stream",
+                intermediate_steps=f"{word}",
+            )
+            for word in rest_of_output
+        ]
+        resps = [resp] + rest_of_resps
         # Try to send the response, handle potential errors.
+
         try:
-            await self.websocket.send_json(resp.dict())
+            # This is to emulate the stream of tokens
+            for resp in resps:
+                await self.websocket.send_json(resp.dict())
         except Exception as e:
             logger.error(e)
 
