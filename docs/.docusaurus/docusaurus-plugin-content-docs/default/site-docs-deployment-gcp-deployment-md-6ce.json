@@ -2,7 +2,7 @@
   "unversionedId": "deployment/gcp-deployment",
   "id": "deployment/gcp-deployment",
   "title": "Deploy on Google Cloud Platform",
-  "description": "Run LangFlow from a New Google Cloud Project",
+  "description": "Run Langflow from a New Google Cloud Project",
   "source": "@site/docs/deployment/gcp-deployment.md",
   "sourceDirName": "deployment",
   "slug": "/deployment/gcp-deployment",

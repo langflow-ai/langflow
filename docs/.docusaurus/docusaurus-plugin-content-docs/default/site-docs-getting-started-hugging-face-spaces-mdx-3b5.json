@@ -2,7 +2,7 @@
   "unversionedId": "getting-started/hugging-face-spaces",
   "id": "getting-started/hugging-face-spaces",
   "title": "🤗 HuggingFace Spaces",
-  "description": "A fully featured version of LangFlow can be accessed via HuggingFace spaces with no installation required.",
+  "description": "A fully featured version of Langflow can be accessed via HuggingFace spaces with no installation required.",
   "source": "@site/docs/getting-started/hugging-face-spaces.mdx",
   "sourceDirName": "getting-started",
   "slug": "/getting-started/hugging-face-spaces",

@@ -15,24 +15,23 @@ The vector store is used for efficient semantic search, while `VectorStoreInfo` 
 Once you build this flow, ask questions about the data in the chat interface (e.g., number of rows or columns).
 :::
 
+## ⛓️ Langflow Example
 
-## ⛓️ LangFlow Example
-
-import ThemedImage from '@theme/ThemedImage';
-import useBaseUrl from '@docusaurus/useBaseUrl';
-import ZoomableImage from '/src/theme/ZoomableImage.js';
-
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 <ZoomableImage
   alt="Docusaurus themed image"
   sources={{
-    light: 'img/csv-loader.png',
+    light: "img/csv-loader.png",
   }}
 />
 
- #### <a target="\_blank" href="json_files/CSV_Loader.json" download>Download Flow</a>
+#### <a target="\_blank" href="json_files/CSV_Loader.json" download>Download Flow</a>
 
 :::note LangChain Components 🦜🔗
+
 - [`CSVLoader`](https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/csv)
 - [`CharacterTextSplitter`](https://python.langchain.com/docs/modules/data_connection/document_transformers/text_splitters/character_text_splitter)
 - [`OpenAIEmbedding`](https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/openai)
@@ -40,4 +39,4 @@ import ZoomableImage from '/src/theme/ZoomableImage.js';
 - [`VectorStoreInfo`](https://python.langchain.com/docs/modules/data_connection/vectorstores/)
 - [`OpenAI`](https://python.langchain.com/docs/modules/model_io/models/llms/integrations/openai)
 - [`VectorStoreAgent`](https://python.langchain.com/docs/modules/agents/toolkits/vectorstore)
-:::
+  :::

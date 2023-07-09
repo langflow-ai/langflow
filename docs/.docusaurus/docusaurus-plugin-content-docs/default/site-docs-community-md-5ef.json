@@ -2,7 +2,7 @@
   "unversionedId": "community",
   "id": "community",
   "title": "Community",
-  "description": "🤖 Join LangFlow Discord server",
+  "description": "🤖 Join Langflow Discord server",
   "source": "@site/docs/community.md",
   "sourceDirName": ".",
   "slug": "/community",

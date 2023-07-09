@@ -1,6 +1,5 @@
 # Embeddings
 
-
 ### CohereEmbeddings
 
 Wrapper around Cohere embedding models.
@@ -13,8 +12,7 @@ The `CohereEmbeddings` is used to load the Cohere Embedding module. To use this 
 
 - **model:** it refers to the language model that is used for embedding text documents and performing queries. Defaults to `embed-english-v2.0`.
 
-- **truncate:** *Optional[str] = None*. Is used to specify whether or not to truncate the input text. Truncation is useful when dealing with long texts that exceed the model's maximum input length. By truncating the text, you can ensure that it fits within the model's constraints.
-
+- **truncate:** _Optional[str] = None_. Is used to specify whether or not to truncate the input text. Truncation is useful when dealing with long texts that exceed the model's maximum input length. By truncating the text, you can ensure that it fits within the model's constraints.
 
 ### HuggingFaceEmbeddings
 
@@ -26,12 +24,11 @@ The `HuggingFaceEmbeddings` helps you work with text embedding models provided b
 
 - **cache_folder:** is used to specify the folder where the embeddings will be cached. When embeddings are computed for a text, they can be stored in the cache folder so that they can be reused later without the need to recompute them. This can improve the performance of the application by avoiding redundant computations.
 
-- **encode_kwargs:** is used to pass additional keyword arguments to the encoding method of the underlying Hugging Face model. These keyword arguments can be used to customize the encoding process, such as specifying the maximum length of the input sequence or enabling truncation or padding. 
+- **encode_kwargs:** is used to pass additional keyword arguments to the encoding method of the underlying Hugging Face model. These keyword arguments can be used to customize the encoding process, such as specifying the maximum length of the input sequence or enabling truncation or padding.
 
 - **model_kwargs:** is used to customize the behavior of the model, such as specifying the model architecture, the tokenizer, or any other model-specific configuration options. By using model_kwargs, you can configure the Hugging Face model according to your specific needs and preferences.
 
-- **model_name:**  is used to specify the name or identifier of the Hugging Face model that will be used for generating embeddings. It allows users to choose a specific pre-trained model from the Hugging Face model hub. Defaults to `sentence-transformers/all-mpnet-base-v2`.
-
+- **model_name:** is used to specify the name or identifier of the Hugging Face model that will be used for generating embeddings. It allows users to choose a specific pre-trained model from the Hugging Face model hub. Defaults to `sentence-transformers/all-mpnet-base-v2`.
 
 ### OpenAIEmbeddings
 
@@ -47,17 +44,17 @@ The `OpenAIEmbeddings` class helps you work with text embedding models. It is de
 
 - **embedding_ctx_length:** this parameter determines the maximum context length for the text embedding model. It specifies the number of tokens that the model considers when generating embeddings for a piece of text. Defaults to `8191`. This means that the model will consider up to 8191 tokens when generating embeddings.
 
-- **max_retries:** this parameter determines the maximum number of times LangFlow will retry a request if the model provider returns an error from their API. Defaults to `6`.
+- **max_retries:** this parameter determines the maximum number of times Langflow will retry a request if the model provider returns an error from their API. Defaults to `6`.
 
 - **model:** is s used to specify the specific text embedding model to use for embedding. It allows you to choose a pre-trained model that best suits your needs. Defaults to `text-embedding-ada-002`.
 
 - **openai_api_base:** it refers to the base URL for the Azure OpenAI resource. It is used to configure the API to connect to the Azure OpenAI service. The base URL can be found in the Azure portal under your Azure OpenAI resource. It is typically in the format:
 
-    ```HTML
-    https://your-resource-name.openai.azure.com
-    ```
+  ```HTML
+  https://your-resource-name.openai.azure.com
+  ```
 
-- **openai_api_key:** is used to authenticate and authorize access to the [OpenAI](https://openai.com/) service. 
+- **openai_api_key:** is used to authenticate and authorize access to the [OpenAI](https://openai.com/) service.
 
 - **openai_api_type:** is used to specify the type of OpenAI API being used, either the regular OpenAI API or the Azure OpenAI API. This parameter allows the `OpenAIEmbeddings` class to connect to the appropriate API service.
 
@@ -67,6 +64,6 @@ The `OpenAIEmbeddings` class helps you work with text embedding models. It is de
 
 - **openai_proxy:** proxy enables better budgeting and cost management for making OpenAI API calls including more transparency into pricing.
 
-- **request_timeout:** is used to specify the maximum amount of time, in milliseconds, that the LangFlow will wait for a response from the OpenAI API when generating embeddings for a given text. *Optional[Union[float, Tuple[float, float]]] = None*.
+- **request_timeout:** is used to specify the maximum amount of time, in milliseconds, that the Langflow will wait for a response from the OpenAI API when generating embeddings for a given text. _Optional[Union[float, Tuple[float, float]]] = None_.
 
-- **tiktoken_model_name:** is used to count the number of tokens in documents to constrain them to be under a certain limit. By default, when set to None, this will be the same as the embedding model name. However, there are some cases where you may want to use this Embedding class with a model name not supported by tiktoken. This can include when using Azure embeddings or when using one of the many model providers that expose an OpenAI-like API but with different models. 
+- **tiktoken_model_name:** is used to count the number of tokens in documents to constrain them to be under a certain limit. By default, when set to None, this will be the same as the embedding model name. However, there are some cases where you may want to use this Embedding class with a model name not supported by tiktoken. This can include when using Azure embeddings or when using one of the many model providers that expose an OpenAI-like API but with different models.

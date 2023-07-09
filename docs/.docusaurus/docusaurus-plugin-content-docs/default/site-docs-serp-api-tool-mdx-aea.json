@@ -2,7 +2,7 @@
   "unversionedId": "serp-api-tool",
   "id": "serp-api-tool",
   "title": "Serp API Tool",
-  "description": "The Serp API (Search Engine Results Page) allows developers to scrape results from search engines such as Google, Bing and Yahoo, and can be used as in LangFlow through the Search component.",
+  "description": "The Serp API (Search Engine Results Page) allows developers to scrape results from search engines such as Google, Bing and Yahoo, and can be used as in Langflow through the Search component.",
   "source": "@site/docs/serp-api-tool.mdx",
   "sourceDirName": ".",
   "slug": "/serp-api-tool",
