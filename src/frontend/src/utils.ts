@@ -17,10 +17,10 @@ import {
   Paperclip,
   Rocket,
   Scissors,
+  Sparkles,
   TerminalSquare,
   Wand2,
   Wrench,
-  Sparkles,
 } from "lucide-react";
 import { ComponentType, SVGProps } from "react";
 import { Connection, Edge, Node, ReactFlowInstance } from "reactflow";

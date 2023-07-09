@@ -268,9 +268,9 @@ export default function ParameterComponent({
             ></Dropdown>
           </div>
         ) : left === true && type === "code" ? (
-          <div  className="mt-2 w-full">
+          <div className="mt-2 w-full">
             <CodeAreaComponent
-              dynamic = {data.node.template[name].dynamic ?? false}
+              dynamic={data.node.template[name].dynamic ?? false}
               setNodeClass={(nodeClass) => {
                 data.node = nodeClass;
               }}
