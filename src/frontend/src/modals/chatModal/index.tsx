@@ -25,7 +25,7 @@ export default function ChatModal({
   const [chatValue, setChatValue] = useState("");
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
   const { reactFlowInstance } = useContext(typesContext);
-  const { setErrorData, setNoticeData } = useContext(alertContext);
+  const { setErrorData } = useContext(alertContext);
   const ws = useRef<WebSocket | null>(null);
   const [lockChat, setLockChat] = useState(false);
   const isOpen = useRef(open);
