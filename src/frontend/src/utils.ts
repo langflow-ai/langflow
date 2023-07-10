@@ -598,7 +598,7 @@ export function isValidConnection(
       ) ||
     targetHandle.split("|")[0] === "str"
   ) {
-    let targetNode = reactFlowInstance.getNode(target).data.node;
+    let targetNode = reactFlowInstance?.getNode(target)?.data?.node;
     if (!targetNode) {
       if (
         !reactFlowInstance
