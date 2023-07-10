@@ -48,7 +48,7 @@ export default function CodeAreaComponent({
           className={
             editNode
               ? "input-edit-node input-dialog"
-              : (disabled ? " input-disable " : "") +
+              : (disabled ? " input-disable input-ring " : "") +
                 " input-primary text-muted-foreground "
           }
         >
