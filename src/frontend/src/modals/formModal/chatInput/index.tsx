@@ -1,4 +1,4 @@
-import { Lock, LucideSend } from "lucide-react";
+import { Lock, LucideSend, Sparkles } from "lucide-react";
 import { useEffect } from "react";
 import { classNames } from "../../../utils";
 
@@ -49,24 +49,37 @@ export default function ChatInput({
           setChatValue(e.target.value);
         }}
         className={classNames(
-          lockChat || noInput
-            ? " form-modal-lock-true bg-input "
+          lockChat
+            ? " form-modal-lock-true bg-input"
+            : noInput
+            ? "form-modal-no-input bg-input"
             : " form-modal-lock-false",
+
           "form-modal-lockchat"
         )}
-        placeholder={"Send a message..."}
+        placeholder={
+          noInput
+            ? "No chat input variables found. Click to run your flow."
+            : "Send a message..."
+        }
       />
       <div className="form-modal-send-icon-position">
         <button
           className={classNames(
             "form-modal-send-button",
-            chatValue === "" ? "text-primary" : " bg-indigo-600 text-background"
+            noInput
+              ? "bg-indigo-600 text-background"
+              : chatValue === ""
+              ? "text-primary"
+              : "bg-emerald-600 text-background"
           )}
           disabled={lockChat}
           onClick={() => sendMessage()}
         >
           {lockChat ? (
             <Lock className="form-modal-lock-icon" aria-hidden="true" />
+          ) : noInput ? (
+            <Sparkles className="form-modal-play-icon" aria-hidden="true" />
           ) : (
             <LucideSend className="form-modal-send-icon " aria-hidden="true" />
           )}
