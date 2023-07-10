@@ -8,6 +8,7 @@ export default function ChatInput({
   sendMessage,
   setChatValue,
   inputRef,
+  noInput,
 }) {
   useEffect(() => {
     if (!lockChat && inputRef.current) {
@@ -32,7 +33,7 @@ export default function ChatInput({
         }}
         rows={1}
         ref={inputRef}
-        disabled={lockChat}
+        disabled={lockChat || noInput}
         style={{
           resize: "none",
           bottom: `${inputRef?.current?.scrollHeight}px`,
@@ -48,7 +49,7 @@ export default function ChatInput({
           setChatValue(e.target.value);
         }}
         className={classNames(
-          lockChat
+          lockChat || noInput
             ? " form-modal-lock-true bg-input "
             : " form-modal-lock-false",
           "form-modal-lockchat"
