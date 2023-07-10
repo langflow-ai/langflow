@@ -333,41 +333,35 @@ export default function FormModal({
   }, [open]);
 
   function sendMessage() {
-    if (chatValue !== "") {
-      let nodeValidationErrors = validateNodes(reactFlowInstance);
-      if (nodeValidationErrors.length === 0) {
-        setLockChat(true);
-        let inputs = tabsState[id.current].formKeysData.input_keys;
-        setChatValue("");
-        const message = inputs;
-        addChatHistory(
-          message,
-          true,
-          chatKey,
-          tabsState[flow.id].formKeysData.template
-        );
-        sendAll({
-          ...reactFlowInstance.toObject(),
-          inputs: inputs,
-          chatHistory,
-          name: flow.name,
-          description: flow.description,
-        });
-        setTabsState((old) => {
-          let newTabsState = _.cloneDeep(old);
-          newTabsState[id.current].formKeysData.input_keys[chatKey] = "";
-          return newTabsState;
-        });
-      } else {
-        setErrorData({
-          title: "Oops! Looks like you missed some required information:",
-          list: nodeValidationErrors,
-        });
-      }
+    let nodeValidationErrors = validateNodes(reactFlowInstance);
+    if (nodeValidationErrors.length === 0) {
+      setLockChat(true);
+      let inputs = tabsState[id.current].formKeysData.input_keys;
+      setChatValue("");
+      const message = inputs;
+      addChatHistory(
+        message,
+        true,
+        chatKey,
+        tabsState[flow.id].formKeysData.template
+      );
+      sendAll({
+        ...reactFlowInstance.toObject(),
+        inputs: inputs,
+        chatHistory,
+        name: flow.name,
+        description: flow.description,
+      });
+      setTabsState((old) => {
+        if (!chatKey) return old;
+        let newTabsState = _.cloneDeep(old);
+        newTabsState[id.current].formKeysData.input_keys[chatKey] = "";
+        return newTabsState;
+      });
     } else {
       setErrorData({
-        title: "Error sending message",
-        list: ["The message cannot be empty."],
+        title: "Oops! Looks like you missed some required information:",
+        list: nodeValidationErrors,
       });
     }
   }
@@ -549,13 +543,12 @@ export default function FormModal({
                   <div className="langflow-chat-input">
                     <ChatInput
                       chatValue={chatValue}
+                      noInput={!chatKey}
                       lockChat={lockChat}
                       sendMessage={sendMessage}
                       setChatValue={(value) => {
                         setChatValue(value);
                         setTabsState((old) => {
-                          // chatKey is undefined when there are no chat input keys
-                          if (!chatKey) return old;
                           let newTabsState = _.cloneDeep(old);
                           newTabsState[id.current].formKeysData.input_keys[
                             chatKey
