@@ -34,13 +34,13 @@ export default function ChatMessage({
         {!chat.isSend ? (
           <div className="form-modal-chat-image">
             <div className="form-modal-chat-bot-icon ">
-              <img src={Robot} className="form-modal-chat-icon-img" />
+              <img src={Robot} className="form-modal-chat-icon-img" alt="robot_image"/>
             </div>
           </div>
         ) : (
           <div className="form-modal-chat-image">
             <div className="form-modal-chat-user-icon ">
-              <img src={MaleTechnology} className="form-modal-chat-icon-img" />
+              <img src={MaleTechnology} className="form-modal-chat-icon-img" alt="male_technology"/>
             </div>
           </div>
         )}
@@ -75,7 +75,7 @@ export default function ChatMessage({
                     components={{
                       code({ node, inline, className, children, ...props }) {
                         if (children.length) {
-                          if (children[0] == "▍") {
+                          if (children[0] === "▍") {
                             return (
                               <span className="form-modal-markdown-span">
                                 ▍

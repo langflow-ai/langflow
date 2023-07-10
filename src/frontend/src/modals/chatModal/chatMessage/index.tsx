@@ -86,7 +86,7 @@ export default function ChatMessage({
                     components={{
                       code({ node, inline, className, children, ...props }) {
                         if (children.length) {
-                          if (children[0] == "▍") {
+                          if (children[0] === "▍") {
                             return (
                               <span className="chat-message-modal-markdown-span">
                                 ▍

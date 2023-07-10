@@ -205,6 +205,7 @@ The cursor: default; property value restores the browser's default cursor style 
   .input-primary {
     @apply bg-background block border-ring form-input px-3 placeholder:text-muted-foreground rounded-md shadow-sm sm:text-sm truncate w-full;
   }
+
   .input-edit-node{
     @apply input-primary placeholder:text-center pt-0.5 pb-0.5 text-center
   }
@@ -212,7 +213,7 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply input-primary pr-7 mx-2
   }
   .input-disable{
-    @apply bg-input
+    @apply bg-input text-muted-foreground
   }
   .input-dialog{
     @apply text-ring cursor-pointer bg-transparent
@@ -1049,5 +1050,8 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply relative w-full rounded-md shadow-sm
   }
 
+  .tooltip-fixed-width{
+    @apply max-w-[30vw] max-h-[20vh] overflow-auto
+  }
 
 }

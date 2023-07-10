@@ -44,7 +44,7 @@ export default function PromptAreaComponent({
         })
         .catch((error) => {});
     }
-  }, [reactFlowInstance, field_name]);
+  }, [reactFlowInstance, field_name, myValue, nodeClass, setNodeClass]);
 
   return (
     <div className={disabled ? "cursor-not-allowed" : ""}>
@@ -69,10 +69,9 @@ export default function PromptAreaComponent({
             }}
             className={
               editNode
-                ? " input-edit-node " + " input-dialog "
+                ? "input-edit-node input-dialog"
                 : (disabled ? " input-disable " : "") +
-                  " input-primary " +
-                  " input-dialog "
+                  " input-primary input-dialog"
             }
           >
             {myValue !== "" ? myValue : "Type your prompt here"}

@@ -843,7 +843,7 @@ export function groupByFamily(data, baseClasses, left, type) {
     });
   });
 
-  if (left == false) {
+  if (left === false) {
     let groupedBy = arrOfType.filter((object, index, self) => {
       const foundIndex = self.findIndex(
         (o) => o.family === object.family && o.type === object.type
@@ -866,7 +866,7 @@ export function groupByFamily(data, baseClasses, left, type) {
         });
       }
 
-      if (left == false) {
+      if (left === false) {
         let resFil = result.filter((group) => group.family === parentOutput);
         result = resFil;
       }
@@ -893,8 +893,8 @@ export function groupByFamily(data, baseClasses, left, type) {
     }
 
     groupedArray.forEach((object, index, self) => {
-      const findObj = arrOfLength.find((x) => x.type == object.family);
-      if (object.component.length == findObj.length) {
+      const findObj = arrOfLength.find((x) => x.type === object.family);
+      if (object.component.length === findObj.length) {
         self[index]["type"] = "";
       } else {
         self[index]["type"] = object.component.join(", ");

@@ -1,5 +1,5 @@
 import { Dispatch, SetStateAction } from "react";
-import { FlowType } from "../flow";
+import { FlowType, TweaksType } from "../flow";
 
 export type TabsContextType = {
   saveFlow: (flow: FlowType) => Promise<void>;
@@ -32,8 +32,8 @@ export type TabsContextType = {
   ) => void;
   lastCopiedSelection: { nodes: any; edges: any };
   setLastCopiedSelection: (selection: { nodes: any; edges: any }) => void;
-  setTweak: (tweak: any) => void;
-  getTweak: any;
+  setTweak: (tweak: TweaksType) => void;
+  getTweak: TweaksType[];
 };
 
 export type TabsState = {

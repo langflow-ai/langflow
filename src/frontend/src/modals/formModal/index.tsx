@@ -63,12 +63,14 @@ export default function FormModal({
 
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
   const { reactFlowInstance } = useContext(typesContext);
-  const { setErrorData, setNoticeData } = useContext(alertContext);
+  const { setErrorData } = useContext(alertContext);
   const ws = useRef<WebSocket | null>(null);
   const [lockChat, setLockChat] = useState(false);
   const isOpen = useRef(open);
   const messagesRef = useRef(null);
   const id = useRef(flow.id);
+  const tabsStateFlowId = tabsState[flow.id];
+  const tabsStateFlowIdFormKeysData = tabsStateFlowId.formKeysData;
   const [chatKey, setChatKey] = useState(
     Object.keys(tabsState[flow.id].formKeysData.input_keys).find(
       (k) => !tabsState[flow.id].formKeysData.handle_keys.some((j) => j === k)
@@ -86,7 +88,7 @@ export default function FormModal({
   }, [open]);
   useEffect(() => {
     id.current = flow.id;
-  }, [flow.id, tabsState[flow.id], tabsState[flow.id].formKeysData]);
+  }, [flow.id, tabsStateFlowId, tabsStateFlowIdFormKeysData]);
 
   var isStream = false;
 
@@ -515,7 +517,7 @@ export default function FormModal({
                       <ChatMessage
                         lockChat={lockChat}
                         chat={c}
-                        lastMessage={chatHistory.length - 1 == i ? true : false}
+                        lastMessage={chatHistory.length - 1 === i ? true : false}
                         key={i}
                       />
                     ))

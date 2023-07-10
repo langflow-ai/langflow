@@ -55,7 +55,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const { closePopUp } = useContext(PopUpContext);
   const { types } = useContext(typesContext);
   const ref = useRef();
-  const { setTabsState, tabId, save } = useContext(TabsContext);
+  const { setTabsState, tabId } = useContext(TabsContext);
   const { reactFlowInstance } = useContext(typesContext);
 
   let disabled =
