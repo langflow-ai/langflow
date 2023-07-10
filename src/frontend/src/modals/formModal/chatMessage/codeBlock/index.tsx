@@ -1,5 +1,5 @@
 import { IconCheck, IconClipboard, IconDownload } from "@tabler/icons-react";
-import { FC, memo, useState } from "react";
+import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import { programmingLanguages } from "../../../../utils";
@@ -9,7 +9,7 @@ interface Props {
   value: string;
 }
 
-export const CodeBlock: FC<Props> = memo(({ language, value }) => {
+export function CodeBlock({ language, value }) {
   const [isCopied, setIsCopied] = useState<Boolean>(false);
 
   const copyToClipboard = () => {
@@ -63,7 +63,7 @@ export const CodeBlock: FC<Props> = memo(({ language, value }) => {
       </div>
 
       <SyntaxHighlighter
-        className=" w-[47vw]"
+        className="overflow-auto"
         language={language}
         style={oneDark}
         customStyle={{ margin: 0 }}
@@ -72,5 +72,5 @@ export const CodeBlock: FC<Props> = memo(({ language, value }) => {
       </SyntaxHighlighter>
     </div>
   );
-});
+}
 CodeBlock.displayName = "CodeBlock";

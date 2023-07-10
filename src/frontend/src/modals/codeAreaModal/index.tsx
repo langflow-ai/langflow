@@ -5,7 +5,7 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 import { TerminalSquare } from "lucide-react";
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useRef, useState } from "react";
 import AceEditor from "react-ace";
 import { Button } from "../../components/ui/button";
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants";
@@ -37,9 +37,6 @@ export default function CodeAreaModal({
     detail: { error: string; traceback: string };
   }>(null);
   const ref = useRef();
-  useEffect(() => {
-    setValue(code);
-  }, [code, setValue]);
 
   function setModalOpen(x: boolean) {
     if (x === false) {
