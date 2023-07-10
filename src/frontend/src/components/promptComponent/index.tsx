@@ -70,7 +70,7 @@ export default function PromptAreaComponent({
             editNode
               ? "input-edit-node input-dialog"
               : (disabled ? " input-disable " : "") +
-                " input-dialog input-primary"
+                " input-primary text-muted-foreground"
           }
         >
           {myValue !== "" ? myValue : "Type your prompt here"}
