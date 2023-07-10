@@ -220,7 +220,14 @@ class PromptVertex(Vertex):
             # We'll build the prompt with the artifacts
             # to show the user what the prompt looks like
             # with the variables filled in
-            return self._built_object.format(**self.artifacts)
+            artifacts = self.artifacts.copy()
+            # Remove the handle_keys from the artifacts
+            # so the prompt format doesn't break
+            artifacts.pop("handle_keys", None)
+            try:
+                return self._built_object.format(**self.artifacts)
+            except KeyError:
+                return super()._built_object_repr()
         else:
             return super()._built_object_repr()
 
