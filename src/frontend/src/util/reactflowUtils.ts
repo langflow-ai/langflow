@@ -5,6 +5,7 @@ export function cleanEdges({
   flow: { edges, nodes },
   updateEdge,
 }: cleanEdgesType) {
+  console.log(nodes, "nodes");
   let newEdges = _.cloneDeep(edges);
   edges.forEach((edge) => {
     // check if the source and target node still exists
@@ -20,8 +21,8 @@ export function cleanEdges({
       if (targetHandle) {
         const field = targetHandle.split("|")[1];
         const id =
-          (targetNode.data.node.template[field].input_types?.join(";") ??
-            targetNode.data.node.template[field].type) +
+          (targetNode.data.node.template[field]?.input_types?.join(";") ??
+            targetNode.data.node.template[field]?.type) +
           "|" +
           field +
           "|" +
@@ -42,6 +43,6 @@ export function cleanEdges({
       }
     }
   });
-  console.log("cleanEdges", newEdges);
+  console.log("clean end", newEdges);
   updateEdge(newEdges);
 }
