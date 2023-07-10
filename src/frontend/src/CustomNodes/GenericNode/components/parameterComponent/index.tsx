@@ -122,7 +122,7 @@ export default function ParameterComponent({
             {nodeNames[item.family] ?? ""}{" "}
             <span className="text-xs">
               {" "}
-              {item.type == "" ? "" : " - "}
+              {item.type === "" ? "" : " - "}
               {item.type.split(", ").length > 2
                 ? item.type.split(", ").map((el, i) => (
                     <React.Fragment key={el + i}>
@@ -176,7 +176,7 @@ export default function ParameterComponent({
           <></>
         ) : (
           <ShadTooltip
-            style="max-w-[30vw] max-h-[20vh] overflow-auto custom-scroll"
+            style="tooltip-fixed-width custom-scroll"
             delayDuration={0}
             content={refHtml.current}
             side={left ? "left" : "right"}
@@ -217,7 +217,7 @@ export default function ParameterComponent({
               />
             ) : data.node.template[name].multiline ? (
               <TextAreaComponent
-                disabled={false}
+                disabled={disabled}
                 value={data.node.template[name].value ?? ""}
                 onChange={handleOnNewValue}
               />

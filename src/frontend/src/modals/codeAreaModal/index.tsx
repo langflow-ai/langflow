@@ -31,7 +31,7 @@ export default function CodeAreaModal({
   const [code, setCode] = useState(value);
   const [loading, setLoading] = useState(false);
   const { dark } = useContext(darkContext);
-  const { closePopUp } = useContext(PopUpContext);
+  const { closePopUp, setCloseEdit } = useContext(PopUpContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [error, setError] = useState<{
     detail: { error: string; traceback: string };
@@ -40,6 +40,13 @@ export default function CodeAreaModal({
   useEffect(() => {
     setValue(code);
   }, [code, setValue]);
+
+  function setModalOpen(x: boolean) {
+    if (x === false) {
+      setCloseEdit("codearea");
+      closePopUp();
+    }
+  }
 
   function handleClick() {
     setLoading(true);
@@ -55,6 +62,7 @@ export default function CodeAreaModal({
             });
             setValue(code);
             setOpen((old) => !old);
+            setModalOpen(false);
           } else {
             if (funcErrors.length !== 0) {
               setErrorData({

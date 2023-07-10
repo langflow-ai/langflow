@@ -202,13 +202,12 @@ export default function GenericModal({
             "flex h-[55vh] w-full"
           )}
         >
-          {type == TypeModal.PROMPT && isEdit ? (
+          {type === TypeModal.PROMPT && isEdit ? (
             <Textarea
               ref={ref}
               className="form-input h-full w-full rounded-lg border-gray-300 custom-scroll focus-visible:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
               value={inputValue}
               onBlur={() => {
-                blur();
                 setIsEdit(false);
               }}
               autoFocus
@@ -218,9 +217,9 @@ export default function GenericModal({
               }}
               placeholder="Type message here."
             />
-          ) : type == TypeModal.PROMPT && !isEdit ? (
+          ) : type === TypeModal.PROMPT && !isEdit ? (
             <TextAreaContentView />
-          ) : type != TypeModal.PROMPT ? (
+          ) : type !== TypeModal.PROMPT ? (
             <Textarea
               ref={ref}
               className="form-input h-full w-full rounded-lg border-gray-300 focus-visible:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
@@ -235,7 +234,7 @@ export default function GenericModal({
           )}
         </div>
 
-        {type == TypeModal.PROMPT && (
+        {type === TypeModal.PROMPT && (
           <>
             <div className="sm:6/6 mr-28 mt-3 h-[60px] overflow-y-auto custom-scroll">
               <div className="flex flex-wrap items-center">
@@ -281,7 +280,7 @@ export default function GenericModal({
                   setModalOpen(false);
                   break;
                 case 2:
-                  !inputValue || inputValue == ""
+                  !inputValue || inputValue === ""
                     ? setModalOpen(false)
                     : validatePrompt(false);
                   break;

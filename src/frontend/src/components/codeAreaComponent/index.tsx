@@ -27,15 +27,10 @@ export default function CodeAreaComponent({
   useEffect(() => {
     setMyValue(typeof value == "string" ? value : JSON.stringify(value));
   }, [value]);
+  
 
   return (
-    <div className={disabled ? "cursor-not-allowed" : ""}>
-      <div
-        className={
-          (editNode ? "w-full items-center" : "flex w-full items-center") +
-          (disabled ? " pointer-events-none" : "")
-        }
-      >
+      <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
         <div className="flex w-full items-center">
           <span
             onClick={() => {
@@ -53,9 +48,8 @@ export default function CodeAreaComponent({
             }}
             className={
               editNode
-                ? "input-edit-node input-dialog "
-                : "input-dialog input-primary " +
-                  (disabled ? "input-disable" : "")
+                ? "input-edit-node"
+                : "input-primary text-muted-foreground" + (disabled ? " input-disable" : "")
             }
           >
             {myValue !== "" ? myValue : "Type something..."}
@@ -87,6 +81,5 @@ export default function CodeAreaComponent({
           </button>
         </div>
       </div>
-    </div>
   );
 }

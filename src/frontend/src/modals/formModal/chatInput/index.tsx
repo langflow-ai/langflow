@@ -57,7 +57,7 @@ export default function ChatInput({
         <button
           className={classNames(
             "form-modal-send-button",
-            chatValue == "" ? "text-primary" : " bg-indigo-600 text-background"
+            chatValue === "" ? "text-primary" : " bg-indigo-600 text-background"
           )}
           disabled={lockChat}
           onClick={() => sendMessage()}

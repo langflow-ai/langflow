@@ -27,13 +27,8 @@ export default function TextAreaComponent({
   }, [closePopUp]);
 
   return (
-    <div className={disabled ? "cursor-not-allowed" : ""}>
-      <div
-        className={
-          (editNode ? "relative top-2 w-full" : "flex w-full items-center") +
-          (disabled ? " pointer-events-none" : "")
-        }
-      >
+      <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
+        <div className="flex w-full items-center">
         <input
           value={myValue}
           className={
@@ -46,6 +41,7 @@ export default function TextAreaComponent({
             setMyValue(e.target.value);
             onChange(e.target.value);
           }}
+
         />
 
         <button

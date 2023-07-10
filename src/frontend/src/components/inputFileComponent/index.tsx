@@ -98,10 +98,8 @@ export default function InputFileComponent({
           onClick={handleButtonClick}
           className={
             editNode
-              ? " input-edit-node " + " input-dialog "
-              : (disabled ? " input-disable " : "") +
-                " input-primary " +
-                " input-dialog "
+              ? "input-edit-node input-dialog text-muted-foreground"
+              : (disabled ? "input-disable input-primary input-dialog" : "input-primary input-dialog text-muted-foreground") 
           }
         >
           {myValue !== "" ? myValue : "No file"}
