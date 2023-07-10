@@ -138,51 +138,56 @@ export default function ChatMessage({
         </div>
       ) : (
         <div>
-          <button
-            className="form-modal-initial-prompt-btn"
-            onClick={() => {
-              setPromptOpen((old) => !old);
-            }}
-          >
-            Display Prompt
-            <ChevronDown
-              className={
-                "h-3 w-3 transition-all " + (promptOpen ? "rotate-180" : "")
-              }
-            />
-          </button>
-          <span className="prose inline-block break-words text-primary dark:prose-invert">
-            {promptOpen
-              ? template?.split("\n")?.map((line, index) => {
-                  const regex = /{([^}]+)}/g;
-                  let match;
-                  let parts = [];
-                  let lastIndex = 0;
-                  while ((match = regex.exec(line)) !== null) {
-                    // Push text up to the match
-                    if (match.index !== lastIndex) {
-                      parts.push(line.substring(lastIndex, match.index));
-                    }
-                    // Push div with matched text
-                    if (chat.message[match[1]]) {
-                      parts.push(
-                        <span className="my-1 rounded-md bg-indigo-100">
-                          {chat.message[match[1]]}
-                        </span>
-                      );
-                    }
+          {template && (
+            <>
+              <button
+                className="form-modal-initial-prompt-btn"
+                onClick={() => {
+                  setPromptOpen((old) => !old);
+                }}
+              >
+                Display Prompt
+                <ChevronDown
+                  className={
+                    "h-3 w-3 transition-all " + (promptOpen ? "rotate-180" : "")
+                  }
+                />
+              </button>
+              <span className="prose inline-block break-words text-primary dark:prose-invert">
+                {promptOpen
+                  ? template?.split("\n")?.map((line, index) => {
+                      const regex = /{([^}]+)}/g;
+                      let match;
+                      let parts = [];
+                      let lastIndex = 0;
+                      while ((match = regex.exec(line)) !== null) {
+                        // Push text up to the match
+                        if (match.index !== lastIndex) {
+                          parts.push(line.substring(lastIndex, match.index));
+                        }
+                        // Push div with matched text
+                        if (chat.message[match[1]]) {
+                          parts.push(
+                            <span className="my-1 rounded-md bg-indigo-100">
+                              {chat.message[match[1]]}
+                            </span>
+                          );
+                        }
 
-                    // Update last index
-                    lastIndex = regex.lastIndex;
-                  }
-                  // Push text after the last match
-                  if (lastIndex !== line.length) {
-                    parts.push(line.substring(lastIndex));
-                  }
-                  return <p>{parts}</p>;
-                })
-              : chat.message[chat.chatKey]}
-          </span>
+                        // Update last index
+                        lastIndex = regex.lastIndex;
+                      }
+                      // Push text after the last match
+                      if (lastIndex !== line.length) {
+                        parts.push(line.substring(lastIndex));
+                      }
+                      return <p>{parts}</p>;
+                    })
+                  : chat.message[chat.chatKey]}
+              </span>
+            </>
+          )}
+          {chat.message[chat.chatKey]}
         </div>
       )}
     </div>
