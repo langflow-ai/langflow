@@ -165,7 +165,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                 {data.node.template[n].list ? (
                                   <InputListComponent
                                     editNode={true}
-                                    disabled={false}
+                                    disabled={disabled}
                                     value={
                                       !data.node.template[n].value ||
                                       data.node.template[n].value === ""
@@ -178,7 +178,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                   />
                                 ) : data.node.template[n].multiline ? (
                                   <TextAreaComponent
-                                    disabled={false}
+                                    disabled={disabled}
                                     editNode={true}
                                     value={data.node.template[n].value ?? ""}
                                     onChange={(t: string) => {
@@ -188,7 +188,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                 ) : (
                                   <InputComponent
                                     editNode={true}
-                                    disabled={false}
+                                    disabled={disabled}
                                     password={
                                       data.node.template[n].password ?? false
                                     }
@@ -214,7 +214,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                             ) : data.node.template[n].type === "float" ? (
                               <div className="mx-auto">
                                 <FloatComponent
-                                  disabled={false}
+                                  disabled={disabled}
                                   editNode={true}
                                   value={data.node.template[n].value ?? ""}
                                   onChange={(t) => {
@@ -239,7 +239,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                             ) : data.node.template[n].type === "int" ? (
                               <div className="mx-auto">
                                 <IntComponent
-                                  disabled={false}
+                                  disabled={disabled}
                                   editNode={true}
                                   value={data.node.template[n].value ?? ""}
                                   onChange={(t) => {
@@ -251,7 +251,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                               <div className="mx-auto">
                                 <InputFileComponent
                                   editNode={true}
-                                  disabled={false}
+                                  disabled={disabled}
                                   value={data.node.template[n].value ?? ""}
                                   onChange={(t: string) => {
                                     handleOnNewValue(t, n);
@@ -268,7 +268,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                 <PromptAreaComponent
                                   field_name={n}
                                   editNode={true}
-                                  disabled={false}
+                                  disabled={disabled}
                                   nodeClass={data.node}
                                   setNodeClass={(nodeClass) => {
                                     data.node = nodeClass;
@@ -282,7 +282,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                             ) : data.node.template[n].type === "code" ? (
                               <div className="mx-auto">
                                 <CodeAreaComponent
-                                  disabled={false}
+                                  disabled={disabled}
                                   editNode={true}
                                   value={data.node.template[n].value ?? ""}
                                   onChange={(t: string) => {
@@ -303,7 +303,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                                 setEnabled={(e) =>
                                   changeAdvanced(data.node.template[n])
                                 }
-                                disabled={false}
+                                disabled={disabled}
                                 size="small"
                               />
                             </div>
