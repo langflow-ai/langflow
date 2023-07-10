@@ -63,8 +63,8 @@ export default function Dropdown({
                 <Listbox.Options
                   className={classNames(
                     editNode
-                      ? "dropdown-component-true-options nowheel"
-                      : "dropdown-component-false-options nowheel",
+                      ? "dropdown-component-true-options nowheel custom-scroll"
+                      : "dropdown-component-false-options nowheel custom-scroll",
                     apiModal ? "mb-2 w-[250px]" : "absolute"
                   )}
                 >
