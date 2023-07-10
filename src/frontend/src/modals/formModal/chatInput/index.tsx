@@ -48,7 +48,7 @@ export default function ChatInput({
           setChatValue(e.target.value);
         }}
         className={classNames(
-          lockChat ? " form-modal-lock-true" : " form-modal-lock-false",
+          lockChat ? " form-modal-lock-true bg-input " : " form-modal-lock-false",
           "form-modal-lockchat"
         )}
         placeholder={"Send a message..."}
