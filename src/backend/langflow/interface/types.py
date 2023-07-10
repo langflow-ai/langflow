@@ -20,14 +20,14 @@ from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.tools import CustomComponentNode
 from langflow.interface.retrievers.base import retriever_creator
 
-from langflow.utils.util import get_base_classes
+import re
 import warnings
-from fastapi import HTTPException
 import traceback
+from fastapi import HTTPException
+from langflow.utils.util import get_base_classes
+
 
 # Used to get the base_classes list
-
-
 def get_type_list():
     """Get a list of all langchain types"""
     all_types = build_langchain_types_dict()
@@ -69,6 +69,7 @@ def build_langchain_types_dict():  # sourcery skip: dict-assign-update-to-union
         created_types = creator.to_dict()
         if created_types[creator.type_name].values():
             all_types.update(created_types)
+
     return all_types
 
 
@@ -78,25 +79,35 @@ def process_type(field_type: str):
 
 # TODO: Move to correct place
 def add_new_custom_field(
-    template, field_name: str, field_type: str, field_config: dict
+    template,
+    field_name: str,
+    field_type: str,
+    field_value: str,
+    field_required: bool,
+    field_config: dict,
 ):
     # Check field_config if any of the keys are in it
     # if it is, update the value
     display_name = field_config.pop("display_name", field_name)
     field_type = field_config.pop("field_type", field_type)
     field_type = process_type(field_type)
+
+    if field_value is not None:
+        field_value = field_value.replace("'", "").replace('"', "")
+
     if "name" in field_config:
         warnings.warn(
             "The 'name' key in field_config is used to build the object and can't be changed."
         )
         field_config.pop("name", None)
 
-    required = field_config.pop("required", True)
+    required = field_config.pop("required", field_required)
     placeholder = field_config.pop("placeholder", "")
 
     new_field = TemplateField(
         name=field_name,
         field_type=field_type,
+        value=field_value,
         show=True,
         required=required,
         advanced=False,
@@ -133,6 +144,20 @@ def add_code_field(template, raw_code):
     return template
 
 
+def extract_type_from_optional(field_type):
+    """
+    Extract the type from a string formatted as "Optional[<type>]".
+
+    Parameters:
+    field_type (str): The string from which to extract the type.
+
+    Returns:
+    str: The extracted type, or an empty string if no type was found.
+    """
+    match = re.search(r"\[(.*?)\]", field_type)
+    return match[1] if match else None
+
+
 def build_langchain_template_custom_component(extractor: CustomComponent):
     # Build base "CustomComponent" template
     frontend_node = CustomComponentNode().to_dict().get(type(extractor).__name__)
@@ -145,19 +170,30 @@ def build_langchain_template_custom_component(extractor: CustomComponent):
         frontend_node["description"] = template_config["description"]
     raw_code = extractor.code
     field_config = template_config.get("field_config", {})
+
     if function_args is not None:
         # Add extra fields
         for extra_field in function_args:
-            def_field = extra_field[0]
-            def_type = extra_field[1]
+            field_required = True
+            field_name, field_type, field_value = extra_field
 
-            if def_field != "self":
+            if field_name != "self":
                 # TODO: Validate type - if is possible to render into frontend
-                if not def_type:
-                    def_type = "str"
-                config = field_config.get(def_field, {})
+                if "optional" in field_type.lower():
+                    field_type = extract_type_from_optional(field_type)
+                    field_required = False
+
+                if not field_type:
+                    field_type = "str"
+
+                config = field_config.get(field_name, {})
                 frontend_node = add_new_custom_field(
-                    frontend_node, def_field, def_type, config
+                    frontend_node,
+                    field_name,
+                    field_type,
+                    field_value,
+                    field_required,
+                    config,
                 )
 
     frontend_node = add_code_field(frontend_node, raw_code)
