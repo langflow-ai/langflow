@@ -12,7 +12,7 @@ import { FBIcon } from "./icons/FacebookMessenger";
 import { GitBookIcon } from "./icons/GitBook";
 import { GoogleIcon } from "./icons/Google";
 import { HackerNewsIcon } from "./icons/hackerNews";
-import { HugginFaceIcon } from "./icons/HuggingFace";
+import { HuggingFaceIcon } from "./icons/HuggingFace";
 import { IFixIcon } from "./icons/IFixIt";
 import { MetaIcon } from "./icons/Meta";
 import { MidjourneyIcon } from "./icons/Midjorney";
@@ -197,10 +197,10 @@ export const nodeIconsLucide: {
   HNLoader: HackerNewsIcon as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
-  HuggingFaceHub: HugginFaceIcon as React.ForwardRefExoticComponent<
+  HuggingFaceHub: HuggingFaceIcon as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
-  HuggingFaceEmbeddings: HugginFaceIcon as React.ForwardRefExoticComponent<
+  HuggingFaceEmbeddings: HuggingFaceIcon as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
   IFixitLoader: IFixIcon as React.ForwardRefExoticComponent<
