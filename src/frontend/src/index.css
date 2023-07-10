@@ -216,7 +216,7 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply input-primary pr-7 mx-2
   }
   .input-disable{
-    @apply bg-input text-muted-foreground
+    @apply bg-border placeholder:text-ring border-transparent
   }
   .input-dialog{
     @apply text-ring cursor-pointer bg-transparent
