@@ -1,5 +1,5 @@
+import re
 import ast
-import contextlib
 import traceback
 from typing import Callable, Optional
 from fastapi import HTTPException
@@ -77,26 +77,34 @@ class CustomComponent(BaseModel):
         else:
             self.class_template["functions"].append(function_data)
 
+    def _split_string(self, text):
+        """
+        Split a string by ':' or '=' and append None until the resulting list has 3 items.
+
+        Parameters:
+        text (str): The string to be split.
+
+        Returns:
+        list: A list of strings resulting from the split operation,
+        padded with None until its length is 3.
+        """
+        items = [item.strip() for item in re.split(r"[:=]", text) if item.strip()]
+        while len(items) < 3:
+            items.append(None)
+
+        return items
+
     def transform_list(self, input_list):
-        output_list = []
-        for item in input_list:
-            # Split each item on ':' to separate variable name and type
-            split_item = item.split(":")
+        """
+        Transform a list of strings by splitting each string and padding with None.
 
-            # If there is a type, strip any leading/trailing spaces from it
-            if len(split_item) > 1:
-                split_item[1] = split_item[1].strip()
-            # If there isn't a type, append None
-            else:
-                split_item.append(None)
-            for i in range(len(split_item)):
-                with contextlib.suppress(ValueError):
-                    # Try to evaluate the item
-                    split_item[i] = ast.literal_eval(split_item[i])
+        Parameters:
+        input_list (list): The list of strings to be transformed.
 
-            output_list.append(split_item)
-
-        return output_list
+        Returns:
+        list: A list of lists, each containing the result of the split operation.
+        """
+        return [self._split_string(item) for item in input_list]
 
     def extract_class_info(self):
         try:
@@ -120,6 +128,7 @@ class CustomComponent(BaseModel):
         attributes = data.get("class", {}).get("attributes", {})
         functions = data.get("functions", [])
         template_config = self._build_template_config(attributes)
+
         if build_function := next(
             (f for f in functions if f["name"] == self.function_entrypoint_name),
             None,
@@ -146,6 +155,7 @@ class CustomComponent(BaseModel):
             )
         if "description" in attributes:
             template_config["description"] = ast.literal_eval(attributes["description"])
+
         return template_config
 
     def _class_template_validation(self, code: dict):
