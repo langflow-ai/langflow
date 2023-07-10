@@ -39,11 +39,9 @@
   - [Deploy Langflow on Google Cloud Platform](#deploy-langflow-on-google-cloud-platform)
   - [Deploy Langflow on Jina AI Cloud](#deploy-langflow-on-jina-ai-cloud)
       - [API Usage](#api-usage)
-  - [Deploy on Railway](#deploy-on-railway)
-  - [Deploy on Render](#deploy-on-render)
-  - [🎨 Creating Flows](#-creating-flows)
-  - [👋 Contributing](#-contributing)
-  - [📄 License](#-license)
+- [🎨 Creating Flows](#-creating-flows)
+- [👋 Contributing](#-contributing)
+- [📄 License](#-license)
 
 
 # 📦 Installation
@@ -232,7 +230,7 @@ print(run_flow("Your message", flow_id=FLOW_ID, tweaks=TWEAKS))
 <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" />
 </a>
 
-## 🎨 Creating Flows
+# 🎨 Creating Flows
 
 Creating flows with Langflow is easy. Simply drag sidebar components onto the canvas and connect them together to create your pipeline. Langflow provides a range of [LangChain components](https://langchain.readthedocs.io/en/latest/reference.html) to choose from, including LLMs, prompt serializers, agents, and chains.
 
@@ -251,7 +249,7 @@ flow("Hey, have you heard of Langflow?")
 ```
 
 
-## 👋 Contributing
+# 👋 Contributing
 
 We welcome contributions from developers of all levels to our open-source project on GitHub. If you'd like to contribute, please check our [contributing guidelines](./CONTRIBUTING.md) and help make Langflow more accessible.
 
@@ -264,6 +262,6 @@ Join our [Discord](https://discord.com/invite/EqksyE2EX9) server to ask question
 [![Star History Chart](https://api.star-history.com/svg?repos=logspace-ai/langflow&type=Timeline)](https://star-history.com/#logspace-ai/langflow&Date)
 
 
-## 📄 License
+# 📄 License
 
 Langflow is released under the MIT License. See the LICENSE file for details.
