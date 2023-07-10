@@ -374,7 +374,9 @@ export default function ChatModal({
                       <ChatMessage
                         lockChat={lockChat}
                         chat={c}
-                        lastMessage={chatHistory.length - 1 === i ? true : false}
+                        lastMessage={
+                          chatHistory.length - 1 === i ? true : false
+                        }
                         key={i}
                       />
                     ))

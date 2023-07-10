@@ -99,7 +99,9 @@ export default function InputFileComponent({
           className={
             editNode
               ? "input-edit-node input-dialog text-muted-foreground"
-              : (disabled ? "input-disable input-primary input-dialog" : "input-primary input-dialog text-muted-foreground") 
+              : disabled
+              ? "input-disable input-dialog input-primary"
+              : "input-dialog input-primary text-muted-foreground"
           }
         >
           {myValue !== "" ? myValue : "No file"}
