@@ -33,8 +33,8 @@ export default function TextAreaComponent({
           value={myValue}
           className={
             editNode
-              ? "input-edit-node"
-              : "input-primary" + (disabled ? " input-disable " : "")
+              ? " input-edit-node "
+              : " input-primary " + (disabled ? " input-disable" : "")
           }
           placeholder={"Type something..."}
           onChange={(e) => {

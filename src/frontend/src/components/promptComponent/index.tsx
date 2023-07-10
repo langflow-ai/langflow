@@ -47,7 +47,6 @@ export default function PromptAreaComponent({
   }, [reactFlowInstance, field_name, myValue, nodeClass, setNodeClass]);
 
   return (
-    <div className={disabled ? "cursor-not-allowed" : ""}>
       <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
         <div className="flex w-full items-center">
           <span
@@ -107,6 +106,5 @@ export default function PromptAreaComponent({
           </button>
         </div>
       </div>
-    </div>
   );
 }
