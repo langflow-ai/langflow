@@ -76,7 +76,7 @@ export async function postValidatePrompt(
  */
 export async function getExamples(): Promise<FlowType[]> {
   const url =
-    "https://api.github.com/repos/logspace-ai/langflow_examples/contents/examples";
+    "https://api.github.com/repos/logspace-ai/langflow_examples/contents/examples?ref=fix_examples";
   const response = await axios.get(url);
 
   const jsonFiles = response.data.filter((file: any) => {
