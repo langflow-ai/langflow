@@ -6,7 +6,6 @@ export function cleanEdges({
   updateEdge,
 }: cleanEdgesType) {
   let newEdges = _.cloneDeep(edges);
-  console.log("cleanEdges", newEdges);
   edges.forEach((edge) => {
     // check if the source and target node still exists
     const sourceNode = nodes.find((node) => node.id === edge.source);
@@ -43,5 +42,6 @@ export function cleanEdges({
       }
     }
   });
+  console.log("cleanEdges", newEdges);
   updateEdge(newEdges);
 }
