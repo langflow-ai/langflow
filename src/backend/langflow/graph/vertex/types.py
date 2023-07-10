@@ -225,7 +225,7 @@ class PromptVertex(Vertex):
             # so the prompt format doesn't break
             artifacts.pop("handle_keys", None)
             try:
-                return self._built_object.format(**self.artifacts)
+                return self._built_object.format(**artifacts)
             except KeyError:
                 return super()._built_object_repr()
         else:
