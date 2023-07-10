@@ -554,6 +554,8 @@ export default function FormModal({
                       setChatValue={(value) => {
                         setChatValue(value);
                         setTabsState((old) => {
+                          // chatKey is undefined when there are no chat input keys
+                          if (!chatKey) return old;
                           let newTabsState = _.cloneDeep(old);
                           newTabsState[id.current].formKeysData.input_keys[
                             chatKey
