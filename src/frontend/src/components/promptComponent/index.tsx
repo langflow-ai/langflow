@@ -47,64 +47,64 @@ export default function PromptAreaComponent({
   }, [reactFlowInstance, field_name, myValue, nodeClass, setNodeClass]);
 
   return (
-      <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
-        <div className="flex w-full items-center">
-          <span
-            onClick={() => {
-              openPopUp(
-                <GenericModal
-                  type={TypeModal.PROMPT}
-                  value={myValue}
-                  buttonText="Check & Save"
-                  modalTitle="Edit Prompt"
-                  setValue={(t: string) => {
-                    setMyValue(t);
-                    onChange(t);
-                  }}
-                  nodeClass={nodeClass}
-                  setNodeClass={setNodeClass}
-                />
-              );
-            }}
-            className={
-              editNode
-                ? "input-edit-node input-dialog"
-                : (disabled ? " input-disable " : "") +
-                  " input-primary input-dialog"
-            }
-          >
-            {myValue !== "" ? myValue : "Type your prompt here"}
-          </span>
-          <button
-            onClick={() => {
-              openPopUp(
-                <GenericModal
-                  field_name={field_name}
-                  type={TypeModal.PROMPT}
-                  value={myValue}
-                  buttonText="Check & Save"
-                  modalTitle="Edit Prompt"
-                  setValue={(t: string) => {
-                    setMyValue(t);
-                    onChange(t);
-                  }}
-                  nodeClass={nodeClass}
-                  setNodeClass={setNodeClass}
-                />
-              );
-            }}
-          >
-            {!editNode && (
-              <ExternalLink
-                strokeWidth={1.5}
-                className={
-                  "icons-parameters-comp" +
-                  (disabled ? " text-ring" : " hover:text-accent-foreground")
-                }
+    <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
+      <div className="flex w-full items-center">
+        <span
+          onClick={() => {
+            openPopUp(
+              <GenericModal
+                type={TypeModal.PROMPT}
+                value={myValue}
+                buttonText="Check & Save"
+                modalTitle="Edit Prompt"
+                setValue={(t: string) => {
+                  setMyValue(t);
+                  onChange(t);
+                }}
+                nodeClass={nodeClass}
+                setNodeClass={setNodeClass}
               />
-            )}
-          </button>
-        </div>
+            );
+          }}
+          className={
+            editNode
+              ? "input-edit-node input-dialog"
+              : (disabled ? " input-disable " : "") +
+                " input-dialog input-primary"
+          }
+        >
+          {myValue !== "" ? myValue : "Type your prompt here"}
+        </span>
+        <button
+          onClick={() => {
+            openPopUp(
+              <GenericModal
+                field_name={field_name}
+                type={TypeModal.PROMPT}
+                value={myValue}
+                buttonText="Check & Save"
+                modalTitle="Edit Prompt"
+                setValue={(t: string) => {
+                  setMyValue(t);
+                  onChange(t);
+                }}
+                nodeClass={nodeClass}
+                setNodeClass={setNodeClass}
+              />
+            );
+          }}
+        >
+          {!editNode && (
+            <ExternalLink
+              strokeWidth={1.5}
+              className={
+                "icons-parameters-comp" +
+                (disabled ? " text-ring" : " hover:text-accent-foreground")
+              }
+            />
+          )}
+        </button>
       </div>
+    </div>
   );
 }

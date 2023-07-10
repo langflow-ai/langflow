@@ -34,13 +34,21 @@ export default function ChatMessage({
         {!chat.isSend ? (
           <div className="form-modal-chat-image">
             <div className="form-modal-chat-bot-icon ">
-              <img src={Robot} className="form-modal-chat-icon-img" alt="robot_image"/>
+              <img
+                src={Robot}
+                className="form-modal-chat-icon-img"
+                alt="robot_image"
+              />
             </div>
           </div>
         ) : (
           <div className="form-modal-chat-image">
             <div className="form-modal-chat-user-icon ">
-              <img src={MaleTechnology} className="form-modal-chat-icon-img" alt="male_technology"/>
+              <img
+                src={MaleTechnology}
+                className="form-modal-chat-icon-img"
+                alt="male_technology"
+              />
             </div>
           </div>
         )}

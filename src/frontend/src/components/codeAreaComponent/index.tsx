@@ -27,60 +27,59 @@ export default function CodeAreaComponent({
   useEffect(() => {
     setMyValue(typeof value == "string" ? value : JSON.stringify(value));
   }, [value]);
-  
 
   return (
-      <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
-        <div className="flex w-full items-center">
-          <span
-            onClick={() => {
-              openPopUp(
-                <CodeAreaModal
-                  value={myValue}
-                  nodeClass={nodeClass}
-                  setNodeClass={setNodeClass}
-                  setValue={(t: string) => {
-                    setMyValue(t);
-                    onChange(t);
-                  }}
-                />
-              );
-            }}
-            className={
-              editNode
-                ? "input-edit-node input-dialog"
-                : (disabled ? " input-disable " : "") +
-                  " input-primary input-dialog"
-            }
-          >
-            {myValue !== "" ? myValue : "Type something..."}
-          </span>
-          <button
-            onClick={() => {
-              openPopUp(
-                <CodeAreaModal
-                  setNodeClass={setNodeClass}
-                  value={myValue}
-                  nodeClass={nodeClass}
-                  setValue={(t: string) => {
-                    setMyValue(t);
-                    onChange(t);
-                  }}
-                />
-              );
-            }}
-          >
-            {!editNode && (
-              <ExternalLink
-                strokeWidth={1.5}
-                className={
-                  "icons-parameters-comp" +
-                  (disabled ? " text-ring" : " hover:text-accent-foreground")
-                }
+    <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
+      <div className="flex w-full items-center">
+        <span
+          onClick={() => {
+            openPopUp(
+              <CodeAreaModal
+                value={myValue}
+                nodeClass={nodeClass}
+                setNodeClass={setNodeClass}
+                setValue={(t: string) => {
+                  setMyValue(t);
+                  onChange(t);
+                }}
               />
-            )}
-          </button>
-        </div>
+            );
+          }}
+          className={
+            editNode
+              ? "input-edit-node input-dialog"
+              : (disabled ? " input-disable " : "") +
+                " input-dialog input-primary"
+          }
+        >
+          {myValue !== "" ? myValue : "Type something..."}
+        </span>
+        <button
+          onClick={() => {
+            openPopUp(
+              <CodeAreaModal
+                setNodeClass={setNodeClass}
+                value={myValue}
+                nodeClass={nodeClass}
+                setValue={(t: string) => {
+                  setMyValue(t);
+                  onChange(t);
+                }}
+              />
+            );
+          }}
+        >
+          {!editNode && (
+            <ExternalLink
+              strokeWidth={1.5}
+              className={
+                "icons-parameters-comp" +
+                (disabled ? " text-ring" : " hover:text-accent-foreground")
+              }
+            />
+          )}
+        </button>
       </div>
+    </div>
   );
 }
