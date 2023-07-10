@@ -126,7 +126,7 @@ async def stream_build(flow_id: str):
                     params = vertex._built_object_repr()
                     valid = True
                     logger.debug(
-                        f"Building node {params[:50]}{'...' if len(params) > 50 else ''}"
+                        f"Building node {str(params)[:50]}{'...' if len(str(params)) > 50 else ''}"
                     )
                     if vertex.artifacts:
                         # The artifacts will be prompt variables
