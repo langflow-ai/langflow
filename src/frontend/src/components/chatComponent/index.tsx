@@ -72,7 +72,7 @@ export default function Chat({ flow }: ChatType) {
     }
 
     prevNodesRef.current = currentNodes;
-  }, [tabsState]);
+  }, [tabsState, flow.id]);
 
   return (
     <>
@@ -83,9 +83,17 @@ export default function Chat({ flow }: ChatType) {
           setIsBuilt={setIsBuilt}
           isBuilt={isBuilt}
         />
-        {isBuilt && canOpen && (
-          <FormModal key={flow.id} flow={flow} open={open} setOpen={setOpen} />
-        )}
+        {isBuilt &&
+          tabsState[flow.id] &&
+          tabsState[flow.id].formKeysData &&
+          canOpen && (
+            <FormModal
+              key={flow.id}
+              flow={flow}
+              open={open}
+              setOpen={setOpen}
+            />
+          )}
         <ChatTrigger
           canOpen={canOpen}
           open={open}
