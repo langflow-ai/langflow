@@ -89,9 +89,7 @@ class MemoryFrontendNode(FrontendNode):
         if field.name == "url":
             field.show = True
         if field.name == "entity_store":
-            field.show = True
-        if name == "SQLiteEntityStore":
-            field.show = True
+            field.show = False
 
 
 class PostgresChatMessageHistoryFrontendNode(MemoryFrontendNode):

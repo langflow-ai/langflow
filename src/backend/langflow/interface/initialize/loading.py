@@ -361,6 +361,12 @@ def instantiate_textsplitter(
         "separator_type" in params and params["separator_type"] == "Text"
     ) or "separator_type" not in params:
         params.pop("separator_type", None)
+        # separators might come in as an escaped string like \\n
+        # so we need to convert it to a string
+        if "separators" in params:
+            params["separators"] = (
+                params["separators"].encode().decode("unicode-escape")
+            )
         text_splitter = class_object(**params)
     else:
         from langchain.text_splitter import Language

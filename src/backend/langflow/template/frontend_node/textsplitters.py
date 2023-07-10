@@ -45,7 +45,7 @@ class TextSplittersFrontendNode(FrontendNode):
                 field_type="str",
                 required=True,
                 show=True,
-                value=".",
+                value="\\n",
                 name=name,
                 display_name="Separator",
             )
