@@ -1,6 +1,6 @@
 <!-- Title -->
 
-# ⛓️ LangFlow
+# ⛓️ Langflow
 
 ~ An effortless way to experiment and prototype [LangChain](https://github.com/hwchase17/langchain) pipelines ~
 
@@ -27,7 +27,7 @@
 
 ## 📦 Installation
 ### <b>Locally</b>
-You can install LangFlow from pip:
+You can install Langflow from pip:
 
 ```shell
 pip install langflow
@@ -194,4 +194,4 @@ Join our [Discord](https://discord.com/invite/EqksyE2EX9) server to ask question
 
 ## 📄 License
 
-LangFlow is released under the MIT License. See the LICENSE file for details.
+Langflow is released under the MIT License. See the LICENSE file for details.
