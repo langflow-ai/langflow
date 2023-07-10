@@ -12,13 +12,13 @@ In LangChain `ConversationBufferMemory` is a type of memory that stores the mess
 
 **Params**
 
-- **Chat Memory:** Incorporating chat memory into a chain, the model can maintain state and provide more coherent and personalized responses.
+- **Chat Memory:** Incorporating chat memory into a chain, the model can maintain its state and provide more coherent and personalized responses.
 
 
-- **input_key:** Prompt variable name where the memory can find the user's input messages. It is a key or identifier that can be used to associate input data with a specific conversation turn in the conversation buffer memory.
+- **input_key:** Prompt variable name where the memory can find the user input messages. It is a key or identifier that can be used to associate input data with a specific conversation turn in the conversation buffer memory.
 - **memory_key:** Specifies the prompt variable name where the memory will store and retrieve the chat messages. It allows for the preservation of the conversation history throughout the interaction with the language model. Defaults to `chat_history`.
 - **output_key:** Prompt variable name where the memory can store the output messages. As the input key, this allows for easy retrieval and manipulation of the messages.
-- **return_messages:** Determines whether the history should be returned as a string or as a list of messages. If `return_messages` is set to True, the history will be returned as a list of messages. If `return_messages` is set to False or not specified, the history will be returned as a string. Defaults is `False`.
+- **return_messages:** Determines whether the history should be returned as a string or as a list of messages. If `return_messages` is set to True, the history will be returned as a list of messages. If `return_messages` is set to False or not specified, the history will be returned as a string. The default is `False`.
 
 ### ConversationBufferWindowMemory
 
@@ -28,24 +28,24 @@ Buffer for storing conversation memory but using a sliding window.
 
 **Params**
 
-- **Chat Memory:** Incorporating chat memory into a chain, the model can maintain state and provide more coherent and personalized responses.
+- **Chat Memory:** Incorporating chat memory into a chain, the model can maintain its state and provide more coherent and personalized responses.
 
 
-- **input_key:** Prompt variable name where the memory can find the user's input messages. It is a key or identifier that can be used to associate input data with a specific conversation turn in the conversation buffer memory.
+- **input_key:** Prompt variable name where the memory can find the user input messages. It is a key or identifier that can be used to associate input data with a specific conversation turn in the conversation buffer memory.
 - **memory_key:** Specifies the prompt variable name where the memory will store and retrieve the chat messages. It allows for the preservation of the conversation history throughout the interaction with the language model. Defaults to `chat_history`.
 - **k:** Used to specify the number of interactions or messages that should be stored in the conversation buffer. It determines the size of the sliding window that keeps track of the most recent interactions.
 - **output_key:** Prompt variable name where the memory can store the output messages. As the input key, this allows for easy retrieval and manipulation of the messages.
-- **return_messages:** Determines whether the history should be returned as a string or as a list of messages. If `return_messages` is set to True, the history will be returned as a list of messages. If `return_messages` is set to False or not specified, the history will be returned as a string. Defaults is `False`.
+- **return_messages:** Determines whether the history should be returned as a string or as a list of messages. If `return_messages` is set to True, the history will be returned as a list of messages. If `return_messages` is set to False or not specified, the history will be returned as a string. The default is `False`.
 
 ### ConversationEntityMemory
 
 Entity extractor & summarizer memory.
 
-The purpose of `ConversationEntityMemory` is to incorporate intricate memory structures, specifically a key-value store, for entities referenced in a conversation. This key-value store facilitates the storage and retrieval of information relate to entities that have been mentioned throughout the conversation. The memory store can be directly examined and updated with new information. 
+The purpose of `ConversationEntityMemory` is to incorporate intricate memory structures, specifically a key-value store, for entities referenced in a conversation. This key-value store facilitates the storage and retrieval of information related to entities that have been mentioned throughout the conversation. The memory store can be directly examined and updated with new information. 
 
 **Params**
 
-- **Chat Memory:** Incorporating chat memory into a chain, the model can maintain state and provide more coherent and personalized responses.
+- **Chat Memory:** Incorporating chat memory into a chain, the model can maintain its state and provide more coherent and personalized responses.
 - **Entity Store:** Structure that stores information about specific entities mentioned in a conversation.
 - **LLM:** Language Model to use in the `ConversationEntityMemory`.
 
@@ -54,7 +54,7 @@ The purpose of `ConversationEntityMemory` is to incorporate intricate memory str
 - **input_key:** Used to specify the keys in the memory object where the input messages should be stored. This allows for easy retrieval and manipulation of the input messages.
 - **k:** Refers to the number of entities that can be stored in the memory. It determines the maximum number of entities that can be stored and retrieved from the memory object. Defaults to `10`
 - **output_key:** Designate the specific keys within the memory object where the output messages are to be stored. As the input key, this allows for easy retrieval and manipulation of the messages.
-- **return_messages:** Determines whether the history should be returned as a string or as a list of messages. If `return_messages` is set to True, the history will be returned as a list of messages. If `return_messages` is set to False or not specified, the history will be returned as a string. Defaults is `False`.
+- **return_messages:** Determines whether the history should be returned as a string or as a list of messages. If `return_messages` is set to True, the history will be returned as a list of messages. If `return_messages` is set to False or not specified, the history will be returned as a string. The default is `False`.
 
 ### ConversationKGMemory
 
@@ -65,15 +65,15 @@ Conversation Knowledge Graph Memory is a type of memory that uses a knowledge gr
 
 **Params**
 
-- **Chat Memory:** Incorporating chat memory into a chain, the model can maintain state and provide more coherent and personalized responses.
+- **Chat Memory:** Incorporating chat memory into a chain, the model can maintain its state and provide more coherent and personalized responses.
 - **LLM:** Language Model to use in the `ConversationKGMemory`.
 
 
-- **input_key:** Prompt variable name where the memory can find the user's input messages. It is a key or identifier that can be used to associate input data with a specific conversation turn in the conversation buffer memory.
+- **input_key:** Prompt variable name where the memory can find the user input messages. It is a key or identifier that can be used to associate input data with a specific conversation turn in the conversation buffer memory.
 - **k:** Represents the number of previous conversation turns that will be stored in the memory. By setting "k" to 2, it means that the memory will retain the previous 2 conversation turns, allowing the model to access and utilize the information from those turns during the conversation. Defaults to `10`
 - **memory_key:** Specifies the prompt variable name where the memory will store and retrieve the chat messages. It allows for the preservation of the conversation history throughout the interaction with the language model. Defaults to `chat_history`.
 - **output_key:** Prompt variable name where the memory can store the output messages. As the input key, this allows for easy retrieval and manipulation of the messages.
-- **return_messages:** Determines whether the history should be returned as a string or as a list of messages. If `return_messages` is set to True, the history will be returned as a list of messages. If `return_messages` is set to False or not specified, the history will be returned as a string. Defaults is `False`.
+- **return_messages:** Determines whether the history should be returned as a string or as a list of messages. If `return_messages` is set to True, the history will be returned as a list of messages. If `return_messages` is set to False or not specified, the history will be returned as a string. The default is `False`.
 
 ### ConversationSummaryMemory
 
@@ -84,14 +84,14 @@ Conversation summarizer to memory.
 
 **Params**
 
-- **Chat Memory:** Incorporating chat memory into a chain, the model can maintain state and provide more coherent and personalized responses.
+- **Chat Memory:** Incorporating chat memory into a chain, the model can maintain its state and provide more coherent and personalized responses.
 - **LLM:** Language Model to use in the `ConversationSummaryMemory`.
 
 
-- **input_key:** Prompt variable name where the memory can find the user's input messages. It is a key or identifier that can be used to associate input data with a specific conversation turn in the conversation buffer memory.
+- **input_key:** Prompt variable name where the memory can find the user input messages. It is a key or identifier that can be used to associate input data with a specific conversation turn in the conversation buffer memory.
 - **memory_key:** Specifies the prompt variable name where the memory will store and retrieve the chat messages. It allows for the preservation of the conversation history throughout the interaction with the language model. Defaults to `chat_history`.
 - **output_key:** Prompt variable name where the memory can store the output messages. As the input key, this allows for easy retrieval and manipulation of the messages.
-- **return_messages:** Determines whether the history should be returned as a string or as a list of messages. If `return_messages` is set to True, the history will be returned as a list of messages. If `return_messages` is set to False or not specified, the history will be returned as a string. Defaults is `False`.
+- **return_messages:** Determines whether the history should be returned as a string or as a list of messages. If `return_messages` is set to True, the history will be returned as a list of messages. If `return_messages` is set to False or not specified, the history will be returned as a string. The default is `False`.
 
 ### PostgresChatMessageHistory
 
@@ -116,9 +116,9 @@ Class for a VectorStore-backed memory object.
 
 **Params**
 
-- **Retriever:** The retriever to use to fetch relevant documents from.
+- **Retriever:** The retriever to use to fetch relevant documents.
 
 
 - **input_key:** Used to specify the keys in the memory object where the input messages should be stored. This allows for easy retrieval and manipulation of the input messages.
 - **memory_key:** Specifies the prompt variable name where the memory will store and retrieve the chat messages. It allows for the preservation of the conversation history throughout the interaction with the language model. Defaults to `chat_history`.
-- **return_messages:** Determines whether the history should be returned as a string or as a list of messages. If `return_messages` is set to True, the history will be returned as a list of messages. If `return_messages` is set to False or not specified, the history will be returned as a string. Defaults is `False`.
+- **return_messages:** Determines whether the history should be returned as a string or as a list of messages. If `return_messages` is set to True, the history will be returned as a list of messages. If `return_messages` is set to False or not specified, the history will be returned as a string. The default is `False`.

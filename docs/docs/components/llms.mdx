@@ -10,9 +10,9 @@ It is used for chat-based interactions and supports async and streaming function
 
 - **anthropic_api_key:** The parameter is used to authenticate and authorize access to the Anthropic API. 
 
-- **anthropic_api_url:** This parameter specify the URL of the Anthropic API that you want to connect to. 
+- **anthropic_api_url:** This parameter specifies the URL of the Anthropic API that the user wants to connect to. 
 
-- **temperature:** A non-negative float that tunes the degree of randomness in generation.
+- **temperature:** A non-negative float that tunes the degree of randomness in a generation.
 
 
 ### CTransformers
@@ -20,7 +20,7 @@ It is used for chat-based interactions and supports async and streaming function
 
 Wrapper around the C Transformers LLM interface.
 
-It is a wrapper for interacting with GGML (Generative Graded Models in LangChain) models. It is part of the CTransformers library, which is a Python library that provides bindings for GGML models. The LLM CTransformers allows you to use language models (LLMs) within LangChain and generate text using these models. It provides a unified interface for all models and supports models hosted on the Hugging Face Hub. To use, you should have the ctransformers python package installed. See [more](https://github.com/marella/ctransformers).
+It is a wrapper for interacting with GGML (Generative Graded Models in LangChain) models. It is part of the CTransformers library, which is a Python library that provides bindings for GGML models. The LLM CTransformers allow the user to use language models (LLMs) within LangChain and generate text using these models. It provides a unified interface for all models and supports models hosted on the Hugging Face Hub. To use, the user should have the ctransformers python package installed. See [more](https://github.com/marella/ctransformers).
 
 **config:** Configuration for the Transformer models. Check out [config](https://github.com/marella/ctransformers#config). Defaults to:
 
@@ -60,7 +60,7 @@ It is a wrapper for interacting with GGML (Generative Graded Models in LangChain
 
 **model:** The path to a model file or directory or the name of a Hugging Face Hub model repo.
 
-**model_file:** The name of the model file in repo or directory.
+**model_file:** The name of the model file in the repo or directory.
 
 **model_type:** Transformer model to be used. Current supported: GPT-2, GPT-J, GPT4All-J, GPT-NeoX, StableLM, LLaMA, MPT, Dolly V2, Replit, StarCoder, StarChat	and Falcon.
 
@@ -72,9 +72,9 @@ Wrapper around Anthropic's large language model.
 
 - **anthropic_api_key:** The parameter is used to authenticate and authorize access to the Anthropic API. 
 
-- **anthropic_api_url:** This parameter specify the URL of the Anthropic API that you want to connect to. 
+- **anthropic_api_url:** This parameter specifies the URL of the Anthropic API that the user wants to connect to. 
 
-- **temperature:** A non-negative float that tunes the degree of randomness in generation.
+- **temperature:** A non-negative float that tunes the degree of randomness in a generation.
 
 ### ChatOpenAI
 
@@ -88,7 +88,7 @@ It is one of the LLMs (Large Language Models) available and is used for tasks su
 - **model_name:** Model name to use.
 - **openai_api_base:** Base URL for the OpenAI API requests. 
 - **openai_api_key:**  Key used to authenticate and access the OpenAI API.
-- **temperature:** What sampling temperature to use. Defaults to `0.7`
+- **temperature:** What sampling temperature to use? Defaults to `0.7`.
 
 ### Cohere
 
@@ -97,19 +97,19 @@ Wrapper around Cohere large language models.
 
 The Cohere LLM can be used for tasks such as chatbots, Generative Question-Answering (GQA), and summarization. It is designed to be fast and cost-effective, making it suitable for generating hypothetical questions for retrieval.
 
-- **cohere_api_key:** This parameter specify the URL of the Cohere API requests. 
+- **cohere_api_key:** This parameter specifies the URL of the Cohere API requests. 
 - **max_tokens:** Denotes the number of tokens to predict per generation. Defaults to `256`.
-- **temperature:** A non-negative float that tunes the degree of randomness in generation. Defautls to `0.75`.
+- **temperature:** A non-negative float that tunes the degree of randomness in a generation. Defaults to `0.75`.
 
 ### HuggingFaceHub
 
-It is one of the LLMs (Large Language Models) available and is integrated with the Hugging Face Hub. The Hugging Face Hub is an online platform that hosts over 120k models, 20k datasets, and 50k demo apps, all of which are open source and publicly available. The HuggingFaceHub LLM can be accessed through the LangChain framework either by using the local pipeline wrapper or by calling the hosted inference endpoints. It supports tasks such as text generation and can be used for various natural language processing applications.
+It is one of the LLMs (Large Language Models) available and is integrated with the Hugging Face Hub. The Hugging Face Hub is an online platform that hosts over 120k models, 20k datasets, and 50k demo apps, all of which are open-source and publicly available. The HuggingFaceHub LLM can be accessed through the LangChain framework either by using the local pipeline wrapper or by calling the hosted inference endpoints. It supports tasks such as text generation and can be used for various natural language processing applications.
 
 Wrapper around HuggingFaceHub models.
 
 
 - **huggingfacehub_api_token:** Token needed to authenticate the API.
-- **model_kwargs:** Key word arguments to pass to the model.
+- **model_kwargs:** Keyword arguments to pass to the model.
 - **repo_id:** Model name to use. Defaults to `gpt2`.
 - **task:** Task to call the model with. Should be a task that returns generated_text or summary_text.
 
@@ -118,39 +118,36 @@ Wrapper around HuggingFaceHub models.
 
 Wrapper around the llama.cpp model.
 
-It is a wrapper for the llama.cpp library, which is used within LangChain for language model operations. The LlamaCpp LLM allows users to access and utilize the llama.cpp functionality within their applications. It provides integration with the LangChain ecosystem and can be used for tasks such as text generation and embeddings. 
+It is a wrapper for the llama.cpp library, which is used within LangChain for language model operations. The LlamaCpp LLM allows users to access and utilize the llama.cpp functionality within their applications. It provides integration with the LangChain ecosystem and can be used for tasks such as text generation and embeddings. To check out the [installation instructions](https://github.com/ggerganov/llama.cpp).
 
-**! TODO: Info about installation?**
-
-
-- **cache:** Defaults to `False`
-- **echo:** Whether to echo the prompt. Defaults to `False`
-- **f16_kv:** Use half-precision for key/value cache. Defaults to `True`
-- **last_n_tokens_size:** The number of tokens to look back when applying the repeat_penalty. Defaults to `64`
-- **logits_all:** Return logits for all tokens, not just the last token Defaults to `False`
+- **cache:** Defaults to `False`.
+- **echo:** Whether to echo the prompt. Defaults to `False`.
+- **f16_kv:** Use half-precision for key/value cache. Defaults to `True`.
+- **last_n_tokens_size:** The number of tokens to look back at when applying the repeat_penalty. Defaults to `64`.
+- **logits_all:** Return logits for all tokens, not just the last token Defaults to `False`.
 - **logprobs:** The number of logprobs to return. If None, no logprobs are returned.
 - **lora_base:** The path to the Llama LoRA base model.
 - **lora_path:** The path to the Llama LoRA. If None, no LoRa is loaded.
-- **max_tokens:** The maximum number of tokens to generate. Defaults to `256`
+- **max_tokens:** The maximum number of tokens to generate. Defaults to `256`.
 - **model_path:** The path to the Llama model file.
-- **n_batch:** Number of tokens to process in parallel. Should be a number between 1 and n_ctx. Defaults to `8`
-- **n_ctx:** Token context window. Defaults to `512`
-- **n_gpu_layers:** Number of layers to be loaded into gpu memory. Default None.
-- **n_parts:**Number of parts to split the model into. If -1, the number of parts is automatically determined. Defaults to `-1`
+- **n_batch:** Number of tokens to process in parallel. Should be a number between 1 and n_ctx. Defaults to `8`.
+- **n_ctx:** Token context window. Defaults to `512`.
+- **n_gpu_layers:** Number of layers to be loaded into GPU memory. Default None.
+- **n_parts:**Number of parts to split the model into. If -1, the number of parts is automatically determined. Defaults to `-1`.
 - **n_threads:** Number of threads to use. If None, the number of threads is automatically determined.
-- **repeat_penalty:** The penalty to apply to repeated tokens. Defaults to `1.1`
-- **seed:** Seed. If -1, a random seed is used. Defaults to `-1`
+- **repeat_penalty:** The penalty to apply to repeated tokens. Defaults to `1.1`.
+- **seed:** Seed. If -1, a random seed is used. Defaults to `-1`.
 - **stop:** A list of strings to stop generation when encountered.
-- **streaming:** Whether to stream the results, token by token. Defaults to `True`
+- **streaming:** Whether to stream the results, token by token. Defaults to `True`.
 - **suffix:** A suffix to append to the generated text. If None, no suffix is appended.
 - **tags:** Tags to add to the run trace.
-- **temperature:** The temperature to use for sampling. Defaults to `0.8`
-- **top_k:** The top-k value to use for sampling. Defaults to `40`
-- **top_p:** The top-p value to use for sampling. Defaults to `0.95`
-- **use_mlock:** Force system to keep model in RAM. Defaults to `False`
-- **use_mmap:** Whether to keep the model loaded in RAM. Defaults to `True`
-- **verbose:** Whether to print out response text. Defaults to `False`
-- **vocab_only:** Only load the vocabulary, no weights. Defaults to `False`
+- **temperature:** The temperature to use for sampling. Defaults to `0.8`.
+- **top_k:** The top-k value to use for sampling. Defaults to `40`.
+- **top_p:** The top-p value to use for sampling. Defaults to `0.95`.
+- **use_mlock:** Force the system to keep the model in RAM. Defaults to `False`.
+- **use_mmap:** Whether to keep the model loaded in RAM. Defaults to `True`.
+- **verbose:** This parameter is used to control the level of detail in the output of the chain. When set to True, it will print out some internal states of the chain while it is being run, which can help debug and understand the chain's behavior. If set to False, it will suppress the verbose output. Defaults to `False`.
+- **vocab_only:** Only load the vocabulary, no weights. Defaults to `False`.
 
 ### OpenAI
 
@@ -160,27 +157,29 @@ Wrapper around OpenAI large language models.
 OpenAI offers a spectrum of models with different levels of power suitable for different tasks. The OpenAI LLM can be used for tasks such as chatbots, Generative Question-Answering (GQA), and summarization. 
 
 
-- **max_tokens:** The maximum number of tokens to generate in the completion. -1 returns as many tokens as possible given the prompt and the models maximal context size. Defaults to `256`
+- **max_tokens:** The maximum number of tokens to generate in the completion. -1 returns as many tokens as possible given the prompt and the model's maximal context size. Defaults to `256`.
 - **model_kwargs:** Holds any model parameters valid for create call not explicitly specified.
 - **model_name:** Model name to use.
 - **openai_api_base:** Base URL for the OpenAI resource. 
 - **openai_api_key:** Key used to authenticate and access the OpenAI API. 
-- **temperature:** What sampling temperature to use. Defaults to `0.7`
+- **temperature:** What sampling temperature to use? Defaults to `0.7`.
 
 ### VertexAI
 
 
 Wrapper around Google Vertex AI large language models.
 
+Vertex AI is a cloud computing platform offered by Google Cloud Platform (GCP). It provides access, management, and development of applications and services through global data centers. To use Vertex AI PaLM, you need to have the google-cloud-aiplatform Python package installed and credentials configured for your environment.
 
-- **credentials:** The default custom credentials (google.auth.credentials.Credentials) to use
-- **location:** The default location to use when making API calls. Defaults to `us-central1`
-- **max_output_tokens:** Token limit determines the maximum amount of text output from one prompt. Defaults to `128`
-- **model_name:** The name of the Vertex AI large language model. Defaults to `text-bison`
+
+- **credentials:** The default custom credentials (google.auth.credentials.Credentials) to use.
+- **location:** The default location to use when making API calls. Defaults to `us-central1`.
+- **max_output_tokens:** Token limit determines the maximum amount of text output from one prompt. Defaults to `128`.
+- **model_name:** The name of the Vertex AI large language model. Defaults to `text-bison`.
 - **project:** The default GCP project to use when making Vertex API calls.
-- **request_parallelism:** The amount of parallelism allowed for requests issued to VertexAI models. Defaults to `5`
-- **temperature:** Sampling temperature, it controls the degree of randomness in token selection. Defaults to `0`
-- **top_k:** How the model selects tokens for output, the next token is selected from. Defaults to `40`
-- **top_p:** Tokens are selected from most probable to least until the sum of their. Defaults to `0.95`
+- **request_parallelism:** The amount of parallelism allowed for requests issued to VertexAI models. Defaults to `5`.
+- **temperature:** Sampling temperature, controls the degree of randomness in token selection. Defaults to `0`.
+- **top_k:** How the model selects tokens for output, the next token is selected from. Defaults to `40`.
+- **top_p:** Tokens are selected from most probable to least until the sum of their. Defaults to `0.95`.
 - **tuned_model_name:** The name of a tuned model. If provided, model_name is ignored.
-- **verbose:** Whether to print out response text. Defaults to `False`
+- **verbose:** This parameter is used to control the level of detail in the output of the chain. When set to True, it will print out some internal states of the chain while it is being run, which can help debug and understand the chain's behavior. If set to False, it will suppress the verbose output. Defaults to `False`.

@@ -11,20 +11,20 @@ INFO: Works as a proxy of LangChain’s [documents](https://python.langchain.com
 **Params**
 
 
-- **LLM:** Language Model to use in the chain.
+- **LLM:** Language Model to use in the `CombineDocsChain`.
 
 
 - **chain_type:** The chain type to be used. Each one of them applies a different “combination strategy”.
 
-	- **stuff**: The stuff [documents](https://python.langchain.com/docs/modules/chains/document/stuff) chain (“stuff" as in "to stuff" or "to fill") is the most straightforward of *the* document chains. It takes a list of documents, inserts them all into a prompt, and passes that prompt to an LLM. This chain is well-suited for applications where documents are small and only a few are passed in for most calls. 
+	- **stuff:** The stuff [documents](https://python.langchain.com/docs/modules/chains/document/stuff) chain (“stuff" as in "to stuff" or "to fill") is the most straightforward of *the* document chains. It takes a list of documents, inserts them all into a prompt, and passes that prompt to an LLM. This chain is well-suited for applications where documents are small and only a few are passed in for most calls. 
 
-	- **map_reduce**: The map-reduce [documents](https://python.langchain.com/docs/modules/chains/document/map_reduce) chain first applies an LLM chain to each document individually (the Map step), treating the chain output as a new document. It then passes all the new documents to a separate combined documents chain to get a single output (the Reduce step). It can optionally first compress or collapse the mapped documents to make sure that they fit in the combined documents chain (which will often pass them to an LLM). This compression step is performed recursively if necessary. 
+	- **map_reduce:** The map-reduce [documents](https://python.langchain.com/docs/modules/chains/document/map_reduce) chain first applies an LLM chain to each document individually (the Map step), treating the chain output as a new document. It then passes all the new documents to a separate combined documents chain to get a single output (the Reduce step). It can optionally first compress or collapse the mapped documents to make sure that they fit in the combined documents chain (which will often pass them to an LLM). This compression step is performed recursively if necessary. 
 
-	- **map_rerank**: The map re-rank [documents](https://python.langchain.com/docs/modules/chains/document/map_rerank) chain runs an initial prompt on each document that not only tries to complete a task but also gives a score for how certain it is in its answer. The highest-scoring response is returned. 
+	- **map_rerank:** The map re-rank [documents](https://python.langchain.com/docs/modules/chains/document/map_rerank) chain runs an initial prompt on each document that not only tries to complete a task but also gives a score for how certain it is in its answer. The highest-scoring response is returned. 
 
-	- **refine**: The refine [documents](https://python.langchain.com/docs/modules/chains/document/refine) chain constructs a response by looping over the input documents and iteratively updating its answer. For each document, it passes all non-document inputs, the current document, and the latest intermediate answer to an LLM chain to get a new answer. 
+	- **refine:** The refine [documents](https://python.langchain.com/docs/modules/chains/document/refine) chain constructs a response by looping over the input documents and iteratively updating its answer. For each document, it passes all non-document inputs, the current document, and the latest intermediate answer to an LLM chain to get a new answer. 
 
-		Since the Refine chain only passes a single document to the LLM at a time, it is well-suited for tasks that require analyzing more documents than can fit in the model's context. The obvious tradeoff is that this chain will make far more LLM calls than, for example, the Stuff documents chain. There are also certain tasks which are difficult to accomplish iteratively. For example, the Refine chain can perform poorly when documents frequently cross-reference one another or when a task requires detailed information from many documents. 
+		Since the Refine chain only passes a single document to the LLM at a time, it is well-suited for tasks that require analyzing more documents than can fit in the model's context. The obvious tradeoff is that this chain will make far more LLM calls than, for example, the Stuff documents chain. Certain tasks are difficult to accomplish iteratively. For example, the Refine chain can perform poorly when documents frequently cross-reference one another or when a task requires detailed information from many documents. 
 		
 
 ### ConversationChain
@@ -32,18 +32,18 @@ INFO: Works as a proxy of LangChain’s [documents](https://python.langchain.com
 Chain to have a conversation and load context from memory.
 
 
-The `ConversationChain` is a chain that enables interactive conversations with a language model. It's designed to make it easier for you to have a back-and-forth exchange with the model. 
+The `ConversationChain` is a chain that enables interactive conversations with a language model. It's designed to make it easier for the user to have a back-and-forth exchange with the model. 
 
-This type of chain is really useful for building chatbots or virtual assistants because it allows for dynamic and interactive conversations. You can use it to create AI applications that can chat with users, answer questions, provide information, or even engage in more complex conversations.
+This type of chain is really useful for building chatbots or virtual assistants because it allows for dynamic and interactive conversations. The user can use it to create AI applications that can chat with users, answer questions, provide information, or even engage in more complex conversations.
 
 **Params**
-- **LLM:** Language Model to use in the chain.
-- **Memory:** Default memory store.
+- **LLM:** Language Model to use in the `ConversationChain`.
+- **Memory:** Used to specify the type of memory to be used in the conversation. Allows the chain to remember previous interactions and store information.
 
 
-- **input_key:** This parameter is used to specify the key under which the user input will be stored in the conversation memory. It allows you to provide the user's input to the chain for processing and generating a response. *List[str]* - Defines the input keys.
-- **output_key:** This parameter is used to specify the key under which the generated response will be stored in the conversation memory. It allows you to retrieve the response using the specified key. *List[str]* - Defines the output keys.
-- **verbose:**  This parameter is used to control the level of detail in the output of the chain. When set to True, it will print out some internal states of the chain while it is being run, which can be helpful for debugging and understanding the chain's behavior. If set to False, it will suppress the verbose output. Defaults to `False`.
+- **input_key:** This parameter is used to specify the key under which the user input will be stored in the conversation memory. It allows to provide the user's input to the chain for processing and generating a response.
+- **output_key:** This parameter is used to specify the key under which the generated response will be stored in the conversation memory. It allows the user to retrieve the response using the specified key.
+- **verbose:**  This parameter is used to control the level of detail in the output of the chain. When set to True, it will print out some internal states of the chain while it is being run, which can help debug and understand the chain's behavior. If set to False, it will suppress the verbose output. Defaults to `False`.
 
 
 ### ConversationalRetrievalChain
@@ -56,94 +56,94 @@ The `ConversationalRetrievalChain` retrieves relevant information and provides a
 
 **Params**
 
-- **LLM:** Language Model to use in the chain.
-- **Memory:** Default memory store.
-- **Retriever:** The retriever to use to fetch relevant documents from.
+- **LLM:** Language Model to use in the `ConversationalRetrievalChain`.
+- **Memory:** Used to specify the type of memory to be used in the conversation. Allows the chain to remember previous interactions and store information.
+- **Retriever:** The retriever to use to fetch relevant documents.
 
 
 - **chain_type:** The chain type to be used. Each one of them applies a different “combination strategy”.
 
-	- **stuff**: The stuff [documents](https://python.langchain.com/docs/modules/chains/document/stuff) chain (“stuff" as in "to stuff" or "to fill") is the most straightforward of *the* document chains. It takes a list of documents, inserts them all into a prompt, and passes that prompt to an LLM. This chain is well-suited for applications where documents are small and only a few are passed in for most calls. 
+	- **stuff:** The stuff [documents](https://python.langchain.com/docs/modules/chains/document/stuff) chain (“stuff" as in "to stuff" or "to fill") is the most straightforward of *the* document chains. It takes a list of documents, inserts them all into a prompt, and passes that prompt to an LLM. This chain is well-suited for applications where documents are small and only a few are passed in for most calls. 
 
-	- **map_reduce**: The map-reduce [documents](https://python.langchain.com/docs/modules/chains/document/map_reduce) chain first applies an LLM chain to each document individually (the Map step), treating the chain output as a new document. It then passes all the new documents to a separate combined documents chain to get a single output (the Reduce step). It can optionally first compress or collapse the mapped documents to make sure that they fit in the combined documents chain (which will often pass them to an LLM). This compression step is performed recursively if necessary. 
+	- **map_reduce:** The map-reduce [documents](https://python.langchain.com/docs/modules/chains/document/map_reduce) chain first applies an LLM chain to each document individually (the Map step), treating the chain output as a new document. It then passes all the new documents to a separate combined documents chain to get a single output (the Reduce step). It can optionally first compress or collapse the mapped documents to make sure that they fit in the combined documents chain (which will often pass them to an LLM). This compression step is performed recursively if necessary. 
 		
-	- **map_rerank**: The map re-rank [documents](https://python.langchain.com/docs/modules/chains/document/map_rerank) chain runs an initial prompt on each document that not only tries to complete a task but also gives a score for how certain it is in its answer. The highest-scoring response is returned. 
+	- **map_rerank:** The map re-rank [documents](https://python.langchain.com/docs/modules/chains/document/map_rerank) chain runs an initial prompt on each document that not only tries to complete a task but also gives a score for how certain it is in its answer. The highest-scoring response is returned. 
 	
-	- **refine**: The refine [documents](https://python.langchain.com/docs/modules/chains/document/refine) chain constructs a response by looping over the input documents and iteratively updating its answer. For each document, it passes all non-document inputs, the current document, and the latest intermediate answer to an LLM chain to get a new answer. 
+	- **refine:** The refine [documents](https://python.langchain.com/docs/modules/chains/document/refine) chain constructs a response by looping over the input documents and iteratively updating its answer. For each document, it passes all non-document inputs, the current document, and the latest intermediate answer to an LLM chain to get a new answer. 
 
-		Since the Refine chain only passes a single document to the LLM at a time, it is well-suited for tasks that require analyzing more documents than can fit in the model's context. The obvious tradeoff is that this chain will make far more LLM calls than, for example, the Stuff documents chain. There are also certain tasks which are difficult to accomplish iteratively. For example, the Refine chain can perform poorly when documents frequently cross-reference one another or when a task requires detailed information from many documents. 
+		Since the Refine chain only passes a single document to the LLM at a time, it is well-suited for tasks that require analyzing more documents than can fit in the model's context. The obvious tradeoff is that this chain will make far more LLM calls than, for example, the Stuff documents chain. Certain tasks are difficult to accomplish iteratively. For example, the Refine chain can perform poorly when documents frequently cross-reference one another or when a task requires detailed information from many documents. 
 		
 - **return_source_documents:** This parameter is used in the context of question answering with sources. When this parameter is set to True, the response from the language model will include the source documents that were used to generate the answer. Defaults to `True`
-- **verbose:** Whether or not run in verbose mode. In verbose mode, some intermediate logs will be printed to the console. Defaults to `False`.
+- **verbose:** This parameter is used to control the level of detail in the output of the chain. When set to True, it will print out some internal states of the chain while it is being run, which can help debug and understand the chain's behavior. If set to False, it will suppress the verbose output. Defaults to `False`.
 
 ### LLMChain
 
 
 Chain to run queries against LLMs.
 
-`LLMChain` is a simple chain that enhances language models. It consists of a PromptTemplate and a language model. The PromptTemplate is a structure where you can insert specific information, and the language model is the brain that understands and generates text. `LLMChain` takes the formatted prompt, sends it to the language model, and returns the generated output. Essentially, `LLMChain` helps language models understand and generate text more effectively.
+`LLMChain` is a simple chain that enhances language models. It consists of a PromptTemplate and a language model. The PromptTemplate is a structure where the user can insert specific information, and the language model is the brain that understands and generates text. `LLMChain` takes the formatted prompt, sends it to the language model, and returns the generated output. Essentially, `LLMChain` helps language models understand and generate text more effectively.
 
 **Params**
 
-- **LLM:** Language Model to use in the chain.
-- **Memory:** Default memory store.
-- **Prompt**: Prompt object to use in the chain.
+- **LLM:** Language Model to use in the `LLMChain`.
+- **Memory:** Used to specify the type of memory to be used in the conversation. Allows the chain to remember previous interactions and store information.
+- **Prompt:**Prompt object to use in the chain.
 
 
 - **output_key:** This parameter is used to specify which key in the LLM output dictionary should be returned as the final output. By default, the `LLMChain` returns both the input and output key values. Defaults to *str* = `text`.
-- **verbose:** Whether or not run in verbose mode. In verbose mode, some intermediate logs will be printed to the console. Defaults to `False`.
+- **verbose:** This parameter is used to control the level of detail in the output of the chain. When set to True, it will print out some internal states of the chain while it is being run, which can help debug and understand the chain's behavior. If set to False, it will suppress the verbose output. Defaults to `False`.
 
 ### LLMCheckerChain
 
 
 The `LLMCheckerChain` is specifically designed to make sure that the text generated by the language model follows certain rules or guidelines. These rules are pre-defined and serve as a set of standards that the generated content should adhere to.
 
-By using the `LLMCheckerChain`, you can ensure that the output of the language model doesn't violate any guidelines, is not offensive, and stays within the desired context.
+By using the `LLMCheckerChain`, the user can ensure that the output of the language model doesn't violate any guidelines, is not offensive, and stays within the desired context.
 
 **Params**
-- **LLM:** Language Model to use in the chain.
+- **LLM:** Language Model to use in the `LLMCheckerChain`.
 
 
 ### LLMMathChain
 
 
-Chain that interprets a prompt and executes python code to do math.
+Chain that interprets a prompt and executes Python code to do the math.
 
-`LLMMathChain` is a part of the LangChain library. This module lets you use language models to perform mathematical calculations.  It's a step-by-step process that the module follows to help you find answers to math questions.
+`LLMMathChain` is a part of the LangChain library. This module lets the user use language models to perform mathematical calculations.  It's a step-by-step process that the module follows to help the user to find answers to math questions.
 
 **Params**
-- **LLM:** Language Model to use in the chain.
+- **LLM:** Language Model to use in the `LLMMathChain`.
 - **LLM Chain:** LLM Chain to use in the chain.
-- **Memory:** Default memory store.
+- **Memory:** Used to specify the type of memory to be used in the conversation. Allows the chain to remember previous interactions and store information.
 
 
-- **input_key:** This parameter is used to specify the input value for the mathematical calculation. It allows you to provide the specific values or variables that you want to use in the calculation. Defaults to *str* = `question`.
-- **output_key:** This parameter is used to specify the key under which the output of the mathematical calculation will be stored. It allows you to retrieve the result of the calculation using the specified key. Defaults to *str* = `answer`
-- **verbose:** This parameter is used to control the level of detail in the output of the chain. When set to `True`, it will print out some internal states of the chain while it is being run, which can be helpful for debugging and understanding the chain's behavior. If set to `False`, it will suppress the verbose output. Defaults to `False`
+- **input_key:** This parameter is used to specify the input value for the mathematical calculation. It allows the user to provide the specific values or variables that wants to use in the calculation. Defaults to *str* = `question`.
+- **output_key:** This parameter is used to specify the key under which the output of the mathematical calculation will be stored. It allows the user to retrieve the result of the calculation using the specified key. Defaults to *str* = `answer`
+- **verbose:** This parameter is used to control the level of detail in the output of the chain. When set to `True`, it will print out some internal states of the chain while it is being run, which can help debug and understand the chain's behavior. If set to `False`, it will suppress the verbose output. Defaults to `False`
 
 ### MidJourneyChainPromptChain
 
-`MidJourneyChainPromptChain` is a chain you can use to generate new MidJourney prompts.
+`MidJourneyChainPromptChain` is a chain the user can use to generate new MidJourney prompts.
 
 **Params**
-- **LLM:** Language Model to use in the chain.
-- **Memory:** Default memory store.
+- **LLM:** Language Model to use in the `MidJourneyChainPromptChain`.
+- **Memory:** Used to specify the type of memory to be used in the conversation. Allows the chain to remember previous interactions and store information.
 
 
 ### RetrievalQA
 
 Chain for question-answering against an index.
 
-`RetrievalQA` is a question answering task where a computer program searches through multiple databases to find answers. The program is evaluated based on its ability to accurately predict the answers. It involves organizing the data, creating indexes for efficient searching, and using an agent to navigate between the databases. The predictions made by the program are scored using a language model for evaluation.
+`RetrievalQA` is a question-answering task where a computer program searches through multiple databases to find answers. The program is evaluated based on its ability to accurately predict the answers. It involves organizing the data, creating indexes for efficient searching, and using an agent to navigate between the databases. The predictions made by the program are scored using a language model for evaluation.
 
 **Params**
-- **Combine Documents Chain**: Chain to use to combine the documents.
-- ** Memory:** Default memory store.
-- ** Retriever**:  Chain for question-answering against an index.
+- **Combine Documents Chain:** Chain to use to combine the documents.
+- ** Memory:** Used to specify the type of memory to be used in the conversation. Allows the chain to remember previous interactions and store information.
+- ** Retriever:** The retriever to use to fetch relevant documents.
 
 
-- **input_key:** This parameter is used to specify the key in the input data that contains the question. It is used to retrieve the question from the input data and pass it to the question answering model for generating the answer. Defaults to `query`.
-- **output_key:** This parameter is used to specify the key in the output data where the generated answer will be stored. It is used to retrieve the answer from the output data after the question answering model has generated it. Defaults to `result`.
+- **input_key:** This parameter is used to specify the key in the input data that contains the question. It is used to retrieve the question from the input data and pass it to the question-answering model for generating the answer. Defaults to `query`.
+- **output_key:** This parameter is used to specify the key in the output data where the generated answer will be stored. It is used to retrieve the answer from the output data after the question-answering model has generated it. Defaults to `result`.
 - **return_source_documents:** This parameter is used to specify whether or not to include the source documents that were used to answer the question in the output. When set to `True`, the source documents will be included in the output along with the generated answer. This can be useful for providing additional context or references to the user. Defaults to `True`.
 - **verbose:** This parameter is used to control the level of verbosity or detail in the output. When set to `True`, it provides additional information and details about the retrieval process and the documents that were considered for answering the question. Defaults to `False`.
 
@@ -152,53 +152,52 @@ Chain for question-answering against an index.
 
 Question-answering with sources over an index.
 
-The `RetrievalQAWithSourcesChain` is a chain that helps us answer questions using different sources of information. It connects different parts together. When we use the `RetrievalQAWithSourcesChain`, we can provide a list of texts, embeddings, and metadata. These are basically pieces of information that we want to use to find answers to questions.
+The `RetrievalQAWithSourcesChain` is a chain that helps us answer questions using different sources of information. It connects different parts. When we use the `RetrievalQAWithSourcesChain`, we can provide a list of texts, embeddings, and metadata. These are pieces of information that we want to use to find answers to questions.
 
 **Params**
-- **Combine Documents Chain**: Chain to use to combine the documents.
-- ** Memory:** Default memory store.
-- ** Retriever**:  Chain for question-answering against an index.
+- **Combine Documents Chain:** Chain to use to combine the documents.
+- ** Memory:** Used to specify the type of memory to be used in the conversation. Allows the chain to remember previous interactions and store information.
+- ** Retriever:** The retriever to use to fetch relevant documents.
 
 
-- **return_source_documents:** This parameter allows you to easily return the source documents that were retrieved from the index. This is useful when you want to inspect the documents that were used to answer the question. By setting return_source_documents to `True`, you can access the source documents as part of the output of the chain. Defaults to `True`.
-- **verbose:** This parameter controls whether or not internal states of the chain are printed out while it is being run. By setting verbose to `True`, you can see additional information about the chain's execution, which can be helpful for debugging and understanding how the chain is processing the input. Defaults to `False`.
+- **return_source_documents:** This parameter allows the user to easily return the source documents that were retrieved from the index. This is useful when the user wants to inspect the documents that were used to answer the question. By setting return_source_documents to `True`, it can access the source documents as part of the output of the chain. Defaults to `True`.
+- **verbose:** This parameter controls whether or not internal states of the chain are printed out while it is being run. By setting verbose to `True`, the user can see additional information about the chain's execution, which can help debug and understand how the chain is processing the input. Defaults to `False`.
 
 ### SQLDatabaseChain
 
 
 Chain for interacting with SQL Database.
 
-The `SQLDatabaseChain` is a chain that helps you find answers to questions using a SQL database. With the `SQLDatabaseChain`, you can ask questions about the information stored in the SQL database and it will try to find the answers for you.
+The `SQLDatabaseChain` is a chain that helps the user find answers to questions using a SQL database. With the `SQLDatabaseChain`, the user can ask questions about the information stored in the SQL database and it will try to find the answers.
 
 **Params**
 - **Database:** SQL Database to connect to.
-- **LLM:** Language Model to use in the chain.
+- **LLM:** Language Model to use in the `SQLDatabaseChain`.
 - **LLMChain:** Chain to run queries against LLMs.
-- **Memory:** Default memory store.
+- **Memory:** Used to specify the type of memory to be used in the conversation. Allows the chain to remember previous interactions and store information.
 - **Prompt:** Prompt to use to translate natural language to SQL.
 
 
-- **input_key:** This parameter is used to specify the key in the input object that contains the SQL query to be executed. It allows you to pass the SQL query as part of the input object when calling the `SQLDatabaseChain`. The value of the input_key should be a string that matches the key in the input object where the SQL query is located. Defaults to `query`.
+- **input_key:** This parameter is used to specify the key in the input object that contains the SQL query to be executed. It allows the user to pass the SQL query as part of the input object when calling the `SQLDatabaseChain`. The value of the input_key should be a string that matches the key in the input object where the SQL query is located. Defaults to `query`.
 - **output_key:** This parameter is used to specify the key in the output object where the result of the SQL query will be stored. The value of the output_key should be a string that represents the desired key in the output object. Defaults to `result`.
 - **verbose:** This parameter is used to enable or disable verbose mode for the chain. When verbose is set to `True`, the chain will log events and information to the console, providing more detailed output for debugging purposes. Defaults to `False`.
 
 ### SeriesCharacterChain
 
 
-`SeriesCharacterChain` is a chain you can use to have a conversation with a character from a series.
+`SeriesCharacterChain` is a chain the user can use to have a conversation with a character from a series.
 
 **Params**
-- **LLM:** Language Model to use in the chain.
+- **LLM:** Language Model to use in the `SeriesCharacterChain`.
 
 
-- **character:** This parameter is used to specify the character that you want to have a conversation with.
+- **character:** This parameter is used to specify the character that the user wants to have a conversation with.
 - **series:** This parameter is used to specify the series that the character belongs to.
 
 ### TimeTravelGuideChain
 
-The `TimeTravelGuideChain` is a chain that creates a time travel guide. It helps you travel through time and space. With `TimeTravelGuideChain`, you can explore different places in the past and future.
+The `TimeTravelGuideChain` is a chain that creates a time travel guide. It helps the user travel through time and space. With `TimeTravelGuideChain`, the user can explore different places in the past and future.
 
 **Params**
-- **LLM:** Language Model to use in the chain.
-- **Memory:** Default memory store.
-
+- **LLM:** Language Model to use in the `TimeTravelGuideChain`.
+- **Memory:** Used to specify the type of memory to be used in the conversation. Allows the chain to remember previous interactions and store information.

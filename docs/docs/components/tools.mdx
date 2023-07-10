@@ -3,55 +3,55 @@
 
 ### BigSearchRun
 
-A wrapper around Bing Search. Useful for when you need to answer.questions about current events. Input should be a search query. 
+A wrapper around Bing Search. Useful for when the user needs to answer.questions about current events. The input should be a search query. 
 
 Bing Search is a web search engine owned and operated by Microsoft. It provides search results for various types of content, including web pages, images, videos, and news articles. Bing Search uses a combination of algorithms and human editors to deliver relevant and accurate search results to users.
 
 
 **Params**
 
-- **Api Wrapper**: Wrapper for Bing Search API.
+- **Api Wrapper:** Wrapper for Bing Search API.
 
 
 ### Calculator
 
-Useful for when you need to answer questions about math.
+Useful for when the user needs to answer math questions.
 
 **Params**
 
-- **LLM**: Language Model to use in the calculation.
+- **LLM:** Language Model to use in the calculation.
 
 
 ### GoogleSearchResults
 
-A wrapper around Google Search. Useful for when you need to answer questions about current events. Input should be a search query. Output is a JSON array of the query results.
+A wrapper around Google Search. Useful for when the user needs to answer questions about current events. The input should be a search query. Output is a JSON array of the query results.
 
 **Params**
 
-- **Api Wrapper**: Wrapper for Google Search API.
+- **Api Wrapper:** Wrapper for Google Search API.
 
 
 ### GoogleSearchRun
 
-A wrapper around Google Search. Useful for when you need to answer questions about current events. Input should be a search query.
+A wrapper around Google Search. Useful for when the user needs to answer questions about current events. The input should be a search query.
 
 **Params**
 
-- **Api Wrapper**: Wrapper for Google Search API.
+- **Api Wrapper:** Wrapper for Google Search API.
 
 
 ### GoogleSerperRun
 
-A low-cost Google Search API. Useful for when you need to answer questions about current events. Input should be a search query.
+A low-cost Google Search API. Useful for when the user needs to answer questions about current events. The input should be a search query.
 
 **Params**
 
-- **Api Wrapper**: Wrapper around the Serper.dev Google Search API.
+- **Api Wrapper:** Wrapper around the Serper.dev Google Search API.
 
 
 ### InfoSQLDatabaseTool
 
-Tool for getting metadata about a SQL database. Input this tool is a comma-separated list of tables, output is the schema and sample rows for those tables. Example Input: `“table1`, `table2`, `table3”`.
+Tool for getting metadata about a SQL database. Input this tool is a comma-separated list of tables, and output is the schema and sample rows for those tables. Example Input: `“table1`, `table2`, `table3”`.
 
 **Params**
 
@@ -59,7 +59,7 @@ Tool for getting metadata about a SQL database. Input this tool is a comma-separ
 
 ### JsonGetValueTool
 
-Can be used to see value in string format at a given path. Before calling this you should be SURE that the path to this exists. The input is a text representation of the path to the dict in Python syntax (e.g. data["key1"][0]["key2"]).
+Can be used to see value in string format at a given path. Before calling this, the user should be SURE that the path to this exists. The input is a text representation of the path to the `dict` in Python syntax (e.g. data["key1"][0]["key2"]).
 
 **Params**
 
@@ -68,7 +68,7 @@ Can be used to see value in string format at a given path. Before calling this y
 
 ### JsonListKeysTool
 
-Tool for listing keys in a JSON spec. Input is an empty string, output is a comma separated list of tables in the database.
+Tool for listing keys in a JSON spec. Input is an empty string, output is a comma-separated list of tables in the database.
 
 **Params**
 
@@ -83,12 +83,12 @@ The `JsonSpec` class is the base class for the JSON spec. It is used to interact
 
 - **path:** The parameter refers to the key or keys that are used to access a specific value within a JSON/dict object. It is used to navigate through the structure of the JSON object and locate the desired information. 
 
-- **max value length:** This parameter refers to the maximum allowed length of a value in a JSON document. It is a parameter that can be set to limit the size of values in order to prevent excessively large values from being stored or transmitted.
+- **max value length:** This parameter refers to the maximum allowed length of a value in a JSON document. It is a parameter that can be set to limit the size of values to prevent excessively large values from being stored or transmitted.
 
 
 ### ListSQLDatabaseTool
 
-Tool for getting tables names. Input is an empty string, output is a comma separated list of tables in the database.
+Tool for getting table names. Input is an empty string, output is a comma-separated list of tables in the database.
 
 **Params**
 
@@ -97,19 +97,19 @@ Tool for getting tables names. Input is an empty string, output is a comma separ
 
 ### News API
 
-Use this when you want to get information about the top headlines of current news stories. The input should be a question in natural language that this API can answer.
+Use this when the user wants to get information about the top headlines of current news stories. The input should be a question in natural language that this API can answer.
 
 **Params**
 
 - **LLM:** Language Model to use in the `News API`.
 
 
-- **news_api_key:** It refers to the API key that is required to access and authenticate requests to the `News API`. The news_api_key acts as a security measure to ensure that only authorized users can access the `News API` and retrieve news data. [Get your API key here](https://newsapi.org/).
+- **news_api_key:** It refers to the API key that is required to access and authenticate requests to the `News API`. The news_api_key acts as a security measure to ensure that only authorized users can access the `News API` and retrieve news data. [Get API key here](https://newsapi.org/).
 
 
 ### PAL-MATH
 
-A language model that is really good at solving complex word math problems. Input should be a fully worded hard word math problem. 
+A language model that is good at solving complex word math problems. Input should be a fully worded hard-word math problem. 
 
 **Params**
 
@@ -125,32 +125,32 @@ Use the Listen Notes Podcast API to search all podcasts or episodes. The input s
 - **LLM:** Language Model to use in the `Podcast API`.
 
 
-- **listen_api_key:** It is a parameter used in the Podcast API to authenticate and authorize access to the API. It is a unique key assigned to each user or developer who wants to use the Podcast API. [Get your API key here](https://www.listennotes.com/api/).
+- **listen_api_key:** It is a parameter used in the Podcast API to authenticate and authorize access to the API. It is a unique key assigned to each user or developer who wants to use the Podcast API. [Get API key here](https://www.listennotes.com/api/).
 
 
 ### PythonAstREPLTool
 
-A Python shell. Use this to execute python commands. Input should be a valid python command. When using this tool, sometimes output is abbreviated - make sure it does not look abbreviated before using it in your answer.
+A Python shell. Use this to execute Python commands. Input should be a valid Python command. When using this tool, sometimes the output is abbreviated - make sure it does not look abbreviated before using it in the answer.
 
 
 ### PythonFunction
 
-Python function to be execute. 
+Python function to be executed. 
 
-It allows you to create a customized tool using the `PythonFunction` connected to a Tool component.
+It allows the user to create a customized tool using the `PythonFunction` connected to a Tool component.
 
 **Params**
 
-- **code**: The parameter refers to the code that is used to create a customized tool using the `PythonFunction`. Make sure that your function returns a string.
+- **code:** The parameter refers to the code that is used to create a customized tool using the `PythonFunction`. Make sure that the user function returns a string.
 
 
 ### PythonFunctionTool
 
-Python function to be execute. 
+Python function to be executed. 
 
 **Params**
 
-- **code**: The parameter refers to the code that is used to create a customized tool using the `PythonFunction`. Make sure that your function returns a string.
+- **code:** The parameter refers to the code that is used to create a customized tool using the `PythonFunction`. Make sure that the user function returns a string.
 
 - **description:** The parameter refers to the description of the `PythonFunctionTool`.
 
@@ -170,7 +170,7 @@ Input to this tool is a detailed and correct SQL query, output is a result from 
 
 ### RequestsDeleteTool
 
-A portal to the internet. Use this when you need to make a DELETE request to a URL. Input should be a specific url, and the output will be the text response of the DELETE request.
+A portal to the internet. Use this when the user needs to make a DELETE request to a URL. Input should be a specific URL, and the output will be the text response of the DELETE request.
 
 **Params**
 
@@ -179,7 +179,7 @@ A portal to the internet. Use this when you need to make a DELETE request to a U
 
 ### RequestsGetTool
 
-A portal to the internet. Use this when you need to get specific content from a website. Input should be a url `(i.e. https://www.google.com)`. The output will be the text response of the GET request.
+A portal to the internet. Use this when the user needs to get specific content from a website. Input should be a URL `(i.e. https://www.google.com)`. The output will be the text response of the GET request.
 
 **Params**
 
@@ -188,7 +188,7 @@ A portal to the internet. Use this when you need to get specific content from a 
 
 ### RequestsPatchTool
 
-Use this when you want to PATCH to a website. Input should be a json string with two keys: "url" and "data". The value of "url" should be a string, and the value of "data" should be a dictionary of key-value pairs you want to PATCH to the url. Be careful to always use double quotes for strings in the json string The output will be the text response of the 
+Use this when the user wants to PATCH to a website. Input should be a JSON string with two keys: "URL" and "data". The value of "URL" should be a string, and the value of "data" should be a dictionary of key-value pairs the user wants to PATCH to the URL. Be careful to always use double quotes for strings in the JSON string The output will be the text response of the 
 PATCH request.
 
 **Params**
@@ -197,7 +197,7 @@ PATCH request.
 
 ### RequestsPostTool
 
-Use this when you want to POST to a website. Input should be a json string with two keys: "url" and "data". The value of "url" should be a string, and the value of "data" should be a dictionary of key-value pairs you want to POST to the url. Be careful to always use double quotes for strings in the json string The output will be the text response of the 
+Use this when the user wants to POST to a website. Input should be a JSON string with two keys: "URL" and "data". The value of "URL" should be a string, and the value of "data" should be a dictionary of key-value pairs the user wants to POST to the URL. Be careful to always use double quotes for strings in the JSON string The output will be the text response of the 
 POST request.
 
 **Params**
@@ -206,7 +206,7 @@ POST request.
 
 ### RequestsPutTool
 
-Use this when you want to PUT to a website. Input should be a json string with two keys: "url" and "data". The value of "url" should be a string, and the value of "data" should be a dictionary of key-value pairs you want to PUT to the url. Be careful to always use double quotes for strings in the json string. The output will be the text response of the 
+Use this when the user wants to PUT to a website. Input should be a JSON string with two keys: "URL" and "data". The value of "URL" should be a string, and the value of "data" should be a dictionary of key-value pairs the user wants to PUT to the URL. Be careful to always use double quotes for strings in the JSON string. The output will be the text response of the 
 PUT request. 
 
 - **Requests Wrapper:** Lightweight wrapper around requests library `(TextRequestsWrapper)`.
@@ -214,33 +214,33 @@ PUT request.
 
 ### Search
 
-A search engine. Useful for when you need to answer questions about current events. Input should be a search query.
+A search engine. Useful for when the user needs to answer questions about current events. The input should be a search query.
 
 **Params**
 
-- **serpapi_api_key:** This parameter is used to authenticate and authorize API requests to the SerpAPI service. The API key acts as a unique identifier for the user and allows them to access the SerpAPI functionality. [Get your API key here](https://serpapi.com/).
+- **serpapi_api_key:** This parameter is used to authenticate and authorize API requests to the SerpAPI service. The API key acts as a unique identifier for the user and allows them to access the SerpAPI functionality. [Get API key here](https://serpapi.com/).
 
 
 ### TMDB API
 
 
-Useful for when you want to get information from The Movie Database. The input should be a question in natural language that this API can answer.
+Useful for when the user wants to get information from The Movie Database. The input should be a question in natural language that this API can answer.
 
 **Params**
 
 - **LLM:** Language Model to use in the `TMDB API`.
 
 
-- **tmdb_bearer_token:** It is an authentication token used in the TMDB API. It is used to authorize API requests to the TMDB service. By setting the tmdb_bearer_token in the API request headers, users can make requests to the TMDB API and retrieve information about movies, TV shows, actors, and more. [Get your API key here](https://developers.themoviedb.org/3/getting-started/introduction).
+- **tmdb_bearer_token:** It is an authentication token used in the TMDB API. It is used to authorize API requests to the TMDB service. By setting the tmdb_bearer_token in the API request headers, users can make requests to the TMDB API and retrieve information about movies, TV shows, actors, and more. [Get API key here](https://developers.themoviedb.org/3/getting-started/introduction).
 
 
 ### Tool
 
-Converts a chain, agent or function into a tool. It allows you to define custom tools that can be used by the agent to perform specific tasks.
+Converts a chain, agent, or function into a tool. It allows the user to define custom tools that can be used by the agent to perform specific tasks.
 
 **Params**
 
-- **Func:** Use to convert `Chain`, `Agent` or `Function` into a tool.
+- **Func:** Use to convert `Chain`, `Agent`, or `Function` into a tool.
 
 
 - **description:**  A description of the tool and its purpose.
@@ -252,7 +252,7 @@ Converts a chain, agent or function into a tool. It allows you to define custom 
 
 ### WikipediaQueryRun
 
-A wrapper around Wikipedia. Useful for when you need to answer general questions about people, places, companies, facts, historical events, or other subjects. Input should be a search query.
+A wrapper around Wikipedia. Useful when the user needs to answer general questions about people, places, companies, facts, historical events, or other subjects. The input should be a search query.
 
 **Params**
 
@@ -261,7 +261,7 @@ A wrapper around Wikipedia. Useful for when you need to answer general questions
 
 ### WolframAlphaQueryRun
 
-A wrapper around Wolfram Alpha. Useful for when you need to answer questions about Math, Science, Technology, Culture, Society and Everyday Life. Input should be a search query.
+A wrapper around Wolfram Alpha. Useful when the user needs to answer questions about Math, Science, Technology, Culture, Society, and Everyday Life. The input should be a search query.
 
 **Params**
 
