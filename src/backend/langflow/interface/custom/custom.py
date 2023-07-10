@@ -1,4 +1,5 @@
 import ast
+import contextlib
 import traceback
 from typing import Callable, Optional
 from fastapi import HTTPException
@@ -89,12 +90,9 @@ class CustomComponent(BaseModel):
             else:
                 split_item.append(None)
             for i in range(len(split_item)):
-                try:
+                with contextlib.suppress(ValueError):
                     # Try to evaluate the item
                     split_item[i] = ast.literal_eval(split_item[i])
-                except ValueError:
-                    # If it fails, just pass
-                    pass
 
             output_list.append(split_item)
 
@@ -198,7 +196,7 @@ class CustomComponent(BaseModel):
         return validate.create_function(self.code, self.function_entrypoint_name)
 
     def build(self):
-        pass
+        raise NotImplementedError
 
     @property
     def data(self):
