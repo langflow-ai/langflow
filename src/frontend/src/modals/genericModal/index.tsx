@@ -135,10 +135,9 @@ export default function GenericModal({
     postValidatePrompt(field_name, inputValue, nodeClass)
       .then((apiReturn) => {
         if (apiReturn.data) {
-          setNodeClass(apiReturn.data.frontend_node);
-
-          let inputVariables = apiReturn.data.input_variables;
-          if (inputVariables.length === 0) {
+          setNodeClass(apiReturn.data?.frontend_node);
+          let inputVariables = apiReturn.data.input_variables ?? [];
+          if (inputVariables && inputVariables.length === 0) {
             setIsEdit(true);
             setNoticeData({
               title: "Your template does not have any variables.",
@@ -159,6 +158,7 @@ export default function GenericModal({
         }
       })
       .catch((error) => {
+        console.log(error);
         setIsEdit(true);
         return setErrorData({
           title: "There is something wrong with this prompt, please review it",
