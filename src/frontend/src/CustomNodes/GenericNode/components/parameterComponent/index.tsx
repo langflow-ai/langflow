@@ -302,6 +302,7 @@ export default function ParameterComponent({
               field_name={name}
               setNodeClass={(nodeClass) => {
                 data.node = nodeClass;
+                // cleanEdges({ flow: { edges: reactFlowInstance.getEdges(), nodes: reactFlowInstance.getNodes() }, updateEdge: (edge) => reactFlowInstance.setEdges(edge) });
               }}
               nodeClass={data.node}
               disabled={disabled}
