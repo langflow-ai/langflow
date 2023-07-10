@@ -917,11 +917,14 @@ The cursor: default; property value restores the browser's default cursor style 
   .form-modal-lock-true {
     @apply bg-input text-black dark:bg-gray-700 dark:text-gray-300
   }
+  .form-modal-no-input {
+    @apply bg-input text-center text-black dark:bg-gray-700 dark:text-gray-300
+  }
   .form-modal-lock-false {
     @apply bg-white text-black dark:bg-gray-900 dark:text-gray-300
   }
   .form-modal-lockchat {
-    @apply form-input block w-full rounded-md border-gray-300 p-4 pr-16 custom-scroll dark:border-gray-600 sm:text-sm
+    @apply form-input focus:ring-ring focus:border-ring block w-full rounded-md border-gray-300 p-4 pr-16 custom-scroll dark:border-gray-600 sm:text-sm
   }
   .form-modal-send-icon-position {
     @apply absolute bottom-2 right-4
@@ -934,6 +937,9 @@ The cursor: default; property value restores the browser's default cursor style 
   }
   .form-modal-send-icon {
     @apply mr-2 h-5 w-5 rotate-[44deg]
+  }
+  .form-modal-play-icon {
+    @apply h-5 w-5 mx-1
   }
   .form-modal-chat-position {
     @apply flex-max-width px-2 py-6 pl-4 pr-9
