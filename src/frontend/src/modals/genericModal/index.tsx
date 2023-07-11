@@ -57,7 +57,6 @@ export default function GenericModal({
   const [myModalType] = useState(type);
   const [inputValue, setInputValue] = useState(value);
   const [isEdit, setIsEdit] = useState(true);
-  const [wordsHighlightInvalid, setWordsHighlightInvalid] = useState([]);
   const [wordsHighlight, setWordsHighlight] = useState([]);
   const { dark } = useContext(darkContext);
   const { setErrorData, setSuccessData, setNoticeData } =
@@ -102,15 +101,14 @@ export default function GenericModal({
       (word) => !invalid_chars.includes(word)
     );
 
-    setWordsHighlightInvalid(invalid_chars);
     setWordsHighlight(filteredWordsHighlight);
   }
 
   useEffect(() => {
-    if (type == TypeModal.PROMPT && inputValue && inputValue != "") {
+    if (type === TypeModal.PROMPT && inputValue && inputValue != "") {
       checkVariables(inputValue);
     }
-  }, []);
+  }, [inputValue, type]);
 
   const coloredContent = (inputValue || "")
     .replace(/</g, "&lt;")

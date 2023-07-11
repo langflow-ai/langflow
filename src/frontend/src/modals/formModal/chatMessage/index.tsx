@@ -24,7 +24,7 @@ export default function ChatMessage({
 }) {
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
-  const [template, setTemplate] = useState(chat.template);
+  const template = chat.template;
   const [promptOpen, setPromptOpen] = useState(false);
   return (
     <div
@@ -127,7 +127,7 @@ export default function ChatMessage({
                         {chat.message.toString()}
                       </ReactMarkdown>
                     ),
-                    [chat.message.toString()]
+                    [chat.message, chat.message.toString()]
                   )}
                 </div>
                 {chat.files && (

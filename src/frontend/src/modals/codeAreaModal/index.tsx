@@ -27,9 +27,7 @@ export default function CodeAreaModal({
   nodeClass: APIClassType;
   setNodeClass: (Class: APIClassType) => void;
 }) {
-  const [open, setOpen] = useState(true);
   const [code, setCode] = useState(value);
-  const [loading, setLoading] = useState(false);
   const { dark } = useContext(darkContext);
   const { closePopUp, setCloseEdit } = useContext(PopUpContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
@@ -46,10 +44,8 @@ export default function CodeAreaModal({
   }
 
   function handleClick() {
-    setLoading(true);
     postValidateCode(code)
       .then((apiReturn) => {
-        setLoading(false);
         if (apiReturn.data) {
           let importsErrors = apiReturn.data.imports.errors;
           let funcErrors = apiReturn.data.function.errors;
@@ -58,7 +54,6 @@ export default function CodeAreaModal({
               title: "Code is ready to run",
             });
             setValue(code);
-            setOpen((old) => !old);
             setModalOpen(false);
           } else {
             if (funcErrors.length !== 0) {
@@ -81,7 +76,6 @@ export default function CodeAreaModal({
         }
       })
       .catch((_) => {
-        setLoading(false);
         setErrorData({
           title: "There is something wrong with this code, please review it",
         });
@@ -89,7 +83,7 @@ export default function CodeAreaModal({
   }
 
   return (
-    <BaseModal open={true} setOpen={setOpen}>
+    <BaseModal open={true} setOpen={setModalOpen}>
       <BaseModal.Header description={CODE_PROMPT_DIALOG_SUBTITLE}>
         <DialogTitle className="flex items-center">
           <span className="pr-2">Edit Code</span>

@@ -44,7 +44,7 @@ export default function PromptAreaComponent({
         })
         .catch((error) => {});
     }
-  }, [reactFlowInstance, field_name, myValue, nodeClass, setNodeClass]);
+  }, [reactFlowInstance, field_name, myValue, nodeClass, setNodeClass, value]);
 
   return (
     <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
