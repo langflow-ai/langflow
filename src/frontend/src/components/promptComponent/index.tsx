@@ -4,7 +4,6 @@ import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
 import { TypeModal } from "../../utils";
 
-import * as _ from "lodash";
 import { ExternalLink } from "lucide-react";
 import { typesContext } from "../../contexts/typesContext";
 import { postValidatePrompt } from "../../controllers/API";
@@ -18,7 +17,7 @@ export default function PromptAreaComponent({
   disabled,
   editNode = false,
 }: TextAreaComponentType) {
-  const [myValue, setMyValue] = useState("");
+  const [myValue, setMyValue] = useState(value);
   const { openPopUp } = useContext(PopUpContext);
   const { reactFlowInstance } = useContext(typesContext);
   useEffect(() => {
@@ -29,22 +28,34 @@ export default function PromptAreaComponent({
   }, [disabled, onChange]);
 
   useEffect(() => {
-    if (value !== "" && myValue !== value && reactFlowInstance) {
-      // only executed once
-      setMyValue(value);
-      postValidatePrompt(field_name, value, nodeClass)
-        .then((apiReturn) => {
-          if (apiReturn.data) {
-            setNodeClass(apiReturn.data.frontend_node);
-            // need to update reactFlowInstance to re-render the nodes.
-            reactFlowInstance.setEdges(
-              _.cloneDeep(reactFlowInstance.getEdges())
-            );
-          }
-        })
-        .catch((error) => {});
+    setMyValue(value);
+    if (value !== "" && !editNode) {
+      postValidatePrompt(field_name, value, nodeClass).then((apiReturn) => {
+        if (apiReturn.data) {
+          setNodeClass(apiReturn.data.frontend_node);
+          // need to update reactFlowInstance to re-render the nodes.
+        }
+      });
     }
-  }, [reactFlowInstance, field_name, myValue, nodeClass, setNodeClass, value]);
+  }, [value, reactFlowInstance]);
+
+  // useEffect(() => {
+  //   if (value !== "" && myValue !== value && reactFlowInstance) {
+  //     // only executed once
+  //     setMyValue(value);
+  //     postValidatePrompt(field_name, value, nodeClass)
+  //       .then((apiReturn) => {
+  //         if (apiReturn.data) {
+  //           setNodeClass(apiReturn.data.frontend_node);
+  //           // need to update reactFlowInstance to re-render the nodes.
+  //           reactFlowInstance.setEdges(
+  //             _.cloneDeep(reactFlowInstance.getEdges())
+  //           );
+  //         }
+  //       })
+  //       .catch((error) => {});
+  //   }
+  // }, [reactFlowInstance, field_name, myValue, nodeClass, setNodeClass, value]);
 
   return (
     <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
