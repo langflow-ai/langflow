@@ -162,7 +162,9 @@ export default function ExtraSidebar() {
                         <div key={k} data-tooltip-id={t}>
                           <div
                             draggable
-                            className={"side-bar-components-border"}
+                            className={
+                              "side-bar-components-border bg-background"
+                            }
                             style={{
                               borderLeftColor:
                                 nodeColors[d] ?? nodeColors.unknown,
