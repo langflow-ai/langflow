@@ -150,23 +150,23 @@ files = [
 
 [[package]]
 name = "anthropic"
-version = "0.3.3"
+version = "0.3.4"
 description = "Client library for the anthropic API"
 category = "main"
 optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "anthropic-0.3.3-py3-none-any.whl", hash = "sha256:4f607095057e8ec06e8724a0f2dbcbbdd6a5750f6116d87eb51cae82801700a7"},
-    {file = "anthropic-0.3.3.tar.gz", hash = "sha256:db78e49c17bb0ac905e2b2f65789ecd3d33256aa0448e45a5a484909fc6a670f"},
+    {file = "anthropic-0.3.4-py3-none-any.whl", hash = "sha256:7b0396f663b0e4eaaf485ae59a0be014cddfc0f0b8f4dad79bb35d8f28439097"},
+    {file = "anthropic-0.3.4.tar.gz", hash = "sha256:36184840bd33184697666d4f1ec951d78ef5da22e87d936cd3c04b611d84e93c"},
 ]
 
 [package.dependencies]
-anyio = ">=3.5.0"
-distro = ">=1.7.0"
-httpx = ">=0.23.0"
+anyio = ">=3.5.0,<4"
+distro = ">=1.7.0,<2"
+httpx = ">=0.23.0,<1"
 pydantic = ">=1.9.0,<2.0.0"
 tokenizers = ">=0.13.0"
-typing-extensions = ">=4.1.1"
+typing-extensions = ">=4.1.1,<5"
 
 [[package]]
 name = "anyio"
@@ -767,14 +767,14 @@ sqlalchemy = ["sqlalchemy (>1.3.21,<2.0)"]
 
 [[package]]
 name = "cohere"
-version = "4.12.0"
+version = "4.12.1"
 description = ""
 category = "main"
 optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "cohere-4.12.0-py3-none-any.whl", hash = "sha256:6009afd267c5d8b5398747143636d85069f8d06d576664cac84c9f6eac0621d6"},
-    {file = "cohere-4.12.0.tar.gz", hash = "sha256:2e0b4af80e68f904b40d729bd4df1b9639f72b50b4a47c6be58caf0392c8e4c1"},
+    {file = "cohere-4.12.1-py3-none-any.whl", hash = "sha256:80d17ae928873cdf63883a338618e477de5c71b3d510d7891af7dfdabc25186e"},
+    {file = "cohere-4.12.1.tar.gz", hash = "sha256:2e93a094757576d6c8d42e76363aa7841eb4166c5b0de8e5ed7272783982d2a4"},
 ]
 
 [package.dependencies]
@@ -6430,14 +6430,14 @@ sqlcipher = ["sqlcipher3-binary"]
 
 [[package]]
 name = "sqlalchemy2-stubs"
-version = "0.0.2a34"
+version = "0.0.2a35"
 description = "Typing Stubs for SQLAlchemy 1.4"
 category = "main"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "sqlalchemy2-stubs-0.0.2a34.tar.gz", hash = "sha256:2432137ab2fde1a608df4544f6712427b0b7ff25990cfbbc5a9d1db6c8c6f489"},
-    {file = "sqlalchemy2_stubs-0.0.2a34-py3-none-any.whl", hash = "sha256:a313220ac793404349899faf1272e821a62dbe1d3a029bd444faa8d3e966cd07"},
+    {file = "sqlalchemy2-stubs-0.0.2a35.tar.gz", hash = "sha256:bd5d530697d7e8c8504c7fe792ef334538392a5fb7aa7e4f670bfacdd668a19d"},
+    {file = "sqlalchemy2_stubs-0.0.2a35-py3-none-any.whl", hash = "sha256:593784ff9fc0dc2ded1895e3322591689db3be06f3ca006e3ef47640baf2d38a"},
 ]
 
 [package.dependencies]
@@ -7845,4 +7845,4 @@ deploy = ["langchain-serve"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "5c6d484efef3fc84766b588f5f08a83486bcecdebcac9571abd3c6c0e7cf6e42"
+content-hash = "3ef18bc73e595f6aa8c3ee4b4c9666f3328c601933aef1bf225b865f39504e3c"
