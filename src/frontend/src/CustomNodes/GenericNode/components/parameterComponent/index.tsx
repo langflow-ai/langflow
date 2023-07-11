@@ -12,6 +12,7 @@ import IntComponent from "../../../../components/intComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
+import { MAX_LENGTH_TO_SCROLL_TOOLTIP } from "../../../../constants";
 import { PopUpContext } from "../../../../contexts/popUpContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
@@ -26,7 +27,6 @@ import {
   nodeIconsLucide,
   nodeNames,
 } from "../../../../utils";
-import { MAX_LENGTH_TO_SCROLL_TOOLTIP } from "../../../../constants";
 
 export default function ParameterComponent({
   left,
@@ -94,13 +94,12 @@ export default function ParameterComponent({
     );
   }, [info]);
 
-
   useEffect(() => {
     const groupedObj = groupByFamily(myData, tooltipTitle, left, data.type);
 
     refNumberComponents.current = groupedObj[0]?.type?.length;
     console.log(refNumberComponents);
-    
+
     refHtml.current = groupedObj.map((item, i) => {
       const Icon: any = nodeIconsLucide[item.family];
 
@@ -183,7 +182,11 @@ export default function ParameterComponent({
           <></>
         ) : (
           <ShadTooltip
-            styleClasses={refNumberComponents.current > MAX_LENGTH_TO_SCROLL_TOOLTIP ? "tooltip-fixed-width custom-scroll overflow-y-scroll nowheel" : "tooltip-fixed-width"}
+            styleClasses={
+              refNumberComponents.current > MAX_LENGTH_TO_SCROLL_TOOLTIP
+                ? "tooltip-fixed-width custom-scroll overflow-y-scroll nowheel"
+                : "tooltip-fixed-width"
+            }
             delayDuration={0}
             content={refHtml.current}
             side={left ? "left" : "right"}

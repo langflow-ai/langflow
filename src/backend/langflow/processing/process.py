@@ -95,6 +95,10 @@ def process_graph_cached(data_graph: Dict[str, Any], inputs: Optional[dict] = No
     logger.debug("Loaded LangChain object")
     if inputs is None:
         inputs = {}
+
+    # Add artifacts to inputs
+    # artifacts can be documents loaded when building
+    # the flow
     for (
         key,
         value,
@@ -116,8 +120,7 @@ def process_graph_cached(data_graph: Dict[str, Any], inputs: Optional[dict] = No
         result = get_result_and_thought(langchain_object, inputs)
         logger.debug("Generated result and thought")
     elif isinstance(langchain_object, VectorStore):
-        class_name = langchain_object.__class__.__name__
-        result = {"message": f"Processed {class_name} successfully"}
+        result = langchain_object.search(**inputs)
     else:
         raise ValueError(
             f"Unknown langchain_object type: {type(langchain_object).__name__}"
