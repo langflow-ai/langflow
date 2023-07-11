@@ -193,8 +193,7 @@ def instantiate_agent(node_type, class_object: Type[agent_module.Agent], params:
             agent = class_method(**params)
             tools = params.get("tools", [])
             return AgentExecutor.from_agent_and_tools(
-                agent=agent,
-                tools=tools,
+                agent=agent, tools=tools, handle_parsing_errors=True
             )
     return load_agent_executor(class_object, params)
 
@@ -432,6 +431,7 @@ def load_agent_executor(agent_class: type[agent_module.Agent], params, **kwargs)
     return AgentExecutor.from_agent_and_tools(
         agent=agent,
         tools=allowed_tools,
+        handle_parsing_errors=True,
         # memory=memory,
         **kwargs,
     )

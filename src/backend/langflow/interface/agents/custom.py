@@ -157,7 +157,7 @@ class VectorStoreAgent(CustomAgentExecutor):
             llm_chain=llm_chain, allowed_tools=tool_names, **kwargs  # type: ignore
         )
         return AgentExecutor.from_agent_and_tools(
-            agent=agent, tools=tools, verbose=True
+            agent=agent, tools=tools, verbose=True, handle_parsing_errors=True
         )
 
     def run(self, *args, **kwargs):
@@ -232,6 +232,7 @@ class SQLAgent(CustomAgentExecutor):
             verbose=True,
             max_iterations=15,
             early_stopping_method="force",
+            handle_parsing_errors=True,
         )
 
     def run(self, *args, **kwargs):
@@ -276,7 +277,7 @@ class VectorStoreRouterAgent(CustomAgentExecutor):
             llm_chain=llm_chain, allowed_tools=tool_names, **kwargs  # type: ignore
         )
         return AgentExecutor.from_agent_and_tools(
-            agent=agent, tools=tools, verbose=True
+            agent=agent, tools=tools, verbose=True, handle_parsing_errors=True
         )
 
     def run(self, *args, **kwargs):
@@ -308,6 +309,7 @@ class InitializeAgent(CustomAgentExecutor):
             agent=agent,  # type: ignore
             memory=memory,
             return_intermediate_steps=True,
+            handle_parsing_errors=True,
         )
 
     def __init__(self, *args, **kwargs):
