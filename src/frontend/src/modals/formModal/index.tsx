@@ -292,7 +292,7 @@ export default function FormModal({
         ws.current.close();
       }
     };
-  }, []);
+  }, [connectWS]);
 
   useEffect(() => {
     if (
@@ -303,7 +303,7 @@ export default function FormModal({
       connectWS();
       setLockChat(false);
     }
-  }, [lockChat]);
+  }, [lockChat, connectWS]);
 
   async function sendAll(data: sendAllProps) {
     try {
