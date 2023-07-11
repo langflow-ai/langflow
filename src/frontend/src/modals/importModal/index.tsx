@@ -1,18 +1,11 @@
 import {
-  DocumentDuplicateIcon,
-  ComputerDesktopIcon,
-  ArrowUpTrayIcon,
   ArrowLeftIcon,
+  ArrowUpTrayIcon,
+  ComputerDesktopIcon,
+  DocumentDuplicateIcon,
 } from "@heroicons/react/24/outline";
 import { useContext, useRef, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
-import { TabsContext } from "../../contexts/tabsContext";
-import ButtonBox from "./buttonBox";
-import { getExamples } from "../../controllers/API";
-import { alertContext } from "../../contexts/alertContext";
 import LoadingComponent from "../../components/loadingComponent";
-import { FlowType } from "../../types/flow";
-import { classNames } from "../../utils";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +16,13 @@ import {
   DialogTrigger,
 } from "../../components/ui/dialog";
 import { IMPORT_DIALOG_SUBTITLE } from "../../constants";
+import { alertContext } from "../../contexts/alertContext";
+import { PopUpContext } from "../../contexts/popUpContext";
+import { TabsContext } from "../../contexts/tabsContext";
+import { getExamples } from "../../controllers/API";
+import { FlowType } from "../../types/flow";
+import { classNames } from "../../utils";
+import ButtonBox from "./buttonBox";
 
 export default function ImportModal() {
   const [open, setOpen] = useState(true);
@@ -113,9 +113,7 @@ export default function ImportModal() {
                 size="big"
                 bgColor="bg-medium-emerald "
                 description="Prebuilt Examples"
-                icon={
-                  <DocumentDuplicateIcon className="document-icon" />
-                }
+                icon={<DocumentDuplicateIcon className="document-icon" />}
                 onClick={() => {
                   setShowExamples(true);
                   handleExamples();
@@ -127,9 +125,7 @@ export default function ImportModal() {
                 size="big"
                 bgColor="bg-almost-dark-blue "
                 description="Import from Local"
-                icon={
-                  <ComputerDesktopIcon className="document-icon" />
-                }
+                icon={<ComputerDesktopIcon className="document-icon" />}
                 onClick={() => {
                   uploadFlow();
                   setModalOpen(false);

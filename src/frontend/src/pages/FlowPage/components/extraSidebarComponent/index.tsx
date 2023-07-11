@@ -1,22 +1,21 @@
-import DisclosureComponent from "../DisclosureComponent";
+import { Code2, FileDown, FileUp, Menu, Save, Search } from "lucide-react";
+import { useContext, useState } from "react";
+import ShadTooltip from "../../../../components/ShadTooltipComponent";
+import { Separator } from "../../../../components/ui/separator";
+import { alertContext } from "../../../../contexts/alertContext";
+import { PopUpContext } from "../../../../contexts/popUpContext";
+import { TabsContext } from "../../../../contexts/tabsContext";
+import { typesContext } from "../../../../contexts/typesContext";
+import ApiModal from "../../../../modals/ApiModal";
+import ExportModal from "../../../../modals/exportModal";
+import { APIClassType, APIObjectType } from "../../../../types/api";
 import {
   classNames,
   nodeColors,
   nodeIconsLucide,
   nodeNames,
 } from "../../../../utils";
-import { useContext, useState } from "react";
-import { typesContext } from "../../../../contexts/typesContext";
-import { APIClassType, APIObjectType } from "../../../../types/api";
-import ShadTooltip from "../../../../components/ShadTooltipComponent";
-import { Code2, FileDown, FileUp, Save, Search } from "lucide-react";
-import { PopUpContext } from "../../../../contexts/popUpContext";
-import ExportModal from "../../../../modals/exportModal";
-import ApiModal from "../../../../modals/ApiModal";
-import { TabsContext } from "../../../../contexts/tabsContext";
-import { alertContext } from "../../../../contexts/alertContext";
-import { Separator } from "../../../../components/ui/separator";
-import { Menu } from "lucide-react";
+import DisclosureComponent from "../DisclosureComponent";
 
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);
@@ -39,7 +38,7 @@ export default function ExtraSidebar() {
     crt.classList.add("cursor-grabbing");
     document.body.appendChild(crt);
     event.dataTransfer.setDragImage(crt, 0, 0);
-    event.dataTransfer.setData("json", JSON.stringify(data));
+    event.dataTransfer.setData("nodedata", JSON.stringify(data));
   }
 
   function handleSearchInput(e: string) {
@@ -163,7 +162,9 @@ export default function ExtraSidebar() {
                         <div key={k} data-tooltip-id={t}>
                           <div
                             draggable
-                            className={"side-bar-components-border"}
+                            className={
+                              "side-bar-components-border bg-background"
+                            }
                             style={{
                               borderLeftColor:
                                 nodeColors[d] ?? nodeColors.unknown,

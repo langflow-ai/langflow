@@ -1,19 +1,18 @@
-import { Home, MoonIcon, SunIcon, Users2 } from "lucide-react";
+import { Bell, Home, MoonIcon, SunIcon, Users2 } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
 import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
-import { Button } from "../ui/button";
-import { TabsContext } from "../../contexts/tabsContext";
+import { Link, useLocation, useParams } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
+import { USER_PROJECTS_HEADER } from "../../constants";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
 import { PopUpContext } from "../../contexts/popUpContext";
+import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
-import MenuBar from "./components/menuBar";
-import { Link, useLocation, useParams } from "react-router-dom";
-import { USER_PROJECTS_HEADER } from "../../constants";
 import { getRepoStars } from "../../controllers/API";
+import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
-import { Bell } from "lucide-react";
+import MenuBar from "./components/menuBar";
 
 export default function Header() {
   const { flows, addFlow, tabId } = useContext(TabsContext);
@@ -79,9 +78,7 @@ export default function Header() {
           >
             <FaGithub className="mr-2 h-5 w-5" />
             Star
-            <div className="header-github-display">
-              {stars}
-            </div>
+            <div className="header-github-display">{stars}</div>
           </a>
           <a
             href="https://twitter.com/logspace_ai"
@@ -133,9 +130,7 @@ export default function Header() {
               );
             }}
           >
-            {notificationCenter && (
-              <div className="header-notifications"></div>
-            )}
+            {notificationCenter && <div className="header-notifications"></div>}
             <Bell className="side-bar-button-size" aria-hidden="true" />
           </button>
         </div>

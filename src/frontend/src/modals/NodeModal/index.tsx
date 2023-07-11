@@ -1,6 +1,8 @@
 import { Dialog, Transition } from "@headlessui/react";
+import { X } from "lucide-react";
 import { Fragment, useContext, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
+import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
 import {
   classNames,
@@ -9,9 +11,7 @@ import {
   nodeIconsLucide,
   toTitleCase,
 } from "../../utils";
-import { typesContext } from "../../contexts/typesContext";
 import ModalField from "./components/ModalField";
-import { X } from "lucide-react";
 
 export default function NodeModal({ data }: { data: NodeDataType }) {
   const [open, setOpen] = useState(true);
@@ -83,10 +83,7 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
                       }}
                     />
                     <div className="node-modal-title-div">
-                      <Dialog.Title
-                        as="h3"
-                        className="node-modal-title"
-                      >
+                      <Dialog.Title as="h3" className="node-modal-title">
                         {data.type}
                       </Dialog.Title>
                     </div>
@@ -100,10 +97,10 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
                             (t) =>
                               t.charAt(0) !== "_" &&
                               data.node.template[t].advanced &&
-                              data.node.template[t].show,
+                              data.node.template[t].show
                           ).length > limitScrollFieldsModal
                             ? "overflow-scroll overflow-x-hidden custom-scroll"
-                            : "overflow-hidden",
+                            : "overflow-hidden"
                         )}
                       >
                         <div className="node-modal-template-column">
@@ -112,7 +109,7 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
                               (t) =>
                                 t.charAt(0) !== "_" &&
                                 data.node.template[t].advanced &&
-                                data.node.template[t].show,
+                                data.node.template[t].show
                             )
                             .map((t: string, idx) => {
                               return (

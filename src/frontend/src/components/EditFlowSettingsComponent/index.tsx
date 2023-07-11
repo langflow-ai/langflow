@@ -1,7 +1,7 @@
-import React, { useState, ChangeEvent } from "react";
-import { Textarea } from "../../components/ui/textarea";
-import { Label } from "../../components/ui/label";
+import React, { ChangeEvent, useState } from "react";
 import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { Textarea } from "../../components/ui/textarea";
 
 type InputProps = {
   name: string | null;
@@ -47,9 +47,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
         <div className="edit-flow-arrangement">
           <span className="font-medium">Name</span>{" "}
           {isMaxLength && (
-            <span className="edit-flow-span">
-              Character limit reached
-            </span>
+            <span className="edit-flow-span">Character limit reached</span>
           )}
         </div>
         <Input

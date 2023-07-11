@@ -1,9 +1,9 @@
 import { Listbox, Transition } from "@headlessui/react";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { Fragment, useContext, useEffect, useState } from "react";
+import { PopUpContext } from "../../contexts/popUpContext";
 import { DropDownComponentType } from "../../types/components";
 import { classNames } from "../../utils";
-import { ChevronsUpDown, Check } from "lucide-react";
-import { PopUpContext } from "../../contexts/popUpContext";
 
 export default function Dropdown({
   value,
@@ -45,11 +45,7 @@ export default function Dropdown({
                 <span className="dropdown-component-display">
                   {internalValue}
                 </span>
-                <span
-                  className={
-                    "dropdown-component-arrow"
-                  }
-                >
+                <span className={"dropdown-component-arrow"}>
                   <ChevronsUpDown
                     className="dropdown-component-arrow-color"
                     aria-hidden="true"
@@ -67,8 +63,8 @@ export default function Dropdown({
                 <Listbox.Options
                   className={classNames(
                     editNode
-                      ? "dropdown-component-true-options "
-                      : "dropdown-component-false-options ",
+                      ? "dropdown-component-true-options nowheel custom-scroll"
+                      : "dropdown-component-false-options nowheel custom-scroll",
                     apiModal ? "mb-2 w-[250px]" : "absolute"
                   )}
                 >

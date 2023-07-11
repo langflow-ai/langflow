@@ -1,7 +1,7 @@
 import { Transition } from "@headlessui/react";
+import { XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ErrorAlertType } from "../../types/alerts";
-import { XCircle } from "lucide-react";
 
 export default function ErrorAlert({
   title,
@@ -20,6 +20,7 @@ export default function ErrorAlert({
       }, 5000);
     }
   }, [id, removeAlert, show]);
+
   return (
     <Transition
       className="relative"
@@ -43,13 +44,15 @@ export default function ErrorAlert({
       >
         <div className="flex">
           <div className="flex-shrink-0">
-            <XCircle className="error-build-message-circle" aria-hidden="true" />
+            <XCircle
+              className="error-build-message-circle"
+              aria-hidden="true"
+            />
           </div>
           <div className="ml-3">
-            <h3 className="error-build-foreground">
-              {title}
-            </h3>
-            {list.length !== 0 ? (
+            <h3 className="error-build-foreground">{title}</h3>
+            {list?.length !== 0 &&
+            list?.some((item) => item !== null && item !== undefined) ? (
               <div className="error-build-message-div">
                 <ul className="error-build-message-list">
                   {list.map((item, index) => (

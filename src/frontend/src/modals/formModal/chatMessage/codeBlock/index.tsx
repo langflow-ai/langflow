@@ -1,5 +1,5 @@
 import { IconCheck, IconClipboard, IconDownload } from "@tabler/icons-react";
-import { FC, memo, useState } from "react";
+import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import { programmingLanguages } from "../../../../utils";
@@ -9,7 +9,7 @@ interface Props {
   value: string;
 }
 
-export const CodeBlock: FC<Props> = memo(({ language, value }) => {
+export function CodeBlock({ language, value }) {
   const [isCopied, setIsCopied] = useState<Boolean>(false);
 
   const copyToClipboard = () => {
@@ -52,24 +52,18 @@ export const CodeBlock: FC<Props> = memo(({ language, value }) => {
         <span className="code-block-modal-span">{language}</span>
 
         <div className="flex items-center">
-          <button
-            className="code-block-modal-button"
-            onClick={copyToClipboard}
-          >
+          <button className="code-block-modal-button" onClick={copyToClipboard}>
             {isCopied ? <IconCheck size={18} /> : <IconClipboard size={18} />}
             {isCopied ? "Copied!" : "Copy code"}
           </button>
-          <button
-            className="code-block-modal-button"
-            onClick={downloadAsFile}
-          >
+          <button className="code-block-modal-button" onClick={downloadAsFile}>
             <IconDownload size={18} />
           </button>
         </div>
       </div>
 
       <SyntaxHighlighter
-        className=" w-[570px]"
+        className="overflow-auto"
         language={language}
         style={oneDark}
         customStyle={{ margin: 0 }}
@@ -78,5 +72,5 @@ export const CodeBlock: FC<Props> = memo(({ language, value }) => {
       </SyntaxHighlighter>
     </div>
   );
-});
+}
 CodeBlock.displayName = "CodeBlock";

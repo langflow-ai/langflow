@@ -1,9 +1,9 @@
+import { FileSearch2 } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
 import { alertContext } from "../../contexts/alertContext";
-import { FileComponentType } from "../../types/components";
 import { TabsContext } from "../../contexts/tabsContext";
-import { FileSearch2 } from "lucide-react";
 import { uploadFile } from "../../controllers/API";
+import { FileComponentType } from "../../types/components";
 
 export default function InputFileComponent({
   value,
@@ -92,18 +92,16 @@ export default function InputFileComponent({
   };
 
   return (
-    <div
-      className={
-        disabled ? "input-component-div" : "w-full"
-      }
-    >
+    <div className={disabled ? "input-component-div" : "w-full"}>
       <div className="input-file-component">
         <span
           onClick={handleButtonClick}
           className={
             editNode
-              ? "input-edit-node " + "input-primary "
-              : "input-primary " + (disabled ? "input-disable " : "")
+              ? "input-edit-node input-dialog text-muted-foreground"
+              : disabled
+              ? "input-disable input-dialog input-primary"
+              : "input-dialog input-primary text-muted-foreground"
           }
         >
           {myValue !== "" ? myValue : "No file"}
@@ -112,7 +110,10 @@ export default function InputFileComponent({
           {!editNode && !loading && (
             <FileSearch2
               strokeWidth={1.5}
-              className="h-6 w-6 hover:text-accent-foreground"
+              className={
+                "icons-parameters-comp" +
+                (disabled ? " text-ring " : " hover:text-accent-foreground")
+              }
             />
           )}
           {!editNode && loading && (

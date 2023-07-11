@@ -53,7 +53,7 @@ class ChatMessage(BaseModel):
     """Chat message schema."""
 
     is_bot: bool = False
-    message: Union[str, None] = None
+    message: Union[str, None, dict] = None
     type: str = "human"
 
 

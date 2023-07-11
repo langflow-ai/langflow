@@ -4,10 +4,14 @@ from langchain.text_splitter import Language
 
 
 class TextSplittersFrontendNode(FrontendNode):
+    def add_extra_base_classes(self) -> None:
+        self.base_classes = ["Document"]
+        self.output_types = ["Document"]
+
     def add_extra_fields(self) -> None:
         self.template.add_field(
             TemplateField(
-                field_type="BaseLoader",
+                field_type="Document",
                 required=True,
                 show=True,
                 name="documents",
@@ -41,7 +45,7 @@ class TextSplittersFrontendNode(FrontendNode):
                 field_type="str",
                 required=True,
                 show=True,
-                value=".",
+                value="\\n",
                 name=name,
                 display_name="Separator",
             )

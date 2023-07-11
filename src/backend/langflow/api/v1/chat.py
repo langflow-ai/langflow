@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketException, status
 from fastapi.responses import StreamingResponse
+from langflow.api.utils import build_input_keys_response
 from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, StreamData
 
 from langflow.chat.manager import ChatManager
@@ -83,6 +84,7 @@ async def stream_build(flow_id: str):
 
     async def event_stream(flow_id):
         final_response = {"end_of_stream": True}
+        artifacts = {}
         try:
             if flow_id not in flow_data_store:
                 error_message = "Invalid session ID"
@@ -113,13 +115,6 @@ async def stream_build(flow_id: str):
 
             number_of_nodes = len(graph.nodes)
             flow_data_store[flow_id]["status"] = BuildStatus.IN_PROGRESS
-            # To deal with the ZeroShotAgent case
-            # we need to build the root node first
-            # and then the rest of the graph
-            # This is a big problem because certain nodes require
-            # params that are not connected to it.
-            # We should consider connecting the tools to the ZeroShotPrompt
-            graph.build()
 
             for i, vertex in enumerate(graph.generator_build(), 1):
                 try:
@@ -131,8 +126,13 @@ async def stream_build(flow_id: str):
                     params = vertex._built_object_repr()
                     valid = True
                     logger.debug(
-                        f"Building node {params[:50]}{'...' if len(params) > 50 else ''}"
+                        f"Building node {str(params)[:50]}{'...' if len(str(params)) > 50 else ''}"
                     )
+                    if vertex.artifacts:
+                        # The artifacts will be prompt variables
+                        # passed to build_input_keys_response
+                        # to set the input_keys values
+                        artifacts.update(vertex.artifacts)
                 except Exception as exc:
                     params = str(exc)
                     valid = False
@@ -147,9 +147,26 @@ async def stream_build(flow_id: str):
 
                 yield str(StreamData(event="message", data=response))
 
-            chat_manager.set_cache(flow_id, graph.build())
+            langchain_object = graph.build()
+            # Now we  need to check the input_keys to send them to the client
+            if hasattr(langchain_object, "input_keys"):
+                input_keys_response = build_input_keys_response(
+                    langchain_object, artifacts
+                )
+            else:
+                input_keys_response = {
+                    "input_keys": {},
+                    "memory_keys": [],
+                    "handle_keys": [],
+                }
+            yield str(StreamData(event="message", data=input_keys_response))
+
+            chat_manager.set_cache(flow_id, langchain_object)
+            # We need to reset the chat history
+            chat_manager.chat_history.empty_history(flow_id)
             flow_data_store[flow_id]["status"] = BuildStatus.SUCCESS
         except Exception as exc:
+            logger.exception(exc)
             logger.error("Error while building the flow: %s", exc)
             flow_data_store[flow_id]["status"] = BuildStatus.FAILURE
             yield str(StreamData(event="error", data={"error": str(exc)}))

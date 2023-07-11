@@ -1,22 +1,21 @@
-import { useContext, useState } from "react";
 import { Transition } from "@headlessui/react";
 import { Zap } from "lucide-react";
-import { validateNodes } from "../../../utils";
-import { FlowType } from "../../../types/flow";
+import { useContext, useState } from "react";
 import Loading from "../../../components/ui/loading";
 import { useSSE } from "../../../contexts/SSEContext";
-import { typesContext } from "../../../contexts/typesContext";
 import { alertContext } from "../../../contexts/alertContext";
+import { typesContext } from "../../../contexts/typesContext";
 import { postBuildInit } from "../../../controllers/API";
-import ShadTooltip from "../../ShadTooltipComponent";
+import { FlowType } from "../../../types/flow";
+import { validateNodes } from "../../../utils";
 
+import { TabsContext } from "../../../contexts/tabsContext";
 import RadialProgressComponent from "../../RadialProgress";
 
 export default function BuildTrigger({
   open,
   flow,
   setIsBuilt,
-  isBuilt,
 }: {
   open: boolean;
   flow: FlowType;
@@ -25,6 +24,7 @@ export default function BuildTrigger({
 }) {
   const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
   const { reactFlowInstance } = useContext(typesContext);
+  const { setTabsState } = useContext(TabsContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [isIconTouched, setIsIconTouched] = useState(false);
   const eventClick = isBuilding ? "pointer-events-none" : "";
@@ -88,6 +88,16 @@ export default function BuildTrigger({
       } else if (parsedData.log) {
         // If the event is a log, log it
         setSuccessData({ title: parsedData.log });
+      } else if (parsedData.input_keys) {
+        setTabsState((old) => {
+          return {
+            ...old,
+            [flowId]: {
+              ...old[flowId],
+              formKeysData: parsedData,
+            },
+          };
+        });
       } else {
         // Otherwise, process the data
         const isValid = processStreamResult(parsedData);
@@ -127,7 +137,7 @@ export default function BuildTrigger({
 
   async function enforceMinimumLoadingTime(
     startTime: number,
-    minimumLoadingTime: number,
+    minimumLoadingTime: number
   ) {
     const elapsedTime = Date.now() - startTime;
     const remainingTime = minimumLoadingTime - elapsedTime;
@@ -156,11 +166,7 @@ export default function BuildTrigger({
       leaveFrom="translate-y-0"
       leaveTo="translate-y-96"
     >
-      <div
-        className={
-          "round-buttons-position" + (isBuilt ? " bottom-20" : " bottom-4")
-        }
-      >
+      <div className="fixed bottom-20 right-4">
         <div
           className={`${eventClick} round-button-form`}
           onClick={() => {
@@ -184,7 +190,10 @@ export default function BuildTrigger({
                   className="build-trigger-loading-icon"
                 />
               ) : (
-                <Zap strokeWidth={1.5} className="build-trigger-icon" />
+                <Zap
+                  strokeWidth={1.5}
+                  className="sh-6 w-6 fill-build-trigger stroke-build-trigger stroke-1"
+                />
               )}
             </div>
           </button>

@@ -179,7 +179,7 @@ class Graph:
                 raise ValueError(f"Source node {edge['source']} not found")
             if target is None:
                 raise ValueError(f"Target node {edge['target']} not found")
-            edges.append(Edge(source, target))
+            edges.append(Edge(source, target, edge))
         return edges
 
     def _get_vertex_class(self, node_type: str, node_lc_type: str) -> Type[Vertex]:
@@ -214,3 +214,10 @@ class Graph:
         if node_type in node_types:
             children.append(node)
         return children
+
+    def __repr__(self):
+        node_ids = [node.id for node in self.nodes]
+        edges_repr = "\n".join(
+            [f"{edge.source.id} --> {edge.target.id}" for edge in self.edges]
+        )
+        return f"Graph:\nNodes: {node_ids}\nConnections:\n{edges_repr}"

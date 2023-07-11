@@ -1,6 +1,6 @@
-import { classNames } from "../../../utils";
+import { Lock, LucideSend, Sparkles } from "lucide-react";
 import { useEffect } from "react";
-import { Lock, Send } from "lucide-react";
+import { classNames } from "../../../utils";
 
 export default function ChatInput({
   lockChat,
@@ -8,6 +8,7 @@ export default function ChatInput({
   sendMessage,
   setChatValue,
   inputRef,
+  noInput,
 }) {
   useEffect(() => {
     if (!lockChat && inputRef.current) {
@@ -32,7 +33,7 @@ export default function ChatInput({
         }}
         rows={1}
         ref={inputRef}
-        disabled={lockChat}
+        disabled={lockChat || noInput}
         style={{
           resize: "none",
           bottom: `${inputRef?.current?.scrollHeight}px`,
@@ -49,25 +50,38 @@ export default function ChatInput({
         }}
         className={classNames(
           lockChat
-            ? " bg-input text-foreground "
-            : "  bg-background text-foreground ",
-          "chat-input-modal-txtarea" +
-            " input-primary "
+            ? " form-modal-lock-true bg-input"
+            : noInput
+            ? "form-modal-no-input bg-input"
+            : " form-modal-lock-false bg-input",
+
+          "form-modal-lockchat"
         )}
-        placeholder={"Send a message..."}
+        placeholder={
+          noInput
+            ? "No chat input variables found. Click to run your flow."
+            : "Send a message..."
+        }
       />
-      <div className="chat-input-modal-div">
-        <button disabled={lockChat} onClick={() => sendMessage()}>
+      <div className="form-modal-send-icon-position">
+        <button
+          className={classNames(
+            "form-modal-send-button",
+            noInput
+              ? "bg-indigo-600 text-background"
+              : chatValue === ""
+              ? "text-primary"
+              : "bg-emerald-600 text-background"
+          )}
+          disabled={lockChat}
+          onClick={() => sendMessage()}
+        >
           {lockChat ? (
-            <Lock
-              className="chat-input-modal-lock"
-              aria-hidden="true"
-            />
+            <Lock className="form-modal-lock-icon" aria-hidden="true" />
+          ) : noInput ? (
+            <Sparkles className="form-modal-play-icon" aria-hidden="true" />
           ) : (
-            <Send
-              className="chat-input-modal-send "
-              aria-hidden="true"
-            />
+            <LucideSend className="form-modal-send-icon " aria-hidden="true" />
           )}
         </button>
       </div>

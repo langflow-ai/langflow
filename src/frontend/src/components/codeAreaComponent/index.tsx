@@ -1,7 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import CodeAreaModal from "../../modals/codeAreaModal";
-import TextAreaModal from "../../modals/textAreaModal";
 import { TextAreaComponentType } from "../../types/components";
 
 import { ExternalLink } from "lucide-react";
@@ -11,9 +10,11 @@ export default function CodeAreaComponent({
   onChange,
   disabled,
   editNode = false,
+  nodeClass,
+  setNodeClass,
 }: TextAreaComponentType) {
   const [myValue, setMyValue] = useState(
-    typeof value == "string" ? value : JSON.stringify(value),
+    typeof value == "string" ? value : JSON.stringify(value)
   );
   const { openPopUp } = useContext(PopUpContext);
   useEffect(() => {
@@ -28,29 +29,27 @@ export default function CodeAreaComponent({
   }, [value]);
 
   return (
-    <div
-      className={
-        disabled ? "code-area-component" : "w-full"
-      }
-    >
-      <div className="code-area-input-positioning">
+    <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
+      <div className="flex w-full items-center">
         <span
           onClick={() => {
             openPopUp(
               <CodeAreaModal
                 value={myValue}
+                nodeClass={nodeClass}
+                setNodeClass={setNodeClass}
                 setValue={(t: string) => {
                   setMyValue(t);
                   onChange(t);
                 }}
-              />,
+              />
             );
           }}
           className={
             editNode
               ? "input-edit-node input-dialog"
-              : "input-dialog input-primary " +
-                (disabled ? "input-disable" : "")
+              : (disabled ? " input-disable input-ring " : "") +
+                " input-primary text-muted-foreground "
           }
         >
           {myValue !== "" ? myValue : "Type something..."}
@@ -59,17 +58,25 @@ export default function CodeAreaComponent({
           onClick={() => {
             openPopUp(
               <CodeAreaModal
+                setNodeClass={setNodeClass}
                 value={myValue}
+                nodeClass={nodeClass}
                 setValue={(t: string) => {
                   setMyValue(t);
                   onChange(t);
                 }}
-              />,
+              />
             );
           }}
         >
           {!editNode && (
-            <ExternalLink strokeWidth={1.5} className="code-area-external-link" />
+            <ExternalLink
+              strokeWidth={1.5}
+              className={
+                "icons-parameters-comp" +
+                (disabled ? " text-ring" : " hover:text-accent-foreground")
+              }
+            />
           )}
         </button>
       </div>

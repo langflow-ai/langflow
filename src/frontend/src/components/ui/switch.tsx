@@ -1,7 +1,7 @@
 "use client";
 
-import * as React from "react";
 import * as SwitchPrimitives from "@radix-ui/react-switch";
+import * as React from "react";
 import { cn } from "../../utils";
 
 const Switch = React.forwardRef<
@@ -17,8 +17,9 @@ const Switch = React.forwardRef<
     ref={ref}
   >
     <SwitchPrimitives.Thumb
+      aria-disabled={props.disabled}
       className={cn(
-        "pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0"
+        "pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform aria-disabled:bg-muted/70 data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0"
       )}
     />
   </SwitchPrimitives.Root>

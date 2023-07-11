@@ -1,10 +1,10 @@
+import { Copy, FileText, Settings2, Trash2 } from "lucide-react";
 import { useContext, useState } from "react";
-import { Settings2, Copy, Trash2, FileText } from "lucide-react";
-import { classNames } from "../../../../utils";
-import { TabsContext } from "../../../../contexts/tabsContext";
 import { useReactFlow } from "reactflow";
-import EditNodeModal from "../../../../modals/EditNodeModal";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
+import { TabsContext } from "../../../../contexts/tabsContext";
+import EditNodeModal from "../../../../modals/EditNodeModal";
+import { classNames } from "../../../../utils";
 
 const NodeToolbarComponent = (props) => {
   const [nodeLength, setNodeLength] = useState(
@@ -47,7 +47,6 @@ const NodeToolbarComponent = (props) => {
               )}
               onClick={(event) => {
                 event.preventDefault();
-                // console.log(reactFlowInstance.getNode(props.data.id));
                 paste(
                   {
                     nodes: [reactFlowInstance.getNode(props.data.id)],

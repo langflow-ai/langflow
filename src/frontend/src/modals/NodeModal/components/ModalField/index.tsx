@@ -1,15 +1,14 @@
-import { useContext, useState } from "react";
-import { TabsContext } from "../../../../contexts/tabsContext";
-import InputListComponent from "../../../../components/inputListComponent";
-import Dropdown from "../../../../components/dropdownComponent";
-import TextAreaComponent from "../../../../components/textAreaComponent";
-import InputComponent from "../../../../components/inputComponent";
-import ToggleComponent from "../../../../components/toggleComponent";
-import FloatComponent from "../../../../components/floatComponent";
-import IntComponent from "../../../../components/intComponent";
-import InputFileComponent from "../../../../components/inputFileComponent";
-import PromptAreaComponent from "../../../../components/promptComponent";
+import { useState } from "react";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
+import Dropdown from "../../../../components/dropdownComponent";
+import FloatComponent from "../../../../components/floatComponent";
+import InputComponent from "../../../../components/inputComponent";
+import InputFileComponent from "../../../../components/inputFileComponent";
+import InputListComponent from "../../../../components/inputListComponent";
+import IntComponent from "../../../../components/intComponent";
+import PromptAreaComponent from "../../../../components/promptComponent";
+import TextAreaComponent from "../../../../components/textAreaComponent";
+import ToggleComponent from "../../../../components/toggleComponent";
 import { classNames } from "../../../../utils";
 
 export default function ModalField({
@@ -22,7 +21,7 @@ export default function ModalField({
   index,
 }) {
   const [enabled, setEnabled] = useState(
-    data.node.template[name]?.value ?? false,
+    data.node.template[name]?.value ?? false
   );
   const display =
     type === "str" ||
@@ -42,18 +41,18 @@ export default function ModalField({
           (t) =>
             t.charAt(0) !== "_" &&
             data.node.template[t].advanced &&
-            data.node.template[t].show,
+            data.node.template[t].show
         ).length -
           1 ===
           index
           ? "pb-4"
-          : "",
+          : ""
       )}
     >
       {display && (
         <div>
           <span className="mx-2">{title}</span>
-          <span className="text-destructive">{required ? " *" : ""}</span>
+          <span className="text-status-red">{required ? " *" : ""}</span>
         </div>
       )}
 
@@ -150,6 +149,7 @@ export default function ModalField({
       ) : type === "prompt" ? (
         <div className="w-1/2">
           <PromptAreaComponent
+            field_name={name}
             disabled={false}
             value={data.node.template[name].value ?? ""}
             onChange={(t: string) => {

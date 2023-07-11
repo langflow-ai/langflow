@@ -1,8 +1,7 @@
 import { useContext, useEffect, useState } from "react";
-import { FloatComponentType } from "../../types/components";
-import { TabsContext } from "../../contexts/tabsContext";
-import { classNames } from "../../utils";
 import { PopUpContext } from "../../contexts/popUpContext";
+import { TabsContext } from "../../contexts/tabsContext";
+import { FloatComponentType } from "../../types/components";
 
 export default function IntComponent({
   value,
@@ -31,7 +30,7 @@ export default function IntComponent({
     <div
       className={
         "w-full " +
-        (disabled ? "pointer-events-none w-full cursor-not-allowed" : "w-full")
+        (disabled ? "pointer-events-none w-full cursor-not-allowed" : "")
       }
     >
       <input
@@ -42,7 +41,6 @@ export default function IntComponent({
           if (disableCopyPaste) setDisableCopyPaste(false);
         }}
         onKeyDown={(event) => {
-          // console.log(event);
           if (
             event.key !== "Backspace" &&
             event.key !== "Enter" &&
@@ -72,7 +70,7 @@ export default function IntComponent({
         className={
           editNode
             ? " input-edit-node "
-            : " input-primary " + (disabled ? " input-disable " : "")
+            : " input-primary " + (disabled ? " input-disable" : "")
         }
         placeholder={editNode ? "Integer number" : "Type an integer number"}
         onChange={(e) => {

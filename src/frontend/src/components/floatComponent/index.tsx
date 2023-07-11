@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from "react";
-import { FloatComponentType } from "../../types/components";
-import { TabsContext } from "../../contexts/tabsContext";
 import { PopUpContext } from "../../contexts/popUpContext";
+import { TabsContext } from "../../contexts/tabsContext";
+import { FloatComponentType } from "../../types/components";
 
 export default function FloatComponent({
   value,
@@ -30,11 +30,7 @@ export default function FloatComponent({
   }, [closePopUp]);
 
   return (
-    <div
-      className={
-        "w-full " + (disabled ? "float-component-pointer" : "")
-      }
-    >
+    <div className={"w-full " + (disabled ? "float-component-pointer" : "")}>
       <input
         onFocus={() => {
           if (disableCopyPaste) setDisableCopyPaste(true);

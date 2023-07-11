@@ -23,6 +23,7 @@ class ChainCreator(LangChainTypeCreator):
     from_method_nodes = {
         "ConversationalRetrievalChain": "from_llm",
         "LLMCheckerChain": "from_llm",
+        "SQLDatabaseChain": "from_llm",
     }
 
     @property
