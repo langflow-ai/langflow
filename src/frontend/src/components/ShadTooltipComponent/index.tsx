@@ -6,7 +6,7 @@ export default function ShadTooltip({
   side,
   asChild = true,
   children,
-  style,
+  styleClasses,
   delayDuration = 500,
 }: ShadToolTipType) {
   return (
@@ -14,7 +14,7 @@ export default function ShadTooltip({
       <TooltipTrigger asChild={asChild}>{children}</TooltipTrigger>
 
       <TooltipContent
-        className={style}
+        className={styleClasses}
         side={side}
         avoidCollisions={false}
         sticky="always"
