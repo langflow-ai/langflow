@@ -539,11 +539,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
   const updateEdges = (edges) => {
     edges.forEach((edge) => {
-      edge.style = { stroke: "inherit" };
       edge.className =
-        edge.targetHandle.split("|")[0] === "Text"
+        (edge.targetHandle.split("|")[0] === "Text"
           ? "stroke-gray-800 "
-          : "stroke-gray-900 ";
+          : "stroke-gray-900 ") + " stroke-connection";
       edge.animated = edge.targetHandle.split("|")[0] === "Text";
     });
   };
