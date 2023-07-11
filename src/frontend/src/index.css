@@ -27,8 +27,7 @@
   --destructive: 0 100% 50%; /* hsl(0 100% 50%) */
   --destructive-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
   --radius: 0.5rem;
-  --ring: 215 20.2% 65.1%; /* hsl(215 20% 65%) */
-  
+  --ring: 215 20.2% 65.1%; /* hsl(215 20% 65%) */  
   --round-btn-shadow: #00000063;
   
   --error-background: #fef2f2;
@@ -55,6 +54,8 @@
   --status-yellow: #eab308;
   --status-green: #4ade80;
   --status-blue:#2563eb;
+  --connection: #555;
+
 }
 
 .dark {
@@ -113,6 +114,8 @@
   --status-yellow: #eab308;
   --status-green: #4ade80;
   --status-blue: #2563eb;
+  --connection: #555;
+
 }}
 
 @layer base {
