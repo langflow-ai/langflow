@@ -1,15 +1,16 @@
+from collections import defaultdict
 import re
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
+from langflow.template.frontend_node.formatter import field_formatters
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.template.field.base import TemplateField
 from langflow.template.template.base import Template
 from langflow.utils import constants
-from langflow.template.frontend_node.formatter import field_formatters
 
-CLASSES_TO_REMOVE = ["Serializable", "BaseModel"]
+CLASSES_TO_REMOVE = ["Serializable", "BaseModel", "object"]
 
 
 class FieldFormatters(BaseModel):
@@ -47,6 +48,8 @@ class FrontendNode(BaseModel):
     name: str = ""
     display_name: str = ""
     documentation: str = ""
+    custom_fields: defaultdict = defaultdict(list)
+    output_types: List[str] = []
     field_formatters: FieldFormatters = Field(default_factory=FieldFormatters)
 
     def process_base_classes(self) -> None:
@@ -76,6 +79,8 @@ class FrontendNode(BaseModel):
                 "description": self.description,
                 "base_classes": self.base_classes,
                 "display_name": self.display_name or self.name,
+                "custom_fields": self.custom_fields,
+                "output_types": self.output_types,
                 "documentation": self.documentation,
             },
         }

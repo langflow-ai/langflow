@@ -254,7 +254,7 @@ class VectorStoreFrontendNode(FrontendNode):
             # when instantiating the vectorstores
             field.name = "documents"
 
-            field.field_type = "TextSplitter"
+            field.field_type = "Document"
             field.display_name = "Documents"
             field.required = False
             field.show = True

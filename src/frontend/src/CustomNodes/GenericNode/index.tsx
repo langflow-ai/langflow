@@ -1,3 +1,15 @@
+import { Zap } from "lucide-react";
+import { useContext, useEffect, useRef, useState } from "react";
+import { NodeToolbar } from "reactflow";
+import ShadTooltip from "../../components/ShadTooltipComponent";
+import Tooltip from "../../components/TooltipComponent";
+import { useSSE } from "../../contexts/SSEContext";
+import { alertContext } from "../../contexts/alertContext";
+import { PopUpContext } from "../../contexts/popUpContext";
+import { typesContext } from "../../contexts/typesContext";
+import NodeModal from "../../modals/NodeModal";
+import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
+import { NodeDataType } from "../../types/flow";
 import {
   classNames,
   nodeColors,
@@ -5,17 +17,6 @@ import {
   toTitleCase,
 } from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
-import { typesContext } from "../../contexts/typesContext";
-import { useContext, useState, useEffect, useRef } from "react";
-import { NodeDataType } from "../../types/flow";
-import { alertContext } from "../../contexts/alertContext";
-import { PopUpContext } from "../../contexts/popUpContext";
-import NodeModal from "../../modals/NodeModal";
-import Tooltip from "../../components/TooltipComponent";
-import { NodeToolbar } from "reactflow";
-import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
-import ShadTooltip from "../../components/ShadTooltipComponent";
-import { useSSE } from "../../contexts/SSEContext";
 
 export default function GenericNode({
   data,
@@ -66,9 +67,7 @@ export default function GenericNode({
     deleteNode(data.id);
     return;
   }
-
   useEffect(() => {}, [closePopUp, data.node.template]);
-
   return (
     <>
       <NodeToolbar>
@@ -95,10 +94,7 @@ export default function GenericNode({
               }}
             />
             <div className="generic-node-tooltip-div">
-              <ShadTooltip
-                delayDuration={1500}
-                content={data.node.display_name}
-              >
+              <ShadTooltip content={data.node.display_name}>
                 <div className="generic-node-tooltip-div text-primary">
                   {data.node.display_name}
                 </div>
@@ -118,14 +114,24 @@ export default function GenericNode({
             <div>
               <Tooltip
                 title={
-                  !validationStatus ? (
-                    "Validating..."
+                  isBuilding ? (
+                    <span>Building...</span>
+                  ) : !validationStatus ? (
+                    <span className="flex">
+                      Build{" "}
+                      <Zap
+                        className="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1"
+                        strokeWidth={1.5}
+                      />{" "}
+                      flow to validate status.
+                    </span>
                   ) : (
-                    <div className="generic-node-validation-div">
-                      {validationStatus.params ||
-                        ""
-                          .split("\n")
-                          .map((line, index) => <div key={index}>{line}</div>)}
+                    <div className="max-h-96 overflow-auto">
+                      {validationStatus.params
+                        ? validationStatus.params
+                            .split("\n")
+                            .map((line, index) => <div key={index}>{line}</div>)
+                        : ""}
                     </div>
                   )
                 }
@@ -162,9 +168,7 @@ export default function GenericNode({
         </div>
 
         <div className="generic-node-desc">
-          <div className="generic-node-desc-text">
-            {data.node.description}
-          </div>
+          <div className="generic-node-desc-text">{data.node.description}</div>
 
           <>
             {Object.keys(data.node.template)
@@ -196,6 +200,7 @@ export default function GenericNode({
                       data={data}
                       color={
                         nodeColors[types[data.node.template[t].type]] ??
+                        nodeColors[data.node.template[t].type] ??
                         nodeColors.unknown
                       }
                       title={
@@ -207,11 +212,22 @@ export default function GenericNode({
                       }
                       info={data.node.template[t].info}
                       name={t}
-                      tooltipTitle={data.node.template[t].type}
+                      tooltipTitle={
+                        data.node.template[t].input_types?.join("\n") ??
+                        data.node.template[t].type
+                      }
                       required={data.node.template[t].required}
-                      id={data.node.template[t].type + "|" + t + "|" + data.id}
+                      id={
+                        (data.node.template[t].input_types?.join(";") ??
+                          data.node.template[t].type) +
+                        "|" +
+                        t +
+                        "|" +
+                        data.id
+                      }
                       left={true}
                       type={data.node.template[t].type}
+                      optionalHandle={data.node.template[t].input_types}
                     />
                   ) : (
                     <></>
@@ -232,8 +248,12 @@ export default function GenericNode({
             <ParameterComponent
               data={data}
               color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-              title={data.type}
-              tooltipTitle={`${data.node.base_classes.join("\n")}`}
+              title={
+                data.node.output_types && data.node.output_types.length > 0
+                  ? data.node.output_types.join("|")
+                  : data.type
+              }
+              tooltipTitle={data.node.base_classes.join("\n")}
               id={[data.type, data.id, ...data.node.base_classes].join("|")}
               type={data.node.base_classes.join("|")}
               left={false}

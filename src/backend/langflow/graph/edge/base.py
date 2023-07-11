@@ -6,9 +6,15 @@ if TYPE_CHECKING:
 
 
 class Edge:
-    def __init__(self, source: "Vertex", target: "Vertex"):
+    def __init__(self, source: "Vertex", target: "Vertex", edge: dict):
         self.source: "Vertex" = source
         self.target: "Vertex" = target
+        self.source_handle = edge.get("sourceHandle", "")
+        self.target_handle = edge.get("targetHandle", "")
+        # 'BaseLoader;BaseOutputParser|documents|PromptTemplate-zmTlD'
+        # target_param is documents
+        self.target_param = self.target_handle.split("|")[1]
+
         self.validate_edge()
 
     def validate_edge(self) -> None:
@@ -42,6 +48,16 @@ class Edge:
 
     def __repr__(self) -> str:
         return (
-            f"Edge(source={self.source.id}, target={self.target.id}, valid={self.valid}"
+            f"Edge(source={self.source.id}, target={self.target.id}, target_param={self.target_param}"
             f", matched_type={self.matched_type})"
+        )
+
+    def __hash__(self) -> int:
+        return hash(self.__repr__())
+
+    def __eq__(self, __value: object) -> bool:
+        return (
+            self.__repr__() == __value.__repr__()
+            if isinstance(__value, Edge)
+            else False
         )

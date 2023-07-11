@@ -2,9 +2,9 @@ from langflow.template import frontend_node
 
 # These should always be instantiated
 CUSTOM_NODES = {
-    "prompts": {
-        "ZeroShotPrompt": frontend_node.prompts.ZeroShotPromptNode(),
-    },
+    # "prompts": {
+    #     "ZeroShotPrompt": frontend_node.prompts.ZeroShotPromptNode(),
+    # },
     "tools": {
         "PythonFunctionTool": frontend_node.tools.PythonFunctionToolNode(),
         "PythonFunction": frontend_node.tools.PythonFunctionNode(),
@@ -23,6 +23,7 @@ CUSTOM_NODES = {
     },
     "memories": {
         "PostgresChatMessageHistory": frontend_node.memories.PostgresChatMessageHistoryFrontendNode(),
+        "MongoDBChatMessageHistory": frontend_node.memories.MongoDBChatMessageHistoryFrontendNode(),
     },
     "chains": {
         "SeriesCharacterChain": frontend_node.chains.SeriesCharacterChainNode(),

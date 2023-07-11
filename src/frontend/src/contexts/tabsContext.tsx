@@ -1,33 +1,33 @@
+import _ from "lodash";
 import {
-  createContext,
-  useEffect,
-  useState,
-  useRef,
   ReactNode,
+  createContext,
   useContext,
+  useEffect,
+  useRef,
+  useState,
 } from "react";
+import { addEdge } from "reactflow";
+import ShortUniqueId from "short-unique-id";
+import {
+  deleteFlowFromDatabase,
+  downloadFlowsFromDatabase,
+  readFlowsFromDatabase,
+  saveFlowToDatabase,
+  updateFlowInDatabase,
+  uploadFlowsToDatabase,
+} from "../controllers/API";
+import { APIClassType, APITemplateType } from "../types/api";
 import { FlowType, NodeType } from "../types/flow";
 import { TabsContextType, TabsState } from "../types/tabs";
 import {
-  updateIds,
-  updateTemplate,
   getRandomDescription,
   getRandomName,
+  updateIds,
+  updateTemplate,
 } from "../utils";
 import { alertContext } from "./alertContext";
 import { typesContext } from "./typesContext";
-import { APIClassType, APITemplateType } from "../types/api";
-import ShortUniqueId from "short-unique-id";
-import { addEdge } from "reactflow";
-import {
-  readFlowsFromDatabase,
-  deleteFlowFromDatabase,
-  saveFlowToDatabase,
-  downloadFlowsFromDatabase,
-  uploadFlowsToDatabase,
-  updateFlowInDatabase,
-} from "../controllers/API";
-import _ from "lodash";
 
 const uid = new ShortUniqueId({ length: 5 });
 
@@ -54,7 +54,7 @@ const TabsContextInitialValue: TabsContextType = {
   setTabsState: (state: TabsState) => {},
   getNodeId: (nodeType: string) => "",
   setTweak: (tweak: any) => {},
-  getTweak: {},
+  getTweak: [],
   paste: (
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }
@@ -75,7 +75,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   const { templates, reactFlowInstance } = useContext(typesContext);
   const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
   const [tabsState, setTabsState] = useState<TabsState>({});
-  const [getTweak, setTweak] = useState({});
+  const [getTweak, setTweak] = useState([]);
 
   const newNodeId = useRef(uid());
   function incrementNodeId() {
@@ -90,12 +90,9 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       Saveflows.forEach((flow) => {
         if (flow.data && flow.data?.nodes)
           flow.data?.nodes.forEach((node) => {
-            // console.log(node.data.type);
             //looking for file fields to prevent saving the content and breaking the flow for exceeding the the data limite for local storage
             Object.keys(node.data.node.template).forEach((key) => {
-              // console.log(node.data.node.template[key].type);
               if (node.data.node.template[key].type === "file") {
-                // console.log(node.data.node.template[key]);
                 node.data.node.template[key].content = null;
                 node.data.node.template[key].value = "";
               }
@@ -326,28 +323,39 @@ export function TabsProvider({ children }: { children: ReactNode }) {
    * If the file type is application/json, the file is read and parsed into a JSON object.
    * The resulting JSON object is passed to the addFlow function.
    */
-  function uploadFlow(newProject?: boolean) {
-    // create a file input
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".json";
-    // add a change event listener to the file input
-    input.onchange = (e: Event) => {
-      // check if the file type is application/json
-      if ((e.target as HTMLInputElement).files[0].type === "application/json") {
-        // get the file from the file input
-        const file = (e.target as HTMLInputElement).files[0];
-        // read the file as text
-        file.text().then((text) => {
-          // parse the text into a JSON object
-          let flow: FlowType = JSON.parse(text);
+  function uploadFlow(newProject?: boolean, file?: File) {
+    if (file) {
+      file.text().then((text) => {
+        // parse the text into a JSON object
+        let flow: FlowType = JSON.parse(text);
 
-          addFlow(flow, newProject);
-        });
-      }
-    };
-    // trigger the file input click event to open the file dialog
-    input.click();
+        addFlow(flow, newProject);
+      });
+    } else {
+      // create a file input
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".json";
+      // add a change event listener to the file input
+      input.onchange = (e: Event) => {
+        // check if the file type is application/json
+        if (
+          (e.target as HTMLInputElement).files[0].type === "application/json"
+        ) {
+          // get the file from the file input
+          const currentfile = (e.target as HTMLInputElement).files[0];
+          // read the file as text
+          currentfile.text().then((text) => {
+            // parse the text into a JSON object
+            let flow: FlowType = JSON.parse(text);
+
+            addFlow(flow, newProject);
+          });
+        }
+      };
+      // trigger the file input click event to open the file dialog
+      input.click();
+    }
   }
 
   function uploadFlows() {
@@ -531,11 +539,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
   const updateEdges = (edges) => {
     edges.forEach((edge) => {
-      edge.style = { stroke: "inherit" };
       edge.className =
-        edge.targetHandle.split("|")[0] === "Text"
+        (edge.targetHandle.split("|")[0] === "Text"
           ? "stroke-gray-800 "
-          : "stroke-gray-900 ";
+          : "stroke-gray-900 ") + " stroke-connection";
       edge.animated = edge.targetHandle.split("|")[0] === "Text";
     });
   };
@@ -618,6 +625,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           return {
             ...prev,
             [tabId]: {
+              ...prev[tabId],
               isPending: false,
             },
           };

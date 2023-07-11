@@ -1,8 +1,8 @@
+import { Download } from "lucide-react";
 import { useContext, useRef, useState } from "react";
-import { alertContext } from "../../contexts/alertContext";
-import { PopUpContext } from "../../contexts/popUpContext";
-import { TabsContext } from "../../contexts/tabsContext";
-import { removeApiKeys } from "../../utils";
+import EditFlowSettings from "../../components/EditFlowSettingsComponent";
+import { Button } from "../../components/ui/button";
+import { Checkbox } from "../../components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -12,11 +12,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-import { Button } from "../../components/ui/button";
-import { Checkbox } from "../../components/ui/checkbox";
 import { EXPORT_DIALOG_SUBTITLE } from "../../constants";
-import { Download } from "lucide-react";
-import EditFlowSettings from "../../components/EditFlowSettingsComponent";
+import { alertContext } from "../../contexts/alertContext";
+import { PopUpContext } from "../../contexts/popUpContext";
+import { TabsContext } from "../../contexts/tabsContext";
+import { removeApiKeys } from "../../utils";
 
 export default function ExportModal() {
   const [open, setOpen] = useState(true);
@@ -37,7 +37,7 @@ export default function ExportModal() {
   const [checked, setChecked] = useState(false);
   const [name, setName] = useState(flows.find((f) => f.id === tabId).name);
   const [description, setDescription] = useState(
-    flows.find((f) => f.id === tabId).description,
+    flows.find((f) => f.id === tabId).description
   );
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
@@ -71,10 +71,7 @@ export default function ExportModal() {
               setChecked(event);
             }}
           />
-          <label
-            htmlFor="terms"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-          >
+          <label htmlFor="terms" className="export-modal-save-api text-sm">
             Save with my API keys
           </label>
         </div>

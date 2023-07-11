@@ -16,27 +16,91 @@ def test_zero_shot_agent(client: TestClient):
     }
     template = zero_shot_agent["template"]
 
-    assert template["llm_chain"] == {
+    assert template["tools"] == {
         "required": True,
         "placeholder": "",
         "show": True,
         "multiline": False,
         "password": False,
-        "name": "llm_chain",
-        "type": "LLMChain",
+        "name": "tools",
+        "type": "BaseTool",
+        "list": True,
+        "advanced": False,
+        "info": "",
+    }
+
+    # Additional assertions for other template variables
+    assert template["callback_manager"] == {
+        "required": False,
+        "placeholder": "",
+        "show": False,
+        "multiline": False,
+        "password": False,
+        "name": "callback_manager",
+        "type": "BaseCallbackManager",
         "list": False,
         "advanced": False,
         "info": "",
     }
-    assert template["allowed_tools"] == {
-        "required": False,
+    assert template["llm"] == {
+        "required": True,
         "placeholder": "",
         "show": True,
         "multiline": False,
         "password": False,
-        "name": "allowed_tools",
-        "type": "Tool",
+        "name": "llm",
+        "type": "BaseLanguageModel",
+        "list": False,
+        "advanced": False,
+        "info": "",
+    }
+    assert template["output_parser"] == {
+        "required": False,
+        "placeholder": "",
+        "show": False,
+        "multiline": False,
+        "password": False,
+        "name": "output_parser",
+        "type": "AgentOutputParser",
+        "list": False,
+        "advanced": False,
+        "info": "",
+    }
+    assert template["input_variables"] == {
+        "required": False,
+        "placeholder": "",
+        "show": False,
+        "multiline": False,
+        "password": False,
+        "name": "input_variables",
+        "type": "str",
         "list": True,
+        "advanced": False,
+        "info": "",
+    }
+    assert template["prefix"] == {
+        "required": False,
+        "placeholder": "",
+        "show": True,
+        "multiline": True,
+        "value": "Answer the following questions as best you can. You have access to the following tools:",
+        "password": False,
+        "name": "prefix",
+        "type": "str",
+        "list": False,
+        "advanced": False,
+        "info": "",
+    }
+    assert template["suffix"] == {
+        "required": False,
+        "placeholder": "",
+        "show": True,
+        "multiline": True,
+        "value": "Begin!\n\nQuestion: {input}\nThought:{agent_scratchpad}",
+        "password": False,
+        "name": "suffix",
+        "type": "str",
+        "list": False,
         "advanced": False,
         "info": "",
     }

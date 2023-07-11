@@ -1,31 +1,32 @@
+import { Info } from "lucide-react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
+import ShadTooltip from "../../../../components/ShadTooltipComponent";
+import CodeAreaComponent from "../../../../components/codeAreaComponent";
+import Dropdown from "../../../../components/dropdownComponent";
+import FloatComponent from "../../../../components/floatComponent";
+import InputComponent from "../../../../components/inputComponent";
+import InputFileComponent from "../../../../components/inputFileComponent";
+import InputListComponent from "../../../../components/inputListComponent";
+import IntComponent from "../../../../components/intComponent";
+import PromptAreaComponent from "../../../../components/promptComponent";
+import TextAreaComponent from "../../../../components/textAreaComponent";
+import ToggleShadComponent from "../../../../components/toggleShadComponent";
+import { MAX_LENGTH_TO_SCROLL_TOOLTIP } from "../../../../constants";
+import { PopUpContext } from "../../../../contexts/popUpContext";
+import { TabsContext } from "../../../../contexts/tabsContext";
+import { typesContext } from "../../../../contexts/typesContext";
+import { ParameterComponentType } from "../../../../types/components";
+import { cleanEdges } from "../../../../util/reactflowUtils";
 import {
   classNames,
   getRandomKeyByssmm,
   groupByFamily,
   isValidConnection,
+  nodeColors,
   nodeIconsLucide,
+  nodeNames,
 } from "../../../../utils";
-import { useContext, useEffect, useRef, useState } from "react";
-import InputComponent from "../../../../components/inputComponent";
-import InputListComponent from "../../../../components/inputListComponent";
-import TextAreaComponent from "../../../../components/textAreaComponent";
-import { typesContext } from "../../../../contexts/typesContext";
-import { ParameterComponentType } from "../../../../types/components";
-import FloatComponent from "../../../../components/floatComponent";
-import Dropdown from "../../../../components/dropdownComponent";
-import CodeAreaComponent from "../../../../components/codeAreaComponent";
-import InputFileComponent from "../../../../components/inputFileComponent";
-import { TabsContext } from "../../../../contexts/tabsContext";
-import IntComponent from "../../../../components/intComponent";
-import PromptAreaComponent from "../../../../components/promptComponent";
-import { nodeNames } from "../../../../utils";
-import React from "react";
-import { nodeColors } from "../../../../utils";
-import ShadTooltip from "../../../../components/ShadTooltipComponent";
-import { PopUpContext } from "../../../../contexts/popUpContext";
-import ToggleShadComponent from "../../../../components/toggleShadComponent";
-import { Info } from "lucide-react";
 
 export default function ParameterComponent({
   left,
@@ -37,10 +38,12 @@ export default function ParameterComponent({
   type,
   name = "",
   required = false,
+  optionalHandle = null,
   info = "",
 }: ParameterComponentType) {
   const ref = useRef(null);
   const refHtml = useRef(null);
+  const refNumberComponents = useRef(0);
   const infoHtml = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
@@ -58,10 +61,6 @@ export default function ParameterComponent({
     updateNodeInternals(data.id);
   }, [data.id, position, updateNodeInternals]);
 
-  const [enabled, setEnabled] = useState(
-    data.node.template[name]?.value ?? false
-  );
-
   useEffect(() => {}, [closePopUp, data.node.template]);
 
   const { reactFlowInstance } = useContext(typesContext);
@@ -76,6 +75,7 @@ export default function ParameterComponent({
       return {
         ...prev,
         [tabId]: {
+          ...prev[tabId],
           isPending: true,
         },
       };
@@ -95,44 +95,55 @@ export default function ParameterComponent({
   }, [info]);
 
   useEffect(() => {
-    const groupedObj = groupByFamily(myData, tooltipTitle);
+    const groupedObj = groupByFamily(myData, tooltipTitle, left, data.type);
 
-    refHtml.current = groupedObj.map((item, i) => (
-      <span
-        key={getRandomKeyByssmm()}
-        className={classNames(
-          i > 0 ? "mt-3 flex items-center" : "flex items-center"
-        )}
-      >
-        <div
-          className="h-6 w-6"
-          style={{
-            color: nodeColors[item.family],
-          }}
+    refNumberComponents.current = groupedObj[0]?.type?.length;
+
+    refHtml.current = groupedObj.map((item, i) => {
+      const Icon: any = nodeIconsLucide[item.family];
+
+      return (
+        <span
+          key={getRandomKeyByssmm() + item.family + i}
+          className={classNames(
+            i > 0 ? "mt-2 flex items-center" : "flex items-center"
+          )}
         >
-          {React.createElement(nodeIconsLucide[item.family])}
-        </div>
-        <span className="ps-2 text-foreground">
-          {nodeNames[item.family] ?? ""}{" "}
-          <span className={classNames(left ? "hidden" : "")}>
-            {" "}
-            -&nbsp;
-            {item.type.split(", ").length > 2
-              ? item.type.split(", ").map((el, i) => (
-                  <React.Fragment key={el + i}>
-                    <span>
-                      {i === item.type.split(", ").length - 1
-                        ? el
-                        : (el += `, `)}
-                    </span>
-                    {i % 2 === 0 && i > 0 && <br />}
-                  </React.Fragment>
-                ))
-              : item.type}
+          <div
+            className="h-5 w-5"
+            style={{
+              color: nodeColors[item.family],
+            }}
+          >
+            <Icon
+              className="h-5 w-5"
+              strokeWidth={1.5}
+              style={{
+                color: nodeColors[item.family] ?? nodeColors.unknown,
+              }}
+            />
+          </div>
+          <span className="ps-2 text-xs text-foreground">
+            {nodeNames[item.family] ?? ""}{" "}
+            <span className="text-xs">
+              {" "}
+              {item.type === "" ? "" : " - "}
+              {item.type.split(", ").length > 2
+                ? item.type.split(", ").map((el, i) => (
+                    <React.Fragment key={el + i}>
+                      <span>
+                        {i === item.type.split(", ").length - 1
+                          ? el
+                          : (el += `, `)}
+                      </span>
+                    </React.Fragment>
+                  ))
+                : item.type}
+            </span>
           </span>
         </span>
-      </span>
-    ));
+      );
+    });
   }, [tooltipTitle]);
 
   return (
@@ -149,7 +160,7 @@ export default function ParameterComponent({
           }
         >
           {title}
-          <span className="text-destructive">{required ? " *" : ""}</span>
+          <span className="text-status-red">{required ? " *" : ""}</span>
           <div className="">
             {info !== "" && (
               <ShadTooltip content={infoHtml.current}>
@@ -165,10 +176,16 @@ export default function ParameterComponent({
           type === "code" ||
           type === "prompt" ||
           type === "file" ||
-          type === "int") ? (
+          type === "int") &&
+        !optionalHandle ? (
           <></>
         ) : (
           <ShadTooltip
+            styleClasses={
+              refNumberComponents.current > MAX_LENGTH_TO_SCROLL_TOOLTIP
+                ? "tooltip-fixed-width custom-scroll overflow-y-scroll nowheel"
+                : "tooltip-fixed-width"
+            }
             delayDuration={0}
             content={refHtml.current}
             side={left ? "left" : "right"}
@@ -227,10 +244,9 @@ export default function ParameterComponent({
           <div className="mt-2 w-full">
             <ToggleShadComponent
               disabled={disabled}
-              enabled={enabled}
+              enabled={data.node.template[name].value}
               setEnabled={(t) => {
                 handleOnNewValue(t);
-                setEnabled(t);
               }}
               size="large"
             />
@@ -257,6 +273,10 @@ export default function ParameterComponent({
         ) : left === true && type === "code" ? (
           <div className="mt-2 w-full">
             <CodeAreaComponent
+              setNodeClass={(nodeClass) => {
+                data.node = nodeClass;
+              }}
+              nodeClass={data.node}
               disabled={disabled}
               value={data.node.template[name].value ?? ""}
               onChange={handleOnNewValue}
@@ -288,6 +308,20 @@ export default function ParameterComponent({
         ) : left === true && type === "prompt" ? (
           <div className="mt-2 w-full">
             <PromptAreaComponent
+              field_name={name}
+              setNodeClass={(nodeClass) => {
+                data.node = nodeClass;
+                if (reactFlowInstance) {
+                  cleanEdges({
+                    flow: {
+                      edges: reactFlowInstance.getEdges(),
+                      nodes: reactFlowInstance.getNodes(),
+                    },
+                    updateEdge: (edge) => reactFlowInstance.setEdges(edge),
+                  });
+                }
+              }}
+              nodeClass={data.node}
               disabled={disabled}
               value={data.node.template[name].value ?? ""}
               onChange={handleOnNewValue}

@@ -1,4 +1,4 @@
-import React, { ReactNode } from "react";
+import { ReactNode } from "react";
 import { classNames } from "../../../utils";
 
 export default function ButtonBox({
@@ -81,7 +81,7 @@ export default function ButtonBox({
           bgColor,
           height,
           width,
-          padding,
+          padding
         )}
       >
         <div
@@ -98,7 +98,7 @@ export default function ButtonBox({
             className={classNames(
               "w-full break-words font-semibold text-background truncate-multiline",
               titleFontSize,
-              marginTop,
+              marginTop
             )}
           >
             {title}

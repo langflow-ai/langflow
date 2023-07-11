@@ -13,6 +13,16 @@ NON_CHAT_AGENTS = {
 }
 
 
+class AgentFrontendNode(FrontendNode):
+    @staticmethod
+    def format_field(field: TemplateField, name: Optional[str] = None) -> None:
+        if field.name in ["suffix", "prefix"]:
+            field.show = True
+        if field.name == "Tools" and name == "ZeroShotAgent":
+            field.field_type = "BaseTool"
+            field.is_list = True
+
+
 class SQLAgentNode(FrontendNode):
     name: str = "SQLAgent"
     template: Template = Template(
