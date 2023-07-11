@@ -177,7 +177,7 @@ export default function ParameterComponent({
           <></>
         ) : (
           <ShadTooltip
-            style="tooltip-fixed-width custom-scroll"
+            styleClasses="tooltip-fixed-width custom-scroll"
             delayDuration={0}
             content={refHtml.current}
             side={left ? "left" : "right"}
