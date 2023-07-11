@@ -338,7 +338,8 @@ export default function Page({ flow }: { flow: FlowType }) {
   const onSelectionEnd = useCallback(() => {
     setSelectionEnded(true);
   }, []);
-  const onSelectionStart = useCallback(() => {
+  const onSelectionStart = useCallback((event) => {
+    event.preventDefault();
     setSelectionEnded(false);
   }, []);
 
@@ -410,7 +411,6 @@ export default function Page({ flow }: { flow: FlowType }) {
                   nodesDraggable={!disableCopyPaste}
                   panOnDrag={!disableCopyPaste}
                   zoomOnDoubleClick={!disableCopyPaste}
-                  selectNodesOnDrag={false}
                   className="theme-attribution"
                   minZoom={0.01}
                   maxZoom={8}
