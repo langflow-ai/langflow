@@ -43,6 +43,7 @@ module.exports = {
         "accordion-up": "accordion-up 0.2s ease-out",
       },
       colors: {
+        connection: "var(--connection)",
         "almost-dark-gray": "var(--almost-dark-gray)",
         "almost-light-blue": "var(--almost-light-blue)",
         "almost-medium-blue": "var(--almost-medium-blue)",
