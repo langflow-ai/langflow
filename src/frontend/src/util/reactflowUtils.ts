@@ -5,7 +5,6 @@ export function cleanEdges({
   flow: { edges, nodes },
   updateEdge,
 }: cleanEdgesType) {
-  console.log(nodes, "nodes");
   let newEdges = _.cloneDeep(edges);
   edges.forEach((edge) => {
     // check if the source and target node still exists
@@ -43,6 +42,5 @@ export function cleanEdges({
       }
     }
   });
-  console.log("clean end", newEdges);
   updateEdge(newEdges);
 }
