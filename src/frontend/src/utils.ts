@@ -33,6 +33,7 @@ import { EvernoteIcon } from "./icons/Evernote";
 import { FBIcon } from "./icons/FacebookMessenger";
 import { GitBookIcon } from "./icons/GitBook";
 import { GoogleIcon } from "./icons/Google";
+import { HuggingFaceIcon } from "./icons/HuggingFace";
 import { IFixIcon } from "./icons/IFixIt";
 import { MetaIcon } from "./icons/Meta";
 import { MidjourneyIcon } from "./icons/Midjorney";
