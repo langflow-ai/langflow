@@ -90,6 +90,9 @@ class MemoryFrontendNode(FrontendNode):
             field.show = True
         if field.name == "entity_store":
             field.show = False
+        if name == "ConversationEntityMemory" and field.name == "memory_key":
+            field.show = False
+            field.required = False
 
 
 class PostgresChatMessageHistoryFrontendNode(MemoryFrontendNode):
