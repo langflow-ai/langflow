@@ -98,7 +98,6 @@ export default function ParameterComponent({
     const groupedObj = groupByFamily(myData, tooltipTitle, left, data.type);
 
     refNumberComponents.current = groupedObj[0]?.type?.length;
-    console.log(refNumberComponents);
 
     refHtml.current = groupedObj.map((item, i) => {
       const Icon: any = nodeIconsLucide[item.family];

@@ -1066,4 +1066,19 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply max-w-[30vw] max-h-[20vh] overflow-auto
   }
 
+  .ace-editor-arrangement {
+    @apply flex-max-width h-full flex-col transition-all
+  }
+  .ace-editor {
+    @apply h-full w-full rounded-lg border-[1px] border-border custom-scroll
+  }
+  .ace-editor-save-btn {
+    @apply flex-max-width h-fit justify-end
+  }
+
+  .export-modal-save-api {
+    @apply font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70
+  }
+
+
 }
