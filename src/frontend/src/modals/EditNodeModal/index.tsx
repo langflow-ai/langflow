@@ -81,7 +81,6 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
     });
     setNodeValue(!nodeValue);
   }
-  
 
   const handleOnNewValue = (newValue: any, name) => {
     data.node.template[name].value = newValue;

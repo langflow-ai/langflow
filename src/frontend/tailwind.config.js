@@ -130,11 +130,11 @@ module.exports = {
         sans: ["var(--font-sans)", ...fontFamily.sans],
       },
       keyframes: {
-        "slideDown": {
+        slideDown: {
           from: { height: 0 },
-          to: { height: 100},
+          to: { height: 100 },
         },
-        "slideUp": {
+        slideUp: {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: 0 },
         },
@@ -227,5 +227,4 @@ module.exports = {
     require("@tailwindcss/typography"),
     require("daisyui"),
   ],
-  
 };
