@@ -292,7 +292,8 @@ export default function FormModal({
         ws.current.close();
       }
     };
-  }, [connectWS]);
+    // do not add connectWS on dependencies array
+  }, []);
 
   useEffect(() => {
     if (
@@ -303,7 +304,8 @@ export default function FormModal({
       connectWS();
       setLockChat(false);
     }
-  }, [lockChat, connectWS]);
+    // do not add connectWS on dependencies array
+  }, [lockChat]);
 
   async function sendAll(data: sendAllProps) {
     try {
