@@ -50,7 +50,6 @@ import { SupabaseIcon } from "./icons/supabase";
 import { APITemplateType } from "./types/api";
 import { IVarHighlightType } from "./types/components";
 import { FlowType, NodeType } from "./types/flow";
-import { HuggingFaceIcon } from "./icons/HuggingFace";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
