@@ -71,10 +71,7 @@ export default function ExportModal() {
               setChecked(event);
             }}
           />
-          <label
-            htmlFor="terms"
-            className="export-modal-save-api text-sm"
-          >
+          <label htmlFor="terms" className="export-modal-save-api text-sm">
             Save with my API keys
           </label>
         </div>
