@@ -921,13 +921,13 @@ The cursor: default; property value restores the browser's default cursor style 
   }
 
   .form-modal-lock-true {
-    @apply bg-input text-black
+    @apply bg-input text-primary
   }
   .form-modal-no-input {
-    @apply bg-input text-center text-black dark:bg-gray-700 dark:text-gray-300
+    @apply bg-input text-center text-primary dark:bg-gray-700 dark:text-gray-300
   }
   .form-modal-lock-false {
-    @apply bg-white text-black
+    @apply bg-white text-primary
   }
   .form-modal-lockchat {
     @apply form-input focus:ring-ring focus:border-ring block w-full rounded-md border-border p-4 pr-16 custom-scroll sm:text-sm
@@ -1078,6 +1078,10 @@ The cursor: default; property value restores the browser's default cursor style 
 
   .export-modal-save-api {
     @apply font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70
+  }
+
+  .chat-message-highlight {
+    @apply my-1 rounded-md bg-indigo-100 dark:bg-indigo-900
   }
 
 
