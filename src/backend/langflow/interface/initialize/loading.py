@@ -68,7 +68,11 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
     elif base_type == "prompts":
         return instantiate_prompt(node_type, class_object, params)
     elif base_type == "tools":
-        return instantiate_tool(node_type, class_object, params)
+        tool = instantiate_tool(node_type, class_object, params)
+        if hasattr(tool, "name") and isinstance(tool, BaseTool):
+            # tool name shouldn't contain spaces
+            tool.name = tool.name.replace(" ", "_")
+        return tool
     elif base_type == "toolkits":
         return instantiate_toolkit(node_type, class_object, params)
     elif base_type == "embeddings":
@@ -133,6 +137,9 @@ def instantiate_llm(node_type, class_object, params: Dict):
 def instantiate_memory(node_type, class_object, params):
     # process input_key and output_key to remove them if
     # they are empty strings
+    if node_type == "ConversationEntityMemory":
+        params.pop("memory_key", None)
+
     for key in ["input_key", "output_key"]:
         if key in params and (params[key] == "" or not params[key]):
             params.pop(key)
