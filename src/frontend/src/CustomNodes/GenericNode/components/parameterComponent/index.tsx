@@ -41,6 +41,7 @@ export default function ParameterComponent({
 }: ParameterComponentType) {
   const ref = useRef(null);
   const refHtml = useRef(null);
+  const refNumberComponents = useRef(0);
   const infoHtml = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
@@ -91,8 +92,11 @@ export default function ParameterComponent({
     );
   }, [info]);
 
+
   useEffect(() => {
     const groupedObj = groupByFamily(myData, tooltipTitle, left, data.type);
+
+    refNumberComponents.current = groupedObj[0]?.component?.length;
 
     refHtml.current = groupedObj.map((item, i) => {
       const Icon: any = nodeIconsLucide[item.family];
@@ -155,7 +159,7 @@ export default function ParameterComponent({
           }
         >
           {title}
-          <span className="text-destructive">{required ? " *" : ""}</span>
+          <span className="text-status-red">{required ? " *" : ""}</span>
           <div className="">
             {info !== "" && (
               <ShadTooltip content={infoHtml.current}>
@@ -176,7 +180,7 @@ export default function ParameterComponent({
           <></>
         ) : (
           <ShadTooltip
-            style="tooltip-fixed-width custom-scroll"
+            style={refNumberComponents.current > 10 ? "tooltip-fixed-width custom-scroll overflow-y-scroll nowheel" : "tooltip-fixed-width"}
             delayDuration={0}
             content={refHtml.current}
             side={left ? "left" : "right"}

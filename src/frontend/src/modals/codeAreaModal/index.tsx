@@ -129,7 +129,7 @@ export default function CodeAreaModal({
             }
           >
             <div className="mt-1 h-full w-full overflow-x-clip overflow-y-scroll text-left custom-scroll">
-              <h1 className="text-lg text-destructive">
+              <h1 className="text-lg text-status-red">
                 {error?.detail?.error}
               </h1>
               <div className="ml-2 w-full break-all text-sm text-status-red">
