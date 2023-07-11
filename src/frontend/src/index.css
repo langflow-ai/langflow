@@ -42,10 +42,10 @@
   --high-indigo: #4338ca;
   --medium-indigo: #6366f1;
 
-  --chat-bot-icon: #afe6ef;
-  --chat-user-icon: #aface9;
   
   /* Colors that are shared in dark and light mode */
+  --chat-bot-icon: #afe6ef;
+  --chat-user-icon: #aface9;
   --blur-shared: #151923de;
   --build-trigger: 	#dc735b;
   --chat-trigger: #5c8be1;
@@ -106,6 +106,8 @@
   --medium-indigo: #6366f1;
 
   /* Colors that are shared in dark and light mode */
+  --chat-bot-icon: #afe6ef;
+  --chat-user-icon: #aface9;
   --blur-shared: #151923d2;
   --build-trigger: 	#dc735b;
   --chat-trigger: #5c8be1;
