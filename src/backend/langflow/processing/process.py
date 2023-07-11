@@ -22,7 +22,10 @@ def fix_memory_inputs(langchain_object):
     if not hasattr(langchain_object, "memory") or langchain_object.memory is None:
         return
     try:
-        if langchain_object.memory.memory_key in langchain_object.input_variables:
+        if (
+            hasattr(langchain_object.memory, "memory_key")
+            and langchain_object.memory.memory_key in langchain_object.input_variables
+        ):
             return
     except AttributeError:
         input_variables = (
