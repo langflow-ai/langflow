@@ -5,7 +5,7 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 import { TerminalSquare } from "lucide-react";
-import { useContext, useRef, useState } from "react";
+import { useContext, useState } from "react";
 import AceEditor from "react-ace";
 import { Button } from "../../components/ui/button";
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants";
@@ -31,10 +31,6 @@ export default function CodeAreaModal({
   const { dark } = useContext(darkContext);
   const { closePopUp, setCloseEdit } = useContext(PopUpContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
-  const [error, setError] = useState<{
-    detail: { error: string; traceback: string };
-  }>(null);
-  const ref = useRef();
 
   function setModalOpen(x: boolean) {
     if (x === false) {
@@ -112,23 +108,6 @@ export default function CodeAreaModal({
               }}
               className="h-full w-full rounded-lg border-[1px] border-gray-300 custom-scroll dark:border-gray-600"
             />
-          </div>
-          <div
-            className={
-              "w-full transition-all delay-500 " +
-              (error?.detail.error !== undefined ? "h-2/6" : "h-0")
-            }
-          >
-            <div className="mt-1 h-full w-full overflow-x-clip overflow-y-scroll text-left custom-scroll">
-              <h1 className="text-lg text-destructive">
-                {error?.detail?.error}
-              </h1>
-              <div className="ml-2 w-full break-all text-sm text-status-red">
-                <pre className="w-full whitespace-pre-wrap break-all">
-                  {error?.detail?.traceback}
-                </pre>
-              </div>
-            </div>
           </div>
           <div className="flex h-fit w-full justify-end">
             <Button className="mt-3" onClick={handleClick} type="submit">
