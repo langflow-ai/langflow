@@ -53,7 +53,7 @@ export default function ChatInput({
             ? " form-modal-lock-true bg-input"
             : noInput
             ? "form-modal-no-input bg-input"
-            : " form-modal-lock-false",
+            : " form-modal-lock-false bg-input",
 
           "form-modal-lockchat"
         )}
