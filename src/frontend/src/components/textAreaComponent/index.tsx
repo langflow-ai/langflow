@@ -5,6 +5,7 @@ import { TextAreaComponentType } from "../../types/components";
 import { TypeModal } from "../../utils";
 
 import { ExternalLink } from "lucide-react";
+import { TabsContext } from "../../contexts/tabsContext";
 
 export default function TextAreaComponent({
   value,
@@ -14,6 +15,7 @@ export default function TextAreaComponent({
 }: TextAreaComponentType) {
   const [myValue, setMyValue] = useState(value);
   const { openPopUp, closePopUp } = useContext(PopUpContext);
+  const { setDisableCopyPaste } = useContext(TabsContext);
 
   useEffect(() => {
     if (disabled) {
@@ -31,6 +33,12 @@ export default function TextAreaComponent({
       <div className="flex w-full items-center">
         <input
           value={myValue}
+          onFocus={() => {
+            setDisableCopyPaste(true);
+          }}
+          onBlur={() => {
+            setDisableCopyPaste(false);
+          }}
           className={
             editNode
               ? " input-edit-node "
