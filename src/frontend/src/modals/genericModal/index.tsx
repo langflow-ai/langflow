@@ -57,7 +57,6 @@ export default function GenericModal({
   const [myModalType] = useState(type);
   const [inputValue, setInputValue] = useState(value);
   const [isEdit, setIsEdit] = useState(true);
-  const [wordsHighlightInvalid, setWordsHighlightInvalid] = useState([]);
   const [wordsHighlight, setWordsHighlight] = useState([]);
   const { dark } = useContext(darkContext);
   const { setErrorData, setSuccessData, setNoticeData } =
@@ -102,15 +101,14 @@ export default function GenericModal({
       (word) => !invalid_chars.includes(word)
     );
 
-    setWordsHighlightInvalid(invalid_chars);
     setWordsHighlight(filteredWordsHighlight);
   }
 
   useEffect(() => {
-    if (type == TypeModal.PROMPT && inputValue && inputValue != "") {
+    if (type === TypeModal.PROMPT && inputValue && inputValue != "") {
       checkVariables(inputValue);
     }
-  }, []);
+  }, [inputValue, type]);
 
   const coloredContent = (inputValue || "")
     .replace(/</g, "&lt;")
@@ -135,10 +133,9 @@ export default function GenericModal({
     postValidatePrompt(field_name, inputValue, nodeClass)
       .then((apiReturn) => {
         if (apiReturn.data) {
-          setNodeClass(apiReturn.data.frontend_node);
-
-          let inputVariables = apiReturn.data.input_variables;
-          if (inputVariables.length === 0) {
+          setNodeClass(apiReturn.data?.frontend_node);
+          let inputVariables = apiReturn.data.input_variables ?? [];
+          if (inputVariables && inputVariables.length === 0) {
             setIsEdit(true);
             setNoticeData({
               title: "Your template does not have any variables.",
@@ -159,6 +156,7 @@ export default function GenericModal({
         }
       })
       .catch((error) => {
+        console.log(error);
         setIsEdit(true);
         return setErrorData({
           title: "There is something wrong with this prompt, please review it",

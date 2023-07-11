@@ -213,23 +213,27 @@ class PromptVertex(Vertex):
 
     def _built_object_repr(self):
         if (
-            self.artifacts
-            and self._built_object is not None
-            and hasattr(self._built_object, "format")
+            not self.artifacts
+            or self._built_object is None
+            or not hasattr(self._built_object, "format")
         ):
-            # We'll build the prompt with the artifacts
-            # to show the user what the prompt looks like
-            # with the variables filled in
-            artifacts = self.artifacts.copy()
-            # Remove the handle_keys from the artifacts
-            # so the prompt format doesn't break
-            artifacts.pop("handle_keys", None)
-            try:
-                return self._built_object.format(**artifacts)
-            except KeyError:
-                return super()._built_object_repr()
-        else:
             return super()._built_object_repr()
+        # We'll build the prompt with the artifacts
+        # to show the user what the prompt looks like
+        # with the variables filled in
+        artifacts = self.artifacts.copy()
+        # Remove the handle_keys from the artifacts
+        # so the prompt format doesn't break
+        artifacts.pop("handle_keys", None)
+        try:
+            template = self._built_object.format(**artifacts)
+            return (
+                template
+                if isinstance(template, str)
+                else f"{self.vertex_type}({template})"
+            )
+        except KeyError:
+            return str(self._built_object)
 
 
 class OutputParserVertex(Vertex):
