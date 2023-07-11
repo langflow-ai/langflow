@@ -1,3 +1,4 @@
+import contextlib
 import json
 from typing import Any, Callable, Dict, List, Sequence, Type
 
@@ -67,7 +68,11 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
     elif base_type == "prompts":
         return instantiate_prompt(node_type, class_object, params)
     elif base_type == "tools":
-        return instantiate_tool(node_type, class_object, params)
+        tool = instantiate_tool(node_type, class_object, params)
+        if hasattr(tool, "name") and isinstance(tool, BaseTool):
+            # tool name shouldn't contain spaces
+            tool.name = tool.name.replace(" ", "_")
+        return tool
     elif base_type == "toolkits":
         return instantiate_toolkit(node_type, class_object, params)
     elif base_type == "embeddings":
@@ -132,6 +137,9 @@ def instantiate_llm(node_type, class_object, params: Dict):
 def instantiate_memory(node_type, class_object, params):
     # process input_key and output_key to remove them if
     # they are empty strings
+    if node_type == "ConversationEntityMemory":
+        params.pop("memory_key", None)
+
     for key in ["input_key", "output_key"]:
         if key in params and (params[key] == "" or not params[key]):
             params.pop(key)
@@ -196,7 +204,7 @@ def instantiate_prompt(node_type, class_object, params: Dict):
         if "tools" not in params:
             params["tools"] = []
         return ZeroShotAgent.create_prompt(**params)
-    if "MessagePromptTemplate" in node_type:
+    elif "MessagePromptTemplate" in node_type:
         # Then we only need the template
         from_template_params = {
             "template": params.pop("prompt", params.pop("template", ""))
@@ -204,12 +212,12 @@ def instantiate_prompt(node_type, class_object, params: Dict):
 
         if not from_template_params.get("template"):
             raise ValueError("Prompt template is required")
-        return class_object.from_template(**from_template_params)
+        prompt = class_object.from_template(**from_template_params)
 
-    if node_type == "ChatPromptTemplate":
-        return class_object.from_messages(**params)
-
-    prompt = class_object(**params)
+    elif node_type == "ChatPromptTemplate":
+        prompt = class_object.from_messages(**params)
+    else:
+        prompt = class_object(**params)
 
     format_kwargs: Dict[str, Any] = {}
     for input_variable in prompt.input_variables:
@@ -221,18 +229,23 @@ def instantiate_prompt(node_type, class_object, params: Dict):
                 variable, "get_format_instructions"
             ):
                 format_kwargs[input_variable] = variable.get_format_instructions()
-            # check if is a list of Document
             elif isinstance(variable, List) and all(
                 isinstance(item, Document) for item in variable
             ):
                 # Format document to contain page_content and metadata
                 # as one string separated by a newline
-                format_kwargs[input_variable] = "\n".join(
-                    [
-                        f"Document:{item.page_content}\nMetadata:{item.metadata}"
-                        for item in variable
-                    ]
-                )
+                if len(variable) > 1:
+                    content = "\n".join(
+                        [item.page_content for item in variable if item.page_content]
+                    )
+                else:
+                    content = variable[0].page_content
+                    # content could be a json list of strings
+                    with contextlib.suppress(json.JSONDecodeError):
+                        content = json.loads(content)
+                        if isinstance(content, list):
+                            content = ",".join([str(item) for item in content])
+                format_kwargs[input_variable] = content
                 # handle_keys will be a list but it does not exist yet
                 # so we need to create it
 

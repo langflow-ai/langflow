@@ -6,6 +6,12 @@ import { TabsState } from "./types/tabs";
 import { buildInputs, buildTweaks } from "./utils";
 
 /**
+ * Number maximum of components to scroll on tooltips
+ * @constant
+ */
+export const MAX_LENGTH_TO_SCROLL_TOOLTIP = 200;
+
+/**
  * The base text for subtitle of Export Dialog (Toolbar)
  * @constant
  */

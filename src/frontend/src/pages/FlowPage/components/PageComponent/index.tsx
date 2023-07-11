@@ -288,7 +288,7 @@ export default function Page({ flow }: { flow: FlowType }) {
       }
     },
     // Specify dependencies for useCallback
-    [getNodeId, reactFlowInstance, setErrorData, setNodes, takeSnapshot]
+    [getNodeId, reactFlowInstance, setNodes, takeSnapshot]
   );
 
   useEffect(() => {
@@ -322,7 +322,7 @@ export default function Page({ flow }: { flow: FlowType }) {
         setEdges((els) => updateEdge(oldEdge, newConnection, els));
       }
     },
-    []
+    [reactFlowInstance, setEdges]
   );
 
   const onEdgeUpdateEnd = useCallback((_, edge) => {

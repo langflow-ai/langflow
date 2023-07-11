@@ -6,8 +6,8 @@
 /* TODO: Confirm that all colors here are found in tailwind config */
 
 @layer base {
-
-:root {
+  
+  :root {
   --background: 0 0% 100%; /* hsl(0 0% 100%) */
   --foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
   --muted: 210 40% 98%; /* hsl(210 40% 98%) */
@@ -28,21 +28,24 @@
   --destructive-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
   --radius: 0.5rem;
   --ring: 215 20.2% 65.1%; /* hsl(215 20% 65%) */
-
+  
   --round-btn-shadow: #00000063;
-
+  
   --error-background: #fef2f2;
   --error-foreground: #991b1b;
-
+  
   --success-background: #f0fdf4;
   --success-foreground: #14532d;
 
   --info-background: #f0f4fd;
   --info-foreground: #141653;
-
+  
   --high-indigo: #4338ca;
   --medium-indigo: #6366f1;
 
+  --chat-bot-icon: #afe6ef;
+  --chat-user-icon: #aface9;
+  
   /* Colors that are shared in dark and light mode */
   --blur-shared: #151923de;
   --build-trigger: 	#dc735b;
@@ -213,7 +216,7 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply input-primary pr-7 mx-2
   }
   .input-disable{
-    @apply bg-input text-muted-foreground
+    @apply bg-border placeholder:text-ring border-transparent
   }
   .input-dialog{
     @apply text-ring cursor-pointer bg-transparent
@@ -915,13 +918,16 @@ The cursor: default; property value restores the browser's default cursor style 
   }
 
   .form-modal-lock-true {
-    @apply bg-input text-black dark:bg-gray-700 dark:text-gray-300
+    @apply bg-input text-black
+  }
+  .form-modal-no-input {
+    @apply bg-input text-center text-black dark:bg-gray-700 dark:text-gray-300
   }
   .form-modal-lock-false {
-    @apply bg-white text-black dark:bg-gray-900 dark:text-gray-300
+    @apply bg-white text-black
   }
   .form-modal-lockchat {
-    @apply form-input block w-full rounded-md border-gray-300 p-4 pr-16 custom-scroll dark:border-gray-600 sm:text-sm
+    @apply form-input focus:ring-ring focus:border-ring block w-full rounded-md border-border p-4 pr-16 custom-scroll sm:text-sm
   }
   .form-modal-send-icon-position {
     @apply absolute bottom-2 right-4
@@ -934,6 +940,9 @@ The cursor: default; property value restores the browser's default cursor style 
   }
   .form-modal-send-icon {
     @apply mr-2 h-5 w-5 rotate-[44deg]
+  }
+  .form-modal-play-icon {
+    @apply h-5 w-5 mx-1
   }
   .form-modal-chat-position {
     @apply flex-max-width px-2 py-6 pl-4 pr-9
@@ -948,10 +957,10 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md p-5 text-2xl
   }
   .form-modal-chat-bot-icon {
-    @apply form-modal-chat-img-box bg-[#afe6ef]
+    @apply form-modal-chat-img-box bg-chat-bot-icon
   }
   .form-modal-chat-user-icon {
-    @apply form-modal-chat-img-box bg-[#aface9]
+    @apply form-modal-chat-img-box bg-chat-user-icon
   }
   .form-modal-chat-icon-img {
     @apply absolute scale-[60%]
@@ -966,7 +975,7 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply absolute -left-6 -top-3 cursor-pointer
   }
   .form-modal-chat-icon {
-    @apply h-4 w-4 animate-bounce dark:text-white
+    @apply h-4 w-4 animate-bounce
   }
   .form-modal-chat-thought-border {
     @apply rounded-md border border-ring/60
@@ -1035,13 +1044,13 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply flex-max-width h-full flex-col items-center justify-center text-center align-middle
   }
   .langflow-chat-span {
-    @apply text-lg text-gray-600 dark:text-gray-300
+    @apply text-lg text-foreground
   }
   .langflow-chat-desc {
-    @apply w-2/4 rounded-md border border-gray-200 bg-muted px-6 py-8 dark:border-gray-700 dark:bg-gray-900
+    @apply w-2/4 rounded-md border border-border bg-muted px-6 py-8
   }
   .langflow-chat-desc-span {
-    @apply text-base text-gray-500
+    @apply text-base text-muted-foreground
   }
   .langflow-chat-input-div {
     @apply flex-max-width flex-col items-center justify-between px-8 pb-6

@@ -44,7 +44,7 @@ export default function PromptAreaComponent({
         })
         .catch((error) => {});
     }
-  }, [reactFlowInstance, field_name, myValue, nodeClass, setNodeClass]);
+  }, [reactFlowInstance, field_name, myValue, nodeClass, setNodeClass, value]);
 
   return (
     <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
@@ -69,8 +69,8 @@ export default function PromptAreaComponent({
           className={
             editNode
               ? "input-edit-node input-dialog"
-              : (disabled ? " input-disable " : "") +
-                " input-dialog input-primary"
+              : (disabled ? " input-disable text-ring " : "") +
+                " input-primary text-muted-foreground "
           }
         >
           {myValue !== "" ? myValue : "Type your prompt here"}

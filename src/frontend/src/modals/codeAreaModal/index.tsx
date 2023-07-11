@@ -5,7 +5,7 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 import { TerminalSquare } from "lucide-react";
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useState } from "react";
 import AceEditor from "react-ace";
 import { Button } from "../../components/ui/button";
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants";
@@ -27,19 +27,10 @@ export default function CodeAreaModal({
   nodeClass: APIClassType;
   setNodeClass: (Class: APIClassType) => void;
 }) {
-  const [open, setOpen] = useState(true);
   const [code, setCode] = useState(value);
-  const [loading, setLoading] = useState(false);
   const { dark } = useContext(darkContext);
   const { closePopUp, setCloseEdit } = useContext(PopUpContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
-  const [error, setError] = useState<{
-    detail: { error: string; traceback: string };
-  }>(null);
-  const ref = useRef();
-  useEffect(() => {
-    setValue(code);
-  }, [code, setValue]);
 
   function setModalOpen(x: boolean) {
     if (x === false) {
@@ -49,10 +40,8 @@ export default function CodeAreaModal({
   }
 
   function handleClick() {
-    setLoading(true);
     postValidateCode(code)
       .then((apiReturn) => {
-        setLoading(false);
         if (apiReturn.data) {
           let importsErrors = apiReturn.data.imports.errors;
           let funcErrors = apiReturn.data.function.errors;
@@ -61,7 +50,6 @@ export default function CodeAreaModal({
               title: "Code is ready to run",
             });
             setValue(code);
-            setOpen((old) => !old);
             setModalOpen(false);
           } else {
             if (funcErrors.length !== 0) {
@@ -84,7 +72,6 @@ export default function CodeAreaModal({
         }
       })
       .catch((_) => {
-        setLoading(false);
         setErrorData({
           title: "There is something wrong with this code, please review it",
         });
@@ -92,7 +79,7 @@ export default function CodeAreaModal({
   }
 
   return (
-    <BaseModal open={true} setOpen={setOpen}>
+    <BaseModal open={true} setOpen={setModalOpen}>
       <BaseModal.Header description={CODE_PROMPT_DIALOG_SUBTITLE}>
         <DialogTitle className="flex items-center">
           <span className="pr-2">Edit Code</span>
@@ -121,23 +108,6 @@ export default function CodeAreaModal({
               }}
               className="h-full w-full rounded-lg border-[1px] border-gray-300 custom-scroll dark:border-gray-600"
             />
-          </div>
-          <div
-            className={
-              "w-full transition-all delay-500 " +
-              (error?.detail.error !== undefined ? "h-2/6" : "h-0")
-            }
-          >
-            <div className="mt-1 h-full w-full overflow-x-clip overflow-y-scroll text-left custom-scroll">
-              <h1 className="text-lg text-status-red">
-                {error?.detail?.error}
-              </h1>
-              <div className="ml-2 w-full break-all text-sm text-status-red">
-                <pre className="w-full whitespace-pre-wrap break-all">
-                  {error?.detail?.traceback}
-                </pre>
-              </div>
-            </div>
           </div>
           <div className="flex h-fit w-full justify-end">
             <Button className="mt-3" onClick={handleClick} type="submit">

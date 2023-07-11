@@ -19,8 +19,11 @@ async def get_result_and_steps(langchain_object, inputs: Union[dict, str], **kwa
             # Deactivating until we have a frontend solution
             # to display intermediate steps
             langchain_object.return_intermediate_steps = True
+        try:
+            fix_memory_inputs(langchain_object)
+        except Exception as exc:
+            logger.error(exc)
 
-        fix_memory_inputs(langchain_object)
         try:
             async_callbacks = [AsyncStreamingLLMCallbackHandler(**kwargs)]
             output = await langchain_object.acall(inputs, callbacks=async_callbacks)
