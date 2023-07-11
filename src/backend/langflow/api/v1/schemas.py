@@ -125,3 +125,11 @@ class CustomComponentCode(BaseModel):
 class CustomComponentResponseError(BaseModel):
     detail: str
     traceback: str
+
+
+class ComponentListCreate(BaseModel):
+    flows: List[FlowCreate]
+
+
+class ComponentListRead(BaseModel):
+    flows: List[FlowRead]
