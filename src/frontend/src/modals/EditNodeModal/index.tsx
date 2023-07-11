@@ -72,15 +72,16 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
     }
   }
 
-  function changeAdvanced(node): void {
-    Object.keys(data.node.template).filter((n, i) => {
+  function changeAdvanced(node) {
+    Object.keys(data.node.template).map((n, i) => {
       if (n === node.name) {
         data.node.template[n].advanced = !data.node.template[n].advanced;
       }
-      return true;
+      return n;
     });
     setNodeValue(!nodeValue);
   }
+  
 
   const handleOnNewValue = (newValue: any, name) => {
     data.node.template[name].value = newValue;
