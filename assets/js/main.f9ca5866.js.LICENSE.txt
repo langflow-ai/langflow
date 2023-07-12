@@ -27,7 +27,7 @@ object-assign
  * @license  MIT
  */
 
-/*! https://mths.be/punycode v1.3.2 by @mathias */
+/*! https://mths.be/punycode v1.4.1 by @mathias */
 
 /*! medium-zoom 1.0.8 | MIT License | https://github.com/francoischalifour/medium-zoom */
 
