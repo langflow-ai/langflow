@@ -177,6 +177,9 @@ def build_langchain_template_custom_component(extractor: CustomComponent):
             field_required = True
             field_name, field_type, field_value = extra_field
 
+            if not field_type:
+                field_type = ""
+
             if field_name != "self":
                 # TODO: Validate type - if is possible to render into frontend
                 if "optional" in field_type.lower():
