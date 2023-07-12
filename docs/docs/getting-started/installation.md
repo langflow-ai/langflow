@@ -2,7 +2,7 @@
 
 ## Installation
 
-You can install LangFlow from pip:
+You can install Langflow from pip:
 
 ```bash
 pip install langflow

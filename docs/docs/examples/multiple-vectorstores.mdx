@@ -1,16 +1,15 @@
 # Multiple Vector Stores
 
-
 The example below shows an agent operating with two vector stores built upon different data sources.
 
 The `TextLoader` loads a TXT file, while the `WebBaseLoader` pulls text from webpages into a document format to accessed downstream. The `Chroma` vector stores are created analogous to what we have demonstrated in our [CSV Loader](/examples/csv-loader.mdx) example. Finally, the `VectorStoreRouterAgent` constructs an agent that routes between the vector stores.
-
 
 :::info
 Get the TXT file used [here](https://github.com/hwchase17/chat-your-data/blob/master/state_of_the_union.txt).
 :::
 
 URL used by the `WebBaseLoader`:
+
 ```txt
 https://pt.wikipedia.org/wiki/Harry_Potter
 ```
@@ -23,24 +22,23 @@ When you build the flow, request information about one of the sources. The agent
 Learn more about Multiple Vector Stores [here](https://python.langchain.com/docs/modules/agents/toolkits/vectorstore?highlight=Multiple%20Vector%20Stores#multiple-vectorstores).
 :::
 
+## ⛓️ Langflow Example
 
-## ⛓️ LangFlow Example
-
-import ThemedImage from '@theme/ThemedImage';
-import useBaseUrl from '@docusaurus/useBaseUrl';
-import ZoomableImage from '/src/theme/ZoomableImage.js';
-
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 <ZoomableImage
   alt="Docusaurus themed image"
   sources={{
-    light: 'img/multiple-vectorstores.png',
+    light: "img/multiple-vectorstores.png",
   }}
 />
 
- #### <a target="\_blank" href="json_files/Multiple_Vector_Stores.json" download>Download Flow</a>
+#### <a target="\_blank" href="json_files/Multiple_Vector_Stores.json" download>Download Flow</a>
 
 :::note LangChain Components 🦜🔗
+
 - [`WebBaseLoader`](https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/web_base)
 - [`TextLoader`](https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/unstructured_file)
 - [`CharacterTextSplitter`](https://python.langchain.com/docs/modules/data_connection/document_transformers/text_splitters/character_text_splitter)

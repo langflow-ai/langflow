@@ -1,6 +1,6 @@
 # Deploy on Jina AI Cloud
 
-LangFlow integrates with langchain-serve to provide a one-command deployment to [Jina AI Cloud](https://github.com/jina-ai/langchain-serve).
+Langflow integrates with langchain-serve to provide a one-command deployment to [Jina AI Cloud](https://github.com/jina-ai/langchain-serve).
 
 Start by installing `langchain-serve` with 
 
@@ -51,7 +51,7 @@ langflow --jcloud
   ```
 ## API Usage (with python)
 
-You can use LangFlow directly on your browser or the API endpoints on Jina AI Cloud to interact with the server.
+You can use Langflow directly on your browser or the API endpoints on Jina AI Cloud to interact with the server.
 
 ```python
 import requests
@@ -96,6 +96,6 @@ print(run_flow("Your message", flow_id=FLOW_ID, tweaks=TWEAKS))
 
 :::info
 
-Read more about resource customization, cost, and management of LangFlow apps on Jina AI Cloud in the **[langchain-serve](https://github.com/jina-ai/langchain-serve)** repository.
+Read more about resource customization, cost, and management of Langflow apps on Jina AI Cloud in the **[langchain-serve](https://github.com/jina-ai/langchain-serve)** repository.
 
 :::

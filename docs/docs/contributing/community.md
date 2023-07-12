@@ -1,23 +1,23 @@
 # Community
 
-## 🤖 Join **LangFlow** Discord server
+## 🤖 Join **Langflow** Discord server
 
  Join us to ask questions and showcase your projects.
 
  Let's bring together the building blocks of AI integration!
 
- LangFlow [Discord](https://discord.gg/EqksyE2EX9) server.
+ Langflow [Discord](https://discord.gg/EqksyE2EX9) server.
 
 ---
 
-## 🐦 Stay tunned for **LangFlow** on Twitter
+## 🐦 Stay tunned for **Langflow** on Twitter
 
-Follow [@logspace_ai](https://twitter.com/logspace_ai) on **Twitter** to get the latest news about **LangFlow**.
+Follow [@logspace_ai](https://twitter.com/logspace_ai) on **Twitter** to get the latest news about **Langflow**.
 
 ---
-## ⭐️ Star **LangFlow** on GitHub
+## ⭐️ Star **Langflow** on GitHub
 
-You can "star" **LangFlow** in [GitHub](https://github.com/logspace-ai/langflow).
+You can "star" **Langflow** in [GitHub](https://github.com/logspace-ai/langflow).
 
 By adding a star, other users will be able to find it more easily and see that it has been already useful for others.
 
@@ -25,7 +25,7 @@ By adding a star, other users will be able to find it more easily and see that i
 
 ## 👀 Watch the GitHub repository for releases
 
-You can "watch" **LangFlow** in [GitHub](https://github.com/logspace-ai/langflow).
+You can "watch" **Langflow** in [GitHub](https://github.com/logspace-ai/langflow).
 
 
 If you select "Watching" instead of "Releases only" you will receive notifications when someone creates a new issue or question. You can also specify that you only want to be notified about new issues, discussions, PRs, etc.
