@@ -1084,7 +1084,7 @@ The cursor: default; property value restores the browser's default cursor style 
   }
 
   .chat-message-highlight {
-    @apply rounded-md bg-indigo-100 dark:bg-indigo-900
+    @apply px-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900
   }
 
 
