@@ -21,7 +21,7 @@
     "@docusaurus/theme-classic": "^2.4.1",
     "@docusaurus/theme-search-algolia": "^2.4.1",
     "@mdx-js/react": "^1.6.22",
-    "@mendable/search": "^0.0.108",
+    "@mendable/search": "^0.0.114",
     "@pbe/react-yandex-maps": "^1.2.4",
     "@prismicio/client": "^7.0.1",
     "@uiball/loaders": "^1.2.6",
