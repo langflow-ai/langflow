@@ -72,7 +72,7 @@ export default function Chat({ flow }: ChatType) {
     }
 
     prevNodesRef.current = currentNodes;
-  }, [tabsState, flow.id, nodes]);
+  }, [tabsState, flow.id]);
 
   return (
     <>

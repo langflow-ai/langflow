@@ -62,7 +62,7 @@
 
 .dark {
   --background: 224 35% 7.5%; /* hsl(224 40% 10%) */
-  --foreground: 213 31% 85%; /* hsl(213 31% 91%) */
+  --foreground: 213 31% 80%; /* hsl(213 31% 91%) */
 
   --muted: 223 27% 11%; /* hsl(223 27% 11%) */
   --muted-foreground: 215.4 16.3% 56.9%; /* hsl(215 16% 56%) */
@@ -76,13 +76,13 @@
   --border: 216 24% 17%; /* hsl(216 34% 17%) */
   --input: 216 24% 17%; /* hsl(216 34% 17%) */
 
-  --primary: 210 20% 80%; /* hsl(210 40% 98%) */
+  --primary: 210 20% 80%; /* hsl(210 20% 80%) */
   --primary-foreground: 222.2 27.4% 1.2%; /* hsl(222 47% 1%) */
 
-  --secondary: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
-  --secondary-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
+  --secondary: 222.2 37.4% 7.2%; /* hsl(222 47% 11%) */
+  --secondary-foreground: 210 40% 80%; /* hsl(210 40% 80%) */
 
-  --accent: 216 24% 17%; /* hsl(216 34% 17%) */
+  --accent: 216 24% 20%; /* hsl(216 34% 17%) */
   --accent-foreground: 210 30% 98%; /* hsl(210 40% 98%) */
 
   --destructive: 0 63% 31%; /* hsl(0 63% 31%) */
@@ -93,7 +93,7 @@
   --radius: 0.5rem;
 
   --round-btn-shadow: #00000063;
-  
+
   --success-background: #022c22;
   --success-foreground: #ecfdf5;
 
@@ -925,13 +925,16 @@ The cursor: default; property value restores the browser's default cursor style 
   }
 
   .form-modal-lock-true {
-    @apply bg-input text-black
+    @apply bg-input text-primary
   }
   .form-modal-no-input {
-    @apply bg-input text-center text-black dark:bg-gray-700 dark:text-gray-300
+    @apply bg-input text-center text-primary dark:bg-gray-700 dark:text-gray-300
   }
   .form-modal-lock-false {
-    @apply bg-white text-black
+    @apply bg-white text-primary
+  }
+  .code-highlight{
+    @apply block px-3 py-2 w-full h-full text-sm outline-0 border-0 break-all overflow-y-hidden
   }
   .form-modal-lockchat {
     @apply form-input focus:ring-ring focus:border-ring block w-full rounded-md border-border p-4 pr-16 custom-scroll sm:text-sm
@@ -1082,6 +1085,10 @@ The cursor: default; property value restores the browser's default cursor style 
 
   .export-modal-save-api {
     @apply font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70
+  }
+
+  .chat-message-highlight {
+    @apply px-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900
   }
 
 
