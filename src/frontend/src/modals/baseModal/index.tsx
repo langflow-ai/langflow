@@ -33,8 +33,14 @@ interface BaseModalProps {
   children: [React.ReactElement<ContentProps>, React.ReactElement<HeaderProps>];
   open: boolean;
   setOpen: (open: boolean) => void;
+  size?: "small" | "medium" | "large";
 }
-function BaseModal({ open, setOpen, children }: BaseModalProps) {
+function BaseModal({
+  open,
+  setOpen,
+  children,
+  size = "large",
+}: BaseModalProps) {
   const { closePopUp, setCloseEdit } = useContext(PopUpContext);
 
   function setModalOpen(x: boolean) {
@@ -52,11 +58,29 @@ function BaseModal({ open, setOpen, children }: BaseModalProps) {
   const ContentChild = React.Children.toArray(children).find(
     (child) => (child as React.ReactElement).type === Content
   );
+
+  let sizeClass = "";
+
+  switch (size) {
+    case "small":
+      sizeClass = "min-w-[40vw]";
+      break;
+    case "medium":
+      sizeClass = "min-w-[60vw]";
+      break;
+    case "large":
+      sizeClass = "min-w-[80vw]";
+      break;
+    default:
+      sizeClass = "min-w-[80vw]";
+      break;
+  }
+
   //UPDATE COLORS AND STYLE CLASSSES
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger className="hidden"></DialogTrigger>
-      <DialogContent className="min-w-[80vw]">
+      <DialogContent className={sizeClass}>
         {headerChild}
         <div className="mt-2 flex h-[80vh] w-full ">{ContentChild}</div>
       </DialogContent>
