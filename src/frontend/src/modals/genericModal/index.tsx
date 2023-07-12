@@ -220,39 +220,41 @@ export default function GenericModal({
           </div>
 
           <div className="mt-4 flex h-fit w-full items-end justify-between">
-            {type === TypeModal.PROMPT && (
-              <div className="mb-auto mr-2 max-h-20 flex-1 overflow-y-auto custom-scroll">
-                <div className="flex flex-wrap items-center">
-                  <Variable className=" -ml-px mr-1 flex h-4 w-4 text-primary"></Variable>
-                  <span className="text-md font-semibold text-primary">
-                    Input Variables:
-                  </span>
+            <div className="mb-auto flex-1">
+              {type === TypeModal.PROMPT && (
+                <div className=" mr-2 max-h-20 overflow-y-auto custom-scroll">
+                  <div className="flex flex-wrap items-center">
+                    <Variable className=" -ml-px mr-1 flex h-4 w-4 text-primary"></Variable>
+                    <span className="text-md font-semibold text-primary">
+                      Input Variables:
+                    </span>
 
-                  {wordsHighlight.map((word, index) => (
-                    <ShadTooltip
-                      key={getRandomKeyByssmm() + index}
-                      content={word.replace(/[{}]/g, "")}
-                      asChild={false}
-                    >
-                      <Badge
-                        key={index}
-                        variant="gray"
-                        size="md"
-                        className="m-1 max-w-[40vw] cursor-default truncate p-2.5 text-sm"
+                    {wordsHighlight.map((word, index) => (
+                      <ShadTooltip
+                        key={getRandomKeyByssmm() + index}
+                        content={word.replace(/[{}]/g, "")}
+                        asChild={false}
                       >
-                        <div className="relative bottom-[1px]">
-                          <span>
-                            {word.replace(/[{}]/g, "").length > 59
-                              ? word.replace(/[{}]/g, "").slice(0, 56) + "..."
-                              : word.replace(/[{}]/g, "")}
-                          </span>
-                        </div>
-                      </Badge>
-                    </ShadTooltip>
-                  ))}
+                        <Badge
+                          key={index}
+                          variant="gray"
+                          size="md"
+                          className="m-1 max-w-[40vw] cursor-default truncate p-2.5 text-sm"
+                        >
+                          <div className="relative bottom-[1px]">
+                            <span>
+                              {word.replace(/[{}]/g, "").length > 59
+                                ? word.replace(/[{}]/g, "").slice(0, 56) + "..."
+                                : word.replace(/[{}]/g, "")}
+                            </span>
+                          </div>
+                        </Badge>
+                      </ShadTooltip>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
             <Button
               onClick={() => {
                 switch (myModalType) {
