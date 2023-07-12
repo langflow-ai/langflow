@@ -197,13 +197,13 @@ export default function GenericModal({
         <div
           className={classNames(
             !isEdit ? "rounded-lg border" : "",
-            "flex h-[55vh] w-full"
+            "mt-2 flex h-[55vh] w-full"
           )}
         >
           {type === TypeModal.PROMPT && isEdit ? (
             <Textarea
               ref={ref}
-              className="form-input h-full w-full rounded-lg border-gray-300 custom-scroll focus-visible:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+              className="form-input h-full w-full rounded-lg custom-scroll focus-visible:ring-1"
               value={inputValue}
               onBlur={() => {
                 setIsEdit(false);
@@ -220,7 +220,7 @@ export default function GenericModal({
           ) : type !== TypeModal.PROMPT ? (
             <Textarea
               ref={ref}
-              className="form-input h-full w-full rounded-lg border-gray-300 focus-visible:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+              className="form-input h-full w-full rounded-lg focus-visible:ring-1"
               value={inputValue}
               onChange={(e) => {
                 setInputValue(e.target.value);
@@ -234,7 +234,7 @@ export default function GenericModal({
 
         {type === TypeModal.PROMPT && (
           <>
-            <div className="sm:6/6 mr-28 mt-3 h-[60px] overflow-y-auto custom-scroll">
+            <div className="sm:6/6 mr-28 mt-3 max-h-20 overflow-y-auto custom-scroll">
               <div className="flex flex-wrap items-center">
                 <Variable className=" -ml-px mr-1 flex h-4 w-4 text-primary"></Variable>
                 <span className="text-md font-semibold text-primary">
