@@ -1,4 +1,4 @@
-import "../../bundle.min.js";
+import "./bundle.min.js";
 
 declare global {
   namespace JSX {
