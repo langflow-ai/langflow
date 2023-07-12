@@ -10,6 +10,7 @@ from langchain.chains.base import Chain
 from langchain.chat_models.base import BaseChatModel
 from langchain.tools import BaseTool
 from langflow.utils import validate
+from langflow.interface.wrappers.base import wrapper_creator
 
 
 def import_module(module_path: str) -> Any:
@@ -44,6 +45,8 @@ def import_by_type(_type: str, name: str) -> Any:
         "documentloaders": import_documentloader,
         "textsplitters": import_textsplitter,
         "utilities": import_utility,
+        "output_parsers": import_output_parser,
+        "retrievers": import_retriever,
     }
     if _type == "llms":
         key = "chat" if "chat" in name.lower() else "llm"
@@ -54,9 +57,19 @@ def import_by_type(_type: str, name: str) -> Any:
     return loaded_func(name)
 
 
+def import_output_parser(output_parser: str) -> Any:
+    """Import output parser from output parser name"""
+    return import_module(f"from langchain.output_parsers import {output_parser}")
+
+
 def import_chat_llm(llm: str) -> BaseChatModel:
     """Import chat llm from llm name"""
     return import_class(f"langchain.chat_models.{llm}")
+
+
+def import_retriever(retriever: str) -> Any:
+    """Import retriever from retriever name"""
+    return import_module(f"from langchain.retrievers import {retriever}")
 
 
 def import_memory(memory: str) -> Any:
@@ -84,7 +97,11 @@ def import_prompt(prompt: str) -> Type[PromptTemplate]:
 
 def import_wrapper(wrapper: str) -> Any:
     """Import wrapper from wrapper name"""
-    return import_module(f"from langchain.requests import {wrapper}")
+    if (
+        isinstance(wrapper_creator.type_dict, dict)
+        and wrapper in wrapper_creator.type_dict
+    ):
+        return wrapper_creator.type_dict.get(wrapper)
 
 
 def import_toolkit(toolkit: str) -> Any:

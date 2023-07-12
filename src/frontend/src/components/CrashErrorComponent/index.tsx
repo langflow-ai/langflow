@@ -1,11 +1,11 @@
 export default function CrashErrorComponent({ error, resetErrorBoundary }) {
   return (
-    <div className="fixed top-0 left-0 w-full h-full flex items-center justify-center bg-gray-800 bg-opacity-50 z-50">
-      <div className="bg-white max-w-4xl h-1/3 min-h-fit rounded-lg shadow-lg p-8 text-start flex flex-col justify-evenly">
-        <h1 className="text-red-500 text-3xl mb-4">
+    <div className="fixed left-0 top-0 z-50 flex h-full w-full items-center justify-center bg-foreground bg-opacity-50">
+      <div className="flex h-1/3 min-h-fit max-w-4xl flex-col justify-evenly rounded-lg bg-background p-8 text-start shadow-lg">
+        <h1 className="mb-4 text-3xl text-status-red">
           Oops! An unknown error has occurred.
         </h1>
-        <p className="text-gray-700 mb-4 text-xl">
+        <p className="mb-4 text-xl text-foreground">
           Please click the 'Reset Application' button to restore the
           application's state. If the error persists, please create an issue on
           our GitHub page. We apologize for any inconvenience this may have
@@ -14,7 +14,7 @@ export default function CrashErrorComponent({ error, resetErrorBoundary }) {
         <div className="flex justify-center">
           <button
             onClick={resetErrorBoundary}
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-4"
+            className="mr-4 rounded bg-primary px-4 py-2 font-bold text-background hover:bg-ring"
           >
             Reset Application
           </button>
@@ -22,7 +22,7 @@ export default function CrashErrorComponent({ error, resetErrorBoundary }) {
             href="https://github.com/logspace-ai/langflow/issues/new"
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+            className="rounded bg-status-red px-4 py-2 font-bold text-background hover:bg-error-foreground"
           >
             Create Issue
           </a>

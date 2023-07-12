@@ -1,6 +1,6 @@
+import os
 import sys
 import time
-from fastapi import FastAPI
 import httpx
 from multiprocess import Process, cpu_count  # type: ignore
 import platform
@@ -11,9 +11,7 @@ from rich.panel import Panel
 from rich import box
 from rich import print as rprint
 import typer
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-from langflow.main import create_app
+from langflow.main import setup_app
 from langflow.settings import settings
 from langflow.utils.logger import configure, logger
 import webbrowser
@@ -30,17 +28,44 @@ def get_number_of_workers(workers=None):
 
 def update_settings(
     config: str,
+    cache: str,
     dev: bool = False,
     database_url: Optional[str] = None,
     remove_api_keys: bool = False,
 ):
     """Update the settings from a config file."""
+
+    # Check for database_url in the environment variables
+    database_url = database_url or os.getenv("langflow_database_url")
+
     if config:
         settings.update_from_yaml(config, dev=dev)
     if database_url:
         settings.update_settings(database_url=database_url)
     if remove_api_keys:
         settings.update_settings(remove_api_keys=remove_api_keys)
+    if cache:
+        settings.update_settings(cache=cache)
+
+
+def load_params():
+    """
+    Load the parameters from the environment variables.
+    """
+    global_vars = globals()
+
+    for key, value in global_vars.items():
+        env_key = f"LANGFLOW_{key.upper()}"
+        if env_key in os.environ:
+            if isinstance(value, bool):
+                # Handle booleans
+                global_vars[key] = os.getenv(env_key, str(value)).lower() == "true"
+            elif isinstance(value, int):
+                # Handle integers
+                global_vars[key] = int(os.getenv(env_key, str(value)))
+            elif isinstance(value, str) or value is None:
+                # Handle strings and None values
+                global_vars[key] = os.getenv(env_key, str(value))
 
 
 def serve_on_jcloud():
@@ -91,56 +116,75 @@ def serve_on_jcloud():
 
 @app.command()
 def serve(
-    host: str = typer.Option("127.0.0.1", help="Host to bind the server to."),
-    workers: int = typer.Option(1, help="Number of worker processes."),
+    host: str = typer.Option(
+        "127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"
+    ),
+    workers: int = typer.Option(
+        1, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"
+    ),
     timeout: int = typer.Option(60, help="Worker timeout in seconds."),
-    port: int = typer.Option(7860, help="Port to listen on."),
+    port: int = typer.Option(7860, help="Port to listen on.", envvar="LANGFLOW_PORT"),
     config: str = typer.Option("config.yaml", help="Path to the configuration file."),
     # .env file param
     env_file: Path = typer.Option(
         ".env", help="Path to the .env file containing environment variables."
     ),
-    log_level: str = typer.Option("critical", help="Logging level."),
-    log_file: Path = typer.Option("logs/langflow.log", help="Path to the log file."),
+    log_level: str = typer.Option(
+        "critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"
+    ),
+    log_file: Path = typer.Option(
+        "logs/langflow.log", help="Path to the log file.", envvar="LANGFLOW_LOG_FILE"
+    ),
+    cache: str = typer.Option(
+        envvar="LANGFLOW_LANGCHAIN_CACHE",
+        help="Type of cache to use. (InMemoryCache, SQLiteCache)",
+        default="SQLiteCache",
+    ),
     jcloud: bool = typer.Option(False, help="Deploy on Jina AI Cloud"),
     dev: bool = typer.Option(False, help="Run in development mode (may contain bugs)"),
     database_url: str = typer.Option(
         None,
         help="Database URL to connect to. If not provided, a local SQLite database will be used.",
+        envvar="LANGFLOW_DATABASE_URL",
     ),
     path: str = typer.Option(
         None,
         help="Path to the frontend directory containing build files. This is for development purposes only.",
+        envvar="LANGFLOW_FRONTEND_PATH",
     ),
     open_browser: bool = typer.Option(
-        True, help="Open the browser after starting the server."
+        True,
+        help="Open the browser after starting the server.",
+        envvar="LANGFLOW_OPEN_BROWSER",
     ),
     remove_api_keys: bool = typer.Option(
-        False, help="Remove API keys from the projects saved in the database."
+        False,
+        help="Remove API keys from the projects saved in the database.",
+        envvar="LANGFLOW_REMOVE_API_KEYS",
     ),
 ):
     """
     Run the Langflow server.
     """
+    # override env variables with .env file
+    if env_file:
+        load_dotenv(env_file, override=True)
+        load_params()
 
     if jcloud:
         return serve_on_jcloud()
 
-    load_dotenv(env_file)
-
     configure(log_level=log_level, log_file=log_file)
     update_settings(
-        config, dev=dev, database_url=database_url, remove_api_keys=remove_api_keys
+        config,
+        dev=dev,
+        database_url=database_url,
+        remove_api_keys=remove_api_keys,
+        cache=cache,
     )
-    # get the directory of the current file
-    if not path:
-        frontend_path = Path(__file__).parent
-        static_files_dir = frontend_path / "frontend"
-    else:
-        static_files_dir = Path(path)
-
-    app = create_app()
-    setup_static_files(app, static_files_dir)
+    # create path object if path is provided
+    static_files_dir: Optional[Path] = Path(path) if path else None
+    app = setup_app(static_files_dir=static_files_dir)
     # check if port is being used
     if is_port_in_use(port, host):
         port = get_free_port(port)
@@ -188,29 +232,6 @@ def run_on_windows(host, port, log_level, options, app):
     run_langflow(host, port, log_level, options, app)
 
 
-def setup_static_files(app: FastAPI, static_files_dir: Path):
-    """
-    Setup the static files directory.
-
-    Args:
-        app (FastAPI): FastAPI app.
-        path (str): Path to the static files directory.
-    """
-    app.mount(
-        "/",
-        StaticFiles(directory=static_files_dir, html=True),
-        name="static",
-    )
-
-    @app.exception_handler(404)
-    async def custom_404_handler(request, __):
-        path = static_files_dir / "index.html"
-
-        if not path.exists():
-            raise RuntimeError(f"File at path {path} does not exist.")
-        return FileResponse(path)
-
-
 def is_port_in_use(port, host="localhost"):
     """
     Check if a port is in use.
@@ -244,7 +265,7 @@ def get_free_port(port):
 def print_banner(host, port):
     # console = Console()
 
-    word = "LangFlow"
+    word = "Langflow"
     colors = ["#3300cc"]
 
     styled_word = ""
@@ -291,7 +312,7 @@ def run_langflow(host, port, log_level, options, app):
     except KeyboardInterrupt:
         pass
     except Exception as e:
-        logger.error(e)
+        logger.exception(e)
         sys.exit(1)
 
 

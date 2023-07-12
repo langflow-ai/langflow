@@ -1,10 +1,56 @@
+import json
 from typing import Optional
 
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
+from langflow.template.frontend_node.constants import CTRANSFORMERS_DEFAULT_CONFIG
+from langflow.template.frontend_node.constants import OPENAI_API_BASE_INFO
 
 
 class LLMFrontendNode(FrontendNode):
+    def add_extra_fields(self) -> None:
+        if "VertexAI" in self.template.type_name:
+            # Add credentials field which should of type file.
+            self.template.add_field(
+                TemplateField(
+                    field_type="file",
+                    required=False,
+                    show=True,
+                    name="credentials",
+                    value="",
+                    suffixes=[".json"],
+                    fileTypes=["json"],
+                )
+            )
+
+    @staticmethod
+    def format_vertex_field(field: TemplateField, name: str):
+        if "VertexAI" in name:
+            advanced_fields = [
+                "tuned_model_name",
+                "verbose",
+                "top_p",
+                "top_k",
+                "max_output_tokens",
+            ]
+            if field.name in advanced_fields:
+                field.advanced = True
+            show_fields = [
+                "tuned_model_name",
+                "verbose",
+                "project",
+                "location",
+                "credentials",
+                "max_output_tokens",
+                "model_name",
+                "temperature",
+                "top_p",
+                "top_k",
+            ]
+
+            if field.name in show_fields:
+                field.show = True
+
     @staticmethod
     def format_openai_field(field: TemplateField):
         if "openai" in field.name.lower():
@@ -14,6 +60,13 @@ class LLMFrontendNode(FrontendNode):
 
         if "key" not in field.name.lower() and "token" not in field.name.lower():
             field.password = False
+
+        if field.name == "openai_api_base":
+            field.info = OPENAI_API_BASE_INFO
+
+    def add_extra_base_classes(self) -> None:
+        if "BaseLLM" not in self.base_classes:
+            self.base_classes.append("BaseLLM")
 
     @staticmethod
     def format_azure_field(field: TemplateField):
@@ -32,16 +85,26 @@ class LLMFrontendNode(FrontendNode):
         field.advanced = not field.required
 
     @staticmethod
+    def format_ctransformers_field(field: TemplateField):
+        if field.name == "config":
+            field.show = True
+            field.advanced = True
+            field.value = json.dumps(CTRANSFORMERS_DEFAULT_CONFIG, indent=2)
+
+    @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         display_names_dict = {
             "huggingfacehub_api_token": "HuggingFace Hub API Token",
         }
         FrontendNode.format_field(field, name)
         LLMFrontendNode.format_openai_field(field)
+        LLMFrontendNode.format_ctransformers_field(field)
         if name and "azure" in name.lower():
             LLMFrontendNode.format_azure_field(field)
         if name and "llama" in name.lower():
             LLMFrontendNode.format_llama_field(field)
+        if name and "vertex" in name.lower():
+            LLMFrontendNode.format_vertex_field(field, name)
         SHOW_FIELDS = ["repo_id"]
         if field.name in SHOW_FIELDS:
             field.show = True
@@ -77,6 +140,17 @@ class LLMFrontendNode(FrontendNode):
             "model_file",
             "model_type",
             "deployment_name",
+            "credentials",
         ]:
             field.advanced = False
+            field.show = True
+        if field.name == "credentials":
+            field.field_type = "file"
+        if name == "VertexAI" and field.name not in [
+            "callbacks",
+            "client",
+            "stop",
+            "tags",
+            "cache",
+        ]:
             field.show = True
