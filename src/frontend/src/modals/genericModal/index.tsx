@@ -14,11 +14,7 @@ import {
   DialogTrigger,
 } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
-import {
-  HIGHLIGHT_CSS,
-  PROMPT_DIALOG_SUBTITLE,
-  TEXT_DIALOG_SUBTITLE,
-} from "../../constants";
+import { PROMPT_DIALOG_SUBTITLE, TEXT_DIALOG_SUBTITLE } from "../../constants";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
 import { PopUpContext } from "../../contexts/popUpContext";
@@ -119,7 +115,7 @@ export default function GenericModal({
   const TextAreaContentView = () => {
     return (
       <SanitizedHTMLWrapper
-        className={HIGHLIGHT_CSS}
+        className="code-highlight"
         content={coloredContent}
         onClick={() => {
           setIsEdit(true);
