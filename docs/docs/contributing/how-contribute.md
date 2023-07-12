@@ -1,6 +1,6 @@
 # How to contribute?
 
-👋 Hello there! We welcome contributions from developers of all levels to our open-source project on [GitHub](https://github.com/logspace-ai/langflow). If you'd like to contribute, please check our contributing guidelines and help make LangFlow more accessible.
+👋 Hello there! We welcome contributions from developers of all levels to our open-source project on [GitHub](https://github.com/logspace-ai/langflow). If you'd like to contribute, please check our contributing guidelines and help make Langflow more accessible.
 
 As an open-source project in a rapidly developing field, we are extremely open
 to contributions, whether in the form of a new feature, improved infra, or better documentation.
@@ -12,7 +12,7 @@ Please do not try to push directly to this repo unless you are a maintainer.
 ---
 ## Local development
 
-You can develop LangFlow using docker compose, or locally.
+You can develop Langflow using docker compose, or locally.
 
 We provide a .vscode/launch.json file for debugging the backend in VSCode, which is a lot faster than using docker compose.
 
@@ -29,7 +29,7 @@ It is advised to run `make lint` before pushing to the repository.
 
 ## Run locally
 
-LangFlow can run locally by cloning the repository and installing the dependencies. We recommend using a virtual environment to isolate the dependencies from your system.
+Langflow can run locally by cloning the repository and installing the dependencies. We recommend using a virtual environment to isolate the dependencies from your system.
 
 Before you start, make sure you have the following installed:
 
