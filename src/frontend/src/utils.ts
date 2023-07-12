@@ -1,47 +1,55 @@
-import {
-  RocketLaunchIcon,
-  LinkIcon,
-  CpuChipIcon,
-  LightBulbIcon,
-  CommandLineIcon,
-  WrenchScrewdriverIcon,
-  WrenchIcon,
-  ComputerDesktopIcon,
-  GiftIcon,
-  PaperClipIcon,
-  QuestionMarkCircleIcon,
-  FingerPrintIcon,
-  ScissorsIcon,
-  CircleStackIcon,
-  Squares2X2Icon,
-  Bars3CenterLeftIcon,
-} from "@heroicons/react/24/outline";
-import { Connection, Edge, Node, ReactFlowInstance } from "reactflow";
-import { FlowType, NodeType } from "./types/flow";
-import { APITemplateType } from "./types/api";
+import clsx, { ClassValue } from "clsx";
 import _ from "lodash";
-import { ChromaIcon } from "./icons/ChromaIcon";
-import { AnthropicIcon } from "./icons/Anthropic";
+import {
+  Compass,
+  Cpu,
+  FileSearch,
+  Fingerprint,
+  Gift,
+  Hammer,
+  HelpCircle,
+  Laptop2,
+  Layers,
+  Lightbulb,
+  Link,
+  MessageCircle,
+  Paperclip,
+  Rocket,
+  Scissors,
+  TerminalSquare,
+  Wand2,
+  Wrench,
+} from "lucide-react";
+import { ComponentType, SVGProps } from "react";
+import { Connection, Edge, Node, ReactFlowInstance } from "reactflow";
+import { twMerge } from "tailwind-merge";
+import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "./flow_constants";
 import { AirbyteIcon } from "./icons/Airbyte";
+import { AnthropicIcon } from "./icons/Anthropic";
 import { BingIcon } from "./icons/Bing";
+import { ChromaIcon } from "./icons/ChromaIcon";
 import { CohereIcon } from "./icons/Cohere";
 import { EvernoteIcon } from "./icons/Evernote";
 import { FBIcon } from "./icons/FacebookMessenger";
 import { GitBookIcon } from "./icons/GitBook";
 import { GoogleIcon } from "./icons/Google";
-import { HackerNewsIcon } from "./icons/hackerNews";
-import { HugginFaceIcon } from "./icons/HuggingFace";
+import { HuggingFaceIcon } from "./icons/HuggingFace";
 import { IFixIcon } from "./icons/IFixIt";
 import { MetaIcon } from "./icons/Meta";
-import { MidjorneyIcon } from "./icons/Midjorney";
+import { MidjourneyIcon } from "./icons/Midjorney";
+import { MongoDBIcon } from "./icons/MongoDB";
 import { NotionIcon } from "./icons/Notion";
 import { OpenAiIcon } from "./icons/OpenAi";
+import { PineconeIcon } from "./icons/Pinecone";
 import { QDrantIcon } from "./icons/QDrant";
 import { SearxIcon } from "./icons/Searx";
 import { SlackIcon } from "./icons/Slack";
-import clsx, { ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
-import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "./constants";
+import { VertexAIIcon } from "./icons/VertexAI";
+import { HackerNewsIcon } from "./icons/hackerNews";
+import { SupabaseIcon } from "./icons/supabase";
+import { APITemplateType } from "./types/api";
+import { IVarHighlightType } from "./types/components";
+import { FlowType, NodeType } from "./types/flow";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -117,6 +125,9 @@ export const nodeColors: { [char: string]: string } = {
   toolkits: "#DB2C2C",
   wrappers: "#E6277A",
   utilities: "#31A3CC",
+  output_parsers: "#E6A627",
+  str: "#049524",
+  retrievers: "#e6b25a",
   unknown: "#9CA3AF",
 };
 
@@ -135,67 +146,167 @@ export const nodeNames: { [char: string]: string } = {
   toolkits: "Toolkits",
   wrappers: "Wrappers",
   textsplitters: "Text Splitters",
+  retrievers: "Retrievers",
   utilities: "Utilities",
+  output_parsers: "Output Parsers",
   unknown: "Unknown",
 };
 
-export const nodeIcons: {
+export const nodeIconsLucide: {
   [char: string]: React.ForwardRefExoticComponent<
-    React.SVGProps<SVGSVGElement>
+    ComponentType<SVGProps<SVGSVGElement>>
   >;
 } = {
-  Chroma: ChromaIcon,
-  AirbyteJSONLoader: AirbyteIcon,
-  // SerpAPIWrapper: SerperIcon,
-  // AZLyricsLoader: AzIcon,
-  Anthropic: AnthropicIcon,
-  ChatAnthropic: AnthropicIcon,
-  BingSearchAPIWrapper: BingIcon,
-  BingSearchRun: BingIcon,
-  Cohere: CohereIcon,
-  CohereEmbeddings: CohereIcon,
-  EverNoteLoader: EvernoteIcon,
-  FacebookChatLoader: FBIcon,
-  GitbookLoader: GitBookIcon,
-  GoogleSearchAPIWrapper: GoogleIcon,
-  GoogleSearchResults: GoogleIcon,
-  GoogleSearchRun: GoogleIcon,
-  HNLoader: HackerNewsIcon,
-  HuggingFaceHub: HugginFaceIcon,
-  HuggingFaceEmbeddings: HugginFaceIcon,
-  IFixitLoader: IFixIcon,
-  Meta: MetaIcon,
-  Midjorney: MidjorneyIcon,
-  NotionDirectoryLoader: NotionIcon,
-  ChatOpenAI: OpenAiIcon,
-  OpenAI: OpenAiIcon,
-  OpenAIEmbeddings: OpenAiIcon,
-  // UnstructuredPowerPointLoader: PowerPointIcon, // word and powerpoint have differente styles
-  Qdrant: QDrantIcon,
-  // ReadTheDocsLoader: ReadTheDocsIcon, // does not work
-  Searx: SearxIcon,
-  SlackDirectoryLoader: SlackIcon,
-  // Weaviate: WeaviateIcon, // does not work
-  // WikipediaAPIWrapper: WikipediaIcon,
-  // WolframAlphaQueryRun: WolframIcon,
-  // WolframAlphaAPIWrapper: WolframIcon,
-  // UnstructuredWordDocumentLoader: WordIcon, // word and powerpoint have differente styles
-  agents: RocketLaunchIcon,
-  chains: LinkIcon,
-  memories: CpuChipIcon,
-  llms: LightBulbIcon,
-  prompts: CommandLineIcon,
-  tools: WrenchIcon,
-  advanced: ComputerDesktopIcon,
-  chat: Bars3CenterLeftIcon,
-  embeddings: FingerPrintIcon,
-  documentloaders: PaperClipIcon,
-  vectorstores: CircleStackIcon,
-  toolkits: WrenchScrewdriverIcon,
-  textsplitters: ScissorsIcon,
-  wrappers: GiftIcon,
-  utilities: Squares2X2Icon,
-  unknown: QuestionMarkCircleIcon,
+  Chroma: ChromaIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  AirbyteJSONLoader: AirbyteIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  Anthropic: AnthropicIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  ChatAnthropic: AnthropicIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  BingSearchAPIWrapper: BingIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  BingSearchRun: BingIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  Cohere: CohereIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  CohereEmbeddings: CohereIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  EverNoteLoader: EvernoteIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  FacebookChatLoader: FBIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  GitbookLoader: GitBookIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  GoogleSearchAPIWrapper: GoogleIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  GoogleSearchResults: GoogleIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  GoogleSearchRun: GoogleIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  HNLoader: HackerNewsIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  HuggingFaceHub: HuggingFaceIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  HuggingFaceEmbeddings: HuggingFaceIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  IFixitLoader: IFixIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  Meta: MetaIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  Midjorney: MidjourneyIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  MongoDBAtlasVectorSearch: MongoDBIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  NotionDirectoryLoader: NotionIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  ChatOpenAI: OpenAiIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  OpenAI: OpenAiIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  OpenAIEmbeddings: OpenAiIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  Pinecone: PineconeIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  Qdrant: QDrantIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  Searx: SearxIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  SlackDirectoryLoader: SlackIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  SupabaseVectorStore: SupabaseIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  VertexAI: VertexAIIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  ChatVertexAI: VertexAIIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  agents: Rocket as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  chains: Link as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  memories: Cpu as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  llms: Lightbulb as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  prompts: TerminalSquare as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  tools: Wrench as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  advanced: Laptop2 as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  chat: MessageCircle as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  embeddings: Fingerprint as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  documentloaders: Paperclip as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  vectorstores: Layers as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  toolkits: Hammer as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  textsplitters: Scissors as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  wrappers: Gift as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  utilities: Wand2 as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  output_parsers: Compass as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  retrievers: FileSearch as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  unknown: HelpCircle as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
 };
 
 export const gradients = [
@@ -213,6 +324,23 @@ export const gradients = [
   "bg-gradient-to-br from-green-500 to-green-700",
   "bg-gradient-to-br from-rose-400 via-fuchsia-500 to-indigo-500",
   "bg-gradient-to-br from-sky-400 to-blue-500",
+  "bg-gradient-to-br from-green-200 via-green-400 to-green-500",
+  "bg-gradient-to-br from-red-400 via-gray-300 to-blue-500",
+  "bg-gradient-to-br from-gray-900 to-gray-600 bg-gradient-to-r",
+  "bg-gradient-to-br from-rose-500 via-red-400 to-red-500",
+  "bg-gradient-to-br from-fuchsia-600 to-pink-600",
+  "bg-gradient-to-br from-emerald-500 to-lime-600",
+  "bg-gradient-to-br from-rose-500 to-indigo-700",
+  "bg-gradient-to-br bg-gradient-to-tr from-violet-500 to-orange-300",
+  "bg-gradient-to-br from-gray-900 via-purple-900 to-violet-600",
+  "bg-gradient-to-br from-yellow-200 via-red-500 to-fuchsia-500",
+  "bg-gradient-to-br from-sky-400 to-indigo-900",
+  "bg-gradient-to-br from-amber-200 via-violet-600 to-sky-900",
+  "bg-gradient-to-br from-amber-700 via-orange-300 to-rose-800",
+  "bg-gradient-to-br from-gray-300 via-fuchsia-600 to-orange-600",
+  "bg-gradient-to-br from-fuchsia-500 via-red-600 to-orange-400",
+  "bg-gradient-to-br from-sky-400 via-rose-400 to-lime-400",
+  "bg-gradient-to-br from-lime-600 via-yellow-300 to-red-600",
 ];
 
 export const bgColors = {
@@ -403,9 +531,7 @@ export function toFirstUpperCase(str: string) {
 }
 
 export function snakeToSpaces(str: string) {
-  let result = str.split("_").join(" ");
-
-  return result;
+  return str.split("_").join(" ");
 }
 
 export function toNormalCase(str: string) {
@@ -449,10 +575,7 @@ export function roundNumber(x: number, decimals: number) {
 export function getConnectedNodes(edge: Edge, nodes: Array<Node>): Array<Node> {
   const sourceId = edge.source;
   const targetId = edge.target;
-  const connectedNodes = nodes.filter(
-    (node) => node.id === targetId || node.id === sourceId
-  );
-  return connectedNodes;
+  return nodes.filter((node) => node.id === targetId || node.id === sourceId);
 }
 
 export function isValidConnection(
@@ -460,14 +583,22 @@ export function isValidConnection(
   reactFlowInstance: ReactFlowInstance
 ) {
   if (
-    sourceHandle.split("|")[0] === targetHandle.split("|")[0] ||
+    targetHandle
+      .split("|")[0]
+      .split(";")
+      .some((n) => n === sourceHandle.split("|")[0]) ||
     sourceHandle
       .split("|")
       .slice(2)
-      .some((t) => t === targetHandle.split("|")[0]) ||
+      .some((t) =>
+        targetHandle
+          .split("|")[0]
+          .split(";")
+          .some((n) => n === t)
+      ) ||
     targetHandle.split("|")[0] === "str"
   ) {
-    let targetNode = reactFlowInstance.getNode(target).data.node;
+    let targetNode = reactFlowInstance?.getNode(target)?.data?.node;
     if (!targetNode) {
       if (
         !reactFlowInstance
@@ -491,7 +622,6 @@ export function isValidConnection(
 
 export function removeApiKeys(flow: FlowType): FlowType {
   let cleanFLow = _.cloneDeep(flow);
-  console.log(cleanFLow);
   cleanFLow.data.nodes.forEach((node) => {
     for (const key in node.data.node.template) {
       if (node.data.node.template[key].password) {
@@ -659,59 +789,129 @@ export function updateIds(newFlow, getNodeId) {
   });
 }
 
-export function groupByFamily(data, baseClasses) {
+export function groupByFamily(data, baseClasses, left, type) {
+  let parentOutput: string;
   let arrOfParent: string[] = [];
-  let arrOfType: { family: string; type: string }[] = [];
-
+  let arrOfType: { family: string; type: string; component: string }[] = [];
+  let arrOfLength: { length: number; type: string }[] = [];
+  let lastType = "";
   Object.keys(data).map((d) => {
     Object.keys(data[d]).map((n) => {
-      if (
-        data[d][n].base_classes.some((r) => baseClasses.split("\n").includes(r))
-      ) {
-        arrOfParent.push(d);
+      try {
+        if (
+          data[d][n].base_classes.some((r) =>
+            baseClasses.split("\n").includes(r)
+          )
+        ) {
+          arrOfParent.push(d);
+        }
+        if (n === type) {
+          parentOutput = d;
+        }
+
+        if (d !== lastType) {
+          arrOfLength.push({
+            length: Object.keys(data[d]).length,
+            type: d,
+          });
+
+          lastType = d;
+        }
+      } catch (e) {
+        console.log(e);
       }
     });
   });
 
-  let uniq = arrOfParent.filter(
-    (item, index) => arrOfParent.indexOf(item) === index
-  );
-
   Object.keys(data).map((d) => {
     Object.keys(data[d]).map((n) => {
-      baseClasses.split("\n").forEach((tol) => {
-        data[d][n].base_classes.forEach((data) => {
-          if (tol == data) {
-            arrOfType.push({
-              family: d,
-              type: data,
-            });
-          }
+      try {
+        baseClasses.split("\n").forEach((tol) => {
+          data[d][n].base_classes.forEach((data) => {
+            if (tol == data) {
+              arrOfType.push({
+                family: d,
+                type: data,
+                component: n,
+              });
+            }
+          });
         });
-      });
+      } catch (e) {
+        console.log(e);
+      }
     });
   });
 
-  let groupedBy = arrOfType.filter((object, index, self) => {
-    const foundIndex = self.findIndex(
-      (o) => o.family === object.family && o.type === object.type
-    );
-    return foundIndex === index;
-  });
+  if (left === false) {
+    let groupedBy = arrOfType.filter((object, index, self) => {
+      const foundIndex = self.findIndex(
+        (o) => o.family === object.family && o.type === object.type
+      );
+      return foundIndex === index;
+    });
 
-  let groupedObj = groupedBy.reduce((result, item) => {
-    const existingGroup = result.find((group) => group.family === item.family);
+    return groupedBy.reduce((result, item) => {
+      const existingGroup = result.find(
+        (group) => group.family === item.family
+      );
 
-    if (existingGroup) {
-      existingGroup.type += `, ${item.type}`;
-    } else {
-      result.push({ family: item.family, type: item.type });
+      if (existingGroup) {
+        existingGroup.type += `, ${item.type}`;
+      } else {
+        result.push({
+          family: item.family,
+          type: item.type,
+          component: item.component,
+        });
+      }
+
+      if (left === false) {
+        let resFil = result.filter((group) => group.family === parentOutput);
+        result = resFil;
+      }
+
+      return result;
+    }, []);
+  } else {
+    const groupedArray = [];
+    const groupedData = {};
+
+    arrOfType.forEach((item) => {
+      const { family, type, component } = item;
+      const key = `${family}-${type}`;
+
+      if (!groupedData[key]) {
+        groupedData[key] = { family, type, component: [component] };
+      } else {
+        groupedData[key].component.push(component);
+      }
+    });
+
+    for (const key in groupedData) {
+      groupedArray.push(groupedData[key]);
     }
 
-    return result;
-  }, []);
+    groupedArray.forEach((object, index, self) => {
+      const findObj = arrOfLength.find((x) => x.type === object.family);
+      if (object.component.length === findObj.length) {
+        self[index]["type"] = "";
+      } else {
+        self[index]["type"] = object.component.join(", ");
+      }
+    });
+    return groupedArray;
+  }
+}
 
-  return groupedObj;
+export function buildInputs(tabsState, id) {
+  return tabsState &&
+    tabsState[id] &&
+    tabsState[id].formKeysData &&
+    tabsState[id].formKeysData.input_keys &&
+    Object.keys(tabsState[id].formKeysData.input_keys).length > 0
+    ? JSON.stringify(tabsState[id].formKeysData.input_keys)
+    : '{"input": "message"}';
 }
 
 export function buildTweaks(flow) {
@@ -752,9 +952,7 @@ export function validateNode(
             )
           ? [
               `${type} is missing ${
-                template.display_name
-                  ? template.display_name
-                  : toNormalCase(template[t].name)
+                template.display_name || toNormalCase(template[t].name)
               }.`,
             ]
           : []
@@ -812,3 +1010,34 @@ export function getRandomName(
   // Return title case final name
   return toTitleCase(final_name);
 }
+
+export function getRandomKeyByssmm(): string {
+  const now = new Date();
+  const seconds = String(now.getSeconds()).padStart(2, "0");
+  const milliseconds = String(now.getMilliseconds()).padStart(3, "0");
+  return seconds + milliseconds + Math.abs(Math.floor(Math.random() * 10001));
+}
+
+export const INVALID_CHARACTERS = [
+  " ",
+  ",",
+  ".",
+  ":",
+  ";",
+  "!",
+  "?",
+  "/",
+  "\\",
+  "(",
+  ")",
+  "[",
+  "]",
+  "\n",
+];
+
+export const regexHighlight = /\{([^}]+)\}/g;
+
+export const varHighlightHTML = ({ name }: IVarHighlightType) => {
+  const html = `<span class="font-semibold chat-message-highlight">{${name}}</span>`;
+  return html;
+};

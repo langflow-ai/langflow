@@ -1,7 +1,15 @@
 // src/constants.tsx
 
+import { MessageSquare } from "lucide-react";
 import { FlowType } from "./types/flow";
-import { buildTweaks } from "./utils";
+import { TabsState } from "./types/tabs";
+import { buildInputs, buildTweaks } from "./utils";
+
+/**
+ * Number maximum of components to scroll on tooltips
+ * @constant
+ */
+export const MAX_LENGTH_TO_SCROLL_TOOLTIP = 200;
 
 /**
  * The base text for subtitle of Export Dialog (Toolbar)
@@ -21,6 +29,13 @@ export const SETTINGS_DIALOG_SUBTITLE = "Edit details about your project.";
  */
 export const CODE_DIALOG_SUBTITLE =
   "Export your flow to use it with this code.";
+
+/**
+ * The base text for subtitle of Chat Form
+ * @constant
+ */
+export const CHAT_FORM_DIALOG_SUBTITLE =
+  "Set up the input variables defined in prompt templates. Interact with agents and chains.";
 
 /**
  * The base text for subtitle of Edit Node Dialog
@@ -43,6 +58,17 @@ export const CODE_PROMPT_DIALOG_SUBTITLE =
 export const PROMPT_DIALOG_SUBTITLE =
   "Create your prompt. Prompts can help guide the behavior of a Language Model.";
 
+export const CHAT_CANNOT_OPEN_TITLE = "Chat Cannot Open";
+
+export const CHAT_CANNOT_OPEN_DESCRIPTION = "This is not a chat flow.";
+
+export const FLOW_NOT_BUILT_TITLE = "Flow not built";
+
+export const THOUGHTS_ICON = MessageSquare;
+
+export const FLOW_NOT_BUILT_DESCRIPTION =
+  "Please build the flow before chatting.";
+
 /**
  * The base text for subtitle of Text Dialog
  * @constant
@@ -54,7 +80,11 @@ export const TEXT_DIALOG_SUBTITLE = "Edit your text.";
  * @param {string} flowId - The id of the flow
  * @returns {string} - The python code
  */
-export const getPythonApiCode = (flow: FlowType): string => {
+export const getPythonApiCode = (
+  flow: FlowType,
+  tweak?: any[],
+  tabsState?: TabsState
+): string => {
   const flowId = flow.id;
 
   // create a dictionary of node ids and the values is an empty dictionary
@@ -62,17 +92,23 @@ export const getPythonApiCode = (flow: FlowType): string => {
   //   node.data.id
   // }
   const tweaks = buildTweaks(flow);
+  const inputs = buildInputs(tabsState, flow.id);
   return `import requests
+from typing import Optional
 
 BASE_API_URL = "${window.location.protocol}//${
     window.location.host
-  }/api/v1/predict"
+  }/api/v1/process"
 FLOW_ID = "${flowId}"
 # You can tweak the flow by adding a tweaks dictionary
 # e.g {"OpenAI-XXXXX": {"model_name": "gpt-4"}}
-TWEAKS = ${JSON.stringify(tweaks, null, 2)}
+TWEAKS = ${
+    tweak && tweak.length > 0
+      ? buildTweakObject(tweak)
+      : JSON.stringify(tweaks, null, 2)
+  }
 
-def run_flow(message: str, flow_id: str, tweaks: dict = None) -> dict:
+def run_flow(inputs: dict, flow_id: str, tweaks: Optional[dict] = None) -> dict:
     """
     Run a flow with a given message and optional tweaks.
 
@@ -83,7 +119,7 @@ def run_flow(message: str, flow_id: str, tweaks: dict = None) -> dict:
     """
     api_url = f"{BASE_API_URL}/{flow_id}"
 
-    payload = {"message": message}
+    payload = {"inputs": inputs}
 
     if tweaks:
         payload["tweaks"] = tweaks
@@ -92,42 +128,73 @@ def run_flow(message: str, flow_id: str, tweaks: dict = None) -> dict:
     return response.json()
 
 # Setup any tweaks you want to apply to the flow
-
-print(run_flow("Your message", flow_id=FLOW_ID, tweaks=TWEAKS))`;
+inputs = ${inputs}
+print(run_flow(inputs, flow_id=FLOW_ID, tweaks=TWEAKS))`;
 };
 /**
  * Function to get the curl code for the API
  * @param {string} flowId - The id of the flow
  * @returns {string} - The curl code
  */
-export const getCurlCode = (flow: FlowType): string => {
+export const getCurlCode = (
+  flow: FlowType,
+  tweak?: any[],
+  tabsState?: TabsState
+): string => {
   const flowId = flow.id;
   const tweaks = buildTweaks(flow);
+  const inputs = buildInputs(tabsState, flow.id);
+
   return `curl -X POST \\
   ${window.location.protocol}//${
     window.location.host
-  }/api/v1/predict/${flowId} \\
+  }/api/v1/process/${flowId} \\
   -H 'Content-Type: application/json' \\
-  -d '{"message": "Your message", "tweaks": ${JSON.stringify(
-    tweaks,
-    null,
-    2
-  )}}'`;
+  -d '{"inputs": ${inputs}, "tweaks": ${
+    tweak && tweak.length > 0
+      ? buildTweakObject(tweak)
+      : JSON.stringify(tweaks, null, 2)
+  }}'`;
 };
 /**
  * Function to get the python code for the API
  * @param {string} flowName - The name of the flow
  * @returns {string} - The python code
  */
-export const getPythonCode = (flow: FlowType): string => {
+export const getPythonCode = (
+  flow: FlowType,
+  tweak?: any[],
+  tabsState?: TabsState
+): string => {
   const flowName = flow.name;
   const tweaks = buildTweaks(flow);
+  const inputs = buildInputs(tabsState, flow.id);
   return `from langflow import load_flow_from_json
-TWEAKS = ${JSON.stringify(tweaks, null, 2)}
+TWEAKS = ${
+    tweak && tweak.length > 0
+      ? buildTweakObject(tweak)
+      : JSON.stringify(tweaks, null, 2)
+  }
 flow = load_flow_from_json("${flowName}.json", tweaks=TWEAKS)
 # Now you can use it like any chain
-flow("Hey, have you heard of LangFlow?")`;
+inputs = ${inputs}
+flow(inputs)`;
 };
+
+function buildTweakObject(tweak) {
+  tweak.forEach((el) => {
+    Object.keys(el).forEach((key) => {
+      for (let kp in el[key]) {
+        try {
+          el[key][kp] = JSON.parse(el[key][kp]);
+        } catch {}
+      }
+    });
+  });
+
+  const tweakString = JSON.stringify(tweak, null, 2);
+  return tweakString;
+}
 
 /**
  * The base text for subtitle of Import Dialog
@@ -147,11 +214,14 @@ export const EXPORT_CODE_DIALOG =
  * The base text for subtitle of code dialog
  * @constant
  */
-export const INPUT_STYLE =
-  " focus:ring-1 focus:ring-offset-1 focus:ring-ring focus:outline-none ";
+export const COLUMN_DIV_STYLE =
+  " w-full h-full flex overflow-auto flex-col bg-muted px-16 ";
+
+export const NAV_DISPLAY_STYLE =
+  " w-full flex justify-between py-12 pb-2 px-6 ";
 
 /**
- * Default description for the flow
+ * The base text for subtitle of code dialog
  * @constant
  */
 export const DESCRIPTIONS: string[] = [
@@ -177,11 +247,12 @@ export const DESCRIPTIONS: string[] = [
   "Conversational Cartography Unlocked.",
   "Design, Develop, Dialogize.",
 ];
+export const BUTTON_DIV_STYLE =
+  " flex gap-2 focus:ring-1 focus:ring-offset-1 focus:ring-ring focus:outline-none ";
 
 /**
- * Adjectives for the name of the flow
+ * The base text for subtitle of code dialog
  * @constant
- *
  */
 export const ADJECTIVES: string[] = [
   "admiring",
@@ -249,8 +320,49 @@ export const ADJECTIVES: string[] = [
   "thirsty",
   "tiny",
   "trusting",
+  "bubbly",
+  "charming",
+  "cheerful",
+  "comical",
+  "dazzling",
+  "delighted",
+  "dynamic",
+  "effervescent",
+  "enthusiastic",
+  "exuberant",
+  "fluffy",
+  "friendly",
+  "funky",
+  "giddy",
+  "giggly",
+  "gleeful",
+  "goofy",
+  "graceful",
+  "grinning",
+  "hilarious",
+  "inquisitive",
+  "joyous",
+  "jubilant",
+  "lively",
+  "mirthful",
+  "mischievous",
+  "optimistic",
+  "peppy",
+  "perky",
+  "playful",
+  "quirky",
+  "radiant",
+  "sassy",
+  "silly",
+  "spirited",
+  "sprightly",
+  "twinkly",
+  "upbeat",
+  "vibrant",
+  "witty",
+  "zany",
+  "zealous",
 ];
-
 /**
  * Nouns for the name of the flow
  * @constant
@@ -399,6 +511,38 @@ export const NOUNS: string[] = [
   "wright",
   "yalow",
   "yonath",
+  "coulomb",
+  "degrasse",
+  "dewey",
+  "edison",
+  "eratosthenes",
+  "faraday",
+  "galton",
+  "gauss",
+  "herschel",
+  "hubble",
+  "joule",
+  "kaku",
+  "kepler",
+  "khayyam",
+  "lavoisier",
+  "maxwell",
+  "mendel",
+  "mendeleev",
+  "ohm",
+  "pascal",
+  "planck",
+  "riemann",
+  "schrodinger",
+  "sagan",
+  "tesla",
+  "tyson",
+  "volta",
+  "watt",
+  "weber",
+  "wien",
+  "zoBell",
+  "zuse",
 ];
 
 /**

@@ -59,6 +59,7 @@ def test_build_template_from_function():
     # Test with valid name
     result = build_template_from_function("ExampleClass1", type_to_loader_dict)
 
+    assert result is not None
     assert "template" in result
     assert "description" in result
     assert "base_classes" in result
@@ -67,6 +68,7 @@ def test_build_template_from_function():
     result_with_function = build_template_from_function(
         "ExampleClass1", type_to_loader_dict, add_function=True
     )
+    assert result_with_function is not None
     assert "function" in result_with_function["base_classes"]
 
     # Test with invalid name
@@ -80,6 +82,7 @@ def test_build_template_from_class():
 
     # Test valid input
     result = build_template_from_class("Child", type_to_cls_dict)
+    assert result is not None
     assert "template" in result
     assert "description" in result
     assert "base_classes" in result
@@ -222,6 +225,7 @@ def test_format_dict():
             "password": False,
             "multiline": False,
             "options": OPENAI_MODELS,
+            "value": "text-davinci-003",
         },
     }
     expected_output_openai_chat = {
@@ -233,6 +237,7 @@ def test_format_dict():
             "password": False,
             "multiline": False,
             "options": CHAT_OPENAI_MODELS,
+            "value": "gpt-3.5-turbo-0613",
         },
     }
     assert format_dict(input_dict, "OpenAI") == expected_output_openai

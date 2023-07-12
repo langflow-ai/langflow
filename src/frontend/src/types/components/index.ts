@@ -1,4 +1,5 @@
-import { ForwardRefExoticComponent, ReactElement, ReactNode } from "react";
+import { ReactElement, ReactNode } from "react";
+import { APIClassType } from "../api";
 import { NodeDataType } from "../flow/index";
 import { typesContextType } from "../typesContext";
 export type InputComponentType = {
@@ -22,6 +23,7 @@ export type DropDownComponentType = {
   options: string[];
   onSelect: (value: string) => void;
   editNode?: boolean;
+  apiModal?: boolean;
   numberOfOptions?: number;
 };
 export type ParameterComponentType = {
@@ -35,19 +37,34 @@ export type ParameterComponentType = {
   name?: string;
   tooltipTitle: string;
   dataContext?: typesContextType;
+  optionalHandle?: Array<String>;
+  info?: string;
 };
 export type InputListComponentType = {
   value: string[];
   onChange: (value: string[]) => void;
   disabled: boolean;
   editNode?: boolean;
+  onAddInput?: (value?: string[]) => void;
 };
 
 export type TextAreaComponentType = {
+  field_name?: string;
+  nodeClass?: APIClassType;
+  setNodeClass?: (value: APIClassType) => void;
   disabled: boolean;
   onChange: (value: string[] | string) => void;
   value: string;
   editNode?: boolean;
+};
+
+export type CodeAreaComponentType = {
+  disabled: boolean;
+  onChange: (value: string[] | string) => void;
+  value: string;
+  editNode?: boolean;
+  nodeClass: APIClassType;
+  setNodeClass: (value: APIClassType) => void;
 };
 
 export type FileComponentType = {
@@ -65,7 +82,7 @@ export type DisclosureComponentType = {
   openDisc: boolean;
   button: {
     title: string;
-    Icon: ForwardRefExoticComponent<React.SVGProps<SVGSVGElement>>;
+    Icon: any;
     buttons?: {
       Icon: ReactElement;
       title: string;
@@ -98,3 +115,49 @@ export type TooltipComponentType = {
     | "top-start"
     | "top";
 };
+
+export type ProgressBarType = {
+  children?: ReactElement;
+  value?: number;
+  max?: number;
+};
+
+export type RadialProgressType = {
+  value?: number;
+  color?: string;
+};
+
+export type AccordionComponentType = {
+  children?: ReactElement;
+  open?: string[];
+  trigger?: string;
+};
+export type Side = "top" | "right" | "bottom" | "left";
+
+export type ShadTooltipProps = {
+  delayDuration?: number;
+  side?: Side;
+  content: ReactNode;
+  children: ReactNode;
+  style?: string;
+};
+export type ShadToolTipType = {
+  content?: ReactNode;
+  side?: "top" | "right" | "bottom" | "left";
+  asChild?: boolean;
+  children?: ReactElement;
+  delayDuration?: number;
+  styleClasses?: string;
+};
+
+export type TextHighlightType = {
+  value?: string;
+  side?: "top" | "right" | "bottom" | "left";
+  asChild?: boolean;
+  children?: ReactElement;
+  delayDuration?: number;
+};
+
+export interface IVarHighlightType {
+  name: string;
+}

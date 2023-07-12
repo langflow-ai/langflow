@@ -1,13 +1,15 @@
-import {
-  BuildStatusTypeAPI,
-  PromptTypeAPI,
-  errorsTypeAPI,
-  InitTypeAPI,
-} from "./../../types/api/index";
-import { APIObjectType, sendAllProps } from "../../types/api/index";
 import axios, { AxiosResponse } from "axios";
-import { FlowStyleType, FlowType } from "../../types/flow";
 import { ReactFlowJsonObject } from "reactflow";
+import { APIObjectType, sendAllProps } from "../../types/api/index";
+import { FlowStyleType, FlowType } from "../../types/flow";
+import {
+  APIClassType,
+  BuildStatusTypeAPI,
+  InitTypeAPI,
+  PromptTypeAPI,
+  UploadFileTypeAPI,
+  errorsTypeAPI,
+} from "./../../types/api/index";
 
 /**
  * Fetches all objects from the API endpoint.
@@ -22,7 +24,9 @@ const GITHUB_API_URL = "https://api.github.com";
 
 export async function getRepoStars(owner, repo) {
   try {
-    const response = await axios.get(`${GITHUB_API_URL}/repos/${owner}/${repo}`);
+    const response = await axios.get(
+      `${GITHUB_API_URL}/repos/${owner}/${repo}`
+    );
     return response.data.stargazers_count;
   } catch (error) {
     console.error("Error fetching repository data:", error);
@@ -46,23 +50,23 @@ export async function postValidateCode(
   return await axios.post("/api/v1/validate/code", { code });
 }
 
-export async function postValidateNode(
-  nodeId: string,
-  data: any
-): Promise<AxiosResponse<string>> {
-  return await axios.post(`/api/v1/validate/node/${nodeId}`, { data });
-}
-
 /**
  * Checks the prompt for the code block by sending it to an API endpoint.
- *
+ * @param {string} name - The name of the field to check.
  * @param {string} template - The template string of the prompt to check.
+ * @param {APIClassType} frontend_node - The frontend node to check.
  * @returns {Promise<AxiosResponse<PromptTypeAPI>>} A promise that resolves to an AxiosResponse containing the validation results.
  */
-export async function checkPrompt(
-  template: string
+export async function postValidatePrompt(
+  name: string,
+  template: string,
+  frontend_node: APIClassType
 ): Promise<AxiosResponse<PromptTypeAPI>> {
-  return await axios.post("/api/v1/validate/prompt", { template });
+  return await axios.post("/api/v1/validate/prompt", {
+    name: name,
+    template: template,
+    frontend_node: frontend_node,
+  });
 }
 
 /**
@@ -72,7 +76,7 @@ export async function checkPrompt(
  */
 export async function getExamples(): Promise<FlowType[]> {
   const url =
-    "https://api.github.com/repos/logspace-ai/langflow_examples/contents/examples";
+    "https://api.github.com/repos/logspace-ai/langflow_examples/contents/examples?ref=fix_examples";
   const response = await axios.get(url);
 
   const jsonFiles = response.data.filter((file: any) => {
@@ -315,5 +319,23 @@ export async function getBuildStatus(
 export async function postBuildInit(
   flow: FlowType
 ): Promise<AxiosResponse<InitTypeAPI>> {
-  return await axios.post(`/api/v1/build/init`, flow);
+  return await axios.post(`/api/v1/build/init/${flow.id}`, flow);
+}
+
+// fetch(`/upload/${id}`, {
+//   method: "POST",
+//   body: formData,
+// });
+/**
+ * Uploads a file to the server.
+ * @param {File} file - The file to upload.
+ * @param {string} id - The ID of the flow to upload the file to.
+ */
+export async function uploadFile(
+  file: File,
+  id: string
+): Promise<AxiosResponse<UploadFileTypeAPI>> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return await axios.post(`/api/v1/upload/${id}`, formData);
 }

@@ -165,6 +165,7 @@ def build_template_from_method(
                         "required": param.default == param.empty,
                     }
                     for name, param in params.items()
+                    if name not in ["self", "kwargs", "args"]
                 },
             }
 
@@ -233,13 +234,20 @@ def format_dict(d, name: Optional[str] = None):
 
         _type = value["type"]
 
+        if not isinstance(_type, str):
+            _type = _type.__name__
+
         # Remove 'Optional' wrapper
         if "Optional" in _type:
             _type = _type.replace("Optional[", "")[:-1]
 
         # Check for list type
         if "List" in _type or "Sequence" in _type or "Set" in _type:
-            _type = _type.replace("List[", "")[:-1]
+            _type = (
+                _type.replace("List[", "")
+                .replace("Sequence[", "")
+                .replace("Set[", "")[:-1]
+            )
             value["list"] = True
         else:
             value["list"] = False
@@ -299,12 +307,15 @@ def format_dict(d, name: Optional[str] = None):
         if name == "OpenAI" and key == "model_name":
             value["options"] = constants.OPENAI_MODELS
             value["list"] = True
+            value["value"] = constants.OPENAI_MODELS[0]
         elif name == "ChatOpenAI" and key == "model_name":
             value["options"] = constants.CHAT_OPENAI_MODELS
             value["list"] = True
+            value["value"] = constants.CHAT_OPENAI_MODELS[0]
         elif (name == "Anthropic" or name == "ChatAnthropic") and key == "model_name":
             value["options"] = constants.ANTHROPIC_MODELS
             value["list"] = True
+            value["value"] = constants.ANTHROPIC_MODELS[0]
     return d
 
 

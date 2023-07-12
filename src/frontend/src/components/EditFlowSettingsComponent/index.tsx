@@ -1,7 +1,7 @@
-import React, { useState, ChangeEvent } from "react";
-import { Textarea } from "../../components/ui/textarea";
-import { Label } from "../../components/ui/label";
+import React, { ChangeEvent, useState } from "react";
 import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { Textarea } from "../../components/ui/textarea";
 
 type InputProps = {
   name: string | null;
@@ -44,12 +44,10 @@ export const EditFlowSettings: React.FC<InputProps> = ({
   return (
     <>
       <Label>
-        <div className="flex justify-between">
+        <div className="edit-flow-arrangement">
           <span className="font-medium">Name</span>{" "}
           {isMaxLength && (
-            <span className="text-red-500 animate-pulse ml-10">
-              Character limit reached
-            </span>
+            <span className="edit-flow-span">Character limit reached</span>
           )}
         </div>
         <Input
@@ -71,7 +69,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           onChange={handleDescriptionChange}
           value={description ?? ""}
           placeholder="Flow description"
-          className="max-h-[100px] mt-2 font-normal"
+          className="mt-2 max-h-[100px] font-normal"
           rows={3}
         />
       </Label>

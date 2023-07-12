@@ -53,7 +53,7 @@ class ToolNode(FrontendNode):
         ],
     )
     description: str = "Converts a chain, agent or function into a tool."
-    base_classes: list[str] = ["Tool"]
+    base_classes: list[str] = ["Tool", "BaseTool"]
 
     def to_dict(self):
         return super().to_dict()
@@ -96,10 +96,20 @@ class PythonFunctionToolNode(FrontendNode):
                 name="code",
                 advanced=False,
             ),
+            TemplateField(
+                field_type="bool",
+                required=True,
+                placeholder="",
+                is_list=False,
+                show=True,
+                multiline=False,
+                value=False,
+                name="return_direct",
+            ),
         ],
     )
     description: str = "Python function to be executed."
-    base_classes: list[str] = ["Tool"]
+    base_classes: list[str] = ["BaseTool", "Tool"]
 
     def to_dict(self):
         return super().to_dict()
