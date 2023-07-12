@@ -551,10 +551,3 @@ export const NOUNS: string[] = [
  *
  */
 export const USER_PROJECTS_HEADER = "My Collection";
-/**
- * CSS for highlight HTML
- * @constant
- *
- */
-export const HIGHLIGHT_CSS =
-  "block pl-3 pr-14 py-2 w-full h-full text-sm outline-0 border-0 break-all overflow-y-hidden max-w-[75vw]";

@@ -4,21 +4,9 @@ import SanitizedHTMLWrapper from "../../components/SanitizedHTMLWrapper";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "../../components/ui/dialog";
+import { DialogTitle } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
-import {
-  HIGHLIGHT_CSS,
-  PROMPT_DIALOG_SUBTITLE,
-  TEXT_DIALOG_SUBTITLE,
-} from "../../constants";
+import { PROMPT_DIALOG_SUBTITLE, TEXT_DIALOG_SUBTITLE } from "../../constants";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
 import { PopUpContext } from "../../contexts/popUpContext";
@@ -32,6 +20,7 @@ import {
   regexHighlight,
   varHighlightHTML,
 } from "../../utils";
+import BaseModal from "../baseModal";
 
 export default function GenericModal({
   field_name = "",
@@ -119,7 +108,7 @@ export default function GenericModal({
   const TextAreaContentView = () => {
     return (
       <SanitizedHTMLWrapper
-        className={HIGHLIGHT_CSS}
+        className="code-highlight"
         content={coloredContent}
         onClick={() => {
           setIsEdit(true);
@@ -166,133 +155,138 @@ export default function GenericModal({
   }
 
   return (
-    <Dialog open={true} onOpenChange={setModalOpen}>
-      <DialogTrigger></DialogTrigger>
-      <DialogContent className="min-w-[80vw] gap-2">
-        <DialogHeader>
-          <DialogTitle className="flex items-center">
-            <span className="pr-2">{myModalTitle}</span>
-            <FileText
-              strokeWidth={1.5}
-              className="h-6 w-6 pl-1 text-primary "
-              aria-hidden="true"
-            />
-          </DialogTitle>
-          <DialogDescription>
-            {(() => {
-              switch (myModalTitle) {
-                case "Edit Text":
-                  return TEXT_DIALOG_SUBTITLE;
+    <BaseModal open={true} setOpen={setModalOpen}>
+      <BaseModal.Header
+        description={(() => {
+          switch (myModalTitle) {
+            case "Edit Text":
+              return TEXT_DIALOG_SUBTITLE;
 
-                case "Edit Prompt":
-                  return PROMPT_DIALOG_SUBTITLE;
+            case "Edit Prompt":
+              return PROMPT_DIALOG_SUBTITLE;
 
-                default:
-                  return null;
-              }
-            })()}
-          </DialogDescription>
-        </DialogHeader>
 
-        <div
-          className={classNames(
-            !isEdit ? "rounded-lg border" : "",
-            "flex h-[55vh] w-full"
-          )}
-        >
-          {type === TypeModal.PROMPT && isEdit ? (
-            <Textarea
-              ref={ref}
-              className="form-input h-full w-full rounded-lg border-border custom-scroll focus-visible:ring-1"
-              value={inputValue}
-              onBlur={() => {
-                setIsEdit(false);
-              }}
-              autoFocus
-              onChange={(e) => {
-                setInputValue(e.target.value);
-                checkVariables(e.target.value);
-              }}
-              placeholder="Type message here."
-            />
-          ) : type === TypeModal.PROMPT && !isEdit ? (
-            <TextAreaContentView />
-          ) : type !== TypeModal.PROMPT ? (
-            <Textarea
-              ref={ref}
-              className="form-input h-full w-full rounded-lg border-border focus-visible:ring-1"
-              value={inputValue}
-              onChange={(e) => {
-                setInputValue(e.target.value);
-              }}
-              placeholder="Type message here."
-            />
-          ) : (
-            <></>
-          )}
-        </div>
-
-        {type === TypeModal.PROMPT && (
-          <>
-            <div className="sm:6/6 mr-28 mt-3 h-[60px] overflow-y-auto custom-scroll">
-              <div className="flex flex-wrap items-center">
-                <Variable className=" -ml-px mr-1 flex h-4 w-4 text-primary"></Variable>
-                <span className="text-md font-semibold text-primary">
-                  Input Variables:
-                </span>
-
-                {wordsHighlight.map((word, index) => (
-                  <ShadTooltip
-                    key={getRandomKeyByssmm() + index}
-                    content={word.replace(/[{}]/g, "")}
-                    asChild={false}
-                  >
-                    <Badge
-                      key={index}
-                      variant="gray"
-                      size="md"
-                      className="m-1 max-w-[40vw] cursor-default truncate p-2.5 text-sm"
-                    >
-                      <div className="relative bottom-[1px]">
-                        <span>
-                          {word.replace(/[{}]/g, "").length > 59
-                            ? word.replace(/[{}]/g, "").slice(0, 56) + "..."
-                            : word.replace(/[{}]/g, "")}
-                        </span>
-                      </div>
-                    </Badge>
-                  </ShadTooltip>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
-
-        <DialogFooter>
-          <Button
-            className="mt-3"
-            onClick={() => {
-              switch (myModalType) {
-                case 1:
-                  setValue(inputValue);
-                  setModalOpen(false);
-                  break;
-                case 2:
-                  !inputValue || inputValue === ""
-                    ? setModalOpen(false)
-                    : validatePrompt(false);
-                  break;
-
-                default:
-                  break;
-              }
-            }}
-            type="submit"
+            default:
+              return null;
+          }
+        })()}
+      >
+        <DialogTitle className="flex items-center">
+          <span className="pr-2">{myModalTitle}</span>
+          <FileText
+            strokeWidth={1.5}
+            className="h-6 w-6 pl-1 text-primary "
+            aria-hidden="true"
+          />
+        </DialogTitle>
+      </BaseModal.Header>
+      <BaseModal.Content>
+        <div className="flex h-full flex-col">
+          <div
+            className={classNames(
+              !isEdit ? "rounded-lg border" : "",
+              "flex h-full w-full"
+            )}
           >
-            {myButtonText}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            {type === TypeModal.PROMPT && isEdit ? (
+              <Textarea
+                ref={ref}
+                className="form-input h-full w-full rounded-lg custom-scroll focus-visible:ring-1"
+                value={inputValue}
+                onBlur={() => {
+                  setIsEdit(false);
+                }}
+                autoFocus
+                onChange={(e) => {
+                  setInputValue(e.target.value);
+                  checkVariables(e.target.value);
+                }}
+                placeholder="Type message here."
+              />
+            ) : type === TypeModal.PROMPT && !isEdit ? (
+              <TextAreaContentView />
+            ) : type !== TypeModal.PROMPT ? (
+              <Textarea
+                ref={ref}
+                className="form-input h-full w-full rounded-lg focus-visible:ring-1"
+                value={inputValue}
+                onChange={(e) => {
+                  setInputValue(e.target.value);
+                }}
+                placeholder="Type message here."
+              />
+            ) : (
+              <></>
+            )}
+          </div>
+
+          <div className="mt-6 flex h-fit w-full items-end justify-between">
+            <div className="mb-auto flex-1">
+              {type === TypeModal.PROMPT && (
+                <div className=" mr-2">
+                  <div className="max-h-20 overflow-y-auto custom-scroll">
+                    <div className="flex flex-wrap items-center">
+                      <Variable className=" -ml-px mr-1 flex h-4 w-4 text-primary"></Variable>
+                      <span className="text-md font-semibold text-primary">
+                        Prompt Variables:
+                      </span>
+
+                      {wordsHighlight.map((word, index) => (
+                        <ShadTooltip
+                          key={getRandomKeyByssmm() + index}
+                          content={word.replace(/[{}]/g, "")}
+                          asChild={false}
+                        >
+                          <Badge
+                            key={index}
+                            variant="gray"
+                            size="md"
+                            className="m-1 max-w-[40vw] cursor-default truncate p-2.5 text-sm"
+                          >
+                            <div className="relative bottom-[1px]">
+                              <span>
+                                {word.replace(/[{}]/g, "").length > 59
+                                  ? word.replace(/[{}]/g, "").slice(0, 56) +
+                                    "..."
+                                  : word.replace(/[{}]/g, "")}
+                              </span>
+                            </div>
+                          </Badge>
+                        </ShadTooltip>
+                      ))}
+                    </div>
+                  </div>
+                  <span className="mt-1 text-xs text-muted-foreground">
+                    Prompt variables can be created with any chosen name inside
+                    curly brackets, e.g. {"{variable_name}"}
+                  </span>
+                </div>
+              )}
+            </div>
+            <Button
+              onClick={() => {
+                switch (myModalType) {
+                  case 1:
+                    setValue(inputValue);
+                    setModalOpen(false);
+                    break;
+                  case 2:
+                    !inputValue || inputValue === ""
+                      ? setModalOpen(false)
+                      : validatePrompt(false);
+                    break;
+
+                  default:
+                    break;
+                }
+              }}
+              type="submit"
+            >
+              {myButtonText}
+            </Button>
+          </div>
+        </div>
+      </BaseModal.Content>
+    </BaseModal>
   );
 }
