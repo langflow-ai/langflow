@@ -121,7 +121,7 @@ export default function Header() {
                 <>
                   <div
                     className="absolute z-10"
-                    style={{ top: top + 34, left: left - AlertWidth }}
+                    style={{ top: top + 40, left: left - AlertWidth }}
                   >
                     <AlertDropdown />
                   </div>
