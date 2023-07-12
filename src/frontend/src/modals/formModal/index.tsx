@@ -50,7 +50,7 @@ export default function FormModal({
       const handleKeys = formKeysData.handle_keys;
 
       const keyToUse = Object.keys(inputKeys).find(
-        (k) => !handleKeys.some((j) => j === k)
+        (k) => !handleKeys.some((j) => j === k) && inputKeys[k] === ""
       );
 
       return inputKeys[keyToUse];
@@ -73,7 +73,9 @@ export default function FormModal({
   const tabsStateFlowIdFormKeysData = tabsStateFlowId.formKeysData;
   const [chatKey, setChatKey] = useState(
     Object.keys(tabsState[flow.id].formKeysData.input_keys).find(
-      (k) => !tabsState[flow.id].formKeysData.handle_keys.some((j) => j === k)
+      (k) =>
+        !tabsState[flow.id].formKeysData.handle_keys.some((j) => j === k) &&
+        tabsState[flow.id].formKeysData.input_keys[k] === ""
     )
   );
 
@@ -381,6 +383,9 @@ export default function FormModal({
     if (checked === true) {
       setChatKey(i);
       setChatValue(tabsState[flow.id].formKeysData.input_keys[i]);
+    } else {
+      setChatKey(null);
+      setChatValue("");
     }
   }
   return (
