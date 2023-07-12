@@ -1,7 +1,7 @@
 import { Route, Routes } from "react-router-dom";
-import HomePage from "./pages/MainPage";
-import FlowPage from "./pages/FlowPage";
 import CommunityPage from "./pages/CommunityPage";
+import FlowPage from "./pages/FlowPage";
+import HomePage from "./pages/MainPage";
 
 const Router = () => {
   return (

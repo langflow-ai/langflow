@@ -1,16 +1,15 @@
-import contextlib
-import io
 from pathlib import Path
 from langchain.schema import AgentAction
 import json
 from langflow.interface.run import (
-    build_langchain_object_with_caching,
+    build_sorted_vertices_with_caching,
     get_memory_key,
     update_memory_keys,
 )
 from langflow.utils.logger import logger
 from langflow.graph import Graph
-
+from langchain.chains.base import Chain
+from langchain.vectorstores.base import VectorStore
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 
@@ -23,7 +22,10 @@ def fix_memory_inputs(langchain_object):
     if not hasattr(langchain_object, "memory") or langchain_object.memory is None:
         return
     try:
-        if langchain_object.memory.memory_key in langchain_object.input_variables:
+        if (
+            hasattr(langchain_object.memory, "memory_key")
+            and langchain_object.memory.memory_key in langchain_object.input_variables
+        ):
             return
     except AttributeError:
         input_variables = (
@@ -55,69 +57,54 @@ def format_actions(actions: List[Tuple[AgentAction, str]]) -> str:
     return "\n".join(output)
 
 
-def get_result_and_thought(langchain_object, message: str):
+def get_result_and_thought(langchain_object: Any, inputs: dict):
     """Get result and thought from extracted json"""
     try:
         if hasattr(langchain_object, "verbose"):
             langchain_object.verbose = True
-        chat_input = None
-        memory_key = ""
-        if hasattr(langchain_object, "memory") and langchain_object.memory is not None:
-            memory_key = langchain_object.memory.memory_key
-
-        if hasattr(langchain_object, "input_keys"):
-            for key in langchain_object.input_keys:
-                if key not in [memory_key, "chat_history"]:
-                    chat_input = {key: message}
-        else:
-            chat_input = message  # type: ignore
 
         if hasattr(langchain_object, "return_intermediate_steps"):
-            # https://github.com/hwchase17/langchain/issues/2068
-            # Deactivating until we have a frontend solution
-            # to display intermediate steps
-            langchain_object.return_intermediate_steps = False
+            langchain_object.return_intermediate_steps = True
 
         fix_memory_inputs(langchain_object)
 
-        with io.StringIO() as output_buffer, contextlib.redirect_stdout(output_buffer):
-            try:
-                # if hasattr(langchain_object, "acall"):
-                #     output = await langchain_object.acall(chat_input)
-                # else:
-                output = langchain_object(chat_input)
-            except ValueError as exc:
-                # make the error message more informative
-                logger.debug(f"Error: {str(exc)}")
-                output = langchain_object.run(chat_input)
-
-            intermediate_steps = (
-                output.get("intermediate_steps", []) if isinstance(output, dict) else []
-            )
-
-            result = (
-                output.get(langchain_object.output_keys[0])
-                if isinstance(output, dict)
-                else output
-            )
-            if intermediate_steps:
-                thought = format_actions(intermediate_steps)
-            else:
-                thought = output_buffer.getvalue()
+        try:
+            output = langchain_object(inputs, return_only_outputs=True)
+        except ValueError as exc:
+            # make the error message more informative
+            logger.debug(f"Error: {str(exc)}")
+            output = langchain_object.run(inputs)
 
     except Exception as exc:
         raise ValueError(f"Error: {str(exc)}") from exc
-    return result, thought
+    return output
 
 
-def process_graph_cached(data_graph: Dict[str, Any], message: str):
+def get_input_str_if_only_one_input(inputs: dict) -> Optional[str]:
+    """Get input string if only one input is provided"""
+    return list(inputs.values())[0] if len(inputs) == 1 else None
+
+
+def process_graph_cached(data_graph: Dict[str, Any], inputs: Optional[dict] = None):
     """
     Process graph by extracting input variables and replacing ZeroShotPrompt
     with PromptTemplate,then run the graph and return the result and thought.
     """
     # Load langchain object
-    langchain_object = build_langchain_object_with_caching(data_graph)
-    logger.debug("Loaded langchain object")
+    langchain_object, artifacts = build_sorted_vertices_with_caching(data_graph)
+    logger.debug("Loaded LangChain object")
+    if inputs is None:
+        inputs = {}
+
+    # Add artifacts to inputs
+    # artifacts can be documents loaded when building
+    # the flow
+    for (
+        key,
+        value,
+    ) in artifacts.items():
+        if key not in inputs or not inputs[key]:
+            inputs[key] = value
 
     if langchain_object is None:
         # Raise user facing error
@@ -126,30 +113,39 @@ def process_graph_cached(data_graph: Dict[str, Any], message: str):
         )
 
     # Generate result and thought
-    logger.debug("Generating result and thought")
-    result, thought = get_result_and_thought(langchain_object, message)
-    logger.debug("Generated result and thought")
-    return {"result": str(result), "thought": thought.strip()}
+    if isinstance(langchain_object, Chain):
+        if inputs is None:
+            raise ValueError("Inputs must be provided for a Chain")
+        logger.debug("Generating result and thought")
+        result = get_result_and_thought(langchain_object, inputs)
+        logger.debug("Generated result and thought")
+    elif isinstance(langchain_object, VectorStore):
+        result = langchain_object.search(**inputs)
+    else:
+        raise ValueError(
+            f"Unknown langchain_object type: {type(langchain_object).__name__}"
+        )
+    return result
 
 
 def load_flow_from_json(
-    input: Union[Path, str, dict], tweaks: Optional[dict] = None, build=True
+    flow: Union[Path, str, dict], tweaks: Optional[dict] = None, build=True
 ):
     """
     Load flow from a JSON file or a JSON object.
 
-    :param input: JSON file path or JSON object
+    :param flow: JSON file path or JSON object
     :param tweaks: Optional tweaks to be processed
     :param build: If True, build the graph, otherwise return the graph object
     :return: Langchain object or Graph object depending on the build parameter
     """
     # If input is a file path, load JSON from the file
-    if isinstance(input, (str, Path)):
-        with open(input, "r", encoding="utf-8") as f:
+    if isinstance(flow, (str, Path)):
+        with open(flow, "r", encoding="utf-8") as f:
             flow_graph = json.load(f)
     # If input is a dictionary, assume it's a JSON object
-    elif isinstance(input, dict):
-        flow_graph = input
+    elif isinstance(flow, dict):
+        flow_graph = flow
     else:
         raise TypeError(
             "Input must be either a file path (str) or a JSON object (dict)"
@@ -206,7 +202,8 @@ def apply_tweaks(node: Dict[str, Any], node_tweaks: Dict[str, Any]) -> None:
 
     for tweak_name, tweak_value in node_tweaks.items():
         if tweak_name and tweak_value and tweak_name in template_data:
-            template_data[tweak_name]["value"] = tweak_value
+            key = tweak_name if tweak_name == "file_path" else "value"
+            template_data[tweak_name][key] = tweak_value
 
 
 def process_tweaks(

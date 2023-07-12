@@ -13,9 +13,34 @@ class ChainFrontendNode(FrontendNode):
             self.template.add_field(
                 TemplateField(
                     field_type="BaseChatMemory",
-                    required=False,
+                    required=True,
                     show=True,
                     name="memory",
+                    advanced=False,
+                )
+            )
+            # add return_source_documents
+            self.template.add_field(
+                TemplateField(
+                    field_type="bool",
+                    required=False,
+                    show=True,
+                    name="return_source_documents",
+                    advanced=False,
+                    value=True,
+                    display_name="Return source documents",
+                )
+            )
+            self.template.add_field(
+                TemplateField(
+                    field_type="str",
+                    required=True,
+                    is_list=True,
+                    show=True,
+                    multiline=False,
+                    options=QA_CHAIN_TYPES,
+                    value=QA_CHAIN_TYPES[0],
+                    name="chain_type",
                     advanced=False,
                 )
             )
@@ -23,6 +48,10 @@ class ChainFrontendNode(FrontendNode):
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         FrontendNode.format_field(field, name)
+
+        if "name" == "RetrievalQA" and field.name == "memory":
+            field.show = False
+            field.required = False
 
         field.advanced = False
         if "key" in field.name:
@@ -47,17 +76,23 @@ class ChainFrontendNode(FrontendNode):
             field.show = True
             field.advanced = False
         if field.name == "memory":
-            field.required = False
+            # field.required = False
             field.show = True
             field.advanced = False
         if field.name == "verbose":
             field.required = False
-            field.show = True
+            field.show = False
             field.advanced = True
         if field.name == "llm":
             field.required = True
             field.show = True
             field.advanced = False
+
+        if field.name == "return_source_documents":
+            field.required = False
+            field.show = True
+            field.advanced = True
+            field.value = True
 
 
 class SeriesCharacterChainNode(FrontendNode):

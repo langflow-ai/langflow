@@ -1,8 +1,7 @@
 import { useContext, useEffect, useState } from "react";
-import { FloatComponentType } from "../../types/components";
+import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
-import { classNames } from "../../utils";
-import { INPUT_STYLE } from "../../constants";
+import { FloatComponentType } from "../../types/components";
 
 export default function IntComponent({
   value,
@@ -14,6 +13,7 @@ export default function IntComponent({
   const [myValue, setMyValue] = useState(value ?? "");
   const { setDisableCopyPaste } = useContext(TabsContext);
   const min = 0;
+  const { closePopUp } = useContext(PopUpContext);
 
   useEffect(() => {
     if (disabled) {
@@ -24,13 +24,13 @@ export default function IntComponent({
 
   useEffect(() => {
     setMyValue(value);
-  }, [value]);
+  }, [closePopUp]);
 
   return (
     <div
       className={
         "w-full " +
-        (disabled ? "pointer-events-none cursor-not-allowed w-full" : "w-full")
+        (disabled ? "pointer-events-none w-full cursor-not-allowed" : "")
       }
     >
       <input
@@ -41,7 +41,6 @@ export default function IntComponent({
           if (disableCopyPaste) setDisableCopyPaste(false);
         }}
         onKeyDown={(event) => {
-          // console.log(event);
           if (
             event.key !== "Backspace" &&
             event.key !== "Enter" &&
@@ -70,13 +69,10 @@ export default function IntComponent({
         value={myValue}
         className={
           editNode
-            ? "focus:placeholder-transparent text-center placeholder:text-center border-1 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm" +
-              INPUT_STYLE
-            : "focus:placeholder-transparent block w-full form-input dark:bg-gray-900 dark:border-gray-600 dark:text-gray-300 rounded-md border-gray-300 shadow-sm ring-offset-background sm:text-sm" +
-              INPUT_STYLE +
-              (disabled ? " bg-gray-200 dark:bg-gray-700" : "")
+            ? " input-edit-node "
+            : " input-primary " + (disabled ? " input-disable" : "")
         }
-        placeholder={editNode ? "Integer number" : "Type a integer number"}
+        placeholder={editNode ? "Integer number" : "Type an integer number"}
         onChange={(e) => {
           setMyValue(e.target.value);
           onChange(e.target.value);
