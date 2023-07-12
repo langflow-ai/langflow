@@ -4,8 +4,8 @@ const lightCodeTheme = require("prism-react-renderer/themes/github");
 /** @type {import('@docusaurus/types').DocusaurusConfig} */
 (
   module.exports = {
-    title: "LangFlow Documentation",
-    tagline: "LangFlow is a GUI for LangChain, designed with react-flow",
+    title: "Langflow Documentation",
+    tagline: "Langflow is a GUI for LangChain, designed with react-flow",
     favicon: "img/favicon.ico",
     url: "https://logspace-ai.github.io",
     baseUrl: "/",
@@ -59,9 +59,9 @@ const lightCodeTheme = require("prism-react-renderer/themes/github");
       ({
         navbar: {
           hideOnScroll: true,
-          title: "LangFlow",
+          title: "Langflow",
           logo: {
-            alt: "LangFlow",
+            alt: "Langflow",
             src: "img/chain.png",
           },
           items: [
@@ -103,7 +103,7 @@ const lightCodeTheme = require("prism-react-renderer/themes/github");
         },
         announcementBar: {
           content:
-            '⭐️ If you like ⛓️LangFlow, star it on <a target="_blank" rel="noopener noreferrer" href="https://github.com/logspace-ai/langflow">GitHub</a>! ⭐️',
+            '⭐️ If you like ⛓️Langflow, star it on <a target="_blank" rel="noopener noreferrer" href="https://github.com/logspace-ai/langflow">GitHub</a>! ⭐️',
           backgroundColor: "#B53D38", //Mustard Yellow #D19900 #D4B20B - Salmon #E9967A
           textColor: "#fff",
           isCloseable: false,
