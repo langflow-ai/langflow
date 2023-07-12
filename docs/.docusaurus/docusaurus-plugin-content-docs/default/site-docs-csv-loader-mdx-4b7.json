@@ -1,0 +1,23 @@
+{
+  "unversionedId": "csv-loader",
+  "id": "csv-loader",
+  "title": "CSV Loader",
+  "description": "The VectoStoreAgent component retrieves information from one or more vector stores. This example shows a VectoStoreAgent connected to a CSV file through the Chroma vector store. Process description:",
+  "source": "@site/docs/csv-loader.mdx",
+  "sourceDirName": ".",
+  "slug": "/csv-loader",
+  "permalink": "/csv-loader",
+  "draft": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "MidJourney Prompt Chain",
+    "permalink": "/midjourney-prompt-chain"
+  },
+  "next": {
+    "title": "Serp API Tool",
+    "permalink": "/serp-api-tool"
+  }
+}

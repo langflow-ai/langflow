@@ -1,0 +1,23 @@
+{
+  "unversionedId": "examples/conversation-chain",
+  "id": "examples/conversation-chain",
+  "title": "Conversation Chain",
+  "description": "This example shows how to instantiate a simple ConversationChain component using a Language Model (LLM). Once the Node Status turns green 🟢, the chat will be ready to take in user messages. Here, we used ChatOpenAI to act as the required LLM input, but you can use any LLM for this purpose.",
+  "source": "@site/docs/examples/conversation-chain.mdx",
+  "sourceDirName": "examples",
+  "slug": "/examples/conversation-chain",
+  "permalink": "/examples/conversation-chain",
+  "draft": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Wrappers",
+    "permalink": "/components/wrappers"
+  },
+  "next": {
+    "title": "Buffer Memory",
+    "permalink": "/examples/buffer-memory"
+  }
+}

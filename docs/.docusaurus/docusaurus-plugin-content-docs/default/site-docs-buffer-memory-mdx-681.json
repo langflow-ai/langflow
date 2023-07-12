@@ -1,0 +1,23 @@
+{
+  "unversionedId": "buffer-memory",
+  "id": "buffer-memory",
+  "title": "Buffer Memory",
+  "description": "For certain applications, retaining past interactions is crucial. For that, chains and agents may accept a memory component as one of their input parameters. The ConversationBufferMemory component is one of them. It stores messages and extracts them into variables.",
+  "source": "@site/docs/buffer-memory.mdx",
+  "sourceDirName": ".",
+  "slug": "/buffer-memory",
+  "permalink": "/buffer-memory",
+  "draft": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Conversation Chain",
+    "permalink": "/conversation-chain"
+  },
+  "next": {
+    "title": "MidJourney Prompt Chain",
+    "permalink": "/midjourney-prompt-chain"
+  }
+}

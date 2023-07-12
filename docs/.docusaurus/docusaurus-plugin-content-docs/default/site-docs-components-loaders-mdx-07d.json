@@ -1,0 +1,23 @@
+{
+  "unversionedId": "components/loaders",
+  "id": "components/loaders",
+  "title": "Loaders",
+  "description": "(coming soon)",
+  "source": "@site/docs/components/loaders.mdx",
+  "sourceDirName": "components",
+  "slug": "/components/loaders",
+  "permalink": "/components/loaders",
+  "draft": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Chains",
+    "permalink": "/components/chains"
+  },
+  "next": {
+    "title": "Embeddings",
+    "permalink": "/components/embeddings"
+  }
+}

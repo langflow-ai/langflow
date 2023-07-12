@@ -1,0 +1,23 @@
+{
+  "unversionedId": "components/memories",
+  "id": "components/memories",
+  "title": "Memories",
+  "description": "(coming soon)",
+  "source": "@site/docs/components/memories.mdx",
+  "sourceDirName": "components",
+  "slug": "/components/memories",
+  "permalink": "/components/memories",
+  "draft": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "LLMs",
+    "permalink": "/components/llms"
+  },
+  "next": {
+    "title": "Prompts",
+    "permalink": "/components/prompts"
+  }
+}

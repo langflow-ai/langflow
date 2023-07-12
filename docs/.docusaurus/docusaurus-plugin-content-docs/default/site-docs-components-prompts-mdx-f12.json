@@ -1,0 +1,23 @@
+{
+  "unversionedId": "components/prompts",
+  "id": "components/prompts",
+  "title": "Prompts",
+  "description": "(coming soon)",
+  "source": "@site/docs/components/prompts.mdx",
+  "sourceDirName": "components",
+  "slug": "/components/prompts",
+  "permalink": "/components/prompts",
+  "draft": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Memories",
+    "permalink": "/components/memories"
+  },
+  "next": {
+    "title": "Text Splitters",
+    "permalink": "/components/text-splitters"
+  }
+}
