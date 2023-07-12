@@ -242,3 +242,6 @@ dmypy.json
 # Poetry
 .testenv/*
 langflow.db
+
+# docusaurus
+.docusaurus/
