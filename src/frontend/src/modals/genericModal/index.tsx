@@ -203,7 +203,7 @@ export default function GenericModal({
           {type === TypeModal.PROMPT && isEdit ? (
             <Textarea
               ref={ref}
-              className="form-input h-full w-full rounded-lg border-gray-300 custom-scroll focus-visible:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+              className="form-input h-full w-full rounded-lg border-border custom-scroll focus-visible:ring-1"
               value={inputValue}
               onBlur={() => {
                 setIsEdit(false);
@@ -220,7 +220,7 @@ export default function GenericModal({
           ) : type !== TypeModal.PROMPT ? (
             <Textarea
               ref={ref}
-              className="form-input h-full w-full rounded-lg border-gray-300 focus-visible:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+              className="form-input h-full w-full rounded-lg border-border focus-visible:ring-1"
               value={inputValue}
               onChange={(e) => {
                 setInputValue(e.target.value);
