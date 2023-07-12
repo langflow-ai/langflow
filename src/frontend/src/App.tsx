@@ -14,6 +14,7 @@ import { alertContext } from "./contexts/alertContext";
 import { locationContext } from "./contexts/locationContext";
 import { TabsContext } from "./contexts/tabsContext";
 import Router from "./routes";
+import ChatWidget from "./webComponents/chatWidget";
 
 export default function App() {
   let { setCurrent, setShowSideBar, setIsStackedOpen } =
@@ -136,7 +137,9 @@ export default function App() {
         <Header />
         <Router />
       </ErrorBoundary>
-      <div></div>
+      <div>
+        <ChatWidget />
+      </div>
       <div className="app-div" style={{ zIndex: 999 }}>
         {alertsList.map((alert) => (
           <div key={alert.id}>
