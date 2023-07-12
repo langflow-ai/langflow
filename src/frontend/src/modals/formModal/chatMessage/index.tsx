@@ -181,7 +181,7 @@ export default function ChatMessage({
                       // Push div with matched text
                       if (chat.message[match[1]]) {
                         parts.push(
-                          <span className="my-1 rounded-md bg-indigo-100">
+                          <span className="my-1 rounded-md bg-low-indigo">
                             {chat.message[match[1]]}
                           </span>
                         );
