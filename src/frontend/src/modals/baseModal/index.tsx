@@ -59,20 +59,25 @@ function BaseModal({
     (child) => (child as React.ReactElement).type === Content
   );
 
-  let sizeClass = "";
+  let minWidth: string;
+  let height: string;
 
   switch (size) {
     case "small":
-      sizeClass = "min-w-[40vw]";
+      minWidth = "min-w-[40vw]";
+      height = "h-[40vh]";
       break;
     case "medium":
-      sizeClass = "min-w-[60vw]";
+      minWidth = "min-w-[60vw]";
+      height = "h-[60vh]";
       break;
     case "large":
-      sizeClass = "min-w-[80vw]";
+      minWidth = "min-w-[80vw]";
+      height = "h-[80vh]";
       break;
     default:
-      sizeClass = "min-w-[80vw]";
+      minWidth = "min-w-[80vw]";
+      height = "h-[80vh]";
       break;
   }
 
@@ -80,9 +85,9 @@ function BaseModal({
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger className="hidden"></DialogTrigger>
-      <DialogContent className={sizeClass}>
+      <DialogContent className={minWidth}>
         {headerChild}
-        <div className="mt-2 flex h-[80vh] w-full ">{ContentChild}</div>
+        <div className={`mt-2 flex ${height} w-full `}>{ContentChild}</div>
       </DialogContent>
     </Dialog>
   );
