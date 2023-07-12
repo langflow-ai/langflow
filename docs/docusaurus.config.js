@@ -12,7 +12,6 @@ const lightCodeTheme = require("prism-react-renderer/themes/github");
     onBrokenLinks: "throw",
     onBrokenMarkdownLinks: "warn",
     organizationName: "logspace-ai",
-    deploymentBranch: "main",
     projectName: "langflow",
     trailingSlash: false,
     customFields: {
