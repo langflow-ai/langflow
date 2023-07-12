@@ -1,3 +1,4 @@
+import contextlib
 import json
 from typing import Any, Callable, Dict, List, Sequence, Type
 
@@ -24,6 +25,7 @@ from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.chains.base import chain_creator
 from langflow.interface.output_parsers.base import output_parser_creator
 from langflow.interface.retrievers.base import retriever_creator
+from langflow.interface.wrappers.base import wrapper_creator
 from langflow.interface.utils import load_file_into_dict
 from langflow.utils import validate
 from langchain.chains.base import Chain
@@ -70,7 +72,11 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
     elif base_type == "prompts":
         return instantiate_prompt(node_type, class_object, params)
     elif base_type == "tools":
-        return instantiate_tool(node_type, class_object, params)
+        tool = instantiate_tool(node_type, class_object, params)
+        if hasattr(tool, "name") and isinstance(tool, BaseTool):
+            # tool name shouldn't contain spaces
+            tool.name = tool.name.replace(" ", "_")
+        return tool
     elif base_type == "toolkits":
         return instantiate_toolkit(node_type, class_object, params)
     elif base_type == "embeddings":
@@ -95,6 +101,8 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
         return instantiate_memory(node_type, class_object, params)
     elif base_type == "custom_components":
         return instantiate_custom_component(node_type, class_object, params)
+    elif base_type == "wrappers":
+        return instantiate_wrapper(node_type, class_object, params)
     else:
         return class_object(**params)
 
@@ -102,6 +110,15 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
 def instantiate_custom_component(node_type, class_object, params):
     class_object = get_function_custom(params.pop("code"))
     return class_object().build(**params)
+
+
+def instantiate_wrapper(node_type, class_object, params):
+    if node_type in wrapper_creator.from_method_nodes:
+        method = wrapper_creator.from_method_nodes[node_type]
+        if class_method := getattr(class_object, method, None):
+            return class_method(**params)
+        raise ValueError(f"Method {method} not found in {class_object}")
+    return class_object(**params)
 
 
 def instantiate_output_parser(node_type, class_object, params):
@@ -119,12 +136,21 @@ def instantiate_llm(node_type, class_object, params: Dict):
     # False if condition is True
     if node_type == "VertexAI":
         return initialize_vertexai(class_object=class_object, params=params)
+    # max_tokens sometimes is a string and should be an int
+    if "max_tokens" in params:
+        if isinstance(params["max_tokens"], str) and params["max_tokens"].isdigit():
+            params["max_tokens"] = int(params["max_tokens"])
+        elif not isinstance(params.get("max_tokens"), int):
+            params.pop("max_tokens", None)
     return class_object(**params)
 
 
 def instantiate_memory(node_type, class_object, params):
     # process input_key and output_key to remove them if
     # they are empty strings
+    if node_type == "ConversationEntityMemory":
+        params.pop("memory_key", None)
+
     for key in ["input_key", "output_key"]:
         if key in params and (params[key] == "" or not params[key]):
             params.pop(key)
@@ -178,8 +204,7 @@ def instantiate_agent(node_type, class_object: Type[agent_module.Agent], params:
             agent = class_method(**params)
             tools = params.get("tools", [])
             return AgentExecutor.from_agent_and_tools(
-                agent=agent,
-                tools=tools,
+                agent=agent, tools=tools, handle_parsing_errors=True
             )
     return load_agent_executor(class_object, params)
 
@@ -189,7 +214,7 @@ def instantiate_prompt(node_type, class_object, params: Dict):
         if "tools" not in params:
             params["tools"] = []
         return ZeroShotAgent.create_prompt(**params)
-    if "MessagePromptTemplate" in node_type:
+    elif "MessagePromptTemplate" in node_type:
         # Then we only need the template
         from_template_params = {
             "template": params.pop("prompt", params.pop("template", ""))
@@ -197,12 +222,12 @@ def instantiate_prompt(node_type, class_object, params: Dict):
 
         if not from_template_params.get("template"):
             raise ValueError("Prompt template is required")
-        return class_object.from_template(**from_template_params)
+        prompt = class_object.from_template(**from_template_params)
 
-    if node_type == "ChatPromptTemplate":
-        return class_object.from_messages(**params)
-
-    prompt = class_object(**params)
+    elif node_type == "ChatPromptTemplate":
+        prompt = class_object.from_messages(**params)
+    else:
+        prompt = class_object(**params)
 
     format_kwargs: Dict[str, Any] = {}
     for input_variable in prompt.input_variables:
@@ -214,18 +239,23 @@ def instantiate_prompt(node_type, class_object, params: Dict):
                 variable, "get_format_instructions"
             ):
                 format_kwargs[input_variable] = variable.get_format_instructions()
-            # check if is a list of Document
             elif isinstance(variable, List) and all(
                 isinstance(item, Document) for item in variable
             ):
                 # Format document to contain page_content and metadata
                 # as one string separated by a newline
-                format_kwargs[input_variable] = "\n".join(
-                    [
-                        f"Document:{item.page_content}\nMetadata:{item.metadata}"
-                        for item in variable
-                    ]
-                )
+                if len(variable) > 1:
+                    content = "\n".join(
+                        [item.page_content for item in variable if item.page_content]
+                    )
+                else:
+                    content = variable[0].page_content
+                    # content could be a json list of strings
+                    with contextlib.suppress(json.JSONDecodeError):
+                        content = json.loads(content)
+                        if isinstance(content, list):
+                            content = ",".join([str(item) for item in content])
+                format_kwargs[input_variable] = content
                 # handle_keys will be a list but it does not exist yet
                 # so we need to create it
 
@@ -247,12 +277,14 @@ def instantiate_prompt(node_type, class_object, params: Dict):
 
 def instantiate_tool(node_type, class_object: Type[BaseTool], params: Dict):
     if node_type == "JsonSpec":
-        params["dict_"] = load_file_into_dict(params.pop("path"))
+        if file_dict := load_file_into_dict(params.pop("path")):
+            params["dict_"] = file_dict
+        else:
+            raise ValueError("Invalid file")
         return class_object(**params)
     elif node_type == "PythonFunctionTool":
         params["func"] = get_function(params.get("code"))
         return class_object(**params)
-    # For backward compatibility
     elif node_type == "PythonFunction":
         function_string = params["code"]
         if isinstance(function_string, str):
@@ -354,6 +386,12 @@ def instantiate_textsplitter(
         "separator_type" in params and params["separator_type"] == "Text"
     ) or "separator_type" not in params:
         params.pop("separator_type", None)
+        # separators might come in as an escaped string like \\n
+        # so we need to convert it to a string
+        if "separators" in params:
+            params["separators"] = (
+                params["separators"].encode().decode("unicode-escape")
+            )
         text_splitter = class_object(**params)
     else:
         from langchain.text_splitter import Language
@@ -406,6 +444,7 @@ def load_agent_executor(agent_class: type[agent_module.Agent], params, **kwargs)
     return AgentExecutor.from_agent_and_tools(
         agent=agent,
         tools=allowed_tools,
+        handle_parsing_errors=True,
         # memory=memory,
         **kwargs,
     )

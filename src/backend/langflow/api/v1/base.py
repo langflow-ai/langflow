@@ -60,12 +60,26 @@ INVALID_CHARACTERS = {
     "}",
 }
 
+INVALID_NAMES = {
+    "input_variables",
+    "output_parser",
+    "partial_variables",
+    "template",
+    "template_format",
+    "validate_template",
+}
+
 
 def validate_prompt(template: str):
     input_variables = extract_input_variables_from_prompt(template)
 
     # Check if there are invalid characters in the input_variables
     input_variables = check_input_variables(input_variables)
+    if any(var in INVALID_NAMES for var in input_variables):
+        raise ValueError(
+            f"Invalid input variables. None of the variables can be named {', '.join(input_variables)}. "
+        )
+
     try:
         PromptTemplate(template=template, input_variables=input_variables)
     except Exception as exc:

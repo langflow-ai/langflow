@@ -14,7 +14,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../../../ui/dropdown-menu";
 
@@ -52,13 +51,11 @@ export const MenuBar = ({ flows, tabId }) => {
       <div className="header-menu-bar">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              className="header-menu-bar-display"
-              variant="primary"
-              size="sm"
-            >
-              <div className="header-menu-flow-name">{current_flow.name}</div>
-              <ChevronDown className="h-4 w-4" />
+            <Button asChild variant="primary" size="sm">
+              <div className="header-menu-bar-display">
+                <div className="header-menu-flow-name">{current_flow.name}</div>
+                <ChevronDown className="h-4 w-4" />
+              </div>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-44">
@@ -99,7 +96,7 @@ export const MenuBar = ({ flows, tabId }) => {
               <Redo className="header-menu-options " />
               Redo
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
+            {/* <DropdownMenuSeparator /> */}
             {/* <DropdownMenuLabel>Projects</DropdownMenuLabel> */}
             {/* <DropdownMenuRadioGroup className="max-h-full overflow-scroll"
               value={tabId}

@@ -1,18 +1,18 @@
 import Convert from "ansi-to-html";
 import { ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import MaleTechnology from "../../../assets/male-technologist.png";
 import Robot from "../../../assets/robot.png";
+import SanitizedHTMLWrapper from "../../../components/SanitizedHTMLWrapper";
 import { THOUGHTS_ICON } from "../../../constants";
 import { ChatMessageType } from "../../../types/chat";
 import { classNames } from "../../../utils";
 import FileCard from "../fileComponent";
 import { CodeBlock } from "./codeBlock";
-
 export default function ChatMessage({
   chat,
   lockChat,
@@ -24,96 +24,111 @@ export default function ChatMessage({
 }) {
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
-  const [template, setTemplate] = useState(chat.template);
+  const template = chat.template;
   const [promptOpen, setPromptOpen] = useState(false);
   return (
     <div
-      className={classNames(
-        "flex w-full px-2 py-6 pl-4 pr-9",
-        chat.isSend ? "" : " "
-      )}
+      className={classNames("form-modal-chat-position", chat.isSend ? "" : " ")}
     >
-      <div className={classNames("mb-3 ml-3 mr-6 mt-1 ")}>
+      <div className={classNames("form-modal-chatbot-icon ")}>
         {!chat.isSend ? (
-          <div className="flex flex-col items-center gap-1">
-            <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-[#afe6ef] p-5 text-2xl ">
-              <img src={Robot} className="absolute scale-[60%]" />
+          <div className="form-modal-chat-image">
+            <div className="form-modal-chat-bot-icon ">
+              <img
+                src={Robot}
+                className="form-modal-chat-icon-img"
+                alt="robot_image"
+              />
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-1">
-            <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-[#aface9] p-5 text-2xl ">
-              <img src={MaleTechnology} className="absolute scale-[60%]" />
+          <div className="form-modal-chat-image">
+            <div className="form-modal-chat-user-icon ">
+              <img
+                src={MaleTechnology}
+                className="form-modal-chat-icon-img"
+                alt="male_technology"
+              />
             </div>
           </div>
         )}
       </div>
       {!chat.isSend ? (
-        <div className="flex w-full flex-1 text-start">
-          <div className="relative inline-block w-full text-start text-sm font-normal text-muted-foreground">
+        <div className="form-modal-chat-text-position">
+          <div className="form-modal-chat-text">
             {hidden && chat.thought && chat.thought !== "" && (
               <div
                 onClick={() => setHidden((prev) => !prev)}
-                className="absolute -left-8 -top-3 cursor-pointer"
+                className="form-modal-chat-icon-div"
               >
-                <THOUGHTS_ICON className="h-4 w-4 animate-bounce dark:text-white" />
+                <THOUGHTS_ICON className="form-modal-chat-icon" />
               </div>
             )}
             {chat.thought && chat.thought !== "" && !hidden && (
-              <div
+              <SanitizedHTMLWrapper
+                className=" form-modal-chat-thought"
+                content={convert.toHtml(chat.thought)}
                 onClick={() => setHidden((prev) => !prev)}
-                className=" ml-3 inline-block h-full w-[95%] cursor-pointer overflow-scroll rounded-md border
-								border-gray-300 bg-muted px-2 text-start text-primary scrollbar-hide dark:border-gray-500 dark:bg-gray-800"
-                dangerouslySetInnerHTML={{
-                  __html: convert.toHtml(chat.thought),
-                }}
-              ></div>
+              />
             )}
             {chat.thought && chat.thought !== "" && !hidden && <br></br>}
             <div className="w-full">
               <div className="w-full dark:text-white">
                 <div className="w-full">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm, remarkMath]}
-                    rehypePlugins={[rehypeMathjax]}
-                    className="markdown prose inline-block break-words text-primary
-                     dark:prose-invert"
-                    components={{
-                      code({ node, inline, className, children, ...props }) {
-                        if (children.length) {
-                          if (children[0] == "▍") {
-                            return (
-                              <span className="mt-1 animate-pulse cursor-default">
-                                ▍
-                              </span>
+                  {useMemo(
+                    () => (
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm, remarkMath]}
+                        rehypePlugins={[rehypeMathjax]}
+                        className="markdown prose inline-block break-words text-primary
+                     dark:prose-invert sm:max-w-[30vw] lg:max-w-[40vw]"
+                        components={{
+                          code: ({
+                            node,
+                            inline,
+                            className,
+                            children,
+                            ...props
+                          }) => {
+                            if (children.length) {
+                              if (children[0] === "▍") {
+                                return (
+                                  <span className="form-modal-markdown-span">
+                                    ▍
+                                  </span>
+                                );
+                              }
+
+                              children[0] = (children[0] as string).replace(
+                                "`▍`",
+                                "▍"
+                              );
+                            }
+
+                            const match = /language-(\w+)/.exec(
+                              className || ""
                             );
-                          }
 
-                          children[0] = (children[0] as string).replace(
-                            "`▍`",
-                            "▍"
-                          );
-                        }
-
-                        const match = /language-(\w+)/.exec(className || "");
-
-                        return !inline ? (
-                          <CodeBlock
-                            key={Math.random()}
-                            language={(match && match[1]) || ""}
-                            value={String(children).replace(/\n$/, "")}
-                            {...props}
-                          />
-                        ) : (
-                          <code className={className} {...props}>
-                            {children}
-                          </code>
-                        );
-                      },
-                    }}
-                  >
-                    {chat.message.toString()}
-                  </ReactMarkdown>
+                            return !inline ? (
+                              <CodeBlock
+                                key={Math.random()}
+                                language={(match && match[1]) || ""}
+                                value={String(children).replace(/\n$/, "")}
+                                {...props}
+                              />
+                            ) : (
+                              <code className={className} {...props}>
+                                {children}
+                              </code>
+                            );
+                          },
+                        }}
+                      >
+                        {chat.message.toString()}
+                      </ReactMarkdown>
+                    ),
+                    [chat.message, chat.message.toString()]
+                  )}
                 </div>
                 {chat.files && (
                   <div className="my-2 w-full">
@@ -136,51 +151,57 @@ export default function ChatMessage({
         </div>
       ) : (
         <div>
-          <button
-            className="mb-2 flex items-center gap-4 rounded-md border border-ring/60 bg-background px-4 py-2 text-base font-semibold"
-            onClick={() => {
-              setPromptOpen((old) => !old);
-            }}
-          >
-            Initial Prompt
-            <ChevronDown
-              className={
-                "h-3 w-3 transition-all " + (promptOpen ? "rotate-180" : "")
-              }
-            />
-          </button>
-          <span className="prose inline-block break-words text-primary dark:prose-invert">
-            {promptOpen
-              ? template.split("\n").map((line, index) => {
-                  const regex = /{([^}]+)}/g;
-                  let match;
-                  let parts = [];
-                  let lastIndex = 0;
-                  while ((match = regex.exec(line)) !== null) {
-                    // Push text up to the match
-                    if (match.index !== lastIndex) {
-                      parts.push(line.substring(lastIndex, match.index));
-                    }
-                    // Push div with matched text
-                    if (chat.message[match[1]]) {
-                      parts.push(
-                        <span className="my-1 rounded-md bg-indigo-100">
-                          {chat.message[match[1]]}
-                        </span>
-                      );
-                    }
+          {template ? (
+            <>
+              <button
+                className="form-modal-initial-prompt-btn"
+                onClick={() => {
+                  setPromptOpen((old) => !old);
+                }}
+              >
+                Display Prompt
+                <ChevronDown
+                  className={
+                    "h-3 w-3 transition-all " + (promptOpen ? "rotate-180" : "")
+                  }
+                />
+              </button>
+              <span className="prose inline-block break-words text-primary dark:prose-invert">
+                {promptOpen
+                  ? template?.split("\n")?.map((line, index) => {
+                      const regex = /{([^}]+)}/g;
+                      let match;
+                      let parts = [];
+                      let lastIndex = 0;
+                      while ((match = regex.exec(line)) !== null) {
+                        // Push text up to the match
+                        if (match.index !== lastIndex) {
+                          parts.push(line.substring(lastIndex, match.index));
+                        }
+                        // Push div with matched text
+                        if (chat.message[match[1]]) {
+                          parts.push(
+                            <span className="chat-message-highlight">
+                              {chat.message[match[1]]}
+                            </span>
+                          );
+                        }
 
-                    // Update last index
-                    lastIndex = regex.lastIndex;
-                  }
-                  // Push text after the last match
-                  if (lastIndex !== line.length) {
-                    parts.push(line.substring(lastIndex));
-                  }
-                  return <p>{parts}</p>;
-                })
-              : chat.message[chat.chatKey]}
-          </span>
+                        // Update last index
+                        lastIndex = regex.lastIndex;
+                      }
+                      // Push text after the last match
+                      if (lastIndex !== line.length) {
+                        parts.push(line.substring(lastIndex));
+                      }
+                      return <p>{parts}</p>;
+                    })
+                  : chat.message[chat.chatKey]}
+              </span>
+            </>
+          ) : (
+            <span>{chat.message[chat.chatKey]}</span>
+          )}
         </div>
       )}
     </div>

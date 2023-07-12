@@ -5,6 +5,7 @@ import { TextAreaComponentType } from "../../types/components";
 import { TypeModal } from "../../utils";
 
 import { ExternalLink } from "lucide-react";
+import { TabsContext } from "../../contexts/tabsContext";
 
 export default function TextAreaComponent({
   value,
@@ -14,6 +15,7 @@ export default function TextAreaComponent({
 }: TextAreaComponentType) {
   const [myValue, setMyValue] = useState(value);
   const { openPopUp, closePopUp } = useContext(PopUpContext);
+  const { setDisableCopyPaste } = useContext(TabsContext);
 
   useEffect(() => {
     if (disabled) {
@@ -27,19 +29,20 @@ export default function TextAreaComponent({
   }, [closePopUp]);
 
   return (
-    <div className={disabled ? "cursor-not-allowed" : ""}>
-      <div
-        className={
-          (editNode ? "relative top-2 w-full" : "flex w-full items-center") +
-          (disabled ? " pointer-events-none" : "")
-        }
-      >
+    <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
+      <div className="flex w-full items-center">
         <input
           value={myValue}
+          onFocus={() => {
+            setDisableCopyPaste(true);
+          }}
+          onBlur={() => {
+            setDisableCopyPaste(false);
+          }}
           className={
             editNode
-              ? "input-edit-node"
-              : "input-primary" + (disabled ? " input-disable " : "")
+              ? " input-edit-node "
+              : " input-primary " + (disabled ? " input-disable" : "")
           }
           placeholder={"Type something..."}
           onChange={(e) => {

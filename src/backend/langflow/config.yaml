@@ -277,8 +277,13 @@ vectorstores:
     documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/supabase"
   MongoDBAtlasVectorSearch:
     documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/mongodb_atlas"
+  # Requires docarray >=0.32.0 but langchain-serve requires jina 3.15.2 which doesn't support docarray >=0.32.0
+  # DocArrayInMemorySearch:
+  #   documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/docarray_in_memory"
 wrappers:
   RequestsWrapper:
+    documentation: ""
+  SQLDatabase:
     documentation: ""
 output_parsers:
   StructuredOutputParser:

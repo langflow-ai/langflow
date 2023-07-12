@@ -43,6 +43,7 @@ module.exports = {
         "accordion-up": "accordion-up 0.2s ease-out",
       },
       colors: {
+        connection: "var(--connection)",
         "almost-dark-gray": "var(--almost-dark-gray)",
         "almost-light-blue": "var(--almost-light-blue)",
         "almost-medium-blue": "var(--almost-medium-blue)",
@@ -82,6 +83,8 @@ module.exports = {
         "status-yellow": "var(--status-yellow)",
         "success-background": "var(--success-background)",
         "success-foreground": "var(--success-foreground)",
+        "chat-bot-icon": "var(--chat-bot-icon)",
+        "chat-user-icon": "var(--chat-user-icon)",
 
         white: "var(--white)",
         border: "hsl(var(--border))",
@@ -127,18 +130,18 @@ module.exports = {
         sans: ["var(--font-sans)", ...fontFamily.sans],
       },
       keyframes: {
-        "accordion-down": {
+        slideDown: {
           from: { height: 0 },
-          to: { height: "var(--radix-accordion-content-height)" },
+          to: { height: 100 },
         },
-        "accordion-up": {
+        slideUp: {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: 0 },
         },
       },
       animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
+        "accordion-down": "slideDown 300ms ease-out",
+        "accordion-up": "slideUp 300ms ease-in",
       },
     },
   },

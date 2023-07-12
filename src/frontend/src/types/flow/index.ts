@@ -27,3 +27,11 @@ export type FlowStyleType = {
   color: string;
   flow_id: string;
 };
+
+export type TweaksType = Array<
+  {
+    [key: string]: {
+      output_key?: string;
+    };
+  } & FlowStyleType
+>;

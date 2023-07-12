@@ -12,10 +12,12 @@ import IntComponent from "../../../../components/intComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
+import { MAX_LENGTH_TO_SCROLL_TOOLTIP } from "../../../../constants";
 import { PopUpContext } from "../../../../contexts/popUpContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
+import { cleanEdges } from "../../../../util/reactflowUtils";
 import {
   classNames,
   getRandomKeyByssmm,
@@ -41,6 +43,7 @@ export default function ParameterComponent({
 }: ParameterComponentType) {
   const ref = useRef(null);
   const refHtml = useRef(null);
+  const refNumberComponents = useRef(0);
   const infoHtml = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
@@ -57,10 +60,6 @@ export default function ParameterComponent({
   useEffect(() => {
     updateNodeInternals(data.id);
   }, [data.id, position, updateNodeInternals]);
-
-  const [enabled, setEnabled] = useState(
-    data.node.template[name]?.value ?? false
-  );
 
   useEffect(() => {}, [closePopUp, data.node.template]);
 
@@ -99,6 +98,8 @@ export default function ParameterComponent({
   useEffect(() => {
     const groupedObj = groupByFamily(myData, tooltipTitle, left, data.type);
 
+    refNumberComponents.current = groupedObj[0]?.type?.length;
+
     refHtml.current = groupedObj.map((item, i) => {
       const Icon: any = nodeIconsLucide[item.family];
 
@@ -127,7 +128,7 @@ export default function ParameterComponent({
             {nodeNames[item.family] ?? ""}{" "}
             <span className="text-xs">
               {" "}
-              {item.type == "" ? "" : " - "}
+              {item.type === "" ? "" : " - "}
               {item.type.split(", ").length > 2
                 ? item.type.split(", ").map((el, i) => (
                     <React.Fragment key={el + i}>
@@ -160,7 +161,7 @@ export default function ParameterComponent({
           }
         >
           {title}
-          <span className="text-destructive">{required ? " *" : ""}</span>
+          <span className="text-status-red">{required ? " *" : ""}</span>
           <div className="">
             {info !== "" && (
               <ShadTooltip content={infoHtml.current}>
@@ -181,7 +182,11 @@ export default function ParameterComponent({
           <></>
         ) : (
           <ShadTooltip
-            style="max-w-[30vw] max-h-[20vh] overflow-auto custom-scroll"
+            styleClasses={
+              refNumberComponents.current > MAX_LENGTH_TO_SCROLL_TOOLTIP
+                ? "tooltip-fixed-width custom-scroll overflow-y-scroll nowheel"
+                : "tooltip-fixed-width"
+            }
             delayDuration={0}
             content={refHtml.current}
             side={left ? "left" : "right"}
@@ -222,7 +227,7 @@ export default function ParameterComponent({
               />
             ) : data.node.template[name].multiline ? (
               <TextAreaComponent
-                disabled={false}
+                disabled={disabled}
                 value={data.node.template[name].value ?? ""}
                 onChange={handleOnNewValue}
               />
@@ -240,10 +245,9 @@ export default function ParameterComponent({
           <div className="mt-2 w-full">
             <ToggleShadComponent
               disabled={disabled}
-              enabled={enabled}
+              enabled={data.node.template[name].value}
               setEnabled={(t) => {
                 handleOnNewValue(t);
-                setEnabled(t);
               }}
               size="large"
             />
@@ -309,6 +313,15 @@ export default function ParameterComponent({
               field_name={name}
               setNodeClass={(nodeClass) => {
                 data.node = nodeClass;
+                if (reactFlowInstance) {
+                  cleanEdges({
+                    flow: {
+                      edges: reactFlowInstance.getEdges(),
+                      nodes: reactFlowInstance.getNodes(),
+                    },
+                    updateEdge: (edge) => reactFlowInstance.setEdges(edge),
+                  });
+                }
               }}
               nodeClass={data.node}
               disabled={disabled}

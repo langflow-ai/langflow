@@ -6,8 +6,8 @@
 /* TODO: Confirm that all colors here are found in tailwind config */
 
 @layer base {
-
-:root {
+  
+  :root {
   --background: 0 0% 100%; /* hsl(0 0% 100%) */
   --foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
   --muted: 210 40% 98%; /* hsl(210 40% 98%) */
@@ -27,36 +27,40 @@
   --destructive: 0 100% 50%; /* hsl(0 100% 50%) */
   --destructive-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
   --radius: 0.5rem;
-  --ring: 215 20.2% 65.1%; /* hsl(215 20% 65%) */
-
+  --ring: 215 20.2% 65.1%; /* hsl(215 20% 65%) */  
   --round-btn-shadow: #00000063;
-
+  
   --error-background: #fef2f2;
   --error-foreground: #991b1b;
-
+  
   --success-background: #f0fdf4;
   --success-foreground: #14532d;
 
   --info-background: #f0f4fd;
   --info-foreground: #141653;
-
+  
   --high-indigo: #4338ca;
   --medium-indigo: #6366f1;
 
+  --chat-bot-icon: #afe6ef;
+  --chat-user-icon: #aface9;
+  
   /* Colors that are shared in dark and light mode */
   --blur-shared: #151923de;
   --build-trigger: 	#dc735b;
   --chat-trigger: #5c8be1;
-  --chat-trigger-disabled: #9db7e8;
+  --chat-trigger-disabled: #b4c3da;
   --status-red: #ef4444;
   --status-yellow: #eab308;
   --status-green: #4ade80;
   --status-blue:#2563eb;
+  --connection: #555;
+
 }
 
 .dark {
   --background: 224 35% 7.5%; /* hsl(224 40% 10%) */
-  --foreground: 213 31% 85%; /* hsl(213 31% 91%) */
+  --foreground: 213 31% 80%; /* hsl(213 31% 91%) */
 
   --muted: 223 27% 11%; /* hsl(223 27% 11%) */
   --muted-foreground: 215.4 16.3% 56.9%; /* hsl(215 16% 56%) */
@@ -70,13 +74,13 @@
   --border: 216 24% 17%; /* hsl(216 34% 17%) */
   --input: 216 24% 17%; /* hsl(216 34% 17%) */
 
-  --primary: 210 20% 80%; /* hsl(210 40% 98%) */
+  --primary: 210 20% 80%; /* hsl(210 20% 80%) */
   --primary-foreground: 222.2 27.4% 1.2%; /* hsl(222 47% 1%) */
 
-  --secondary: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
-  --secondary-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
+  --secondary: 222.2 37.4% 7.2%; /* hsl(222 47% 11%) */
+  --secondary-foreground: 210 40% 80%; /* hsl(210 40% 80%) */
 
-  --accent: 216 24% 17%; /* hsl(216 34% 17%) */
+  --accent: 216 24% 20%; /* hsl(216 34% 17%) */
   --accent-foreground: 210 30% 98%; /* hsl(210 40% 98%) */
 
   --destructive: 0 63% 31%; /* hsl(0 63% 31%) */
@@ -87,7 +91,7 @@
   --radius: 0.5rem;
 
   --round-btn-shadow: #00000063;
-  
+
   --success-background: #022c22;
   --success-foreground: #ecfdf5;
 
@@ -105,11 +109,13 @@
   --blur-shared: #151923d2;
   --build-trigger: 	#dc735b;
   --chat-trigger: #5c8be1;
-  --chat-trigger-disabled: #2b4470;
+  --chat-trigger-disabled: #2d3b54;
   --status-red: #ef4444;
   --status-yellow: #eab308;
   --status-green: #4ade80;
   --status-blue: #2563eb;
+  --connection: #555;
+
 }}
 
 @layer base {
@@ -205,6 +211,7 @@ The cursor: default; property value restores the browser's default cursor style 
   .input-primary {
     @apply bg-background block border-ring form-input px-3 placeholder:text-muted-foreground rounded-md shadow-sm sm:text-sm truncate w-full;
   }
+
   .input-edit-node{
     @apply input-primary placeholder:text-center pt-0.5 pb-0.5 text-center
   }
@@ -212,7 +219,7 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply input-primary pr-7 mx-2
   }
   .input-disable{
-    @apply bg-input
+    @apply bg-border placeholder:text-ring border-transparent
   }
   .input-dialog{
     @apply text-ring cursor-pointer bg-transparent
@@ -545,7 +552,7 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply flex items-center gap-0.5 rounded-md px-1.5 py-1 text-sm font-medium
   }
   .header-menu-bar-display {
-    @apply flex max-w-[200px] items-center gap-2
+    @apply flex max-w-[200px] items-center gap-2 cursor-pointer
   }
   .header-menu-flow-name {
     @apply flex-1 truncate
@@ -911,6 +918,173 @@ The cursor: default; property value restores the browser's default cursor style 
 
   .icons-parameters-comp{
     @apply ml-3 h-6 w-6
+  }
+
+  .form-modal-lock-true {
+    @apply bg-input text-primary
+  }
+  .form-modal-no-input {
+    @apply bg-input text-center text-primary dark:bg-gray-700 dark:text-gray-300
+  }
+  .form-modal-lock-false {
+    @apply bg-white text-primary
+  }
+  .code-highlight{
+    @apply block px-3 py-2 w-full h-full text-sm outline-0 border-0 break-all overflow-y-hidden
+  }
+  .form-modal-lockchat {
+    @apply form-input focus:ring-ring focus:border-ring block w-full rounded-md border-border p-4 pr-16 custom-scroll sm:text-sm
+  }
+  .form-modal-send-icon-position {
+    @apply absolute bottom-2 right-4
+  }
+  .form-modal-send-button {
+    @apply rounded-md p-2 px-1 transition-all duration-300
+  }
+  .form-modal-lock-icon {
+    @apply ml-1 mr-1 h-5 w-5 animate-pulse
+  }
+  .form-modal-send-icon {
+    @apply mr-2 h-5 w-5 rotate-[44deg]
+  }
+  .form-modal-play-icon {
+    @apply h-5 w-5 mx-1
+  }
+  .form-modal-chat-position {
+    @apply flex-max-width px-2 py-6 pl-4 pr-9
+  }
+  .form-modal-chatbot-icon {
+    @apply mb-3 ml-3 mr-6 mt-1
+  }
+  .form-modal-chat-image {
+    @apply flex flex-col items-center gap-1
+  }
+  .form-modal-chat-img-box {
+    @apply relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md p-5 text-2xl
+  }
+  .form-modal-chat-bot-icon {
+    @apply form-modal-chat-img-box bg-chat-bot-icon
+  }
+  .form-modal-chat-user-icon {
+    @apply form-modal-chat-img-box bg-chat-user-icon
+  }
+  .form-modal-chat-icon-img {
+    @apply absolute scale-[60%]
+  }
+  .form-modal-chat-text-position {
+    @apply flex w-full flex-1 text-start
+  }
+  .form-modal-chat-text {
+    @apply relative flex w-full flex-col text-start text-sm font-normal text-muted-foreground
+  }
+  .form-modal-chat-icon-div {
+    @apply absolute -left-6 -top-3 cursor-pointer
+  }
+  .form-modal-chat-icon {
+    @apply h-4 w-4 animate-bounce
+  }
+  .form-modal-chat-thought-border {
+    @apply rounded-md border border-ring/60
+  }
+  .form-modal-chat-thought-size {
+    @apply inline-block h-full w-[95%]
+  }
+  .form-modal-chat-thought {
+    @apply cursor-pointer overflow-scroll bg-background text-start text-primary scrollbar-hide form-modal-chat-thought-border form-modal-chat-thought-size py-2 px-2
+  }
+  .form-modal-markdown-span {
+    @apply mt-1 animate-pulse cursor-default
+  }
+  .form-modal-initial-prompt-btn {
+    @apply mb-2 flex items-center gap-2 rounded-md border border-border bg-background shadow-sm px-4 py-2 text-sm font-semibold
+  }
+  .form-modal-iv-box {
+    @apply mt-2 flex-max-width h-[80vh]
+  }
+  .form-modal-iv-size {
+    @apply mr-6 flex h-full w-2/6 flex-col justify-start overflow-auto scrollbar-hide
+  }
+  .file-component-arrangement {
+    @apply flex items-center py-2
+  }
+  .file-component-variable {
+    @apply -ml-px mr-1 h-4 w-4 text-primary
+  }
+  .file-component-variables-span {
+    @apply font-semibold text-primary
+  }
+  .file-component-variables-title {
+    @apply flex items-center justify-between pt-2
+  }
+  .file-component-variables-div {
+    @apply mr-2.5 flex items-center
+  }
+  .file-component-variables-title-txt {
+    @apply text-sm font-medium text-primary
+  }
+  .file-component-accordion-div {
+    @apply flex items-start gap-3
+  }
+  .file-component-badge-div {
+    @apply flex-max-width items-center justify-between
+  }
+  .file-component-tab-column {
+    @apply flex flex-col gap-2 p-1
+  }
+  .tab-accordion-badge-div {
+    @apply flex flex-1 items-center justify-between py-4 text-sm font-normal text-muted-foreground transition-all
+  }
+  .eraser-column-arrangement {
+    @apply flex-max-width flex-1 flex-col
+  }
+  .eraser-size {
+    @apply relative flex h-full w-full flex-col rounded-md border bg-muted
+  }
+  .eraser-position {
+    @apply absolute right-3 top-3 z-50
+  }
+  .chat-message-div {
+    @apply flex-max-width h-full flex-col items-center overflow-scroll scrollbar-hide
+  }
+  .chat-alert-box {
+    @apply flex-max-width h-full flex-col items-center justify-center text-center align-middle
+  }
+  .langflow-chat-span {
+    @apply text-lg text-foreground
+  }
+  .langflow-chat-desc {
+    @apply w-2/4 rounded-md border border-border bg-muted px-6 py-8
+  }
+  .langflow-chat-desc-span {
+    @apply text-base text-muted-foreground
+  }
+  .langflow-chat-input-div {
+    @apply flex-max-width flex-col items-center justify-between px-8 pb-6
+  }
+  .langflow-chat-input {
+    @apply relative w-full rounded-md shadow-sm
+  }
+
+  .tooltip-fixed-width{
+    @apply max-w-[30vw] max-h-[20vh] overflow-auto
+  }
+
+  .ace-editor-arrangement {
+    @apply flex-max-width h-full flex-col transition-all
+  }
+  .ace-editor {
+    @apply h-full w-full rounded-lg border-[1px] border-border custom-scroll
+  }
+  .ace-editor-save-btn {
+    @apply flex-max-width h-fit justify-end
+  }
+
+  .export-modal-save-api {
+    @apply font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70
+  }
+
+  .chat-message-highlight {
+    @apply px-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900
   }
 
 

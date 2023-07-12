@@ -30,7 +30,7 @@ export default function IntComponent({
     <div
       className={
         "w-full " +
-        (disabled ? "pointer-events-none w-full cursor-not-allowed" : "w-full")
+        (disabled ? "pointer-events-none w-full cursor-not-allowed" : "")
       }
     >
       <input
@@ -70,7 +70,7 @@ export default function IntComponent({
         className={
           editNode
             ? " input-edit-node "
-            : " input-primary " + (disabled ? " input-disable " : "")
+            : " input-primary " + (disabled ? " input-disable" : "")
         }
         placeholder={editNode ? "Integer number" : "Type an integer number"}
         onChange={(e) => {

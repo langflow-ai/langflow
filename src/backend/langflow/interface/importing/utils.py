@@ -11,6 +11,7 @@ from langchain.chat_models.base import BaseChatModel
 from langchain.tools import BaseTool
 from langflow.interface.custom.custom import CustomComponent
 from langflow.utils import validate
+from langflow.interface.wrappers.base import wrapper_creator
 
 
 def import_module(module_path: str) -> Any:
@@ -103,7 +104,11 @@ def import_prompt(prompt: str) -> Type[PromptTemplate]:
 
 def import_wrapper(wrapper: str) -> Any:
     """Import wrapper from wrapper name"""
-    return import_module(f"from langchain.requests import {wrapper}")
+    if (
+        isinstance(wrapper_creator.type_dict, dict)
+        and wrapper in wrapper_creator.type_dict
+    ):
+        return wrapper_creator.type_dict.get(wrapper)
 
 
 def import_toolkit(toolkit: str) -> Any:

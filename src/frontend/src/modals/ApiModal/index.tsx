@@ -142,7 +142,8 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
   }
 
   function startTweaks() {
-    tweak?.current?.push(buildTweaks(flow));
+    const t = buildTweaks(flow);
+    tweak?.current?.push(t);
   }
 
   function filterNodes() {
@@ -266,7 +267,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger></DialogTrigger>
-      <DialogContent className="h-[80vh] lg:max-w-[80vw]">
+      <DialogContent className="h-[80vh] md:max-w-[80vw]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Code</span>
@@ -382,10 +383,10 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                             key={i}
                                             className="h-10 dark:border-b-muted"
                                           >
-                                            <TableCell className="p-0 text-center text-sm text-gray-900">
+                                            <TableCell className="p-0 text-center text-sm text-foreground">
                                               {n}
                                             </TableCell>
-                                            <TableCell className="p-0 text-center text-xs text-gray-900 dark:text-gray-300">
+                                            <TableCell className="p-0 text-xs text-foreground">
                                               <div className="m-auto w-[250px]">
                                                 {t.data.node.template[n]
                                                   .type === "str" &&

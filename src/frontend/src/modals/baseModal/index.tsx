@@ -54,7 +54,7 @@ function BaseModal({ open, setOpen, children }: BaseModalProps) {
   );
   //UPDATE COLORS AND STYLE CLASSSES
   return (
-    <Dialog open={open} onOpenChange={setModalOpen}>
+    <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger className="hidden"></DialogTrigger>
       <DialogContent className="min-w-[80vw]">
         {headerChild}

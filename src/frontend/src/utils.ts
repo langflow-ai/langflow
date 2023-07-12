@@ -35,7 +35,7 @@ import { EvernoteIcon } from "./icons/Evernote";
 import { FBIcon } from "./icons/FacebookMessenger";
 import { GitBookIcon } from "./icons/GitBook";
 import { GoogleIcon } from "./icons/Google";
-import { HugginFaceIcon } from "./icons/HuggingFace";
+import { HuggingFaceIcon } from "./icons/HuggingFace";
 import { IFixIcon } from "./icons/IFixIt";
 import { MetaIcon } from "./icons/Meta";
 import { MidjourneyIcon } from "./icons/Midjorney";
@@ -206,10 +206,10 @@ export const nodeIconsLucide: {
   HNLoader: HackerNewsIcon as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
-  HuggingFaceHub: HugginFaceIcon as React.ForwardRefExoticComponent<
+  HuggingFaceHub: HuggingFaceIcon as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
-  HuggingFaceEmbeddings: HugginFaceIcon as React.ForwardRefExoticComponent<
+  HuggingFaceEmbeddings: HuggingFaceIcon as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
   IFixitLoader: IFixIcon as React.ForwardRefExoticComponent<
@@ -608,7 +608,7 @@ export function isValidConnection(
       ) ||
     targetHandle.split("|")[0] === "str"
   ) {
-    let targetNode = reactFlowInstance.getNode(target).data.node;
+    let targetNode = reactFlowInstance?.getNode(target)?.data?.node;
     if (!targetNode) {
       if (
         !reactFlowInstance
@@ -853,7 +853,7 @@ export function groupByFamily(data, baseClasses, left, type) {
     });
   });
 
-  if (left == false) {
+  if (left === false) {
     let groupedBy = arrOfType.filter((object, index, self) => {
       const foundIndex = self.findIndex(
         (o) => o.family === object.family && o.type === object.type
@@ -876,7 +876,7 @@ export function groupByFamily(data, baseClasses, left, type) {
         });
       }
 
-      if (left == false) {
+      if (left === false) {
         let resFil = result.filter((group) => group.family === parentOutput);
         result = resFil;
       }
@@ -903,8 +903,8 @@ export function groupByFamily(data, baseClasses, left, type) {
     }
 
     groupedArray.forEach((object, index, self) => {
-      const findObj = arrOfLength.find((x) => x.type == object.family);
-      if (object.component.length == findObj.length) {
+      const findObj = arrOfLength.find((x) => x.type === object.family);
+      if (object.component.length === findObj.length) {
         self[index]["type"] = "";
       } else {
         self[index]["type"] = object.component.join(", ");
@@ -1048,10 +1048,6 @@ export const INVALID_CHARACTERS = [
 export const regexHighlight = /\{([^}]+)\}/g;
 
 export const varHighlightHTML = ({ name }: IVarHighlightType) => {
-  const html = `<div class="inline-flex items-center justify-center rounded-md font-medium text-primary bg-muted pb-1">
-  <span class='opacity-60 pl-1'>{</span>
-  <span>${name}</span>
-  <span class='opacity-60 pr-1'>}</span>
-</div>`;
+  const html = `<span class="font-semibold chat-message-highlight">{${name}}</span>`;
   return html;
 };
