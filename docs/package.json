@@ -1,0 +1,70 @@
+{
+  "name": "docusaurus",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "docusaurus": "docusaurus",
+    "start": "docusaurus start",
+    "build": "docusaurus build",
+    "swizzle": "docusaurus swizzle",
+    "deploy": "docusaurus deploy",
+    "clear": "docusaurus clear",
+    "serve": "docusaurus serve",
+    "write-translations": "docusaurus write-translations",
+    "write-heading-ids": "docusaurus write-heading-ids"
+  },
+  "dependencies": {
+    "@babel/preset-react": "^7.22.3",
+    "@docusaurus/core": "2.4.1",
+    "@docusaurus/plugin-ideal-image": "^2.4.1",
+    "@docusaurus/preset-classic": "2.4.1",
+    "@docusaurus/theme-classic": "^2.4.1",
+    "@docusaurus/theme-search-algolia": "^2.4.1",
+    "@mdx-js/react": "^1.6.22",
+    "@mendable/search": "^0.0.114",
+    "@pbe/react-yandex-maps": "^1.2.4",
+    "@prismicio/client": "^7.0.1",
+    "@uiball/loaders": "^1.2.6",
+    "autoprefixer": "^10.4.14",
+    "clsx": "^1.2.1",
+    "docusaurus-plugin-image-zoom": "^0.1.4",
+    "jquery": "^3.7.0",
+    "medium-zoom": "^1.0.8",
+    "node-fetch": "^3.3.1",
+    "path-browserify": "^1.0.1",
+    "postcss": "^8.4.24",
+    "prism-react-renderer": "^1.3.5",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-images": "^0.6.7",
+    "react-medium-image-zoom": "^5.1.6",
+    "react-player": "^2.12.0",
+    "react-transition-group": "^4.4.5",
+    "remark-parse": "^10.0.2",
+    "swizzle": "^1.1.0",
+    "tailwindcss": "^3.3.2"
+  },
+  "devDependencies": {
+    "@docusaurus/module-type-aliases": "2.4.1",
+    "css-loader": "^6.8.1",
+    "docusaurus-node-polyfills": "^1.0.0",
+    "node-sass": "^9.0.0",
+    "sass": "^1.62.1",
+    "ts-loader": "^9.4.3"
+  },
+  "browserslist": {
+    "production": [
+      ">0.5%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "engines": {
+    "node": ">=16.14"
+  }
+}
