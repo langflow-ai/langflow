@@ -1038,10 +1038,6 @@ export const INVALID_CHARACTERS = [
 export const regexHighlight = /\{([^}]+)\}/g;
 
 export const varHighlightHTML = ({ name }: IVarHighlightType) => {
-  const html = `<div class="inline-flex items-center justify-center rounded-md font-medium text-primary bg-muted pb-1">
-  <span class='opacity-60 pl-1'>{</span>
-  <span>${name}</span>
-  <span class='opacity-60 pr-1'>}</span>
-</div>`;
+  const html = `<span class="font-semibold chat-message-highlight">{${name}}</span>`;
   return html;
 };
