@@ -4,6 +4,7 @@ from langflow.database.models.component import Component
 from langflow.database.base import get_session
 from sqlmodel import Session, select
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
 
 
 COMPONENT_NOT_FOUND = "Component not found"
@@ -13,9 +14,16 @@ router = APIRouter(prefix="/components", tags=["Components"])
 
 @router.post("/", response_model=Component)
 def create_component(component: Component, db: Session = Depends(get_session)):
-    db.add(component)
-    db.commit()
-    db.refresh(component)
+    try:
+        db.add(component)
+        db.commit()
+        db.refresh(component)
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="A component with the same id already exists.",
+        ) from e
     return component
 
 
