@@ -35,3 +35,17 @@ export type TweaksType = Array<
     };
   } & FlowStyleType
 >;
+
+// right side
+export type sourceHandleType = {
+  dataType: string;
+  id: string;
+  baseClasses: string[];
+};
+//left side
+export type targetHandleType = {
+  inputTypes?: string[];
+  type: string;
+  fieldName: string;
+  id: string;
+};
