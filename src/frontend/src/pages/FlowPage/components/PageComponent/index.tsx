@@ -184,11 +184,11 @@ export default function Page({ flow }: { flow: FlowType }) {
         addEdge(
           {
             ...params,
-            style: { stroke: "inherit" },
+            style: { stroke: "#555" },
             className:
-              params.targetHandle.split("|")[0] === "Text"
+              (params.targetHandle.split("|")[0] === "Text"
                 ? "stroke-foreground "
-                : "stroke-foreground ",
+                : "stroke-foreground ") + " stroke-connection",
             animated: params.targetHandle.split("|")[0] === "Text",
           },
           eds
@@ -288,7 +288,7 @@ export default function Page({ flow }: { flow: FlowType }) {
       }
     },
     // Specify dependencies for useCallback
-    [getNodeId, reactFlowInstance, setErrorData, setNodes, takeSnapshot]
+    [getNodeId, reactFlowInstance, setNodes, takeSnapshot]
   );
 
   useEffect(() => {
@@ -322,7 +322,7 @@ export default function Page({ flow }: { flow: FlowType }) {
         setEdges((els) => updateEdge(oldEdge, newConnection, els));
       }
     },
-    []
+    [reactFlowInstance, setEdges]
   );
 
   const onEdgeUpdateEnd = useCallback((_, edge) => {
@@ -338,7 +338,8 @@ export default function Page({ flow }: { flow: FlowType }) {
   const onSelectionEnd = useCallback(() => {
     setSelectionEnded(true);
   }, []);
-  const onSelectionStart = useCallback(() => {
+  const onSelectionStart = useCallback((event) => {
+    event.preventDefault();
     setSelectionEnded(false);
   }, []);
 
@@ -371,10 +372,11 @@ export default function Page({ flow }: { flow: FlowType }) {
                 <ReactFlow
                   nodes={nodes}
                   onMove={() => {
-                    updateFlow({
-                      ...flow,
-                      data: reactFlowInstance.toObject(),
-                    });
+                    if (reactFlowInstance)
+                      updateFlow({
+                        ...flow,
+                        data: reactFlowInstance.toObject(),
+                      });
                   }}
                   edges={edges}
                   onPaneClick={() => {
@@ -409,7 +411,6 @@ export default function Page({ flow }: { flow: FlowType }) {
                   nodesDraggable={!disableCopyPaste}
                   panOnDrag={!disableCopyPaste}
                   zoomOnDoubleClick={!disableCopyPaste}
-                  selectNodesOnDrag={false}
                   className="theme-attribution"
                   minZoom={0.01}
                   maxZoom={8}

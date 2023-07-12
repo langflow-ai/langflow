@@ -114,7 +114,9 @@ export default function GenericNode({
             <div>
               <Tooltip
                 title={
-                  !validationStatus ? (
+                  isBuilding ? (
+                    <span>Building...</span>
+                  ) : !validationStatus ? (
                     <span className="flex">
                       Build{" "}
                       <Zap

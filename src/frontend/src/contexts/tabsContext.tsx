@@ -54,7 +54,7 @@ const TabsContextInitialValue: TabsContextType = {
   setTabsState: (state: TabsState) => {},
   getNodeId: (nodeType: string) => "",
   setTweak: (tweak: any) => {},
-  getTweak: {},
+  getTweak: [],
   paste: (
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }
@@ -75,7 +75,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   const { templates, reactFlowInstance } = useContext(typesContext);
   const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
   const [tabsState, setTabsState] = useState<TabsState>({});
-  const [getTweak, setTweak] = useState({});
+  const [getTweak, setTweak] = useState([]);
 
   const newNodeId = useRef(uid());
   function incrementNodeId() {
@@ -539,11 +539,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
   const updateEdges = (edges) => {
     edges.forEach((edge) => {
-      edge.style = { stroke: "inherit" };
       edge.className =
-        edge.targetHandle.split("|")[0] === "Text"
+        (edge.targetHandle.split("|")[0] === "Text"
           ? "stroke-gray-800 "
-          : "stroke-gray-900 ";
+          : "stroke-gray-900 ") + " stroke-connection";
       edge.animated = edge.targetHandle.split("|")[0] === "Text";
     });
   };

@@ -1,0 +1,11 @@
+services:
+  # A Docker web service
+  - type: web
+    name: langflow
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    repo: https://github.com/logspace-ai/langflow
+    branch: main
+    healthCheckPath: /health
+    autoDeploy: false

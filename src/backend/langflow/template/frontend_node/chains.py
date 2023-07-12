@@ -81,7 +81,7 @@ class ChainFrontendNode(FrontendNode):
             field.advanced = False
         if field.name == "verbose":
             field.required = False
-            field.show = True
+            field.show = False
             field.advanced = True
         if field.name == "llm":
             field.required = True

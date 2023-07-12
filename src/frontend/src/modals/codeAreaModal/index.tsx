@@ -10,16 +10,9 @@ import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/ace";
 // import "ace-builds/webpack-resolver";
 import { TerminalSquare } from "lucide-react";
+import { useContext, useState } from "react";
+import AceEditor from "react-ace";
 import { Button } from "../../components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "../../components/ui/dialog";
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
@@ -45,9 +38,7 @@ export default function CodeAreaModal({
   setNodeClass: (Class: APIClassType) => void;
   dynamic?: boolean;
 }) {
-  const [open, setOpen] = useState(true);
   const [code, setCode] = useState(value);
-  const [loading, setLoading] = useState(false);
   const { dark } = useContext(darkContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [activeTab, setActiveTab] = useState("0");
@@ -55,14 +46,12 @@ export default function CodeAreaModal({
     detail: { error: string; traceback: string };
   }>(null);
   const { closePopUp, setCloseEdit } = useContext(PopUpContext);
-  const ref = useRef();
+  const { setErrorData, setSuccessData } = useContext(alertContext);
+
   function setModalOpen(x: boolean) {
-    setOpen(x);
     if (x === false) {
-      setTimeout(() => {
-        setCloseEdit("editcode");
-        closePopUp();
-      }, 300);
+      setCloseEdit("codearea");
+      closePopUp();
     }
   }
   console.log(dynamic);

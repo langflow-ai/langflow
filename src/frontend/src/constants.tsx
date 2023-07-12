@@ -6,6 +6,12 @@ import { TabsState } from "./types/tabs";
 import { buildInputs, buildTweaks } from "./utils";
 
 /**
+ * Number maximum of components to scroll on tooltips
+ * @constant
+ */
+export const MAX_LENGTH_TO_SCROLL_TOOLTIP = 200;
+
+/**
  * The base text for subtitle of Export Dialog (Toolbar)
  * @constant
  */
@@ -545,10 +551,3 @@ export const NOUNS: string[] = [
  *
  */
 export const USER_PROJECTS_HEADER = "My Collection";
-/**
- * CSS for highlight HTML
- * @constant
- *
- */
-export const HIGHLIGH_CSS =
-  "block pl-3 pr-14 py-2 w-full h-full text-sm outline-0 border-0 break-all overflow-y-hidden max-w-[75vw]";

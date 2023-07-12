@@ -214,3 +214,10 @@ class Graph:
         if node_type in node_types:
             children.append(node)
         return children
+
+    def __repr__(self):
+        node_ids = [node.id for node in self.nodes]
+        edges_repr = "\n".join(
+            [f"{edge.source.id} --> {edge.target.id}" for edge in self.edges]
+        )
+        return f"Graph:\nNodes: {node_ids}\nConnections:\n{edges_repr}"

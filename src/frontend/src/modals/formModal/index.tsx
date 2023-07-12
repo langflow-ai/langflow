@@ -50,7 +50,7 @@ export default function FormModal({
       const handleKeys = formKeysData.handle_keys;
 
       const keyToUse = Object.keys(inputKeys).find(
-        (k) => !handleKeys.some((j) => j === k)
+        (k) => !handleKeys.some((j) => j === k) && inputKeys[k] === ""
       );
 
       return inputKeys[keyToUse];
@@ -63,15 +63,19 @@ export default function FormModal({
 
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
   const { reactFlowInstance } = useContext(typesContext);
-  const { setErrorData, setNoticeData } = useContext(alertContext);
+  const { setErrorData } = useContext(alertContext);
   const ws = useRef<WebSocket | null>(null);
   const [lockChat, setLockChat] = useState(false);
   const isOpen = useRef(open);
   const messagesRef = useRef(null);
   const id = useRef(flow.id);
+  const tabsStateFlowId = tabsState[flow.id];
+  const tabsStateFlowIdFormKeysData = tabsStateFlowId.formKeysData;
   const [chatKey, setChatKey] = useState(
     Object.keys(tabsState[flow.id].formKeysData.input_keys).find(
-      (k) => !tabsState[flow.id].formKeysData.handle_keys.some((j) => j === k)
+      (k) =>
+        !tabsState[flow.id].formKeysData.handle_keys.some((j) => j === k) &&
+        tabsState[flow.id].formKeysData.input_keys[k] === ""
     )
   );
 
@@ -86,7 +90,7 @@ export default function FormModal({
   }, [open]);
   useEffect(() => {
     id.current = flow.id;
-  }, [flow.id, tabsState[flow.id], tabsState[flow.id].formKeysData]);
+  }, [flow.id, tabsStateFlowId, tabsStateFlowIdFormKeysData]);
 
   var isStream = false;
 
@@ -290,6 +294,7 @@ export default function FormModal({
         ws.current.close();
       }
     };
+    // do not add connectWS on dependencies array
   }, []);
 
   useEffect(() => {
@@ -301,6 +306,7 @@ export default function FormModal({
       connectWS();
       setLockChat(false);
     }
+    // do not add connectWS on dependencies array
   }, [lockChat]);
 
   async function sendAll(data: sendAllProps) {
@@ -331,41 +337,35 @@ export default function FormModal({
   }, [open]);
 
   function sendMessage() {
-    if (chatValue !== "") {
-      let nodeValidationErrors = validateNodes(reactFlowInstance);
-      if (nodeValidationErrors.length === 0) {
-        setLockChat(true);
-        let inputs = tabsState[id.current].formKeysData.input_keys;
-        setChatValue("");
-        const message = inputs;
-        addChatHistory(
-          message,
-          true,
-          chatKey,
-          tabsState[flow.id].formKeysData.template
-        );
-        sendAll({
-          ...reactFlowInstance.toObject(),
-          inputs: inputs,
-          chatHistory,
-          name: flow.name,
-          description: flow.description,
-        });
-        setTabsState((old) => {
-          let newTabsState = _.cloneDeep(old);
-          newTabsState[id.current].formKeysData.input_keys[chatKey] = "";
-          return newTabsState;
-        });
-      } else {
-        setErrorData({
-          title: "Oops! Looks like you missed some required information:",
-          list: nodeValidationErrors,
-        });
-      }
+    let nodeValidationErrors = validateNodes(reactFlowInstance);
+    if (nodeValidationErrors.length === 0) {
+      setLockChat(true);
+      let inputs = tabsState[id.current].formKeysData.input_keys;
+      setChatValue("");
+      const message = inputs;
+      addChatHistory(
+        message,
+        true,
+        chatKey,
+        tabsState[flow.id].formKeysData.template
+      );
+      sendAll({
+        ...reactFlowInstance.toObject(),
+        inputs: inputs,
+        chatHistory,
+        name: flow.name,
+        description: flow.description,
+      });
+      setTabsState((old) => {
+        if (!chatKey) return old;
+        let newTabsState = _.cloneDeep(old);
+        newTabsState[id.current].formKeysData.input_keys[chatKey] = "";
+        return newTabsState;
+      });
     } else {
       setErrorData({
-        title: "Error sending message",
-        list: ["The message cannot be empty."],
+        title: "Oops! Looks like you missed some required information:",
+        list: nodeValidationErrors,
       });
     }
   }
@@ -383,6 +383,9 @@ export default function FormModal({
     if (checked === true) {
       setChatKey(i);
       setChatValue(tabsState[flow.id].formKeysData.input_keys[i]);
+    } else {
+      setChatKey(null);
+      setChatValue("");
     }
   }
   return (
@@ -401,19 +404,19 @@ export default function FormModal({
             <DialogDescription>{CHAT_FORM_DIALOG_SUBTITLE}</DialogDescription>
           </DialogHeader>
 
-          <div className="mt-2 flex h-[80vh] w-full ">
-            <div className="mr-6 flex h-full w-2/6 flex-col justify-start overflow-auto scrollbar-hide">
-              <div className="flex items-center py-2">
-                <Variable className=" -ml-px mr-1 h-4 w-4 text-primary"></Variable>
-                <span className="text-md font-semibold text-primary">
+          <div className="form-modal-iv-box ">
+            <div className="form-modal-iv-size">
+              <div className="file-component-arrangement">
+                <Variable className=" file-component-variable"></Variable>
+                <span className="file-component-variables-span text-md">
                   Input Variables
                 </span>
               </div>
-              <div className="flex items-center justify-between pt-2">
-                <div className="mr-2.5 flex items-center">
+              <div className="file-component-variables-title">
+                <div className="file-component-variables-div">
                   <span className="text-sm font-medium text-primary">Name</span>
                 </div>
-                <div className="mr-2.5 flex items-center">
+                <div className="file-component-variables-div">
                   <span className="text-sm font-medium text-primary">
                     Chat Input
                   </span>
@@ -422,10 +425,10 @@ export default function FormModal({
               <Accordion type="multiple" className="w-full">
                 {Object.keys(tabsState[id.current].formKeysData.input_keys).map(
                   (i, k) => (
-                    <div className="flex items-start gap-3" key={k}>
+                    <div className="file-component-accordion-div" key={k}>
                       <AccordionItem className="w-full" key={k} value={i}>
                         <AccordionTrigger className="flex gap-2">
-                          <div className="flex w-full items-center justify-between">
+                          <div className="file-component-badge-div">
                             <Badge variant="gray" size="md">
                               {i}
                             </Badge>
@@ -450,7 +453,7 @@ export default function FormModal({
                           </div>
                         </AccordionTrigger>
                         <AccordionContent>
-                          <div className="flex flex-col gap-2 p-1">
+                          <div className="file-component-tab-column">
                             {tabsState[
                               id.current
                             ].formKeysData.handle_keys.some((t) => t === i) && (
@@ -482,21 +485,21 @@ export default function FormModal({
                 )}
                 {tabsState[id.current].formKeysData.memory_keys.map((i, k) => (
                   <AccordionItem key={k} value={i}>
-                    <div className="group flex flex-1 items-center justify-between py-4 text-sm font-normal text-muted-foreground transition-all">
+                    <div className="tab-accordion-badge-div group">
                       <div className="group-hover:underline">
                         <Badge size="md" variant="gray">
                           {i}
                         </Badge>
                       </div>
-                      Used as Memory Key
+                      Used as memory key
                     </div>
                   </AccordionItem>
                 ))}
               </Accordion>
             </div>
-            <div className="flex w-full flex-1 flex-col">
-              <div className="relative flex h-full w-full flex-col rounded-md border bg-muted">
-                <div className="absolute right-3 top-3 z-50">
+            <div className="eraser-column-arrangement">
+              <div className="eraser-size">
+                <div className="eraser-position">
                   <button disabled={lockChat} onClick={() => clearChat()}>
                     <Eraser
                       className={classNames(
@@ -509,30 +512,29 @@ export default function FormModal({
                     />
                   </button>
                 </div>
-                <div
-                  ref={messagesRef}
-                  className="flex h-full w-full flex-col items-center overflow-scroll scrollbar-hide"
-                >
+                <div ref={messagesRef} className="chat-message-div">
                   {chatHistory.length > 0 ? (
                     chatHistory.map((c, i) => (
                       <ChatMessage
                         lockChat={lockChat}
                         chat={c}
-                        lastMessage={chatHistory.length - 1 == i ? true : false}
+                        lastMessage={
+                          chatHistory.length - 1 === i ? true : false
+                        }
                         key={i}
                       />
                     ))
                   ) : (
-                    <div className="flex h-full w-full flex-col items-center justify-center text-center align-middle">
+                    <div className="chat-alert-box">
                       <span>
                         👋{" "}
-                        <span className="text-lg text-gray-600 dark:text-gray-300">
+                        <span className="langflow-chat-span">
                           LangFlow Chat
                         </span>
                       </span>
                       <br />
-                      <div className="w-2/4 rounded-md border border-gray-200 bg-muted px-6 py-8 dark:border-gray-700 dark:bg-gray-900">
-                        <span className="text-base text-gray-500">
+                      <div className="langflow-chat-desc">
+                        <span className="langflow-chat-desc-span">
                           Start a conversation and click the agent's thoughts{" "}
                           <span>
                             <THOUGHTS_ICON className="mx-1 inline h-5 w-5 animate-bounce " />
@@ -544,10 +546,11 @@ export default function FormModal({
                   )}
                   <div ref={ref}></div>
                 </div>
-                <div className="flex w-full flex-col items-center justify-between px-8 pb-6">
-                  <div className="relative w-full rounded-md shadow-sm">
+                <div className="langflow-chat-input-div">
+                  <div className="langflow-chat-input">
                     <ChatInput
                       chatValue={chatValue}
+                      noInput={!chatKey}
                       lockChat={lockChat}
                       sendMessage={sendMessage}
                       setChatValue={(value) => {

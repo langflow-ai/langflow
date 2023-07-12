@@ -4,7 +4,6 @@ import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
 import { TypeModal } from "../../utils";
 
-import * as _ from "lodash";
 import { ExternalLink } from "lucide-react";
 import { typesContext } from "../../contexts/typesContext";
 import { postValidatePrompt } from "../../controllers/API";
@@ -18,7 +17,7 @@ export default function PromptAreaComponent({
   disabled,
   editNode = false,
 }: TextAreaComponentType) {
-  const [myValue, setMyValue] = useState("");
+  const [myValue, setMyValue] = useState(value);
   const { openPopUp } = useContext(PopUpContext);
   const { reactFlowInstance } = useContext(typesContext);
   useEffect(() => {
@@ -29,84 +28,93 @@ export default function PromptAreaComponent({
   }, [disabled, onChange]);
 
   useEffect(() => {
-    if (value !== "" && myValue !== value && reactFlowInstance) {
-      // only executed once
-      setMyValue(value);
-      postValidatePrompt(field_name, value, nodeClass)
-        .then((apiReturn) => {
-          if (apiReturn.data) {
-            setNodeClass(apiReturn.data.frontend_node);
-            // need to update reactFlowInstance to re-render the nodes.
-            reactFlowInstance.setEdges(
-              _.cloneDeep(reactFlowInstance.getEdges())
-            );
-          }
-        })
-        .catch((error) => {});
+    setMyValue(value);
+    if (value !== "" && !editNode) {
+      postValidatePrompt(field_name, value, nodeClass).then((apiReturn) => {
+        if (apiReturn.data) {
+          setNodeClass(apiReturn.data.frontend_node);
+          // need to update reactFlowInstance to re-render the nodes.
+        }
+      });
     }
-  }, [reactFlowInstance, field_name]);
+  }, [value, reactFlowInstance]);
+
+  // useEffect(() => {
+  //   if (value !== "" && myValue !== value && reactFlowInstance) {
+  //     // only executed once
+  //     setMyValue(value);
+  //     postValidatePrompt(field_name, value, nodeClass)
+  //       .then((apiReturn) => {
+  //         if (apiReturn.data) {
+  //           setNodeClass(apiReturn.data.frontend_node);
+  //           // need to update reactFlowInstance to re-render the nodes.
+  //           reactFlowInstance.setEdges(
+  //             _.cloneDeep(reactFlowInstance.getEdges())
+  //           );
+  //         }
+  //       })
+  //       .catch((error) => {});
+  //   }
+  // }, [reactFlowInstance, field_name, myValue, nodeClass, setNodeClass, value]);
 
   return (
-    <div className={disabled ? "cursor-not-allowed" : ""}>
-      <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
-        <div className="flex w-full items-center">
-          <span
-            onClick={() => {
-              openPopUp(
-                <GenericModal
-                  type={TypeModal.PROMPT}
-                  value={myValue}
-                  buttonText="Check & Save"
-                  modalTitle="Edit Prompt"
-                  setValue={(t: string) => {
-                    setMyValue(t);
-                    onChange(t);
-                  }}
-                  nodeClass={nodeClass}
-                  setNodeClass={setNodeClass}
-                />
-              );
-            }}
-            className={
-              editNode
-                ? " input-edit-node " + " input-dialog "
-                : (disabled ? " input-disable " : "") +
-                  " input-primary " +
-                  " input-dialog "
-            }
-          >
-            {myValue !== "" ? myValue : "Type your prompt here"}
-          </span>
-          <button
-            onClick={() => {
-              openPopUp(
-                <GenericModal
-                  field_name={field_name}
-                  type={TypeModal.PROMPT}
-                  value={myValue}
-                  buttonText="Check & Save"
-                  modalTitle="Edit Prompt"
-                  setValue={(t: string) => {
-                    setMyValue(t);
-                    onChange(t);
-                  }}
-                  nodeClass={nodeClass}
-                  setNodeClass={setNodeClass}
-                />
-              );
-            }}
-          >
-            {!editNode && (
-              <ExternalLink
-                strokeWidth={1.5}
-                className={
-                  "icons-parameters-comp" +
-                  (disabled ? " text-ring" : " hover:text-accent-foreground")
-                }
+    <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
+      <div className="flex w-full items-center">
+        <span
+          onClick={() => {
+            openPopUp(
+              <GenericModal
+                type={TypeModal.PROMPT}
+                value={myValue}
+                buttonText="Check & Save"
+                modalTitle="Edit Prompt"
+                setValue={(t: string) => {
+                  setMyValue(t);
+                  onChange(t);
+                }}
+                nodeClass={nodeClass}
+                setNodeClass={setNodeClass}
               />
-            )}
-          </button>
-        </div>
+            );
+          }}
+          className={
+            editNode
+              ? "input-edit-node input-dialog"
+              : (disabled ? " input-disable text-ring " : "") +
+                " input-primary text-muted-foreground "
+          }
+        >
+          {myValue !== "" ? myValue : "Type your prompt here"}
+        </span>
+        <button
+          onClick={() => {
+            openPopUp(
+              <GenericModal
+                field_name={field_name}
+                type={TypeModal.PROMPT}
+                value={myValue}
+                buttonText="Check & Save"
+                modalTitle="Edit Prompt"
+                setValue={(t: string) => {
+                  setMyValue(t);
+                  onChange(t);
+                }}
+                nodeClass={nodeClass}
+                setNodeClass={setNodeClass}
+              />
+            );
+          }}
+        >
+          {!editNode && (
+            <ExternalLink
+              strokeWidth={1.5}
+              className={
+                "icons-parameters-comp" +
+                (disabled ? " text-ring" : " hover:text-accent-foreground")
+              }
+            />
+          )}
+        </button>
       </div>
     </div>
   );

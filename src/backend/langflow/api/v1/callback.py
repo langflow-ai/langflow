@@ -10,6 +10,7 @@ from fastapi import WebSocket
 
 
 from langchain.schema import AgentAction, LLMResult, AgentFinish
+from langflow.utils.logger import logger
 
 
 # https://github.com/hwchase17/chat-langchain/blob/master/callback.py
@@ -62,12 +63,36 @@ class AsyncStreamingLLMCallbackHandler(AsyncCallbackHandler):
 
     async def on_tool_end(self, output: str, **kwargs: Any) -> Any:
         """Run when tool ends running."""
+        observation_prefix = kwargs.get("observation_prefix", "Tool output: ")
+        split_output = output.split()
+        first_word = split_output[0]
+        rest_of_output = split_output[1:]
+        # Create a formatted message.
+        intermediate_steps = f"{observation_prefix}{first_word}"
+
+        # Create a ChatResponse instance.
         resp = ChatResponse(
             message="",
             type="stream",
-            intermediate_steps=f"Tool output: {output}",
+            intermediate_steps=intermediate_steps,
         )
-        await self.websocket.send_json(resp.dict())
+        rest_of_resps = [
+            ChatResponse(
+                message="",
+                type="stream",
+                intermediate_steps=f"{word}",
+            )
+            for word in rest_of_output
+        ]
+        resps = [resp] + rest_of_resps
+        # Try to send the response, handle potential errors.
+
+        try:
+            # This is to emulate the stream of tokens
+            for resp in resps:
+                await self.websocket.send_json(resp.dict())
+        except Exception as e:
+            logger.error(e)
 
     async def on_tool_error(
         self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
