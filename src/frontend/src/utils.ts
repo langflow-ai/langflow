@@ -1,7 +1,6 @@
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "./flow_constants";
-import { IVarHighlightType } from "./types/components";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -252,27 +251,3 @@ export function getRandomKeyByssmm(): string {
   const milliseconds = String(now.getMilliseconds()).padStart(3, "0");
   return seconds + milliseconds + Math.abs(Math.floor(Math.random() * 10001));
 }
-
-export const INVALID_CHARACTERS = [
-  " ",
-  ",",
-  ".",
-  ":",
-  ";",
-  "!",
-  "?",
-  "/",
-  "\\",
-  "(",
-  ")",
-  "[",
-  "]",
-  "\n",
-];
-
-export const regexHighlight = /\{([^}]+)\}/g;
-
-export const varHighlightHTML = ({ name }: IVarHighlightType) => {
-  const html = `<span class="font-semibold chat-message-highlight">{${name}}</span>`;
-  return html;
-};

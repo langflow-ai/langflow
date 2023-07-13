@@ -7,23 +7,20 @@ import { Button } from "../../components/ui/button";
 import { DialogTitle } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
 import {
+  INVALID_CHARACTERS,
   MAX_WORDS_HIGHLIGHT,
   PROMPT_DIALOG_SUBTITLE,
   TEXT_DIALOG_SUBTITLE,
   TypeModal,
+  regexHighlight,
+  varHighlightHTML,
 } from "../../constants";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { postValidatePrompt } from "../../controllers/API";
 import { APIClassType } from "../../types/api";
-import {
-  INVALID_CHARACTERS,
-  classNames,
-  getRandomKeyByssmm,
-  regexHighlight,
-  varHighlightHTML,
-} from "../../utils";
+import { classNames, getRandomKeyByssmm } from "../../utils";
 import BaseModal from "../baseModal";
 
 export default function GenericModal({
