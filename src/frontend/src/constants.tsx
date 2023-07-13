@@ -15,7 +15,7 @@ export const MAX_LENGTH_TO_SCROLL_TOOLTIP = 200;
  * Number maximum of components to scroll on tooltips
  * @constant
  */
-export const MAX_WORDS_HIGHLIGHT = 110;
+export const MAX_WORDS_HIGHLIGHT = 79;
 
 /**
  * The base text for subtitle of Export Dialog (Toolbar)
