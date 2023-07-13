@@ -6,6 +6,41 @@ import { TabsState } from "./types/tabs";
 import { buildInputs, buildTweaks } from "./utils";
 
 /**
+ * constants fpr programming languages box on chat form
+ * @constant
+ */
+interface languageMap {
+  [key: string]: string | undefined;
+}
+
+export const programmingLanguages: languageMap = {
+  javascript: ".js",
+  python: ".py",
+  java: ".java",
+  c: ".c",
+  cpp: ".cpp",
+  "c++": ".cpp",
+  "c#": ".cs",
+  ruby: ".rb",
+  php: ".php",
+  swift: ".swift",
+  "objective-c": ".m",
+  kotlin: ".kt",
+  typescript: ".ts",
+  go: ".go",
+  perl: ".pl",
+  rust: ".rs",
+  scala: ".scala",
+  haskell: ".hs",
+  lua: ".lua",
+  shell: ".sh",
+  sql: ".sql",
+  html: ".html",
+  css: ".css",
+  // add more file extensions here, make sure the key is same as language prop in CodeBlock.tsx component
+};
+
+/**
  * enum for the different types of nodes
  * @enum
  */
