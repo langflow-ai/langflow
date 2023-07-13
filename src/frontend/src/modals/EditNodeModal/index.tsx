@@ -12,7 +12,6 @@ import TextAreaComponent from "../../components/textAreaComponent";
 import ToggleShadComponent from "../../components/toggleShadComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
-import { DialogTitle } from "../../components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -93,10 +92,8 @@ export default function EditNodeModal({
     <BaseModal size="large-h-full" open={modalOpen} setOpen={setModalOpen}>
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Header description={data.node?.description}>
-        <DialogTitle className="flex items-center">
-          <span className="pr-2">{data.type}</span>
-          <Badge variant="secondary">ID: {data.id}</Badge>
-        </DialogTitle>
+        <span className="pr-2">{data.type}</span>
+        <Badge variant="secondary">ID: {data.id}</Badge>
       </BaseModal.Header>
       <BaseModal.Content>
         <div className="flex pb-2">
