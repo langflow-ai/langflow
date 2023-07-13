@@ -4,7 +4,6 @@ import SanitizedHTMLWrapper from "../../components/SanitizedHTMLWrapper";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
-import { DialogTitle } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
 import {
   MAX_WORDS_HIGHLIGHT,
@@ -180,14 +179,12 @@ export default function GenericModal({
           }
         })()}
       >
-        <DialogTitle className="flex items-center">
-          <span className="pr-2">{myModalTitle}</span>
-          <FileText
-            strokeWidth={1.5}
-            className="h-6 w-6 pl-1 text-primary "
-            aria-hidden="true"
-          />
-        </DialogTitle>
+        <span className="pr-2">{myModalTitle}</span>
+        <FileText
+          strokeWidth={1.5}
+          className="h-6 w-6 pl-1 text-primary "
+          aria-hidden="true"
+        />
       </BaseModal.Header>
       <BaseModal.Content>
         <div className="flex h-full flex-col">
