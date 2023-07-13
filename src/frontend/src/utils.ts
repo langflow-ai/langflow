@@ -84,41 +84,6 @@ export function checkUpperWords(str: string) {
   return words.join(" ");
 }
 
-export function updateIds(newFlow, getNodeId) {
-  let idsMap = {};
-
-  newFlow.nodes.forEach((n: NodeType) => {
-    // Generate a unique node ID
-    let newId = getNodeId(n.data.type);
-    idsMap[n.id] = newId;
-    n.id = newId;
-    n.data.id = newId;
-    // Add the new node to the list of nodes in state
-  });
-
-  newFlow.edges.forEach((e) => {
-    e.source = idsMap[e.source];
-    e.target = idsMap[e.target];
-    let sourceHandleSplitted = e.sourceHandle.split("|");
-    e.sourceHandle =
-      sourceHandleSplitted[0] +
-      "|" +
-      e.source +
-      "|" +
-      sourceHandleSplitted.slice(2).join("|");
-    let targetHandleSplitted = e.targetHandle.split("|");
-    e.targetHandle =
-      targetHandleSplitted.slice(0, -1).join("|") + "|" + e.target;
-    e.id =
-      "reactflow__edge-" +
-      e.source +
-      e.sourceHandle +
-      "-" +
-      e.target +
-      e.targetHandle;
-  });
-}
-
 export function groupByFamily(data, baseClasses, left, type) {
   let parentOutput: string;
   let arrOfParent: string[] = [];
