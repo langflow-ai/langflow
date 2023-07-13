@@ -1,9 +1,9 @@
 import React, { forwardRef } from "react";
-import { ReactComponent as SerperSVG } from "./serper.svg";
+import SvgSerper from "./Serper";
 
 export const SerperIcon = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<{}>
 >((props, ref) => {
-  return <SerperSVG ref={ref} {...props} />;
+  return <SvgSerper ref={ref} {...props} />;
 });
