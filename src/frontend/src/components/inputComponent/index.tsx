@@ -1,5 +1,4 @@
 import { useContext, useEffect, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { InputComponentType } from "../../types/components";
 import { classNames } from "../../utils";
@@ -15,7 +14,6 @@ export default function InputComponent({
   const [myValue, setMyValue] = useState(value ?? "");
   const [pwdVisible, setPwdVisible] = useState(false);
   const { setDisableCopyPaste } = useContext(TabsContext);
-  const { closePopUp } = useContext(PopUpContext);
 
   useEffect(() => {
     if (disabled) {
@@ -23,10 +21,6 @@ export default function InputComponent({
       onChange("");
     }
   }, [disabled, onChange]);
-
-  useEffect(() => {
-    setMyValue(value ?? "");
-  }, [closePopUp]);
 
   return (
     <div className={disabled ? "input-component-div" : "relative"}>
