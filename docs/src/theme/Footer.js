@@ -1,6 +1,7 @@
 import React from "react";
 import Footer from "@theme-original/Footer";
 import { MendableFloatingButton } from "@mendable/search";
+import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 
 export default function FooterWrapper(props) {
   const iconSpan1 = React.createElement(
