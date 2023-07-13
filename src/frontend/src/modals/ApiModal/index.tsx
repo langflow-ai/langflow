@@ -3,7 +3,6 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 import { ReactNode, useContext, useEffect, useRef, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
 // import "ace-builds/webpack-resolver";
 import { Check, Clipboard, Code2 } from "lucide-react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -41,7 +40,6 @@ import {
   getPythonApiCode,
   getPythonCode,
 } from "../../constants";
-import { darkContext } from "../../contexts/darkContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { FlowType } from "../../types/flow/index";
 import { buildTweaks, classNames } from "../../utils";
@@ -54,12 +52,8 @@ export default function ApiModal({
   flow: FlowType;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(true);
-  const { dark } = useContext(darkContext);
-  const { closePopUp, closeEdit, setCloseEdit } = useContext(PopUpContext);
   const [activeTab, setActiveTab] = useState("0");
   const [isCopied, setIsCopied] = useState<Boolean>(false);
-  const [enabled, setEnabled] = useState(null);
   const [openAccordion, setOpenAccordion] = useState([]);
   const tweak = useRef([]);
   const tweaksList = useRef([]);
@@ -104,22 +98,6 @@ export default function ApiModal({
   ];
 
   useEffect(() => {
-    if (closeEdit !== "") {
-      tweak.current = getTweak;
-      if (tweak.current.length > 0) {
-        setActiveTab("3");
-        openAccordions();
-      } else {
-        startTweaks();
-      }
-    } else {
-      if (tweak?.current) {
-        startTweaks();
-      }
-    }
-  }, [closeEdit]);
-
-  useEffect(() => {
     filterNodes();
   }, []);
 
@@ -130,20 +108,6 @@ export default function ApiModal({
       image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
       code: pythonCode,
     });
-  }
-
-  function setModalOpen(x: boolean) {
-    setOpen(x);
-    if (x === false) {
-      setCloseEdit("");
-      setTweak([]);
-      closePopUp();
-    }
-  }
-
-  function startTweaks() {
-    const t = buildTweaks(flow);
-    tweak?.current?.push(t);
   }
 
   function filterNodes() {
@@ -493,7 +457,6 @@ export default function ApiModal({
                                                         t.data.node.template[
                                                           n
                                                         ].value = e;
-                                                        setEnabled(e);
                                                         buildTweakObject(
                                                           t["data"]["id"],
                                                           e,
