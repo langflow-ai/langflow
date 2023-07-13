@@ -1,6 +1,6 @@
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "./flow_constants";
+import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");

@@ -3,7 +3,7 @@ import { Check, ChevronsUpDown } from "lucide-react";
 import { Fragment, useContext, useEffect, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { DropDownComponentType } from "../../types/components";
-import { classNames } from "../../utils";
+import { classNames } from "../../utils/utils";
 
 export default function Dropdown({
   value,

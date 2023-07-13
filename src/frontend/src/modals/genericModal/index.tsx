@@ -20,7 +20,7 @@ import { darkContext } from "../../contexts/darkContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { postValidatePrompt } from "../../controllers/API";
 import { APIClassType } from "../../types/api";
-import { classNames, getRandomKeyByssmm } from "../../utils";
+import { classNames, getRandomKeyByssmm } from "../../utils/utils";
 import BaseModal from "../baseModal";
 
 export default function GenericModal({

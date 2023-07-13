@@ -10,8 +10,8 @@ import { typesContext } from "../../contexts/typesContext";
 import NodeModal from "../../modals/NodeModal";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { NodeDataType } from "../../types/flow";
-import { classNames, toTitleCase } from "../../utils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
+import { classNames, toTitleCase } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
 
 export default function GenericNode({
