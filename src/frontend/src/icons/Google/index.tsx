@@ -1,9 +1,9 @@
 import React, { forwardRef } from "react";
-import { ReactComponent as GoogleSVG } from "./google.svg";
+import SvgGoogle from "./Google";
 
 export const GoogleIcon = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<{}>
 >((props, ref) => {
-  return <GoogleSVG ref={ref} {...props} />;
+  return <SvgGoogle ref={ref} {...props} />;
 });

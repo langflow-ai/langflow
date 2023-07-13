@@ -1,8 +1,8 @@
 import React, { forwardRef } from "react";
-import { ReactComponent as IFixItSVG } from "./ifixit-seeklogo.com.svg";
+import SvgIfixitSeeklogocom from "./IfixitSeeklogoCom";
 
 export const IFixIcon = forwardRef<SVGSVGElement, React.PropsWithChildren<{}>>(
   (props, ref) => {
-    return <IFixItSVG ref={ref} {...props} />;
+    return <SvgIfixitSeeklogocom ref={ref} {...props} />;
   }
 );

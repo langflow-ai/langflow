@@ -161,3 +161,12 @@ export type TextHighlightType = {
 export interface IVarHighlightType {
   name: string;
 }
+
+export type SvgIconProps = {
+  name: string;
+}
+
+export type IconComponentProps = {
+  method: string;
+  name: string;
+}

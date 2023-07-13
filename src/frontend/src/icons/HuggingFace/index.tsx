@@ -1,9 +1,9 @@
 import React, { forwardRef } from "react";
-import { ReactComponent as HugginFaceSVG } from "./hf-logo.svg";
+import SvgHfLogo from "./HfLogo";
 
 export const HuggingFaceIcon = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<{}>
 >((props, ref) => {
-  return <HugginFaceSVG ref={ref} {...props} />;
+  return <SvgHfLogo ref={ref} {...props} />;
 });

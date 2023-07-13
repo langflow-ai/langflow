@@ -50,6 +50,36 @@ import { SupabaseIcon } from "./icons/supabase";
 import { APITemplateType } from "./types/api";
 import { IVarHighlightType } from "./types/components";
 import { FlowType, NodeType } from "./types/flow";
+import SvgAirbyte from "./icons/Airbyte/Airbyte";
+import SvgAnthropicBox from "./icons/Anthropic/AnthropicBox";
+import SvgBing from "./icons/Bing/Bing";
+import SvgChroma from "./icons/ChromaIcon/Chroma";
+import SvgCohere from "./icons/Cohere/Cohere";
+import SvgEvernoteIcon from "./icons/Evernote/EvernoteIcon";
+import SvgFacebookMessengerLogo2020 from "./icons/FacebookMessenger/FacebookMessengerLogo2020";
+import SvgGitbookSvgrepoCom from "./icons/GitBook/GitbookSvgrepoCom";
+import SvgGoogle from "./icons/Google/Google";
+import SvgYCombinatorLogo from "./icons/hackerNews/YCombinatorLogo";
+import SvgHfLogo from "./icons/HuggingFace/HfLogo";
+import SvgIfixitSeeklogocom from "./icons/IFixIt/IfixitSeeklogoCom";
+import SvgMetaIcon from "./icons/Meta/MetaIcon";
+import SvgMidjourneyEmblem from "./icons/Midjorney/MidjourneyEmblem";
+import SvgMongodbIcon from "./icons/MongoDB/MongodbIcon";
+import SvgNotionLogo from "./icons/Notion/NotionLogo";
+import SvgOpenAi from "./icons/OpenAi/OpenAi";
+import SvgPineconeLogo from "./icons/Pinecone/PineconeLogo";
+import SvgPowerPoint from "./icons/PowerPoint/PowerPoint";
+import SvgQDrant from "./icons/QDrant/QDrant";
+import SvgReadthedocsioIcon from "./icons/ReadTheDocs/ReadthedocsioIcon";
+import SvgSearxLogo from "./icons/Searx/SearxLogo";
+import SvgSerper from "./icons/Serper/Serper";
+import SvgSlackIcon from "./icons/Slack/SlackIcon";
+import SvgSupabaseIcon from "./icons/supabase/SupabaseIcon";
+import SvgVertexAi from "./icons/VertexAI/VertexAi";
+import SvgWeaviate from "./icons/Weaviate/Weaviate";
+import SvgWikipedia from "./icons/Wikipedia/Wikipedia";
+import SvgWolfram from "./icons/Wolfram/Wolfram";
+import SvgWord from "./icons/Word/Word";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -61,6 +91,39 @@ export enum TypeModal {
   TEXT = 1,
   PROMPT = 2,
 }
+
+export const svgIcons = {
+  Airbyte: SvgAirbyte,
+  Anthropic: SvgAnthropicBox,
+  Bing: SvgBing,
+  ChromaIcon: SvgChroma,
+  Cohere: SvgCohere,
+  Evernote: SvgEvernoteIcon,
+  FacebookMessenger: SvgFacebookMessengerLogo2020,
+  GitBook: SvgGitbookSvgrepoCom,
+  Google: SvgGoogle,
+  HackerNews: SvgYCombinatorLogo,
+  HuggingFace: SvgHfLogo,
+  IFixIt: SvgIfixitSeeklogocom,
+  Meta: SvgMetaIcon,
+  MidJorney: SvgMidjourneyEmblem,
+  MongoDB: SvgMongodbIcon,
+  Notion: SvgNotionLogo,
+  OpenAi: SvgOpenAi,
+  Pinecone: SvgPineconeLogo,
+  PowerPoint: SvgPowerPoint,
+  QDrant: SvgQDrant,
+  ReadTheDocs: SvgReadthedocsioIcon,
+  Searx: SvgSearxLogo,
+  Serper: SvgSerper,
+  Slack: SvgSlackIcon,
+  Supabase: SvgSupabaseIcon,
+  VertexAI: SvgVertexAi,
+  Weaviate: SvgWeaviate,
+  Wikipedia: SvgWikipedia,
+  Wolfram: SvgWolfram,
+  Word: SvgWord,
+};
 
 export const textColors = {
   white: "text-white",
