@@ -96,7 +96,7 @@ export const svgIcons = {
   Airbyte: SvgAirbyte,
   Anthropic: SvgAnthropicBox,
   Bing: SvgBing,
-  ChromaIcon: SvgChroma,
+  Chroma: SvgChroma,
   Cohere: SvgCohere,
   Evernote: SvgEvernoteIcon,
   FacebookMessenger: SvgFacebookMessengerLogo2020,
@@ -215,161 +215,57 @@ export const nodeNames: { [char: string]: string } = {
   unknown: "Unknown",
 };
 
-export const nodeIconsLucide: {
-  [char: string]: React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >;
-} = {
-  Chroma: ChromaIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  AirbyteJSONLoader: AirbyteIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  Anthropic: AnthropicIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  ChatAnthropic: AnthropicIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  BingSearchAPIWrapper: BingIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  BingSearchRun: BingIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  Cohere: CohereIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  CohereEmbeddings: CohereIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  EverNoteLoader: EvernoteIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  FacebookChatLoader: FBIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  GitbookLoader: GitBookIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  GoogleSearchAPIWrapper: GoogleIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  GoogleSearchResults: GoogleIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  GoogleSearchRun: GoogleIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  HNLoader: HackerNewsIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  HuggingFaceHub: HuggingFaceIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  HuggingFaceEmbeddings: HuggingFaceIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  IFixitLoader: IFixIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  Meta: MetaIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  Midjorney: MidjourneyIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  MongoDBAtlasVectorSearch: MongoDBIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  NotionDirectoryLoader: NotionIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  ChatOpenAI: OpenAiIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  OpenAI: OpenAiIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  OpenAIEmbeddings: OpenAiIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  Pinecone: PineconeIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  Qdrant: QDrantIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  Searx: SearxIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  SlackDirectoryLoader: SlackIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  SupabaseVectorStore: SupabaseIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  VertexAI: VertexAIIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  ChatVertexAI: VertexAIIcon as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  agents: Rocket as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  chains: Link as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  memories: Cpu as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  llms: Lightbulb as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  prompts: TerminalSquare as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  tools: Wrench as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  advanced: Laptop2 as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  chat: MessageCircle as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  embeddings: Fingerprint as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  documentloaders: Paperclip as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  vectorstores: Layers as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  toolkits: Hammer as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  textsplitters: Scissors as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  wrappers: Gift as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  utilities: Wand2 as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  output_parsers: Compass as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  retrievers: FileSearch as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
-  unknown: HelpCircle as React.ForwardRefExoticComponent<
-    ComponentType<SVGProps<SVGSVGElement>>
-  >,
+export const nodeIconsLucide = {
+  Chroma: ChromaIcon,
+  AirbyteJSONLoader: AirbyteIcon,
+  Anthropic: AnthropicIcon,
+  ChatAnthropic: AnthropicIcon,
+  BingSearchAPIWrapper: BingIcon,
+  BingSearchRun: BingIcon,
+  Cohere: CohereIcon,
+  CohereEmbeddings: CohereIcon,
+  EverNoteLoader: EvernoteIcon,
+  FacebookChatLoader: FBIcon,
+  GitbookLoader: GitBookIcon,
+  GoogleSearchAPIWrapper: GoogleIcon,
+  GoogleSearchResults: GoogleIcon,
+  GoogleSearchRun: GoogleIcon,
+  HNLoader: HackerNewsIcon,
+  HuggingFaceHub: HuggingFaceIcon,
+  HuggingFaceEmbeddings: HuggingFaceIcon,
+  IFixitLoader: IFixIcon,
+  Meta: MetaIcon,
+  Midjorney: MidjourneyIcon,
+  MongoDBAtlasVectorSearch: MongoDBIcon,
+  NotionDirectoryLoader: NotionIcon,
+  ChatOpenAI: OpenAiIcon,
+  OpenAI: OpenAiIcon,
+  OpenAIEmbeddings: OpenAiIcon,
+  Pinecone: PineconeIcon,
+  Qdrant: QDrantIcon,
+  Searx: SearxIcon,
+  SlackDirectoryLoader: SlackIcon,
+  SupabaseVectorStore: SupabaseIcon,
+  VertexAI: VertexAIIcon,
+  ChatVertexAI: VertexAIIcon,
+  agents: Rocket,
+  chains: Link,
+  memories: Cpu,
+  llms: Lightbulb,
+  prompts: TerminalSquare,
+  tools: Wrench,
+  advanced: Laptop2,
+  chat: MessageCircle,
+  embeddings: Fingerprint,
+  documentloaders: Paperclip,
+  vectorstores: Layers,
+  toolkits: Hammer,
+  textsplitters: Scissors,
+  wrappers: Gift,
+  utilities: Wand2,
+  output_parsers: Compass,
+  retrievers: FileSearch,
+  unknown: HelpCircle,
 };
 
 export const gradients = [
