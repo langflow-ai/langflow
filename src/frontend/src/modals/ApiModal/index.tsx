@@ -51,8 +51,8 @@ import {
 import { darkContext } from "../../contexts/darkContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { FlowType } from "../../types/flow/index";
-import { buildTweaks, classNames } from "../../utils";
-
+import { classNames } from "../../utils";
+import { buildTweaks } from "../../utils/reactflowUtils";
 export default function ApiModal({ flow }: { flow: FlowType }) {
   const [open, setOpen] = useState(true);
   const { dark } = useContext(darkContext);

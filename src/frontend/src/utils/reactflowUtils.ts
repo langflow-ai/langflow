@@ -159,3 +159,10 @@ export function updateIds(newFlow, getNodeId) {
       e.targetHandle;
   });
 }
+
+export function buildTweaks(flow) {
+  return flow.data.nodes.reduce((acc, node) => {
+    acc[node.data.id] = {};
+    return acc;
+  }, {});
+}
