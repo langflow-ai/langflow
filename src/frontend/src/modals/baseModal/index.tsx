@@ -1,4 +1,4 @@
-import { ReactNode, useContext } from "react";
+import { ReactNode } from "react";
 
 import React from "react";
 import {
@@ -9,14 +9,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-import { PopUpContext } from "../../contexts/popUpContext";
 
 type ContentProps = { children: ReactNode };
 type HeaderProps = { children: ReactNode; description: string };
 type FooterProps = { children: ReactNode };
+type TriggerProps = { children: ReactNode };
 
 const Content: React.FC<ContentProps> = ({ children }) => {
   return <div className="h-full w-full">{children}</div>;
+};
+const Trigger: React.FC<ContentProps> = ({ children }) => {
+  return <>{children}</>;
 };
 
 const Header: React.FC<{ children: ReactNode; description: string }> = ({
@@ -38,10 +41,11 @@ interface BaseModalProps {
   children: [
     React.ReactElement<ContentProps>,
     React.ReactElement<HeaderProps>,
+    React.ReactElement<TriggerProps>,
     React.ReactElement<FooterProps>?
   ];
-  open: boolean;
-  setOpen: (open: boolean) => void;
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
   size?: "smaller" | "small" | "medium" | "large" | "large-h-full";
 }
 function BaseModal({
@@ -50,19 +54,11 @@ function BaseModal({
   children,
   size = "large",
 }: BaseModalProps) {
-  const { closePopUp, setCloseEdit } = useContext(PopUpContext);
-
-  function setModalOpen(x: boolean) {
-    setOpen(x);
-    if (x === false) {
-      setTimeout(() => {
-        setCloseEdit("editcode");
-        closePopUp();
-      }, 300);
-    }
-  }
   const headerChild = React.Children.toArray(children).find(
     (child) => (child as React.ReactElement).type === Header
+  );
+  const triggerChild = React.Children.toArray(children).find(
+    (child) => (child as React.ReactElement).type === Trigger
   );
   const ContentChild = React.Children.toArray(children).find(
     (child) => (child as React.ReactElement).type === Content
@@ -102,8 +98,8 @@ function BaseModal({
 
   //UPDATE COLORS AND STYLE CLASSSES
   return (
-    <Dialog open={true} onOpenChange={setModalOpen}>
-      <DialogTrigger className="hidden"></DialogTrigger>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger className="w-full">{triggerChild}</DialogTrigger>
       <DialogContent className={minWidth}>
         {headerChild}
         <div className={`mt-2 flex ${height} w-full `}>{ContentChild}</div>
@@ -116,5 +112,6 @@ function BaseModal({
 
 BaseModal.Content = Content;
 BaseModal.Header = Header;
+BaseModal.Trigger = Trigger;
 BaseModal.Footer = Footer;
 export default BaseModal;

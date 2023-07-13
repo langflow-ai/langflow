@@ -59,52 +59,29 @@ export default function PromptAreaComponent({
 
   return (
     <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
-      <div className="flex w-full items-center">
-        <span
-          onClick={() => {
-            openPopUp(
-              <GenericModal
-                type={TypeModal.PROMPT}
-                value={myValue}
-                buttonText="Check & Save"
-                modalTitle="Edit Prompt"
-                setValue={(t: string) => {
-                  setMyValue(t);
-                  onChange(t);
-                }}
-                nodeClass={nodeClass}
-                setNodeClass={setNodeClass}
-              />
-            );
-          }}
-          className={
-            editNode
-              ? "input-edit-node input-dialog"
-              : (disabled ? " input-disable text-ring " : "") +
-                " input-primary text-muted-foreground "
-          }
-        >
-          {myValue !== "" ? myValue : "Type your prompt here"}
-        </span>
-        <button
-          onClick={() => {
-            openPopUp(
-              <GenericModal
-                field_name={field_name}
-                type={TypeModal.PROMPT}
-                value={myValue}
-                buttonText="Check & Save"
-                modalTitle="Edit Prompt"
-                setValue={(t: string) => {
-                  setMyValue(t);
-                  onChange(t);
-                }}
-                nodeClass={nodeClass}
-                setNodeClass={setNodeClass}
-              />
-            );
-          }}
-        >
+      <GenericModal
+        type={TypeModal.PROMPT}
+        value={myValue}
+        buttonText="Check & Save"
+        modalTitle="Edit Prompt"
+        setValue={(t: string) => {
+          setMyValue(t);
+          onChange(t);
+        }}
+        nodeClass={nodeClass}
+        setNodeClass={setNodeClass}
+      >
+        <div className="flex w-full items-center">
+          <span
+            className={
+              editNode
+                ? "input-edit-node input-dialog"
+                : (disabled ? " input-disable text-ring " : "") +
+                  " input-primary text-muted-foreground "
+            }
+          >
+            {myValue !== "" ? myValue : "Type your prompt here"}
+          </span>
           {!editNode && (
             <ExternalLink
               strokeWidth={1.5}
@@ -114,8 +91,8 @@ export default function PromptAreaComponent({
               }
             />
           )}
-        </button>
-      </div>
+        </div>
+      </GenericModal>
     </div>
   );
 }

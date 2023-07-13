@@ -40,9 +40,10 @@ export default function TextAreaComponent({
             setDisableCopyPaste(false);
           }}
           className={
-            editNode
+            (editNode
               ? " input-edit-node "
-              : " input-primary " + (disabled ? " input-disable" : "")
+              : " input-primary " + (disabled ? " input-disable" : "")) +
+            " w-full"
           }
           placeholder={"Type something..."}
           onChange={(e) => {
@@ -50,33 +51,28 @@ export default function TextAreaComponent({
             onChange(e.target.value);
           }}
         />
-
-        <button
-          onClick={() => {
-            openPopUp(
-              <GenericModal
-                type={TypeModal.TEXT}
-                buttonText="Finishing Editing"
-                modalTitle="Edit Text"
-                value={myValue}
-                setValue={(t: string) => {
-                  setMyValue(t);
-                  onChange(t);
-                }}
+        <div>
+          <GenericModal
+            type={TypeModal.TEXT}
+            buttonText="Finishing Editing"
+            modalTitle="Edit Text"
+            value={myValue}
+            setValue={(t: string) => {
+              setMyValue(t);
+              onChange(t);
+            }}
+          >
+            {!editNode && (
+              <ExternalLink
+                strokeWidth={1.5}
+                className={
+                  "icons-parameters-comp" +
+                  (disabled ? " text-ring" : " hover:text-accent-foreground")
+                }
               />
-            );
-          }}
-        >
-          {!editNode && (
-            <ExternalLink
-              strokeWidth={1.5}
-              className={
-                "icons-parameters-comp" +
-                (disabled ? " text-ring" : " hover:text-accent-foreground")
-              }
-            />
-          )}
-        </button>
+            )}
+          </GenericModal>
+        </div>
       </div>
     </div>
   );

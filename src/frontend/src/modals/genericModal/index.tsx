@@ -1,15 +1,17 @@
 import { FileText, Variable } from "lucide-react";
-import { useContext, useEffect, useRef, useState } from "react";
+import { ReactNode, useContext, useEffect, useRef, useState } from "react";
 import SanitizedHTMLWrapper from "../../components/SanitizedHTMLWrapper";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { DialogTitle } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
-import { MAX_WORDS_HIGHLIGHT, PROMPT_DIALOG_SUBTITLE, TEXT_DIALOG_SUBTITLE } from "../../constants";
+import {
+  MAX_WORDS_HIGHLIGHT,
+  PROMPT_DIALOG_SUBTITLE,
+  TEXT_DIALOG_SUBTITLE,
+} from "../../constants";
 import { alertContext } from "../../contexts/alertContext";
-import { darkContext } from "../../contexts/darkContext";
-import { PopUpContext } from "../../contexts/popUpContext";
 import { postValidatePrompt } from "../../controllers/API";
 import { APIClassType } from "../../types/api";
 import {
@@ -31,6 +33,7 @@ export default function GenericModal({
   type,
   nodeClass,
   setNodeClass,
+  children,
 }: {
   field_name?: string;
   setValue: (value: string) => void;
@@ -38,6 +41,7 @@ export default function GenericModal({
   buttonText: string;
   modalTitle: string;
   type: number;
+  children: ReactNode;
   nodeClass?: APIClassType;
   setNodeClass?: (Class: APIClassType) => void;
 }) {
@@ -47,17 +51,9 @@ export default function GenericModal({
   const [inputValue, setInputValue] = useState(value);
   const [isEdit, setIsEdit] = useState(true);
   const [wordsHighlight, setWordsHighlight] = useState([]);
-  const { dark } = useContext(darkContext);
   const { setErrorData, setSuccessData, setNoticeData } =
     useContext(alertContext);
-  const { closePopUp, setCloseEdit } = useContext(PopUpContext);
   const ref = useRef();
-  function setModalOpen(x: boolean) {
-    if (x === false) {
-      setCloseEdit("generic");
-      closePopUp();
-    }
-  }
   const divRef = useRef(null);
   const divRefPrompt = useRef(null);
 
@@ -120,14 +116,15 @@ export default function GenericModal({
     );
   };
 
-  function getClassByNumberLength(){
+  function getClassByNumberLength() {
     let sumOfCaracteres: number = 0;
-    wordsHighlight.forEach(element => {
-      sumOfCaracteres = sumOfCaracteres + element.replace(/[{}]/g, "").length
+    wordsHighlight.forEach((element) => {
+      sumOfCaracteres = sumOfCaracteres + element.replace(/[{}]/g, "").length;
     });
-    return sumOfCaracteres > MAX_WORDS_HIGHLIGHT ? "code-highlight" : "code-nohighlight"
+    return sumOfCaracteres > MAX_WORDS_HIGHLIGHT
+      ? "code-highlight"
+      : "code-nohighlight";
   }
-
 
   function validatePrompt(closeModal: boolean) {
     postValidatePrompt(field_name, inputValue, nodeClass)
@@ -165,8 +162,11 @@ export default function GenericModal({
       });
   }
 
+  const [modalOpen, setModalOpen] = useState(false);
+
   return (
-    <BaseModal open={true} setOpen={setModalOpen}>
+    <BaseModal open={modalOpen} setOpen={setModalOpen}>
+      <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Header
         description={(() => {
           switch (myModalTitle) {
@@ -234,7 +234,10 @@ export default function GenericModal({
             <div className="mb-auto flex-1">
               {type === TypeModal.PROMPT && (
                 <div className=" mr-2">
-                  <div ref={divRef} className="max-h-20 overflow-y-auto custom-scroll">
+                  <div
+                    ref={divRef}
+                    className="max-h-20 overflow-y-auto custom-scroll"
+                  >
                     <div className="flex flex-wrap items-center">
                       <Variable className=" -ml-px mr-1 flex h-4 w-4 text-primary"></Variable>
                       <span className="text-md font-semibold text-primary">
