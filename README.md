@@ -27,14 +27,17 @@
 </p>
 
 # Table of Contents
+- [⛓️ Langflow](#️-langflow)
+- [Table of Contents](#table-of-contents)
 - [📦 Installation](#-installation)
     - [Locally](#locally)
+    - [HuggingFace Spaces](#huggingface-spaces)
 - [🖥️ Command Line Interface (CLI)](#️-command-line-interface-cli)
     - [Usage](#usage)
     - [Environment Variables](#environment-variables)
 - [Deployment](#deployment)
-    - [Deploy Langflow on Google Cloud Platform](#deploy-langflow-on-google-cloud-platform)
-    - [Deploy Langflow on Jina AI Cloud](#deploy-langflow-on-jina-ai-cloud)
+  - [Deploy Langflow on Google Cloud Platform](#deploy-langflow-on-google-cloud-platform)
+  - [Deploy Langflow on Jina AI Cloud](#deploy-langflow-on-jina-ai-cloud)
       - [API Usage](#api-usage)
 - [🎨 Creating Flows](#-creating-flows)
 - [👋 Contributing](#-contributing)
@@ -59,6 +62,8 @@ or
 langflow # or langflow --help
 ```
 
+### HuggingFace Spaces
+You can also check it out on [HuggingFace Spaces](https://huggingface.co/spaces/Logspace/Langflow) and run it in your browser! You can even clone it and have your own copy of Langflow to play with.
 
 # 🖥️ Command Line Interface (CLI)
 
@@ -101,7 +106,7 @@ A sample `.env` file named `.env.example` is included with the project. Copy thi
 
 # Deployment
 
-### Deploy Langflow on Google Cloud Platform
+## Deploy Langflow on Google Cloud Platform
 
 Follow our step-by-step guide to deploy Langflow on Google Cloud Platform (GCP) using Google Cloud Shell. The guide is available in the [**Langflow in Google Cloud Platform**](GCP_DEPLOYMENT.md) document.
 
@@ -110,7 +115,7 @@ Alternatively, click the **"Open in Cloud Shell"** button below to launch Google
 [![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/open?git_repo=https://github.com/logspace-ai/langflow&working_dir=scripts&shellonly=true&tutorial=walkthroughtutorial_spot.md)
 
 
-### Deploy Langflow on [Jina AI Cloud](https://github.com/jina-ai/langchain-serve)
+## Deploy Langflow on [Jina AI Cloud](https://github.com/jina-ai/langchain-serve)
 
 Langflow integrates with langchain-serve to provide a one-command deployment to Jina AI Cloud.
 
@@ -217,8 +222,15 @@ print(run_flow("Your message", flow_id=FLOW_ID, tweaks=TWEAKS))
 
 > Read more about resource customization, cost, and management of Langflow apps on Jina AI Cloud in the **[langchain-serve](https://github.com/jina-ai/langchain-serve)** repository.
 
+## Deploy on Railway
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/Emy2sU?referralCode=MnPSdg)
 
-## 🎨 Creating Flows
+## Deploy on Render
+<a href="https://render.com/deploy?repo=https://github.com/logspace-ai/langflow/tree/main">
+<img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" />
+</a>
+
+# 🎨 Creating Flows
 
 Creating flows with Langflow is easy. Simply drag sidebar components onto the canvas and connect them together to create your pipeline. Langflow provides a range of [LangChain components](https://langchain.readthedocs.io/en/latest/reference.html) to choose from, including LLMs, prompt serializers, agents, and chains.
 
@@ -237,7 +249,7 @@ flow("Hey, have you heard of Langflow?")
 ```
 
 
-## 👋 Contributing
+# 👋 Contributing
 
 We welcome contributions from developers of all levels to our open-source project on GitHub. If you'd like to contribute, please check our [contributing guidelines](./CONTRIBUTING.md) and help make Langflow more accessible.
 
@@ -250,6 +262,6 @@ Join our [Discord](https://discord.com/invite/EqksyE2EX9) server to ask question
 [![Star History Chart](https://api.star-history.com/svg?repos=logspace-ai/langflow&type=Timeline)](https://star-history.com/#logspace-ai/langflow&Date)
 
 
-## 📄 License
+# 📄 License
 
 Langflow is released under the MIT License. See the LICENSE file for details.

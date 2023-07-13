@@ -2,7 +2,7 @@ from pathlib import Path
 from langchain.schema import AgentAction
 import json
 from langflow.interface.run import (
-    build_langchain_object_with_caching,
+    build_sorted_vertices_with_caching,
     get_memory_key,
     update_memory_keys,
 )
@@ -22,7 +22,10 @@ def fix_memory_inputs(langchain_object):
     if not hasattr(langchain_object, "memory") or langchain_object.memory is None:
         return
     try:
-        if langchain_object.memory.memory_key in langchain_object.input_variables:
+        if (
+            hasattr(langchain_object.memory, "memory_key")
+            and langchain_object.memory.memory_key in langchain_object.input_variables
+        ):
             return
     except AttributeError:
         input_variables = (
@@ -88,8 +91,20 @@ def process_graph_cached(data_graph: Dict[str, Any], inputs: Optional[dict] = No
     with PromptTemplate,then run the graph and return the result and thought.
     """
     # Load langchain object
-    langchain_object = build_langchain_object_with_caching(data_graph)
+    langchain_object, artifacts = build_sorted_vertices_with_caching(data_graph)
     logger.debug("Loaded LangChain object")
+    if inputs is None:
+        inputs = {}
+
+    # Add artifacts to inputs
+    # artifacts can be documents loaded when building
+    # the flow
+    for (
+        key,
+        value,
+    ) in artifacts.items():
+        if key not in inputs or not inputs[key]:
+            inputs[key] = value
 
     if langchain_object is None:
         # Raise user facing error
@@ -105,8 +120,7 @@ def process_graph_cached(data_graph: Dict[str, Any], inputs: Optional[dict] = No
         result = get_result_and_thought(langchain_object, inputs)
         logger.debug("Generated result and thought")
     elif isinstance(langchain_object, VectorStore):
-        class_name = langchain_object.__class__.__name__
-        result = {"message": f"Processed {class_name} successfully"}
+        result = langchain_object.search(**inputs)
     else:
         raise ValueError(
             f"Unknown langchain_object type: {type(langchain_object).__name__}"
@@ -115,23 +129,23 @@ def process_graph_cached(data_graph: Dict[str, Any], inputs: Optional[dict] = No
 
 
 def load_flow_from_json(
-    input: Union[Path, str, dict], tweaks: Optional[dict] = None, build=True
+    flow: Union[Path, str, dict], tweaks: Optional[dict] = None, build=True
 ):
     """
     Load flow from a JSON file or a JSON object.
 
-    :param input: JSON file path or JSON object
+    :param flow: JSON file path or JSON object
     :param tweaks: Optional tweaks to be processed
     :param build: If True, build the graph, otherwise return the graph object
     :return: Langchain object or Graph object depending on the build parameter
     """
     # If input is a file path, load JSON from the file
-    if isinstance(input, (str, Path)):
-        with open(input, "r", encoding="utf-8") as f:
+    if isinstance(flow, (str, Path)):
+        with open(flow, "r", encoding="utf-8") as f:
             flow_graph = json.load(f)
     # If input is a dictionary, assume it's a JSON object
-    elif isinstance(input, dict):
-        flow_graph = input
+    elif isinstance(flow, dict):
+        flow_graph = flow
     else:
         raise TypeError(
             "Input must be either a file path (str) or a JSON object (dict)"

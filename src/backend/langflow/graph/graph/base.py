@@ -60,7 +60,7 @@ class Graph:
         # the toolkit node
         self._build_node_params()
         # remove invalid nodes
-        self._remove_invalid_nodes()
+        self._validate_nodes()
 
     def _build_node_params(self) -> None:
         """Identifies and handles the LLM node within the graph."""
@@ -75,14 +75,13 @@ class Graph:
                 if isinstance(node, ToolkitVertex):
                     node.params["llm"] = llm_node
 
-    def _remove_invalid_nodes(self) -> None:
-        """Removes invalid nodes from the graph."""
-        self.nodes = [
-            node
-            for node in self.nodes
-            if self._validate_node(node)
-            or (len(self.nodes) == 1 and len(self.edges) == 0)
-        ]
+    def _validate_nodes(self) -> None:
+        """Check that all nodes have edges"""
+        for node in self.nodes:
+            if not self._validate_node(node):
+                raise ValueError(
+                    f"{node.vertex_type} is not connected to any other components"
+                )
 
     def _validate_node(self, node: Vertex) -> bool:
         """Validates a node."""
@@ -179,7 +178,7 @@ class Graph:
                 raise ValueError(f"Source node {edge['source']} not found")
             if target is None:
                 raise ValueError(f"Target node {edge['target']} not found")
-            edges.append(Edge(source, target))
+            edges.append(Edge(source, target, edge))
         return edges
 
     def _get_vertex_class(self, node_type: str, node_lc_type: str) -> Type[Vertex]:
@@ -214,3 +213,10 @@ class Graph:
         if node_type in node_types:
             children.append(node)
         return children
+
+    def __repr__(self):
+        node_ids = [node.id for node in self.nodes]
+        edges_repr = "\n".join(
+            [f"{edge.source.id} --> {edge.target.id}" for edge in self.edges]
+        )
+        return f"Graph:\nNodes: {node_ids}\nConnections:\n{edges_repr}"

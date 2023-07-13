@@ -1,7 +1,7 @@
+import { Settings2 } from "lucide-react";
 import { useContext, useRef, useState } from "react";
-import { alertContext } from "../../contexts/alertContext";
-import { PopUpContext } from "../../contexts/popUpContext";
-import { TabsContext } from "../../contexts/tabsContext";
+import EditFlowSettings from "../../components/EditFlowSettingsComponent";
+import { Button } from "../../components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,11 +11,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-import { Button } from "../../components/ui/button";
 import { SETTINGS_DIALOG_SUBTITLE } from "../../constants";
-import EditFlowSettings from "../../components/EditFlowSettingsComponent";
-import { Settings2 } from "lucide-react";
-import { updateFlowInDatabase } from "../../controllers/API";
+import { alertContext } from "../../contexts/alertContext";
+import { PopUpContext } from "../../contexts/popUpContext";
+import { TabsContext } from "../../contexts/tabsContext";
 
 export default function FlowSettingsModal() {
   const [open, setOpen] = useState(true);
@@ -27,7 +26,7 @@ export default function FlowSettingsModal() {
   const maxLength = 50;
   const [name, setName] = useState(flows.find((f) => f.id === tabId).name);
   const [description, setDescription] = useState(
-    flows.find((f) => f.id === tabId).description,
+    flows.find((f) => f.id === tabId).description
   );
   function setModalOpen(x: boolean) {
     setOpen(x);
@@ -48,11 +47,11 @@ export default function FlowSettingsModal() {
   return (
     <Dialog open={true} onOpenChange={setModalOpen}>
       <DialogTrigger asChild></DialogTrigger>
-      <DialogContent className="lg:max-w-[600px] h-[390px]">
+      <DialogContent className="h-[390px] lg:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Settings </span>
-            <Settings2 className="w-4 h-4 mr-2 dark:text-gray-300" />
+            <Settings2 className="mr-2 h-4 w-4 " />
           </DialogTitle>
           <DialogDescription>{SETTINGS_DIALOG_SUBTITLE}</DialogDescription>
         </DialogHeader>

@@ -1,27 +1,24 @@
-import { useContext } from "react";
-import { TabsContext } from "../../../../contexts/tabsContext";
-import { PopUpContext } from "../../../../contexts/popUpContext";
 import {
-  Plus,
   ChevronDown,
   ChevronLeft,
-  Undo,
+  Plus,
   Redo,
   Settings2,
+  Undo,
 } from "lucide-react";
+import { useContext } from "react";
+import { PopUpContext } from "../../../../contexts/popUpContext";
+import { TabsContext } from "../../../../contexts/tabsContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "../../../ui/dropdown-menu";
 
-import { alertContext } from "../../../../contexts/alertContext";
 import { Link, useNavigate } from "react-router-dom";
+import { alertContext } from "../../../../contexts/alertContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 import { Button } from "../../../ui/button";
@@ -47,20 +44,18 @@ export const MenuBar = ({ flows, tabId }) => {
   let current_flow = flows.find((flow) => flow.id === tabId);
 
   return (
-    <div className="flex gap-2 items-center">
+    <div className="round-button-div">
       <Link to="/">
         <ChevronLeft className="w-4" />
       </Link>
-      <div className="flex items-center font-medium text-sm rounded-md py-1 px-1.5 gap-0.5">
+      <div className="header-menu-bar">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              className="gap-2 flex items-center max-w-[200px]"
-              variant="primary"
-              size="sm"
-            >
-              <div className="truncate flex-1">{current_flow.name}</div>
-              <ChevronDown className="w-4 h-4" />
+            <Button asChild variant="primary" size="sm">
+              <div className="header-menu-bar-display">
+                <div className="header-menu-flow-name">{current_flow.name}</div>
+                <ChevronDown className="h-4 w-4" />
+              </div>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-44">
@@ -71,7 +66,7 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="header-menu-options" />
               New
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -80,7 +75,7 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <Settings2 className="w-4 h-4 mr-2 dark:text-gray-300" />
+              <Settings2 className="header-menu-options " />
               Settings
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -89,7 +84,7 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <Undo className="w-4 h-4 mr-2 dark:text-gray-300" />
+              <Undo className="header-menu-options " />
               Undo
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -98,10 +93,10 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <Redo className="w-4 h-4 mr-2 dark:text-gray-300" />
+              <Redo className="header-menu-options " />
               Redo
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
+            {/* <DropdownMenuSeparator /> */}
             {/* <DropdownMenuLabel>Projects</DropdownMenuLabel> */}
             {/* <DropdownMenuRadioGroup className="max-h-full overflow-scroll"
               value={tabId}

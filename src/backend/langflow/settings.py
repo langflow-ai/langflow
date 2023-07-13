@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     toolkits: dict = {}
     textsplitters: dict = {}
     utilities: dict = {}
+    output_parsers: dict = {}
     dev: bool = False
     database_url: Optional[str] = None
     cache: str = "InMemoryCache"
@@ -66,7 +67,7 @@ class Settings(BaseSettings):
         self.vectorstores = new_settings.vectorstores or {}
         self.documentloaders = new_settings.documentloaders or {}
         self.retrievers = new_settings.retrievers or {}
-
+        self.output_parsers = new_settings.output_parsers or {}
         self.dev = dev
 
     def update_settings(self, **kwargs):

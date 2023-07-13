@@ -1,0 +1,530 @@
+{
+  "description": "Query an API spec to get information about the endpoints, parameters, and responses.",
+  "name": "JSON Agent",
+  "id": "e364ff2d-fa4f-41fa-8412-f4a91cbe1d44",
+  "data": {
+    "nodes": [
+      {
+        "width": 384,
+        "height": 227,
+        "id": "dndnode_13",
+        "type": "genericNode",
+        "position": {
+          "x": 1187.2084622072437,
+          "y": 116.13738146259979
+        },
+        "data": {
+          "type": "JsonToolkit",
+          "node": {
+            "template": {
+              "spec": {
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "multiline": false,
+                "password": false,
+                "name": "spec",
+                "advanced": false,
+                "type": "JsonSpec",
+                "list": false
+              },
+              "_type": "JsonToolkit"
+            },
+            "description": "Toolkit for interacting with a JSON spec.",
+            "base_classes": [
+              "BaseToolkit",
+              "JsonToolkit"
+            ]
+          },
+          "id": "dndnode_13",
+          "value": null
+        },
+        "selected": false,
+        "positionAbsolute": {
+          "x": 1187.2084622072437,
+          "y": 116.13738146259979
+        },
+        "dragging": false
+      },
+      {
+        "width": 384,
+        "height": 267,
+        "id": "dndnode_15",
+        "type": "genericNode",
+        "position": {
+          "x": 1659.6395547893094,
+          "y": 397.52506741326164
+        },
+        "data": {
+          "type": "JsonAgent",
+          "node": {
+            "template": {
+              "toolkit": {
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "multiline": false,
+                "password": false,
+                "name": "toolkit",
+                "advanced": false,
+                "type": "BaseToolkit",
+                "list": false
+              },
+              "llm": {
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "multiline": false,
+                "password": false,
+                "name": "llm",
+                "display_name": "LLM",
+                "advanced": false,
+                "type": "BaseLanguageModel",
+                "list": false
+              },
+              "_type": "json_agent"
+            },
+            "description": "Construct a json agent from an LLM and tools.",
+            "base_classes": [
+              "AgentExecutor"
+            ]
+          },
+          "id": "dndnode_15",
+          "value": null
+        },
+        "selected": false,
+        "positionAbsolute": {
+          "x": 1659.6395547893094,
+          "y": 397.52506741326164
+        },
+        "dragging": false
+      },
+      {
+        "width": 384,
+        "height": 597,
+        "id": "dndnode_17",
+        "type": "genericNode",
+        "position": {
+          "x": 664.5046837368179,
+          "y": 351.4165918614485
+        },
+        "data": {
+          "type": "OpenAI",
+          "node": {
+            "template": {
+              "cache": {
+                "required": false,
+                "placeholder": "",
+                "show": false,
+                "multiline": false,
+                "password": false,
+                "name": "cache",
+                "advanced": false,
+                "type": "bool",
+                "list": false
+              },
+              "verbose": {
+                "required": false,
+                "placeholder": "",
+                "show": false,
+                "multiline": false,
+                "password": false,
+                "name": "verbose",
+                "advanced": false,
+                "type": "bool",
+                "list": false
+              },
+              "callbacks": {
+                "required": false,
+                "placeholder": "",
+                "show": false,
+                "multiline": false,
+                "password": false,
+                "name": "callbacks",
+                "advanced": false,
+                "type": "langchain.callbacks.base.BaseCallbackHandler",
+                "list": true
+              },
+              "client": {
+                "required": false,
+                "placeholder": "",
+                "show": false,
+                "multiline": false,
+                "password": false,
+                "name": "client",
+                "advanced": false,
+                "type": "Any",
+                "list": false
+              },
+              "model_name": {
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "multiline": false,
+                "value": "text-davinci-003",
+                "password": false,
+                "options": [
+                  "text-davinci-003",
+                  "text-davinci-002",
+                  "text-curie-001",
+                  "text-babbage-001",
+                  "text-ada-001"
+                ],
+                "name": "model_name",
+                "advanced": false,
+                "type": "str",
+                "list": true
+              },
+              "temperature": {
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "multiline": false,
+                "value": 0.7,
+                "password": false,
+                "name": "temperature",
+                "advanced": false,
+                "type": "float",
+                "list": false
+              },
+              "max_tokens": {
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "multiline": false,
+                "value": 256,
+                "password": true,
+                "name": "max_tokens",
+                "advanced": false,
+                "type": "int",
+                "list": false
+              },
+              "top_p": {
+                "required": false,
+                "placeholder": "",
+                "show": false,
+                "multiline": false,
+                "value": 1,
+                "password": false,
+                "name": "top_p",
+                "advanced": false,
+                "type": "float",
+                "list": false
+              },
+              "frequency_penalty": {
+                "required": false,
+                "placeholder": "",
+                "show": false,
+                "multiline": false,
+                "value": 0,
+                "password": false,
+                "name": "frequency_penalty",
+                "advanced": false,
+                "type": "float",
+                "list": false
+              },
+              "presence_penalty": {
+                "required": false,
+                "placeholder": "",
+                "show": false,
+                "multiline": false,
+                "value": 0,
+                "password": false,
+                "name": "presence_penalty",
+                "advanced": false,
+                "type": "float",
+                "list": false
+              },
+              "n": {
+                "required": false,
+                "placeholder": "",
+                "show": false,
+                "multiline": false,
+                "value": 1,
+                "password": false,
+                "name": "n",
+                "advanced": false,
+                "type": "int",
+                "list": false
+              },
+              "best_of": {
+                "required": false,
+                "placeholder": "",
+                "show": false,
+                "multiline": false,
+                "value": 1,
+                "password": false,
+                "name": "best_of",
+                "advanced": false,
+                "type": "int",
+                "list": false
+              },
+              "model_kwargs": {
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "multiline": false,
+                "password": false,
+                "name": "model_kwargs",
+                "advanced": true,
+                "type": "code",
+                "list": false
+              },
+              "openai_api_key": {
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "multiline": false,
+                "value": "",
+                "password": true,
+                "name": "openai_api_key",
+                "display_name": "OpenAI API Key",
+                "advanced": false,
+                "type": "str",
+                "list": false
+              },
+              "openai_api_base": {
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "multiline": false,
+                "password": true,
+                "name": "openai_api_base",
+                "display_name": "OpenAI API Base",
+                "advanced": false,
+                "type": "str",
+                "list": false,
+                "value": ""
+              },
+              "openai_organization": {
+                "required": false,
+                "placeholder": "",
+                "show": false,
+                "multiline": false,
+                "password": false,
+                "name": "openai_organization",
+                "display_name": "OpenAI Organization",
+                "advanced": false,
+                "type": "str",
+                "list": false
+              },
+              "openai_proxy": {
+                "required": false,
+                "placeholder": "",
+                "show": false,
+                "multiline": false,
+                "password": false,
+                "name": "openai_proxy",
+                "display_name": "OpenAI Proxy",
+                "advanced": false,
+                "type": "str",
+                "list": false
+              },
+              "batch_size": {
+                "required": false,
+                "placeholder": "",
+                "show": false,
+                "multiline": false,
+                "value": 20,
+                "password": false,
+                "name": "batch_size",
+                "advanced": false,
+                "type": "int",
+                "list": false
+              },
+              "request_timeout": {
+                "required": false,
+                "placeholder": "",
+                "show": false,
+                "multiline": false,
+                "password": false,
+                "name": "request_timeout",
+                "advanced": false,
+                "type": "float",
+                "list": false
+              },
+              "logit_bias": {
+                "required": false,
+                "placeholder": "",
+                "show": false,
+                "multiline": false,
+                "password": false,
+                "name": "logit_bias",
+                "advanced": false,
+                "type": "code",
+                "list": false
+              },
+              "max_retries": {
+                "required": false,
+                "placeholder": "",
+                "show": false,
+                "multiline": false,
+                "value": 6,
+                "password": false,
+                "name": "max_retries",
+                "advanced": false,
+                "type": "int",
+                "list": false
+              },
+              "streaming": {
+                "required": false,
+                "placeholder": "",
+                "show": false,
+                "multiline": false,
+                "value": false,
+                "password": false,
+                "name": "streaming",
+                "advanced": false,
+                "type": "bool",
+                "list": false
+              },
+              "allowed_special": {
+                "required": false,
+                "placeholder": "",
+                "show": false,
+                "multiline": false,
+                "value": [],
+                "password": false,
+                "name": "allowed_special",
+                "advanced": false,
+                "type": "Literal'all'",
+                "list": true
+              },
+              "disallowed_special": {
+                "required": false,
+                "placeholder": "",
+                "show": false,
+                "multiline": false,
+                "value": "all",
+                "password": false,
+                "name": "disallowed_special",
+                "advanced": false,
+                "type": "Literal'all'",
+                "list": false
+              },
+              "_type": "OpenAI"
+            },
+            "description": "Generic OpenAI class that uses model name.",
+            "base_classes": [
+              "BaseLLM",
+              "BaseLanguageModel",
+              "OpenAI",
+              "BaseOpenAI"
+            ]
+          },
+          "id": "dndnode_17",
+          "value": null
+        },
+        "selected": false,
+        "positionAbsolute": {
+          "x": 664.5046837368179,
+          "y": 351.4165918614485
+        },
+        "dragging": false
+      },
+      {
+        "width": 384,
+        "height": 323,
+        "id": "dndnode_126653ac-f17f-4266-8b19-510eed024b17",
+        "type": "genericNode",
+        "position": {
+          "x": 644.1239078947345,
+          "y": -74.06644565448788
+        },
+        "data": {
+          "type": "JsonSpec",
+          "node": {
+            "template": {
+              "max_value_length": {
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "multiline": false,
+                "value": "",
+                "password": false,
+                "name": "max_value_length",
+                "advanced": false,
+                "type": "int",
+                "list": false
+              },
+              "path": {
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "multiline": false,
+                "value": "",
+                "suffixes": [
+                  ".json",
+                  ".yaml",
+                  ".yml"
+                ],
+                "password": false,
+                "name": "path",
+                "advanced": false,
+                "type": "file",
+                "list": false,
+                "fileTypes": [
+                  "json",
+                  "yaml",
+                  "yml"
+                ],
+                "content": null
+              },
+              "_type": "JsonSpec"
+            },
+            "description": "",
+            "base_classes": [
+              "Tool",
+              "JsonSpec"
+            ]
+          },
+          "id": "dndnode_126653ac-f17f-4266-8b19-510eed024b17",
+          "value": null
+        },
+        "selected": false,
+        "positionAbsolute": {
+          "x": 644.1239078947345,
+          "y": -74.06644565448788
+        },
+        "dragging": false
+      }
+    ],
+    "edges": [
+      {
+        "source": "dndnode_13",
+        "sourceHandle": "JsonToolkit|dndnode_13|BaseToolkit|JsonToolkit",
+        "target": "dndnode_15",
+        "targetHandle": "BaseToolkit|toolkit|dndnode_15",
+        "className": "animate-pulse",
+        "id": "reactflow__edge-dndnode_13JsonToolkit|dndnode_13|BaseToolkit|JsonToolkit-dndnode_15BaseToolkit|toolkit|dndnode_15",
+        "selected": false
+      },
+      {
+        "source": "dndnode_17",
+        "sourceHandle": "OpenAI|dndnode_17|BaseLLM|BaseLanguageModel|OpenAI|BaseOpenAI",
+        "target": "dndnode_15",
+        "targetHandle": "BaseLanguageModel|llm|dndnode_15",
+        "className": "animate-pulse",
+        "id": "reactflow__edge-dndnode_17OpenAI|dndnode_17|BaseLLM|BaseLanguageModel|OpenAI|BaseOpenAI-dndnode_15BaseLanguageModel|llm|dndnode_15",
+        "selected": false
+      },
+      {
+        "source": "dndnode_126653ac-f17f-4266-8b19-510eed024b17",
+        "sourceHandle": "JsonSpec|dndnode_126653ac-f17f-4266-8b19-510eed024b17|Tool|JsonSpec",
+        "target": "dndnode_13",
+        "targetHandle": "JsonSpec|spec|dndnode_13",
+        "style": {
+          "stroke": "#222222"
+        },
+        "animated": false,
+        "id": "reactflow__edge-dndnode_126653ac-f17f-4266-8b19-510eed024b17JsonSpec|dndnode_126653ac-f17f-4266-8b19-510eed024b17|Tool|JsonSpec-dndnode_13JsonSpec|spec|dndnode_13",
+        "selected": false
+      }
+    ],
+    "viewport": {
+      "x": -258.1938704405271,
+      "y": 118.65185298284183,
+      "zoom": 0.697371833175204
+    }
+  }
+}

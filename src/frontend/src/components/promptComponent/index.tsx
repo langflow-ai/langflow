@@ -1,12 +1,17 @@
 import { useContext, useEffect, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
-import { TextAreaComponentType } from "../../types/components";
 import GenericModal from "../../modals/genericModal";
+import { TextAreaComponentType } from "../../types/components";
 import { TypeModal } from "../../utils";
-import { INPUT_STYLE } from "../../constants";
+
 import { ExternalLink } from "lucide-react";
+import { typesContext } from "../../contexts/typesContext";
+import { postValidatePrompt } from "../../controllers/API";
 
 export default function PromptAreaComponent({
+  field_name,
+  setNodeClass,
+  nodeClass,
   value,
   onChange,
   disabled,
@@ -14,6 +19,7 @@ export default function PromptAreaComponent({
 }: TextAreaComponentType) {
   const [myValue, setMyValue] = useState(value);
   const { openPopUp } = useContext(PopUpContext);
+  const { reactFlowInstance } = useContext(typesContext);
   useEffect(() => {
     if (disabled) {
       setMyValue("");
@@ -23,15 +29,37 @@ export default function PromptAreaComponent({
 
   useEffect(() => {
     setMyValue(value);
-  }, [value]);
+    if (value !== "" && !editNode) {
+      postValidatePrompt(field_name, value, nodeClass).then((apiReturn) => {
+        if (apiReturn.data) {
+          setNodeClass(apiReturn.data.frontend_node);
+          // need to update reactFlowInstance to re-render the nodes.
+        }
+      });
+    }
+  }, [value, reactFlowInstance]);
+
+  // useEffect(() => {
+  //   if (value !== "" && myValue !== value && reactFlowInstance) {
+  //     // only executed once
+  //     setMyValue(value);
+  //     postValidatePrompt(field_name, value, nodeClass)
+  //       .then((apiReturn) => {
+  //         if (apiReturn.data) {
+  //           setNodeClass(apiReturn.data.frontend_node);
+  //           // need to update reactFlowInstance to re-render the nodes.
+  //           reactFlowInstance.setEdges(
+  //             _.cloneDeep(reactFlowInstance.getEdges())
+  //           );
+  //         }
+  //       })
+  //       .catch((error) => {});
+  //   }
+  // }, [reactFlowInstance, field_name, myValue, nodeClass, setNodeClass, value]);
 
   return (
-    <div
-      className={
-        disabled ? "pointer-events-none cursor-not-allowed w-full" : " w-full"
-      }
-    >
-      <div className="w-full flex items-center">
+    <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
+      <div className="flex w-full items-center">
         <span
           onClick={() => {
             openPopUp(
@@ -44,16 +72,16 @@ export default function PromptAreaComponent({
                   setMyValue(t);
                   onChange(t);
                 }}
-              />,
+                nodeClass={nodeClass}
+                setNodeClass={setNodeClass}
+              />
             );
           }}
           className={
             editNode
-              ? "cursor-pointer truncate placeholder:text-center text-gray-500 border-1 block w-full pt-0.5 pb-0.5 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm sm:text-sm" +
-                INPUT_STYLE +
-                (disabled ? " bg-gray-200 " : "")
-              : "truncate block w-full text-gray-500 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 shadow-sm sm:text-sm" +
-                (disabled ? " bg-gray-200" : "")
+              ? "input-edit-node input-dialog"
+              : (disabled ? " input-disable text-ring " : "") +
+                " input-primary text-muted-foreground "
           }
         >
           {myValue !== "" ? myValue : "Type your prompt here"}
@@ -62,6 +90,7 @@ export default function PromptAreaComponent({
           onClick={() => {
             openPopUp(
               <GenericModal
+                field_name={field_name}
                 type={TypeModal.PROMPT}
                 value={myValue}
                 buttonText="Check & Save"
@@ -70,12 +99,20 @@ export default function PromptAreaComponent({
                   setMyValue(t);
                   onChange(t);
                 }}
-              />,
+                nodeClass={nodeClass}
+                setNodeClass={setNodeClass}
+              />
             );
           }}
         >
           {!editNode && (
-            <ExternalLink className="w-6 h-6 hover:text-ring dark:text-gray-300 ml-3" />
+            <ExternalLink
+              strokeWidth={1.5}
+              className={
+                "icons-parameters-comp" +
+                (disabled ? " text-ring" : " hover:text-accent-foreground")
+              }
+            />
           )}
         </button>
       </div>

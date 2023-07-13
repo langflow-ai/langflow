@@ -1,5 +1,5 @@
 import { Dispatch, SetStateAction } from "react";
-import { FlowType } from "../flow";
+import { FlowType, TweaksType } from "../flow";
 
 export type TabsContextType = {
   saveFlow: (flow: FlowType) => Promise<void>;
@@ -11,10 +11,14 @@ export type TabsContextType = {
   addFlow: (flowData?: FlowType, newProject?: boolean) => Promise<String>;
   updateFlow: (newFlow: FlowType) => void;
   incrementNodeId: () => string;
-  downloadFlow: (flow: FlowType) => void;
+  downloadFlow: (
+    flow: FlowType,
+    flowName: string,
+    flowDescription?: string
+  ) => void;
   downloadFlows: () => void;
   uploadFlows: () => void;
-  uploadFlow: (newFlow?: boolean) => void;
+  uploadFlow: (newFlow?: boolean, file?: File) => void;
   hardReset: () => void;
   //disable CopyPaste
   disableCopyPaste: boolean;
@@ -24,16 +28,22 @@ export type TabsContextType = {
   setTabsState: Dispatch<SetStateAction<TabsState>>;
   paste: (
     selection: { nodes: any; edges: any },
-    position: { x: number; y: number; paneX?: number; paneY?: number },
+    position: { x: number; y: number; paneX?: number; paneY?: number }
   ) => void;
   lastCopiedSelection: { nodes: any; edges: any };
   setLastCopiedSelection: (selection: { nodes: any; edges: any }) => void;
-  setTweak: (tweak: any) => void;
-  getTweak: any;
+  setTweak: (tweak: TweaksType) => void;
+  getTweak: TweaksType[];
 };
 
 export type TabsState = {
   [key: string]: {
     isPending: boolean;
+    formKeysData: {
+      template?: string;
+      input_keys?: Object;
+      memory_keys?: Array<string>;
+      handle_keys?: Array<string>;
+    };
   };
 };

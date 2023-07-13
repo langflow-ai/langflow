@@ -53,7 +53,7 @@ export const locationContext = createContext<locationContextType>(initialValue);
 export function LocationProvider({ children }: { children: ReactNode }) {
   const [current, setCurrent] = useState(initialValue.current);
   const [isStackedOpen, setIsStackedOpen] = useState(
-    initialValue.isStackedOpen,
+    initialValue.isStackedOpen
   );
   const [showSideBar, setShowSideBar] = useState(initialValue.showSideBar);
   const [extraNavigation, setExtraNavigation] = useState({ title: "" });

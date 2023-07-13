@@ -1,14 +1,12 @@
-from langflow.utils.constants import DIRECT_TYPES
 from langflow.interface.initialize import loading
 from langflow.interface.listing import ALL_TYPES_DICT
+from langflow.utils.constants import DIRECT_TYPES
 from langflow.utils.logger import logger
 from langflow.utils.util import sync_to_async
 
 
-import contextlib
 import inspect
 import types
-import warnings
 from typing import Any, Dict, List, Optional
 from typing import TYPE_CHECKING
 
@@ -25,6 +23,7 @@ class Vertex:
         self._parse_data()
         self._built_object = None
         self._built = False
+        self.artifacts: Dict[str, Any] = {}
 
     def _parse_data(self) -> None:
         self.data = self._data["data"]
@@ -45,6 +44,14 @@ class Vertex:
             for key, value in template_dicts.items()
             if not value["required"]
         ]
+        # Add the template_dicts[key]["input_types"] to the optional_inputs
+        self.optional_inputs.extend(
+            [
+                input_type
+                for value in template_dicts.values()
+                for input_type in value.get("input_types", [])
+            ]
+        )
 
         template_dict = self.data["node"]["template"]
         self.vertex_type = (
@@ -60,6 +67,7 @@ class Vertex:
                     break
 
     def _build_params(self):
+        # sourcery skip: merge-list-append, remove-redundant-if
         # Some params are required, some are optional
         # but most importantly, some params are python base classes
         # like str and others are LangChain objects like LLMChain, BasePromptTemplate
@@ -80,8 +88,19 @@ class Vertex:
             if isinstance(value, dict)
         }
         params = {}
+
+        for edge in self.edges:
+            param_key = edge.target_param
+            if param_key in template_dict:
+                if template_dict[param_key]["list"]:
+                    if param_key not in params:
+                        params[param_key] = []
+                    params[param_key].append(edge.source)
+                elif edge.target.id == self.id:
+                    params[param_key] = edge.source
+
         for key, value in template_dict.items():
-            if key == "_type":
+            if key == "_type" or not value.get("show"):
                 continue
             # If the type is not transformable to a python base class
             # then we need to get the edge that connects to this node
@@ -92,123 +111,130 @@ class Vertex:
                 file_path = value.get("file_path")
 
                 params[key] = file_path
+            elif value.get("type") in DIRECT_TYPES and params.get(key) is None:
+                params[key] = value.get("value")
 
-            elif value.get("type") not in DIRECT_TYPES:
-                # Get the edge that connects to this node
-                edges = [
-                    edge
-                    for edge in self.edges
-                    if edge.target == self and edge.matched_type in value["type"]
-                ]
-
-                # Get the output of the node that the edge connects to
-                # if the value['list'] is True, then there will be more
-                # than one time setting to params[key]
-                # so we need to append to a list if it exists
-                # or create a new list if it doesn't
-
-                if value["required"] and not edges:
-                    # If a required parameter is not found, raise an error
-                    raise ValueError(
-                        f"Required input {key} for module {self.vertex_type} not found"
-                    )
-                elif value["list"]:
-                    # If this is a list parameter, append all sources to a list
-                    params[key] = [edge.source for edge in edges]
-                elif edges:
-                    # If a single parameter is found, use its source
-                    params[key] = edges[0].source
-
-            elif value["required"] or value.get("value"):
-                # If value does not have value this still passes
-                # but then gives a keyError
-                # so we need to check if value has value
-                new_value = value.get("value")
-                if new_value is None:
-                    warnings.warn(f"Value for {key} in {self.vertex_type} is None. ")
-                if value.get("type") == "int":
-                    with contextlib.suppress(TypeError, ValueError):
-                        new_value = int(new_value)  # type: ignore
-                params[key] = new_value
-
+            if not value.get("required") and params.get(key) is None:
+                if value.get("default"):
+                    params[key] = value.get("default")
+                else:
+                    params.pop(key, None)
         # Add _type to params
         self.params = params
 
     def _build(self):
-        # The params dict is used to build the module
-        # it contains values and keys that point to nodes which
-        # have their own params dict
-        # When build is called, we iterate through the params dict
-        # and if the value is a node, we call build on that node
-        # and use the output of that build as the value for the param
-        # if the value is not a node, then we use the value as the param
-        # and continue
-        # Another aspect is that the node_type is the class that we need to import
-        # and instantiate with these built params
+        """
+        Initiate the build process.
+        """
         logger.debug(f"Building {self.vertex_type}")
-        # Build each node in the params dict
+        self._build_each_node_in_params_dict()
+        self._get_and_instantiate_class()
+        self._validate_built_object()
+
+        self._built = True
+
+    def _build_each_node_in_params_dict(self):
+        """
+        Iterates over each node in the params dictionary and builds it.
+        """
         for key, value in self.params.copy().items():
-            # Check if Node or list of Nodes and not self
-            # to avoid recursion
-            if isinstance(value, Vertex):
+            if self._is_node(value):
                 if value == self:
                     del self.params[key]
                     continue
-                result = value.build()
-                # If the key is "func", then we need to use the run method
-                if key == "func":
-                    if not isinstance(result, types.FunctionType):
-                        # func can be
-                        # PythonFunction(code='\ndef upper_case(text: str) -> str:\n    return text.upper()\n')
-                        # so we need to check if there is an attribute called run
-                        if hasattr(result, "run"):
-                            result = result.run  # type: ignore
-                        elif hasattr(result, "get_function"):
-                            result = result.get_function()  # type: ignore
-                    elif inspect.iscoroutinefunction(result):
-                        self.params["coroutine"] = result
-                    else:
-                        # turn result which is a function into a coroutine
-                        # so that it can be awaited
-                        self.params["coroutine"] = sync_to_async(result)
-                if isinstance(result, list):
-                    # If the result is a list, then we need to extend the list
-                    # with the result but first check if the key exists
-                    # if it doesn't, then we need to create a new list
-                    if isinstance(self.params[key], list):
-                        self.params[key].extend(result)
+                self._build_node_and_update_params(key, value)
+            elif isinstance(value, list) and self._is_list_of_nodes(value):
+                self._build_list_of_nodes_and_update_params(key, value)
 
-                self.params[key] = result
-            elif isinstance(value, list) and all(
-                isinstance(node, Vertex) for node in value
-            ):
-                self.params[key] = []
-                for node in value:
-                    built = node.build()
-                    if isinstance(built, list):
-                        self.params[key].extend(built)
-                    else:
-                        self.params[key].append(built)
+    def _is_node(self, value):
+        """
+        Checks if the provided value is an instance of Vertex.
+        """
+        return isinstance(value, Vertex)
 
-        # Get the class from LANGCHAIN_TYPES_DICT
-        # and instantiate it with the params
-        # and return the instance
+    def _is_list_of_nodes(self, value):
+        """
+        Checks if the provided value is a list of Vertex instances.
+        """
+        return all(self._is_node(node) for node in value)
 
+    def _build_node_and_update_params(self, key, node):
+        """
+        Builds a given node and updates the params dictionary accordingly.
+        """
+        result = node.build()
+        self._handle_func(key, result)
+        if isinstance(result, list):
+            self._extend_params_list_with_result(key, result)
+        self.params[key] = result
+
+    def _build_list_of_nodes_and_update_params(self, key, nodes):
+        """
+        Iterates over a list of nodes, builds each and updates the params dictionary.
+        """
+        self.params[key] = []
+        for node in nodes:
+            built = node.build()
+            if isinstance(built, list):
+                self.params[key].extend(built)
+            else:
+                self.params[key].append(built)
+
+    def _handle_func(self, key, result):
+        """
+        Handles 'func' key by checking if the result is a function and setting it as coroutine.
+        """
+        if key == "func":
+            if not isinstance(result, types.FunctionType):
+                if hasattr(result, "run"):
+                    result = result.run  # type: ignore
+                elif hasattr(result, "get_function"):
+                    result = result.get_function()  # type: ignore
+            elif inspect.iscoroutinefunction(result):
+                self.params["coroutine"] = result
+            else:
+                self.params["coroutine"] = sync_to_async(result)
+
+    def _extend_params_list_with_result(self, key, result):
+        """
+        Extends a list in the params dictionary with the given result if it exists.
+        """
+        if isinstance(self.params[key], list):
+            self.params[key].extend(result)
+
+    def _get_and_instantiate_class(self):
+        """
+        Gets the class from a dictionary and instantiates it with the params.
+        """
+        if self.base_type is None:
+            raise ValueError(f"Base type for node {self.vertex_type} not found")
         try:
-            self._built_object = loading.instantiate_class(
+            result = loading.instantiate_class(
                 node_type=self.vertex_type,
                 base_type=self.base_type,
                 params=self.params,
             )
+            self._update_built_object_and_artifacts(result)
         except Exception as exc:
             raise ValueError(
                 f"Error building node {self.vertex_type}: {str(exc)}"
             ) from exc
 
+    def _update_built_object_and_artifacts(self, result):
+        """
+        Updates the built object and its artifacts.
+        """
+        if isinstance(result, tuple):
+            self._built_object, self.artifacts = result
+        else:
+            self._built_object = result
+
+    def _validate_built_object(self):
+        """
+        Checks if the built object is None and raises a ValueError if so.
+        """
         if self._built_object is None:
             raise ValueError(f"Node type {self.vertex_type} not found")
-
-        self._built = True
 
     def build(self, force: bool = False) -> Any:
         if not self._built or force:
@@ -217,10 +243,11 @@ class Vertex:
         return self._built_object
 
     def add_edge(self, edge: "Edge") -> None:
-        self.edges.append(edge)
+        if edge not in self.edges:
+            self.edges.append(edge)
 
     def __repr__(self) -> str:
-        return f"Node(id={self.id}, data={self.data})"
+        return f"Vertex(id={self.id}, data={self.data})"
 
     def __eq__(self, __o: object) -> bool:
         return self.id == __o.id if isinstance(__o, Vertex) else False
@@ -229,4 +256,5 @@ class Vertex:
         return id(self)
 
     def _built_object_repr(self):
-        return repr(self._built_object)
+        # Add a message with an emoji, stars for sucess,
+        return "Built sucessfully ✨" if self._built_object else "Failed to build 😵‍💫"
