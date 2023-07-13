@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { InputComponentType } from "../../types/components";
-import { classNames } from "../../utils";
+import { classNames } from "../../utils/utils";
 
 export default function InputComponent({
   value,

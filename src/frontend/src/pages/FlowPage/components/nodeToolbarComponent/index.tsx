@@ -4,7 +4,7 @@ import { useReactFlow } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import EditNodeModal from "../../../../modals/EditNodeModal";
-import { classNames } from "../../../../utils";
+import { classNames } from "../../../../utils/utils";
 
 const NodeToolbarComponent = (props) => {
   const [nodeLength, setNodeLength] = useState(

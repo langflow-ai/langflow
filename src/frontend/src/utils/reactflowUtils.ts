@@ -3,7 +3,7 @@ import { Connection, ReactFlowInstance } from "reactflow";
 import { APITemplateType } from "../types/api";
 import { FlowType, NodeType } from "../types/flow";
 import { cleanEdgesType } from "../types/utils/reactflowUtils";
-import { toNormalCase } from "../utils";
+import { toNormalCase } from "./utils";
 
 export function cleanEdges({
   flow: { edges, nodes },

@@ -2,7 +2,7 @@ import { Disclosure } from "@headlessui/react";
 import { useContext } from "react";
 import { Link } from "react-router-dom";
 import { locationContext } from "../../contexts/locationContext";
-import { classNames } from "../../utils";
+import { classNames } from "../../utils/utils";
 
 export default function ExtraSidebar() {
   const {

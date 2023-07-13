@@ -9,12 +9,12 @@ import { typesContext } from "../../../../contexts/typesContext";
 import ApiModal from "../../../../modals/ApiModal";
 import ExportModal from "../../../../modals/exportModal";
 import { APIClassType, APIObjectType } from "../../../../types/api";
-import { classNames } from "../../../../utils";
 import {
   nodeColors,
   nodeIconsLucide,
   nodeNames,
 } from "../../../../utils/styleUtils";
+import { classNames } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 
 export default function ExtraSidebar() {

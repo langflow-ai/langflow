@@ -18,11 +18,6 @@ import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
 import {
-  classNames,
-  getRandomKeyByssmm,
-  groupByFamily,
-} from "../../../../utils";
-import {
   cleanEdges,
   isValidConnection,
 } from "../../../../utils/reactflowUtils";
@@ -31,6 +26,11 @@ import {
   nodeIconsLucide,
   nodeNames,
 } from "../../../../utils/styleUtils";
+import {
+  classNames,
+  getRandomKeyByssmm,
+  groupByFamily,
+} from "../../../../utils/utils";
 
 export default function ParameterComponent({
   left,

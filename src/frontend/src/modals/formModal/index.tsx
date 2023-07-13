@@ -5,7 +5,7 @@ import { typesContext } from "../../contexts/typesContext";
 import { sendAllProps } from "../../types/api";
 import { ChatMessageType } from "../../types/chat";
 import { FlowType } from "../../types/flow";
-import { classNames } from "../../utils";
+import { classNames } from "../../utils/utils";
 import ChatInput from "./chatInput";
 import ChatMessage from "./chatMessage";
 

@@ -1,6 +1,6 @@
 import { Lock, LucideSend, Sparkles } from "lucide-react";
 import { useEffect } from "react";
-import { classNames } from "../../../utils";
+import { classNames } from "../../../utils/utils";
 
 export default function ChatInput({
   lockChat,

@@ -10,7 +10,7 @@ import Robot from "../../../assets/robot.png";
 import SanitizedHTMLWrapper from "../../../components/SanitizedHTMLWrapper";
 import { THOUGHTS_ICON } from "../../../constants";
 import { ChatMessageType } from "../../../types/chat";
-import { classNames } from "../../../utils";
+import { classNames } from "../../../utils/utils";
 import FileCard from "../fileComponent";
 import { CodeBlock } from "./codeBlock";
 export default function ChatMessage({
