@@ -55,13 +55,6 @@ export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
 }
 
-export const limitScrollFieldsModal = 10;
-
-export enum TypeModal {
-  TEXT = 1,
-  PROMPT = 2,
-}
-
 export const nodeIconsLucide: {
   [char: string]: React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>

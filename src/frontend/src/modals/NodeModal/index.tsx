@@ -1,15 +1,11 @@
 import { Dialog, Transition } from "@headlessui/react";
 import { X } from "lucide-react";
 import { Fragment, useContext, useRef, useState } from "react";
+import { limitScrollFieldsModal } from "../../constants";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
-import {
-  classNames,
-  limitScrollFieldsModal,
-  nodeIconsLucide,
-  toTitleCase,
-} from "../../utils";
+import { classNames, nodeIconsLucide, toTitleCase } from "../../utils";
 import { nodeColors } from "../../utils/styleUtils";
 import ModalField from "./components/ModalField";
 

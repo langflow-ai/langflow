@@ -10,6 +10,7 @@ import {
   MAX_WORDS_HIGHLIGHT,
   PROMPT_DIALOG_SUBTITLE,
   TEXT_DIALOG_SUBTITLE,
+  TypeModal,
 } from "../../constants";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
@@ -18,7 +19,6 @@ import { postValidatePrompt } from "../../controllers/API";
 import { APIClassType } from "../../types/api";
 import {
   INVALID_CHARACTERS,
-  TypeModal,
   classNames,
   getRandomKeyByssmm,
   regexHighlight,
