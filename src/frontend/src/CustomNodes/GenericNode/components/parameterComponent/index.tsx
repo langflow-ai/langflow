@@ -21,9 +21,11 @@ import {
   classNames,
   getRandomKeyByssmm,
   groupByFamily,
-  isValidConnection,
 } from "../../../../utils";
-import { cleanEdges } from "../../../../utils/reactflowUtils";
+import {
+  cleanEdges,
+  isValidConnection,
+} from "../../../../utils/reactflowUtils";
 import {
   nodeColors,
   nodeIconsLucide,

@@ -1,6 +1,6 @@
 import clsx, { ClassValue } from "clsx";
 import _ from "lodash";
-import { Connection, ReactFlowInstance } from "reactflow";
+import { ReactFlowInstance } from "reactflow";
 import { twMerge } from "tailwind-merge";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "./flow_constants";
 import { APITemplateType } from "./types/api";
@@ -72,48 +72,6 @@ export function normalCaseToSnakeCase(str: string) {
 
 export function roundNumber(x: number, decimals: number) {
   return Math.round(x * Math.pow(10, decimals)) / Math.pow(10, decimals);
-}
-
-export function isValidConnection(
-  { source, target, sourceHandle, targetHandle }: Connection,
-  reactFlowInstance: ReactFlowInstance
-) {
-  if (
-    targetHandle
-      .split("|")[0]
-      .split(";")
-      .some((n) => n === sourceHandle.split("|")[0]) ||
-    sourceHandle
-      .split("|")
-      .slice(2)
-      .some((t) =>
-        targetHandle
-          .split("|")[0]
-          .split(";")
-          .some((n) => n === t)
-      ) ||
-    targetHandle.split("|")[0] === "str"
-  ) {
-    let targetNode = reactFlowInstance?.getNode(target)?.data?.node;
-    if (!targetNode) {
-      if (
-        !reactFlowInstance
-          .getEdges()
-          .find((e) => e.targetHandle === targetHandle)
-      ) {
-        return true;
-      }
-    } else if (
-      (!targetNode.template[targetHandle.split("|")[1]].list &&
-        !reactFlowInstance
-          .getEdges()
-          .find((e) => e.targetHandle === targetHandle)) ||
-      targetNode.template[targetHandle.split("|")[1]].list
-    ) {
-      return true;
-    }
-  }
-  return false;
 }
 
 export function removeApiKeys(flow: FlowType): FlowType {
