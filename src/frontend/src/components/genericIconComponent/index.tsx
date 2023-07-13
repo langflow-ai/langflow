@@ -1,8 +1,15 @@
-import { IconComponentProps, SvgIconProps } from "../../types/components";
-import { svgIcons } from "../../utils";
+import { IconComponentProps, IconProps } from "../../types/components";
+import { nodeIconsLucide, svgIcons } from "../../utils";
 
-export function IconFromSvg({ name }: SvgIconProps): JSX.Element {
-  const TargetSvg = svgIcons[name]
+export function IconFromLucide({ name }: IconProps): JSX.Element {
+  const TargetIcon = nodeIconsLucide[name];
+  return (
+    <TargetIcon />
+  );
+}
+
+export function IconFromSvg({ name }: IconProps): JSX.Element {
+  const TargetSvg = svgIcons[name];
   return (
     <TargetSvg />
   );
@@ -12,5 +19,9 @@ export default function IconComponent({ method, name }: IconComponentProps): JSX
   switch (method) {
     case 'SVG':
       return <IconFromSvg name={ name } />
+    case 'LUCIDE':
+      return <IconFromLucide name={ name } />
+    default:
+      return 
   }
 }

@@ -162,7 +162,7 @@ export interface IVarHighlightType {
   name: string;
 }
 
-export type SvgIconProps = {
+export type IconProps = {
   name: string;
 }
 
