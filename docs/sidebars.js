@@ -21,6 +21,12 @@ module.exports = {
         "guidelines/collection",
       ],
     },
+    {
+      type: "category",
+      label: "Guides",
+      collapsed: false,
+      items: ["guides/loading_document"],
+    },
     // {
     //   type: 'category',
     //   label: 'Components',
