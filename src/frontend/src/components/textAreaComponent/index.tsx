@@ -1,5 +1,4 @@
 import { useContext, useEffect, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
 import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
 
@@ -13,7 +12,6 @@ export default function TextAreaComponent({
   editNode = false,
 }: TextAreaComponentType) {
   const [myValue, setMyValue] = useState(value);
-  const { openPopUp, closePopUp } = useContext(PopUpContext);
   const { setDisableCopyPaste } = useContext(TabsContext);
 
   useEffect(() => {
@@ -22,10 +20,6 @@ export default function TextAreaComponent({
       onChange("");
     }
   }, [disabled, onChange]);
-
-  useEffect(() => {
-    setMyValue(value);
-  }, [closePopUp]);
 
   return (
     <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
