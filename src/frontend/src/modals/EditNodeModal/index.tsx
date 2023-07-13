@@ -29,7 +29,8 @@ import { classNames, limitScrollFieldsModal } from "../../utils";
 import BaseModal from "../baseModal";
 
 export default function EditNodeModal({ data, children }: { data: NodeDataType; children: ReactNode }) {
-  const [open, setOpen] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+
   const [nodeLength, setNodeLength] = useState(
     Object.keys(data.node.template).filter(
       (t) =>
@@ -85,7 +86,7 @@ export default function EditNodeModal({ data, children }: { data: NodeDataType; 
 
   
   return (
-    <BaseModal size="large-h-full">
+    <BaseModal size="large-h-full" open={modalOpen} setOpen={setModalOpen}>
       <BaseModal.Trigger>
         {children}
       </BaseModal.Trigger>
@@ -307,7 +308,7 @@ export default function EditNodeModal({ data, children }: { data: NodeDataType; 
         <Button
           className="mt-3"
           onClick={() => {
-            setOpen(false);
+            setModalOpen(false);
           }}
           type="submit"
         >
