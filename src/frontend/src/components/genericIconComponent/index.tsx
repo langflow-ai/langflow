@@ -1,12 +1,19 @@
-/* import React, { forwardRef } from "react";
+import { FC } from "react";
+import SvgGoogle from "../../icons/Google/Google";
+import SvgBing from "../../icons/Bing/Bing";
+import { IconComponentProps, SvgIconProps } from "../../types/components";
+import { svgIcons } from "../../utils";
 
-export default function IconComponent(icon, props, ref) {
+export function IconFromSvg({ name }: SvgIconProps): JSX.Element {
+  const TargetSvg = svgIcons[name]
   return (
-    forwardRef<
-      SVGSVGElement,
-      React.PropsWithChildren<{}>
-    >((props, ref) => {
-      return < ref={ref} {...props} />;
-    })
+    <TargetSvg />
   );
-} */
+}
+
+export default function IconComponent({ method, name }: IconComponentProps): JSX.Element {
+  switch (method) {
+    case 'SVG':
+      return <IconFromSvg name={ name } />
+  }
+}
