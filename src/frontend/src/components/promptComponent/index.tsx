@@ -1,5 +1,4 @@
 import { useContext, useEffect, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
 import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
 
@@ -17,7 +16,6 @@ export default function PromptAreaComponent({
   editNode = false,
 }: TextAreaComponentType) {
   const [myValue, setMyValue] = useState(value);
-  const { openPopUp } = useContext(PopUpContext);
   const { reactFlowInstance } = useContext(typesContext);
   useEffect(() => {
     if (disabled) {
