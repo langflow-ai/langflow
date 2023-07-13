@@ -1,17 +1,16 @@
 import { Download } from "lucide-react";
-import { ReactNode, useContext, useRef, useState } from "react";
+import { ReactNode, useContext, useState } from "react";
 import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { DialogTitle } from "../../components/ui/dialog";
 import { EXPORT_DIALOG_SUBTITLE } from "../../constants";
-import { alertContext } from "../../contexts/alertContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { removeApiKeys } from "../../utils";
 import BaseModal from "../baseModal";
 
-export default function ExportModal({children} : {children: ReactNode}) {
+export default function ExportModal({ children }: { children: ReactNode }) {
   const { closePopUp } = useContext(PopUpContext);
   const { flows, tabId, updateFlow, downloadFlow, saveFlow } =
     useContext(TabsContext);
@@ -22,11 +21,8 @@ export default function ExportModal({children} : {children: ReactNode}) {
   );
   return (
     <BaseModal size="smaller">
-        <BaseModal.Trigger>
-          {children}
-        </BaseModal.Trigger>
+      <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Header description={EXPORT_DIALOG_SUBTITLE}>
-
         <DialogTitle className="flex items-center">
           <span className="pr-2">Export</span>
           <Download
