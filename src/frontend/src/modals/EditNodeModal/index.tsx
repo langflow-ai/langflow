@@ -1,5 +1,5 @@
 import { Variable } from "lucide-react";
-import { useContext, useRef, useState } from "react";
+import { ReactNode, useContext, useRef, useState } from "react";
 import CodeAreaComponent from "../../components/codeAreaComponent";
 import Dropdown from "../../components/dropdownComponent";
 import FloatComponent from "../../components/floatComponent";
@@ -28,7 +28,7 @@ import { NodeDataType } from "../../types/flow";
 import { classNames, limitScrollFieldsModal } from "../../utils";
 import BaseModal from "../baseModal";
 
-export default function EditNodeModal({ data }: { data: NodeDataType }) {
+export default function EditNodeModal({ data, children }: { data: NodeDataType; children: ReactNode }) {
   const [open, setOpen] = useState(true);
   const [nodeLength, setNodeLength] = useState(
     Object.keys(data.node.template).filter(
@@ -58,12 +58,6 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
     closePopUp();
   }
 
-  function setModalOpen(x: boolean) {
-    setOpen(x);
-    if (x === false) {
-      closePopUp();
-    }
-  }
 
   function changeAdvanced(node) {
     Object.keys(data.node.template).map((n, i) => {
@@ -89,8 +83,12 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
     });
   };
 
+  
   return (
-    <BaseModal open={true} setOpen={setModalOpen} size="large-h-full">
+    <BaseModal size="large-h-full">
+      <BaseModal.Trigger>
+        {children}
+      </BaseModal.Trigger>
       <BaseModal.Header description={data.node?.description}>
         <DialogTitle className="flex items-center">
           <span className="pr-2">{data.type}</span>
@@ -309,7 +307,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
         <Button
           className="mt-3"
           onClick={() => {
-            setModalOpen(false);
+            setOpen(false);
           }}
           type="submit"
         >
