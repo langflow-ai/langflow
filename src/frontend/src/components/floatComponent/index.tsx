@@ -1,5 +1,4 @@
 import { useContext, useEffect, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { FloatComponentType } from "../../types/components";
 
@@ -12,7 +11,6 @@ export default function FloatComponent({
 }: FloatComponentType) {
   const [myValue, setMyValue] = useState(value ?? "");
   const { setDisableCopyPaste } = useContext(TabsContext);
-  const { closePopUp } = useContext(PopUpContext);
 
   const step = 0.1;
   const min = 0;
@@ -24,10 +22,6 @@ export default function FloatComponent({
       onChange("");
     }
   }, [disabled, onChange]);
-
-  useEffect(() => {
-    setMyValue(value);
-  }, [closePopUp]);
 
   return (
     <div className={"w-full " + (disabled ? "float-component-pointer" : "")}>

@@ -4,13 +4,11 @@ import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { EXPORT_DIALOG_SUBTITLE } from "../../constants";
-import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { removeApiKeys } from "../../utils";
 import BaseModal from "../baseModal";
 
 const ExportModal = forwardRef((props: { children: ReactNode }, ref) => {
-  const { closePopUp } = useContext(PopUpContext);
   const { flows, tabId, updateFlow, downloadFlow, saveFlow } =
     useContext(TabsContext);
   const [checked, setChecked] = useState(false);
@@ -18,8 +16,9 @@ const ExportModal = forwardRef((props: { children: ReactNode }, ref) => {
   const [description, setDescription] = useState(
     flows.find((f) => f.id === tabId).description
   );
+  const [open, setOpen] = useState(false);
   return (
-    <BaseModal size="smaller">
+    <BaseModal size="smaller" open={open} setOpen={setOpen}>
       <BaseModal.Trigger>{props.children}</BaseModal.Trigger>
       <BaseModal.Header description={EXPORT_DIALOG_SUBTITLE}>
         <span className="pr-2">Export</span>
@@ -67,8 +66,7 @@ const ExportModal = forwardRef((props: { children: ReactNode }, ref) => {
                 name,
                 description
               );
-
-            closePopUp();
+            setOpen(false);
           }}
           type="submit"
         >

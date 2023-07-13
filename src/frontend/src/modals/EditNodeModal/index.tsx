@@ -20,7 +20,6 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
-import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
@@ -55,7 +54,6 @@ const EditNodeModal = forwardRef(
       ).length
     );
     const [nodeValue, setNodeValue] = useState(null);
-    const { closePopUp } = useContext(PopUpContext);
     const { types } = useContext(typesContext);
     const { setTabsState, tabId } = useContext(TabsContext);
     const { reactFlowInstance } = useContext(typesContext);
@@ -64,7 +62,7 @@ const EditNodeModal = forwardRef(
       reactFlowInstance?.getEdges().some((e) => e.targetHandle === data.id) ??
       false;
     if (nodeLength == 0) {
-      closePopUp();
+      setModalOpen(false);
     }
 
     function changeAdvanced(node) {
