@@ -2,7 +2,6 @@ import { useContext, useEffect, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
-import { TypeModal } from "../../utils";
 
 import { ExternalLink } from "lucide-react";
 import { typesContext } from "../../contexts/typesContext";
@@ -60,7 +59,7 @@ export default function PromptAreaComponent({
   return (
     <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
       <GenericModal
-        type={TypeModal.PROMPT}
+        type={"prompt"}
         value={myValue}
         buttonText="Check & Save"
         modalTitle="Edit Prompt"

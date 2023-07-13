@@ -16,7 +16,6 @@ import { postValidatePrompt } from "../../controllers/API";
 import { APIClassType } from "../../types/api";
 import {
   INVALID_CHARACTERS,
-  TypeModal,
   classNames,
   getRandomKeyByssmm,
   regexHighlight,
