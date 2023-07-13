@@ -54,3 +54,24 @@ export const nodeColors: { [char: string]: string } = {
   retrievers: "#e6b25a",
   unknown: "#9CA3AF",
 };
+
+export const nodeNames: { [char: string]: string } = {
+  prompts: "Prompts",
+  llms: "LLMs",
+  chains: "Chains",
+  agents: "Agents",
+  tools: "Tools",
+  memories: "Memories",
+  advanced: "Advanced",
+  chat: "Chat",
+  embeddings: "Embeddings",
+  documentloaders: "Loaders",
+  vectorstores: "Vector Stores",
+  toolkits: "Toolkits",
+  wrappers: "Wrappers",
+  textsplitters: "Text Splitters",
+  retrievers: "Retrievers",
+  utilities: "Utilities",
+  output_parsers: "Output Parsers",
+  unknown: "Unknown",
+};
