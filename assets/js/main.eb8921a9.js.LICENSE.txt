@@ -69,7 +69,7 @@ object-assign
  */
 
 /** @license React v17.0.2
- * react-is.development.js
+ * react-dom.production.min.js
  *
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
