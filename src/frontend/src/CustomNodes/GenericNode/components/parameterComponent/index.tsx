@@ -22,10 +22,13 @@ import {
   getRandomKeyByssmm,
   groupByFamily,
   isValidConnection,
-  nodeIconsLucide,
 } from "../../../../utils";
 import { cleanEdges } from "../../../../utils/reactflowUtils";
-import { nodeColors, nodeNames } from "../../../../utils/styleUtils";
+import {
+  nodeColors,
+  nodeIconsLucide,
+  nodeNames,
+} from "../../../../utils/styleUtils";
 
 export default function ParameterComponent({
   left,

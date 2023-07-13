@@ -1,3 +1,49 @@
+import {
+  Compass,
+  Cpu,
+  FileSearch,
+  Fingerprint,
+  Gift,
+  Hammer,
+  HelpCircle,
+  Laptop2,
+  Layers,
+  Lightbulb,
+  Link,
+  MessageCircle,
+  Paperclip,
+  Rocket,
+  Scissors,
+  SlackIcon,
+  TerminalSquare,
+  Wand2,
+  Wrench,
+} from "lucide-react";
+import { ComponentType, SVGProps } from "react";
+import { Edge, Node } from "reactflow";
+import { AirbyteIcon } from "../icons/Airbyte";
+import { AnthropicIcon } from "../icons/Anthropic";
+import { BingIcon } from "../icons/Bing";
+import { ChromaIcon } from "../icons/ChromaIcon";
+import { CohereIcon } from "../icons/Cohere";
+import { EvernoteIcon } from "../icons/Evernote";
+import { FBIcon } from "../icons/FacebookMessenger";
+import { GitBookIcon } from "../icons/GitBook";
+import { GoogleIcon } from "../icons/Google";
+import { HuggingFaceIcon } from "../icons/HuggingFace";
+import { IFixIcon } from "../icons/IFixIt";
+import { MetaIcon } from "../icons/Meta";
+import { MidjourneyIcon } from "../icons/Midjorney";
+import { MongoDBIcon } from "../icons/MongoDB";
+import { NotionIcon } from "../icons/Notion";
+import { OpenAiIcon } from "../icons/OpenAi";
+import { PineconeIcon } from "../icons/Pinecone";
+import { QDrantIcon } from "../icons/QDrant";
+import { SearxIcon } from "../icons/Searx";
+import { VertexAIIcon } from "../icons/VertexAI";
+import { HackerNewsIcon } from "../icons/hackerNews";
+import { SupabaseIcon } from "../icons/supabase";
+
 export const gradients = [
   "bg-gradient-to-br from-gray-800 via-rose-700 to-violet-900",
   "bg-gradient-to-br from-green-200 via-green-300 to-blue-500",
@@ -75,3 +121,166 @@ export const nodeNames: { [char: string]: string } = {
   output_parsers: "Output Parsers",
   unknown: "Unknown",
 };
+
+export const nodeIconsLucide: {
+  [char: string]: React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >;
+} = {
+  Chroma: ChromaIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  AirbyteJSONLoader: AirbyteIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  Anthropic: AnthropicIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  ChatAnthropic: AnthropicIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  BingSearchAPIWrapper: BingIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  BingSearchRun: BingIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  Cohere: CohereIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  CohereEmbeddings: CohereIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  EverNoteLoader: EvernoteIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  FacebookChatLoader: FBIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  GitbookLoader: GitBookIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  GoogleSearchAPIWrapper: GoogleIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  GoogleSearchResults: GoogleIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  GoogleSearchRun: GoogleIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  HNLoader: HackerNewsIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  HuggingFaceHub: HuggingFaceIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  HuggingFaceEmbeddings: HuggingFaceIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  IFixitLoader: IFixIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  Meta: MetaIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  Midjorney: MidjourneyIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  MongoDBAtlasVectorSearch: MongoDBIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  NotionDirectoryLoader: NotionIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  ChatOpenAI: OpenAiIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  OpenAI: OpenAiIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  OpenAIEmbeddings: OpenAiIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  Pinecone: PineconeIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  Qdrant: QDrantIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  Searx: SearxIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  SlackDirectoryLoader: SlackIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  SupabaseVectorStore: SupabaseIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  VertexAI: VertexAIIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  ChatVertexAI: VertexAIIcon as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  agents: Rocket as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  chains: Link as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  memories: Cpu as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  llms: Lightbulb as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  prompts: TerminalSquare as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  tools: Wrench as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  advanced: Laptop2 as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  chat: MessageCircle as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  embeddings: Fingerprint as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  documentloaders: Paperclip as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  vectorstores: Layers as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  toolkits: Hammer as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  textsplitters: Scissors as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  wrappers: Gift as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  utilities: Wand2 as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  output_parsers: Compass as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  retrievers: FileSearch as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  unknown: HelpCircle as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+};
+
+export function getConnectedNodes(edge: Edge, nodes: Array<Node>): Array<Node> {
+  const sourceId = edge.source;
+  const targetId = edge.target;
+  return nodes.filter((node) => node.id === targetId || node.id === sourceId);
+}
