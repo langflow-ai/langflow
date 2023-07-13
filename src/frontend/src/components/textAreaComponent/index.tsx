@@ -2,9 +2,9 @@ import { useContext, useEffect, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
-import { TypeModal } from "../../utils";
 
 import { ExternalLink } from "lucide-react";
+import { TypeModal } from "../../constants";
 import { TabsContext } from "../../contexts/tabsContext";
 
 export default function TextAreaComponent({

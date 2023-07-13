@@ -6,6 +6,14 @@ import { TabsState } from "./types/tabs";
 import { buildInputs, buildTweaks } from "./utils";
 
 /**
+ * enum for the different types of nodes
+ * @enum
+ */
+export enum TypeModal {
+  TEXT = 1,
+  PROMPT = 2,
+}
+/**
  * Number maximum of components to scroll on tooltips
  * @constant
  */
@@ -16,6 +24,12 @@ export const MAX_LENGTH_TO_SCROLL_TOOLTIP = 200;
  * @constant
  */
 export const MAX_WORDS_HIGHLIGHT = 79;
+
+/**
+ * Limit of items before show scroll on fields modal
+ * @constant
+ */
+export const limitScrollFieldsModal = 10;
 
 /**
  * The base text for subtitle of Export Dialog (Toolbar)
