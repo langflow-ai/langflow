@@ -5,8 +5,8 @@ import { limitScrollFieldsModal } from "../../constants";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
-import { classNames, nodeIconsLucide, toTitleCase } from "../../utils";
-import { nodeColors } from "../../utils/styleUtils";
+import { classNames, toTitleCase } from "../../utils";
+import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import ModalField from "./components/ModalField";
 
 export default function NodeModal({ data }: { data: NodeDataType }) {
