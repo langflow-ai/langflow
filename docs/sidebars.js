@@ -25,7 +25,7 @@ module.exports = {
       type: "category",
       label: "Guides",
       collapsed: false,
-      items: ["guides/loading_document"],
+      items: ["guides/loading_document", "guides/chatprompttemplate_guide"],
     },
     // {
     //   type: 'category',
