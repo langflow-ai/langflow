@@ -54,6 +54,7 @@ export default function ExtraSidebar() {
       return ret;
     });
   }
+  const flow = flows.find((f) => f.id === tabId);
 
   return (
     <div className="side-bar-arrangement">
@@ -83,18 +84,23 @@ export default function ExtraSidebar() {
           </ExportModal>
         </ShadTooltip>
         <ShadTooltip content="Code" side="top">
-          <ApiModal flow={flows.find((f) => f.id === tabId)}>
-            <button className={classNames("extra-side-bar-buttons")}>
-              <Code2 strokeWidth={1.5} className="side-bar-button-size"></Code2>
-            </button>
-          </ApiModal>
+          {flow && flow.data && (
+            <ApiModal flow={flow}>
+              <button className={classNames("extra-side-bar-buttons")}>
+                <Code2
+                  strokeWidth={1.5}
+                  className="side-bar-button-size"
+                ></Code2>
+              </button>
+            </ApiModal>
+          )}
         </ShadTooltip>
 
         <ShadTooltip content="Save" side="top">
           <button
             className="extra-side-bar-buttons"
             onClick={(event) => {
-              saveFlow(flows.find((f) => f.id === tabId));
+              saveFlow(flow);
               setSuccessData({ title: "Changes saved successfully" });
             }}
             disabled={!isPending}
