@@ -7,10 +7,10 @@ import { NodeDataType } from "../../types/flow";
 import {
   classNames,
   limitScrollFieldsModal,
-  nodeColors,
   nodeIconsLucide,
   toTitleCase,
 } from "../../utils";
+import { nodeColors } from "../../utils/styleUtils";
 import ModalField from "./components/ModalField";
 
 export default function NodeModal({ data }: { data: NodeDataType }) {
