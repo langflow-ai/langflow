@@ -16,7 +16,7 @@ import { EXPORT_DIALOG_SUBTITLE } from "../../constants";
 import { alertContext } from "../../contexts/alertContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
-import { removeApiKeys } from "../../utils";
+import { removeApiKeys } from "../../utils/reactflowUtils";
 
 export default function ExportModal() {
   const [open, setOpen] = useState(true);
