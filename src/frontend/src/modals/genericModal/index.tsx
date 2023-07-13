@@ -58,6 +58,8 @@ export default function GenericModal({
       closePopUp();
     }
   }
+  const divRef = useRef(null);
+  const divRefPrompt = useRef(null);
 
   function checkVariables(valueToCheck) {
     const regex = /\{([^{}]+)\}/g;
@@ -108,7 +110,7 @@ export default function GenericModal({
   const TextAreaContentView = () => {
     return (
       <SanitizedHTMLWrapper
-        className="code-highlight"
+        className={"code-highlight"}
         content={coloredContent}
         onClick={() => {
           setIsEdit(true);
@@ -117,6 +119,7 @@ export default function GenericModal({
       />
     );
   };
+
 
   function validatePrompt(closeModal: boolean) {
     postValidatePrompt(field_name, inputValue, nodeClass)
@@ -189,7 +192,7 @@ export default function GenericModal({
           >
             {type === TypeModal.PROMPT && isEdit ? (
               <Textarea
-                ref={ref}
+                ref={divRefPrompt}
                 className="form-input h-full w-full rounded-lg custom-scroll focus-visible:ring-1"
                 value={inputValue}
                 onBlur={() => {
@@ -223,7 +226,7 @@ export default function GenericModal({
             <div className="mb-auto flex-1">
               {type === TypeModal.PROMPT && (
                 <div className=" mr-2">
-                  <div className="max-h-20 overflow-y-auto custom-scroll">
+                  <div ref={divRef} className="max-h-20 overflow-y-auto custom-scroll">
                     <div className="flex flex-wrap items-center">
                       <Variable className=" -ml-px mr-1 flex h-4 w-4 text-primary"></Variable>
                       <span className="text-md font-semibold text-primary">
