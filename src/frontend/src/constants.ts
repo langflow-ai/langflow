@@ -3,7 +3,8 @@
 import { MessageSquare } from "lucide-react";
 import { FlowType } from "./types/flow";
 import { TabsState } from "./types/tabs";
-import { buildInputs, buildTweaks } from "./utils";
+import { buildInputs } from "./utils";
+import { buildTweaks } from "./utils/reactflowUtils";
 
 /**
  * constants fpr programming languages box on chat form

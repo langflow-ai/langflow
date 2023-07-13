@@ -209,12 +209,6 @@ export function buildInputs(tabsState, id) {
     : '{"input": "message"}';
 }
 
-export function buildTweaks(flow) {
-  return flow.data.nodes.reduce((acc, node) => {
-    acc[node.data.id] = {};
-    return acc;
-  }, {});
-}
 export function validateNode(
   n: NodeType,
   reactFlowInstance: ReactFlowInstance
