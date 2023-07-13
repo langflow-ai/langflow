@@ -240,10 +240,6 @@ export const nodeIconsLucide: {
   >,
 };
 
-export const taskTypeMap: { [key: string]: string } = {
-  MULTICLASS_CLASSIFICATION: "Multiclass Classification",
-};
-
 const charWidths: { [char: string]: number } = {
   " ": 0.2,
   "!": 0.2,
