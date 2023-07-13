@@ -3,19 +3,13 @@ import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 import ReactPlayer from "react-player";
 
-# Populating a Prompt Variable with a Document
+# Integrating a Document into a PromptTemplate Variable: A Step-by-Step Guide
 
 ## Overview
 
-This walkthrough provides a step-by-step guide on how to load a document into a Prompt variable. It is a simple two-part process:
+This guide takes you through the process of augmenting the "Basic Chat with Prompt and History" example. You'll learn how to embed documents as context into the PromptTemplate component utilizing a WebBaseLoader.
 
-1. **Prompt Variable Definition:** We start by defining a Prompt variable within the PromptTemplate component. This variable will serve as the placeholder for our document's content.
-
-2. **WebBaseLoader Connection:** Next, we link a WebBaseLoader to the Prompt variable we've just created. This will facilitate the flow building process and ensure the content of the document is properly loaded.
-
-Upon successful completion of these steps, you'll be able to start a chat with the document's content readily available within the conversational context. This provides seamless integration of the document into the chat, enhancing the user's experience by making relevant information more accessible.
-
-Please follow the steps outlined in the interactive guide to understand the process in detail.
+## Interactive Guide
 
 <iframe
   src="https://app.tango.us/app/embed/76578e84-a700-4b3b-a6ef-8a0350472781?iframe=true"
@@ -30,3 +24,41 @@ Please follow the steps outlined in the interactive guide to understand the proc
   mozallowfullscreen="mozallowfullscreen"
   allowfullscreen="allowfullscreen"
 ></iframe>
+
+## Step-by-Step Instructions
+
+1. Start by navigating to the "Community Examples" section.
+
+2. Find the "Basic Chat with Prompt and History" example and click on "Fork Example".
+
+3. In the editor, open the "Template" field.
+
+4. Here, introduce the `{context}` variable, placing it somewhere before the "Current conversation:" text.
+
+5. Once done, save your changes by clicking on "Check & Save".
+
+6. Next, open the search bar and type "web".
+
+7. Drag and drop a WebBaseLoader (or any other loader of your choice) onto the canvas.
+
+8. Connect this loader to the `{context}` variable that we just added.
+
+9. In the "Web Page" field, enter "https://langflow.org/how-upload-examples".
+
+10. Now, click on "ConversationBufferMemory".
+
+11. In the "Input Key" field, enter "text" to define the Chat variable.
+
+> **Tip:** When defining more than one variable and using a Memory component, it's crucial to specify which variable should be used to create the conversation history.
+
+12. Click on the "Build" button to implement your changes.
+
+13. Open the chat interface to test your modifications.
+
+14. Try asking something like, "How do I upload examples?"
+
+15. Click on "Display Prompt" to view your template.
+
+16. Now, you can see what the model used as a basis to generate its response.
+
+By following these instructions, you have successfully loaded a document into a PromptTemplate variable, allowing for more enriched and context-aware chat responses. This customization enhances user interaction by integrating relevant document content into the chat flow.
