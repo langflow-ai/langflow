@@ -5,7 +5,7 @@ import { typesContext } from "../../contexts/typesContext";
 import { sendAllProps } from "../../types/api";
 import { ChatMessageType } from "../../types/chat";
 import { FlowType } from "../../types/flow";
-import { classNames, validateNodes } from "../../utils";
+import { classNames } from "../../utils";
 import ChatInput from "./chatInput";
 import ChatMessage from "./chatMessage";
 
@@ -29,6 +29,7 @@ import {
 import { Textarea } from "../../components/ui/textarea";
 import { CHAT_FORM_DIALOG_SUBTITLE, THOUGHTS_ICON } from "../../constants";
 import { TabsContext } from "../../contexts/tabsContext";
+import { validateNodes } from "../../utils/reactflowUtils";
 
 export default function FormModal({
   flow,

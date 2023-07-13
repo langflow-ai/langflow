@@ -1,9 +1,7 @@
 import clsx, { ClassValue } from "clsx";
-import { ReactFlowInstance } from "reactflow";
 import { twMerge } from "tailwind-merge";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "./flow_constants";
 import { IVarHighlightType } from "./types/components";
-import { NodeType } from "./types/flow";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -207,58 +205,6 @@ export function buildInputs(tabsState, id) {
     Object.keys(tabsState[id].formKeysData.input_keys).length > 0
     ? JSON.stringify(tabsState[id].formKeysData.input_keys)
     : '{"input": "message"}';
-}
-
-export function validateNode(
-  n: NodeType,
-  reactFlowInstance: ReactFlowInstance
-): Array<string> {
-  if (!n.data?.node?.template || !Object.keys(n.data.node.template)) {
-    return [
-      "We've noticed a potential issue with a node in the flow. Please review it and, if necessary, submit a bug report with your exported flow file. Thank you for your help!",
-    ];
-  }
-
-  const {
-    type,
-    node: { template },
-  } = n.data;
-
-  return Object.keys(template).reduce(
-    (errors: Array<string>, t) =>
-      errors.concat(
-        template[t].required &&
-          template[t].show &&
-          (template[t].value === undefined ||
-            template[t].value === null ||
-            template[t].value === "") &&
-          !reactFlowInstance
-            .getEdges()
-            .some(
-              (e) =>
-                e.targetHandle.split("|")[1] === t &&
-                e.targetHandle.split("|")[2] === n.id
-            )
-          ? [
-              `${type} is missing ${
-                template.display_name || toNormalCase(template[t].name)
-              }.`,
-            ]
-          : []
-      ),
-    [] as string[]
-  );
-}
-
-export function validateNodes(reactFlowInstance: ReactFlowInstance) {
-  if (reactFlowInstance.getNodes().length === 0) {
-    return [
-      "No nodes found in the flow. Please add at least one node to the flow.",
-    ];
-  }
-  return reactFlowInstance
-    .getNodes()
-    .flatMap((n: NodeType) => validateNode(n, reactFlowInstance));
 }
 
 export function getRandomElement<T>(array: T[]): T {
