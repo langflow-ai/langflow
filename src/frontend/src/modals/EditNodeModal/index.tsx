@@ -28,7 +28,13 @@ import { NodeDataType } from "../../types/flow";
 import { classNames, limitScrollFieldsModal } from "../../utils";
 import BaseModal from "../baseModal";
 
-export default function EditNodeModal({ data, children }: { data: NodeDataType; children: ReactNode }) {
+export default function EditNodeModal({
+  data,
+  children,
+}: {
+  data: NodeDataType;
+  children: ReactNode;
+}) {
   const [modalOpen, setModalOpen] = useState(false);
 
   const [nodeLength, setNodeLength] = useState(
@@ -59,7 +65,6 @@ export default function EditNodeModal({ data, children }: { data: NodeDataType; 
     closePopUp();
   }
 
-
   function changeAdvanced(node) {
     Object.keys(data.node.template).map((n, i) => {
       if (n === node.name) {
@@ -84,12 +89,9 @@ export default function EditNodeModal({ data, children }: { data: NodeDataType; 
     });
   };
 
-  
   return (
     <BaseModal size="large-h-full" open={modalOpen} setOpen={setModalOpen}>
-      <BaseModal.Trigger>
-        {children}
-      </BaseModal.Trigger>
+      <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Header description={data.node?.description}>
         <DialogTitle className="flex items-center">
           <span className="pr-2">{data.type}</span>

@@ -76,28 +76,21 @@ export default function ExtraSidebar() {
         </ShadTooltip>
 
         <ShadTooltip content="Export" side="top">
-        <ExportModal>
-        <button
-            className={classNames("extra-side-bar-buttons")}
-          >
-            <FileDown
-              strokeWidth={1.5}
-              className="side-bar-button-size"
-            ></FileDown>
-          </button>
-
-        </ExportModal>
-
+          <ExportModal>
+            <button className={classNames("extra-side-bar-buttons")}>
+              <FileDown
+                strokeWidth={1.5}
+                className="side-bar-button-size"
+              ></FileDown>
+            </button>
+          </ExportModal>
         </ShadTooltip>
         <ShadTooltip content="Code" side="top">
-        <ApiModal flow={flows.find((f) => f.id === tabId)}>
-        <button
-            className={classNames("extra-side-bar-buttons")}
-          >
-            <Code2 strokeWidth={1.5} className="side-bar-button-size"></Code2>
-          </button>
-        </ApiModal>
-
+          <ApiModal flow={flows.find((f) => f.id === tabId)}>
+            <button className={classNames("extra-side-bar-buttons")}>
+              <Code2 strokeWidth={1.5} className="side-bar-button-size"></Code2>
+            </button>
+          </ApiModal>
         </ShadTooltip>
 
         <ShadTooltip content="Save" side="top">
