@@ -40,7 +40,7 @@ export default function GenericModal({
   value: string;
   buttonText: string;
   modalTitle: string;
-  type: number;
+  type: "prompt" | "text";
   children: ReactNode;
   nodeClass?: APIClassType;
   setNodeClass?: (Class: APIClassType) => void;
@@ -92,7 +92,7 @@ export default function GenericModal({
   }
 
   useEffect(() => {
-    if (type === TypeModal.PROMPT && inputValue && inputValue != "") {
+    if (type === "prompt" && inputValue && inputValue != "") {
       checkVariables(inputValue);
     }
   }, [inputValue, type]);
@@ -198,7 +198,7 @@ export default function GenericModal({
               "flex h-full w-full"
             )}
           >
-            {type === TypeModal.PROMPT && isEdit ? (
+            {type === "prompt" && isEdit ? (
               <Textarea
                 ref={divRefPrompt}
                 className="form-input h-full w-full rounded-lg custom-scroll focus-visible:ring-1"
@@ -213,9 +213,9 @@ export default function GenericModal({
                 }}
                 placeholder="Type message here."
               />
-            ) : type === TypeModal.PROMPT && !isEdit ? (
+            ) : type === "prompt" && !isEdit ? (
               <TextAreaContentView />
-            ) : type !== TypeModal.PROMPT ? (
+            ) : type !== "prompt" ? (
               <Textarea
                 ref={ref}
                 className="form-input h-full w-full rounded-lg focus-visible:ring-1"
@@ -232,7 +232,7 @@ export default function GenericModal({
 
           <div className="mt-6 flex h-fit w-full items-end justify-between">
             <div className="mb-auto flex-1">
-              {type === TypeModal.PROMPT && (
+              {type === "prompt" && (
                 <div className=" mr-2">
                   <div
                     ref={divRef}
@@ -279,11 +279,11 @@ export default function GenericModal({
             <Button
               onClick={() => {
                 switch (myModalType) {
-                  case 1:
+                  case "text":
                     setValue(inputValue);
                     setModalOpen(false);
                     break;
-                  case 2:
+                  case "prompt":
                     !inputValue || inputValue === ""
                       ? setModalOpen(false)
                       : validatePrompt(false);

@@ -2,7 +2,7 @@ import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
-import { useContext, useEffect, useRef, useState } from "react";
+import { ReactNode, useContext, useEffect, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 // import "ace-builds/webpack-resolver";
 import { Check, Clipboard, Code2 } from "lucide-react";
@@ -52,8 +52,9 @@ import { darkContext } from "../../contexts/darkContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { FlowType } from "../../types/flow/index";
 import { buildTweaks, classNames } from "../../utils";
+import BaseModal from "../baseModal";
 
-export default function ApiModal({ flow }: { flow: FlowType }) {
+export default function ApiModal({ flow, children }: { flow: FlowType; children: ReactNode }) {
   const [open, setOpen] = useState(true);
   const { dark } = useContext(darkContext);
   const { closePopUp, closeEdit, setCloseEdit } = useContext(PopUpContext);
@@ -265,21 +266,25 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
   }
 
   return (
-    <Dialog open={true} onOpenChange={setModalOpen}>
-      <DialogTrigger></DialogTrigger>
-      <DialogContent className="h-[80vh] md:max-w-[80vw]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center">
-            <span className="pr-2">Code</span>
-            <Code2
-              className="h-6 w-6 pl-1 text-gray-800 dark:text-white"
-              aria-hidden="true"
-            />
-          </DialogTitle>
-          <DialogDescription>{EXPORT_CODE_DIALOG}</DialogDescription>
-        </DialogHeader>
 
-        <Tabs
+    <BaseModal>
+    <BaseModal.Trigger>
+      {children}
+    </BaseModal.Trigger>
+  <BaseModal.Header description={EXPORT_CODE_DIALOG}>
+
+    <DialogTitle className="flex items-center">
+      <span className="pr-2">Code</span>
+      <Code2
+        strokeWidth={1.5}
+        className="h-6 w-6 pl-1 text-primary "
+        aria-hidden="true"
+      />
+    </DialogTitle>
+  </BaseModal.Header>
+  <BaseModal.Content>
+
+  <Tabs
           value={activeTab}
           className="api-modal-tabs"
           onValueChange={(value) => {
@@ -318,7 +323,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
             >
               {index < 3 ? (
                 <SyntaxHighlighter
-                  className="h-[60vh] w-full overflow-auto custom-scroll"
+                  className="h-[70vh] w-full overflow-auto custom-scroll"
                   language={tab.mode}
                   style={oneDark}
                 >
@@ -329,7 +334,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                   <div className="api-modal-according-display">
                     <div
                       className={classNames(
-                        "h-[60vh] w-full rounded-lg bg-muted",
+                        "h-[70vh] w-full rounded-lg bg-muted",
                         1 == 1
                           ? "overflow-scroll overflow-x-hidden custom-scroll"
                           : "overflow-hidden"
@@ -720,34 +725,6 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                           )}
                         </div>
                       ))}
-
-                      {/*
-                      <div className="flex flex-col gap-5 bg-muted">
-                        <Table className="table-fixed bg-muted outline-1">
-                          <TableHeader className="border-gray-200 text-gray-500 text-xs font-medium h-10">
-                            <TableRow className="dark:border-b-muted">
-                              <TableHead className="h-5 text-center">
-                                TWEAK
-                              </TableHead>
-                              <TableHead className="p-0 h-5 text-center">
-                                VALUE
-                              </TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {invoices.map((invoice) => (
-                              <TableRow className="p-0 text-center text-gray-900 text-sm">
-                                <TableCell className="p-2 text-center text-gray-900 text-sm truncate">
-                                  {invoice.paymentStatus}
-                                </TableCell>
-                                <TableCell className="p-2 text-center text-gray-900 text-sm truncate">
-                                  {invoice.paymentMethod}
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div> */}
                     </div>
                   </div>
                 </>
@@ -755,7 +732,10 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
             </TabsContent>
           ))}
         </Tabs>
-      </DialogContent>
-    </Dialog>
+  </BaseModal.Content>
+
+
+</BaseModal>
+
   );
 }
