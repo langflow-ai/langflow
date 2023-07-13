@@ -1,5 +1,6 @@
 import _ from "lodash";
 import { Connection, ReactFlowInstance } from "reactflow";
+import { APITemplateType } from "../types/api";
 import { FlowType } from "../types/flow";
 import { cleanEdgesType } from "../types/utils/reactflowUtils";
 
@@ -99,4 +100,27 @@ export function removeApiKeys(flow: FlowType): FlowType {
     }
   });
   return cleanFLow;
+}
+
+export function updateTemplate(
+  reference: APITemplateType,
+  objectToUpdate: APITemplateType
+): APITemplateType {
+  let clonedObject: APITemplateType = _.cloneDeep(reference);
+
+  // Loop through each key in the reference object
+  for (const key in clonedObject) {
+    // If the key is not in the object to update, add it
+    if (objectToUpdate[key] && objectToUpdate[key].value) {
+      clonedObject[key].value = objectToUpdate[key].value;
+    }
+    if (
+      objectToUpdate[key] &&
+      objectToUpdate[key].advanced !== null &&
+      objectToUpdate[key].advanced !== undefined
+    ) {
+      clonedObject[key].advanced = objectToUpdate[key].advanced;
+    }
+  }
+  return clonedObject;
 }
