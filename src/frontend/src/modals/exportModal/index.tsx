@@ -3,20 +3,13 @@ import { useContext, useRef, useState } from "react";
 import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "../../components/ui/dialog";
+import { DialogTitle } from "../../components/ui/dialog";
 import { EXPORT_DIALOG_SUBTITLE } from "../../constants";
 import { alertContext } from "../../contexts/alertContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { removeApiKeys } from "../../utils";
+import BaseModal from "../baseModal";
 
 export default function ExportModal() {
   const [open, setOpen] = useState(true);
@@ -40,21 +33,18 @@ export default function ExportModal() {
     flows.find((f) => f.id === tabId).description
   );
   return (
-    <Dialog open={true} onOpenChange={setModalOpen}>
-      <DialogTrigger asChild></DialogTrigger>
-      <DialogContent className="h-[420px] lg:max-w-[600px] ">
-        <DialogHeader>
-          <DialogTitle className="flex items-center">
-            <span className="pr-2">Export</span>
-            <Download
-              strokeWidth={1.5}
-              className="h-6 w-6 pl-1 text-foreground"
-              aria-hidden="true"
-            />
-          </DialogTitle>
-          <DialogDescription>{EXPORT_DIALOG_SUBTITLE}</DialogDescription>
-        </DialogHeader>
-
+    <BaseModal open={true} setOpen={setModalOpen} size="smaller">
+      <BaseModal.Header description={EXPORT_DIALOG_SUBTITLE}>
+        <DialogTitle className="flex items-center">
+          <span className="pr-2">Export</span>
+          <Download
+            strokeWidth={1.5}
+            className="h-6 w-6 pl-1 text-primary "
+            aria-hidden="true"
+          />
+        </DialogTitle>
+      </BaseModal.Header>
+      <BaseModal.Content>
         <EditFlowSettings
           name={name}
           description={description}
@@ -64,42 +54,42 @@ export default function ExportModal() {
           setDescription={setDescription}
           updateFlow={updateFlow}
         />
-        <div className="flex items-center space-x-2">
+        <div className="mt-3 flex items-center space-x-2">
           <Checkbox
             id="terms"
             onCheckedChange={(event: boolean) => {
               setChecked(event);
             }}
           />
-          <label htmlFor="terms" className="export-modal-save-api text-sm">
+          <label htmlFor="terms" className="export-modal-save-api text-sm ">
             Save with my API keys
           </label>
         </div>
+      </BaseModal.Content>
 
-        <DialogFooter>
-          <Button
-            onClick={() => {
-              if (checked)
-                downloadFlow(
-                  flows.find((f) => f.id === tabId),
-                  name,
-                  description
-                );
-              else
-                downloadFlow(
-                  removeApiKeys(flows.find((f) => f.id === tabId)),
-                  name,
-                  description
-                );
+      <BaseModal.Footer>
+        <Button
+          onClick={() => {
+            if (checked)
+              downloadFlow(
+                flows.find((f) => f.id === tabId),
+                name,
+                description
+              );
+            else
+              downloadFlow(
+                removeApiKeys(flows.find((f) => f.id === tabId)),
+                name,
+                description
+              );
 
-              closePopUp();
-            }}
-            type="submit"
-          >
-            Download Flow
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            closePopUp();
+          }}
+          type="submit"
+        >
+          Download Flow
+        </Button>
+      </BaseModal.Footer>
+    </BaseModal>
   );
 }

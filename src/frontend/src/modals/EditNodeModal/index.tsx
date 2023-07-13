@@ -12,15 +12,7 @@ import TextAreaComponent from "../../components/textAreaComponent";
 import ToggleShadComponent from "../../components/toggleShadComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "../../components/ui/dialog";
+import { DialogTitle } from "../../components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -34,6 +26,7 @@ import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
 import { classNames, limitScrollFieldsModal } from "../../utils";
+import BaseModal from "../baseModal";
 
 export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const [open, setOpen] = useState(true);
@@ -97,24 +90,18 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
   };
 
   return (
-    <Dialog open={true} onOpenChange={setModalOpen}>
-      <DialogTrigger asChild></DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] lg:max-w-[700px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center">
-            <span className="pr-2">{data.type}</span>
-            <Badge variant="secondary">ID: {data.id}</Badge>
-          </DialogTitle>
-          <DialogDescription asChild>
-            <div>
-              {data.node?.description}
-              <div className="flex pt-3">
-                <Variable className="edit-node-modal-variable "></Variable>
-                <span className="edit-node-modal-span">Parameters</span>
-              </div>
-            </div>
-          </DialogDescription>
-        </DialogHeader>
+    <BaseModal open={true} setOpen={setModalOpen} size="large-h-full">
+      <BaseModal.Header description={data.node?.description}>
+        <DialogTitle className="flex items-center">
+          <span className="pr-2">{data.type}</span>
+          <Badge variant="secondary">ID: {data.id}</Badge>
+        </DialogTitle>
+      </BaseModal.Header>
+      <BaseModal.Content>
+        <div className="flex pb-2">
+          <Variable className="edit-node-modal-variable "></Variable>
+          <span className="edit-node-modal-span">Parameters</span>
+        </div>
 
         <div className="edit-node-modal-arrangement">
           <div
@@ -316,19 +303,19 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
             )}
           </div>
         </div>
+      </BaseModal.Content>
 
-        <DialogFooter>
-          <Button
-            className="mt-3"
-            onClick={() => {
-              setModalOpen(false);
-            }}
-            type="submit"
-          >
-            Save Changes
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <BaseModal.Footer>
+        <Button
+          className="mt-3"
+          onClick={() => {
+            setModalOpen(false);
+          }}
+          type="submit"
+        >
+          Save Changes
+        </Button>
+      </BaseModal.Footer>
+    </BaseModal>
   );
 }

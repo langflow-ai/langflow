@@ -255,7 +255,7 @@ export default function GenericModal({
                       ))}
                     </div>
                   </div>
-                  <span className="mt-1 text-xs text-muted-foreground">
+                  <span className="mt-2 text-xs text-muted-foreground">
                     Prompt variables can be created with any chosen name inside
                     curly brackets, e.g. {"{variable_name}"}
                   </span>
