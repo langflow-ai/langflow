@@ -29,11 +29,12 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
+import { limitScrollFieldsModal } from "../../constants";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
-import { classNames, limitScrollFieldsModal } from "../../utils";
+import { classNames } from "../../utils";
 
 export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const [open, setOpen] = useState(true);
