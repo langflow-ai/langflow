@@ -5,13 +5,12 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 import { TerminalSquare } from "lucide-react";
-import { useContext, useState } from "react";
+import { ReactNode, useContext, useState } from "react";
 import AceEditor from "react-ace";
 import { Button } from "../../components/ui/button";
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
-import { PopUpContext } from "../../contexts/popUpContext";
 import { postValidateCode } from "../../controllers/API";
 import { APIClassType } from "../../types/api";
 import BaseModal from "../baseModal";
@@ -21,23 +20,17 @@ export default function CodeAreaModal({
   setValue,
   nodeClass,
   setNodeClass,
+  children,
 }: {
   setValue: (value: string) => void;
   value: string;
   nodeClass: APIClassType;
+  children: ReactNode;
   setNodeClass: (Class: APIClassType) => void;
 }) {
   const [code, setCode] = useState(value);
   const { dark } = useContext(darkContext);
-  const { closePopUp, setCloseEdit } = useContext(PopUpContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
-
-  function setModalOpen(x: boolean) {
-    if (x === false) {
-      setCloseEdit("codearea");
-      closePopUp();
-    }
-  }
 
   function handleClick() {
     postValidateCode(code)
@@ -50,7 +43,7 @@ export default function CodeAreaModal({
               title: "Code is ready to run",
             });
             setValue(code);
-            setModalOpen(false);
+            setOpen(false);
           } else {
             if (funcErrors.length !== 0) {
               setErrorData({
@@ -78,8 +71,11 @@ export default function CodeAreaModal({
       });
   }
 
+  const [open, setOpen] = useState(false);
+
   return (
-    <BaseModal open={true} setOpen={setModalOpen}>
+    <BaseModal open={open} setOpen={setOpen}>
+      <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Header description={CODE_PROMPT_DIALOG_SUBTITLE}>
         <DialogTitle className="flex items-center">
           <span className="pr-2">Edit Code</span>

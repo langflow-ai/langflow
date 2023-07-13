@@ -1,5 +1,4 @@
-import { useContext, useEffect, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
+import { useEffect, useState } from "react";
 import CodeAreaModal from "../../modals/codeAreaModal";
 import { TextAreaComponentType } from "../../types/components";
 
@@ -16,7 +15,6 @@ export default function CodeAreaComponent({
   const [myValue, setMyValue] = useState(
     typeof value == "string" ? value : JSON.stringify(value)
   );
-  const { openPopUp } = useContext(PopUpContext);
   useEffect(() => {
     if (disabled) {
       setMyValue("");
@@ -30,45 +28,26 @@ export default function CodeAreaComponent({
 
   return (
     <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
-      <div className="flex w-full items-center">
-        <span
-          onClick={() => {
-            openPopUp(
-              <CodeAreaModal
-                value={myValue}
-                nodeClass={nodeClass}
-                setNodeClass={setNodeClass}
-                setValue={(t: string) => {
-                  setMyValue(t);
-                  onChange(t);
-                }}
-              />
-            );
-          }}
-          className={
-            editNode
-              ? "input-edit-node input-dialog"
-              : (disabled ? " input-disable input-ring " : "") +
-                " input-primary text-muted-foreground "
-          }
-        >
-          {myValue !== "" ? myValue : "Type something..."}
-        </span>
-        <button
-          onClick={() => {
-            openPopUp(
-              <CodeAreaModal
-                setNodeClass={setNodeClass}
-                value={myValue}
-                nodeClass={nodeClass}
-                setValue={(t: string) => {
-                  setMyValue(t);
-                  onChange(t);
-                }}
-              />
-            );
-          }}
-        >
+      <CodeAreaModal
+        value={myValue}
+        nodeClass={nodeClass}
+        setNodeClass={setNodeClass}
+        setValue={(t: string) => {
+          setMyValue(t);
+          onChange(t);
+        }}
+      >
+        <div className="flex w-full items-center">
+          <span
+            className={
+              editNode
+                ? "input-edit-node input-dialog"
+                : (disabled ? " input-disable input-ring " : "") +
+                  " input-primary text-muted-foreground "
+            }
+          >
+            {myValue !== "" ? myValue : "Type something..."}
+          </span>
           {!editNode && (
             <ExternalLink
               strokeWidth={1.5}
@@ -78,8 +57,8 @@ export default function CodeAreaComponent({
               }
             />
           )}
-        </button>
-      </div>
+        </div>
+      </CodeAreaModal>
     </div>
   );
 }

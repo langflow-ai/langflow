@@ -36,7 +36,7 @@ export default function FormModal({
   setOpen,
 }: {
   open: boolean;
-  setOpen: Function;
+  setOpen: (open: boolean) => void;
   flow: FlowType;
 }) {
   const { tabsState, setTabsState } = useContext(TabsContext);
@@ -389,8 +389,8 @@ export default function FormModal({
     }
   }
   return (
-    <Dialog open={open} onOpenChange={setModalOpen}>
-      <DialogTrigger className="hidden"></DialogTrigger>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger hidden></DialogTrigger>
       {tabsState[flow.id].formKeysData && (
         <DialogContent className="min-w-[80vw]">
           <DialogHeader>
