@@ -1,5 +1,5 @@
 import { Download } from "lucide-react";
-import { ReactNode, useContext, useState } from "react";
+import { ReactNode, forwardRef, useContext, useState } from "react";
 import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
@@ -10,7 +10,7 @@ import { TabsContext } from "../../contexts/tabsContext";
 import { removeApiKeys } from "../../utils";
 import BaseModal from "../baseModal";
 
-export default function ExportModal({ children }: { children: ReactNode }) {
+const ExportModal = forwardRef((props: { children: ReactNode }, ref) => {
   const { closePopUp } = useContext(PopUpContext);
   const { flows, tabId, updateFlow, downloadFlow, saveFlow } =
     useContext(TabsContext);
@@ -21,7 +21,7 @@ export default function ExportModal({ children }: { children: ReactNode }) {
   );
   return (
     <BaseModal size="smaller">
-      <BaseModal.Trigger>{children}</BaseModal.Trigger>
+      <BaseModal.Trigger>{props.children}</BaseModal.Trigger>
       <BaseModal.Header description={EXPORT_DIALOG_SUBTITLE}>
         <DialogTitle className="flex items-center">
           <span className="pr-2">Export</span>
@@ -80,4 +80,5 @@ export default function ExportModal({ children }: { children: ReactNode }) {
       </BaseModal.Footer>
     </BaseModal>
   );
-}
+});
+export default ExportModal;
