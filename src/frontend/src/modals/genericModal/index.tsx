@@ -125,8 +125,6 @@ export default function GenericModal({
     wordsHighlight.forEach(element => {
       sumOfCaracteres = sumOfCaracteres + element.replace(/[{}]/g, "").length
     });
-    console.log(sumOfCaracteres);
-    
     return sumOfCaracteres > MAX_WORDS_HIGHLIGHT ? "code-highlight" : "code-nohighlight"
   }
 
