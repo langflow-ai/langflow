@@ -1,4 +1,5 @@
 import _ from "lodash";
+import { Connection, ReactFlowInstance } from "reactflow";
 import { cleanEdgesType } from "../types/utils/reactflowUtils";
 
 export function cleanEdges({
@@ -43,4 +44,46 @@ export function cleanEdges({
     }
   });
   updateEdge(newEdges);
+}
+
+export function isValidConnection(
+  { source, target, sourceHandle, targetHandle }: Connection,
+  reactFlowInstance: ReactFlowInstance
+) {
+  if (
+    targetHandle
+      .split("|")[0]
+      .split(";")
+      .some((n) => n === sourceHandle.split("|")[0]) ||
+    sourceHandle
+      .split("|")
+      .slice(2)
+      .some((t) =>
+        targetHandle
+          .split("|")[0]
+          .split(";")
+          .some((n) => n === t)
+      ) ||
+    targetHandle.split("|")[0] === "str"
+  ) {
+    let targetNode = reactFlowInstance?.getNode(target)?.data?.node;
+    if (!targetNode) {
+      if (
+        !reactFlowInstance
+          .getEdges()
+          .find((e) => e.targetHandle === targetHandle)
+      ) {
+        return true;
+      }
+    } else if (
+      (!targetNode.template[targetHandle.split("|")[1]].list &&
+        !reactFlowInstance
+          .getEdges()
+          .find((e) => e.targetHandle === targetHandle)) ||
+      targetNode.template[targetHandle.split("|")[1]].list
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
