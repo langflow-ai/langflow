@@ -1,6 +1,7 @@
 // src/constants.tsx
 
 import { MessageSquare } from "lucide-react";
+import { IVarHighlightType } from "./types/components";
 import { FlowType } from "./types/flow";
 import { TabsState } from "./types/tabs";
 import { buildInputs } from "./utils";
@@ -13,6 +14,38 @@ import { buildTweaks } from "./utils/reactflowUtils";
 interface languageMap {
   [key: string]: string | undefined;
 }
+/**
+ * invalid characters for flow name
+ * @constant
+ */
+export const INVALID_CHARACTERS = [
+  " ",
+  ",",
+  ".",
+  ":",
+  ";",
+  "!",
+  "?",
+  "/",
+  "\\",
+  "(",
+  ")",
+  "[",
+  "]",
+  "\n",
+];
+
+/**
+ * regex to highlight the variables in the text
+ * @constant
+ */
+
+export const regexHighlight = /\{([^}]+)\}/g;
+
+export const varHighlightHTML = ({ name }: IVarHighlightType) => {
+  const html = `<span class="font-semibold chat-message-highlight">{${name}}</span>`;
+  return html;
+};
 
 export const programmingLanguages: languageMap = {
   javascript: ".js",
