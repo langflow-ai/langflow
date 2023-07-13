@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { cleanEdgesType } from "./../types/utils/reactflowUtils";
+import { cleanEdgesType } from "../types/utils/reactflowUtils";
 
 export function cleanEdges({
   flow: { edges, nodes },

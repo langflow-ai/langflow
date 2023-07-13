@@ -17,7 +17,6 @@ import { PopUpContext } from "../../../../contexts/popUpContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
-import { cleanEdges } from "../../../../util/reactflowUtils";
 import {
   classNames,
   getRandomKeyByssmm,
@@ -27,6 +26,7 @@ import {
   nodeIconsLucide,
   nodeNames,
 } from "../../../../utils";
+import { cleanEdges } from "../../../../utils/reactflowUtils";
 
 export default function ParameterComponent({
   left,
