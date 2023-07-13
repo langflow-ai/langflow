@@ -62,29 +62,6 @@ export enum TypeModal {
   PROMPT = 2,
 }
 
-export const borderLColors = {
-  white: "border-l-white",
-  red: "border-l-red-500",
-  orange: "border-l-orange-500",
-  amber: "border-l-amber-500",
-  yellow: "border-l-yellow-500",
-  lime: "border-l-lime-500",
-  green: "border-l-green-500",
-  emerald: "border-l-emerald-500",
-  teal: "border-l-teal-500",
-  cyan: "border-l-cyan-500",
-  sky: "border-l-sky-500",
-  blue: "border-l-blue-500",
-  indigo: "border-l-indigo-500",
-  violet: "border-l-violet-500",
-  purple: "border-l-purple-500",
-  fuchsia: "border-l-fuchsia-500",
-  pink: "border-l-pink-500",
-  rose: "border-l-rose-500",
-  black: "border-l-black-500",
-  gray: "border-l-gray-500",
-};
-
 export const nodeColors: { [char: string]: string } = {
   prompts: "#4367BF",
   llms: "#6344BE",
