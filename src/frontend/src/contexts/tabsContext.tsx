@@ -195,7 +195,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     if (!flow.data || !flow.data.edges) return;
     flow.data.edges.forEach((edge) => {
       edge.className = "";
-      edge.style = { stroke: "#555555" };
+      edge.style = { stroke: "#555" };
     });
   }
 
@@ -472,7 +472,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           sourceHandle,
           targetHandle,
           id,
-          style: { stroke: "inherit" },
+          style: { stroke: "#555" },
           className:
             targetHandle.split("|")[0] === "Text"
               ? "stroke-gray-800 "
