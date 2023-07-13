@@ -2,7 +2,7 @@ import { Trash2 } from "lucide-react";
 import { useContext } from "react";
 import { TabsContext } from "../../contexts/tabsContext";
 import { FlowType } from "../../types/flow";
-import { gradients } from "../../utils";
+import { gradients } from "../../utils/styleUtils";
 import {
   Card,
   CardDescription,
