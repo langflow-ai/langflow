@@ -1,0 +1,28 @@
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import ReactPlayer from "react-player";
+
+# Loading a document into a Prompt variable
+
+## Overview
+
+The following example shows how to load a document into a Prompt variable.
+First, we define a Prompt variable in the PromptTemplate component,
+then we connect a WebBaseLoader to that variable and build the flow.
+
+Once the building is complete, we can start chatting having the content of the document in the context of the conversation.
+
+<iframe
+  src="https://app.tango.us/app/embed/76578e84-a700-4b3b-a6ef-8a0350472781?iframe=true"
+  sandbox="allow-scripts allow-top-navigation-by-user-activation allow-popups allow-same-origin"
+  security="restricted"
+  title="Loading a document into a PromptTemplate variable"
+  width="100%"
+  height="800px"
+  referrerpolicy="strict-origin-when-cross-origin"
+  frameborder="0"
+  webkitallowfullscreen="webkitallowfullscreen"
+  mozallowfullscreen="mozallowfullscreen"
+  allowfullscreen="allowfullscreen"
+></iframe>
