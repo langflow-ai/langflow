@@ -213,7 +213,7 @@ The cursor: default; property value restores the browser's default cursor style 
   }
 
   .input-edit-node{
-    @apply input-primary placeholder:text-center pt-0.5 pb-0.5 text-center
+    @apply input-primary border-border placeholder:text-center pt-0.5 pb-0.5 text-center
   }
   .input-search{
     @apply input-primary pr-7 mx-2
