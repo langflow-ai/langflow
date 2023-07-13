@@ -212,84 +212,8 @@ export const nodeIconsLucide: {
   >,
 };
 
-const charWidths: { [char: string]: number } = {
-  " ": 0.2,
-  "!": 0.2,
-  '"': 0.3,
-  "#": 0.5,
-  $: 0.5,
-  "%": 0.5,
-  "&": 0.5,
-  "(": 0.2,
-  ")": 0.2,
-  "*": 0.5,
-  "+": 0.5,
-  ",": 0.2,
-  "-": 0.2,
-  ".": 0.1,
-  "/": 0.5,
-  ":": 0.2,
-  ";": 0.2,
-  "<": 0.5,
-  "=": 0.5,
-  ">": 0.5,
-  "?": 0.2,
-  "@": 0.5,
-  "[": 0.2,
-  "\\": 0.5,
-  "]": 0.2,
-  "^": 0.5,
-  _: 0.2,
-  "`": 0.5,
-  "{": 0.2,
-  "|": 0.2,
-  "}": 0.2,
-  "~": 0.5,
-};
-
-for (let i = 65; i <= 90; i++) {
-  charWidths[String.fromCharCode(i)] = 0.6;
-}
-for (let i = 97; i <= 122; i++) {
-  charWidths[String.fromCharCode(i)] = 0.5;
-}
-
-export function measureTextWidth(text: string, fontSize: number) {
-  let wordWidth = 0;
-  for (let j = 0; j < text.length; j++) {
-    let char = text[j];
-    let charWidth = charWidths[char] || 0.5;
-    wordWidth += charWidth * fontSize;
-  }
-  return wordWidth;
-}
-
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
-}
-
-export function measureTextHeight(
-  text: string,
-  width: number,
-  fontSize: number
-) {
-  const charHeight = fontSize;
-  const lineHeight = charHeight * 1.5;
-  const words = text.split(" ");
-  let lineWidth = 0;
-  let totalHeight = 0;
-  for (let i = 0; i < words.length; i++) {
-    let word = words[i];
-    let wordWidth = measureTextWidth(word, fontSize);
-    if (lineWidth + wordWidth + charWidths[" "] * fontSize <= width) {
-      lineWidth += wordWidth + charWidths[" "] * fontSize;
-    } else {
-      totalHeight += lineHeight;
-      lineWidth = wordWidth;
-    }
-  }
-  totalHeight += lineHeight;
-  return totalHeight;
 }
 
 export function toCamelCase(str: string) {
