@@ -41,7 +41,7 @@ interface BaseModalProps {
   children: [
     React.ReactElement<ContentProps>,
     React.ReactElement<HeaderProps>,
-    React.ReactElement<TriggerProps>,
+    React.ReactElement<TriggerProps>?,
     React.ReactElement<FooterProps>?
   ];
   open?: boolean;
@@ -99,7 +99,9 @@ function BaseModal({
   //UPDATE COLORS AND STYLE CLASSSES
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger className="w-full">{triggerChild}</DialogTrigger>
+      <DialogTrigger className="w-full" hidden={triggerChild ? false : true}>
+        {triggerChild}
+      </DialogTrigger>
       <DialogContent className={minWidth}>
         {headerChild}
         <div className={`mt-2 flex ${height} w-full `}>{ContentChild}</div>

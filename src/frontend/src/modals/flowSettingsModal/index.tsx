@@ -33,9 +33,6 @@ export default function FlowSettingsModal({
   }
   return (
     <BaseModal open={open} setOpen={setOpen} size="smaller">
-      <BaseModal.Trigger>
-        <></>
-      </BaseModal.Trigger>
       <BaseModal.Header description={SETTINGS_DIALOG_SUBTITLE}>
         <span className="pr-2">Settings</span>
         <Settings2
