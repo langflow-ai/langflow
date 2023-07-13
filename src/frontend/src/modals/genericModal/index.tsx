@@ -6,7 +6,7 @@ import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { DialogTitle } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
-import { PROMPT_DIALOG_SUBTITLE, TEXT_DIALOG_SUBTITLE } from "../../constants";
+import { MAX_WORDS_HIGHLIGHT, PROMPT_DIALOG_SUBTITLE, TEXT_DIALOG_SUBTITLE } from "../../constants";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
 import { PopUpContext } from "../../contexts/popUpContext";
@@ -110,7 +110,7 @@ export default function GenericModal({
   const TextAreaContentView = () => {
     return (
       <SanitizedHTMLWrapper
-        className={"code-highlight"}
+        className={getClassByNumberLength()}
         content={coloredContent}
         onClick={() => {
           setIsEdit(true);
@@ -119,6 +119,16 @@ export default function GenericModal({
       />
     );
   };
+
+  function getClassByNumberLength(){
+    let sumOfCaracteres: number = 0;
+    wordsHighlight.forEach(element => {
+      sumOfCaracteres = sumOfCaracteres + element.replace(/[{}]/g, "").length
+    });
+    console.log(sumOfCaracteres);
+    
+    return sumOfCaracteres > MAX_WORDS_HIGHLIGHT ? "code-highlight" : "code-nohighlight"
+  }
 
 
   function validatePrompt(closeModal: boolean) {

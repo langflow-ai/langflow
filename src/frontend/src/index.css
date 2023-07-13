@@ -935,6 +935,10 @@ The cursor: default; property value restores the browser's default cursor style 
   .code-highlight{
     @apply block px-3 py-2 w-full max-h-[64vh] text-sm outline-0 border-0 break-all overflow-y-hidden
   }
+
+  .code-nohighlight{
+    @apply block px-3 py-2 w-full max-h-[70vh] text-sm outline-0 border-0 break-all overflow-y-hidden
+  }
   .form-modal-lockchat {
     @apply form-input focus:ring-ring focus:border-ring block w-full rounded-md border-border p-4 pr-16 custom-scroll sm:text-sm
   }
