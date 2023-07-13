@@ -5,7 +5,7 @@ import { twMerge } from "tailwind-merge";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "./flow_constants";
 import { APITemplateType } from "./types/api";
 import { IVarHighlightType } from "./types/components";
-import { FlowType, NodeType } from "./types/flow";
+import { NodeType } from "./types/flow";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -68,22 +68,6 @@ export function normalCaseToSnakeCase(str: string) {
       return word.toLowerCase();
     })
     .join("_");
-}
-
-export function roundNumber(x: number, decimals: number) {
-  return Math.round(x * Math.pow(10, decimals)) / Math.pow(10, decimals);
-}
-
-export function removeApiKeys(flow: FlowType): FlowType {
-  let cleanFLow = _.cloneDeep(flow);
-  cleanFLow.data.nodes.forEach((node) => {
-    for (const key in node.data.node.template) {
-      if (node.data.node.template[key].password) {
-        node.data.node.template[key].value = "";
-      }
-    }
-  });
-  return cleanFLow;
 }
 
 export function updateObject<T extends Record<string, any>>(

@@ -1,5 +1,6 @@
 import _ from "lodash";
 import { Connection, ReactFlowInstance } from "reactflow";
+import { FlowType } from "../types/flow";
 import { cleanEdgesType } from "../types/utils/reactflowUtils";
 
 export function cleanEdges({
@@ -86,4 +87,16 @@ export function isValidConnection(
     }
   }
   return false;
+}
+
+export function removeApiKeys(flow: FlowType): FlowType {
+  let cleanFLow = _.cloneDeep(flow);
+  cleanFLow.data.nodes.forEach((node) => {
+    for (const key in node.data.node.template) {
+      if (node.data.node.template[key].password) {
+        node.data.node.template[key].value = "";
+      }
+    }
+  });
+  return cleanFLow;
 }
