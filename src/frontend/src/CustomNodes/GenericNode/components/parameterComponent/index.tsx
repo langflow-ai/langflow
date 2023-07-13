@@ -23,10 +23,9 @@ import {
   groupByFamily,
   isValidConnection,
   nodeIconsLucide,
-  nodeNames,
 } from "../../../../utils";
 import { cleanEdges } from "../../../../utils/reactflowUtils";
-import { nodeColors } from "../../../../utils/styleUtils";
+import { nodeColors, nodeNames } from "../../../../utils/styleUtils";
 
 export default function ParameterComponent({
   left,
