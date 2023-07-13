@@ -4,5 +4,5 @@ import { ReactComponent as FacebookMessengerSVG } from "./Facebook_Messenger_log
 export const FBIcon = forwardRef<SVGSVGElement, React.PropsWithChildren<{}>>(
   (props, ref) => {
     return <FacebookMessengerSVG ref={ref} {...props} />;
-  },
+  }
 );

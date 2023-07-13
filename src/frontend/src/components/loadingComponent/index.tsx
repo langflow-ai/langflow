@@ -4,10 +4,10 @@ type LoadingComponentProps = {
 
 export default function LoadingComponent({ remSize }: LoadingComponentProps) {
   return (
-    <div role="status" className="w-min m-auto">
+    <div role="status" className="m-auto w-min">
       <svg
         aria-hidden="true"
-        className={`w-${remSize} h-${remSize} mr-2 text-muted animate-spin dark:text-gray-600 fill-blue-600`}
+        className={`w-${remSize} h-${remSize} mr-2 animate-spin fill-almost-medium-blue  text-muted`}
         viewBox="0 0 100 101"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
@@ -22,7 +22,9 @@ export default function LoadingComponent({ remSize }: LoadingComponentProps) {
         />
       </svg>
       <br></br>
-      <span className="animate-pulse text-blue-600 text-lg">Loading...</span>
+      <span className="animate-pulse text-lg text-almost-medium-blue">
+        Loading...
+      </span>
     </div>
   );
 }

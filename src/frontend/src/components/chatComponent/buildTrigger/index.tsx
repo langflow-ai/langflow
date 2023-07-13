@@ -1,21 +1,21 @@
-import { useContext, useState } from "react";
 import { Transition } from "@headlessui/react";
 import { Zap } from "lucide-react";
-import { validateNodes } from "../../../utils";
-import { FlowType } from "../../../types/flow";
+import { useContext, useState } from "react";
 import Loading from "../../../components/ui/loading";
 import { useSSE } from "../../../contexts/SSEContext";
-import { typesContext } from "../../../contexts/typesContext";
 import { alertContext } from "../../../contexts/alertContext";
+import { typesContext } from "../../../contexts/typesContext";
 import { postBuildInit } from "../../../controllers/API";
+import { FlowType } from "../../../types/flow";
+import { validateNodes } from "../../../utils";
 
+import { TabsContext } from "../../../contexts/tabsContext";
 import RadialProgressComponent from "../../RadialProgress";
 
 export default function BuildTrigger({
   open,
   flow,
   setIsBuilt,
-  isBuilt,
 }: {
   open: boolean;
   flow: FlowType;
@@ -24,6 +24,7 @@ export default function BuildTrigger({
 }) {
   const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
   const { reactFlowInstance } = useContext(typesContext);
+  const { setTabsState } = useContext(TabsContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [isIconTouched, setIsIconTouched] = useState(false);
   const eventClick = isBuilding ? "pointer-events-none" : "";
@@ -87,6 +88,16 @@ export default function BuildTrigger({
       } else if (parsedData.log) {
         // If the event is a log, log it
         setSuccessData({ title: parsedData.log });
+      } else if (parsedData.input_keys) {
+        setTabsState((old) => {
+          return {
+            ...old,
+            [flowId]: {
+              ...old[flowId],
+              formKeysData: parsedData,
+            },
+          };
+        });
       } else {
         // Otherwise, process the data
         const isValid = processStreamResult(parsedData);
@@ -126,7 +137,7 @@ export default function BuildTrigger({
 
   async function enforceMinimumLoadingTime(
     startTime: number,
-    minimumLoadingTime: number,
+    minimumLoadingTime: number
   ) {
     const elapsedTime = Date.now() - startTime;
     const remainingTime = minimumLoadingTime - elapsedTime;
@@ -155,9 +166,9 @@ export default function BuildTrigger({
       leaveFrom="translate-y-0"
       leaveTo="translate-y-96"
     >
-      <div className={`fixed right-4` + (isBuilt ? " bottom-20" : " bottom-4")}>
+      <div className="fixed bottom-20 right-4">
         <div
-          className={`${eventClick} flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full shadow-md shadow-[#0000002a] hover:shadow-[#00000032] bg-[#E2E7EE] dark:border-gray-600 cursor-pointer`}
+          className={`${eventClick} round-button-form`}
           onClick={() => {
             handleBuild(flow);
           }}
@@ -165,17 +176,24 @@ export default function BuildTrigger({
           onMouseLeave={handleMouseLeave}
         >
           <button>
-            <div className="flex gap-3 items-center">
+            <div className="round-button-div">
               {isBuilding && progress < 1 ? (
                 // Render your loading animation here when isBuilding is true
                 <RadialProgressComponent
-                  color={"text-orange-400"}
+                  // ! confirm below works
+                  color={"text-build-trigger"}
                   value={progress}
                 ></RadialProgressComponent>
               ) : isBuilding ? (
-                <Loading strokeWidth={1.5} style={{ color: "#fb923c" }} />
+                <Loading
+                  strokeWidth={1.5}
+                  className="build-trigger-loading-icon"
+                />
               ) : (
-                <Zap className="sh-6 w-6 fill-orange-400 stroke-1 stroke-orange-400" />
+                <Zap
+                  strokeWidth={1.5}
+                  className="sh-6 w-6 fill-build-trigger stroke-build-trigger stroke-1"
+                />
               )}
             </div>
           </button>

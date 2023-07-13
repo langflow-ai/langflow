@@ -1,4 +1,4 @@
-import React, { ReactNode } from "react";
+import { ReactNode } from "react";
 import { classNames } from "../../../utils";
 
 export default function ButtonBox({
@@ -77,28 +77,28 @@ export default function ButtonBox({
     <button disabled={deactivate} onClick={onClick}>
       <div
         className={classNames(
-          "flex flex-col justify-center items-center rounded-lg text-center shadow border border-gray-300 dark:border-gray-800 hover:shadow-lg transform hover:scale-105",
+          "button-box-modal-div",
           bgColor,
           height,
           width,
-          padding,
+          padding
         )}
       >
         <div
-          className={`flex items-center justify-center ${bigCircle} bg-white/30 dark:bg-white/30 rounded-full mb-1`}
+          className={`flex items-center justify-center ${bigCircle} mb-1 rounded-full bg-background/30`}
         >
           <div
-            className={`flex items-center justify-center ${smallCircle} bg-white dark:bg-white/80 rounded-full`}
+            className={`flex items-center justify-center ${smallCircle} rounded-full bg-background`}
           >
             <div className={textColor}>{icon}</div>
           </div>
         </div>
-        <div className="w-full mt-auto mb-auto">
+        <div className="mb-auto mt-auto w-full">
           <h3
             className={classNames(
-              "w-full font-semibold break-words text-white dark:text-white/80 truncate-multiline",
+              "w-full break-words font-semibold text-background truncate-multiline",
               titleFontSize,
-              marginTop,
+              marginTop
             )}
           >
             {title}

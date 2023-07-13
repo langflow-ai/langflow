@@ -1,8 +1,8 @@
 import { Disclosure } from "@headlessui/react";
-import { useContext, useState } from "react";
+import { useContext } from "react";
 import { Link } from "react-router-dom";
-import { classNames } from "../../utils";
 import { locationContext } from "../../contexts/locationContext";
+import { classNames } from "../../utils";
 
 export default function ExtraSidebar() {
   const {
@@ -16,15 +16,13 @@ export default function ExtraSidebar() {
   return (
     <>
       <aside
-        className={` ${
-          isStackedOpen ? "w-52" : "w-0 "
-        } flex-shrink-0 flex overflow-hidden flex-col border-r dark:border-r-gray-700 transition-all duration-500`}
+        className={` ${isStackedOpen ? "w-52" : "w-0 "} unused-side-bar-aside`}
       >
-        <div className="w-52 dark:bg-gray-800 border dark:border-gray-700  overflow-y-auto scrollbar-hide h-full flex flex-col items-start bg-white">
-          <div className="flex flex-grow flex-col w-full">
+        <div className="unused-side-bar-arrangement">
+          <div className="unused-side-bar-division">
             {extraNavigation.options ? (
               <div className="p-4">
-                <nav className="flex-1 space-y-1">
+                <nav className="unused-side-bar-nav">
                   {extraNavigation.options.map((item) =>
                     !item.children ? (
                       <div key={item.name}>
@@ -32,17 +30,17 @@ export default function ExtraSidebar() {
                           to={item.href}
                           className={classNames(
                             item.href.split("/")[2] === current[4]
-                              ? "bg-muted text-gray-900"
-                              : "bg-white text-gray-600 hover:bg-muted hover:text-gray-900",
-                            "group w-full flex items-center pl-2 py-2 text-sm font-medium rounded-md",
+                              ? "unused-side-bar-link-colors-true"
+                              : "unused-side-bar-link-colors-false",
+                            "unused-side-bar-link"
                           )}
                         >
                           <item.icon
                             className={classNames(
                               item.href.split("/")[2] === current[4]
-                                ? "text-gray-500"
-                                : "text-gray-400 group-hover:text-gray-500",
-                              "mr-3 flex-shrink-0 h-6 w-6",
+                                ? "text-ring"
+                                : "unused-side-bar-icon-false",
+                              "unused-side-bar-icon"
                             )}
                           />
                           {item.name}
@@ -59,22 +57,22 @@ export default function ExtraSidebar() {
                             <Disclosure.Button
                               className={classNames(
                                 item.href.split("/")[2] === current[4]
-                                  ? "bg-muted text-gray-900"
-                                  : "bg-white text-gray-600 hover:bg-muted hover:text-gray-900",
-                                "group w-full flex items-center pl-2 pr-1 py-2 text-left text-sm font-medium rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500",
+                                  ? "unused-side-bar-link-colors-true"
+                                  : "unused-side-bar-link-colors-false",
+                                "unused-side-bar-disclosure"
                               )}
                             >
                               <item.icon
-                                className="mr-3 h-6 w-6 flex-shrink-0 text-gray-400 group-hover:text-gray-500"
+                                className="unused-side-bar-disclosure-icon"
                                 aria-hidden="true"
                               />
                               <span className="flex-1">{item.name}</span>
                               <svg
                                 className={classNames(
                                   open
-                                    ? "text-gray-400 rotate-90"
-                                    : "text-gray-300",
-                                  "ml-3 h-5 w-5 flex-shrink-0 transition-rotate duration-150 ease-in-out group-hover:text-gray-400",
+                                    ? "unused-side-bar-svg-true"
+                                    : "text-ring",
+                                  "unused-side-bar-svg"
                                 )}
                                 viewBox="0 0 20 20"
                                 aria-hidden="true"
@@ -92,9 +90,9 @@ export default function ExtraSidebar() {
                                   to={subItem.href}
                                   className={classNames(
                                     subItem.href.split("/")[3] === current[5]
-                                      ? "bg-muted text-gray-900"
-                                      : "bg-white text-gray-600 hover:bg-muted hover:text-gray-900",
-                                    "group flex w-full items-center rounded-md py-2 pl-11 pr-2 text-sm font-medium",
+                                      ? "unused-side-bar-link-colors-true"
+                                      : "unused-side-bar-link-colors-false",
+                                    "unused-side-bar-disclosure-panel"
                                   )}
                                 >
                                   {subItem.name}
@@ -104,7 +102,7 @@ export default function ExtraSidebar() {
                           </>
                         )}
                       </Disclosure>
-                    ),
+                    )
                   )}
                 </nav>
               </div>

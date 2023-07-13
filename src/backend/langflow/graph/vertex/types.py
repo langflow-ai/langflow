@@ -1,3 +1,4 @@
+import ast
 from typing import Any, Dict, List, Optional, Union
 
 from langflow.graph.vertex.base import Vertex
@@ -79,7 +80,7 @@ class WrapperVertex(Vertex):
     def build(self, force: bool = False) -> Any:
         if not self._built or force:
             if "headers" in self.params:
-                self.params["headers"] = eval(self.params["headers"])
+                self.params["headers"] = ast.literal_eval(self.params["headers"])
             self._build()
         return self._built_object
 
@@ -91,8 +92,13 @@ class DocumentLoaderVertex(Vertex):
     def _built_object_repr(self):
         # This built_object is a list of documents. Maybe we should
         # show how many documents are in the list?
+
         if self._built_object:
+            avg_length = sum(len(doc.page_content) for doc in self._built_object) / len(
+                self._built_object
+            )
             return f"""{self.vertex_type}({len(self._built_object)} documents)
+            \nAvg. Document Length (characters): {avg_length}
             Documents: {self._built_object[:3]}..."""
         return f"{self.vertex_type}()"
 
@@ -124,8 +130,13 @@ class TextSplitterVertex(Vertex):
     def _built_object_repr(self):
         # This built_object is a list of documents. Maybe we should
         # show how many documents are in the list?
+
         if self._built_object:
+            avg_length = sum(len(doc.page_content) for doc in self._built_object) / len(
+                self._built_object
+            )
             return f"""{self.vertex_type}({len(self._built_object)} documents)
+            \nAvg. Document Length (characters): {avg_length}
             \nDocuments: {self._built_object[:3]}..."""
         return f"{self.vertex_type}()"
 
@@ -185,11 +196,46 @@ class PromptVertex(Vertex):
                 ]
             else:
                 prompt_params = ["template"]
-            for param in prompt_params:
-                prompt_text = self.params[param]
-                variables = extract_input_variables_from_prompt(prompt_text)
-                self.params["input_variables"].extend(variables)
-            self.params["input_variables"] = list(set(self.params["input_variables"]))
+
+            if "prompt" not in self.params and "messages" not in self.params:
+                for param in prompt_params:
+                    prompt_text = self.params[param]
+                    variables = extract_input_variables_from_prompt(prompt_text)
+                    self.params["input_variables"].extend(variables)
+                self.params["input_variables"] = list(
+                    set(self.params["input_variables"])
+                )
+            else:
+                self.params.pop("input_variables", None)
 
             self._build()
         return self._built_object
+
+    def _built_object_repr(self):
+        if (
+            not self.artifacts
+            or self._built_object is None
+            or not hasattr(self._built_object, "format")
+        ):
+            return super()._built_object_repr()
+        # We'll build the prompt with the artifacts
+        # to show the user what the prompt looks like
+        # with the variables filled in
+        artifacts = self.artifacts.copy()
+        # Remove the handle_keys from the artifacts
+        # so the prompt format doesn't break
+        artifacts.pop("handle_keys", None)
+        try:
+            template = self._built_object.format(**artifacts)
+            return (
+                template
+                if isinstance(template, str)
+                else f"{self.vertex_type}({template})"
+            )
+        except KeyError:
+            return str(self._built_object)
+
+
+class OutputParserVertex(Vertex):
+    def __init__(self, data: Dict):
+        super().__init__(data, base_type="output_parsers")

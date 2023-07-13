@@ -37,8 +37,8 @@ const TooltipReact: FC<TooltipProps> = ({
         id={selector}
         content={content}
         className={classNames(
-          "!bg-white !text-xs !font-normal !text-gray-700 !shadow-md !opacity-100 z-[9999]",
-          className,
+          "z-[9999] !bg-white !text-xs !font-normal !text-foreground !opacity-100 !shadow-md",
+          className
         )}
         place={position}
         clickable={clickable}

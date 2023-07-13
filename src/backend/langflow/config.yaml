@@ -151,12 +151,19 @@ memories:
     documentation: "https://python.langchain.com/docs/modules/memory/how_to/buffer_window"
   VectorStoreRetrieverMemory:
     documentation: "https://python.langchain.com/docs/modules/memory/how_to/vectorstore_retriever_memory"
-
+  MongoDBChatMessageHistory:
+    documentation: "https://python.langchain.com/docs/modules/memory/integrations/mongodb_chat_message_history"
 prompts:
+  ChatMessagePromptTemplate:
+    documentation: "https://python.langchain.com/docs/modules/model_io/prompts/prompt_templates/msg_prompt_templates"
+  HumanMessagePromptTemplate:
+    documentation: "https://python.langchain.com/docs/modules/model_io/models/chat/how_to/prompts"
+  SystemMessagePromptTemplate:
+    documentation: "https://python.langchain.com/docs/modules/model_io/models/chat/how_to/prompts"
+  ChatPromptTemplate:
+    documentation: "https://python.langchain.com/docs/modules/model_io/models/chat/how_to/prompts"
   PromptTemplate:
     documentation: "https://python.langchain.com/docs/modules/model_io/prompts/prompt_templates/"
-  ZeroShotPrompt:
-    documentation: "https://python.langchain.com/docs/modules/agents/how_to/custom_mrkl_agent"
 textsplitters:
   CharacterTextSplitter:
     documentation: "https://python.langchain.com/docs/modules/data_connection/document_transformers/text_splitters/character_text_splitter"
@@ -269,7 +276,17 @@ vectorstores:
   SupabaseVectorStore:
     documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/supabase"
   MongoDBAtlasVectorSearch:
-    documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/mongodb_atlas_vector_search"
+    documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/mongodb_atlas"
+  # Requires docarray >=0.32.0 but langchain-serve requires jina 3.15.2 which doesn't support docarray >=0.32.0
+  # DocArrayInMemorySearch:
+  #   documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/docarray_in_memory"
 wrappers:
   RequestsWrapper:
     documentation: ""
+  SQLDatabase:
+    documentation: ""
+output_parsers:
+  StructuredOutputParser:
+    documentation: "https://python.langchain.com/docs/modules/model_io/output_parsers/structured"
+  ResponseSchema:
+    documentation: "https://python.langchain.com/docs/modules/model_io/output_parsers/structured"
