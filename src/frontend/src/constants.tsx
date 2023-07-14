@@ -198,7 +198,7 @@ function buildTweakObject(tweak) {
     });
   });
 
-  const tweakString = JSON.stringify(tweak, null, 2);
+  const tweakString = JSON.stringify(tweak[0], null, 2);
   return tweakString;
 }
 
