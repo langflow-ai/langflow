@@ -96,7 +96,7 @@ class Creator(BaseModel, ABC):
         frontend_node_instance.add_extra_fields()
         frontend_node_instance.add_extra_base_classes()
         frontend_node_instance.set_documentation(self.docs_map.get(name, ""))
-        return signature
+        return frontend_node_instance
 
 
 class LangChainTypeCreator(Creator):

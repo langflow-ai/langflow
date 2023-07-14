@@ -1,6 +1,7 @@
 import contextlib
 import io
 from typing import List, Tuple
+from langflow.cache.utils import memoize_dict
 
 from langflow.utils.logger import logger
 from langchain.schema import AgentAction
@@ -11,6 +12,7 @@ def build_langchain_object_with_caching(data_graph):
     """
     Build langchain object from data_graph.
     """
+    from langflow.graph.graph import Graph
 
     logger.debug("Building langchain object")
     graph = Graph.from_payload(data_graph)
