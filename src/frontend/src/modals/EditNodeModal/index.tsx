@@ -30,29 +30,16 @@ const EditNodeModal = forwardRef(
   (
     {
       data,
+      nodeLength,
       children,
     }: {
       data: NodeDataType;
+      nodeLength: number;
       children: ReactNode;
     },
     ref
   ) => {
     const [modalOpen, setModalOpen] = useState(false);
-
-    const [nodeLength, setNodeLength] = useState(
-      Object.keys(data.node.template).filter(
-        (t) =>
-          t.charAt(0) !== "_" &&
-          data.node.template[t].show &&
-          (data.node.template[t].type === "str" ||
-            data.node.template[t].type === "bool" ||
-            data.node.template[t].type === "float" ||
-            data.node.template[t].type === "code" ||
-            data.node.template[t].type === "prompt" ||
-            data.node.template[t].type === "file" ||
-            data.node.template[t].type === "int")
-      ).length
-    );
     const [nodeValue, setNodeValue] = useState(null);
     const { types } = useContext(typesContext);
     const { setTabsState, tabId } = useContext(TabsContext);
@@ -86,8 +73,12 @@ const EditNodeModal = forwardRef(
       });
     };
 
+    const setOpen = (x: boolean) => {
+      if (nodeLength > 0) setModalOpen(x);
+    };
+
     return (
-      <BaseModal size="large-h-full" open={modalOpen} setOpen={setModalOpen}>
+      <BaseModal size="large-h-full" open={modalOpen} setOpen={setOpen}>
         <BaseModal.Trigger>{children}</BaseModal.Trigger>
         <BaseModal.Header description={data.node?.description}>
           <span className="pr-2">{data.type}</span>
