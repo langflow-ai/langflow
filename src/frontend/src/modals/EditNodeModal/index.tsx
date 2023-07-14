@@ -61,9 +61,6 @@ const EditNodeModal = forwardRef(
     let disabled =
       reactFlowInstance?.getEdges().some((e) => e.targetHandle === data.id) ??
       false;
-    if (nodeLength == 0) {
-      setModalOpen(false);
-    }
 
     function changeAdvanced(node) {
       Object.keys(data.node.template).map((n, i) => {
