@@ -767,21 +767,22 @@ sqlalchemy = ["sqlalchemy (>1.3.21,<2.0)"]
 
 [[package]]
 name = "cohere"
-version = "4.13.0"
+version = "4.13.1"
 description = ""
 category = "main"
 optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "cohere-4.13.0-py3-none-any.whl", hash = "sha256:ac8faf352c9e8794dfd05002ce52b7d4f6da8f47a20172c8640ed58e8dfd3f10"},
-    {file = "cohere-4.13.0.tar.gz", hash = "sha256:7c8e65aa4fc50fe6a9e8fe19d64e18b77d4250ec70845d480c68644d5a903253"},
+    {file = "cohere-4.13.1-py3-none-any.whl", hash = "sha256:f6fd2c9fcec6b6d45d669287bc45e7268f92cbabb2a2df8d5df3b5725b80be0b"},
+    {file = "cohere-4.13.1.tar.gz", hash = "sha256:53c380966fddd213d5ce701bf1a5fe7a9fb62dc2e37ef23b3e8d294bf82b5ba0"},
 ]
 
 [package.dependencies]
 aiohttp = ">=3.0,<4.0"
 backoff = ">=2.0,<3.0"
 importlib_metadata = ">=6.0,<7.0"
-requests = ">=2.0,<3.0"
+requests = ">=2.25.0,<3.0.0"
+urllib3 = ">=1.26,<3"
 
 [[package]]
 name = "colorama"
@@ -2928,14 +2929,14 @@ testing = ["pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)",
 
 [[package]]
 name = "langchain"
-version = "0.0.232"
+version = "0.0.233"
 description = "Building applications with LLMs through composability"
 category = "main"
 optional = false
 python-versions = ">=3.8.1,<4.0"
 files = [
-    {file = "langchain-0.0.232-py3-none-any.whl", hash = "sha256:33d8d498115f9af8d1851ba7fa326348848fabd314497629ac55b3b9b61e3ec1"},
-    {file = "langchain-0.0.232.tar.gz", hash = "sha256:afcd5ed45adf8ec1434151f881ac9ff73d958fe3ea8d7725d7b6b603feb48c8d"},
+    {file = "langchain-0.0.233-py3-none-any.whl", hash = "sha256:615f57abdf14515a4760f54b8cdc176edff38e657b674b7182084396d6530699"},
+    {file = "langchain-0.0.233.tar.gz", hash = "sha256:e139f4939fa7eb4822fe69d3732718d19428ffcc3bd39872342c18037dbfbd8f"},
 ]
 
 [package.dependencies]
@@ -3031,13 +3032,13 @@ test = ["coverage", "pytest", "pytest-cov"]
 
 [[package]]
 name = "llama-cpp-python"
-version = "0.1.70"
+version = "0.1.71"
 description = "A Python wrapper for llama.cpp"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "llama_cpp_python-0.1.70.tar.gz", hash = "sha256:616ea7ad87417eba9c76d6ffe060b855af39ab7e795032dcf19fc49a7e73806b"},
+    {file = "llama_cpp_python-0.1.71.tar.gz", hash = "sha256:598b61862ab4e18e0acce5902ae8a9c1ece1554d4b87bf8bb7ad6a0b1660f3cd"},
 ]
 
 [package.dependencies]
@@ -3046,7 +3047,7 @@ numpy = ">=1.20.0"
 typing-extensions = ">=4.5.0"
 
 [package.extras]
-server = ["fastapi (>=0.100.0)", "pydantic-settings (>=2.0.1)", "sse-starlette (>=1.6.1)", "uvicorn (>=0.22.1)"]
+server = ["fastapi (>=0.100.0)", "pydantic-settings (>=2.0.1)", "sse-starlette (>=1.6.1)", "uvicorn (>=0.22.0)"]
 
 [[package]]
 name = "loguru"
@@ -7750,19 +7751,19 @@ multidict = ">=4.0"
 
 [[package]]
 name = "zipp"
-version = "3.16.1"
+version = "3.16.2"
 description = "Backport of pathlib-compatible object wrapper for zip files"
 category = "main"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "zipp-3.16.1-py3-none-any.whl", hash = "sha256:0b37c326d826d5ca35f2b9685cd750292740774ef16190008b00a0227c256fe0"},
-    {file = "zipp-3.16.1.tar.gz", hash = "sha256:857b158da2cbf427b376da1c24fd11faecbac5a4ac7523c3607f8a01f94c2ec0"},
+    {file = "zipp-3.16.2-py3-none-any.whl", hash = "sha256:679e51dd4403591b2d6838a48de3d283f3d188412a9782faadf845f298736ba0"},
+    {file = "zipp-3.16.2.tar.gz", hash = "sha256:ebc15946aa78bd63458992fc81ec3b6f7b1e92d51c35e6de1c3804e73b799147"},
 ]
 
 [package.extras]
 docs = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
-testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-mypy (>=0.9.1)", "pytest-ruff"]
+testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-ignore-flaky", "pytest-mypy (>=0.9.1)", "pytest-ruff"]
 
 [[package]]
 name = "zstandard"
@@ -7829,4 +7830,4 @@ deploy = ["langchain-serve"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "c3af9ea35a1786197ab1325814e4e45755aa46dae0fd363243ab807081f8d45c"
+content-hash = "752424172da0f4b36648ff928e56895ad0f516dcc9cb69d788c8f0487f6e9db0"
