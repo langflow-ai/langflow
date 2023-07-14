@@ -201,7 +201,7 @@ const EditNodeModal = forwardRef(
                                     editNode={true}
                                     value={data.node.template[n].value ?? ""}
                                     onChange={(t) => {
-                                      data.node.template[n].value = t;
+                                      handleOnNewValue(t, n);
                                     }}
                                   />
                                 </div>
