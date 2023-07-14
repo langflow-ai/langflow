@@ -1,5 +1,4 @@
 import { Transition } from "@headlessui/react";
-import { MessagesSquare } from "lucide-react";
 
 import { useContext } from "react";
 import {
@@ -9,6 +8,7 @@ import {
   FLOW_NOT_BUILT_TITLE,
 } from "../../../constants";
 import { alertContext } from "../../../contexts/alertContext";
+import IconComponent from "../../genericIconComponent";
 
 export default function ChatTrigger({ open, setOpen, isBuilt, canOpen }) {
   const { setErrorData } = useContext(alertContext);
@@ -50,15 +50,15 @@ export default function ChatTrigger({ open, setOpen, isBuilt, canOpen }) {
         }
       >
         <div className="flex gap-3">
-          <MessagesSquare
-            className={
+          <IconComponent
+            name="MessagesSquare"
+            style={
               "h-6 w-6 transition-all " +
               (isBuilt && canOpen
                 ? "message-button-icon"
                 : "disabled-message-button-icon")
             }
-            style={{ color: "white" }}
-            strokeWidth={1.5}
+            method="LUCIDE"
           />
         </div>
       </button>

@@ -1,4 +1,3 @@
-import { Variable } from "lucide-react";
 import { useContext, useRef, useState } from "react";
 import CodeAreaComponent from "../../components/codeAreaComponent";
 import Dropdown from "../../components/dropdownComponent";
@@ -34,6 +33,7 @@ import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
 import { classNames, limitScrollFieldsModal } from "../../utils";
+import IconComponent from "../../components/genericIconComponent";
 
 export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const [open, setOpen] = useState(true);
@@ -109,7 +109,11 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
             <div>
               {data.node?.description}
               <div className="flex pt-3">
-                <Variable className="edit-node-modal-variable "></Variable>
+                <IconComponent
+                  name="Variable"
+                  style="edit-node-modal-variable "
+                  method="LUCIDE"
+                />
                 <span className="edit-node-modal-span">Parameters</span>
               </div>
             </div>

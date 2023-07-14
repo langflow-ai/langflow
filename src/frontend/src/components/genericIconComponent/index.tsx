@@ -1,28 +1,34 @@
 import { IconComponentProps, IconProps } from "../../types/components";
 import { nodeIconsLucide, svgIcons } from "../../utils";
 
-export function IconFromLucide({ name }: IconProps): JSX.Element {
+export function IconFromLucide({
+  name,
+  style,
+}: IconProps): JSX.Element {
   const TargetIcon = nodeIconsLucide[name] ?? nodeIconsLucide["unknown"];
-  return <TargetIcon />;
+  return <TargetIcon className={ style } />;
 }
 
-export function IconFromSvg({ name }: IconProps): JSX.Element {
+export function IconFromSvg({
+  name,
+  style
+}: IconProps): JSX.Element {
   const TargetSvg = svgIcons[name] ?? nodeIconsLucide["unknown"];
-  return <TargetSvg />;
+  return <TargetSvg className={ style } />;
 }
 
 export default function IconComponent({
   method,
   name,
-  className,
+  style,
 }: IconComponentProps): JSX.Element {
   switch (method) {
     case "SVG":
-      return <IconFromSvg name={name} />;
+      return <IconFromSvg name={name} style={ style } />;
     case "LUCIDE":
-      return <IconFromLucide name={name} />;
+      return <IconFromLucide name={name} style={ style } />;
     default:
       console.error("IconComponent: invalid method");
-      return <IconFromLucide name={"unknown"} />;
+      return <IconFromLucide name={"unknown"} style={"unknown"} />;
   }
 }

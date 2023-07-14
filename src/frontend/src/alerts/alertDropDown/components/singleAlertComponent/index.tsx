@@ -1,8 +1,8 @@
 import { Transition } from "@headlessui/react";
-import { CheckCircle2, Info, X, XCircle } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { SingleAlertComponentType } from "../../../../types/alerts";
+import IconComponent from "../../../../components/genericIconComponent";
 
 export default function SingleAlert({
   dropItem,
@@ -29,7 +29,12 @@ export default function SingleAlert({
           key={dropItem.id}
         >
           <div className="flex-shrink-0">
-            <XCircle className="h-5 w-5 text-status-red" aria-hidden="true" />
+            <IconComponent
+              method="LUCIDE"
+              name="XCircle"
+              style="h-5 w-5 text-status-red"
+              aria-hidden="true"
+            />
           </div>
           <div className="ml-3">
             <h3 className="break-words text-sm font-medium text-error-foreground">
@@ -62,8 +67,10 @@ export default function SingleAlert({
                 className="inline-flex rounded-md p-1.5 text-status-red"
               >
                 <span className="sr-only">Dismiss</span>
-                <X
-                  className="h-4 w-4 text-error-foreground"
+                <IconComponent
+                  name="X"
+                  method="LUCIDE"
+                  style="h-4 w-4 text-error-foreground"
                   aria-hidden="true"
                 />
               </button>
@@ -76,7 +83,12 @@ export default function SingleAlert({
           key={dropItem.id}
         >
           <div className="flex-shrink-0">
-            <Info className="h-5 w-5 text-status-blue " aria-hidden="true" />
+            <IconComponent
+              name="Info"
+              method="LUCIDE"
+              style="h-5 w-5 text-status-blue "
+              aria-hidden="true"
+            />
           </div>
           <div className="ml-3 flex-1 md:flex md:justify-between">
             <p className="text-sm font-medium text-info-foreground">
@@ -108,8 +120,10 @@ export default function SingleAlert({
                 className="inline-flex rounded-md p-1.5 text-info-foreground"
               >
                 <span className="sr-only">Dismiss</span>
-                <X
-                  className="h-4 w-4 text-info-foreground"
+                <IconComponent
+                  method="LUCIDE"
+                  name="X"
+                  style="h-4 w-4 text-info-foreground"
                   aria-hidden="true"
                 />
               </button>
@@ -122,8 +136,10 @@ export default function SingleAlert({
           key={dropItem.id}
         >
           <div className="flex-shrink-0">
-            <CheckCircle2
-              className="h-5 w-5 text-status-green"
+            <IconComponent
+              name="CheckCircle2"
+              style="h-5 w-5 text-status-green"
+              method="LUCIDE"
               aria-hidden="true"
             />
           </div>
@@ -145,8 +161,10 @@ export default function SingleAlert({
                 className="inline-flex rounded-md p-1.5 text-status-green"
               >
                 <span className="sr-only">Dismiss</span>
-                <X
-                  className="h-4 w-4 text-success-foreground"
+                <IconComponent
+                  name="X"
+                  method="LUCIDE"
+                  style="h-4 w-4 text-success-foreground"
                   aria-hidden="true"
                 />
               </button>

@@ -4,8 +4,8 @@ import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
 import { TypeModal } from "../../utils";
 
-import { ExternalLink } from "lucide-react";
 import { TabsContext } from "../../contexts/tabsContext";
+import IconComponent from "../genericIconComponent";
 
 export default function TextAreaComponent({
   value,
@@ -68,9 +68,10 @@ export default function TextAreaComponent({
           }}
         >
           {!editNode && (
-            <ExternalLink
-              strokeWidth={1.5}
-              className={
+            <IconComponent
+              name="ExternalLink"
+              method="LUCIDE"
+              style={
                 "icons-parameters-comp" +
                 (disabled ? " text-ring" : " hover:text-accent-foreground")
               }

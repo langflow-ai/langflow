@@ -1,10 +1,10 @@
-import { Copy, FileText, Settings2, Trash2 } from "lucide-react";
 import { useContext, useState } from "react";
 import { useReactFlow } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import { classNames } from "../../../../utils";
+import IconComponent from "../../../../components/genericIconComponent";
 
 const NodeToolbarComponent = (props) => {
   const [nodeLength, setNodeLength] = useState(
@@ -36,7 +36,11 @@ const NodeToolbarComponent = (props) => {
                 props.deleteNode(props.data.id);
               }}
             >
-              <Trash2 className="h-4 w-4"></Trash2>
+              <IconComponent
+                name="Trash2"
+                style="h-4 w-4"
+                method="LUCIDE"
+              />
             </button>
           </ShadTooltip>
 
@@ -61,7 +65,11 @@ const NodeToolbarComponent = (props) => {
                 );
               }}
             >
-              <Copy className="h-4 w-4"></Copy>
+              <IconComponent
+                name="Copy"
+                style="h-4 w-4"
+                method="LUCIDE"
+              />
             </button>
           </ShadTooltip>
 
@@ -90,7 +98,11 @@ const NodeToolbarComponent = (props) => {
                 }
               }}
             >
-              <FileText className="h-4 w-4 "></FileText>
+              <IconComponent
+                name="FileText"
+                style="h-4 w-4 "
+                method="LUCIDE"
+              />
             </a>
           </ShadTooltip>
 
@@ -110,7 +122,11 @@ const NodeToolbarComponent = (props) => {
                 props.openPopUp(<EditNodeModal data={props.data} />);
               }}
             >
-              <Settings2 className="h-4 w-4 "></Settings2>
+              <IconComponent
+                name="Settings2"
+                style="h-4 w-4 "
+                method="LUCIDE"
+              />
             </button>
           </ShadTooltip>
 

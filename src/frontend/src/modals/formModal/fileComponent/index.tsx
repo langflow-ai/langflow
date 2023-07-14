@@ -1,6 +1,6 @@
 import * as base64js from "base64-js";
-import { DownloadCloud, File } from "lucide-react";
 import { useState } from "react";
+import IconComponent from "../../../components/genericIconComponent";
 
 export default function FileCard({ fileName, content, fileType }) {
   const handleDownload = () => {
@@ -41,7 +41,11 @@ export default function FileCard({ fileName, content, fileType }) {
               className="file-card-modal-image-button "
               onClick={handleDownload}
             >
-              <DownloadCloud className="h-5 w-5 text-current hover:scale-110" />
+              <IconComponent
+                name="DownloadCloud"
+                style="h-5 w-5 text-current hover:scale-110"
+                method="LUCIDE"
+              />
             </button>
           </div>
         )}
@@ -60,14 +64,22 @@ export default function FileCard({ fileName, content, fileType }) {
             className="h-8 w-8"
           />
         ) : (
-          <File className="h-8 w-8" />
+          <IconComponent
+            name="File"
+            style="h-8 w-8"
+            method="LUCIDE"
+          />
         )}
         <div className="file-card-modal-footer">
           {" "}
           <div className="file-card-modal-name">{fileName}</div>
           <div className="file-card-modal-type">{fileType}</div>
         </div>
-        <DownloadCloud className="ml-auto h-6 w-6 text-current" />
+        <IconComponent
+          name="DownloadCloud"
+          style="ml-auto h-6 w-6 text-current"
+          method="LUCIDE"
+        />
       </div>
     </button>
   );

@@ -1,5 +1,4 @@
 import { Transition } from "@headlessui/react";
-import { Zap } from "lucide-react";
 import { useContext, useState } from "react";
 import Loading from "../../../components/ui/loading";
 import { useSSE } from "../../../contexts/SSEContext";
@@ -11,6 +10,7 @@ import { validateNodes } from "../../../utils";
 
 import { TabsContext } from "../../../contexts/tabsContext";
 import RadialProgressComponent from "../../RadialProgress";
+import IconComponent from "../../genericIconComponent";
 
 export default function BuildTrigger({
   open,
@@ -190,9 +190,10 @@ export default function BuildTrigger({
                   className="build-trigger-loading-icon"
                 />
               ) : (
-                <Zap
-                  strokeWidth={1.5}
-                  className="sh-6 w-6 fill-build-trigger stroke-build-trigger stroke-1"
+                <IconComponent
+                  name="Zap"
+                  style="sh-6 w-6 fill-build-trigger stroke-build-trigger stroke-1"
+                  method="LUCIDE"
                 />
               )}
             </div>

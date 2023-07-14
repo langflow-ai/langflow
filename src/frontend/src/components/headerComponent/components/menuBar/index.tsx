@@ -1,11 +1,3 @@
-import {
-  ChevronDown,
-  ChevronLeft,
-  Plus,
-  Redo,
-  Settings2,
-  Undo,
-} from "lucide-react";
 import { useContext } from "react";
 import { PopUpContext } from "../../../../contexts/popUpContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
@@ -22,6 +14,7 @@ import { alertContext } from "../../../../contexts/alertContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 import { Button } from "../../../ui/button";
+import IconComponent from "../../../genericIconComponent";
 
 export const MenuBar = ({ flows, tabId }) => {
   const { updateFlow, setTabId, addFlow } = useContext(TabsContext);
@@ -46,7 +39,11 @@ export const MenuBar = ({ flows, tabId }) => {
   return (
     <div className="round-button-div">
       <Link to="/">
-        <ChevronLeft className="w-4" />
+        <IconComponent
+          name="ChevronLeft"
+          style="w-4"
+          method="LUCIDE"
+        />
       </Link>
       <div className="header-menu-bar">
         <DropdownMenu>
@@ -54,7 +51,11 @@ export const MenuBar = ({ flows, tabId }) => {
             <Button asChild variant="primary" size="sm">
               <div className="header-menu-bar-display">
                 <div className="header-menu-flow-name">{current_flow.name}</div>
-                <ChevronDown className="h-4 w-4" />
+                <IconComponent
+                  name="ChevronDown"
+                  style="h-4 w-4"
+                  method="LUCIDE"
+                />
               </div>
             </Button>
           </DropdownMenuTrigger>
@@ -66,7 +67,11 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <Plus className="header-menu-options" />
+              <IconComponent
+                name="Plus"
+                style="header-menu-options"
+                method="LUCIDE"
+              />
               New
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -75,7 +80,11 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <Settings2 className="header-menu-options " />
+              <IconComponent
+                name="Settings2"
+                style="header-menu-options "
+                method="LUCIDE"
+              />
               Settings
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -84,7 +93,11 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <Undo className="header-menu-options " />
+              <IconComponent
+                name="Undo"
+                style="header-menu-options "
+                method="LUCIDE"
+              />
               Undo
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -93,7 +106,11 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <Redo className="header-menu-options " />
+              <IconComponent
+                name="Redo"
+                style="header-menu-options "
+                method="LUCIDE"
+              />
               Redo
             </DropdownMenuItem>
             {/* <DropdownMenuSeparator /> */}

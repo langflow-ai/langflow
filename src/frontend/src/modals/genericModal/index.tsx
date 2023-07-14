@@ -1,4 +1,3 @@
-import { FileText, Variable } from "lucide-react";
 import { useContext, useEffect, useRef, useState } from "react";
 import SanitizedHTMLWrapper from "../../components/SanitizedHTMLWrapper";
 import ShadTooltip from "../../components/ShadTooltipComponent";
@@ -21,6 +20,7 @@ import {
   varHighlightHTML,
 } from "../../utils";
 import BaseModal from "../baseModal";
+import IconComponent from "../../components/genericIconComponent";
 
 export default function GenericModal({
   field_name = "",
@@ -172,9 +172,10 @@ export default function GenericModal({
       >
         <DialogTitle className="flex items-center">
           <span className="pr-2">{myModalTitle}</span>
-          <FileText
-            strokeWidth={1.5}
-            className="h-6 w-6 pl-1 text-primary "
+          <IconComponent
+            name="FileText"
+            method="LUCIDE"
+            style="h-6 w-6 pl-1 text-primary "
             aria-hidden="true"
           />
         </DialogTitle>
@@ -225,7 +226,11 @@ export default function GenericModal({
                 <div className=" mr-2">
                   <div className="max-h-20 overflow-y-auto custom-scroll">
                     <div className="flex flex-wrap items-center">
-                      <Variable className=" -ml-px mr-1 flex h-4 w-4 text-primary"></Variable>
+                      <IconComponent
+                        method="LUCIDE"
+                        name="Variable"
+                        style=" -ml-px mr-1 flex h-4 w-4 text-primary"
+                      />
                       <span className="text-md font-semibold text-primary">
                         Prompt Variables:
                       </span>

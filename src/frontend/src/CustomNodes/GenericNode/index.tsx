@@ -1,4 +1,3 @@
-import { Zap } from "lucide-react";
 import { useContext, useEffect, useRef, useState } from "react";
 import { NodeToolbar } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
@@ -17,6 +16,7 @@ import {
   toTitleCase,
 } from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
+import IconComponent from "../../components/genericIconComponent";
 
 export default function GenericNode({
   data,
@@ -119,9 +119,10 @@ export default function GenericNode({
                   ) : !validationStatus ? (
                     <span className="flex">
                       Build{" "}
-                      <Zap
-                        className="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1"
-                        strokeWidth={1.5}
+                      <IconComponent
+                        name="Zap"
+                        style="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1"
+                        method="LUCIDE"
                       />{" "}
                       flow to validate status.
                     </span>

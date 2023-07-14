@@ -1,6 +1,6 @@
-import { Lock, LucideSend, Sparkles } from "lucide-react";
 import { useEffect } from "react";
 import { classNames } from "../../../utils";
+import IconComponent from "../../../components/genericIconComponent";
 
 export default function ChatInput({
   lockChat,
@@ -77,11 +77,26 @@ export default function ChatInput({
           onClick={() => sendMessage()}
         >
           {lockChat ? (
-            <Lock className="form-modal-lock-icon" aria-hidden="true" />
+            <IconComponent
+              name="Lock"
+              style="form-modal-lock-icon"
+              method="LUCIDE"
+              aria-hidden="true"
+            />
           ) : noInput ? (
-            <Sparkles className="form-modal-play-icon" aria-hidden="true" />
+            <IconComponent
+              name="Sparkles"
+              style="form-modal-play-icon"
+              method="LUCIDE"
+              aria-hidden="true"
+            />
           ) : (
-            <LucideSend className="form-modal-send-icon " aria-hidden="true" />
+            <IconComponent
+              name="LucideSend"
+              style="form-modal-send-icon "
+              method="LUCIDE"
+              aria-hidden="true"
+            />
           )}
         </button>
       </div>

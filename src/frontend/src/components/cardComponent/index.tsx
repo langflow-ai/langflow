@@ -1,4 +1,3 @@
-import { Trash2 } from "lucide-react";
 import { useContext } from "react";
 import { TabsContext } from "../../contexts/tabsContext";
 import { FlowType } from "../../types/flow";
@@ -10,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/card";
+import IconComponent from "../genericIconComponent";
 
 export const CardComponent = ({
   flow,
@@ -37,7 +37,11 @@ export const CardComponent = ({
           <span className="card-component-title-size">{flow.name}</span>
           {onDelete && (
             <button className="card-component-delete-button" onClick={onDelete}>
-              <Trash2 className="card-component-delete-icon" />
+              <IconComponent
+                name="Trash2"
+                style="card-component-delete-icon"
+                method="LUCIDE"
+              />
             </button>
           )}
         </CardTitle>
