@@ -108,6 +108,33 @@ const ApiModal = forwardRef(
     ];
 
     useEffect(() => {
+
+      if(flow["data"]["nodes"].length == 0){
+        tweak.current = [];
+        setTweak(tweak.current);
+        
+      }
+
+      else{
+        if (tweak.current.length > 0) {
+          tweak.current = getTweak;
+
+        } else {
+          startTweaks();
+        }
+      }
+      
+
+
+    }, [flow["data"]["nodes"]]);
+
+    function startTweaks() {
+      const t = buildTweaks(flow);
+      Object.keys(t).length == 0 ? tweak.current = [] : tweak?.current?.push(t);
+      setTweak(tweak.current);
+    }
+
+    useEffect(() => {
       filterNodes();
     }, []);
 
