@@ -96,16 +96,23 @@ const NodeToolbarComponent = (props) => {
 
           <ShadTooltip content="Edit" side="top">
             <EditNodeModal data={props.data}>
-              <div
-                className={classNames(
-                  "relative -ml-px inline-flex items-center rounded-r-md bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
-                    (nodeLength == 0
-                      ? " text-muted-foreground"
-                      : " text-foreground")
-                )}
-              >
-                <Settings2 className="h-4 w-4 "></Settings2>
-              </div>
+
+            <button
+              className={classNames(
+                "relative -ml-px inline-flex items-center rounded-r-md bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
+                  (nodeLength == 0
+                    ? " text-muted-foreground"
+                    : " text-foreground")
+              )}
+              onClick={(event) => {
+                if (nodeLength == 0) {
+                  event.preventDefault();
+                }
+              }}
+            >
+              <Settings2 className="h-4 w-4 "></Settings2>
+            </button>
+
             </EditNodeModal>
           </ShadTooltip>
         </span>
