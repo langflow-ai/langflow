@@ -14,7 +14,7 @@ from langflow.interface.vector_store.base import vectorstore_creator
 from langflow.interface.wrappers.base import wrapper_creator
 from langflow.interface.output_parsers.base import output_parser_creator
 from langflow.interface.custom.base import custom_component_creator
-from langflow.interface.custom.custom import CustomComponent
+from langflow.interface.custom.custom_component import CustomComponent
 
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.tools import CustomComponentNode
@@ -92,9 +92,6 @@ def add_new_custom_field(
     field_type = field_config.pop("field_type", field_type)
     field_type = process_type(field_type)
 
-    if field_value is not None:
-        field_value = field_value.replace("'", "").replace('"', "")
-
     if "name" in field_config:
         warnings.warn(
             "The 'name' key in field_config is used to build the object and can't be changed."
@@ -158,29 +155,27 @@ def extract_type_from_optional(field_type):
     return match[1] if match else None
 
 
-def build_langchain_template_custom_component(extractor: CustomComponent):
+def build_langchain_template_custom_component(custom_component: CustomComponent):
     # Build base "CustomComponent" template
-    frontend_node = CustomComponentNode().to_dict().get(type(extractor).__name__)
+    frontend_node = CustomComponentNode().to_dict().get(type(custom_component).__name__)
 
-    function_args, return_type, template_config = extractor.args_and_return_type
-
-    if "display_name" in template_config and frontend_node is not None:
-        frontend_node["display_name"] = template_config["display_name"]
-    if "description" in template_config and frontend_node is not None:
-        frontend_node["description"] = template_config["description"]
-    raw_code = extractor.code
-    field_config = template_config.get("field_config", {})
+    function_args = custom_component.get_function_entrypoint_args
+    return_type = custom_component.get_function_entrypoint_return_type
+    # template_config = custom_component.get_template_config
 
     if function_args is not None:
         # Add extra fields
         for extra_field in function_args:
-            field_required = True
-            field_name, field_type, field_value = extra_field
-
-            if not field_type:
-                field_type = ""
+            field_name = extra_field.get("name") if "name" in extra_field else ""
 
             if field_name != "self":
+                field_type = extra_field.get("type") if "type" in extra_field else ""
+                field_value = (
+                    extra_field.get("default") if "default" in extra_field else ""
+                )
+                field_required = True
+                field_config = {}
+
                 # TODO: Validate type - if is possible to render into frontend
                 if "optional" in field_type.lower():
                     field_type = extract_type_from_optional(field_type)
@@ -189,17 +184,16 @@ def build_langchain_template_custom_component(extractor: CustomComponent):
                 if not field_type:
                     field_type = "str"
 
-                config = field_config.get(field_name, {})
                 frontend_node = add_new_custom_field(
                     frontend_node,
                     field_name,
                     field_type,
                     field_value,
                     field_required,
-                    config,
+                    field_config,
                 )
 
-    frontend_node = add_code_field(frontend_node, raw_code)
+    frontend_node = add_code_field(frontend_node, custom_component.code)
 
     # Get base classes from "return_type" and add to template.base_classes
     try:
@@ -214,8 +208,10 @@ def build_langchain_template_custom_component(extractor: CustomComponent):
                     "traceback": traceback.format_exc(),
                 },
             )
+
         return_type_instance = LANGCHAIN_BASE_TYPES.get(return_type)
         base_classes = get_base_classes(return_type_instance)
+
     except (KeyError, AttributeError) as err:
         raise HTTPException(
             status_code=400,

@@ -1,3 +1,4 @@
+from datetime import timezone
 from typing import List
 from uuid import UUID
 from langflow.database.models.component import Component, ComponentModel
@@ -60,7 +61,7 @@ def update_component(
     for key, value in component_data.items():
         setattr(db_component, key, value)
 
-    db_component.update_at = datetime.utcnow()
+    db_component.update_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(db_component)
     return db_component
