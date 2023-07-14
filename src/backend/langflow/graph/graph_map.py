@@ -7,7 +7,7 @@ from langflow.graph import Vertex
 from langflow.graph import Graph
 from langflow.graph.vertex.types import ConnectorVertex
 from collections import deque
-from langflow.graph.schema import GraphInput, ResultPair
+from langflow.graph.schema import Payload, ResultPair
 from langflow.utils.logger import logger
 
 
@@ -57,12 +57,15 @@ class GraphMap:
     #     return str(result), "\n".join(self.intermediate_steps)
 
     async def process(self, input_data: str, **kwargs):
-        graph_input = GraphInput(
-            result_pairs=[ResultPair(result=input_data, extra=None)]
-        )
+        graph_input = Payload(result_pairs=[ResultPair(result=input_data, extra=None)])
         for vertex in self.sorted_vertices:
             for edge in vertex.edges:
-                await edge.fulfill(graph_input, **kwargs)
+                if edge.is_runnable:
+                    await edge.process_runnable(graph_input, **kwargs)
+                else:
+                    edge.fulfill()
+
+        return graph_input.get_last_result_pair(), graph_input.format()
 
     @memoize_dict(maxsize=20)
     @staticmethod

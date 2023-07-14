@@ -1,20 +1,23 @@
 import asyncio
 import json
 from collections import defaultdict
-from typing import Any, Dict, List
+from typing import Any, Dict, List, TYPE_CHECKING
 
 from fastapi import WebSocket, status
+from langflow.api.v1.callback import AsyncStreamingLLMCallbackHandler
 
 from langflow.api.v1.schemas import ChatMessage, ChatResponse, FileResponse
 from langflow.cache import cache_manager
 from langflow.cache.manager import Subject
-from langflow.chat.utils import process_graph
 
 from langflow.interface.utils import pil_to_base64
 from langflow.utils.logger import logger
 
 
 from langflow.cache.flow import InMemoryCache
+
+if TYPE_CHECKING:
+    from langflow.graph.graph_map import GraphMap
 
 
 class ChatHistory(Subject):
@@ -110,7 +113,7 @@ class ChatManager:
             self.disconnect(client_id)
 
     async def process_message(
-        self, client_id: str, payload: Dict, langchain_object: Any
+        self, client_id: str, payload: Dict, graph_map: "GraphMap"
     ):
         # Process the graph data and chat message
         chat_message = payload.pop("message", "")
@@ -126,10 +129,18 @@ class ChatManager:
         try:
             logger.debug("Generating result and thought")
 
-            result, intermediate_steps = await process_graph(
-                langchain_object=langchain_object,
-                chat_message=chat_message,
-                websocket=self.active_connections[client_id],
+            # result, intermediate_steps = await process_graph(
+            #     langchain_object=langchain_object,
+            #     chat_message=chat_message,
+            #     websocket=self.active_connections[client_id],
+            # )
+            callbacks = [
+                AsyncStreamingLLMCallbackHandler(
+                    websocket=self.active_connections[client_id]
+                )
+            ]
+            result_pair, intermediate_steps = await graph_map.process(
+                chat_message.message, callbacks=callbacks
             )
         except Exception as e:
             # Log stack trace
@@ -152,7 +163,7 @@ class ChatManager:
                     break
 
         response = ChatResponse(
-            message=result,
+            message=result_pair.result,
             intermediate_steps=intermediate_steps.strip(),
             type="end",
             files=file_responses,
@@ -188,9 +199,11 @@ class ChatManager:
                     continue
 
                 with self.cache_manager.set_client_id(client_id):
-                    langchain_object = self.in_memory_cache.get(client_id)
-                    await self.process_message(client_id, payload, langchain_object)
+                    if graph_map := self.in_memory_cache.get(client_id):
+                        await self.process_message(client_id, payload, graph_map)
 
+                    else:
+                        raise ValueError("No graph map found for client")
         except Exception as e:
             # Handle any exceptions that might occur
             logger.error(e)
