@@ -89,7 +89,7 @@ const ApiModal = forwardRef(
     const curl_code = getCurlCode(flow, tweak.current, tabsState);
     const pythonCode = getPythonCode(flow, tweak.current, tabsState);
     const tweaksCode = buildTweaks(flow);
-    const tabs = [
+    const [tabs, setTabs] = useState([
       {
         name: "cURL",
         mode: "bash",
@@ -109,7 +109,8 @@ const ApiModal = forwardRef(
         image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
         code: pythonCode,
       },
-    ];
+      
+    ]);
 
     useEffect(() => {
 
@@ -126,15 +127,65 @@ const ApiModal = forwardRef(
       filterNodes();
       
       if (Object.keys(tweaksCode).length > 0) {
-        tabs.push({
-          name: "Tweaks",
-          mode: "python",
-          image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-          code: pythonCode,
-        });
+
+        setActiveTab("0");
+
+        setTabs([
+          {
+            name: "cURL",
+            mode: "bash",
+            image: "https://curl.se/logo/curl-symbol-transparent.png",
+            code: curl_code,
+          },
+          {
+            name: "Python API",
+            mode: "python",
+            image:
+              "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
+            code: pythonApiCode,
+          },
+          {
+            name: "Python Code",
+            mode: "python",
+            image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+            code: pythonCode,
+          },
+          {
+            name: "Tweaks",
+            mode: "python",
+            image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+            code: pythonCode,
+          }
+    
+        ])
+      }
+
+      else{
+        setTabs([
+          {
+            name: "cURL",
+            mode: "bash",
+            image: "https://curl.se/logo/curl-symbol-transparent.png",
+            code: curl_code,
+          },
+          {
+            name: "Python API",
+            mode: "python",
+            image:
+              "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
+            code: pythonApiCode,
+          },
+          {
+            name: "Python Code",
+            mode: "python",
+            image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+            code: pythonCode,
+          }
+    
+        ])
       }
       
-    }, [flow["data"]["nodes"]]);
+    }, [flow["data"]["nodes"], closePopUp]);
 
 
     function filterNodes() {
