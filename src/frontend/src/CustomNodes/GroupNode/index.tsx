@@ -11,7 +11,12 @@ import {
   updateFlowPosition,
 } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
-import { Handle, NodeToolbar, Position, useUpdateNodeInternals } from "reactflow";
+import {
+  Handle,
+  NodeToolbar,
+  Position,
+  useUpdateNodeInternals,
+} from "reactflow";
 import {
   ArrowsPointingOutIcon,
   Cog6ToothIcon,
@@ -213,20 +218,21 @@ export default function GroupNode({
               .map((field_name: string, idx) => (
                 <div key={idx}>
                   {data.node.template[field_name].show &&
-                    !data.node.template[field_name].root &&
-                    !data.node.template[field_name].advanced ? (
+                  !data.node.template[field_name].root &&
+                  !data.node.template[field_name].advanced ? (
                     <ParameterComponent
                       data={data}
                       color={
-                        nodeColors[types[data.node.template[field_name].type]] ??
-                        nodeColors.unknown
+                        nodeColors[
+                          types[data.node.template[field_name].type]
+                        ] ?? nodeColors.unknown
                       }
                       title={
                         data.node.template[field_name].display_name
                           ? data.node.template[field_name].display_name
                           : data.node.template[field_name].name
-                            ? toNormalCase(data.node.template[field_name].name)
-                            : toNormalCase(field_name)
+                          ? toNormalCase(data.node.template[field_name].name)
+                          : toNormalCase(field_name)
                       }
                       name={field_name}
                       tooltipTitle={
@@ -243,9 +249,9 @@ export default function GroupNode({
                         data.id +
                         (data.node.template[field_name].proxy
                           ? "|" +
-                          data.node.template[field_name].proxy.id +
-                          "|" +
-                          data.node.template[field_name].proxy.field
+                            data.node.template[field_name].proxy.id +
+                            "|" +
+                            data.node.template[field_name].proxy.field
                           : "")
                       }
                       left={true}
@@ -277,9 +283,9 @@ export default function GroupNode({
                       data.id +
                       (data.node.template[field_name].proxy
                         ? "|" +
-                        data.node.template[field_name].proxy.id +
-                        "|" +
-                        data.node.template[field_name].proxy.field
+                          data.node.template[field_name].proxy.id +
+                          "|" +
+                          data.node.template[field_name].proxy.field
                         : "")
                     }
                     type={data.node.base_classes.join("|")}

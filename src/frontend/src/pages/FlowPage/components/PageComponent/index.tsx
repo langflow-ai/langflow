@@ -25,7 +25,12 @@ import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { APIClassType } from "../../../../types/api";
 import { FlowType, NodeType } from "../../../../types/flow";
-import { generateFlow, generateNodeFromFlow, isValidConnection, validateSelection } from "../../../../utils";
+import {
+  generateFlow,
+  generateNodeFromFlow,
+  isValidConnection,
+  validateSelection,
+} from "../../../../utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import ExtraSidebar from "../extraSidebarComponent";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
@@ -356,7 +361,7 @@ export default function Page({ flow }: { flow: FlowType }) {
         <div className="w-full h-full">
           <div className="w-full h-full" ref={reactFlowWrapper}>
             {Object.keys(templates).length > 0 &&
-              Object.keys(types).length > 0 ? (
+            Object.keys(types).length > 0 ? (
               <div className="w-full h-full">
                 <ReactFlow
                   nodes={nodes}

@@ -17,7 +17,14 @@ import {
   HandleComponentType,
   ParameterComponentType,
 } from "../../../../../../types/components";
-import { isValidConnection, classNames, groupByFamily, nodeColors, nodeIcons, nodeNames } from "../../../../../../utils";
+import {
+  isValidConnection,
+  classNames,
+  groupByFamily,
+  nodeColors,
+  nodeIcons,
+  nodeNames,
+} from "../../../../../../utils";
 import React from "react";
 import ShadTooltip from "../../../../../../components/ShadTooltipComponent";
 
@@ -58,7 +65,6 @@ export default function HandleComponent({
       };
     });
   };
-
 
   useEffect(() => {
     const groupedObj = groupByFamily(myData, tooltipTitle);
@@ -101,7 +107,6 @@ export default function HandleComponent({
     ));
   }, [tooltipTitle]);
 
-
   return (
     <>
       <div
@@ -123,10 +128,10 @@ export default function HandleComponent({
         <></>
       ) : (
         <ShadTooltip
-        delayDuration={0}
-        content={refHtml.current}
-        side={left ? "left" : "right"}
-      >
+          delayDuration={0}
+          content={refHtml.current}
+          side={left ? "left" : "right"}
+        >
           <Handle
             type={left ? "target" : "source"}
             position={left ? Position.Left : Position.Right}
@@ -151,7 +156,7 @@ export default function HandleComponent({
                 : "white",
             }}
           ></Handle>
-      </ShadTooltip>
+        </ShadTooltip>
       )}
 
       {data &&
