@@ -25,17 +25,19 @@ LANGCHAIN_BASE_TYPES = {
 
 DEFAULT_CUSTOM_COMPONENT_CODE = """
 from langflow import Prompt
+from langflow.interface.custom.custom_component import CustomComponent
+
 from langchain.llms.base import BaseLLM
 from langchain.chains import LLMChain
-from langflow.interface.custom import CustomComponent
 from langchain import PromptTemplate
 from langchain.schema import Document
+
 import requests
 
-class YourComponent:
-    display_name: str = "Your Component"
-    description: str = "Your description"
-    field_config = { "url": { "multiline": True, "required": True } }
+class YourComponent(CustomComponent):
+    #display_name: str = "Your Component"
+    #description: str = "Your description"
+    #field_config = { "url": { "multiline": True, "required": True } }
 
     def build(self, url: str, llm: BaseLLM, template: Prompt) -> Document:
         response = requests.get(url)
@@ -44,7 +46,3 @@ class YourComponent:
         result = chain.run(response.text[:300])
         return Document(page_content=str(result))
 """
-
-
-# Create a new class that can be used as a type
-# that returns type "prompt" if we get a certain param
