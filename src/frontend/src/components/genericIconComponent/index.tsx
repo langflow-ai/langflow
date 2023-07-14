@@ -14,6 +14,7 @@ export function IconFromSvg({ name }: IconProps): JSX.Element {
 export default function IconComponent({
   method,
   name,
+  className,
 }: IconComponentProps): JSX.Element {
   switch (method) {
     case "SVG":
