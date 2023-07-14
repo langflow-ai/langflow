@@ -93,8 +93,8 @@ def json_flow():
         return f.read()
 
 
-@pytest.fixture(name="session")  #
-def session_fixture():  #
+@pytest.fixture(name="session")
+def session_fixture():
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
@@ -103,19 +103,19 @@ def session_fixture():  #
         yield session
 
 
-@pytest.fixture(name="client")  #
-def client_fixture(session: Session):  #
-    def get_session_override():  #
+@pytest.fixture(name="client")
+def client_fixture(session: Session):
+    def get_session_override():
         return session
 
     from langflow.main import create_app
 
     app = create_app()
 
-    app.dependency_overrides[get_session] = get_session_override  #
+    app.dependency_overrides[get_session] = get_session_override
 
     yield TestClient(app)
-    app.dependency_overrides.clear()  #
+    app.dependency_overrides.clear()
 
 
 @pytest.fixture
@@ -311,7 +311,8 @@ class DocumentFilterByLengthComponent(CustomComponent):
 
 @pytest.fixture
 def get_request():
-    return """import requests
+    return """
+import requests
 from typing import Dict, Union
 from langchain.schema import Document
 from langflow.interface.custom.base import CustomComponent
@@ -333,12 +334,14 @@ class GetRequestComponent(CustomComponent):
         # Create a document with the response text and the URL as metadata
         document = Document(page_content=response.text, metadata={"url": url})
 
-        return document"""
+        return document
+"""
 
 
 @pytest.fixture
 def post_request():
-    return """import requests
+    return """
+import requests
 from typing import Dict, Union
 from langchain.schema import Document
 from langflow.interface.custom.base import CustomComponent
@@ -361,4 +364,5 @@ class PostRequestComponent(CustomComponent):
         # Create a document with the response text and the URL and data as metadata
         document = Document(page_content=response.text, metadata={"url": url, "data": data})
 
-        return document"""
+        return document
+"""
