@@ -97,16 +97,16 @@ async def stream_build(flow_id: str):
                 }
                 yield build_stream_string("data", log_dict)
                 for edge in vertex.edges:
-                    if edge.is_fulfilled:
+                    if edge.is_fulfilled or edge.is_runnable:
                         continue
                     try:
-                        await edge.fulfill()
+                        edge.fulfill()
 
                     except Exception as exc:
                         params = str(exc)
                         valid = False
 
-                await vertex.build()
+                vertex.build()
                 params = vertex._built_object_repr()
                 valid = True
                 logger.debug(
