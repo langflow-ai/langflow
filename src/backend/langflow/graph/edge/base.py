@@ -10,6 +10,12 @@ class Edge:
     def __init__(self, source: "Vertex", target: "Vertex", raw_edge: dict):
         self.source: "Vertex" = source
         self.target: "Vertex" = target
+        self.source_handle = raw_edge.get("sourceHandle", "")
+        self.target_handle = raw_edge.get("targetHandle", "")
+        # 'BaseLoader;BaseOutputParser|documents|PromptTemplate-zmTlD'
+        # target_param is documents
+        self.target_param = self.target_handle.split("|")[1]
+
         self.validate_edge()
         self.parse_target_handle(raw_edge)
 
@@ -36,12 +42,7 @@ class Edge:
         )
         # Get what type of input the target node is expecting
         self.matched_type = next(
-            (
-                output
-                for output in self.source_types
-                for target_req in self.target_reqs
-                if output in target_req
-            ),
+            (output for output in self.source_types if output in self.target_reqs),
             None,
         )
         no_matched_type = self.matched_type is None
@@ -56,3 +57,13 @@ class Edge:
 
     def __repr__(self) -> str:
         return f"{self.source.vertex_type} -> {self.target.vertex_type}"
+
+    def __hash__(self) -> int:
+        return hash(self.__repr__())
+
+    def __eq__(self, __value: object) -> bool:
+        return (
+            self.__repr__() == __value.__repr__()
+            if isinstance(__value, Edge)
+            else False
+        )

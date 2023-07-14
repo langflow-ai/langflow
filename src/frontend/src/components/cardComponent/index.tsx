@@ -1,15 +1,14 @@
-import { Trash2, ExternalLink } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useContext } from "react";
-import { Link } from "react-router-dom";
 import { TabsContext } from "../../contexts/tabsContext";
 import { FlowType } from "../../types/flow";
 import { gradients } from "../../utils";
 import {
-  CardTitle,
+  Card,
   CardDescription,
   CardFooter,
-  Card,
   CardHeader,
+  CardTitle,
 } from "../ui/card";
 
 export const CardComponent = ({
@@ -28,24 +27,22 @@ export const CardComponent = ({
   return (
     <Card className="group">
       <CardHeader>
-        <CardTitle className="flex w-full items-center gap-4">
+        <CardTitle className="card-component-title-display">
           <span
             className={
-              "rounded-full w-7 h-7 flex items-center justify-center text-2xl " +
+              "card-component-image " +
               gradients[parseInt(flow.id.slice(0, 12), 16) % gradients.length]
             }
           ></span>
-          <span className="flex-1 w-full inline-block truncate-doubleline break-words">
-            {flow.name}
-          </span>
+          <span className="card-component-title-size">{flow.name}</span>
           {onDelete && (
-            <button className="flex self-start" onClick={onDelete}>
-              <Trash2 className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-all" />
+            <button className="card-component-delete-button" onClick={onDelete}>
+              <Trash2 className="card-component-delete-icon" />
             </button>
           )}
         </CardTitle>
-        <CardDescription className="pt-2 pb-2">
-          <div className="truncate-doubleline">
+        <CardDescription className="card-component-desc">
+          <div className="card-component-desc-text">
             {flow.description}
             {/* {flow.description} */}
           </div>
@@ -53,8 +50,8 @@ export const CardComponent = ({
       </CardHeader>
 
       <CardFooter>
-        <div className="flex gap-2 w-full justify-between items-end">
-          <div className="flex flex-wrap gap-2">
+        <div className="card-component-footer-arrangement">
+          <div className="card-component-footer">
             {/* <Badge variant="secondary">Agent</Badge>
             <Badge variant="secondary">
               <div className="w-3">

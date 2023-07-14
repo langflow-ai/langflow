@@ -8,11 +8,17 @@ from langflow.interface.base import LangChainTypeCreator
 from langflow.settings import settings
 from langflow.template.frontend_node.agents import AgentFrontendNode
 from langflow.utils.logger import logger
-from langflow.utils.util import build_template_from_class
+from langflow.utils.util import build_template_from_class, build_template_from_method
 
 
 class AgentCreator(LangChainTypeCreator):
     type_name: str = "agents"
+
+    from_method_nodes = {"ZeroShotAgent": "from_llm_and_tools"}
+
+    @property
+    def frontend_node_class(self) -> type[AgentFrontendNode]:
+        return AgentFrontendNode
 
     @property
     def frontend_node_class(self) -> Type[AgentFrontendNode]:
@@ -32,6 +38,13 @@ class AgentCreator(LangChainTypeCreator):
         try:
             if name in get_custom_nodes(self.type_name).keys():
                 return get_custom_nodes(self.type_name)[name]
+            elif name in self.from_method_nodes:
+                return build_template_from_method(
+                    name,
+                    type_to_cls_dict=self.type_to_loader_dict,
+                    add_function=True,
+                    method_name=self.from_method_nodes[name],
+                )
             return build_template_from_class(
                 name, self.type_to_loader_dict, add_function=True
             )

@@ -19,8 +19,16 @@ class AgentFrontendNode(FrontendNode):
         super().add_extra_fields()
         self.template.set_root_field(RootField(field_type="Text"))
 
+    @staticmethod
+    def format_field(field: TemplateField, name: Optional[str] = None) -> None:
+        if field.name in ["suffix", "prefix"]:
+            field.show = True
+        if field.name == "Tools" and name == "ZeroShotAgent":
+            field.field_type = "BaseTool"
+            field.is_list = True
 
-class SQLAgentNode(AgentFrontendNode):
+
+class SQLAgentNode(FrontendNode):
     name: str = "SQLAgent"
     template: Template = Template(
         type_name="sql_agent",

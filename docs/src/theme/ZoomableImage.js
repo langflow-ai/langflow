@@ -1,0 +1,47 @@
+import React, { useState, useEffect } from 'react';
+import ThemedImage from '@theme/ThemedImage';
+import useBaseUrl from '@docusaurus/useBaseUrl';
+
+const ZoomableImage = ({ alt, sources }) => {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+  };
+
+  const handleKeyPress = (event) => {
+    if (event.key === 'Escape') {
+      setIsFullscreen(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isFullscreen) {
+      document.addEventListener('keydown', handleKeyPress);
+    } else {
+      document.removeEventListener('keydown', handleKeyPress);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyPress);
+    };
+  }, [isFullscreen]);
+
+  return (
+    <div
+      className={`zoomable-image ${isFullscreen ? 'fullscreen' : ''}`}
+      onClick={toggleFullscreen}
+    >
+      <ThemedImage
+        className="zoomable-image-inner"
+        alt={alt}
+        sources={{
+          light: useBaseUrl(sources.light),
+          dark: useBaseUrl(sources.dark),
+        }}
+      />
+    </div>
+  );
+};
+
+export default ZoomableImage;

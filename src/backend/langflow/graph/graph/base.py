@@ -110,23 +110,35 @@ class Graph:
                 print(e)
         # This is a hack to make sure that the LLM vertex is sent to
         # the toolkit vertex
-        llm_vertex = None
         for vertex in self.vertices:
             vertex._build_params()
 
-            if isinstance(vertex, LLMVertex):
-                llm_vertex = vertex
+        # This is a hack to make sure that the LLM node is sent to
+        # the toolkit node
+        self._build_node_params()
+        # remove invalid nodes
+        self._validate_nodes()
 
-        for vertex in self.vertices:
-            if isinstance(vertex, ToolkitVertex):
-                vertex.params["llm"] = llm_vertex
-        # remove invalid vertices
-        self.vertices = [
-            vertex
-            for vertex in self.vertices
-            if self._validate_vertex(vertex)
-            or (len(self.vertices) == 1 and len(self.edges) == 0)
-        ]
+    def _build_node_params(self) -> None:
+        """Identifies and handles the LLM node within the graph."""
+        llm_node = None
+        for node in self.nodes:
+            node._build_params()
+            if isinstance(node, LLMVertex):
+                llm_node = node
+
+        if llm_node:
+            for node in self.nodes:
+                if isinstance(node, ToolkitVertex):
+                    node.params["llm"] = llm_node
+
+    def _validate_nodes(self) -> None:
+        """Check that all nodes have edges"""
+        for node in self.nodes:
+            if not self._validate_node(node):
+                raise ValueError(
+                    f"{node.vertex_type} is not connected to any other components"
+                )
 
     def _validate_vertex(self, vertex: Vertex) -> bool:
         # All vertices that do not have edges are invalid
@@ -189,7 +201,7 @@ class Graph:
     def generator_build(self) -> Generator:
         """Builds each vertex in the graph and yields it."""
         sorted_vertices = self.topological_sort()
-        logger.info("Sorted vertices: %s", sorted_vertices)
+        logger.debug("Sorted vertices: %s", sorted_vertices)
         yield from sorted_vertices
 
     def get_vertex_neighbors(self, vertex: Vertex) -> Dict[Vertex, int]:
@@ -324,3 +336,10 @@ class Graph:
         if isinstance(other, Graph):
             return self.vertices == other.vertices and self.edges == other.edges
         return False
+
+    def __repr__(self):
+        node_ids = [node.id for node in self.nodes]
+        edges_repr = "\n".join(
+            [f"{edge.source.id} --> {edge.target.id}" for edge in self.edges]
+        )
+        return f"Graph:\nNodes: {node_ids}\nConnections:\n{edges_repr}"

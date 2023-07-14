@@ -6,6 +6,50 @@ from langflow.utils.logger import logger
 from langchain.schema import AgentAction
 
 
+@memoize_dict(maxsize=10)
+def build_langchain_object_with_caching(data_graph):
+    """
+    Build langchain object from data_graph.
+    """
+
+    logger.debug("Building langchain object")
+    graph = Graph.from_payload(data_graph)
+    return graph.build()
+
+
+@memoize_dict(maxsize=10)
+def build_sorted_vertices_with_caching(data_graph):
+    """
+    Build langchain object from data_graph.
+    """
+
+    logger.debug("Building langchain object")
+    graph = Graph.from_payload(data_graph)
+    sorted_vertices = graph.topological_sort()
+    artifacts = {}
+    for vertex in sorted_vertices:
+        vertex.build()
+        if vertex.artifacts:
+            artifacts.update(vertex.artifacts)
+    return graph.build(), artifacts
+
+
+def build_langchain_object(data_graph):
+    """
+    Build langchain object from data_graph.
+    """
+
+    logger.debug("Building langchain object")
+    nodes = data_graph["nodes"]
+    # Add input variables
+    # nodes = payload.extract_input_variables(nodes)
+    # Nodes, edges and root node
+    edges = data_graph["edges"]
+    graph = Graph(nodes, edges)
+
+    return graph.build()
+
+
 def get_memory_key(langchain_object):
     """
     Given a LangChain object, this function retrieves the current memory key from the object's memory attribute.
@@ -38,9 +82,13 @@ def update_memory_keys(langchain_object, possible_new_mem_key):
         if key not in [langchain_object.memory.memory_key, possible_new_mem_key]
     ][0]
 
-    langchain_object.memory.input_key = input_key
-    langchain_object.memory.output_key = output_key
-    langchain_object.memory.memory_key = possible_new_mem_key
+    keys = [input_key, output_key, possible_new_mem_key]
+    attrs = ["input_key", "output_key", "memory_key"]
+    for key, attr in zip(keys, attrs):
+        try:
+            setattr(langchain_object.memory, attr, key)
+        except ValueError as exc:
+            logger.debug(f"{langchain_object.memory} has no attribute {attr} ({exc})")
 
 
 def fix_memory_inputs(langchain_object):

@@ -4,6 +4,7 @@ from langflow.template.field.fields import RootField
 from pydantic import BaseModel
 
 from langflow.template.field.base import TemplateField
+from langflow.utils.constants import DIRECT_TYPES
 
 
 class Template(BaseModel):
@@ -20,9 +21,16 @@ class Template(BaseModel):
             for field in self.fields:
                 format_field_func(field, name)
 
+    def sort_fields(self):
+        # first sort alphabetically
+        # then sort fields so that fields that have .field_type in DIRECT_TYPES are first
+        self.fields.sort(key=lambda x: x.name)
+        self.fields.sort(key=lambda x: x.field_type in DIRECT_TYPES, reverse=False)
+
     def to_dict(self, format_field_func=None):
         self.process_fields(self.type_name, format_field_func)
-        result: dict = {field.name: field.to_dict() for field in self.fields}
+        self.sort_fields()
+        result = {field.name: field.to_dict() for field in self.fields}
         result["_type"] = self.type_name  # type: ignore
         if self.root_field:
             result["root_field"] = self.root_field.to_dict()

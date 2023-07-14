@@ -1,7 +1,5 @@
-import React, { ReactNode, useEffect, useRef, useState } from "react";
-import { DocumentDuplicateIcon } from "@heroicons/react/solid";
+import { ReactNode } from "react";
 import { classNames } from "../../../utils";
-import Tooltip from "../../../components/TooltipComponent";
 
 export default function ButtonBox({
   onClick,
@@ -79,7 +77,7 @@ export default function ButtonBox({
     <button disabled={deactivate} onClick={onClick}>
       <div
         className={classNames(
-          "flex transform flex-col items-center justify-center rounded-lg border border-gray-300 text-center shadow hover:scale-105 hover:shadow-lg dark:border-gray-800",
+          "button-box-modal-div",
           bgColor,
           height,
           width,
@@ -87,18 +85,18 @@ export default function ButtonBox({
         )}
       >
         <div
-          className={`flex items-center justify-center ${bigCircle} mb-1 rounded-full bg-white/30 dark:bg-white/30`}
+          className={`flex items-center justify-center ${bigCircle} mb-1 rounded-full bg-background/30`}
         >
           <div
-            className={`flex items-center justify-center ${smallCircle} rounded-full bg-white dark:bg-white/80`}
+            className={`flex items-center justify-center ${smallCircle} rounded-full bg-background`}
           >
             <div className={textColor}>{icon}</div>
           </div>
         </div>
-        <div className="w-full mt-auto mb-auto">
+        <div className="mb-auto mt-auto w-full">
           <h3
             className={classNames(
-              "w-full font-semibold break-words text-white dark:text-white/80 truncate-multiline",
+              "w-full break-words font-semibold text-background truncate-multiline",
               titleFontSize,
               marginTop
             )}

@@ -1,26 +1,26 @@
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "../ui/tooltip";
+import { ShadToolTipType } from "../../types/components";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
-const ShadTooltip = (props) => {
+export default function ShadTooltip({
+  content,
+  side,
+  asChild = true,
+  children,
+  styleClasses,
+  delayDuration = 500,
+}: ShadToolTipType) {
   return (
-    <TooltipProvider>
-      <Tooltip delayDuration={props.delayDuration}>
-        <TooltipTrigger asChild>{props.children}</TooltipTrigger>
+    <Tooltip delayDuration={delayDuration}>
+      <TooltipTrigger asChild={asChild}>{children}</TooltipTrigger>
 
-        <TooltipContent
-          side={props.side}
-          avoidCollisions={false}
-          sticky="always"
-        >
-          {props.content}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+      <TooltipContent
+        className={styleClasses}
+        side={side}
+        avoidCollisions={false}
+        sticky="always"
+      >
+        {content}
+      </TooltipContent>
+    </Tooltip>
   );
-};
-
-export default ShadTooltip;
+}
