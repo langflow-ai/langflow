@@ -109,6 +109,12 @@ const ApiModal = forwardRef(
 
     useEffect(() => {
       filterNodes();
+
+      if(getTweak.length == 0){
+        const t = buildTweaks(flow);
+        tweak?.current?.push(t);
+      }
+      
     }, []);
 
     if (Object.keys(tweaksCode).length > 0) {
