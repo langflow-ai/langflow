@@ -112,13 +112,19 @@ const ApiModal = forwardRef(
     ];
 
     useEffect(() => {
-      
-      filterNodes();
 
-      if(getTweak.length == 0){
-        const t = buildTweaks(flow);
-        tweak?.current?.push(t);
+      if(getTweak.length == 0 && tweak?.current.length == 0 && flow["data"]["nodes"].length == 0){
+        tweak.current = [];
       }
+
+      else {
+        tweak.current = [];
+        const t = buildTweaks(flow);
+        tweak.current.push(t);
+      }
+
+      filterNodes();
+      
       if (Object.keys(tweaksCode).length > 0) {
         tabs.push({
           name: "Tweaks",
@@ -128,7 +134,7 @@ const ApiModal = forwardRef(
         });
       }
       
-    }, [closePopUp]);
+    }, [flow["data"]["nodes"]]);
 
 
     function filterNodes() {
