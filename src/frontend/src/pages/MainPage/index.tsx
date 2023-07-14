@@ -1,10 +1,10 @@
-import { Download, ExternalLink, Home, Plus, Upload } from "lucide-react";
 import { useContext, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { CardComponent } from "../../components/cardComponent";
 import { Button } from "../../components/ui/button";
 import { USER_PROJECTS_HEADER } from "../../constants";
 import { TabsContext } from "../../contexts/tabsContext";
+import IconComponent from "../../components/genericIconComponent";
 export default function HomePage() {
   const { flows, setTabId, downloadFlows, uploadFlows, addFlow, removeFlow } =
     useContext(TabsContext);
@@ -16,7 +16,11 @@ export default function HomePage() {
     <div className="main-page-panel">
       <div className="main-page-nav-arrangement">
         <span className="main-page-nav-title">
-          <Home className="w-6" />
+          <IconComponent
+            name="Home"
+            style="w-6"
+            method="LUCIDE"
+          />
           {USER_PROJECTS_HEADER}
         </span>
         <div className="button-div-style">
@@ -26,7 +30,11 @@ export default function HomePage() {
               downloadFlows();
             }}
           >
-            <Download className="main-page-nav-button" />
+            <IconComponent
+              name="Download"
+              style="main-page-nav-button"
+              method="LUCIDE"
+            />
             Download Collection
           </Button>
           <Button
@@ -35,7 +43,11 @@ export default function HomePage() {
               uploadFlows();
             }}
           >
-            <Upload className="main-page-nav-button" />
+            <IconComponent
+              name="Upload"
+              style="main-page-nav-button"
+              method="LUCIDE"
+            />
             Upload Collection
           </Button>
           <Button
@@ -46,7 +58,11 @@ export default function HomePage() {
               });
             }}
           >
-            <Plus className="main-page-nav-button" />
+            <IconComponent
+              name="Plus"
+              style="main-page-nav-button"
+              method="LUCIDE"
+            />
             New Project
           </Button>
         </div>
@@ -67,7 +83,11 @@ export default function HomePage() {
                   size="sm"
                   className="whitespace-nowrap "
                 >
-                  <ExternalLink className="main-page-nav-button" />
+                  <IconComponent
+                    name="ExternalLink"
+                    style="main-page-nav-button"
+                    method="LUCIDE"
+                  />
                   Edit Flow
                 </Button>
               </Link>

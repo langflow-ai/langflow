@@ -1,5 +1,4 @@
 import { Dialog, Transition } from "@headlessui/react";
-import { X } from "lucide-react";
 import { Fragment, useContext, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { typesContext } from "../../contexts/typesContext";
@@ -12,6 +11,7 @@ import {
   toTitleCase,
 } from "../../utils";
 import ModalField from "./components/ModalField";
+import IconComponent from "../../components/genericIconComponent";
 
 export default function NodeModal({ data }: { data: NodeDataType }) {
   const [open, setOpen] = useState(true);
@@ -69,7 +69,12 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
                     }}
                   >
                     <span className="sr-only">Close</span>
-                    <X className="h-6 w-6" aria-hidden="true" />
+                    <IconComponent
+                      name="X"
+                      style="h-6 w-6"
+                      aria-hidden="true"
+                      method="LUCIDE"
+                    />
                   </button>
                 </div>
                 <div className="node-modal-dialog-icon-div">

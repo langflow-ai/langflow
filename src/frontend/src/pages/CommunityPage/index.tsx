@@ -1,4 +1,3 @@
-import { GitFork, GithubIcon, Users2 } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { alertContext } from "../../contexts/alertContext";
@@ -8,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { CardComponent } from "../../components/cardComponent";
 import { getExamples } from "../../controllers/API";
 import { FlowType } from "../../types/flow";
+import IconComponent from "../../components/genericIconComponent";
 export default function CommunityPage() {
   const { flows, setTabId, downloadFlows, uploadFlows, addFlow } =
     useContext(TabsContext);
@@ -40,7 +40,11 @@ export default function CommunityPage() {
     <div className="community-page-arrangement">
       <div className="community-page-nav-arrangement">
         <span className="community-page-nav-title">
-          <Users2 className="w-6" />
+          <IconComponent
+            name="Users2"
+            style="w-6"
+            method="LUCIDE"
+          />
           Community Examples
         </span>
         <div className="community-page-nav-button">
@@ -50,7 +54,11 @@ export default function CommunityPage() {
             rel="noreferrer"
           >
             <Button variant="primary">
-              <GithubIcon className="main-page-nav-button" />
+              <IconComponent
+                method="LUCIDE"
+                name="GithubIcon"
+                style="main-page-nav-button"
+              />
               Add Your Example
             </Button>
           </a>
@@ -79,7 +87,11 @@ export default function CommunityPage() {
                     });
                   }}
                 >
-                  <GitFork className="main-page-nav-button" />
+                  <IconComponent
+                    name="GitFork"
+                    style="main-page-nav-button"
+                    method="LUCIDE"
+                  />
                   Fork Example
                 </Button>
               }

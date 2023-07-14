@@ -1,4 +1,3 @@
-import { Eraser, TerminalSquare, Variable } from "lucide-react";
 import { useContext, useEffect, useRef, useState } from "react";
 import { alertContext } from "../../contexts/alertContext";
 import { typesContext } from "../../contexts/typesContext";
@@ -29,6 +28,7 @@ import {
 import { Textarea } from "../../components/ui/textarea";
 import { CHAT_FORM_DIALOG_SUBTITLE, THOUGHTS_ICON } from "../../constants";
 import { TabsContext } from "../../contexts/tabsContext";
+import IconComponent from "../../components/genericIconComponent";
 
 export default function FormModal({
   flow,
@@ -396,8 +396,10 @@ export default function FormModal({
           <DialogHeader>
             <DialogTitle className="flex items-center">
               <span className="pr-2">Chat</span>
-              <TerminalSquare
-                className="h-6 w-6 pl-1 text-gray-800 dark:text-white"
+              <IconComponent
+                name="prompts"
+                style="h-6 w-6 pl-1 text-gray-800 dark:text-white"
+                method="LUCIDE"
                 aria-hidden="true"
               />
             </DialogTitle>
@@ -407,7 +409,11 @@ export default function FormModal({
           <div className="form-modal-iv-box ">
             <div className="form-modal-iv-size">
               <div className="file-component-arrangement">
-                <Variable className=" file-component-variable"></Variable>
+                <IconComponent
+                  name="Variable"
+                  style=" file-component-variable"
+                  method="LUCIDE"
+                />
                 <span className="file-component-variables-span text-md">
                   Input Variables
                 </span>
@@ -501,14 +507,16 @@ export default function FormModal({
               <div className="eraser-size">
                 <div className="eraser-position">
                   <button disabled={lockChat} onClick={() => clearChat()}>
-                    <Eraser
-                      className={classNames(
+                    <IconComponent
+                      name="Eraser"
+                      style={classNames(
                         "h-5 w-5",
                         lockChat
                           ? "animate-pulse text-primary"
                           : "text-primary hover:text-gray-600"
                       )}
                       aria-hidden="true"
+                      method="LUCIDE"
                     />
                   </button>
                 </div>

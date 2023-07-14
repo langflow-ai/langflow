@@ -5,7 +5,7 @@ import "ace-builds/src-noconflict/theme-twilight";
 import { useContext, useEffect, useRef, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 // import "ace-builds/webpack-resolver";
-import { Check, Clipboard, Code2 } from "lucide-react";
+import { Check, Clipboard } from "lucide-react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import AccordionComponent from "../../components/AccordionComponent";
@@ -52,6 +52,7 @@ import { darkContext } from "../../contexts/darkContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { FlowType } from "../../types/flow/index";
 import { buildTweaks, classNames } from "../../utils";
+import IconComponent from "../../components/genericIconComponent";
 
 export default function ApiModal({ flow }: { flow: FlowType }) {
   const [open, setOpen] = useState(true);
@@ -271,8 +272,10 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Code</span>
-            <Code2
-              className="h-6 w-6 pl-1 text-gray-800 dark:text-white"
+            <IconComponent
+              method="LUCIDE"
+              name="Code2"
+              style="h-6 w-6 pl-1 text-gray-800 dark:text-white"
               aria-hidden="true"
             />
           </DialogTitle>

@@ -1,4 +1,3 @@
-import { Bell, Home, MoonIcon, SunIcon, Users2 } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
 import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
 import { Link, useLocation, useParams } from "react-router-dom";
@@ -13,6 +12,7 @@ import { getRepoStars } from "../../controllers/API";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import MenuBar from "./components/menuBar";
+import IconComponent from "../genericIconComponent";
 
 export default function Header() {
   const { flows, addFlow, tabId } = useContext(TabsContext);
@@ -51,7 +51,11 @@ export default function Header() {
             variant={location.pathname === "/" ? "primary" : "secondary"}
             size="sm"
           >
-            <Home className="h-4 w-4" />
+            <IconComponent
+              name="Home"
+              method="LUCIDE"
+              style="h-4 w-4"
+            />
             <div className="flex-1">{USER_PROJECTS_HEADER}</div>
           </Button>
         </Link>
@@ -63,7 +67,11 @@ export default function Header() {
             }
             size="sm"
           >
-            <Users2 className="h-4 w-4" />
+            <IconComponent
+              method="LUCIDE"
+              name="Users2"
+              style="h-4 w-4"
+            />
             <div className="flex-1">Community Examples</div>
           </Button>
         </Link>
@@ -105,9 +113,17 @@ export default function Header() {
             }}
           >
             {dark ? (
-              <SunIcon className="side-bar-button-size" />
+              <IconComponent
+                name="SunIcon"
+                style="side-bar-button-size"
+                method="LUCIDE"
+              />
             ) : (
-              <MoonIcon className="side-bar-button-size" />
+              <IconComponent
+                name="MoonIcon"
+                style="side-bar-button-size"
+                method="LUCIDE"
+              />
             )}
           </button>
           <button
@@ -131,7 +147,12 @@ export default function Header() {
             }}
           >
             {notificationCenter && <div className="header-notifications"></div>}
-            <Bell className="side-bar-button-size" aria-hidden="true" />
+            <IconComponent
+              name="Bell"
+              method="LUCIDE"
+              style="side-bar-button-size"
+              aria-hidden="true"
+            />
           </button>
         </div>
       </div>

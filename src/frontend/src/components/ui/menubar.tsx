@@ -1,10 +1,10 @@
 "use client";
 
 import * as MenubarPrimitive from "@radix-ui/react-menubar";
-import { Check, ChevronRight, Circle } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "../../utils";
+import IconComponent from "../genericIconComponent";
 
 const MenubarMenu = MenubarPrimitive.Menu;
 
@@ -62,7 +62,11 @@ const MenubarSubTrigger = React.forwardRef<
     {...props}
   >
     {children}
-    <ChevronRight className="ml-auto h-4 w-4" />
+    <IconComponent
+      name="ChevronRight"
+      style="ml-auto h-4 w-4"
+      method="LUCIDE"
+    />
   </MenubarPrimitive.SubTrigger>
 ));
 MenubarSubTrigger.displayName = MenubarPrimitive.SubTrigger.displayName;
@@ -140,7 +144,11 @@ const MenubarCheckboxItem = React.forwardRef<
   >
     <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
       <MenubarPrimitive.ItemIndicator>
-        <Check className="h-4 w-4" />
+        <IconComponent
+          name="Check"
+          style="h-4 w-4"
+          method="LUCIDE"
+        />
       </MenubarPrimitive.ItemIndicator>
     </span>
     {children}
@@ -162,7 +170,11 @@ const MenubarRadioItem = React.forwardRef<
   >
     <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
       <MenubarPrimitive.ItemIndicator>
-        <Circle className="h-2 w-2 fill-current" />
+        <IconComponent
+          name="Circle"
+          style="h-2 w-2 fill-current"
+          method="LUCIDE"
+        />
       </MenubarPrimitive.ItemIndicator>
     </span>
     {children}

@@ -2,8 +2,8 @@ import { useContext, useEffect, useState } from "react";
 import { InputListComponentType } from "../../types/components";
 
 import _ from "lodash";
-import { Plus, X } from "lucide-react";
 import { PopUpContext } from "../../contexts/popUpContext";
+import IconComponent from "../genericIconComponent";
 
 export default function InputListComponent({
   value,
@@ -65,7 +65,11 @@ export default function InputListComponent({
                   onChange(inputList);
                 }}
               >
-                <Plus className={"h-4 w-4 hover:text-accent-foreground"} />
+                <IconComponent
+                  name="Plus"
+                  style={"h-4 w-4 hover:text-accent-foreground"}
+                  method="LUCIDE"
+                />
               </button>
             ) : (
               <button
@@ -78,7 +82,11 @@ export default function InputListComponent({
                   onChange(inputList);
                 }}
               >
-                <X className="h-4 w-4 hover:text-status-red" />
+                <IconComponent
+                  name="X"
+                  style="h-4 w-4 hover:text-status-red"
+                  method="LUCIDE"
+                />
               </button>
             )}
           </div>

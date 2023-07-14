@@ -1,7 +1,7 @@
 import { Transition } from "@headlessui/react";
-import { XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ErrorAlertType } from "../../types/alerts";
+import IconComponent from "../../components/genericIconComponent";
 
 export default function ErrorAlert({
   title,
@@ -44,8 +44,10 @@ export default function ErrorAlert({
       >
         <div className="flex">
           <div className="flex-shrink-0">
-            <XCircle
-              className="error-build-message-circle"
+            <IconComponent
+              name="XCircle"
+              method="LUCIDE"
+              style="error-build-message-circle"
               aria-hidden="true"
             />
           </div>

@@ -1,4 +1,3 @@
-import { Settings2 } from "lucide-react";
 import { useContext, useRef, useState } from "react";
 import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import { Button } from "../../components/ui/button";
@@ -15,6 +14,7 @@ import { SETTINGS_DIALOG_SUBTITLE } from "../../constants";
 import { alertContext } from "../../contexts/alertContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
+import IconComponent from "../../components/genericIconComponent";
 
 export default function FlowSettingsModal() {
   const [open, setOpen] = useState(true);
@@ -51,7 +51,11 @@ export default function FlowSettingsModal() {
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Settings </span>
-            <Settings2 className="mr-2 h-4 w-4 " />
+            <IconComponent
+              name="Settings2"
+              style="mr-2 h-4 w-4 "
+              method="LUCIDE"
+            />
           </DialogTitle>
           <DialogDescription>{SETTINGS_DIALOG_SUBTITLE}</DialogDescription>
         </DialogHeader>

@@ -1,4 +1,4 @@
-import { Code2, FileDown, FileUp, Menu, Save, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { useContext, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import { Separator } from "../../../../components/ui/separator";
@@ -16,6 +16,7 @@ import {
   nodeNames,
 } from "../../../../utils";
 import DisclosureComponent from "../DisclosureComponent";
+import IconComponent from "../../../../components/genericIconComponent";
 
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);
@@ -68,10 +69,11 @@ export default function ExtraSidebar() {
               uploadFlow();
             }}
           >
-            <FileUp
-              strokeWidth={1.5}
-              className="side-bar-button-size "
-            ></FileUp>
+            <IconComponent
+              name="FileUp"
+              method="LUCIDE"
+              style="side-bar-button-size "
+            />
           </button>
         </ShadTooltip>
 
@@ -82,10 +84,11 @@ export default function ExtraSidebar() {
               openPopUp(<ExportModal />);
             }}
           >
-            <FileDown
-              strokeWidth={1.5}
-              className="side-bar-button-size"
-            ></FileDown>
+            <IconComponent
+              name="FileDown"
+              method="LUCIDE"
+              style="side-bar-button-size"
+            />
           </button>
         </ShadTooltip>
         <ShadTooltip content="Code" side="top">
@@ -95,7 +98,11 @@ export default function ExtraSidebar() {
               openPopUp(<ApiModal flow={flows.find((f) => f.id === tabId)} />);
             }}
           >
-            <Code2 strokeWidth={1.5} className="side-bar-button-size"></Code2>
+            <IconComponent
+              name="Code2"
+              method="LUCIDE"
+              style="side-bar-button-size"
+            />
           </button>
         </ShadTooltip>
 
@@ -108,13 +115,14 @@ export default function ExtraSidebar() {
             }}
             disabled={!isPending}
           >
-            <Save
-              strokeWidth={1.5}
-              className={
+            <IconComponent
+              name="Save"
+              method="LUCIDE"
+              style={
                 "side-bar-button-size" +
                 (isPending ? " " : " extra-side-bar-save-disable")
               }
-            ></Save>
+            />
           </button>
         </ShadTooltip>
       </div>
@@ -187,7 +195,11 @@ export default function ExtraSidebar() {
                               <span className="side-bar-components-text">
                                 {data[d][t].display_name}
                               </span>
-                              <Menu className="side-bar-components-icon " />
+                              <IconComponent
+                                name="Menu"
+                                style="side-bar-components-icon "
+                                method="LUCIDE"
+                              />
                             </div>
                           </div>
                         </div>

@@ -4,9 +4,9 @@ import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
 import { TypeModal } from "../../utils";
 
-import { ExternalLink } from "lucide-react";
 import { typesContext } from "../../contexts/typesContext";
 import { postValidatePrompt } from "../../controllers/API";
+import IconComponent from "../genericIconComponent";
 
 export default function PromptAreaComponent({
   field_name,
@@ -106,9 +106,10 @@ export default function PromptAreaComponent({
           }}
         >
           {!editNode && (
-            <ExternalLink
-              strokeWidth={1.5}
-              className={
+            <IconComponent
+              name="ExternalLink"
+              method="LUCIDE"
+              style={
                 "icons-parameters-comp" +
                 (disabled ? " text-ring" : " hover:text-accent-foreground")
               }
