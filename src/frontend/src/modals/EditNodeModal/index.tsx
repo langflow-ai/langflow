@@ -25,6 +25,7 @@ import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
 import { classNames, limitScrollFieldsModal } from "../../utils";
 import BaseModal from "../baseModal";
+import { PopUpContext } from "../../contexts/popUpContext";
 
 const EditNodeModal = forwardRef(
   (
@@ -44,6 +45,7 @@ const EditNodeModal = forwardRef(
     const { types } = useContext(typesContext);
     const { setTabsState, tabId } = useContext(TabsContext);
     const { reactFlowInstance } = useContext(typesContext);
+    const { closePopUp } = useContext(PopUpContext);
 
     let disabled =
       reactFlowInstance?.getEdges().some((e) => e.targetHandle === data.id) ??
@@ -74,6 +76,9 @@ const EditNodeModal = forwardRef(
     };
 
     const setOpen = (x: boolean) => {
+      if(!x) {
+        closePopUp();
+      }
       if (nodeLength > 0) setModalOpen(x);
     };
 
