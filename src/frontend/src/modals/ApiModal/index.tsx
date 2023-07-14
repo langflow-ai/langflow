@@ -50,6 +50,7 @@ import { TabsContext } from "../../contexts/tabsContext";
 import { FlowType } from "../../types/flow/index";
 import { buildTweaks, classNames } from "../../utils";
 import BaseModal from "../baseModal";
+import { PopUpContext } from "../../contexts/popUpContext";
 
 const ApiModal = forwardRef(
   (
@@ -62,12 +63,14 @@ const ApiModal = forwardRef(
     },
     ref
   ) => {
+    const { closeEdit, setCloseEdit } = useContext(PopUpContext);
     const [activeTab, setActiveTab] = useState("0");
     const [isCopied, setIsCopied] = useState<Boolean>(false);
     const [openAccordion, setOpenAccordion] = useState([]);
     const tweak = useRef([]);
     const tweaksList = useRef([]);
     const { setTweak, getTweak, tabsState } = useContext(TabsContext);
+
     const copyToClipboard = () => {
       if (!navigator.clipboard || !navigator.clipboard.writeText) {
         return;
@@ -108,25 +111,45 @@ const ApiModal = forwardRef(
     ];
 
     useEffect(() => {
-
-      if(flow["data"]["nodes"].length == 0){
-        tweak.current = [];
-        setTweak(tweak.current);
-        
-      }
-
-      else{
+      if (closeEdit !== "") {
+        tweak.current = getTweak;
         if (tweak.current.length > 0) {
-          tweak.current = getTweak;
-
+          setActiveTab("3");
+          openAccordions();
         } else {
           startTweaks();
         }
+      } else {
+        if (tweak?.current) {
+          startTweaks();
+        }
       }
+    }, [closeEdit]);
+  
+    useEffect(() => {
+      filterNodes();
+    }, []);
+
+    // useEffect(() => {
+
+    //   if(flow["data"]["nodes"].length == 0){
+    //     tweak.current = [];
+    //     setTweak(tweak.current);
+        
+    //   }
+
+    //   else{
+    //     if (tweak.current.length > 0) {
+    //       tweak.current = getTweak;
+
+    //     } else {
+    //       startTweaks();
+    //     }
+    //   }
       
 
 
-    }, [flow["data"]["nodes"]]);
+    // }, [flow["data"]["nodes"]]);
 
     function startTweaks() {
       const t = buildTweaks(flow);
@@ -265,8 +288,13 @@ const ApiModal = forwardRef(
       });
     }
 
+    const setOpen = (x: boolean) => {
+        setCloseEdit("");
+    };
+
+
     return (
-      <BaseModal>
+      <BaseModal setOpen={setOpen}>
         <BaseModal.Trigger>{children}</BaseModal.Trigger>
         <BaseModal.Header description={EXPORT_CODE_DIALOG}>
           <span className="pr-2">Code</span>
