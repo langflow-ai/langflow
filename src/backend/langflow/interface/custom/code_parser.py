@@ -61,12 +61,11 @@ class CodeParser:
         Extracts "imports" from the code.
         """
         if isinstance(node, ast.Import):
-            module = node.names[0].name
-            self.data["imports"].append(module)
+            for alias in node.names:
+                self.data["imports"].append(alias.name)
         elif isinstance(node, ast.ImportFrom):
-            module = node.module
-            names = [alias.name for alias in node.names]
-            self.data["imports"].append((module, names))
+            for alias in node.names:
+                self.data["imports"].append((node.module, alias.name))
 
     def parse_functions(self, node: ast.FunctionDef) -> None:
         """
@@ -97,7 +96,7 @@ class CodeParser:
 
         # Handle positional arguments with default values
         defaults = [None] * (len(node.args.args) - len(node.args.defaults)) + [
-            ast.unparse(default) for default in node.args.defaults
+            ast.unparse(default) if default else None for default in node.args.defaults
         ]
 
         for arg, default in zip(node.args.args, defaults):
@@ -126,10 +125,38 @@ class CodeParser:
             func["body"].append(ast.unparse(line))
         return func
 
+    def parse_assign(self, stmt):
+        """
+        Parses an Assign statement and returns a dictionary
+        with the target's name and value.
+        """
+        for target in stmt.targets:
+            if isinstance(target, ast.Name):
+                return {"name": target.id, "value": ast.unparse(stmt.value)}
+
+    def parse_ann_assign(self, stmt):
+        """
+        Parses an AnnAssign statement and returns a dictionary
+        with the target's name, value, and annotation.
+        """
+        if isinstance(stmt.target, ast.Name):
+            return {
+                "name": stmt.target.id,
+                "value": ast.unparse(stmt.value) if stmt.value else None,
+                "annotation": ast.unparse(stmt.annotation),
+            }
+
+    def parse_function_def(self, stmt):
+        """
+        Parses a FunctionDef statement and returns the parsed
+        method and a boolean indicating if it's an __init__ method.
+        """
+        method = self.parse_callable_details(stmt)
+        return (method, True) if stmt.name == "__init__" else (method, False)
+
     def parse_classes(self, node: ast.ClassDef) -> None:
         """
-        Extracts "classes" from the code, including
-        inheritance and init methods.
+        Extracts "classes" from the code, including inheritance and init methods.
         """
         class_dict = {
             "name": node.name,
@@ -140,15 +167,15 @@ class CodeParser:
         }
 
         for stmt in node.body:
-            if isinstance(stmt, ast.AnnAssign):
-                attr = {"name": stmt.target.id, "type": ast.unparse(stmt.annotation)}
-                class_dict["attributes"].append(attr)
-            elif isinstance(stmt, ast.Assign):
-                attr = {"name": stmt.targets[0].id, "value": ast.unparse(stmt.value)}
-                class_dict["attributes"].append(attr)
+            if isinstance(stmt, ast.Assign):
+                if attr := self.parse_assign(stmt):
+                    class_dict["attributes"].append(attr)
+            elif isinstance(stmt, ast.AnnAssign):
+                if attr := self.parse_ann_assign(stmt):
+                    class_dict["attributes"].append(attr)
             elif isinstance(stmt, ast.FunctionDef):
-                method = self.parse_callable_details(stmt)
-                if stmt.name == "__init__":
+                method, is_init = self.parse_function_def(stmt)
+                if is_init:
                     class_dict["init"] = method
                 else:
                     class_dict["methods"].append(method)
