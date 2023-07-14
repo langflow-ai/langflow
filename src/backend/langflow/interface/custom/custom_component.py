@@ -8,7 +8,7 @@ from langflow.utils import validate
 
 
 class CustomComponent(Component):
-    code: str
+    code: Optional[str]
     field_config: dict = {}
     code_class_base_inheritance = "CustomComponent"
     function_entrypoint_name = "build"
