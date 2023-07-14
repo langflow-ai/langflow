@@ -30,6 +30,14 @@ import { QDrantIcon } from "./icons/QDrant";
 import { SearxIcon } from "./icons/Searx";
 import { SlackIcon } from "./icons/Slack";
 import { HackerNewsIcon } from "./icons/hackerNews";
+import { HuggingFaceIcon } from "./icons/HuggingFace";
+import { MidjourneyIcon } from "./icons/Midjorney";
+import { MongoDBIcon } from "./icons/MongoDB";
+import { PineconeIcon } from "./icons/Pinecone";
+import { SupabaseIcon } from "./icons/supabase";
+import { VertexAIIcon } from "./icons/VertexAI";
+import { Compass, Cpu, FileSearch, Fingerprint, Gift, Hammer, HelpCircle, Laptop2, Layers, Lightbulb, Link, MessageCircle, Paperclip, Rocket, Scissors, TerminalSquare, Wand2, Wrench, Zap } from "lucide-react";
+import clsx, { ClassValue } from "clsx";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -286,6 +294,9 @@ export const nodeIconsLucide: {
     ComponentType<SVGProps<SVGSVGElement>>
   >,
   retrievers: FileSearch as React.ForwardRefExoticComponent<
+    ComponentType<SVGProps<SVGSVGElement>>
+  >,
+  connectors: Zap as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
   unknown: HelpCircle as React.ForwardRefExoticComponent<
