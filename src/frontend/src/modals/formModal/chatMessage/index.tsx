@@ -81,7 +81,7 @@ export default function ChatMessage({
                         remarkPlugins={[remarkGfm, remarkMath]}
                         rehypePlugins={[rehypeMathjax]}
                         className="markdown prose inline-block break-words text-primary
-                     dark:prose-invert sm:max-w-[30vw] lg:max-w-[40vw]"
+                     dark:prose-invert sm:w-[30vw] sm:max-w-[30vw] lg:w-[40vw] lg:max-w-[40vw]"
                         components={{
                           code: ({
                             node,
