@@ -307,3 +307,58 @@ class DocumentFilterByLengthComponent(CustomComponent):
 
         return filtered_documents
 """
+
+
+@pytest.fixture
+def get_request():
+    return """import requests
+from typing import Dict, Union
+from langchain.schema import Document
+from langflow.interface.custom.base import CustomComponent
+
+class GetRequestComponent(CustomComponent):
+    display_name: str = "GET Request"
+    field_config = {
+        "url": {"field_type": "str", "required": True},
+    }
+
+    def build(self, url: str) -> Document:
+        # Send a GET request to the URL
+        response = requests.get(url)
+
+        # Raise an exception if the request was not successful
+        if response.status_code != 200:
+            raise ValueError(f"GET request failed: {response.status_code} status code")
+
+        # Create a document with the response text and the URL as metadata
+        document = Document(page_content=response.text, metadata={"url": url})
+
+        return document"""
+
+
+@pytest.fixture
+def post_request():
+    return """import requests
+from typing import Dict, Union
+from langchain.schema import Document
+from langflow.interface.custom.base import CustomComponent
+
+class PostRequestComponent(CustomComponent):
+    display_name: str = "POST Request"
+    field_config = {
+        "url": {"field_type": "str", "required": True},
+        "data": {"field_type": "dict", "required": True},
+    }
+
+    def build(self, url: str, data: Dict[str, Union[str, int]]) -> Document:
+        # Send a POST request to the URL
+        response = requests.post(url, data=data)
+
+        # Raise an exception if the request was not successful
+        if response.status_code != 200:
+            raise ValueError(f"POST request failed: {response.status_code} status code")
+
+        # Create a document with the response text and the URL and data as metadata
+        document = Document(page_content=response.text, metadata={"url": url, "data": data})
+
+        return document"""
