@@ -169,4 +169,5 @@ export type IconProps = {
 export type IconComponentProps = {
   method: "SVG" | "LUCIDE";
   name: string;
+  className?: string;
 };
