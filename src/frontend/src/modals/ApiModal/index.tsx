@@ -110,56 +110,14 @@ const ApiModal = forwardRef(
       },
     ];
 
-    useEffect(() => {
-      if (closeEdit !== "") {
-        tweak.current = getTweak;
-        if (tweak.current.length > 0) {
-          setActiveTab("3");
-          openAccordions();
-        } else {
-          startTweaks();
-        }
-      } else {
-        if (tweak?.current) {
-          startTweaks();
-        }
-      }
-    }, [closeEdit]);
   
     useEffect(() => {
+      tweaksList.current = [];
       filterNodes();
-    }, []);
+     
+    }, [flow["data"]["nodes"]]);
 
-    // useEffect(() => {
-
-    //   if(flow["data"]["nodes"].length == 0){
-    //     tweak.current = [];
-    //     setTweak(tweak.current);
-        
-    //   }
-
-    //   else{
-    //     if (tweak.current.length > 0) {
-    //       tweak.current = getTweak;
-
-    //     } else {
-    //       startTweaks();
-    //     }
-    //   }
-      
-
-
-    // }, [flow["data"]["nodes"]]);
-
-    function startTweaks() {
-      const t = buildTweaks(flow);
-      Object.keys(t).length == 0 ? tweak.current = [] : tweak?.current?.push(t);
-      setTweak(tweak.current);
-    }
-
-    useEffect(() => {
-      filterNodes();
-    }, []);
+  
 
     if (Object.keys(tweaksCode).length > 0) {
       tabs.push({
@@ -289,7 +247,7 @@ const ApiModal = forwardRef(
     }
 
     const setOpen = (x: boolean) => {
-        setCloseEdit("");
+      x ? setCloseEdit("apimodal") : setCloseEdit("");
     };
 
 
