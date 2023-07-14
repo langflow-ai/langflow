@@ -62,6 +62,7 @@ const ApiModal = forwardRef(
     },
     ref
   ) => {
+
     const [activeTab, setActiveTab] = useState("0");
     const [isCopied, setIsCopied] = useState<Boolean>(false);
     const [openAccordion, setOpenAccordion] = useState([]);
@@ -114,17 +115,18 @@ const ApiModal = forwardRef(
         const t = buildTweaks(flow);
         tweak?.current?.push(t);
       }
+
+      if (Object.keys(tweaksCode).length > 0) {
+        tabs.push({
+          name: "Tweaks",
+          mode: "python",
+          image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+          code: pythonCode,
+        });
+      }
       
     }, []);
 
-    if (Object.keys(tweaksCode).length > 0) {
-      tabs.push({
-        name: "Tweaks",
-        mode: "python",
-        image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-        code: pythonCode,
-      });
-    }
 
     function filterNodes() {
       let arrNodesWithValues = [];
