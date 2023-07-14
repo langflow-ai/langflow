@@ -108,6 +108,12 @@ class BaseStrCode(BaseModel):
 
         return v
 
+    def get_function(self):
+        """Get the function"""
+        function_name = validate.extract_function_name(self.code)
+
+        return validate.create_function(self.code, function_name)
+
 
 class CustomChain(Chain, ABC):
     """Custom chain"""

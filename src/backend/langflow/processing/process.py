@@ -5,13 +5,11 @@ from langchain.schema import AgentAction
 import json
 from langflow.cache.utils import memoize_dict
 from langflow.interface.run import (
-    fix_memory_inputs,
-    format_actions,
     get_memory_key,
     update_memory_keys,
 )
 from langflow.utils.logger import logger
-from langflow.graph import Graph
+
 
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -157,6 +155,8 @@ def load_flow_from_json(
     :param build: If True, build the graph, otherwise return the graph object
     :return: Langchain object or Graph object depending on the build parameter
     """
+    from langflow.graph import Graph
+
     # If input is a file path, load JSON from the file
     if isinstance(input, (str, Path)):
         with open(input, "r", encoding="utf-8") as f:

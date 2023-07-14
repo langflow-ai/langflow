@@ -17,6 +17,7 @@ from langchain.base_language import BaseLanguageModel
 from langchain.callbacks.base import BaseCallbackManager
 from langchain.chains.loading import load_chain_from_config
 from langchain.llms.loading import load_llm_from_config
+
 from pydantic import ValidationError
 
 from langflow.interface.custom_lists import CUSTOM_NODES
@@ -192,29 +193,6 @@ def instantiate_utility(node_type, class_object, params):
     if node_type == "SQLDatabase":
         return class_object.from_uri(params.pop("uri"))
     return class_object(**params)
-
-
-def load_flow_from_json(path: str, build=True):
-    """Load flow from json file"""
-    # This is done to avoid circular imports
-
-    with open(path, "r", encoding="utf-8") as f:
-        flow_graph = json.load(f)
-    data_graph = flow_graph["data"]
-    graph = Graph(graph_data=data_graph)
-    if build:
-        langchain_object = graph.build()
-        if hasattr(langchain_object, "verbose"):
-            langchain_object.verbose = True
-
-        if hasattr(langchain_object, "return_intermediate_steps"):
-            # https://github.com/hwchase17/langchain/issues/2068
-            # Deactivating until we have a frontend solution
-            # to display intermediate steps
-            langchain_object.return_intermediate_steps = False
-        fix_memory_inputs(langchain_object)
-        return langchain_object
-    return graph
 
 
 def replace_zero_shot_prompt_with_prompt_template(nodes):
