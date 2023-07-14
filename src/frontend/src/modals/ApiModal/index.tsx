@@ -50,7 +50,6 @@ import { TabsContext } from "../../contexts/tabsContext";
 import { FlowType } from "../../types/flow/index";
 import { buildTweaks, classNames } from "../../utils";
 import BaseModal from "../baseModal";
-import { PopUpContext } from "../../contexts/popUpContext";
 
 const ApiModal = forwardRef(
   (
@@ -63,14 +62,12 @@ const ApiModal = forwardRef(
     },
     ref
   ) => {
-    const { closeEdit, setCloseEdit } = useContext(PopUpContext);
     const [activeTab, setActiveTab] = useState("0");
     const [isCopied, setIsCopied] = useState<Boolean>(false);
     const [openAccordion, setOpenAccordion] = useState([]);
     const tweak = useRef([]);
     const tweaksList = useRef([]);
     const { setTweak, getTweak, tabsState } = useContext(TabsContext);
-
     const copyToClipboard = () => {
       if (!navigator.clipboard || !navigator.clipboard.writeText) {
         return;
@@ -110,14 +107,9 @@ const ApiModal = forwardRef(
       },
     ];
 
-  
     useEffect(() => {
-      tweaksList.current = [];
       filterNodes();
-     
-    }, [flow["data"]["nodes"]]);
-
-  
+    }, []);
 
     if (Object.keys(tweaksCode).length > 0) {
       tabs.push({
@@ -246,13 +238,8 @@ const ApiModal = forwardRef(
       });
     }
 
-    const setOpen = (x: boolean) => {
-      x ? setCloseEdit("apimodal") : setCloseEdit("");
-    };
-
-
     return (
-      <BaseModal setOpen={setOpen}>
+      <BaseModal>
         <BaseModal.Trigger>{children}</BaseModal.Trigger>
         <BaseModal.Header description={EXPORT_CODE_DIALOG}>
           <span className="pr-2">Code</span>
