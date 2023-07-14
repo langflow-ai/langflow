@@ -1,4 +1,3 @@
-import ast
 from typing import Callable, Optional
 from fastapi import HTTPException
 from langflow.interface.custom.constants import LANGCHAIN_BASE_TYPES
@@ -28,7 +27,7 @@ class CustomComponent(Component):
                 },
             )
 
-        # TODO: build logic
+        # TODO: Create the logic to validate what the Custom Component should have as a prerequisite to be able to execute
         return True
 
     def is_check_valid(self) -> bool:
@@ -92,24 +91,35 @@ class CustomComponent(Component):
         return build_method["return_type"]
 
     @property
-    def get_template_config(self) -> dict:
-        extra_attributes = {}  # self.get_extra_attributes
-        template_config = {}
+    def get_main_class_name(self):
+        tree = self.get_code_tree(self.code)
 
-        if "field_config" in extra_attributes:
-            template_config["field_config"] = ast.literal_eval(
-                extra_attributes["field_config"]
-            )
-        if "display_name" in extra_attributes:
-            template_config["display_name"] = ast.literal_eval(
-                extra_attributes["display_name"]
-            )
-        if "description" in extra_attributes:
-            template_config["description"] = ast.literal_eval(
-                extra_attributes["description"]
-            )
+        base_name = self.code_class_base_inheritance
+        method_name = self.function_entrypoint_name
 
-        return template_config
+        classes = []
+        for item in tree.get("classes"):
+            if base_name in item["bases"]:
+                method_names = [method["name"] for method in item["methods"]]
+                if method_name in method_names:
+                    classes.append(item["name"])
+
+        # Get just the first item
+        return next(iter(classes), "")
+
+    @property
+    def build_template_config(self):
+        tree = self.get_code_tree(self.code)
+
+        attributes = [
+            main_class["attributes"]
+            for main_class in tree.get("classes")
+            if main_class["name"] == self.get_main_class_name
+        ]
+        # Get just the first item
+        attributes = next(iter(attributes), [])
+
+        return super().build_template_config(attributes)
 
     @property
     def get_function(self):

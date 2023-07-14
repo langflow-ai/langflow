@@ -161,7 +161,18 @@ def build_langchain_template_custom_component(custom_component: CustomComponent)
 
     function_args = custom_component.get_function_entrypoint_args
     return_type = custom_component.get_function_entrypoint_return_type
-    # template_config = custom_component.get_template_config
+    template_config = custom_component.build_template_config
+
+    # Rewrite diplay_name and description values
+    if frontend_node:
+        if "display_name" in template_config:
+            frontend_node["display_name"] = template_config["display_name"]
+
+        elif "description" in template_config:
+            frontend_node["description"] = template_config["description"]
+
+    # Rewrite field configurations
+    field_config = template_config.get("field_config", {})
 
     if function_args is not None:
         # Add extra fields
@@ -174,7 +185,6 @@ def build_langchain_template_custom_component(custom_component: CustomComponent)
                     extra_field.get("default") if "default" in extra_field else ""
                 )
                 field_required = True
-                field_config = {}
 
                 # TODO: Validate type - if is possible to render into frontend
                 if "optional" in field_type.lower():
@@ -184,13 +194,14 @@ def build_langchain_template_custom_component(custom_component: CustomComponent)
                 if not field_type:
                     field_type = "str"
 
+                config = field_config.get(field_name, {})
                 frontend_node = add_new_custom_field(
                     frontend_node,
                     field_name,
                     field_type,
                     field_value,
                     field_required,
-                    field_config,
+                    config,
                 )
 
     frontend_node = add_code_field(frontend_node, custom_component.code)

@@ -252,7 +252,8 @@ class CustomChain(CustomComponent):
 
     def build(self, prompt, llm, input: str) -> Document:
         chain = MyCustomChain(prompt=prompt, llm=llm)
-        return chain(input)'''
+        return chain(input)
+'''
 
 
 @pytest.fixture
