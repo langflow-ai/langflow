@@ -1,0 +1,59 @@
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import ReactPlayer from "react-player";
+
+# Component
+
+Components are the building blocks of the flows. They are made of inputs, outputs, and parameters that define their functionality, providing a convenient and straightforward way to compose LLM-based applications. Learn more about components and how they work in the LangChain [documentation](https://docs.langchain.com/docs/category/components) section.
+
+### Component's Features
+
+<div style={{ marginBottom: "20px" }}>
+  During the flow creation process, you will notice handles (colored circles)
+  attached to one or both sides of a component. These handles represent the
+  availability to connect to other components, while their colors are type hints
+  (hover over a handle to see connection details).
+</div>
+
+<div style={{ marginBottom: "20px" }}>
+  For example, if you select a <code>ConversationChain</code> component, you
+  will see orange <span style={{ color: "orange" }}>o</span> and purple{" "}
+  <span style={{ color: "purple" }}>o</span> input handles. They indicate that
+  this component accepts an LLM and a Memory component as inputs. The red
+  asterisk <span style={{ color: "red" }}>*</span> means that at least one input
+  of that type is required.
+</div>
+
+<div
+  style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
+>
+  <ZoomableImage
+    alt="Docusaurus themed image"
+    sources={{
+      light: useBaseUrl("img/single-compenent.png"),
+    }}
+    style={{ width: "100%", maxWidth: "800px", margin: "0 auto" }}
+  />
+</div>
+
+<div style={{ marginBottom: "20px" }}>
+  On the top right corner, you will find the component status icon 🔴. Make the
+  necessary connections, build the flow (⚡ zap icon on the bottom right of the
+  canvas) and once the validation is completed, the status of each validated
+  component should light green 🟢. Hover over the component status to reveal the
+  outputs going through it in case of success, or the detected error in case of
+  failure.
+</div>
+
+---
+
+### Component's Parameters
+
+Langflow components can be edited in the component settings button. Hide parameters to reduce complexity and keep the canvas clean and intuitive for experimentation.
+
+<div
+  style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
+>
+  <ReactPlayer playing controls url="/videos/langflow_parameters.mp4" />
+</div>
