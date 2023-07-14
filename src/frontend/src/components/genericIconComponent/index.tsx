@@ -3,25 +3,24 @@ import { nodeIconsLucide, svgIcons } from "../../utils";
 
 export function IconFromLucide({ name }: IconProps): JSX.Element {
   const TargetIcon = nodeIconsLucide[name];
-  return (
-    <TargetIcon />
-  );
+  return <TargetIcon />;
 }
 
 export function IconFromSvg({ name }: IconProps): JSX.Element {
   const TargetSvg = svgIcons[name];
-  return (
-    <TargetSvg />
-  );
+  return <TargetSvg />;
 }
 
-export default function IconComponent({ method, name }: IconComponentProps): JSX.Element {
+export default function IconComponent({
+  method,
+  name,
+}: IconComponentProps): JSX.Element {
   switch (method) {
-    case 'SVG':
-      return <IconFromSvg name={ name } />
-    case 'LUCIDE':
-      return <IconFromLucide name={ name } />
+    case "SVG":
+      return <IconFromSvg name={name} />;
+    case "LUCIDE":
+      return <IconFromLucide name={name} />;
     default:
-      return 
+      return;
   }
 }

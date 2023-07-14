@@ -1,4 +1,3 @@
-import * as React from "react";
 const SvgVertexAi = (props) => (
   <svg viewBox="0 0 32 32" width="1em" height="1em" {...props}>
     <path
