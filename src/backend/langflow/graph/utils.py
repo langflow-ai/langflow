@@ -1,5 +1,6 @@
 from collections import defaultdict
 import re
+from typing import Any, Union
 
 
 def validate_prompt(prompt: str):
@@ -35,3 +36,14 @@ def set_proxy_values(group_node, proxy_cache):
         if proxy_values := proxy_cache.get(node["id"]):
             for key, value in proxy_values.items():
                 node["data"]["node"]["template"][key]["value"] = value
+
+
+def flatten_list(list_of_lists: list[Union[list, Any]]) -> list:
+    """Flatten list of lists."""
+    new_list = []
+    for item in list_of_lists:
+        if isinstance(item, list):
+            new_list.extend(item)
+        else:
+            new_list.append(item)
+    return new_list

@@ -21,7 +21,7 @@ class Graph:
         *,
         graph_data: Optional[Dict] = None,
         vertices: Optional[List[Vertex]] = None,
-        edges: Optional[List[Edge]] = None,
+        edges: Optional[List[ContractEdge]] = None,
     ) -> None:
         self.has_connectors = False
 
@@ -36,14 +36,6 @@ class Graph:
         elif vertices and edges:
             self.vertices = vertices
             self.edges = edges
-
-    @classmethod
-    def from_root_vertex(cls, root_vertex: Vertex):
-        # Starting at the root vertex
-        # Iterate all of its edges to find
-        # all vertices and edges
-        vertices, edges = cls.traverse_graph(root_vertex)
-        return cls(vertices=vertices, edges=edges)
 
     @classmethod
     def from_payload(cls, payload: Dict) -> "Graph":
@@ -151,13 +143,13 @@ class Graph:
         ]
         return connected_vertices
 
-    async def build(self) -> Chain:
+    def build(self) -> Chain:
         """Builds the graph."""
         # Get root node
         root_node = payload.get_root_vertex(self)
         if root_node is None:
             raise ValueError("No root node found")
-        return await root_node.build()
+        return root_node.build()
 
     def topological_sort(self) -> List[Vertex]:
         """

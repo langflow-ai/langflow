@@ -55,7 +55,4 @@ class Edge:
             )
 
     def __repr__(self) -> str:
-        return (
-            f"Edge(source={self.source.id}, target={self.target.id}, valid={self.valid}"
-            f", matched_type={self.matched_type})"
-        )
+        return f"{self.source.vertex_type} -> {self.target.vertex_type}"

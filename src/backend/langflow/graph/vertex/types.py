@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Optional, Union
 
 from langflow.graph.vertex.base import Vertex
-from langflow.graph.utils import extract_input_variables_from_prompt
+from langflow.graph.utils import extract_input_variables_from_prompt, flatten_list
 from copy import deepcopy
 
 from langflow.interface.connectors.custom import ConnectorFunction
@@ -49,12 +49,12 @@ class AgentVertex(LangChainVertex):
             elif isinstance(source_node, ChainVertex):
                 self.chains.append(source_node)
 
-    async def build(self, force: bool = False) -> Any:
+    def build(self, force: bool = False) -> Any:
         if not self._built or force:
             self._set_tools_and_chains()
             # First, build the tools
             for tool_node in self.tools:
-                await tool_node.build()
+                tool_node.build()
 
             # Next, build the chains and the rest
             for chain_node in self.chains:
@@ -96,7 +96,7 @@ class WrapperVertex(LangChainVertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="wrappers")
 
-    async def build(self, force: bool = False) -> Any:
+    def build(self, force: bool = False) -> Any:
         if not self._built or force:
             if "headers" in self.params:
                 self.params["headers"] = eval(self.params["headers"])
@@ -148,11 +148,13 @@ class TextSplitterVertex(LangChainVertex):
         return f"{self.vertex_type}()"
 
 
-class ChainVertex(Vertex):
+class ChainVertex(LangChainVertex):
+    can_be_root: bool = True
+
     def __init__(self, data: Dict):
         super().__init__(data, base_type="chains")
 
-    async def build(
+    def build(
         self,
         force: bool = False,
         tools: Optional[List[Union[ToolkitVertex, ToolVertex]]] = None,
@@ -173,7 +175,7 @@ class PromptVertex(Vertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="prompts")
 
-    async def build(
+    def build(
         self,
         force: bool = False,
         tools: Optional[List[Union[ToolkitVertex, ToolVertex]]] = None,
@@ -187,7 +189,7 @@ class PromptVertex(Vertex):
             # Check if it is a ZeroShotPrompt and needs a tool
             if "ShotPrompt" in self.vertex_type:
                 tools = (
-                    [await tool_node.build() for tool_node in tools]
+                    [tool_node.build() for tool_node in tools]
                     if tools is not None
                     else []
                 )

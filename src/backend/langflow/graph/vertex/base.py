@@ -198,17 +198,17 @@ class Vertex:
 
         self._built = True
 
-    async def build(self, force: bool = False) -> Any:
+    def build(self, force: bool = False) -> Any:
         if not self._built or force:
             self._build()
-            await self.fulfill_contracts()
+            self.fulfill_contracts()
 
         return self._built_object
 
-    async def fulfill_contracts(self):
+    def fulfill_contracts(self):
         for edge in self.edges:
             if edge.source == self:
-                await edge.fulfill()
+                edge.fulfill()
 
     def add_edge(self, edge: "ContractEdge") -> None:
         self.edges.append(edge)
