@@ -1,6 +1,5 @@
-import { Tooltip } from "@mui/material";
 import { useRef, useState, useEffect, useContext } from "react";
-import { useUpdateNodeInternals, Handle, Position } from "reactflow";
+import { Handle, Position } from "reactflow";
 import CodeAreaComponent from "../../../../../../components/codeAreaComponent";
 import Dropdown from "../../../../../../components/dropdownComponent";
 import FloatComponent from "../../../../../../components/floatComponent";
@@ -13,16 +12,13 @@ import TextAreaComponent from "../../../../../../components/textAreaComponent";
 import ToggleComponent from "../../../../../../components/toggleComponent";
 import { TabsContext } from "../../../../../../contexts/tabsContext";
 import { typesContext } from "../../../../../../contexts/typesContext";
-import {
-  HandleComponentType,
-  ParameterComponentType,
-} from "../../../../../../types/components";
+import { HandleComponentType } from "../../../../../../types/components";
 import {
   isValidConnection,
   classNames,
   groupByFamily,
   nodeColors,
-  nodeIcons,
+  nodeIconsLucide,
   nodeNames,
 } from "../../../../../../utils";
 import React from "react";
@@ -82,7 +78,7 @@ export default function HandleComponent({
             color: nodeColors[item.family],
           }}
         >
-          {React.createElement(nodeIcons[item.family])}
+          {React.createElement(nodeIconsLucide[item.family])}
         </div>
         <span className="ps-2 text-gray-950">
           {nodeNames[item.family] ?? ""}{" "}

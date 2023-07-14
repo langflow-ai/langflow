@@ -1,27 +1,16 @@
 import { useContext, useEffect, useRef, useState } from "react";
-import { FlowType, NodeDataType } from "../../types/flow";
+import { NodeDataType } from "../../types/flow";
 import {
   classNames,
-  concatFlows,
   expandGroupNode,
-  isValidConnection,
   nodeColors,
-  nodeIcons,
+  nodeIconsLucide,
   toNormalCase,
   updateFlowPosition,
 } from "../../utils";
 import { typesContext } from "../../contexts/typesContext";
-import {
-  Handle,
-  NodeToolbar,
-  Position,
-  useUpdateNodeInternals,
-} from "reactflow";
-import {
-  ArrowsPointingOutIcon,
-  Cog6ToothIcon,
-  TrashIcon,
-} from "@heroicons/react/24/outline";
+import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
+import { ArrowsPointingOutIcon } from "@heroicons/react/24/outline";
 import InputParameterComponent from "../GenericNode/components/inputParameterComponent";
 import { TabsContext } from "../../contexts/tabsContext";
 import InputComponent from "../../components/inputComponent";
@@ -44,7 +33,7 @@ export default function GroupNode({
   const [isValid, setIsValid] = useState(true);
   const { reactFlowInstance, deleteNode, types } = useContext(typesContext);
   const { setDisableCopyPaste } = useContext(TabsContext);
-  const Icon = nodeIcons["custom"];
+  const Icon = nodeIconsLucide["custom"];
   const ref = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [flowHandlePosition, setFlowHandlePosition] = useState(0);
