@@ -9,7 +9,7 @@ from langchain.base_language import BaseLanguageModel
 from langchain.chains.base import Chain
 from langchain.chat_models.base import BaseChatModel
 from langchain.tools import BaseTool
-from langflow.interface.custom.custom import CustomComponent
+from langflow.interface.custom.custom_component import CustomComponent
 from langflow.utils import validate
 from langflow.interface.wrappers.base import wrapper_creator
 
@@ -61,7 +61,9 @@ def import_by_type(_type: str, name: str) -> Any:
 
 def import_custom_component(custom_component: str) -> CustomComponent:
     """Import custom component from custom component name"""
-    return import_class(f"langflow.interface.custom.custom.{custom_component}")
+    return import_class(
+        f"langflow.interface.custom.custom_component.{custom_component}"
+    )
 
 
 def import_output_parser(output_parser: str) -> Any:
@@ -183,5 +185,4 @@ def get_function(code):
 
 def get_function_custom(code):
     class_name = validate.extract_class_name(code)
-
     return validate.create_class(code, class_name)

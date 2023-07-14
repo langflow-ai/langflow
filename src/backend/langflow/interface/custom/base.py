@@ -2,7 +2,9 @@ from typing import Any, Dict, List, Optional, Type
 
 
 from langflow.interface.base import LangChainTypeCreator
-from langflow.interface.custom.custom import CustomComponent
+
+# from langflow.interface.custom.custom import CustomComponent
+from langflow.interface.custom.custom_component import CustomComponent
 from langflow.template.frontend_node.custom_components import (
     CustomComponentFrontendNode,
 )

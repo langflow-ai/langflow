@@ -7,7 +7,7 @@ from langflow.utils.logger import logger
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 
-from langflow.interface.custom.custom import CustomComponent
+from langflow.interface.custom.custom_component import CustomComponent
 
 from langflow.api.v1.schemas import (
     ProcessResponse,
