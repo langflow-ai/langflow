@@ -50,6 +50,7 @@ import { TabsContext } from "../../contexts/tabsContext";
 import { FlowType } from "../../types/flow/index";
 import { buildTweaks, classNames } from "../../utils";
 import BaseModal from "../baseModal";
+import { PopUpContext } from "../../contexts/popUpContext";
 
 const ApiModal = forwardRef(
   (
@@ -69,6 +70,8 @@ const ApiModal = forwardRef(
     const tweak = useRef([]);
     const tweaksList = useRef([]);
     const { setTweak, getTweak, tabsState } = useContext(TabsContext);
+    const { closePopUp } = useContext(PopUpContext);
+
     const copyToClipboard = () => {
       if (!navigator.clipboard || !navigator.clipboard.writeText) {
         return;
@@ -109,13 +112,13 @@ const ApiModal = forwardRef(
     ];
 
     useEffect(() => {
+      
       filterNodes();
 
       if(getTweak.length == 0){
         const t = buildTweaks(flow);
         tweak?.current?.push(t);
       }
-
       if (Object.keys(tweaksCode).length > 0) {
         tabs.push({
           name: "Tweaks",
@@ -125,7 +128,7 @@ const ApiModal = forwardRef(
         });
       }
       
-    }, []);
+    }, [closePopUp]);
 
 
     function filterNodes() {
@@ -246,8 +249,14 @@ const ApiModal = forwardRef(
       });
     }
 
+    const setOpen = (x: boolean) => {
+      if(x) {
+        closePopUp();
+      }
+    };
+
     return (
-      <BaseModal>
+      <BaseModal setOpen={setOpen}>
         <BaseModal.Trigger>{children}</BaseModal.Trigger>
         <BaseModal.Header description={EXPORT_CODE_DIALOG}>
           <span className="pr-2">Code</span>
