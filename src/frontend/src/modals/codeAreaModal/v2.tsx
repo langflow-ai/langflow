@@ -37,11 +37,11 @@ export default function CodeAreaModal({
   const { dark } = useContext(darkContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [activeTab, setActiveTab] = useState("0");
+  const [height, setHeight] = useState(null);
   const [error, setError] = useState<{
     detail: { error: string; traceback: string };
   }>(null);
   const { closePopUp, setCloseEdit } = useContext(PopUpContext);
-  const ref = useRef();
   function setModalOpen(x: boolean) {
     setOpen(x);
     if (x === false) {
@@ -109,7 +109,23 @@ export default function CodeAreaModal({
         });
     }
   }
-  const tabs = [{ name: "code" }, { name: "errors" }];
+
+  /// use effect to update ace editor on error to handle right scroll
+  useEffect(() => {
+    // Function to be executed after the state changes
+    const delayedFunction = setTimeout(() => {
+      if (error?.detail.error !== undefined) {
+        //trigger to update the height, does not really apply any height
+        setHeight("90%");
+      }
+      //600 to happen after the transition of 500ms
+    }, 600);
+
+    // Cleanup function to clear the timeout if the component unmounts or the state changes again
+    return () => {
+      clearTimeout(delayedFunction);
+    };
+  }, [error, setHeight]);
 
   return (
     <BaseModal open={true} setOpen={setOpen}>
@@ -129,6 +145,7 @@ export default function CodeAreaModal({
             <AceEditor
               value={code}
               mode="python"
+              height={height ?? "100%"}
               highlightActiveLine={true}
               showPrintMargin={false}
               fontSize={14}
@@ -148,7 +165,7 @@ export default function CodeAreaModal({
               (error?.detail.error !== undefined ? "h-2/6" : "h-0")
             }
           >
-            <div className="mt-1 h-full w-full overflow-x-clip overflow-y-scroll text-left custom-scroll">
+            <div className="mt-1 h-full w-full overflow-y-auto overflow-x-clip text-left custom-scroll">
               <h1 className="text-lg text-destructive">
                 {error?.detail?.error}
               </h1>
