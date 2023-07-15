@@ -308,6 +308,11 @@ const ApiModal = forwardRef(
           }
         });
       });
+
+      if(accordionsToOpen.length == 0){
+        setOpenAccordion([]);
+      }
+      
     }
 
     const setOpen = (x: boolean) => {
