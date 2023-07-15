@@ -1,7 +1,7 @@
 import ast
 import pytest
 from fastapi import HTTPException
-from langflow.interface.custom.custom import CustomComponent
+from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.custom.constants import DEFAULT_CUSTOM_COMPONENT_CODE
 
 
