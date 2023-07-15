@@ -112,24 +112,30 @@ const ApiModal = forwardRef(
       
     ]);
 
+    function startState(){
+      tweak.current = [];
+      setTweak([]);
+      tweaksList.current = [];
+    }
+
     useEffect(() => {
 
-      if(getTweak.length == 0 && tweak?.current.length == 0 && flow["data"]["nodes"].length == 0){
-        tweak.current = [];
+      if(flow["data"]["nodes"].length == 0){
+        startState();
       }
 
       else {
         tweak.current = [];
         const t = buildTweaks(flow);
         tweak.current.push(t);
+
+        
       }
 
       filterNodes();
       
       if (Object.keys(tweaksCode).length > 0) {
-
         setActiveTab("0");
-
         setTabs([
           {
             name: "cURL",
