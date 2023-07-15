@@ -904,7 +904,7 @@ The cursor: default; property value restores the browser's default cursor style 
   }
 
   .api-modal-tabs {
-    @apply w-full h-full overflow-hidden text-center bg-muted rounded-md border
+    @apply lg:w-full h-full overflow-hidden text-center bg-muted rounded-md border sm:w-[75vw]
   }
   .api-modal-tablist-div {
     @apply flex items-center justify-between px-2
