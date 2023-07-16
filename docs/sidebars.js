@@ -19,7 +19,15 @@ module.exports = {
         "guidelines/components",
         "guidelines/features",
         "guidelines/collection",
+        "guidelines/prompt-customization",
+        "guidelines/chat-interface",
       ],
+    },
+    {
+      type: "category",
+      label: "Step-by-Step Guides",
+      collapsed: false,
+      items: ["guides/loading_document", "guides/chatprompttemplate_guide"],
     },
     // {
     //   type: 'category',
