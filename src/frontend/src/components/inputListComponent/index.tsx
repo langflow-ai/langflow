@@ -14,6 +14,12 @@ export default function InputListComponent({
   const [inputList, setInputList] = useState(value ?? [""]);
 
   useEffect(() => {
+    if (value) {
+      setInputList(value);
+    }
+  }, [value]);
+
+  useEffect(() => {
     if (disabled) {
       setInputList([""]);
       onChange([""]);

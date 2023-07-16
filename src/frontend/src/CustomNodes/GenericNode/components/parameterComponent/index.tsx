@@ -1,3 +1,4 @@
+import { cloneDeep } from "lodash";
 import { Info } from "lucide-react";
 import React, { useContext, useEffect, useRef, useState } from "react";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
@@ -31,6 +32,7 @@ export default function ParameterComponent({
   left,
   id,
   data,
+  setData,
   tooltipTitle,
   title,
   color,
@@ -62,10 +64,13 @@ export default function ParameterComponent({
   const { reactFlowInstance } = useContext(typesContext);
   let disabled =
     reactFlowInstance?.getEdges().some((e) => e.targetHandle === id) ?? false;
-  const [myData, setMyData] = useState(useContext(typesContext).data);
+
+  const { data: myData } = useContext(typesContext);
 
   const handleOnNewValue = (newValue: any) => {
-    data.node.template[name].value = newValue;
+    let newData = cloneDeep(data);
+    newData.node.template[name].value = newValue;
+    setData(newData);
     // Set state to pending
     setTabsState((prev) => {
       return {
