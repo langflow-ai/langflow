@@ -6,24 +6,24 @@ import { TabsContext } from "../../../../contexts/tabsContext";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import { classNames } from "../../../../utils";
 
-const NodeToolbarComponent = (props) => {
+export default function NodeToolbarComponent({ data, deleteNode }) {
   const [nodeLength, setNodeLength] = useState(
-    Object.keys(props.data.node.template).filter(
+    Object.keys(data.node.template).filter(
       (t) =>
         t.charAt(0) !== "_" &&
-        props.data.node.template[t].show &&
-        (props.data.node.template[t].type === "str" ||
-          props.data.node.template[t].type === "bool" ||
-          props.data.node.template[t].type === "float" ||
-          props.data.node.template[t].type === "code" ||
-          props.data.node.template[t].type === "prompt" ||
-          props.data.node.template[t].type === "file" ||
-          props.data.node.template[t].type === "Any" ||
-          props.data.node.template[t].type === "int")
+        data.node.template[t].show &&
+        (data.node.template[t].type === "str" ||
+          data.node.template[t].type === "bool" ||
+          data.node.template[t].type === "float" ||
+          data.node.template[t].type === "code" ||
+          data.node.template[t].type === "prompt" ||
+          data.node.template[t].type === "file" ||
+          data.node.template[t].type === "Any" ||
+          data.node.template[t].type === "int")
     ).length
   );
 
-  const { setLastCopiedSelection, paste } = useContext(TabsContext);
+  const { paste } = useContext(TabsContext);
   const reactFlowInstance = useReactFlow();
   return (
     <>
@@ -33,7 +33,7 @@ const NodeToolbarComponent = (props) => {
             <button
               className="relative inline-flex items-center rounded-l-md  bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
               onClick={() => {
-                props.deleteNode(props.data.id);
+                deleteNode(data.id);
               }}
             >
               <Trash2 className="h-4 w-4"></Trash2>
@@ -49,14 +49,14 @@ const NodeToolbarComponent = (props) => {
                 event.preventDefault();
                 paste(
                   {
-                    nodes: [reactFlowInstance.getNode(props.data.id)],
+                    nodes: [reactFlowInstance.getNode(data.id)],
                     edges: [],
                   },
                   {
                     x: 50,
                     y: 10,
-                    paneX: reactFlowInstance.getNode(props.data.id).position.x,
-                    paneY: reactFlowInstance.getNode(props.data.id).position.y,
+                    paneX: reactFlowInstance.getNode(data.id).position.x,
+                    paneY: reactFlowInstance.getNode(data.id).position.y,
                   }
                 );
               }}
@@ -67,25 +67,23 @@ const NodeToolbarComponent = (props) => {
 
           <ShadTooltip
             content={
-              props.data.node.documentation === ""
-                ? "Coming Soon"
-                : "Documentation"
+              data.node.documentation === "" ? "Coming Soon" : "Documentation"
             }
             side="top"
           >
             <a
               className={classNames(
                 "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
-                  (props.data.node.documentation === ""
+                  (data.node.documentation === ""
                     ? " text-muted-foreground"
                     : " text-foreground")
               )}
               target="_blank"
               rel="noopener noreferrer"
-              href={props.data.node.documentation}
+              href={data.node.documentation}
               // deactivate link if no documentation is provided
               onClick={(event) => {
-                if (props.data.node.documentation === "") {
+                if (data.node.documentation === "") {
                   event.preventDefault();
                 }
               }}
@@ -95,7 +93,7 @@ const NodeToolbarComponent = (props) => {
           </ShadTooltip>
 
           <ShadTooltip content="Edit" side="top">
-            <EditNodeModal data={props.data} nodeLength={nodeLength}>
+            <EditNodeModal data={data} nodeLength={nodeLength}>
               <div
                 className={classNames(
                   "relative -ml-px inline-flex items-center rounded-r-md bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
@@ -112,6 +110,4 @@ const NodeToolbarComponent = (props) => {
       </div>
     </>
   );
-};
-
-export default NodeToolbarComponent;
+}

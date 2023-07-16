@@ -20,7 +20,6 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
-import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
@@ -42,22 +41,15 @@ const EditNodeModal = forwardRef(
   ) => {
     const [modalOpen, setModalOpen] = useState(false);
     const [nodeValue, setNodeValue] = useState(null);
-    const { types } = useContext(typesContext);
     const { setTabsState, tabId } = useContext(TabsContext);
     const { reactFlowInstance } = useContext(typesContext);
-    const { closePopUp } = useContext(PopUpContext);
 
     let disabled =
       reactFlowInstance?.getEdges().some((e) => e.targetHandle === data.id) ??
       false;
 
-    function changeAdvanced(node) {
-      Object.keys(data.node.template).map((n, i) => {
-        if (n === node.name) {
-          data.node.template[n].advanced = !data.node.template[n].advanced;
-        }
-        return n;
-      });
+    function changeAdvanced(n) {
+      data.node.template[n].advanced = !data.node.template[n].advanced;
       setNodeValue(!nodeValue);
     }
 
@@ -75,15 +67,8 @@ const EditNodeModal = forwardRef(
       });
     };
 
-    const setOpen = (x: boolean) => {
-      if (!x) {
-        closePopUp();
-      }
-      if (nodeLength > 0) setModalOpen(x);
-    };
-
     return (
-      <BaseModal size="large-h-full" open={modalOpen} setOpen={setOpen}>
+      <BaseModal size="large-h-full" open={modalOpen} setOpen={setModalOpen}>
         <BaseModal.Trigger>{children}</BaseModal.Trigger>
         <BaseModal.Header description={data.node?.description}>
           <span className="pr-2">{data.type}</span>
@@ -279,9 +264,7 @@ const EditNodeModal = forwardRef(
                               <div className="items-center text-center">
                                 <ToggleShadComponent
                                   enabled={!data.node.template[n].advanced}
-                                  setEnabled={(e) =>
-                                    changeAdvanced(data.node.template[n])
-                                  }
+                                  setEnabled={(e) => changeAdvanced(n)}
                                   disabled={disabled}
                                   size="small"
                                 />
