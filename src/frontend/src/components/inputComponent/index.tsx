@@ -11,13 +11,11 @@ export default function InputComponent({
   password,
   editNode = false,
 }: InputComponentType) {
-  const [myValue, setMyValue] = useState(value ?? "");
   const [pwdVisible, setPwdVisible] = useState(false);
   const { setDisableCopyPaste } = useContext(TabsContext);
 
   useEffect(() => {
     if (disabled) {
-      setMyValue("");
       onChange("");
     }
   }, [disabled, onChange]);
@@ -25,7 +23,7 @@ export default function InputComponent({
   return (
     <div className={disabled ? "input-component-div" : "relative"}>
       <input
-        value={myValue}
+        value={value}
         onFocus={() => {
           if (disableCopyPaste) setDisableCopyPaste(true);
         }}
@@ -34,16 +32,13 @@ export default function InputComponent({
         }}
         className={classNames(
           disabled ? " input-disable " : "",
-          password && !pwdVisible && myValue !== ""
-            ? " text-clip password "
-            : "",
+          password && !pwdVisible && value !== "" ? " text-clip password " : "",
           editNode ? " input-edit-node " : " input-primary ",
           password && editNode ? "pr-8" : "",
           password && !editNode ? "pr-10" : ""
         )}
         placeholder={password && editNode ? "Key" : "Type something..."}
         onChange={(e) => {
-          setMyValue(e.target.value);
           onChange(e.target.value);
         }}
       />

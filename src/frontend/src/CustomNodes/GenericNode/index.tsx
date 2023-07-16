@@ -17,15 +17,16 @@ import {
 import ParameterComponent from "./components/parameterComponent";
 
 export default function GenericNode({
-  data,
+  data: olddata,
   selected,
 }: {
   data: NodeDataType;
   selected: boolean;
 }) {
+  const [data, setData] = useState(olddata);
   const { setErrorData } = useContext(alertContext);
   const showError = useRef(true);
-  const { types, deleteNode } = useContext(typesContext);
+  const { types, deleteNode, reactFlowInstance } = useContext(typesContext);
   // any to avoid type conflict
   const Icon: any =
     nodeIconsLucide[data.type] || nodeIconsLucide[types[data.type]];
@@ -33,6 +34,10 @@ export default function GenericNode({
   // State for outline color
   const { sseData, isBuilding } = useSSE();
   const refHtml = useRef(null);
+  useEffect(() => {
+    console.log("atualizou", data);
+    olddata = data;
+  }, [data, reactFlowInstance]);
 
   // useEffect(() => {
   //   if (reactFlowInstance) {
@@ -63,12 +68,12 @@ export default function GenericNode({
     deleteNode(data.id);
     return;
   }
-  useEffect(() => {}, [data.node.template]);
   return (
     <>
       <NodeToolbar>
         <NodeToolbarComponent
           data={data}
+          setData={setData}
           deleteNode={deleteNode}
         ></NodeToolbarComponent>
       </NodeToolbar>
@@ -184,6 +189,7 @@ export default function GenericNode({
                   !data.node.template[t].advanced ? (
                     <ParameterComponent
                       data={data}
+                      setData={setData}
                       color={
                         nodeColors[types[data.node.template[t].type]] ??
                         nodeColors[data.node.template[t].type] ??
@@ -233,6 +239,7 @@ export default function GenericNode({
               </div> */}
             <ParameterComponent
               data={data}
+              setData={setData}
               color={nodeColors[types[data.type]] ?? nodeColors.unknown}
               title={
                 data.node.output_types && data.node.output_types.length > 0

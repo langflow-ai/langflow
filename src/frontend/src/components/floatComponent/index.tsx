@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect } from "react";
 import { TabsContext } from "../../contexts/tabsContext";
 import { FloatComponentType } from "../../types/components";
 
@@ -9,7 +9,6 @@ export default function FloatComponent({
   disabled,
   editNode = false,
 }: FloatComponentType) {
-  const [myValue, setMyValue] = useState(value ?? "");
   const { setDisableCopyPaste } = useContext(TabsContext);
 
   const step = 0.1;
@@ -18,7 +17,6 @@ export default function FloatComponent({
 
   useEffect(() => {
     if (disabled) {
-      setMyValue("");
       onChange("");
     }
   }, [disabled, onChange]);
@@ -44,7 +42,7 @@ export default function FloatComponent({
           }
         }}
         max={max}
-        value={myValue}
+        value={value ?? ""}
         className={
           editNode
             ? "input-edit-node"
@@ -54,7 +52,6 @@ export default function FloatComponent({
           editNode ? "Number 0 to 1" : "Type a number from zero to one"
         }
         onChange={(e) => {
-          setMyValue(e.target.value);
           onChange(e.target.value);
         }}
       />

@@ -6,7 +6,7 @@ import { TabsContext } from "../../../../contexts/tabsContext";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import { classNames } from "../../../../utils";
 
-export default function NodeToolbarComponent({ data, deleteNode }) {
+export default function NodeToolbarComponent({ data, setData, deleteNode }) {
   const [nodeLength, setNodeLength] = useState(
     Object.keys(data.node.template).filter(
       (t) =>
@@ -93,7 +93,11 @@ export default function NodeToolbarComponent({ data, deleteNode }) {
           </ShadTooltip>
 
           <ShadTooltip content="Edit" side="top">
-            <EditNodeModal data={data} nodeLength={nodeLength}>
+            <EditNodeModal
+              data={data}
+              setData={setData}
+              nodeLength={nodeLength}
+            >
               <div
                 className={classNames(
                   "relative -ml-px inline-flex items-center rounded-r-md bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +

@@ -28,6 +28,7 @@ export type DropDownComponentType = {
 };
 export type ParameterComponentType = {
   data: NodeDataType;
+  setData: (value: NodeDataType) => void;
   title: string;
   id: string;
   color: string;

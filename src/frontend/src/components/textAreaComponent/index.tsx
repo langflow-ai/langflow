@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect } from "react";
 import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
 
@@ -11,12 +11,10 @@ export default function TextAreaComponent({
   disabled,
   editNode = false,
 }: TextAreaComponentType) {
-  const [myValue, setMyValue] = useState(value);
   const { setDisableCopyPaste } = useContext(TabsContext);
 
   useEffect(() => {
     if (disabled) {
-      setMyValue("");
       onChange("");
     }
   }, [disabled, onChange]);
@@ -25,7 +23,7 @@ export default function TextAreaComponent({
     <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
       <div className="flex w-full items-center">
         <input
-          value={myValue}
+          value={value}
           onFocus={() => {
             setDisableCopyPaste(true);
           }}
@@ -40,7 +38,6 @@ export default function TextAreaComponent({
           }
           placeholder={"Type something..."}
           onChange={(e) => {
-            setMyValue(e.target.value);
             onChange(e.target.value);
           }}
         />
@@ -49,9 +46,8 @@ export default function TextAreaComponent({
             type={"text"}
             buttonText="Finishing Editing"
             modalTitle="Edit Text"
-            value={myValue}
+            value={value}
             setValue={(t: string) => {
-              setMyValue(t);
               onChange(t);
             }}
           >
