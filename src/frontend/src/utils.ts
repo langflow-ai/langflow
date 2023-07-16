@@ -876,7 +876,7 @@ export function groupByFamily(data, baseClasses, left, type) {
         });
       }
 
-      if (left === false) {
+      if(parentOutput !== "custom_components"){
         let resFil = result.filter((group) => group.family === parentOutput);
         result = resFil;
       }
