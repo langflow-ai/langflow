@@ -33,7 +33,6 @@ export default function GenericNode({
   // any to avoid type conflict
   const Icon: any =
     nodeIconsLucide[data.type] || nodeIconsLucide[types[data.type]];
-  console.log({ data, Icon, types: data.type || types[data.type], color: nodeColors[types[data.type]] })
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type]
   const [validationStatus, setValidationStatus] = useState(null);
   // State for outline color
