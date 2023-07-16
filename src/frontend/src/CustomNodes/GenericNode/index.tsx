@@ -35,15 +35,8 @@ export default function GenericNode({
   const { sseData, isBuilding } = useSSE();
   const refHtml = useRef(null);
   useEffect(() => {
-    console.log("atualizou", data);
-    olddata = data;
+    olddata.node = data.node;
   }, [data, reactFlowInstance]);
-
-  // useEffect(() => {
-  //   if (reactFlowInstance) {
-  //     setParams(Object.values(reactFlowInstance.toObject()));
-  //   }
-  // }, [save]);
 
   // New useEffect to watch for changes in sseData and update validation status
   useEffect(() => {
