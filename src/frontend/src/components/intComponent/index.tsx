@@ -1,5 +1,4 @@
-import { useContext, useEffect, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
+import { useContext, useEffect } from "react";
 import { TabsContext } from "../../contexts/tabsContext";
 import { FloatComponentType } from "../../types/components";
 
@@ -10,21 +9,14 @@ export default function IntComponent({
   disabled,
   editNode = false,
 }: FloatComponentType) {
-  const [myValue, setMyValue] = useState(value ?? "");
   const { setDisableCopyPaste } = useContext(TabsContext);
   const min = 0;
-  const { closePopUp } = useContext(PopUpContext);
 
   useEffect(() => {
     if (disabled) {
-      setMyValue("");
       onChange("");
     }
   }, [disabled, onChange]);
-
-  useEffect(() => {
-    setMyValue(value);
-  }, [closePopUp]);
 
   return (
     <div
@@ -66,7 +58,7 @@ export default function IntComponent({
             e.target.value = min.toString();
           }
         }}
-        value={myValue}
+        value={value ?? ""}
         className={
           editNode
             ? " input-edit-node "
@@ -74,7 +66,6 @@ export default function IntComponent({
         }
         placeholder={editNode ? "Integer number" : "Type an integer number"}
         onChange={(e) => {
-          setMyValue(e.target.value);
           onChange(e.target.value);
         }}
       />

@@ -6,8 +6,7 @@ import {
   Settings2,
   Undo,
 } from "lucide-react";
-import { useContext } from "react";
-import { PopUpContext } from "../../../../contexts/popUpContext";
+import { useContext, useState } from "react";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import {
   DropdownMenu,
@@ -26,8 +25,8 @@ import { Button } from "../../../ui/button";
 export const MenuBar = ({ flows, tabId }) => {
   const { updateFlow, setTabId, addFlow } = useContext(TabsContext);
   const { setErrorData } = useContext(alertContext);
-  const { openPopUp } = useContext(PopUpContext);
   const { undo, redo } = useContext(undoRedoContext);
+  const [openSettings, setOpenSettings] = useState(false);
 
   const navigate = useNavigate();
 
@@ -69,15 +68,17 @@ export const MenuBar = ({ flows, tabId }) => {
               <Plus className="header-menu-options" />
               New
             </DropdownMenuItem>
+
             <DropdownMenuItem
               onClick={() => {
-                openPopUp(<FlowSettingsModal />);
+                setOpenSettings(true);
               }}
               className="cursor-pointer"
             >
               <Settings2 className="header-menu-options " />
               Settings
             </DropdownMenuItem>
+
             <DropdownMenuItem
               onClick={() => {
                 undo();
@@ -96,32 +97,12 @@ export const MenuBar = ({ flows, tabId }) => {
               <Redo className="header-menu-options " />
               Redo
             </DropdownMenuItem>
-            {/* <DropdownMenuSeparator /> */}
-            {/* <DropdownMenuLabel>Projects</DropdownMenuLabel> */}
-            {/* <DropdownMenuRadioGroup className="max-h-full overflow-scroll"
-              value={tabId}
-              onValueChange={(value) => {
-                setTabId(value);
-              }}
-            >
-              {flows.map((flow, idx) => {
-                return (
-                  <Link
-                    to={"/flow/" + flow.id}
-                    className="flex w-full items-center"
-                  >
-                    <DropdownMenuRadioItem
-                      value={flow.id}
-                      className="flex-1 w-full inline-block truncate break-words mr-2"
-                    >
-                      {flow.name}
-                    </DropdownMenuRadioItem>
-                  </Link>
-                );
-              })}
-            </DropdownMenuRadioGroup> */}
           </DropdownMenuContent>
         </DropdownMenu>
+        <FlowSettingsModal
+          open={openSettings}
+          setOpen={setOpenSettings}
+        ></FlowSettingsModal>
       </div>
     </div>
   );

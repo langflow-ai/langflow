@@ -1,7 +1,4 @@
-// organize-imports-ignore
-import { useContext, useEffect, useRef, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
-import AceEditor from "react-ace";
+import "ace-builds/src-noconflict/ace";
 import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
@@ -10,7 +7,7 @@ import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/ace";
 // import "ace-builds/webpack-resolver";
 import { TerminalSquare } from "lucide-react";
-import { useContext, useState } from "react";
+import { ReactNode, useContext, useEffect, useState } from "react";
 import AceEditor from "react-ace";
 import { Button } from "../../components/ui/button";
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants";
@@ -24,48 +21,39 @@ import {
   TabsList,
   TabsTrigger,
 } from "../../components/ui/tabs";
+import BaseModal from "../baseModal";
 
 export default function CodeAreaModal({
   value,
   setValue,
   nodeClass,
   setNodeClass,
+  children,
   dynamic,
 }: {
   setValue: (value: string) => void;
   value: string;
   nodeClass: APIClassType;
+  children: ReactNode;
   setNodeClass: (Class: APIClassType) => void;
   dynamic?: boolean;
 }) {
   const [code, setCode] = useState(value);
   const { dark } = useContext(darkContext);
+  const [height, setHeight] = useState(null);
   const { setErrorData, setSuccessData } = useContext(alertContext);
-  const [activeTab, setActiveTab] = useState("0");
   const [error, setError] = useState<{
     detail: { error: string; traceback: string };
   }>(null);
-  const { closePopUp, setCloseEdit } = useContext(PopUpContext);
-  const { setErrorData, setSuccessData } = useContext(alertContext);
-
-  function setModalOpen(x: boolean) {
-    if (x === false) {
-      setCloseEdit("codearea");
-      closePopUp();
-    }
-  }
-  console.log(dynamic);
 
   useEffect(() => {
-    setValue(code);
-  }, [code, setValue]);
+    handleClick();
+  }, [])
 
   function handleClick() {
-    setLoading(true);
     if (!dynamic) {
       postValidateCode(code)
         .then((apiReturn) => {
-          setLoading(false);
           if (apiReturn.data) {
             let importsErrors = apiReturn.data.imports.errors;
             let funcErrors = apiReturn.data.function.errors;
@@ -95,7 +83,6 @@ export default function CodeAreaModal({
           }
         })
         .catch((_) => {
-          setLoading(false);
           setErrorData({
             title: "There is something wrong with this code, please review it",
           });
@@ -106,109 +93,71 @@ export default function CodeAreaModal({
           const { data } = apiReturn;
           if (data) {
             setNodeClass(data);
-            setModalOpen(false);
+            setOpen(false);
           }
         })
         .catch((err) => {
-          setErrorData({
-            title:
-              "There is something wrong with this code, please see the error on the errors tab",
-          });
-          console.log(err.response.data);
           setError(err.response.data);
         });
     }
-    // axios.get("/api/v1/custom_component_error").catch((err) => {
-
-    // })
   }
-  const tabs = [{ name: "code" }, { name: "errors" }];
+
+  useEffect(() => {
+    // Function to be executed after the state changes
+    const delayedFunction = setTimeout(() => {
+      if (error?.detail.error !== undefined) {
+        //trigger to update the height, does not really apply any height
+        setHeight("90%");
+      }
+      //600 to happen after the transition of 500ms
+    }, 600);
+
+    // Cleanup function to clear the timeout if the component unmounts or the state changes again
+    return () => {
+      clearTimeout(delayedFunction);
+    };
+  }, [error, setHeight]);
+
+  const [open, setOpen] = useState(false);
 
   return (
-    <Dialog open={true} onOpenChange={setModalOpen}>
-      <DialogTrigger></DialogTrigger>
-      <DialogContent className="min-w-[80vw]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center">
-            <span className="pr-2">Edit Code</span>
-            <TerminalSquare
-              strokeWidth={1.5}
-              className="h-6 w-6 pl-1 text-primary "
-              aria-hidden="true"
+    <BaseModal open={open} setOpen={setOpen}>
+      <BaseModal.Trigger>{children}</BaseModal.Trigger>
+      <BaseModal.Header description={CODE_PROMPT_DIALOG_SUBTITLE}>
+        <span className="pr-2">Edit Code</span>
+        <TerminalSquare
+          strokeWidth={1.5}
+          className="h-6 w-6 pl-1 text-primary "
+          aria-hidden="true"
+        />
+      </BaseModal.Header>
+      <BaseModal.Content>
+        <div className="flex h-full w-full flex-col transition-all">
+          <div className="h-full w-full">
+            <AceEditor
+              value={code}
+              mode="python"
+              height={height ?? "100%"}
+              highlightActiveLine={true}
+              showPrintMargin={false}
+              fontSize={14}
+              showGutter
+              enableLiveAutocompletion
+              theme={dark ? "twilight" : "github"}
+              name="CodeEditor"
+              onChange={(value) => {
+                setCode(value);
+              }}
+              className="h-full w-full rounded-lg border-[1px] border-border custom-scroll"
             />
-          </DialogTitle>
-          <DialogDescription>{CODE_PROMPT_DIALOG_SUBTITLE}</DialogDescription>
-        </DialogHeader>
-        <Tabs
-          defaultValue={"0"}
-          className="h-full w-full overflow-hidden rounded-md border bg-muted text-center"
-          onValueChange={(value) => setActiveTab(value)}
-        >
-          <div className="flex h-72 flex-col items-start px-2">
-            <TabsList>
-              {tabs.map((tab, index) => (
-                <TabsTrigger
-                  disabled={index === 1 && error?.detail.error === undefined}
-                  key={index}
-                  value={index.toString()}
-                >
-                  <span
-                    className={
-                      error?.detail.error !== undefined && index === 1
-                        ? "text-destructive"
-                        : ""
-                    }
-                  >
-                    {tab.name}
-                  </span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            {tabs.map((tab, index) => (
-              <TabsContent
-                value={index.toString()}
-                className="mt-1 h-full w-full overflow-hidden px-4 pb-4"
-              >
-                {tab.name === "code" ? (
-                  <div className="h-full w-full">
-                    <AceEditor
-                      value={code}
-                      mode="python"
-                      highlightActiveLine={true}
-                      showPrintMargin={false}
-                      fontSize={14}
-                      showGutter
-                      enableLiveAutocompletion
-                      theme={dark ? "twilight" : "github"}
-                      name="CodeEditor"
-                      onChange={(value) => {
-                        setCode(value);
-                      }}
-                      className="h-full w-full rounded-lg border-[1px] border-gray-300 custom-scroll dark:border-gray-600"
-                    />
-                  </div>
-                ) : (
-                  <div className="flex h-full  w-full flex-col overflow-scroll bg-red-200 p-2 text-left custom-scroll">
-                    <h1 className="text-lg text-red-600">
-                      {error?.detail?.error}
-                    </h1>
-                    <span className="w-full border border-red-300"></span>
-                    <div className="text-sm text-red-500">
-                      {error?.detail?.traceback}
-                    </div>
-                  </div>
-                )}
-              </TabsContent>
-            ))}
           </div>
-        </Tabs>
-        <DialogFooter>
-          <Button className="mt-3" onClick={handleClick} type="submit">
-            {/* {loading?(<Loading/>):'Check & Save'} */}
-            Check & Save
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <div className="flex h-fit w-full justify-end">
+            <Button className="mt-3" onClick={handleClick} type="submit">
+              Check & Save
+            </Button>
+          </div>
+        </div>
+      </BaseModal.Content>
+    </BaseModal>
   );
 }

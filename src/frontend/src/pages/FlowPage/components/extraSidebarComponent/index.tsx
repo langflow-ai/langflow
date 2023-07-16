@@ -3,7 +3,6 @@ import { useContext, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import { Separator } from "../../../../components/ui/separator";
 import { alertContext } from "../../../../contexts/alertContext";
-import { PopUpContext } from "../../../../contexts/popUpContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import ApiModal from "../../../../modals/ApiModal";
@@ -19,7 +18,6 @@ import DisclosureComponent from "../DisclosureComponent";
 
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);
-  const { openPopUp } = useContext(PopUpContext);
   const { flows, tabId, uploadFlow, tabsState, saveFlow } =
     useContext(TabsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
@@ -56,6 +54,7 @@ export default function ExtraSidebar() {
       return ret;
     });
   }
+  const flow = flows.find((f) => f.id === tabId);
 
   return (
     <div className="side-bar-arrangement">
@@ -64,7 +63,6 @@ export default function ExtraSidebar() {
           <button
             className="extra-side-bar-buttons"
             onClick={() => {
-              // openPopUp(<ImportModal />);
               uploadFlow();
             }}
           >
@@ -76,34 +74,33 @@ export default function ExtraSidebar() {
         </ShadTooltip>
 
         <ShadTooltip content="Export" side="top">
-          <button
-            className={classNames("extra-side-bar-buttons")}
-            onClick={(event) => {
-              openPopUp(<ExportModal />);
-            }}
-          >
-            <FileDown
-              strokeWidth={1.5}
-              className="side-bar-button-size"
-            ></FileDown>
-          </button>
+          <ExportModal>
+            <div className={classNames("extra-side-bar-buttons")}>
+              <FileDown
+                strokeWidth={1.5}
+                className="side-bar-button-size"
+              ></FileDown>
+            </div>
+          </ExportModal>
         </ShadTooltip>
         <ShadTooltip content="Code" side="top">
-          <button
-            className={classNames("extra-side-bar-buttons")}
-            onClick={(event) => {
-              openPopUp(<ApiModal flow={flows.find((f) => f.id === tabId)} />);
-            }}
-          >
-            <Code2 strokeWidth={1.5} className="side-bar-button-size"></Code2>
-          </button>
+          {flow && flow.data && (
+            <ApiModal flow={flow}>
+              <div className={classNames("extra-side-bar-buttons")}>
+                <Code2
+                  strokeWidth={1.5}
+                  className="side-bar-button-size"
+                ></Code2>
+              </div>
+            </ApiModal>
+          )}
         </ShadTooltip>
 
         <ShadTooltip content="Save" side="top">
           <button
             className="extra-side-bar-buttons"
             onClick={(event) => {
-              saveFlow(flows.find((f) => f.id === tabId));
+              saveFlow(flow);
               setSuccessData({ title: "Changes saved successfully" });
             }}
             disabled={!isPending}

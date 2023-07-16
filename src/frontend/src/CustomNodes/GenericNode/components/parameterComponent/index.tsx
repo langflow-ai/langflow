@@ -1,3 +1,4 @@
+import { cloneDeep } from "lodash";
 import { Info } from "lucide-react";
 import React, { useContext, useEffect, useRef, useState } from "react";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
@@ -13,7 +14,6 @@ import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { MAX_LENGTH_TO_SCROLL_TOOLTIP } from "../../../../constants";
-import { PopUpContext } from "../../../../contexts/popUpContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
@@ -32,6 +32,7 @@ export default function ParameterComponent({
   left,
   id,
   data,
+  setData,
   tooltipTitle,
   title,
   color,
@@ -47,7 +48,6 @@ export default function ParameterComponent({
   const infoHtml = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
-  const { closePopUp } = useContext(PopUpContext);
   const { setTabsState, tabId, save } = useContext(TabsContext);
 
   useEffect(() => {
@@ -61,15 +61,16 @@ export default function ParameterComponent({
     updateNodeInternals(data.id);
   }, [data.id, position, updateNodeInternals]);
 
-  useEffect(() => {}, [closePopUp, data.node.template]);
-
   const { reactFlowInstance } = useContext(typesContext);
   let disabled =
     reactFlowInstance?.getEdges().some((e) => e.targetHandle === id) ?? false;
-  const [myData, setMyData] = useState(useContext(typesContext).data);
+
+  const { data: myData } = useContext(typesContext);
 
   const handleOnNewValue = (newValue: any) => {
-    data.node.template[name].value = newValue;
+    let newData = cloneDeep(data);
+    newData.node.template[name].value = newValue;
+    setData(newData);
     // Set state to pending
     setTabsState((prev) => {
       return {

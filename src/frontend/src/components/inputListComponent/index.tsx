@@ -1,9 +1,8 @@
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { InputListComponentType } from "../../types/components";
 
 import _ from "lodash";
 import { Plus, X } from "lucide-react";
-import { PopUpContext } from "../../contexts/popUpContext";
 
 export default function InputListComponent({
   value,
@@ -13,7 +12,12 @@ export default function InputListComponent({
   onAddInput,
 }: InputListComponentType) {
   const [inputList, setInputList] = useState(value ?? [""]);
-  const { closePopUp } = useContext(PopUpContext);
+
+  useEffect(() => {
+    if (value) {
+      setInputList(value);
+    }
+  }, [value]);
 
   useEffect(() => {
     if (disabled) {
@@ -21,10 +25,6 @@ export default function InputListComponent({
       onChange([""]);
     }
   }, [disabled, onChange]);
-
-  useEffect(() => {
-    setInputList(value);
-  }, [closePopUp]);
 
   return (
     <div

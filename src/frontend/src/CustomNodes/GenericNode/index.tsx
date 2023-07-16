@@ -5,9 +5,7 @@ import ShadTooltip from "../../components/ShadTooltipComponent";
 import Tooltip from "../../components/TooltipComponent";
 import { useSSE } from "../../contexts/SSEContext";
 import { alertContext } from "../../contexts/alertContext";
-import { PopUpContext } from "../../contexts/popUpContext";
 import { typesContext } from "../../contexts/typesContext";
-import NodeModal from "../../modals/NodeModal";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { NodeDataType } from "../../types/flow";
 import {
@@ -19,17 +17,16 @@ import {
 import ParameterComponent from "./components/parameterComponent";
 
 export default function GenericNode({
-  data,
+  data: olddata,
   selected,
 }: {
   data: NodeDataType;
   selected: boolean;
 }) {
+  const [data, setData] = useState(olddata);
   const { setErrorData } = useContext(alertContext);
   const showError = useRef(true);
-  const { types, deleteNode } = useContext(typesContext);
-
-  const { closePopUp, openPopUp } = useContext(PopUpContext);
+  const { types, deleteNode, reactFlowInstance } = useContext(typesContext);
   // any to avoid type conflict
   const Icon: any =
     nodeIconsLucide[data.type] || nodeIconsLucide[types[data.type]];
@@ -37,12 +34,9 @@ export default function GenericNode({
   // State for outline color
   const { sseData, isBuilding } = useSSE();
   const refHtml = useRef(null);
-
-  // useEffect(() => {
-  //   if (reactFlowInstance) {
-  //     setParams(Object.values(reactFlowInstance.toObject()));
-  //   }
-  // }, [save]);
+  useEffect(() => {
+    olddata.node = data.node;
+  }, [data, reactFlowInstance]);
 
   // New useEffect to watch for changes in sseData and update validation status
   useEffect(() => {
@@ -67,13 +61,12 @@ export default function GenericNode({
     deleteNode(data.id);
     return;
   }
-  useEffect(() => {}, [closePopUp, data.node.template]);
   return (
     <>
       <NodeToolbar>
         <NodeToolbarComponent
           data={data}
-          openPopUp={openPopUp}
+          setData={setData}
           deleteNode={deleteNode}
         ></NodeToolbarComponent>
       </NodeToolbar>
@@ -100,15 +93,6 @@ export default function GenericNode({
                 </div>
               </ShadTooltip>
             </div>
-          </div>
-          <div className="round-button-div">
-            <button
-              className="relative"
-              onClick={(event) => {
-                event.preventDefault();
-                openPopUp(<NodeModal data={data} />);
-              }}
-            ></button>
           </div>
           <div className="round-button-div">
             <div>
@@ -198,6 +182,7 @@ export default function GenericNode({
                   !data.node.template[t].advanced ? (
                     <ParameterComponent
                       data={data}
+                      setData={setData}
                       color={
                         nodeColors[types[data.node.template[t].type]] ??
                         nodeColors[data.node.template[t].type] ??
@@ -242,21 +227,23 @@ export default function GenericNode({
             >
               {" "}
             </div>
-            {data.node.base_classes?.length > 0 && (
-              <ParameterComponent
-                data={data}
-                color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-                title={
-                  data.node.output_types && data.node.output_types.length > 0
-                    ? data.node.output_types.join("|")
-                    : data.type
-                }
-                tooltipTitle={data.node.base_classes.join("\n")}
-                id={[data.type, data.id, ...data.node.base_classes].join("|")}
-                type={data.node.base_classes.join("|")}
-                left={false}
-              />
-            )}
+            {/* <div className="px-5 py-2 mt-2 text-center">
+                  Output
+              </div> */}
+            <ParameterComponent
+              data={data}
+              setData={setData}
+              color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+              title={
+                data.node.output_types && data.node.output_types.length > 0
+                  ? data.node.output_types.join("|")
+                  : data.type
+              }
+              tooltipTitle={data.node.base_classes.join("\n")}
+              id={[data.type, data.id, ...data.node.base_classes].join("|")}
+              type={data.node.base_classes.join("|")}
+              left={false}
+            />
           </>
         </div>
       </div>

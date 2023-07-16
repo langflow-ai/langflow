@@ -16,6 +16,8 @@ export default function AccordionComponent({
     open.length === 0 ? "" : getOpenAccordion()
   );
 
+  console.log(open);
+
   function getOpenAccordion() {
     let value = "";
     open.forEach((el) => {

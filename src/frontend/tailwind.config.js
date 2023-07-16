@@ -132,7 +132,7 @@ module.exports = {
       keyframes: {
         slideDown: {
           from: { height: 0 },
-          to: { height: 100 },
+          to: { height: "100vh" },
         },
         slideUp: {
           from: { height: "var(--radix-accordion-content-height)" },
