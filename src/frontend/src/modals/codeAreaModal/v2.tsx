@@ -36,7 +36,6 @@ export default function CodeAreaModal({
   const [loading, setLoading] = useState(false);
   const { dark } = useContext(darkContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
-  const [activeTab, setActiveTab] = useState("0");
   const [height, setHeight] = useState(null);
   const [error, setError] = useState<{
     detail: { error: string; traceback: string };
@@ -54,6 +53,10 @@ export default function CodeAreaModal({
   useEffect(() => {
     setValue(code);
   }, [code, setValue]);
+
+  useEffect(() => {
+    handleClick();
+  }, [])
 
   function handleClick() {
     setLoading(true);
