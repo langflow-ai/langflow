@@ -165,10 +165,12 @@ export interface IVarHighlightType {
 export type IconProps = {
   name: string;
   style: string;
+  iconColor?: string;
 };
 
 export type IconComponentProps = {
   method: "SVG" | "LUCIDE";
   name: string;
   style: string;
+  iconColor?: string;
 };

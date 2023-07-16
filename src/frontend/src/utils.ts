@@ -136,7 +136,7 @@ export enum TypeModal {
 }
 
 export const svgIcons = {
-  Airbyte: SvgAirbyte,
+  /* Airbyte: SvgAirbyte,
   Anthropic: SvgAnthropicBox,
   Bing: SvgBing,
   Chroma: SvgChroma,
@@ -165,7 +165,7 @@ export const svgIcons = {
   Weaviate: SvgWeaviate,
   Wikipedia: SvgWikipedia,
   Wolfram: SvgWolfram,
-  Word: SvgWord,
+  Word: SvgWord, */
 };
 
 export const textColors = {
