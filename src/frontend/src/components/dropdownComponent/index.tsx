@@ -1,6 +1,6 @@
 import { Listbox, Transition } from "@headlessui/react";
 import { Check, ChevronsUpDown } from "lucide-react";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { DropDownComponentType } from "../../types/components";
 import { classNames } from "../../utils";
 
@@ -15,6 +15,10 @@ export default function Dropdown({
   let [internalValue, setInternalValue] = useState(
     value === "" || !value ? "Choose an option" : value
   );
+
+  useEffect(() => {
+    setInternalValue(value === "" || !value ? "Choose an option" : value);
+  }, [value]);
 
   return (
     <>
