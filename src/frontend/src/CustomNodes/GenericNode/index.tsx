@@ -28,11 +28,13 @@ export default function GenericNode({
   const { setErrorData } = useContext(alertContext);
   const showError = useRef(true);
   const { types, deleteNode } = useContext(typesContext);
-
+  
   const { closePopUp, openPopUp } = useContext(PopUpContext);
   // any to avoid type conflict
   const Icon: any =
     nodeIconsLucide[data.type] || nodeIconsLucide[types[data.type]];
+  console.log({ data, Icon, types: data.type || types[data.type], color: nodeColors[types[data.type]] })
+  const name = nodeIconsLucide[data.type] ? data.type : types[data.type]
   const [validationStatus, setValidationStatus] = useState(null);
   // State for outline color
   const { sseData, isBuilding } = useSSE();
@@ -86,12 +88,11 @@ export default function GenericNode({
       >
         <div className="generic-node-div-title">
           <div className="generic-node-title-arrangement">
-            <Icon
-              strokeWidth={1.5}
-              className="generic-node-icon"
-              style={{
-                color: nodeColors[types[data.type]] ?? nodeColors.unknown,
-              }}
+            <IconComponent
+              name={name}
+              style="generic-node-icon"
+              method="LUCIDE"
+              iconColor={`${nodeColors[types[data.type]]}`}
             />
             <div className="generic-node-tooltip-div">
               <ShadTooltip content={data.node.display_name}>
