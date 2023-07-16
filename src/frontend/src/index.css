@@ -212,11 +212,11 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply focus:placeholder-transparent focus:ring-ring focus:border-ring
   }
   .input-primary {
-    @apply bg-background block border-border form-input px-3 placeholder:text-muted-foreground rounded-md shadow-sm sm:text-sm truncate w-full;
+    @apply bg-background text-left block border-border form-input px-3 placeholder:text-muted-foreground rounded-md shadow-sm sm:text-sm truncate w-full;
   }
 
   .input-edit-node{
-    @apply input-primary border-border placeholder:text-center pt-0.5 pb-0.5 text-center
+    @apply input-primary border-border pt-0.5 pb-0.5
   }
   .input-search{
     @apply input-primary pr-7 mx-2
@@ -904,7 +904,7 @@ The cursor: default; property value restores the browser's default cursor style 
   }
 
   .api-modal-tabs {
-    @apply w-full h-full overflow-hidden text-center bg-muted rounded-md border
+    @apply lg:w-full h-full overflow-hidden text-center bg-muted rounded-md border sm:w-[75vw]
   }
   .api-modal-tablist-div {
     @apply flex items-center justify-between px-2

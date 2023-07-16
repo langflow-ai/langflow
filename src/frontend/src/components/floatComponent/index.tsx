@@ -1,5 +1,4 @@
-import { useContext, useEffect, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
+import { useContext, useEffect } from "react";
 import { TabsContext } from "../../contexts/tabsContext";
 import { FloatComponentType } from "../../types/components";
 
@@ -10,9 +9,7 @@ export default function FloatComponent({
   disabled,
   editNode = false,
 }: FloatComponentType) {
-  const [myValue, setMyValue] = useState(value ?? "");
   const { setDisableCopyPaste } = useContext(TabsContext);
-  const { closePopUp } = useContext(PopUpContext);
 
   const step = 0.1;
   const min = 0;
@@ -20,14 +17,9 @@ export default function FloatComponent({
 
   useEffect(() => {
     if (disabled) {
-      setMyValue("");
       onChange("");
     }
   }, [disabled, onChange]);
-
-  useEffect(() => {
-    setMyValue(value);
-  }, [closePopUp]);
 
   return (
     <div className={"w-full " + (disabled ? "float-component-pointer" : "")}>
@@ -50,7 +42,7 @@ export default function FloatComponent({
           }
         }}
         max={max}
-        value={myValue}
+        value={value ?? ""}
         className={
           editNode
             ? "input-edit-node"
@@ -60,7 +52,6 @@ export default function FloatComponent({
           editNode ? "Number 0 to 1" : "Type a number from zero to one"
         }
         onChange={(e) => {
-          setMyValue(e.target.value);
           onChange(e.target.value);
         }}
       />

@@ -59,11 +59,6 @@ export function classNames(...classes: Array<string>) {
 
 export const limitScrollFieldsModal = 10;
 
-export enum TypeModal {
-  TEXT = 1,
-  PROMPT = 2,
-}
-
 export const textColors = {
   white: "text-white",
   red: "text-red-700",
