@@ -17,7 +17,6 @@ export default function AccordionComponent({
   );
 
   console.log(open);
-  
 
   function getOpenAccordion() {
     let value = "";

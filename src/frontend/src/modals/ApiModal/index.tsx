@@ -50,7 +50,6 @@ import { TabsContext } from "../../contexts/tabsContext";
 import { FlowType } from "../../types/flow/index";
 import { buildTweaks, classNames } from "../../utils";
 import BaseModal from "../baseModal";
-import { PopUpContext } from "../../contexts/popUpContext";
 
 const ApiModal = forwardRef(
   (
@@ -63,14 +62,13 @@ const ApiModal = forwardRef(
     },
     ref
   ) => {
-
     const [activeTab, setActiveTab] = useState("0");
+    const [open, setOpen] = useState(false);
     const [isCopied, setIsCopied] = useState<Boolean>(false);
     const [openAccordion, setOpenAccordion] = useState([]);
     const tweak = useRef([]);
     const tweaksList = useRef([]);
     const { setTweak, getTweak, tabsState } = useContext(TabsContext);
-    const { closePopUp } = useContext(PopUpContext);
 
     const copyToClipboard = () => {
       if (!navigator.clipboard || !navigator.clipboard.writeText) {
@@ -109,29 +107,25 @@ const ApiModal = forwardRef(
         image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
         code: pythonCode,
       },
-      
     ]);
 
-    function startState(){
+    function startState() {
       tweak.current = [];
       setTweak([]);
       tweaksList.current = [];
     }
 
     useEffect(() => {
-
-      if(flow["data"]["nodes"].length == 0){
+      if (flow["data"]["nodes"].length == 0) {
         startState();
-      }
-
-      else {
+      } else {
         tweak.current = [];
         const t = buildTweaks(flow);
         tweak.current.push(t);
       }
 
       filterNodes();
-      
+
       if (Object.keys(tweaksCode).length > 0) {
         setActiveTab("0");
         setTabs([
@@ -159,12 +153,9 @@ const ApiModal = forwardRef(
             mode: "python",
             image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
             code: pythonCode,
-          }
-    
-        ])
-      }
-
-      else{
+          },
+        ]);
+      } else {
         setTabs([
           {
             name: "cURL",
@@ -184,13 +175,10 @@ const ApiModal = forwardRef(
             mode: "python",
             image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
             code: pythonCode,
-          }
-    
-        ])
+          },
+        ]);
       }
-      
-    }, [flow["data"]["nodes"], closePopUp]);
-
+    }, [flow["data"]["nodes"], open]);
 
     function filterNodes() {
       let arrNodesWithValues = [];
@@ -309,20 +297,13 @@ const ApiModal = forwardRef(
         });
       });
 
-      if(accordionsToOpen.length == 0){
+      if (accordionsToOpen.length == 0) {
         setOpenAccordion([]);
       }
-      
     }
 
-    const setOpen = (x: boolean) => {
-      if(x) {
-        closePopUp();
-      }
-    };
-
     return (
-      <BaseModal setOpen={setOpen}>
+      <BaseModal open={open} setOpen={setOpen}>
         <BaseModal.Trigger>{children}</BaseModal.Trigger>
         <BaseModal.Header description={EXPORT_CODE_DIALOG}>
           <span className="pr-2">Code</span>
