@@ -12,7 +12,6 @@ import ChatMessage from "./chatMessage";
 import _ from "lodash";
 import AccordionComponent from "../../components/AccordionComponent";
 import ToggleShadComponent from "../../components/toggleShadComponent";
-import { AccordionItem } from "../../components/ui/accordion";
 import { Badge } from "../../components/ui/badge";
 import {
   Dialog,
@@ -420,10 +419,8 @@ export default function FormModal({
                 </div>
               </div>
 
-
               {Object.keys(tabsState[id.current].formKeysData.input_keys).map(
                 (i, k) => (
-                  
                   <div className="file-component-accordion-div" key={k}>
                     <AccordionComponent
                       trigger={
@@ -484,7 +481,7 @@ export default function FormModal({
                 )
               )}
               {tabsState[id.current].formKeysData.memory_keys.map((i, k) => (
-                  <div className="file-component-accordion-div" key={k}>
+                <div className="file-component-accordion-div" key={k}>
                   <AccordionComponent
                     trigger={
                       <div className="file-component-badge-div">
@@ -523,9 +520,7 @@ export default function FormModal({
                         </div>
                       )}
                       <Textarea
-                        value={
-                          tabsState[id.current].formKeysData.input_keys[i]
-                        }
+                        value={tabsState[id.current].formKeysData.input_keys[i]}
                         onChange={(e) => {
                           setTabsState((old) => {
                             let newTabsState = _.cloneDeep(old);

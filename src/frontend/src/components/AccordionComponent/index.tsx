@@ -34,7 +34,12 @@ export default function AccordionComponent({
 
   return (
     <>
-      <Accordion type="single" className="w-full" value={value} onValueChange={setValue}>
+      <Accordion
+        type="single"
+        className="w-full"
+        value={value}
+        onValueChange={setValue}
+      >
         <AccordionItem value={keyValue} className="border-b">
           <AccordionTrigger
             onClick={() => {
