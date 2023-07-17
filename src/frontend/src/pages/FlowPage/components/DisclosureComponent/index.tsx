@@ -29,7 +29,6 @@ export default function DisclosureComponent({
                     style={`${
                       open || openDisc ? "rotate-90 transform" : ""
                     } h-4 w-4 text-foreground`}
-                    method="LUCIDE"
                   />
                 </div>
               </div>

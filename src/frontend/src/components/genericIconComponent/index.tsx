@@ -11,16 +11,10 @@ export function IconFromLucide({
 }
 
 export default function IconComponent({
-  method,
   name,
   style,
   iconColor,
 }: IconComponentProps): JSX.Element {
-  switch (method) {
-    case "LUCIDE":
-      return <IconFromLucide name={name} style={style} iconColor={iconColor} />;
-    default:
-      console.error("IconComponent: invalid method");
-      return <IconFromLucide name={"unknown"} style={"unknown"} />;
-  }
+  const TargetIcon = nodeIconsLucide[name] ?? nodeIconsLucide["unknown"];
+  return <TargetIcon className={style} style={{ color: iconColor }} />;
 }

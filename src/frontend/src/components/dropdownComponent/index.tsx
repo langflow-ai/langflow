@@ -47,7 +47,6 @@ export default function Dropdown({
                 </span>
                 <span className={"dropdown-component-arrow"}>
                   <IconComponent
-                    method="LUCIDE"
                     name="ChevronsUpDown"
                     style="dropdown-component-arrow-color"
                     aria-hidden="true"
@@ -102,7 +101,6 @@ export default function Dropdown({
                               )}
                             >
                               <IconComponent
-                                method="LUCIDE"
                                 name="Check"
                                 style={
                                   active

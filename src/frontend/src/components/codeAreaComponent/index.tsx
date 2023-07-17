@@ -72,7 +72,6 @@ export default function CodeAreaComponent({
           {!editNode && (
             <IconComponent
               name="ExternalLink"
-              method="LUCIDE"
               style={
                 "icons-parameters-comp" +
                 (disabled ? " text-ring" : " hover:text-accent-foreground")

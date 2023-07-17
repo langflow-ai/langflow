@@ -36,7 +36,7 @@ const NodeToolbarComponent = (props) => {
                 props.deleteNode(props.data.id);
               }}
             >
-              <IconComponent name="Trash2" style="h-4 w-4" method="LUCIDE" />
+              <IconComponent name="Trash2" style="h-4 w-4" />
             </button>
           </ShadTooltip>
 
@@ -61,7 +61,7 @@ const NodeToolbarComponent = (props) => {
                 );
               }}
             >
-              <IconComponent name="Copy" style="h-4 w-4" method="LUCIDE" />
+              <IconComponent name="Copy" style="h-4 w-4" />
             </button>
           </ShadTooltip>
 
@@ -90,7 +90,7 @@ const NodeToolbarComponent = (props) => {
                 }
               }}
             >
-              <IconComponent name="FileText" style="h-4 w-4 " method="LUCIDE" />
+              <IconComponent name="FileText" style="h-4 w-4 " />
             </a>
           </ShadTooltip>
 
@@ -110,11 +110,7 @@ const NodeToolbarComponent = (props) => {
                 props.openPopUp(<EditNodeModal data={props.data} />);
               }}
             >
-              <IconComponent
-                name="Settings2"
-                style="h-4 w-4 "
-                method="LUCIDE"
-              />
+              <IconComponent name="Settings2" style="h-4 w-4 " />
             </button>
           </ShadTooltip>
         </span>

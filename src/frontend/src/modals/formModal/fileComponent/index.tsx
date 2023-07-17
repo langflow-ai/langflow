@@ -44,7 +44,6 @@ export default function FileCard({ fileName, content, fileType }) {
               <IconComponent
                 name="DownloadCloud"
                 style="h-5 w-5 text-current hover:scale-110"
-                method="LUCIDE"
               />
             </button>
           </div>
@@ -64,7 +63,7 @@ export default function FileCard({ fileName, content, fileType }) {
             className="h-8 w-8"
           />
         ) : (
-          <IconComponent name="File" style="h-8 w-8" method="LUCIDE" />
+          <IconComponent name="File" style="h-8 w-8" />
         )}
         <div className="file-card-modal-footer">
           {" "}
@@ -74,7 +73,6 @@ export default function FileCard({ fileName, content, fileType }) {
         <IconComponent
           name="DownloadCloud"
           style="ml-auto h-6 w-6 text-current"
-          method="LUCIDE"
         />
       </div>
     </button>

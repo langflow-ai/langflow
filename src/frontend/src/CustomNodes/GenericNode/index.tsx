@@ -39,12 +39,6 @@ export default function GenericNode({
   const { sseData, isBuilding } = useSSE();
   const refHtml = useRef(null);
 
-  // useEffect(() => {
-  //   if (reactFlowInstance) {
-  //     setParams(Object.values(reactFlowInstance.toObject()));
-  //   }
-  // }, [save]);
-
   // New useEffect to watch for changes in sseData and update validation status
   useEffect(() => {
     const relevantData = sseData[data.id];
@@ -90,7 +84,6 @@ export default function GenericNode({
             <IconComponent
               name={name}
               style="generic-node-icon"
-              method="LUCIDE"
               iconColor={`${nodeColors[types[data.type]]}`}
             />
             <div className="generic-node-tooltip-div">
@@ -122,7 +115,6 @@ export default function GenericNode({
                       <IconComponent
                         name="Zap"
                         style="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1"
-                        method="LUCIDE"
                       />{" "}
                       flow to validate status.
                     </span>

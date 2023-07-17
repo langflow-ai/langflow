@@ -167,7 +167,6 @@ export default function ParameterComponent({
                 <IconComponent
                   name="Info"
                   style="relative bottom-0.5 ml-2 h-3 w-3"
-                  method="LUCIDE"
                 />
               </ShadTooltip>
             )}

@@ -110,7 +110,6 @@ export default function InputFileComponent({
           {!editNode && !loading && (
             <IconComponent
               name="FileSearch2"
-              method="LUCIDE"
               style={
                 "icons-parameters-comp" +
                 (disabled ? " text-ring " : " hover:text-accent-foreground")

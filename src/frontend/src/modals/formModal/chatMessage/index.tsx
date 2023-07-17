@@ -165,7 +165,6 @@ export default function ChatMessage({
                   style={
                     "h-3 w-3 transition-all " + (promptOpen ? "rotate-180" : "")
                   }
-                  method="LUCIDE"
                 />
               </button>
               <span className="prose inline-block break-words text-primary dark:prose-invert">

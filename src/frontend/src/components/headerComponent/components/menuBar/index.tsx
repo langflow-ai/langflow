@@ -39,7 +39,7 @@ export const MenuBar = ({ flows, tabId }) => {
   return (
     <div className="round-button-div">
       <Link to="/">
-        <IconComponent name="ChevronLeft" style="w-4" method="LUCIDE" />
+        <IconComponent name="ChevronLeft" style="w-4" />
       </Link>
       <div className="header-menu-bar">
         <DropdownMenu>
@@ -47,11 +47,7 @@ export const MenuBar = ({ flows, tabId }) => {
             <Button asChild variant="primary" size="sm">
               <div className="header-menu-bar-display">
                 <div className="header-menu-flow-name">{current_flow.name}</div>
-                <IconComponent
-                  name="ChevronDown"
-                  style="h-4 w-4"
-                  method="LUCIDE"
-                />
+                <IconComponent name="ChevronDown" style="h-4 w-4" />
               </div>
             </Button>
           </DropdownMenuTrigger>
@@ -63,11 +59,7 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <IconComponent
-                name="Plus"
-                style="header-menu-options"
-                method="LUCIDE"
-              />
+              <IconComponent name="Plus" style="header-menu-options" />
               New
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -76,11 +68,7 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <IconComponent
-                name="Settings2"
-                style="header-menu-options "
-                method="LUCIDE"
-              />
+              <IconComponent name="Settings2" style="header-menu-options " />
               Settings
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -89,11 +77,7 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <IconComponent
-                name="Undo"
-                style="header-menu-options "
-                method="LUCIDE"
-              />
+              <IconComponent name="Undo" style="header-menu-options " />
               Undo
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -102,37 +86,9 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <IconComponent
-                name="Redo"
-                style="header-menu-options "
-                method="LUCIDE"
-              />
+              <IconComponent name="Redo" style="header-menu-options " />
               Redo
             </DropdownMenuItem>
-            {/* <DropdownMenuSeparator /> */}
-            {/* <DropdownMenuLabel>Projects</DropdownMenuLabel> */}
-            {/* <DropdownMenuRadioGroup className="max-h-full overflow-scroll"
-              value={tabId}
-              onValueChange={(value) => {
-                setTabId(value);
-              }}
-            >
-              {flows.map((flow, idx) => {
-                return (
-                  <Link
-                    to={"/flow/" + flow.id}
-                    className="flex w-full items-center"
-                  >
-                    <DropdownMenuRadioItem
-                      value={flow.id}
-                      className="flex-1 w-full inline-block truncate break-words mr-2"
-                    >
-                      {flow.name}
-                    </DropdownMenuRadioItem>
-                  </Link>
-                );
-              })}
-            </DropdownMenuRadioGroup> */}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

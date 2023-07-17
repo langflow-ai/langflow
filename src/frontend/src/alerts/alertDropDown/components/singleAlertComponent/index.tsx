@@ -30,7 +30,6 @@ export default function SingleAlert({
         >
           <div className="flex-shrink-0">
             <IconComponent
-              method="LUCIDE"
               name="XCircle"
               style="h-5 w-5 text-status-red"
               aria-hidden="true"
@@ -69,7 +68,6 @@ export default function SingleAlert({
                 <span className="sr-only">Dismiss</span>
                 <IconComponent
                   name="X"
-                  method="LUCIDE"
                   style="h-4 w-4 text-error-foreground"
                   aria-hidden="true"
                 />
@@ -85,7 +83,6 @@ export default function SingleAlert({
           <div className="flex-shrink-0">
             <IconComponent
               name="Info"
-              method="LUCIDE"
               style="h-5 w-5 text-status-blue "
               aria-hidden="true"
             />
@@ -121,7 +118,6 @@ export default function SingleAlert({
               >
                 <span className="sr-only">Dismiss</span>
                 <IconComponent
-                  method="LUCIDE"
                   name="X"
                   style="h-4 w-4 text-info-foreground"
                   aria-hidden="true"
@@ -139,7 +135,6 @@ export default function SingleAlert({
             <IconComponent
               name="CheckCircle2"
               style="h-5 w-5 text-status-green"
-              method="LUCIDE"
               aria-hidden="true"
             />
           </div>
@@ -163,7 +158,6 @@ export default function SingleAlert({
                 <span className="sr-only">Dismiss</span>
                 <IconComponent
                   name="X"
-                  method="LUCIDE"
                   style="h-4 w-4 text-success-foreground"
                   aria-hidden="true"
                 />

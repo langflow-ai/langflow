@@ -46,7 +46,6 @@ export default function ErrorAlert({
           <div className="flex-shrink-0">
             <IconComponent
               name="XCircle"
-              method="LUCIDE"
               style="error-build-message-circle"
               aria-hidden="true"
             />

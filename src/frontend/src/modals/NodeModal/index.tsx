@@ -73,7 +73,6 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
                       name="X"
                       style="h-6 w-6"
                       aria-hidden="true"
-                      method="LUCIDE"
                     />
                   </button>
                 </div>

@@ -80,21 +80,18 @@ export default function ChatInput({
             <IconComponent
               name="Lock"
               style="form-modal-lock-icon"
-              method="LUCIDE"
               aria-hidden="true"
             />
           ) : noInput ? (
             <IconComponent
               name="Sparkles"
               style="form-modal-play-icon"
-              method="LUCIDE"
               aria-hidden="true"
             />
           ) : (
             <IconComponent
               name="LucideSend"
               style="form-modal-send-icon "
-              method="LUCIDE"
               aria-hidden="true"
             />
           )}
