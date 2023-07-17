@@ -1,6 +1,7 @@
 import { Search } from "lucide-react";
 import { useContext, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
+import IconComponent from "../../../../components/genericIconComponent";
 import { Separator } from "../../../../components/ui/separator";
 import { alertContext } from "../../../../contexts/alertContext";
 import { PopUpContext } from "../../../../contexts/popUpContext";
@@ -16,7 +17,6 @@ import {
   nodeNames,
 } from "../../../../utils";
 import DisclosureComponent from "../DisclosureComponent";
-import IconComponent from "../../../../components/genericIconComponent";
 
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);

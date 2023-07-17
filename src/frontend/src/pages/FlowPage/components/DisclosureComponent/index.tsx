@@ -1,6 +1,6 @@
 import { Disclosure } from "@headlessui/react";
-import { DisclosureComponentType } from "../../../../types/components";
 import IconComponent from "../../../../components/genericIconComponent";
+import { DisclosureComponentType } from "../../../../types/components";
 
 export default function DisclosureComponent({
   button: { title, Icon, buttons = [] },

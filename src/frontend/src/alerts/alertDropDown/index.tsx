@@ -1,10 +1,10 @@
 import { useContext, useRef } from "react";
+import IconComponent from "../../components/genericIconComponent";
 import { alertContext } from "../../contexts/alertContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { AlertDropdownType } from "../../types/alerts";
 import { useOnClickOutside } from "../hooks/useOnClickOutside";
 import SingleAlert from "./components/singleAlertComponent";
-import IconComponent from "../../components/genericIconComponent";
 
 export default function AlertDropdown({}: AlertDropdownType) {
   const { closePopUp } = useContext(PopUpContext);
@@ -46,11 +46,7 @@ export default function AlertDropdown({}: AlertDropdownType) {
             className="text-foreground hover:text-status-red"
             onClick={closePopUp}
           >
-            <IconComponent
-              method="LUCIDE"
-              name="X"
-              style="h-5 w-5"
-            />
+            <IconComponent method="LUCIDE" name="X" style="h-5 w-5" />
           </button>
         </div>
       </div>

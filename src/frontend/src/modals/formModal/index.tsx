@@ -9,6 +9,7 @@ import ChatInput from "./chatInput";
 import ChatMessage from "./chatMessage";
 
 import _ from "lodash";
+import IconComponent from "../../components/genericIconComponent";
 import ToggleShadComponent from "../../components/toggleShadComponent";
 import {
   Accordion,
@@ -28,7 +29,6 @@ import {
 import { Textarea } from "../../components/ui/textarea";
 import { CHAT_FORM_DIALOG_SUBTITLE, THOUGHTS_ICON } from "../../constants";
 import { TabsContext } from "../../contexts/tabsContext";
-import IconComponent from "../../components/genericIconComponent";
 
 export default function FormModal({
   flow,

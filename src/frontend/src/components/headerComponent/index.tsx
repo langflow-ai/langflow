@@ -9,10 +9,10 @@ import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { getRepoStars } from "../../controllers/API";
+import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import MenuBar from "./components/menuBar";
-import IconComponent from "../genericIconComponent";
 
 export default function Header() {
   const { flows, addFlow, tabId } = useContext(TabsContext);
@@ -51,11 +51,7 @@ export default function Header() {
             variant={location.pathname === "/" ? "primary" : "secondary"}
             size="sm"
           >
-            <IconComponent
-              name="Home"
-              method="LUCIDE"
-              style="h-4 w-4"
-            />
+            <IconComponent name="Home" method="LUCIDE" style="h-4 w-4" />
             <div className="flex-1">{USER_PROJECTS_HEADER}</div>
           </Button>
         </Link>
@@ -67,11 +63,7 @@ export default function Header() {
             }
             size="sm"
           >
-            <IconComponent
-              method="LUCIDE"
-              name="Users2"
-              style="h-4 w-4"
-            />
+            <IconComponent method="LUCIDE" name="Users2" style="h-4 w-4" />
             <div className="flex-1">Community Examples</div>
           </Button>
         </Link>

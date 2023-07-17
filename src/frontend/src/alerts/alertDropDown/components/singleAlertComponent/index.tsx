@@ -1,8 +1,8 @@
 import { Transition } from "@headlessui/react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { SingleAlertComponentType } from "../../../../types/alerts";
 import IconComponent from "../../../../components/genericIconComponent";
+import { SingleAlertComponentType } from "../../../../types/alerts";
 
 export default function SingleAlert({
   dropItem,

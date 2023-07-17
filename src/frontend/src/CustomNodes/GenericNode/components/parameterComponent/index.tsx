@@ -4,6 +4,7 @@ import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
 import Dropdown from "../../../../components/dropdownComponent";
 import FloatComponent from "../../../../components/floatComponent";
+import IconComponent from "../../../../components/genericIconComponent";
 import InputComponent from "../../../../components/inputComponent";
 import InputFileComponent from "../../../../components/inputFileComponent";
 import InputListComponent from "../../../../components/inputListComponent";
@@ -26,7 +27,6 @@ import {
   nodeIconsLucide,
   nodeNames,
 } from "../../../../utils";
-import IconComponent from "../../../../components/genericIconComponent";
 
 export default function ParameterComponent({
   left,
@@ -164,7 +164,11 @@ export default function ParameterComponent({
           <div className="">
             {info !== "" && (
               <ShadTooltip content={infoHtml.current}>
-                <IconComponent name="Info" style="relative bottom-0.5 ml-2 h-3 w-3" method="LUCIDE" />
+                <IconComponent
+                  name="Info"
+                  style="relative bottom-0.5 ml-2 h-3 w-3"
+                  method="LUCIDE"
+                />
               </ShadTooltip>
             )}
           </div>

@@ -1,6 +1,7 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import SanitizedHTMLWrapper from "../../components/SanitizedHTMLWrapper";
 import ShadTooltip from "../../components/ShadTooltipComponent";
+import IconComponent from "../../components/genericIconComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { DialogTitle } from "../../components/ui/dialog";
@@ -20,7 +21,6 @@ import {
   varHighlightHTML,
 } from "../../utils";
 import BaseModal from "../baseModal";
-import IconComponent from "../../components/genericIconComponent";
 
 export default function GenericModal({
   field_name = "",

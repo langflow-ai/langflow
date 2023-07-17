@@ -1,8 +1,8 @@
 import { Transition } from "@headlessui/react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { NoticeAlertType } from "../../types/alerts";
 import IconComponent from "../../components/genericIconComponent";
+import { NoticeAlertType } from "../../types/alerts";
 
 export default function NoticeAlert({
   title,

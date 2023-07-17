@@ -5,9 +5,9 @@ import { TabsContext } from "../../contexts/tabsContext";
 
 import { useNavigate } from "react-router-dom";
 import { CardComponent } from "../../components/cardComponent";
+import IconComponent from "../../components/genericIconComponent";
 import { getExamples } from "../../controllers/API";
 import { FlowType } from "../../types/flow";
-import IconComponent from "../../components/genericIconComponent";
 export default function CommunityPage() {
   const { flows, setTabId, downloadFlows, uploadFlows, addFlow } =
     useContext(TabsContext);
@@ -40,11 +40,7 @@ export default function CommunityPage() {
     <div className="community-page-arrangement">
       <div className="community-page-nav-arrangement">
         <span className="community-page-nav-title">
-          <IconComponent
-            name="Users2"
-            style="w-6"
-            method="LUCIDE"
-          />
+          <IconComponent name="Users2" style="w-6" method="LUCIDE" />
           Community Examples
         </span>
         <div className="community-page-nav-button">

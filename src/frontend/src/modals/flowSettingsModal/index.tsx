@@ -1,5 +1,6 @@
 import { useContext, useRef, useState } from "react";
 import EditFlowSettings from "../../components/EditFlowSettingsComponent";
+import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import {
   Dialog,
@@ -14,7 +15,6 @@ import { SETTINGS_DIALOG_SUBTITLE } from "../../constants";
 import { alertContext } from "../../contexts/alertContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
-import IconComponent from "../../components/genericIconComponent";
 
 export default function FlowSettingsModal() {
   const [open, setOpen] = useState(true);

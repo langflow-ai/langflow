@@ -247,7 +247,6 @@ export const nodeIconsLucide = {
   retrievers: FileSearch,
   unknown: HelpCircle,
 
-
   Trash2,
   X,
   XCircle,

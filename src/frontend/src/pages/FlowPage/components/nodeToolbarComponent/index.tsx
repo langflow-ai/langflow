@@ -1,10 +1,10 @@
 import { useContext, useState } from "react";
 import { useReactFlow } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
+import IconComponent from "../../../../components/genericIconComponent";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import { classNames } from "../../../../utils";
-import IconComponent from "../../../../components/genericIconComponent";
 
 const NodeToolbarComponent = (props) => {
   const [nodeLength, setNodeLength] = useState(
@@ -36,11 +36,7 @@ const NodeToolbarComponent = (props) => {
                 props.deleteNode(props.data.id);
               }}
             >
-              <IconComponent
-                name="Trash2"
-                style="h-4 w-4"
-                method="LUCIDE"
-              />
+              <IconComponent name="Trash2" style="h-4 w-4" method="LUCIDE" />
             </button>
           </ShadTooltip>
 
@@ -65,11 +61,7 @@ const NodeToolbarComponent = (props) => {
                 );
               }}
             >
-              <IconComponent
-                name="Copy"
-                style="h-4 w-4"
-                method="LUCIDE"
-              />
+              <IconComponent name="Copy" style="h-4 w-4" method="LUCIDE" />
             </button>
           </ShadTooltip>
 
@@ -98,11 +90,7 @@ const NodeToolbarComponent = (props) => {
                 }
               }}
             >
-              <IconComponent
-                name="FileText"
-                style="h-4 w-4 "
-                method="LUCIDE"
-              />
+              <IconComponent name="FileText" style="h-4 w-4 " method="LUCIDE" />
             </a>
           </ShadTooltip>
 

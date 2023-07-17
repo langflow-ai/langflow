@@ -1,7 +1,7 @@
 import { Transition } from "@headlessui/react";
 import { useEffect, useState } from "react";
-import { ErrorAlertType } from "../../types/alerts";
 import IconComponent from "../../components/genericIconComponent";
+import { ErrorAlertType } from "../../types/alerts";
 
 export default function ErrorAlert({
   title,
