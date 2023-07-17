@@ -28,7 +28,6 @@ module.exports = {
       },
     },
     extend: {
-
       colors: {
         connection: "var(--connection)",
         "almost-dark-gray": "var(--almost-dark-gray)",
@@ -116,7 +115,6 @@ module.exports = {
       fontFamily: {
         sans: ["var(--font-sans)", ...fontFamily.sans],
       },
-
     },
   },
 
