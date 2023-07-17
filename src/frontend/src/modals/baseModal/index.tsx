@@ -105,8 +105,9 @@ function BaseModal({
       <DialogContent className={minWidth}>
         {headerChild}
         <div className={`mt-2 flex ${height} w-full `}>{ContentChild}</div>
-
-        <div className="flex flex-row-reverse">{ContentFooter}</div>
+        {ContentFooter && (
+          <div className="flex flex-row-reverse">{ContentFooter}</div>
+        )}
       </DialogContent>
     </Dialog>
   );
