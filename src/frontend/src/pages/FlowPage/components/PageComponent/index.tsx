@@ -91,7 +91,6 @@ export default function Page({ flow }: { flow: FlowType }) {
         lastSelection
       ) {
         event.preventDefault();
-        // addFlow(newFlow, false);
       }
     };
     const handleMouseMove = (event) => {

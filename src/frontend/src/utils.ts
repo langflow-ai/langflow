@@ -68,58 +68,28 @@ import { Connection, Edge, Node, ReactFlowInstance } from "reactflow";
 import { twMerge } from "tailwind-merge";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "./flow_constants";
 import { AirbyteIcon } from "./icons/Airbyte";
-import SvgAirbyte from "./icons/Airbyte/Airbyte";
 import { AnthropicIcon } from "./icons/Anthropic";
-import SvgAnthropicBox from "./icons/Anthropic/AnthropicBox";
 import { BingIcon } from "./icons/Bing";
-import SvgBing from "./icons/Bing/Bing";
 import { ChromaIcon } from "./icons/ChromaIcon";
-import SvgChroma from "./icons/ChromaIcon/Chroma";
 import { CohereIcon } from "./icons/Cohere";
-import SvgCohere from "./icons/Cohere/Cohere";
 import { EvernoteIcon } from "./icons/Evernote";
-import SvgEvernoteIcon from "./icons/Evernote/EvernoteIcon";
 import { FBIcon } from "./icons/FacebookMessenger";
-import SvgFacebookMessengerLogo2020 from "./icons/FacebookMessenger/FacebookMessengerLogo2020";
 import { GitBookIcon } from "./icons/GitBook";
-import SvgGitbookSvgrepoCom from "./icons/GitBook/GitbookSvgrepoCom";
 import { GoogleIcon } from "./icons/Google";
-import SvgGoogle from "./icons/Google/Google";
 import { HuggingFaceIcon } from "./icons/HuggingFace";
-import SvgHfLogo from "./icons/HuggingFace/HfLogo";
 import { IFixIcon } from "./icons/IFixIt";
-import SvgIfixitSeeklogocom from "./icons/IFixIt/IfixitSeeklogoCom";
 import { MetaIcon } from "./icons/Meta";
-import SvgMetaIcon from "./icons/Meta/MetaIcon";
 import { MidjourneyIcon } from "./icons/Midjorney";
-import SvgMidjourneyEmblem from "./icons/Midjorney/MidjourneyEmblem";
 import { MongoDBIcon } from "./icons/MongoDB";
-import SvgMongodbIcon from "./icons/MongoDB/MongodbIcon";
 import { NotionIcon } from "./icons/Notion";
-import SvgNotionLogo from "./icons/Notion/NotionLogo";
 import { OpenAiIcon } from "./icons/OpenAi";
-import SvgOpenAi from "./icons/OpenAi/OpenAi";
 import { PineconeIcon } from "./icons/Pinecone";
-import SvgPineconeLogo from "./icons/Pinecone/PineconeLogo";
-import SvgPowerPoint from "./icons/PowerPoint/PowerPoint";
 import { QDrantIcon } from "./icons/QDrant";
-import SvgQDrant from "./icons/QDrant/QDrant";
-import SvgReadthedocsioIcon from "./icons/ReadTheDocs/ReadthedocsioIcon";
 import { SearxIcon } from "./icons/Searx";
-import SvgSearxLogo from "./icons/Searx/SearxLogo";
-import SvgSerper from "./icons/Serper/Serper";
 import { SlackIcon } from "./icons/Slack";
-import SvgSlackIcon from "./icons/Slack/SlackIcon";
 import { VertexAIIcon } from "./icons/VertexAI";
-import SvgVertexAi from "./icons/VertexAI/VertexAi";
-import SvgWeaviate from "./icons/Weaviate/Weaviate";
-import SvgWikipedia from "./icons/Wikipedia/Wikipedia";
-import SvgWolfram from "./icons/Wolfram/Wolfram";
-import SvgWord from "./icons/Word/Word";
 import { HackerNewsIcon } from "./icons/hackerNews";
-import SvgYCombinatorLogo from "./icons/hackerNews/YCombinatorLogo";
 import { SupabaseIcon } from "./icons/supabase";
-import SvgSupabaseIcon from "./icons/supabase/SupabaseIcon";
 import { APITemplateType } from "./types/api";
 import { IVarHighlightType } from "./types/components";
 import { FlowType, NodeType } from "./types/flow";
@@ -134,39 +104,6 @@ export enum TypeModal {
   TEXT = 1,
   PROMPT = 2,
 }
-
-export const svgIcons = {
-  /* Airbyte: SvgAirbyte,
-  Anthropic: SvgAnthropicBox,
-  Bing: SvgBing,
-  Chroma: SvgChroma,
-  Cohere: SvgCohere,
-  Evernote: SvgEvernoteIcon,
-  FacebookMessenger: SvgFacebookMessengerLogo2020,
-  GitBook: SvgGitbookSvgrepoCom,
-  Google: SvgGoogle,
-  HackerNews: SvgYCombinatorLogo,
-  HuggingFace: SvgHfLogo,
-  IFixIt: SvgIfixitSeeklogocom,
-  Meta: SvgMetaIcon,
-  MidJorney: SvgMidjourneyEmblem,
-  MongoDB: SvgMongodbIcon,
-  Notion: SvgNotionLogo,
-  OpenAi: SvgOpenAi,
-  Pinecone: SvgPineconeLogo,
-  PowerPoint: SvgPowerPoint,
-  QDrant: SvgQDrant,
-  ReadTheDocs: SvgReadthedocsioIcon,
-  Searx: SvgSearxLogo,
-  Serper: SvgSerper,
-  Slack: SvgSlackIcon,
-  Supabase: SvgSupabaseIcon,
-  VertexAI: SvgVertexAi,
-  Weaviate: SvgWeaviate,
-  Wikipedia: SvgWikipedia,
-  Wolfram: SvgWolfram,
-  Word: SvgWord, */
-};
 
 export const textColors = {
   white: "text-white",
@@ -356,7 +293,6 @@ export const nodeIconsLucide = {
   Copy,
   Upload,
 };
-/* Trash2 */ 
 
 export const gradients = [
   "bg-gradient-to-br from-gray-800 via-rose-700 to-violet-900",
