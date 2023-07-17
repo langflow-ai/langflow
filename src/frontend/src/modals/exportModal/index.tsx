@@ -1,5 +1,6 @@
 import { useContext, useRef, useState } from "react";
 import EditFlowSettings from "../../components/EditFlowSettingsComponent";
+import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import {
@@ -16,7 +17,6 @@ import { alertContext } from "../../contexts/alertContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { removeApiKeys } from "../../utils";
-import IconComponent from "../../components/genericIconComponent";
 
 export default function ExportModal() {
   const [open, setOpen] = useState(true);

@@ -2,9 +2,8 @@ import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
-import { useContext, useEffect, useRef, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
 import { Check, Clipboard } from "lucide-react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import AccordionComponent from "../../components/AccordionComponent";
@@ -12,6 +11,7 @@ import ShadTooltip from "../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../components/codeAreaComponent";
 import Dropdown from "../../components/dropdownComponent";
 import FloatComponent from "../../components/floatComponent";
+import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
 import InputFileComponent from "../../components/inputFileComponent";
 import InputListComponent from "../../components/inputListComponent";
@@ -48,10 +48,10 @@ import {
   getPythonCode,
 } from "../../constants";
 import { darkContext } from "../../contexts/darkContext";
+import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { FlowType } from "../../types/flow/index";
 import { buildTweaks, classNames } from "../../utils";
-import IconComponent from "../../components/genericIconComponent";
 
 export default function ApiModal({ flow }: { flow: FlowType }) {
   const [open, setOpen] = useState(true);
@@ -378,7 +378,6 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                               "int")
                                       )
                                       .map((n, i) => {
-
                                         return (
                                           <TableRow
                                             key={i}

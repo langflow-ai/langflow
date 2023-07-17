@@ -2,6 +2,7 @@ import { useContext, useEffect, useRef, useState } from "react";
 import { NodeToolbar } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import Tooltip from "../../components/TooltipComponent";
+import IconComponent from "../../components/genericIconComponent";
 import { useSSE } from "../../contexts/SSEContext";
 import { alertContext } from "../../contexts/alertContext";
 import { PopUpContext } from "../../contexts/popUpContext";
@@ -16,7 +17,6 @@ import {
   toTitleCase,
 } from "../../utils";
 import ParameterComponent from "./components/parameterComponent";
-import IconComponent from "../../components/genericIconComponent";
 
 export default function GenericNode({
   data,
@@ -28,12 +28,12 @@ export default function GenericNode({
   const { setErrorData } = useContext(alertContext);
   const showError = useRef(true);
   const { types, deleteNode } = useContext(typesContext);
-  
+
   const { closePopUp, openPopUp } = useContext(PopUpContext);
   // any to avoid type conflict
   const Icon: any =
     nodeIconsLucide[data.type] || nodeIconsLucide[types[data.type]];
-  const name = nodeIconsLucide[data.type] ? data.type : types[data.type]
+  const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [validationStatus, setValidationStatus] = useState(null);
   // State for outline color
   const { sseData, isBuilding } = useSSE();

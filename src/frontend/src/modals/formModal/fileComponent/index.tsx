@@ -64,11 +64,7 @@ export default function FileCard({ fileName, content, fileType }) {
             className="h-8 w-8"
           />
         ) : (
-          <IconComponent
-            name="File"
-            style="h-8 w-8"
-            method="LUCIDE"
-          />
+          <IconComponent name="File" style="h-8 w-8" method="LUCIDE" />
         )}
         <div className="file-card-modal-footer">
           {" "}

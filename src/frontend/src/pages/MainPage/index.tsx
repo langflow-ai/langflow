@@ -1,10 +1,10 @@
 import { useContext, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { CardComponent } from "../../components/cardComponent";
+import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { USER_PROJECTS_HEADER } from "../../constants";
 import { TabsContext } from "../../contexts/tabsContext";
-import IconComponent from "../../components/genericIconComponent";
 export default function HomePage() {
   const { flows, setTabId, downloadFlows, uploadFlows, addFlow, removeFlow } =
     useContext(TabsContext);
@@ -16,11 +16,7 @@ export default function HomePage() {
     <div className="main-page-panel">
       <div className="main-page-nav-arrangement">
         <span className="main-page-nav-title">
-          <IconComponent
-            name="Home"
-            style="w-6"
-            method="LUCIDE"
-          />
+          <IconComponent name="Home" style="w-6" method="LUCIDE" />
           {USER_PROJECTS_HEADER}
         </span>
         <div className="button-div-style">

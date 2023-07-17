@@ -1,5 +1,6 @@
 import { Dialog, Transition } from "@headlessui/react";
 import { Fragment, useContext, useRef, useState } from "react";
+import IconComponent from "../../components/genericIconComponent";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
@@ -11,7 +12,6 @@ import {
   toTitleCase,
 } from "../../utils";
 import ModalField from "./components/ModalField";
-import IconComponent from "../../components/genericIconComponent";
 
 export default function NodeModal({ data }: { data: NodeDataType }) {
   const [open, setOpen] = useState(true);

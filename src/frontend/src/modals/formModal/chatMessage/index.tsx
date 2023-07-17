@@ -7,12 +7,12 @@ import remarkMath from "remark-math";
 import MaleTechnology from "../../../assets/male-technologist.png";
 import Robot from "../../../assets/robot.png";
 import SanitizedHTMLWrapper from "../../../components/SanitizedHTMLWrapper";
+import IconComponent from "../../../components/genericIconComponent";
 import { THOUGHTS_ICON } from "../../../constants";
 import { ChatMessageType } from "../../../types/chat";
 import { classNames } from "../../../utils";
 import FileCard from "../fileComponent";
 import { CodeBlock } from "./codeBlock";
-import IconComponent from "../../../components/genericIconComponent";
 export default function ChatMessage({
   chat,
   lockChat,

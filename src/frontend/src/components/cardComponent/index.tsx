@@ -2,6 +2,7 @@ import { useContext } from "react";
 import { TabsContext } from "../../contexts/tabsContext";
 import { FlowType } from "../../types/flow";
 import { gradients } from "../../utils";
+import IconComponent from "../genericIconComponent";
 import {
   Card,
   CardDescription,
@@ -9,7 +10,6 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/card";
-import IconComponent from "../genericIconComponent";
 
 export const CardComponent = ({
   flow,
@@ -55,8 +55,7 @@ export const CardComponent = ({
 
       <CardFooter>
         <div className="card-component-footer-arrangement">
-          <div className="card-component-footer">
-          </div>
+          <div className="card-component-footer"></div>
           {button && button}
         </div>
       </CardFooter>

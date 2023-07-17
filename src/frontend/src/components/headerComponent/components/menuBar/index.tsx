@@ -13,8 +13,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { alertContext } from "../../../../contexts/alertContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
-import { Button } from "../../../ui/button";
 import IconComponent from "../../../genericIconComponent";
+import { Button } from "../../../ui/button";
 
 export const MenuBar = ({ flows, tabId }) => {
   const { updateFlow, setTabId, addFlow } = useContext(TabsContext);
@@ -39,11 +39,7 @@ export const MenuBar = ({ flows, tabId }) => {
   return (
     <div className="round-button-div">
       <Link to="/">
-        <IconComponent
-          name="ChevronLeft"
-          style="w-4"
-          method="LUCIDE"
-        />
+        <IconComponent name="ChevronLeft" style="w-4" method="LUCIDE" />
       </Link>
       <div className="header-menu-bar">
         <DropdownMenu>
