@@ -1,5 +1,5 @@
 import { Check, Clipboard, Download } from "lucide-react";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import AccordionComponent from "../../components/AccordionComponent";
@@ -28,6 +28,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "../../components/ui/tabs";
+import { darkContext } from "../../contexts/darkContext";
 import { FlowType } from "../../types/flow/index";
 import { classNames } from "../../utils";
 
@@ -36,16 +37,25 @@ export default function CodeTabsComponent({
   tabs,
   activeTab,
   setActiveTab,
-  tweaks: { tweak, tweaksList, buildContent, getValue, buildTweakObject },
+  isMessage,
+  tweaks,
 }: {
   flow?: FlowType;
   tabs: any;
   activeTab: string;
   setActiveTab: any;
-  tweaks?: any;
+  isMessage?: boolean;
+  tweaks?: {
+    tweak?: any;
+    tweaksList?: any;
+    buildContent?: any;
+    getValue?: any;
+    buildTweakObject?: any;
+  };
 }) {
   const [isCopied, setIsCopied] = useState<Boolean>(false);
   const [openAccordion, setOpenAccordion] = useState([]);
+  const { dark } = useContext(darkContext);
 
   const copyToClipboard = () => {
     if (!navigator.clipboard || !navigator.clipboard.writeText) {
@@ -85,7 +95,7 @@ export default function CodeTabsComponent({
 
   function openAccordions() {
     let accordionsToOpen = [];
-    tweak.current.forEach((el) => {
+    tweaks.tweak.current.forEach((el) => {
       Object.keys(el).forEach((key) => {
         if (Object.keys(el[key]).length > 0) {
           accordionsToOpen.push(key);
@@ -101,7 +111,11 @@ export default function CodeTabsComponent({
   return (
     <Tabs
       value={activeTab}
-      className="api-modal-tabs"
+      className={
+        "api-modal-tabs " +
+        (isMessage ? "dark " : "") +
+        (dark && isMessage ? "bg-background" : "")
+      }
       onValueChange={(value) => {
         setActiveTab(value);
         if (value === "3") {
@@ -112,7 +126,13 @@ export default function CodeTabsComponent({
       <div className="api-modal-tablist-div">
         <TabsList>
           {tabs.map((tab, index) => (
-            <TabsTrigger key={index} value={index.toString()}>
+            <TabsTrigger
+              className={
+                isMessage ? "data-[state=active]:bg-primary-foreground" : ""
+              }
+              key={index}
+              value={index.toString()}
+            >
               {tab.name}
             </TabsTrigger>
           ))}
@@ -163,7 +183,7 @@ export default function CodeTabsComponent({
                 >
                   {flow["data"]["nodes"].map((t: any, index) => (
                     <div className="px-3" key={index}>
-                      {tweaksList.current.includes(t["data"]["id"]) && (
+                      {tweaks.tweaksList.current.includes(t["data"]["id"]) && (
                         <AccordionComponent
                           trigger={t["data"]["id"]}
                           open={openAccordion}
@@ -233,7 +253,7 @@ export default function CodeTabsComponent({
                                                     }
                                                     onChange={(k) => {}}
                                                     onAddInput={(k) => {
-                                                      buildTweakObject(
+                                                      tweaks.buildTweakObject(
                                                         t["data"]["id"],
                                                         k,
                                                         t.data.node.template[n]
@@ -243,7 +263,7 @@ export default function CodeTabsComponent({
                                                 ) : t.data.node.template[n]
                                                     .multiline ? (
                                                   <ShadTooltip
-                                                    content={buildContent(
+                                                    content={tweaks.buildContent(
                                                       t.data.node.template[n]
                                                         .value
                                                     )}
@@ -252,7 +272,7 @@ export default function CodeTabsComponent({
                                                       <TextAreaComponent
                                                         disabled={false}
                                                         editNode={true}
-                                                        value={getValue(
+                                                        value={tweaks.getValue(
                                                           t.data.node.template[
                                                             n
                                                           ].value,
@@ -262,7 +282,7 @@ export default function CodeTabsComponent({
                                                           ]
                                                         )}
                                                         onChange={(k) => {
-                                                          buildTweakObject(
+                                                          tweaks.buildTweakObject(
                                                             t["data"]["id"],
                                                             k,
                                                             t.data.node
@@ -280,14 +300,14 @@ export default function CodeTabsComponent({
                                                       t.data.node.template[n]
                                                         .password ?? false
                                                     }
-                                                    value={getValue(
+                                                    value={tweaks.getValue(
                                                       t.data.node.template[n]
                                                         .value,
                                                       t.data,
                                                       t.data.node.template[n]
                                                     )}
                                                     onChange={(k) => {
-                                                      buildTweakObject(
+                                                      tweaks.buildTweakObject(
                                                         t["data"]["id"],
                                                         k,
                                                         t.data.node.template[n]
@@ -309,7 +329,7 @@ export default function CodeTabsComponent({
                                                     t.data.node.template[
                                                       n
                                                     ].value = e;
-                                                    buildTweakObject(
+                                                    tweaks.buildTweakObject(
                                                       t["data"]["id"],
                                                       e,
                                                       t.data.node.template[n]
@@ -322,8 +342,8 @@ export default function CodeTabsComponent({
                                             ) : t.data.node.template[n].type ===
                                               "file" ? (
                                               <ShadTooltip
-                                                content={buildContent(
-                                                  getValue(
+                                                content={tweaks.buildContent(
+                                                  tweaks.getValue(
                                                     t.data.node.template[n]
                                                       .value,
                                                     t.data,
@@ -360,14 +380,14 @@ export default function CodeTabsComponent({
                                                 <FloatComponent
                                                   disabled={false}
                                                   editNode={true}
-                                                  value={getValue(
+                                                  value={tweaks.getValue(
                                                     t.data.node.template[n]
                                                       .value,
                                                     t.data,
                                                     t.data.node.template[n]
                                                   )}
                                                   onChange={(k) => {
-                                                    buildTweakObject(
+                                                    tweaks.buildTweakObject(
                                                       t["data"]["id"],
                                                       k,
                                                       t.data.node.template[n]
@@ -388,13 +408,13 @@ export default function CodeTabsComponent({
                                                       .options
                                                   }
                                                   onSelect={(k) => {
-                                                    buildTweakObject(
+                                                    tweaks.buildTweakObject(
                                                       t["data"]["id"],
                                                       k,
                                                       t.data.node.template[n]
                                                     );
                                                   }}
-                                                  value={getValue(
+                                                  value={tweaks.getValue(
                                                     t.data.node.template[n]
                                                       .value,
                                                     t.data,
@@ -408,14 +428,14 @@ export default function CodeTabsComponent({
                                                 <IntComponent
                                                   disabled={false}
                                                   editNode={true}
-                                                  value={getValue(
+                                                  value={tweaks.getValue(
                                                     t.data.node.template[n]
                                                       .value,
                                                     t.data,
                                                     t.data.node.template[n]
                                                   )}
                                                   onChange={(k) => {
-                                                    buildTweakObject(
+                                                    tweaks.buildTweakObject(
                                                       t["data"]["id"],
                                                       k,
                                                       t.data.node.template[n]
@@ -426,8 +446,8 @@ export default function CodeTabsComponent({
                                             ) : t.data.node.template[n].type ===
                                               "prompt" ? (
                                               <ShadTooltip
-                                                content={buildContent(
-                                                  getValue(
+                                                content={tweaks.buildContent(
+                                                  tweaks.getValue(
                                                     t.data.node.template[n]
                                                       .value,
                                                     t.data,
@@ -439,14 +459,14 @@ export default function CodeTabsComponent({
                                                   <PromptAreaComponent
                                                     editNode={true}
                                                     disabled={false}
-                                                    value={getValue(
+                                                    value={tweaks.getValue(
                                                       t.data.node.template[n]
                                                         .value,
                                                       t.data,
                                                       t.data.node.template[n]
                                                     )}
                                                     onChange={(k) => {
-                                                      buildTweakObject(
+                                                      tweaks.buildTweakObject(
                                                         t["data"]["id"],
                                                         k,
                                                         t.data.node.template[n]
@@ -458,8 +478,8 @@ export default function CodeTabsComponent({
                                             ) : t.data.node.template[n].type ===
                                               "code" ? (
                                               <ShadTooltip
-                                                content={buildContent(
-                                                  getValue(
+                                                content={tweaks.buildContent(
+                                                  tweaks.getValue(
                                                     t.data.node.template[n]
                                                       .value,
                                                     t.data,
@@ -471,14 +491,14 @@ export default function CodeTabsComponent({
                                                   <CodeAreaComponent
                                                     disabled={false}
                                                     editNode={true}
-                                                    value={getValue(
+                                                    value={tweaks.getValue(
                                                       t.data.node.template[n]
                                                         .value,
                                                       t.data,
                                                       t.data.node.template[n]
                                                     )}
                                                     onChange={(k) => {
-                                                      buildTweakObject(
+                                                      tweaks.buildTweakObject(
                                                         t["data"]["id"],
                                                         k,
                                                         t.data.node.template[n]
@@ -504,7 +524,7 @@ export default function CodeTabsComponent({
                         </AccordionComponent>
                       )}
 
-                      {tweaksList.current.length === 0 && (
+                      {tweaks.tweaksList.current.length === 0 && (
                         <>
                           <div className="pt-3">
                             No tweaks are available for this flow.

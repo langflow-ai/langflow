@@ -80,8 +80,8 @@ export default function ChatMessage({
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm, remarkMath]}
                         rehypePlugins={[rehypeMathjax]}
-                        className="markdown prose inline-block break-words text-primary
-                     dark:prose-invert sm:w-[30vw] sm:max-w-[30vw] lg:w-[40vw] lg:max-w-[40vw]"
+                        className="markdown inline-block break-words text-primary
+                      sm:w-[30vw] sm:max-w-[30vw] lg:w-[40vw] lg:max-w-[40vw]"
                         components={{
                           code: ({
                             node,
@@ -111,6 +111,7 @@ export default function ChatMessage({
 
                             return !inline ? (
                               <CodeTabsComponent
+                                isMessage
                                 tabs={[
                                   {
                                     name: (match && match[1]) || "",
