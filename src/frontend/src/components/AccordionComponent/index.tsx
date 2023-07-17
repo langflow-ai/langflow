@@ -34,6 +34,7 @@ export default function AccordionComponent({
 
   return (
     <>
+<<<<<<< HEAD
       <Accordion
         type="single"
         className="w-full"
@@ -41,6 +42,10 @@ export default function AccordionComponent({
         onValueChange={setValue}
       >
         <AccordionItem value={keyValue} className="border-b">
+=======
+      <Accordion type="single" value={value} onValueChange={setValue}>
+        <AccordionItem value={trigger} className="border-none">
+>>>>>>> bugfix-accordion
           <AccordionTrigger
             onClick={() => {
               handleClick();
@@ -49,7 +54,9 @@ export default function AccordionComponent({
           >
             {trigger}
           </AccordionTrigger>
-          <AccordionContent>{children}</AccordionContent>
+          <AccordionContent className="AccordionContent">
+            {children}
+          </AccordionContent>
         </AccordionItem>
       </Accordion>
     </>
