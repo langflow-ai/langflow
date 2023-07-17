@@ -39,24 +39,6 @@ export default function PromptAreaComponent({
     }
   }, [value, reactFlowInstance]);
 
-  // useEffect(() => {
-  //   if (value !== "" && myValue !== value && reactFlowInstance) {
-  //     // only executed once
-  //     setMyValue(value);
-  //     postValidatePrompt(field_name, value, nodeClass)
-  //       .then((apiReturn) => {
-  //         if (apiReturn.data) {
-  //           setNodeClass(apiReturn.data.frontend_node);
-  //           // need to update reactFlowInstance to re-render the nodes.
-  //           reactFlowInstance.setEdges(
-  //             _.cloneDeep(reactFlowInstance.getEdges())
-  //           );
-  //         }
-  //       })
-  //       .catch((error) => {});
-  //   }
-  // }, [reactFlowInstance, field_name, myValue, nodeClass, setNodeClass, value]);
-
   return (
     <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
       <div className="flex w-full items-center">
