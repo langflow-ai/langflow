@@ -106,53 +106,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // function loadCookie(cookie: string) {
-  //   if (cookie && Object.keys(templates).length > 0) {
-  //     let cookieObject: LangflowState = JSON.parse(cookie);
-  //     try {
-  //       cookieObject.flows.forEach((flow) => {
-  //         if (!flow.data) {
-  //           return;
-  //         }
-  //         flow.data.edges.forEach((edge) => {
-  //           edge.className = "";
-  //           edge.style = { stroke: "#555555" };
-  //         });
-
-  //         flow.data.nodes.forEach((node) => {
-  //           const template = templates[node.data.type];
-  //           if (!template) {
-  //             setErrorData({ title: `Unknown node type: ${node.data.type}` });
-  //             return;
-  //           }
-  //           if (Object.keys(template["template"]).length > 0) {
-  //             node.data.node.base_classes = template["base_classes"];
-  //             flow.data.edges.forEach((edge) => {
-  //               if (edge.source === node.id) {
-  //                 edge.sourceHandle = edge.sourceHandle
-  //                   .split("|")
-  //                   .slice(0, 2)
-  //                   .concat(template["base_classes"])
-  //                   .join("|");
-  //               }
-  //             });
-  //             node.data.node.description = template["description"];
-  //             node.data.node.template = updateTemplate(
-  //               template["template"] as unknown as APITemplateType,
-  //               node.data.node.template as APITemplateType
-  //             );
-  //           }
-  //         });
-  //       });
-  //       setTabIndex(cookieObject.tabIndex);
-  //       setFlows(cookieObject.flows);
-  //       setId(cookieObject.id);
-  //     } catch (e) {
-  //       console.log(e);
-  //     }
-  //   }
-  // }
-
   function refreshFlows() {
     getTabsDataFromDB().then((DbData) => {
       if (DbData && Object.keys(templates).length > 0) {
