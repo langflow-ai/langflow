@@ -8,11 +8,11 @@ import remarkMath from "remark-math";
 import MaleTechnology from "../../../assets/male-technologist.png";
 import Robot from "../../../assets/robot.png";
 import SanitizedHTMLWrapper from "../../../components/SanitizedHTMLWrapper";
+import CodeTabsComponent from "../../../components/codeTabsComponent";
 import { THOUGHTS_ICON } from "../../../constants";
 import { ChatMessageType } from "../../../types/chat";
 import { classNames } from "../../../utils";
 import FileCard from "../fileComponent";
-import { CodeBlock } from "./codeBlock";
 export default function ChatMessage({
   chat,
   lockChat,
@@ -110,11 +110,19 @@ export default function ChatMessage({
                             );
 
                             return !inline ? (
-                              <CodeBlock
-                                key={Math.random()}
-                                language={(match && match[1]) || ""}
-                                value={String(children).replace(/\n$/, "")}
-                                {...props}
+                              <CodeTabsComponent
+                                tabs={[
+                                  {
+                                    name: (match && match[1]) || "",
+                                    mode: (match && match[1]) || "",
+                                    image:
+                                      "https://curl.se/logo/curl-symbol-transparent.png",
+                                    language: (match && match[1]) || "",
+                                    code: String(children).replace(/\n$/, ""),
+                                  },
+                                ]}
+                                activeTab={"0"}
+                                setActiveTab={() => {}}
                               />
                             ) : (
                               <code className={className} {...props}>
