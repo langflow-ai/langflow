@@ -45,7 +45,7 @@ export default function AccordionComponent({
           >
             {trigger}
           </AccordionTrigger>
-          <AccordionContent>{children}</AccordionContent>
+          <AccordionContent className="AccordionContent">{children}</AccordionContent>
         </AccordionItem>
       </Accordion>
     </>
