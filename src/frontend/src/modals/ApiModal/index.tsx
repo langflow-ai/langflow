@@ -272,7 +272,6 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
           <DialogTitle className="flex items-center">
             <span className="pr-2">Code</span>
             <IconComponent
-              method="LUCIDE"
               name="Code2"
               style="h-6 w-6 pl-1 text-gray-800 dark:text-white"
               aria-hidden="true"

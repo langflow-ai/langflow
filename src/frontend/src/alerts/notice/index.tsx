@@ -44,7 +44,6 @@ export default function NoticeAlert({
               name="Info"
               style="h-5 w-5 text-status-blue "
               aria-hidden="true"
-              method="LUCIDE"
             />
           </div>
           <div className="ml-3 flex-1 md:flex md:justify-between">

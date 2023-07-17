@@ -399,7 +399,6 @@ export default function FormModal({
               <IconComponent
                 name="prompts"
                 style="h-6 w-6 pl-1 text-gray-800 dark:text-white"
-                method="LUCIDE"
                 aria-hidden="true"
               />
             </DialogTitle>
@@ -412,7 +411,6 @@ export default function FormModal({
                 <IconComponent
                   name="Variable"
                   style=" file-component-variable"
-                  method="LUCIDE"
                 />
                 <span className="file-component-variables-span text-md">
                   Input Variables
@@ -516,7 +514,6 @@ export default function FormModal({
                           : "text-primary hover:text-gray-600"
                       )}
                       aria-hidden="true"
-                      method="LUCIDE"
                     />
                   </button>
                 </div>

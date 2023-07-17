@@ -58,7 +58,6 @@ export default function ChatTrigger({ open, setOpen, isBuilt, canOpen }) {
                 ? "message-button-icon"
                 : "disabled-message-button-icon")
             }
-            method="LUCIDE"
           />
         </div>
       </button>

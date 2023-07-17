@@ -112,7 +112,6 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
                 <IconComponent
                   name="Variable"
                   style="edit-node-modal-variable "
-                  method="LUCIDE"
                 />
                 <span className="edit-node-modal-span">Parameters</span>
               </div>

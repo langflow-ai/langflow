@@ -68,7 +68,6 @@ export default function InputListComponent({
                 <IconComponent
                   name="Plus"
                   style={"h-4 w-4 hover:text-accent-foreground"}
-                  method="LUCIDE"
                 />
               </button>
             ) : (
@@ -82,11 +81,7 @@ export default function InputListComponent({
                   onChange(inputList);
                 }}
               >
-                <IconComponent
-                  name="X"
-                  style="h-4 w-4 hover:text-status-red"
-                  method="LUCIDE"
-                />
+                <IconComponent name="X" style="h-4 w-4 hover:text-status-red" />
               </button>
             )}
           </div>

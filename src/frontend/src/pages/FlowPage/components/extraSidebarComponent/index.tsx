@@ -65,15 +65,10 @@ export default function ExtraSidebar() {
           <button
             className="extra-side-bar-buttons"
             onClick={() => {
-              // openPopUp(<ImportModal />);
               uploadFlow();
             }}
           >
-            <IconComponent
-              name="FileUp"
-              method="LUCIDE"
-              style="side-bar-button-size "
-            />
+            <IconComponent name="FileUp" style="side-bar-button-size " />
           </button>
         </ShadTooltip>
 
@@ -84,11 +79,7 @@ export default function ExtraSidebar() {
               openPopUp(<ExportModal />);
             }}
           >
-            <IconComponent
-              name="FileDown"
-              method="LUCIDE"
-              style="side-bar-button-size"
-            />
+            <IconComponent name="FileDown" style="side-bar-button-size" />
           </button>
         </ShadTooltip>
         <ShadTooltip content="Code" side="top">
@@ -98,11 +89,7 @@ export default function ExtraSidebar() {
               openPopUp(<ApiModal flow={flows.find((f) => f.id === tabId)} />);
             }}
           >
-            <IconComponent
-              name="Code2"
-              method="LUCIDE"
-              style="side-bar-button-size"
-            />
+            <IconComponent name="Code2" style="side-bar-button-size" />
           </button>
         </ShadTooltip>
 
@@ -117,7 +104,6 @@ export default function ExtraSidebar() {
           >
             <IconComponent
               name="Save"
-              method="LUCIDE"
               style={
                 "side-bar-button-size" +
                 (isPending ? " " : " extra-side-bar-save-disable")
@@ -140,7 +126,6 @@ export default function ExtraSidebar() {
           }}
         />
         <div className="search-icon">
-          {/* ! replace hash color here */}
           <Search size={20} strokeWidth={1.5} className="text-primary" />
         </div>
       </div>
@@ -198,7 +183,6 @@ export default function ExtraSidebar() {
                               <IconComponent
                                 name="Menu"
                                 style="side-bar-components-icon "
-                                method="LUCIDE"
                               />
                             </div>
                           </div>

@@ -51,7 +51,7 @@ export default function Header() {
             variant={location.pathname === "/" ? "primary" : "secondary"}
             size="sm"
           >
-            <IconComponent name="Home" method="LUCIDE" style="h-4 w-4" />
+            <IconComponent name="Home" style="h-4 w-4" />
             <div className="flex-1">{USER_PROJECTS_HEADER}</div>
           </Button>
         </Link>
@@ -63,7 +63,7 @@ export default function Header() {
             }
             size="sm"
           >
-            <IconComponent method="LUCIDE" name="Users2" style="h-4 w-4" />
+            <IconComponent name="Users2" style="h-4 w-4" />
             <div className="flex-1">Community Examples</div>
           </Button>
         </Link>
@@ -105,17 +105,9 @@ export default function Header() {
             }}
           >
             {dark ? (
-              <IconComponent
-                name="SunIcon"
-                style="side-bar-button-size"
-                method="LUCIDE"
-              />
+              <IconComponent name="SunIcon" style="side-bar-button-size" />
             ) : (
-              <IconComponent
-                name="MoonIcon"
-                style="side-bar-button-size"
-                method="LUCIDE"
-              />
+              <IconComponent name="MoonIcon" style="side-bar-button-size" />
             )}
           </button>
           <button
@@ -141,7 +133,6 @@ export default function Header() {
             {notificationCenter && <div className="header-notifications"></div>}
             <IconComponent
               name="Bell"
-              method="LUCIDE"
               style="side-bar-button-size"
               aria-hidden="true"
             />

@@ -41,7 +41,6 @@ export default function SuccessAlert({
             <IconComponent
               name="CheckCircle2"
               style="success-alert-icon"
-              method="LUCIDE"
               aria-hidden="true"
             />
           </div>
