@@ -34,7 +34,7 @@ export default function AccordionComponent({
   return (
     <>
       <Accordion type="single" value={value} onValueChange={setValue}>
-        <AccordionItem value={trigger} className="border-none">
+        <AccordionItem value={trigger} className="border-b">
           <AccordionTrigger
             onClick={() => {
               handleClick();
