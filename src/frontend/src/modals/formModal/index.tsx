@@ -452,7 +452,7 @@ export default function FormModal({
                             </div>
                           </div>
                         </AccordionTrigger>
-                        <AccordionContent>
+                        <AccordionContent className="AccordionContent">
                           <div className="file-component-tab-column">
                             {tabsState[
                               id.current
