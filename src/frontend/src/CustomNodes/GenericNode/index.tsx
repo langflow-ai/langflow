@@ -176,25 +176,6 @@ export default function GenericNode({
               .filter((t) => t.charAt(0) !== "_")
               .map((t: string, idx) => (
                 <div key={idx}>
-                  {/* {idx === 0 ? (
-                                <div
-                                    className={classNames(
-                                        "px-5 py-2 mt-2 text-center",
-                                        Object.keys(data.node.template).filter(
-                                            (key) =>
-                                                !key.startsWith("_") &&
-                                                data.node.template[key].show &&
-                                                !data.node.template[key].advanced
-                                        ).length === 0
-                                            ? "hidden"
-                                            : ""
-                                    )}
-                                >
-                                    Inputs
-                                </div>
-                            ) : (
-                                <></>
-                            )} */}
                   {data.node.template[t].show &&
                   !data.node.template[t].advanced ? (
                     <ParameterComponent
@@ -243,9 +224,6 @@ export default function GenericNode({
             >
               {" "}
             </div>
-            {/* <div className="px-5 py-2 mt-2 text-center">
-                  Output
-              </div> */}
             <ParameterComponent
               data={data}
               color={nodeColors[types[data.type]] ?? nodeColors.unknown}
