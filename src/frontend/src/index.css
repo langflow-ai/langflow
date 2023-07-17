@@ -145,6 +145,9 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
 }
+pre {
+  font-family: inherit;
+}
 
 /* The style below sets the cursor property of the element with the class .react-flow__pane to the default cursor.
 The cursor: default; property value restores the browser's default cursor style for the targeted element. By applying this style, the element will no longer have a custom cursor appearance such as "grab" or any other custom cursor defined elsewhere in the application. Instead, it will revert to the default cursor style determined by the browser, typically an arrow-shaped cursor. */
