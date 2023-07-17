@@ -133,7 +133,7 @@ export default function CodeAreaModal({
       </BaseModal.Header>
       <BaseModal.Content>
         <div className="flex h-full w-full flex-col transition-all">
-          <div className="h-full w-full">
+        <div className="h-full w-full">
             <AceEditor
               value={code}
               mode="python"
@@ -148,8 +148,25 @@ export default function CodeAreaModal({
               onChange={(value) => {
                 setCode(value);
               }}
-              className="h-full w-full rounded-lg border-[1px] border-border custom-scroll"
+              className="h-full w-full rounded-lg border-[1px] border-gray-300 custom-scroll dark:border-gray-600"
             />
+          </div>
+          <div
+            className={
+              "w-full transition-all delay-500 " +
+              (error?.detail.error !== undefined ? "h-2/6" : "h-0")
+            }
+          >
+            <div className="mt-1 h-full w-full overflow-y-auto overflow-x-clip text-left custom-scroll">
+              <h1 className="text-lg text-destructive">
+                {error?.detail?.error}
+              </h1>
+              <div className="ml-2 w-full break-all text-sm text-status-red">
+                <pre className="w-full whitespace-pre-wrap break-all">
+                  {error?.detail?.traceback}
+                </pre>
+              </div>
+            </div>
           </div>
           <div className="flex h-fit w-full justify-end">
             <Button className="mt-3" onClick={handleClick} type="submit">
