@@ -1,5 +1,5 @@
 import { IconComponentProps, IconProps } from "../../types/components";
-import { nodeIconsLucide, svgIcons } from "../../utils";
+import { nodeIconsLucide } from "../../utils";
 
 export function IconFromLucide({
   name,
@@ -10,15 +10,6 @@ export function IconFromLucide({
   return <TargetIcon className={ style } style={{ color: iconColor }} />;
 }
 
-export function IconFromSvg({
-  name,
-  style,
-  iconColor,
-}: IconProps): JSX.Element {
-  const TargetSvg = svgIcons[name] ?? nodeIconsLucide["unknown"];
-  return <TargetSvg className={ style } />;
-}
-
 export default function IconComponent({
   method,
   name,
@@ -26,8 +17,6 @@ export default function IconComponent({
   iconColor,
 }: IconComponentProps): JSX.Element {
   switch (method) {
-    case "SVG":
-      return <IconFromSvg name={name} style={ style } iconColor={ iconColor } />;
     case "LUCIDE":
       return <IconFromLucide name={name} style={ style } iconColor={ iconColor } />;
     default:
