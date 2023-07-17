@@ -162,12 +162,6 @@ export interface IVarHighlightType {
   name: string;
 }
 
-export type IconProps = {
-  name: string;
-  style: string;
-  iconColor?: string;
-};
-
 export type IconComponentProps = {
   name: string;
   style: string;
