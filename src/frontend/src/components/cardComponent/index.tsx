@@ -56,13 +56,6 @@ export const CardComponent = ({
       <CardFooter>
         <div className="card-component-footer-arrangement">
           <div className="card-component-footer">
-            {/* <Badge variant="secondary">Agent</Badge>
-            <Badge variant="secondary">
-              <div className="w-3">
-                <OpenAiIcon />
-              </div>
-              <span className="text-base">&nbsp;</span>OpenAI+
-            </Badge> */}
           </div>
           {button && button}
         </div>
