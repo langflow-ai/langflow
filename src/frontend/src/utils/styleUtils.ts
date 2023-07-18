@@ -48,7 +48,6 @@ import {
   Scissors,
   Search,
   Settings2,
-  SlackIcon,
   Sparkles,
   SunIcon,
   TerminalSquare,
@@ -83,14 +82,12 @@ import { OpenAiIcon } from "../icons/OpenAi";
 import { PineconeIcon } from "../icons/Pinecone";
 import { QDrantIcon } from "../icons/QDrant";
 import { SearxIcon } from "../icons/Searx";
-import { VertexAIIcon } from "../icons/VertexAI";
-import { HackerNewsIcon } from "../icons/hackerNews";
-import { SupabaseIcon } from "../icons/supabase";
 import SvgSlackIcon from "../icons/Slack/SlackIcon";
+import { VertexAIIcon } from "../icons/VertexAI";
 import SvgWikipedia from "../icons/Wikipedia/Wikipedia";
 import SvgWolfram from "../icons/Wolfram/Wolfram";
-import SvgWeaviate from "../icons/Weaviate/Weaviate";
-import { WeaviateIcon } from "../icons/Weaviate";
+import { HackerNewsIcon } from "../icons/hackerNews";
+import { SupabaseIcon } from "../icons/supabase";
 
 export const gradients = [
   "bg-gradient-to-br from-gray-800 via-rose-700 to-violet-900",
