@@ -37,7 +37,10 @@ export const CardComponent = ({
           <span className="card-component-title-size">{flow.name}</span>
           {onDelete && (
             <button className="card-component-delete-button" onClick={onDelete}>
-              <IconComponent name="Trash2" style="card-component-delete-icon" />
+              <IconComponent
+                name="Trash2"
+                TWstyle="card-component-delete-icon"
+              />
             </button>
           )}
         </CardTitle>

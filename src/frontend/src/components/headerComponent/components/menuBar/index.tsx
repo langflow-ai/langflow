@@ -39,7 +39,7 @@ export const MenuBar = ({ flows, tabId }) => {
   return (
     <div className="round-button-div">
       <Link to="/">
-        <IconComponent name="ChevronLeft" style="w-4" />
+        <IconComponent name="ChevronLeft" TWstyle="w-4" />
       </Link>
       <div className="header-menu-bar">
         <DropdownMenu>
@@ -47,7 +47,7 @@ export const MenuBar = ({ flows, tabId }) => {
             <Button asChild variant="primary" size="sm">
               <div className="header-menu-bar-display">
                 <div className="header-menu-flow-name">{current_flow.name}</div>
-                <IconComponent name="ChevronDown" style="h-4 w-4" />
+                <IconComponent name="ChevronDown" TWstyle="h-4 w-4" />
               </div>
             </Button>
           </DropdownMenuTrigger>
@@ -59,7 +59,7 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <IconComponent name="Plus" style="header-menu-options" />
+              <IconComponent name="Plus" TWstyle="header-menu-options" />
               New
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -68,7 +68,7 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <IconComponent name="Settings2" style="header-menu-options " />
+              <IconComponent name="Settings2" TWstyle="header-menu-options " />
               Settings
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -77,7 +77,7 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <IconComponent name="Undo" style="header-menu-options " />
+              <IconComponent name="Undo" TWstyle="header-menu-options " />
               Undo
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -86,7 +86,7 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <IconComponent name="Redo" style="header-menu-options " />
+              <IconComponent name="Redo" TWstyle="header-menu-options " />
               Redo
             </DropdownMenuItem>
           </DropdownMenuContent>

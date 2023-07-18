@@ -90,7 +90,7 @@ export default function PromptAreaComponent({
           {!editNode && (
             <IconComponent
               name="ExternalLink"
-              style={
+              TWstyle={
                 "icons-parameters-comp" +
                 (disabled ? " text-ring" : " hover:text-accent-foreground")
               }

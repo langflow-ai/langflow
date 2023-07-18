@@ -42,7 +42,7 @@ export default function NoticeAlert({
           <div className="flex-shrink-0">
             <IconComponent
               name="Info"
-              style="h-5 w-5 text-status-blue "
+              TWstyle="h-5 w-5 text-status-blue "
               aria-hidden="true"
             />
           </div>

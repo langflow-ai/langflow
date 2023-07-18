@@ -52,7 +52,7 @@ export default function ChatTrigger({ open, setOpen, isBuilt, canOpen }) {
         <div className="flex gap-3">
           <IconComponent
             name="MessagesSquare"
-            style={
+            TWstyle={
               "h-6 w-6 transition-all " +
               (isBuilt && canOpen
                 ? "message-button-icon"

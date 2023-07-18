@@ -273,7 +273,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
             <span className="pr-2">Code</span>
             <IconComponent
               name="Code2"
-              style="h-6 w-6 pl-1 text-gray-800 dark:text-white"
+              TWstyle="h-6 w-6 pl-1 text-gray-800 dark:text-white"
               aria-hidden="true"
             />
           </DialogTitle>

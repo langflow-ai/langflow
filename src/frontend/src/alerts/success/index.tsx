@@ -40,7 +40,7 @@ export default function SuccessAlert({
           <div className="flex-shrink-0">
             <IconComponent
               name="CheckCircle2"
-              style="success-alert-icon"
+              TWstyle="success-alert-icon"
               aria-hidden="true"
             />
           </div>

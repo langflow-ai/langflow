@@ -67,7 +67,7 @@ export default function InputListComponent({
               >
                 <IconComponent
                   name="Plus"
-                  style={"h-4 w-4 hover:text-accent-foreground"}
+                  TWstyle={"h-4 w-4 hover:text-accent-foreground"}
                 />
               </button>
             ) : (
@@ -81,7 +81,10 @@ export default function InputListComponent({
                   onChange(inputList);
                 }}
               >
-                <IconComponent name="X" style="h-4 w-4 hover:text-status-red" />
+                <IconComponent
+                  name="X"
+                  TWstyle="h-4 w-4 hover:text-status-red"
+                />
               </button>
             )}
           </div>

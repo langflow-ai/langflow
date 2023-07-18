@@ -31,7 +31,7 @@ export default function SingleAlert({
           <div className="flex-shrink-0">
             <IconComponent
               name="XCircle"
-              style="h-5 w-5 text-status-red"
+              TWstyle="h-5 w-5 text-status-red"
               aria-hidden="true"
             />
           </div>
@@ -68,7 +68,7 @@ export default function SingleAlert({
                 <span className="sr-only">Dismiss</span>
                 <IconComponent
                   name="X"
-                  style="h-4 w-4 text-error-foreground"
+                  TWstyle="h-4 w-4 text-error-foreground"
                   aria-hidden="true"
                 />
               </button>
@@ -83,7 +83,7 @@ export default function SingleAlert({
           <div className="flex-shrink-0">
             <IconComponent
               name="Info"
-              style="h-5 w-5 text-status-blue "
+              TWstyle="h-5 w-5 text-status-blue "
               aria-hidden="true"
             />
           </div>
@@ -119,7 +119,7 @@ export default function SingleAlert({
                 <span className="sr-only">Dismiss</span>
                 <IconComponent
                   name="X"
-                  style="h-4 w-4 text-info-foreground"
+                  TWstyle="h-4 w-4 text-info-foreground"
                   aria-hidden="true"
                 />
               </button>
@@ -134,7 +134,7 @@ export default function SingleAlert({
           <div className="flex-shrink-0">
             <IconComponent
               name="CheckCircle2"
-              style="h-5 w-5 text-status-green"
+              TWstyle="h-5 w-5 text-status-green"
               aria-hidden="true"
             />
           </div>
@@ -158,7 +158,7 @@ export default function SingleAlert({
                 <span className="sr-only">Dismiss</span>
                 <IconComponent
                   name="X"
-                  style="h-4 w-4 text-success-foreground"
+                  TWstyle="h-4 w-4 text-success-foreground"
                   aria-hidden="true"
                 />
               </button>
