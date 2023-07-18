@@ -37,6 +37,7 @@ export default function CommunityPage() {
   }
   const navigate = useNavigate();
 
+  // Show community examples on page start
   useEffect(() => {
     handleExamples();
   }, []);

@@ -27,6 +27,7 @@ export default function Header() {
 
   const [stars, setStars] = useState(null);
 
+  // Get and set numbers of stars on header
   useEffect(() => {
     async function fetchStars() {
       const starsCount = await getRepoStars("logspace-ai", "langflow");

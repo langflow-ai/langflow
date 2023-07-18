@@ -15,6 +15,7 @@ export default function IntComponent({
   const min = 0;
   const { closePopUp } = useContext(PopUpContext);
 
+  // Clear component state
   useEffect(() => {
     if (disabled) {
       setMyValue("");
