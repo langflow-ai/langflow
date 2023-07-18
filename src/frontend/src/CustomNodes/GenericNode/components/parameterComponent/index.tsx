@@ -17,16 +17,20 @@ import { PopUpContext } from "../../../../contexts/popUpContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
-import { cleanEdges } from "../../../../util/reactflowUtils";
+import {
+  cleanEdges,
+  isValidConnection,
+} from "../../../../utils/reactflowUtils";
+import {
+  nodeColors,
+  nodeIconsLucide,
+  nodeNames,
+} from "../../../../utils/styleUtils";
 import {
   classNames,
   getRandomKeyByssmm,
   groupByFamily,
-  isValidConnection,
-  nodeColors,
-  nodeIconsLucide,
-  nodeNames,
-} from "../../../../utils";
+} from "../../../../utils/utils";
 
 export default function ParameterComponent({
   left,

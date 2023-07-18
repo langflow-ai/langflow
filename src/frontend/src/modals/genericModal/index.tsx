@@ -6,20 +6,21 @@ import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { DialogTitle } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
-import { MAX_WORDS_HIGHLIGHT, PROMPT_DIALOG_SUBTITLE, TEXT_DIALOG_SUBTITLE } from "../../constants";
+import {
+  INVALID_CHARACTERS,
+  MAX_WORDS_HIGHLIGHT,
+  PROMPT_DIALOG_SUBTITLE,
+  TEXT_DIALOG_SUBTITLE,
+  TypeModal,
+  regexHighlight,
+  varHighlightHTML,
+} from "../../constants";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { postValidatePrompt } from "../../controllers/API";
 import { APIClassType } from "../../types/api";
-import {
-  INVALID_CHARACTERS,
-  TypeModal,
-  classNames,
-  getRandomKeyByssmm,
-  regexHighlight,
-  varHighlightHTML,
-} from "../../utils";
+import { classNames, getRandomKeyByssmm } from "../../utils/utils";
 import BaseModal from "../baseModal";
 
 export default function GenericModal({
@@ -120,14 +121,15 @@ export default function GenericModal({
     );
   };
 
-  function getClassByNumberLength(){
+  function getClassByNumberLength() {
     let sumOfCaracteres: number = 0;
-    wordsHighlight.forEach(element => {
-      sumOfCaracteres = sumOfCaracteres + element.replace(/[{}]/g, "").length
+    wordsHighlight.forEach((element) => {
+      sumOfCaracteres = sumOfCaracteres + element.replace(/[{}]/g, "").length;
     });
-    return sumOfCaracteres > MAX_WORDS_HIGHLIGHT ? "code-highlight" : "code-nohighlight"
+    return sumOfCaracteres > MAX_WORDS_HIGHLIGHT
+      ? "code-highlight"
+      : "code-nohighlight";
   }
-
 
   function validatePrompt(closeModal: boolean) {
     postValidatePrompt(field_name, inputValue, nodeClass)
@@ -234,7 +236,10 @@ export default function GenericModal({
             <div className="mb-auto flex-1">
               {type === TypeModal.PROMPT && (
                 <div className=" mr-2">
-                  <div ref={divRef} className="max-h-20 overflow-y-auto custom-scroll">
+                  <div
+                    ref={divRef}
+                    className="max-h-20 overflow-y-auto custom-scroll"
+                  >
                     <div className="flex flex-wrap items-center">
                       <IconComponent
                         name="Variable"

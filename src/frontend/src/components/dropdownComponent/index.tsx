@@ -2,7 +2,7 @@ import { Listbox, Transition } from "@headlessui/react";
 import { Fragment, useContext, useEffect, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { DropDownComponentType } from "../../types/components";
-import { classNames } from "../../utils";
+import { classNames } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 
 export default function Dropdown({

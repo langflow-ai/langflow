@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import IconComponent from "../../../components/genericIconComponent";
-import { classNames } from "../../../utils";
+import { classNames } from "../../../utils/utils";
 
 export default function ChatInput({
   lockChat,
