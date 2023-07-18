@@ -39,7 +39,7 @@ export const CardComponent = ({
             <button className="card-component-delete-button" onClick={onDelete}>
               <IconComponent
                 name="Trash2"
-                TWstyle="card-component-delete-icon"
+                className="card-component-delete-icon"
               />
             </button>
           )}

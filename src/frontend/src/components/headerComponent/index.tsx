@@ -51,7 +51,7 @@ export default function Header() {
             variant={location.pathname === "/" ? "primary" : "secondary"}
             size="sm"
           >
-            <IconComponent name="Home" TWstyle="h-4 w-4" />
+            <IconComponent name="Home" className="h-4 w-4" />
             <div className="flex-1">{USER_PROJECTS_HEADER}</div>
           </Button>
         </Link>
@@ -63,7 +63,7 @@ export default function Header() {
             }
             size="sm"
           >
-            <IconComponent name="Users2" TWstyle="h-4 w-4" />
+            <IconComponent name="Users2" className="h-4 w-4" />
             <div className="flex-1">Community Examples</div>
           </Button>
         </Link>
@@ -105,9 +105,9 @@ export default function Header() {
             }}
           >
             {dark ? (
-              <IconComponent name="SunIcon" TWstyle="side-bar-button-size" />
+              <IconComponent name="SunIcon" className="side-bar-button-size" />
             ) : (
-              <IconComponent name="MoonIcon" TWstyle="side-bar-button-size" />
+              <IconComponent name="MoonIcon" className="side-bar-button-size" />
             )}
           </button>
           <button
@@ -133,7 +133,7 @@ export default function Header() {
             {notificationCenter && <div className="header-notifications"></div>}
             <IconComponent
               name="Bell"
-              TWstyle="side-bar-button-size"
+              className="side-bar-button-size"
               aria-hidden="true"
             />
           </button>

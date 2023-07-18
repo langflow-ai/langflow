@@ -16,7 +16,7 @@ export default function HomePage() {
     <div className="main-page-panel">
       <div className="main-page-nav-arrangement">
         <span className="main-page-nav-title">
-          <IconComponent name="Home" TWstyle="w-6" />
+          <IconComponent name="Home" className="w-6" />
           {USER_PROJECTS_HEADER}
         </span>
         <div className="button-div-style">
@@ -26,7 +26,7 @@ export default function HomePage() {
               downloadFlows();
             }}
           >
-            <IconComponent name="Download" TWstyle="main-page-nav-button" />
+            <IconComponent name="Download" className="main-page-nav-button" />
             Download Collection
           </Button>
           <Button
@@ -35,7 +35,7 @@ export default function HomePage() {
               uploadFlows();
             }}
           >
-            <IconComponent name="Upload" TWstyle="main-page-nav-button" />
+            <IconComponent name="Upload" className="main-page-nav-button" />
             Upload Collection
           </Button>
           <Button
@@ -46,7 +46,7 @@ export default function HomePage() {
               });
             }}
           >
-            <IconComponent name="Plus" TWstyle="main-page-nav-button" />
+            <IconComponent name="Plus" className="main-page-nav-button" />
             New Project
           </Button>
         </div>
@@ -69,7 +69,7 @@ export default function HomePage() {
                 >
                   <IconComponent
                     name="ExternalLink"
-                    TWstyle="main-page-nav-button"
+                    className="main-page-nav-button"
                   />
                   Edit Flow
                 </Button>

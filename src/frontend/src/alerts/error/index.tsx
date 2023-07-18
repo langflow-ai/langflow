@@ -46,7 +46,7 @@ export default function ErrorAlert({
           <div className="flex-shrink-0">
             <IconComponent
               name="XCircle"
-              TWstyle="error-build-message-circle"
+              className="error-build-message-circle"
               aria-hidden="true"
             />
           </div>

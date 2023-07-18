@@ -48,7 +48,7 @@ export default function Dropdown({
                 <span className={"dropdown-component-arrow"}>
                   <IconComponent
                     name="ChevronsUpDown"
-                    TWstyle="dropdown-component-arrow-color"
+                    className="dropdown-component-arrow-color"
                     aria-hidden="true"
                   />
                 </span>
@@ -102,7 +102,7 @@ export default function Dropdown({
                             >
                               <IconComponent
                                 name="Check"
-                                TWstyle={
+                                className={
                                   active
                                     ? "dropdown-component-check-icon"
                                     : "dropdown-component-check-icon"
