@@ -87,8 +87,8 @@ export function groupByFamily(data, baseClasses, left, type) {
   let arrOfType: { family: string; type: string; component: string }[] = [];
   let arrOfLength: { length: number; type: string }[] = [];
   let lastType = "";
-  Object.keys(data).map((d) => {
-    Object.keys(data[d]).map((n) => {
+  Object.keys(data).forEach((d) => {
+    Object.keys(data[d]).forEach((n) => {
       try {
         if (
           data[d][n].base_classes.some((r) =>
@@ -120,7 +120,7 @@ export function groupByFamily(data, baseClasses, left, type) {
       try {
         baseClasses.split("\n").forEach((tol) => {
           data[d][n].base_classes.forEach((data) => {
-            if (tol == data) {
+            if (tol === data) {
               arrOfType.push({
                 family: d,
                 type: data,
