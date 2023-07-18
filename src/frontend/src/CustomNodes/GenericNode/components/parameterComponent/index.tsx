@@ -83,6 +83,7 @@ export default function ParameterComponent({
   };
 
   useEffect(() => {
+    if (name === "openai_api_base") console.log(info);
     infoHtml.current = (
       <div className="h-full w-full break-words">
         {info.split("\n").map((line, i) => (
@@ -163,10 +164,13 @@ export default function ParameterComponent({
           <div className="">
             {info !== "" && (
               <ShadTooltip content={infoHtml.current}>
-                <IconComponent
-                  name="Info"
-                  TWstyle="relative bottom-0.5 ml-2 h-3 w-4"
-                />
+                {/* put div to avoid bug that does not display tooltip */}
+                <div>
+                  <IconComponent
+                    name="Info"
+                    TWstyle="relative bottom-0.5 ml-2 h-3 w-4"
+                  />
+                </div>
               </ShadTooltip>
             )}
           </div>
