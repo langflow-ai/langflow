@@ -57,6 +57,8 @@ export default function CodeAreaModal({
             setSuccessData({
               title: "Code is ready to run",
             });
+            setOpen(false);
+            setValue(code);
             // setValue(code);
           } else {
             if (funcErrors.length !== 0) {
@@ -91,6 +93,7 @@ export default function CodeAreaModal({
         const { data } = apiReturn;
         if (data) {
           setNodeClass(data);
+          setValue(code);
           setOpen(false);
         }
       })
