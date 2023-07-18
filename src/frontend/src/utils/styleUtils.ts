@@ -86,6 +86,11 @@ import { SearxIcon } from "../icons/Searx";
 import { VertexAIIcon } from "../icons/VertexAI";
 import { HackerNewsIcon } from "../icons/hackerNews";
 import { SupabaseIcon } from "../icons/supabase";
+import SvgSlackIcon from "../icons/Slack/SlackIcon";
+import SvgWikipedia from "../icons/Wikipedia/Wikipedia";
+import SvgWolfram from "../icons/Wolfram/Wolfram";
+import SvgWeaviate from "../icons/Weaviate/Weaviate";
+import { WeaviateIcon } from "../icons/Weaviate";
 
 export const gradients = [
   "bg-gradient-to-br from-gray-800 via-rose-700 to-violet-900",
@@ -194,11 +199,12 @@ export const nodeIconsLucide = {
   Pinecone: PineconeIcon,
   Qdrant: QDrantIcon,
   Searx: SearxIcon,
-  SlackDirectoryLoader: SlackIcon,
+  SlackDirectoryLoader: SvgSlackIcon,
   SupabaseVectorStore: SupabaseIcon,
   VertexAI: VertexAIIcon,
   ChatVertexAI: VertexAIIcon,
   agents: Rocket,
+  WikipediaAPIWrapper: SvgWikipedia,
   chains: Link,
   memories: Cpu,
   llms: Lightbulb,
@@ -213,9 +219,12 @@ export const nodeIconsLucide = {
   textsplitters: Scissors,
   wrappers: Gift,
   utilities: Wand2,
+  WolframAlphaAPIWrapper: SvgWolfram,
   output_parsers: Compass,
   retrievers: FileSearch,
   unknown: HelpCircle,
+  WikipediaQueryRun: SvgWikipedia,
+  WolframAlphaQueryRun: SvgWolfram,
   Trash2,
   X,
   XCircle,
