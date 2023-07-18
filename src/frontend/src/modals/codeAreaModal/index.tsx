@@ -41,62 +41,74 @@ export default function CodeAreaModal({
   useEffect(() => {
     // if nodeClass.template has more fields other than code and dynamic is true
     // do not run handleClick
-    if (dynamic && Object.keys(nodeClass.template).length > 1) {
+    if (dynamic && Object.keys(nodeClass.template).length > 2) {
       return;
     }
-    handleClick();
+    processCode();
   }, []);
 
-  function handleClick() {
-    if (!dynamic) {
-      postValidateCode(code)
-        .then((apiReturn) => {
-          if (apiReturn.data) {
-            let importsErrors = apiReturn.data.imports.errors;
-            let funcErrors = apiReturn.data.function.errors;
-            if (funcErrors.length === 0 && importsErrors.length === 0) {
-              setSuccessData({
-                title: "Code is ready to run",
-              });
-              // setValue(code);
-            } else {
-              if (funcErrors.length !== 0) {
-                setErrorData({
-                  title: "There is an error in your function",
-                  list: funcErrors,
-                });
-              }
-              if (importsErrors.length !== 0) {
-                setErrorData({
-                  title: "There is an error in your imports",
-                  list: importsErrors,
-                });
-              }
-            }
-          } else {
-            setErrorData({
-              title: "Something went wrong, please try again",
+  function processNonDynamicField() {
+    postValidateCode(code)
+      .then((apiReturn) => {
+        if (apiReturn.data) {
+          let importsErrors = apiReturn.data.imports.errors;
+          let funcErrors = apiReturn.data.function.errors;
+          if (funcErrors.length === 0 && importsErrors.length === 0) {
+            setSuccessData({
+              title: "Code is ready to run",
             });
+            // setValue(code);
+          } else {
+            if (funcErrors.length !== 0) {
+              setErrorData({
+                title: "There is an error in your function",
+                list: funcErrors,
+              });
+            }
+            if (importsErrors.length !== 0) {
+              setErrorData({
+                title: "There is an error in your imports",
+                list: importsErrors,
+              });
+            }
           }
-        })
-        .catch((_) => {
+        } else {
           setErrorData({
-            title: "There is something wrong with this code, please review it",
+            title: "Something went wrong, please try again",
           });
+        }
+      })
+      .catch((_) => {
+        setErrorData({
+          title: "There is something wrong with this code, please review it",
         });
+      });
+  }
+
+  function processDynamicField() {
+    postCustomComponent(code, nodeClass)
+      .then((apiReturn) => {
+        const { data } = apiReturn;
+        if (data) {
+          setNodeClass(data);
+          setOpen(false);
+        }
+      })
+      .catch((err) => {
+        setError(err.response.data);
+      });
+  }
+
+  function processCode() {
+    if (!dynamic) {
+      processNonDynamicField();
     } else {
-      postCustomComponent(code, nodeClass)
-        .then((apiReturn) => {
-          const { data } = apiReturn;
-          if (data) {
-            setNodeClass(data);
-            setOpen(false);
-          }
-        })
-        .catch((err) => {
-          setError(err.response.data);
-        });
+      processDynamicField();
     }
+  }
+
+  function handleClick() {
+    processCode();
   }
 
   useEffect(() => {
