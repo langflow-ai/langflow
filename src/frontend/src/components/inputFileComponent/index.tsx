@@ -1,9 +1,9 @@
-import { FileSearch2 } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
 import { alertContext } from "../../contexts/alertContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { uploadFile } from "../../controllers/API";
 import { FileComponentType } from "../../types/components";
+import IconComponent from "../genericIconComponent";
 
 export default function InputFileComponent({
   value,
@@ -108,8 +108,8 @@ export default function InputFileComponent({
         </span>
         <button onClick={handleButtonClick}>
           {!editNode && !loading && (
-            <FileSearch2
-              strokeWidth={1.5}
+            <IconComponent
+              name="FileSearch2"
               className={
                 "icons-parameters-comp" +
                 (disabled ? " text-ring " : " hover:text-accent-foreground")

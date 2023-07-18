@@ -1,10 +1,87 @@
 // src/constants.tsx
 
 import { MessageSquare } from "lucide-react";
+import { IVarHighlightType } from "./types/components";
 import { FlowType } from "./types/flow";
 import { TabsState } from "./types/tabs";
-import { buildInputs, buildTweaks } from "./utils";
+import { buildTweaks } from "./utils/reactflowUtils";
+import { buildInputs } from "./utils/utils";
 
+/**
+ * constants fpr programming languages box on chat form
+ * @constant
+ */
+interface languageMap {
+  [key: string]: string | undefined;
+}
+/**
+ * invalid characters for flow name
+ * @constant
+ */
+export const INVALID_CHARACTERS = [
+  " ",
+  ",",
+  ".",
+  ":",
+  ";",
+  "!",
+  "?",
+  "/",
+  "\\",
+  "(",
+  ")",
+  "[",
+  "]",
+  "\n",
+];
+
+/**
+ * regex to highlight the variables in the text
+ * @constant
+ */
+
+export const regexHighlight = /\{([^}]+)\}/g;
+
+export const varHighlightHTML = ({ name }: IVarHighlightType) => {
+  const html = `<span class="font-semibold chat-message-highlight">{${name}}</span>`;
+  return html;
+};
+
+export const programmingLanguages: languageMap = {
+  javascript: ".js",
+  python: ".py",
+  java: ".java",
+  c: ".c",
+  cpp: ".cpp",
+  "c++": ".cpp",
+  "c#": ".cs",
+  ruby: ".rb",
+  php: ".php",
+  swift: ".swift",
+  "objective-c": ".m",
+  kotlin: ".kt",
+  typescript: ".ts",
+  go: ".go",
+  perl: ".pl",
+  rust: ".rs",
+  scala: ".scala",
+  haskell: ".hs",
+  lua: ".lua",
+  shell: ".sh",
+  sql: ".sql",
+  html: ".html",
+  css: ".css",
+  // add more file extensions here, make sure the key is same as language prop in CodeBlock.tsx component
+};
+
+/**
+ * enum for the different types of nodes
+ * @enum
+ */
+export enum TypeModal {
+  TEXT = 1,
+  PROMPT = 2,
+}
 /**
  * Number maximum of components to scroll on tooltips
  * @constant
@@ -16,6 +93,12 @@ export const MAX_LENGTH_TO_SCROLL_TOOLTIP = 200;
  * @constant
  */
 export const MAX_WORDS_HIGHLIGHT = 79;
+
+/**
+ * Limit of items before show scroll on fields modal
+ * @constant
+ */
+export const limitScrollFieldsModal = 10;
 
 /**
  * The base text for subtitle of Export Dialog (Toolbar)

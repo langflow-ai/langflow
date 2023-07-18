@@ -21,7 +21,7 @@ import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { getExamples } from "../../controllers/API";
 import { FlowType } from "../../types/flow";
-import { classNames } from "../../utils";
+import { classNames } from "../../utils/utils";
 import ButtonBox from "./buttonBox";
 
 export default function ImportModal() {

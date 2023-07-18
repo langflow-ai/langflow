@@ -1,16 +1,16 @@
-import { Eraser, TerminalSquare, Variable } from "lucide-react";
 import { useContext, useEffect, useRef, useState } from "react";
 import { alertContext } from "../../contexts/alertContext";
 import { typesContext } from "../../contexts/typesContext";
 import { sendAllProps } from "../../types/api";
 import { ChatMessageType } from "../../types/chat";
 import { FlowType } from "../../types/flow";
-import { classNames, validateNodes } from "../../utils";
+import { classNames } from "../../utils/utils";
 import ChatInput from "./chatInput";
 import ChatMessage from "./chatMessage";
 
 import _ from "lodash";
 import AccordionComponent from "../../components/AccordionComponent";
+import IconComponent from "../../components/genericIconComponent";
 import ToggleShadComponent from "../../components/toggleShadComponent";
 import { Badge } from "../../components/ui/badge";
 import {
@@ -24,6 +24,7 @@ import {
 import { Textarea } from "../../components/ui/textarea";
 import { CHAT_FORM_DIALOG_SUBTITLE, THOUGHTS_ICON } from "../../constants";
 import { TabsContext } from "../../contexts/tabsContext";
+import { validateNodes } from "../../utils/reactflowUtils";
 
 export default function FormModal({
   flow,
@@ -392,7 +393,8 @@ export default function FormModal({
           <DialogHeader>
             <DialogTitle className="flex items-center">
               <span className="pr-2">Chat</span>
-              <TerminalSquare
+              <IconComponent
+                name="prompts"
                 className="h-6 w-6 pl-1 text-gray-800 dark:text-white"
                 aria-hidden="true"
               />
@@ -403,7 +405,10 @@ export default function FormModal({
           <div className="form-modal-iv-box ">
             <div className="form-modal-iv-size">
               <div className="file-component-arrangement">
-                <Variable className=" file-component-variable"></Variable>
+                <IconComponent
+                  name="Variable"
+                  className=" file-component-variable"
+                />
                 <span className="file-component-variables-span text-md">
                   Input Variables
                 </span>
@@ -460,7 +465,7 @@ export default function FormModal({
                           </div>
                         )}
                         <Textarea
-                        className="custom-scroll"
+                          className="custom-scroll"
                           value={
                             tabsState[id.current].formKeysData.input_keys[i]
                           }
@@ -544,7 +549,8 @@ export default function FormModal({
               <div className="eraser-size">
                 <div className="eraser-position">
                   <button disabled={lockChat} onClick={() => clearChat()}>
-                    <Eraser
+                    <IconComponent
+                      name="Eraser"
                       className={classNames(
                         "h-5 w-5",
                         lockChat

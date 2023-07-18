@@ -1,6 +1,6 @@
-import { Settings2 } from "lucide-react";
 import { useContext, useRef, useState } from "react";
 import EditFlowSettings from "../../components/EditFlowSettingsComponent";
+import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import {
   Dialog,
@@ -51,7 +51,7 @@ export default function FlowSettingsModal() {
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Settings </span>
-            <Settings2 className="mr-2 h-4 w-4 " />
+            <IconComponent name="Settings2" className="mr-2 h-4 w-4 " />
           </DialogTitle>
           <DialogDescription>{SETTINGS_DIALOG_SUBTITLE}</DialogDescription>
         </DialogHeader>
