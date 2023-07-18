@@ -1,7 +1,7 @@
 import { useContext } from "react";
 import { TabsContext } from "../../contexts/tabsContext";
 import { FlowType } from "../../types/flow";
-import { gradients } from "../../utils";
+import { gradients } from "../../utils/styleUtils";
 import IconComponent from "../genericIconComponent";
 import {
   Card,

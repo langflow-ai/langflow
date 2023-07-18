@@ -6,9 +6,9 @@ import { alertContext } from "../../../contexts/alertContext";
 import { typesContext } from "../../../contexts/typesContext";
 import { postBuildInit } from "../../../controllers/API";
 import { FlowType } from "../../../types/flow";
-import { validateNodes } from "../../../utils";
 
 import { TabsContext } from "../../../contexts/tabsContext";
+import { validateNodes } from "../../../utils/reactflowUtils";
 import RadialProgressComponent from "../../RadialProgress";
 import IconComponent from "../../genericIconComponent";
 

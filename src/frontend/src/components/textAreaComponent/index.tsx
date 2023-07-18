@@ -1,10 +1,9 @@
 import { useContext, useEffect, useState } from "react";
+import { TypeModal } from "../../constants";
 import { PopUpContext } from "../../contexts/popUpContext";
+import { TabsContext } from "../../contexts/tabsContext";
 import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
-import { TypeModal } from "../../utils";
-
-import { TabsContext } from "../../contexts/tabsContext";
 import IconComponent from "../genericIconComponent";
 
 export default function TextAreaComponent({

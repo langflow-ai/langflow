@@ -10,7 +10,7 @@ import SanitizedHTMLWrapper from "../../../components/SanitizedHTMLWrapper";
 import IconComponent from "../../../components/genericIconComponent";
 import { THOUGHTS_ICON } from "../../../constants";
 import { ChatMessageType } from "../../../types/chat";
-import { classNames } from "../../../utils";
+import { classNames } from "../../../utils/utils";
 import FileCard from "../fileComponent";
 import { CodeBlock } from "./codeBlock";
 export default function ChatMessage({
@@ -81,7 +81,7 @@ export default function ChatMessage({
                         remarkPlugins={[remarkGfm, remarkMath]}
                         rehypePlugins={[rehypeMathjax]}
                         className="markdown prose inline-block break-words text-primary
-                     dark:prose-invert sm:max-w-[30vw] lg:max-w-[40vw] sm:w-[30vw] lg:w-[40vw]"
+                     dark:prose-invert sm:w-[30vw] sm:max-w-[30vw] lg:w-[40vw] lg:max-w-[40vw]"
                         components={{
                           code: ({
                             node,
