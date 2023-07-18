@@ -68,7 +68,7 @@ export default function ExtraSidebar() {
               uploadFlow();
             }}
           >
-            <IconComponent name="FileUp" style="side-bar-button-size " />
+            <IconComponent name="FileUp" TWstyle="side-bar-button-size " />
           </button>
         </ShadTooltip>
 
@@ -79,7 +79,7 @@ export default function ExtraSidebar() {
               openPopUp(<ExportModal />);
             }}
           >
-            <IconComponent name="FileDown" style="side-bar-button-size" />
+            <IconComponent name="FileDown" TWstyle="side-bar-button-size" />
           </button>
         </ShadTooltip>
         <ShadTooltip content="Code" side="top">
@@ -89,7 +89,7 @@ export default function ExtraSidebar() {
               openPopUp(<ApiModal flow={flows.find((f) => f.id === tabId)} />);
             }}
           >
-            <IconComponent name="Code2" style="side-bar-button-size" />
+            <IconComponent name="Code2" TWstyle="side-bar-button-size" />
           </button>
         </ShadTooltip>
 
@@ -104,7 +104,7 @@ export default function ExtraSidebar() {
           >
             <IconComponent
               name="Save"
-              style={
+              TWstyle={
                 "side-bar-button-size" +
                 (isPending ? " " : " extra-side-bar-save-disable")
               }
@@ -182,7 +182,7 @@ export default function ExtraSidebar() {
                               </span>
                               <IconComponent
                                 name="Menu"
-                                style="side-bar-components-icon "
+                                TWstyle="side-bar-components-icon "
                               />
                             </div>
                           </div>

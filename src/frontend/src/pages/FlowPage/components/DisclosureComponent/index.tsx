@@ -26,7 +26,7 @@ export default function DisclosureComponent({
                 <div>
                   <IconComponent
                     name="ChevronRight"
-                    style={`${
+                    TWstyle={`${
                       open || openDisc ? "rotate-90 transform" : ""
                     } h-4 w-4 text-foreground`}
                   />

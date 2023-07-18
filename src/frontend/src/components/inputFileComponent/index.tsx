@@ -110,7 +110,7 @@ export default function InputFileComponent({
           {!editNode && !loading && (
             <IconComponent
               name="FileSearch2"
-              style={
+              TWstyle={
                 "icons-parameters-comp" +
                 (disabled ? " text-ring " : " hover:text-accent-foreground")
               }

@@ -85,7 +85,7 @@ export default function CodeAreaModal({
           <span className="pr-2">Edit Code</span>
           <IconComponent
             name="prompts"
-            style="h-6 w-6 pl-1 text-primary "
+            TWstyle="h-6 w-6 pl-1 text-primary "
             aria-hidden="true"
           />
         </DialogTitle>

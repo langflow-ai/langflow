@@ -48,7 +48,7 @@ export default function ExportModal() {
             <span className="pr-2">Export</span>
             <IconComponent
               name="Download"
-              style="h-6 w-6 pl-1 text-foreground"
+              TWstyle="h-6 w-6 pl-1 text-foreground"
               aria-hidden="true"
             />
           </DialogTitle>

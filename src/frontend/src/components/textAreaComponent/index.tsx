@@ -70,7 +70,7 @@ export default function TextAreaComponent({
           {!editNode && (
             <IconComponent
               name="ExternalLink"
-              style={
+              TWstyle={
                 "icons-parameters-comp" +
                 (disabled ? " text-ring" : " hover:text-accent-foreground")
               }

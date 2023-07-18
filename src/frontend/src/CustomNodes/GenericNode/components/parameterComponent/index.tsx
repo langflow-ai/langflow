@@ -145,7 +145,6 @@ export default function ParameterComponent({
       );
     });
   }, [tooltipTitle]);
-
   return (
     <div
       ref={ref}
@@ -166,7 +165,7 @@ export default function ParameterComponent({
               <ShadTooltip content={infoHtml.current}>
                 <IconComponent
                   name="Info"
-                  style="relative bottom-0.5 ml-2 h-3 w-3"
+                  TWstyle="relative bottom-0.5 ml-2 h-3 w-4"
                 />
               </ShadTooltip>
             )}

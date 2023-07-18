@@ -71,7 +71,7 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
                     <span className="sr-only">Close</span>
                     <IconComponent
                       name="X"
-                      style="h-6 w-6"
+                      TWstyle="h-6 w-6"
                       aria-hidden="true"
                     />
                   </button>
