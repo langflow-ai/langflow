@@ -29,7 +29,7 @@ export default function AccordionComponent({
   }
 
   function handleClick() {
-    value == "" ? setValue(keyValue) : setValue("");
+    value === "" ? setValue(keyValue) : setValue("");
   }
 
   return (
