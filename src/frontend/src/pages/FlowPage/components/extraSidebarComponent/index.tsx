@@ -42,6 +42,7 @@ export default function ExtraSidebar() {
     event.dataTransfer.setData("nodedata", JSON.stringify(data));
   }
 
+  // Handle showing components after use search input
   function handleSearchInput(e: string) {
     setFilterData((_) => {
       let ret = {};
@@ -122,6 +123,7 @@ export default function ExtraSidebar() {
           className="input-search"
           onChange={(e) => {
             handleSearchInput(e.target.value);
+            // Set search input state
             setSearch(e.target.value);
           }}
         />
