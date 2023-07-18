@@ -130,7 +130,8 @@ export type RadialProgressType = {
 export type AccordionComponentType = {
   children?: ReactElement;
   open?: string[];
-  trigger?: string;
+  trigger?: string | ReactElement;
+  keyValue?: string;
 };
 export type Side = "top" | "right" | "bottom" | "left";
 
