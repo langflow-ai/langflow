@@ -8,11 +8,11 @@ import remarkMath from "remark-math";
 import MaleTechnology from "../../../assets/male-technologist.png";
 import Robot from "../../../assets/robot.png";
 import SanitizedHTMLWrapper from "../../../components/SanitizedHTMLWrapper";
+import CodeTabsComponent from "../../../components/codeTabsComponent";
 import { THOUGHTS_ICON } from "../../../constants";
 import { ChatMessageType } from "../../../types/chat";
 import { classNames } from "../../../utils";
 import FileCard from "../fileComponent";
-import { CodeBlock } from "./codeBlock";
 export default function ChatMessage({
   chat,
   lockChat,
@@ -80,8 +80,8 @@ export default function ChatMessage({
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm, remarkMath]}
                         rehypePlugins={[rehypeMathjax]}
-                        className="markdown prose inline-block break-words text-primary
-                     dark:prose-invert sm:w-[30vw] sm:max-w-[30vw] lg:w-[40vw] lg:max-w-[40vw]"
+                        className="markdown inline-block break-words text-primary
+                      sm:w-[30vw] sm:max-w-[30vw] lg:w-[40vw] lg:max-w-[40vw]"
                         components={{
                           code: ({
                             node,
@@ -110,11 +110,20 @@ export default function ChatMessage({
                             );
 
                             return !inline ? (
-                              <CodeBlock
-                                key={Math.random()}
-                                language={(match && match[1]) || ""}
-                                value={String(children).replace(/\n$/, "")}
-                                {...props}
+                              <CodeTabsComponent
+                                isMessage
+                                tabs={[
+                                  {
+                                    name: (match && match[1]) || "",
+                                    mode: (match && match[1]) || "",
+                                    image:
+                                      "https://curl.se/logo/curl-symbol-transparent.png",
+                                    language: (match && match[1]) || "",
+                                    code: String(children).replace(/\n$/, ""),
+                                  },
+                                ]}
+                                activeTab={"0"}
+                                setActiveTab={() => {}}
                               />
                             ) : (
                               <code className={className} {...props}>

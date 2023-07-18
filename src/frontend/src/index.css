@@ -145,11 +145,42 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
 }
+pre {
+  font-family: inherit;
+}
 
 /* The style below sets the cursor property of the element with the class .react-flow__pane to the default cursor.
 The cursor: default; property value restores the browser's default cursor style for the targeted element. By applying this style, the element will no longer have a custom cursor appearance such as "grab" or any other custom cursor defined elsewhere in the application. Instead, it will revert to the default cursor style determined by the browser, typically an arrow-shaped cursor. */
 .react-flow__pane {
   cursor: default;
+}
+
+.AccordionContent {
+  overflow: hidden;
+}
+.AccordionContent[data-state='open'] {
+  animation: slideDown 300ms ease-out;
+}
+.AccordionContent[data-state='closed'] {
+  animation: slideUp 300ms ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
 }
 
 
@@ -904,7 +935,7 @@ The cursor: default; property value restores the browser's default cursor style 
   }
 
   .api-modal-tabs {
-    @apply lg:w-full h-full overflow-hidden text-center bg-muted rounded-md border sm:w-[75vw]
+    @apply lg:w-full h-full flex flex-col overflow-hidden text-center bg-muted rounded-md border sm:w-[75vw]
   }
   .api-modal-tablist-div {
     @apply flex items-center justify-between px-2
