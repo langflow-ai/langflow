@@ -6,7 +6,6 @@ export default function IconComponent({
   TWstyle,
   iconColor,
 }: IconComponentProps): JSX.Element {
-  console.log("IconComponent", name, TWstyle, iconColor);
   const TargetIcon = nodeIconsLucide[name] ?? nodeIconsLucide["unknown"];
   return <TargetIcon className={TWstyle} style={{ color: iconColor }} />;
 }
