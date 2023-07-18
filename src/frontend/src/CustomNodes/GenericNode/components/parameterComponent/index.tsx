@@ -54,6 +54,7 @@ export default function ParameterComponent({
   const { closePopUp } = useContext(PopUpContext);
   const { setTabsState, tabId, save } = useContext(TabsContext);
 
+  // Update component position
   useEffect(() => {
     if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
       setPosition(ref.current.offsetTop + ref.current.clientHeight / 2);

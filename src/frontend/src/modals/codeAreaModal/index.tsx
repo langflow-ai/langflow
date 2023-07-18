@@ -39,6 +39,7 @@ export default function CodeAreaModal({
     }
   }
 
+  // Check for custom code errors 
   function handleClick() {
     postValidateCode(code)
       .then((apiReturn) => {

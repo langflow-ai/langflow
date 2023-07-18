@@ -16,6 +16,7 @@ export default function TextAreaComponent({
   const { openPopUp, closePopUp } = useContext(PopUpContext);
   const { setDisableCopyPaste } = useContext(TabsContext);
 
+  // Clear text area
   useEffect(() => {
     if (disabled) {
       setMyValue("");

@@ -8,6 +8,8 @@ export default function ToggleComponent({
   setEnabled,
   disabled,
 }: ToggleComponentType) {
+
+  // set component state as disabled
   useEffect(() => {
     if (disabled) {
       setEnabled(false);
