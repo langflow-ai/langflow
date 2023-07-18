@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { CardComponent } from "../../components/cardComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
-import { USER_PROJECTS_HEADER } from "../../constants";
+import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { TabsContext } from "../../contexts/tabsContext";
 export default function HomePage() {
   const { flows, setTabId, downloadFlows, uploadFlows, addFlow, removeFlow } =
