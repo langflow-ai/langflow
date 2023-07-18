@@ -38,9 +38,14 @@ export default function CodeAreaModal({
     detail: { error: string; traceback: string };
   }>(null);
 
-  // useEffect(() => {
-  //   handleClick();
-  // }, []);
+  useEffect(() => {
+    // if nodeClass.template has more fields other than code and dynamic is true
+    // do not run handleClick
+    if (dynamic && Object.keys(nodeClass.template).length > 1) {
+      return;
+    }
+    handleClick();
+  }, []);
 
   function handleClick() {
     if (!dynamic) {
