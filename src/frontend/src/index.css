@@ -115,6 +115,9 @@
   --status-green: #4ade80;
   --status-blue: #2563eb;
   --connection: #555;
+  
+  --chat-bot-icon: #235d70;
+  --chat-user-icon: #4f3d6e;
 
 }}
 
@@ -209,11 +212,11 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply focus:placeholder-transparent focus:ring-ring focus:border-ring
   }
   .input-primary {
-    @apply bg-background block border-ring form-input px-3 placeholder:text-muted-foreground rounded-md shadow-sm sm:text-sm truncate w-full;
+    @apply bg-background block border-border form-input px-3 placeholder:text-muted-foreground rounded-md shadow-sm sm:text-sm truncate w-full;
   }
 
   .input-edit-node{
-    @apply input-primary placeholder:text-center pt-0.5 pb-0.5 text-center
+    @apply input-primary border-border placeholder:text-center pt-0.5 pb-0.5 text-center
   }
   .input-search{
     @apply input-primary pr-7 mx-2
@@ -652,10 +655,10 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply flex items-center justify-between px-4 py-1.5
   }
   .code-block-modal-span {
-    @apply text-xs lowercase text-background
+    @apply text-xs lowercase text-muted-foreground
   }
   .code-block-modal-button {
-    @apply flex items-center gap-1.5 rounded bg-none p-1 text-xs text-background
+    @apply flex items-center gap-1.5 rounded bg-none p-1 text-xs text-muted-foreground
   }
 
   .chat-message-modal {
@@ -930,7 +933,11 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply bg-white text-primary
   }
   .code-highlight{
-    @apply block px-3 py-2 w-full h-full text-sm outline-0 border-0 break-all overflow-y-hidden
+    @apply block px-3 py-2 w-full max-h-[64vh] text-sm outline-0 border-0 break-all overflow-y-hidden
+  }
+
+  .code-nohighlight{
+    @apply block px-3 py-2 w-full max-h-[70vh] text-sm outline-0 border-0 break-all overflow-y-hidden
   }
   .form-modal-lockchat {
     @apply form-input focus:ring-ring focus:border-ring block w-full rounded-md border-border p-4 pr-16 custom-scroll sm:text-sm
