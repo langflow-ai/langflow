@@ -38,9 +38,9 @@ export default function CodeAreaModal({
     detail: { error: string; traceback: string };
   }>(null);
 
-  useEffect(() => {
-    handleClick();
-  }, []);
+  // useEffect(() => {
+  //   handleClick();
+  // }, []);
 
   function handleClick() {
     if (!dynamic) {
