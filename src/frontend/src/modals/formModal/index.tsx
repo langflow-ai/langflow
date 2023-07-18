@@ -534,7 +534,7 @@ export default function FormModal({
                       <span>
                         👋{" "}
                         <span className="langflow-chat-span">
-                          LangFlow Chat
+                          Langflow Chat
                         </span>
                       </span>
                       <br />
