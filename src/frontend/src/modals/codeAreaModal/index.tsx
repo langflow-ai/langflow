@@ -3,8 +3,6 @@ import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
-import "ace-builds/src-noconflict/ext-language_tools";
-import "ace-builds/src-noconflict/ace";
 // import "ace-builds/webpack-resolver";
 import { TerminalSquare } from "lucide-react";
 import { ReactNode, useContext, useEffect, useState } from "react";
@@ -15,12 +13,6 @@ import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
 import { postCustomComponent, postValidateCode } from "../../controllers/API";
 import { APIClassType } from "../../types/api";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "../../components/ui/tabs";
 import BaseModal from "../baseModal";
 
 export default function CodeAreaModal({
@@ -48,7 +40,7 @@ export default function CodeAreaModal({
 
   useEffect(() => {
     handleClick();
-  }, [])
+  }, []);
 
   function handleClick() {
     if (!dynamic) {
@@ -133,7 +125,7 @@ export default function CodeAreaModal({
       </BaseModal.Header>
       <BaseModal.Content>
         <div className="flex h-full w-full flex-col transition-all">
-        <div className="h-full w-full">
+          <div className="h-full w-full">
             <AceEditor
               value={code}
               mode="python"
