@@ -27,7 +27,8 @@ class CustomComponent(Component):
                 },
             )
 
-        # TODO: Create the logic to validate what the Custom Component should have as a prerequisite to be able to execute
+        # TODO: Create the logic to validate what the Custom Component
+        # should have as a prerequisite to be able to execute
         return True
 
     def is_check_valid(self) -> bool:

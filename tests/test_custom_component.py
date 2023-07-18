@@ -94,7 +94,8 @@ def test_component_code_null_error():
 
 def test_component_function_entrypoint_name_null_error():
     """
-    Test the get_function method raises the ComponentFunctionEntrypointNameNullError when the function_entrypoint_name is empty.
+    Test the get_function method raises the ComponentFunctionEntrypointNameNullError
+    when the function_entrypoint_name is empty.
     """
     component = Component(code=code_default, function_entrypoint_name="")
     with pytest.raises(ComponentFunctionEntrypointNameNullError):
@@ -364,7 +365,8 @@ def test_code_parser_parse_function_def_init():
 
 def test_component_get_code_tree_syntax_error():
     """
-    Test the get_code_tree method of the Component class raises the CodeSyntaxError when given incorrect syntax.
+    Test the get_code_tree method of the Component class
+    raises the CodeSyntaxError when given incorrect syntax.
     """
     component = Component(code="import os as", function_entrypoint_name="build")
     with pytest.raises(CodeSyntaxError):
@@ -373,7 +375,8 @@ def test_component_get_code_tree_syntax_error():
 
 def test_custom_component_class_template_validation_no_code():
     """
-    Test the _class_template_validation method of the CustomComponent class raises the HTTPException when the code is None.
+    Test the _class_template_validation method of the CustomComponent class
+    raises the HTTPException when the code is None.
     """
     custom_component = CustomComponent(code=None, function_entrypoint_name="build")
     with pytest.raises(HTTPException):
@@ -407,7 +410,8 @@ class MyMainClass(CustomComponent):
 
 def test_custom_component_get_function_entrypoint_return_type_no_return_type():
     """
-    Test the get_function_entrypoint_return_type property of the CustomComponent class with a build method with no return type.
+    Test the get_function_entrypoint_return_type property of the
+    CustomComponent class with a build method with no return type.
     """
     my_code = """
 class MyClass(CustomComponent):
