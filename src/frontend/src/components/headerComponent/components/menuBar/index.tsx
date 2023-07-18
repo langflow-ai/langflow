@@ -1,11 +1,3 @@
-import {
-  ChevronDown,
-  ChevronLeft,
-  Plus,
-  Redo,
-  Settings2,
-  Undo,
-} from "lucide-react";
 import { useContext } from "react";
 import { PopUpContext } from "../../../../contexts/popUpContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
@@ -21,6 +13,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { alertContext } from "../../../../contexts/alertContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
+import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
 
 export const MenuBar = ({ flows, tabId }) => {
@@ -46,7 +39,7 @@ export const MenuBar = ({ flows, tabId }) => {
   return (
     <div className="round-button-div">
       <Link to="/">
-        <ChevronLeft className="w-4" />
+        <IconComponent name="ChevronLeft" className="w-4" />
       </Link>
       <div className="header-menu-bar">
         <DropdownMenu>
@@ -54,7 +47,7 @@ export const MenuBar = ({ flows, tabId }) => {
             <Button asChild variant="primary" size="sm">
               <div className="header-menu-bar-display">
                 <div className="header-menu-flow-name">{current_flow.name}</div>
-                <ChevronDown className="h-4 w-4" />
+                <IconComponent name="ChevronDown" className="h-4 w-4" />
               </div>
             </Button>
           </DropdownMenuTrigger>
@@ -66,7 +59,7 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <Plus className="header-menu-options" />
+              <IconComponent name="Plus" className="header-menu-options" />
               New
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -75,7 +68,10 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <Settings2 className="header-menu-options " />
+              <IconComponent
+                name="Settings2"
+                className="header-menu-options "
+              />
               Settings
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -84,7 +80,7 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <Undo className="header-menu-options " />
+              <IconComponent name="Undo" className="header-menu-options " />
               Undo
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -93,33 +89,9 @@ export const MenuBar = ({ flows, tabId }) => {
               }}
               className="cursor-pointer"
             >
-              <Redo className="header-menu-options " />
+              <IconComponent name="Redo" className="header-menu-options " />
               Redo
             </DropdownMenuItem>
-            {/* <DropdownMenuSeparator /> */}
-            {/* <DropdownMenuLabel>Projects</DropdownMenuLabel> */}
-            {/* <DropdownMenuRadioGroup className="max-h-full overflow-scroll"
-              value={tabId}
-              onValueChange={(value) => {
-                setTabId(value);
-              }}
-            >
-              {flows.map((flow, idx) => {
-                return (
-                  <Link
-                    to={"/flow/" + flow.id}
-                    className="flex w-full items-center"
-                  >
-                    <DropdownMenuRadioItem
-                      value={flow.id}
-                      className="flex-1 w-full inline-block truncate break-words mr-2"
-                    >
-                      {flow.name}
-                    </DropdownMenuRadioItem>
-                  </Link>
-                );
-              })}
-            </DropdownMenuRadioGroup> */}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

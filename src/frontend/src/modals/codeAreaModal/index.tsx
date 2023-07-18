@@ -4,9 +4,9 @@ import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
-import { TerminalSquare } from "lucide-react";
 import { useContext, useState } from "react";
 import AceEditor from "react-ace";
+import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants";
 import { alertContext } from "../../contexts/alertContext";
@@ -83,8 +83,8 @@ export default function CodeAreaModal({
       <BaseModal.Header description={CODE_PROMPT_DIALOG_SUBTITLE}>
         <DialogTitle className="flex items-center">
           <span className="pr-2">Edit Code</span>
-          <TerminalSquare
-            strokeWidth={1.5}
+          <IconComponent
+            name="prompts"
             className="h-6 w-6 pl-1 text-primary "
             aria-hidden="true"
           />

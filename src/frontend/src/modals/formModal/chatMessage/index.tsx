@@ -1,5 +1,4 @@
 import Convert from "ansi-to-html";
-import { ChevronDown } from "lucide-react";
 import { useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
@@ -8,9 +7,10 @@ import remarkMath from "remark-math";
 import MaleTechnology from "../../../assets/male-technologist.png";
 import Robot from "../../../assets/robot.png";
 import SanitizedHTMLWrapper from "../../../components/SanitizedHTMLWrapper";
+import IconComponent from "../../../components/genericIconComponent";
 import { THOUGHTS_ICON } from "../../../constants";
 import { ChatMessageType } from "../../../types/chat";
-import { classNames } from "../../../utils";
+import { classNames } from "../../../utils/utils";
 import FileCard from "../fileComponent";
 import { CodeBlock } from "./codeBlock";
 export default function ChatMessage({
@@ -160,7 +160,8 @@ export default function ChatMessage({
                 }}
               >
                 Display Prompt
-                <ChevronDown
+                <IconComponent
+                  name="ChevronDown"
                   className={
                     "h-3 w-3 transition-all " + (promptOpen ? "rotate-180" : "")
                   }

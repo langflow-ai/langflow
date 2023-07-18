@@ -186,7 +186,7 @@ module.exports = {
           "&::-webkit-scrollbar-thumb:hover": {
             backgroundColor: "#bbb",
           },
-          "cursor": "auto"
+          cursor: "auto",
         },
         ".dark .theme-attribution .react-flow__attribution": {
           backgroundColor: "rgba(255, 255, 255, 0.2)",

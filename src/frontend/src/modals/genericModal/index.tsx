@@ -1,29 +1,26 @@
-import { FileText, Variable } from "lucide-react";
 import { useContext, useEffect, useRef, useState } from "react";
 import SanitizedHTMLWrapper from "../../components/SanitizedHTMLWrapper";
 import ShadTooltip from "../../components/ShadTooltipComponent";
+import IconComponent from "../../components/genericIconComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { DialogTitle } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
 import {
+  INVALID_CHARACTERS,
   MAX_WORDS_HIGHLIGHT,
   PROMPT_DIALOG_SUBTITLE,
   TEXT_DIALOG_SUBTITLE,
+  TypeModal,
+  regexHighlight,
+  varHighlightHTML,
 } from "../../constants";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { postValidatePrompt } from "../../controllers/API";
 import { APIClassType } from "../../types/api";
-import {
-  INVALID_CHARACTERS,
-  TypeModal,
-  classNames,
-  getRandomKeyByssmm,
-  regexHighlight,
-  varHighlightHTML,
-} from "../../utils";
+import { classNames, getRandomKeyByssmm } from "../../utils/utils";
 import BaseModal from "../baseModal";
 
 export default function GenericModal({
@@ -188,8 +185,8 @@ export default function GenericModal({
       >
         <DialogTitle className="flex items-center">
           <span className="pr-2">{myModalTitle}</span>
-          <FileText
-            strokeWidth={1.5}
+          <IconComponent
+            name="FileText"
             className="h-6 w-6 pl-1 text-primary "
             aria-hidden="true"
           />
@@ -244,7 +241,10 @@ export default function GenericModal({
                     className="max-h-20 overflow-y-auto custom-scroll"
                   >
                     <div className="flex flex-wrap items-center">
-                      <Variable className=" -ml-px mr-1 flex h-4 w-4 text-primary"></Variable>
+                      <IconComponent
+                        name="Variable"
+                        className=" -ml-px mr-1 flex h-4 w-4 text-primary"
+                      />
                       <span className="text-md font-semibold text-primary">
                         Prompt Variables:
                       </span>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { cn } from "../../utils";
+import { cn } from "../../utils/utils";
 
 export default function RenameLabel(props) {
   const [internalState, setInternalState] = useState(false);
