@@ -8,10 +8,14 @@ import { TabsContext } from "../../contexts/tabsContext";
 export default function HomePage() {
   const { flows, setTabId, downloadFlows, uploadFlows, addFlow, removeFlow } =
     useContext(TabsContext);
+  
+  // Set a null id
   useEffect(() => {
     setTabId("");
   }, []);
   const navigate = useNavigate();
+
+  // Personal flows display
   return (
     <div className="main-page-panel">
       <div className="main-page-nav-arrangement">
