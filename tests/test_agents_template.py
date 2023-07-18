@@ -18,6 +18,7 @@ def test_zero_shot_agent(client: TestClient):
 
     assert template["tools"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -32,6 +33,7 @@ def test_zero_shot_agent(client: TestClient):
     # Additional assertions for other template variables
     assert template["callback_manager"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -44,6 +46,7 @@ def test_zero_shot_agent(client: TestClient):
     }
     assert template["llm"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -56,6 +59,7 @@ def test_zero_shot_agent(client: TestClient):
     }
     assert template["output_parser"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -68,6 +72,7 @@ def test_zero_shot_agent(client: TestClient):
     }
     assert template["input_variables"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -80,6 +85,7 @@ def test_zero_shot_agent(client: TestClient):
     }
     assert template["prefix"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": True,
@@ -93,6 +99,7 @@ def test_zero_shot_agent(client: TestClient):
     }
     assert template["suffix"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": True,
@@ -118,6 +125,7 @@ def test_json_agent(client: TestClient):
 
     assert template["toolkit"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -130,6 +138,7 @@ def test_json_agent(client: TestClient):
     }
     assert template["llm"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -155,12 +164,12 @@ def test_csv_agent(client: TestClient):
 
     assert template["path"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
         "value": "",
         "suffixes": [".csv"],
-        "fileTypes": ["csv"],
         "password": False,
         "name": "path",
         "type": "file",
@@ -171,6 +180,7 @@ def test_csv_agent(client: TestClient):
     }
     assert template["llm"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -196,6 +206,7 @@ def test_initialize_agent(client: TestClient):
 
     assert template["agent"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -217,6 +228,7 @@ def test_initialize_agent(client: TestClient):
     }
     assert template["memory"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -229,6 +241,7 @@ def test_initialize_agent(client: TestClient):
     }
     assert template["tools"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -241,6 +254,7 @@ def test_initialize_agent(client: TestClient):
     }
     assert template["llm"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
