@@ -51,7 +51,7 @@ export default function FlowSettingsModal() {
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Settings </span>
-            <IconComponent name="Settings2" TWstyle="mr-2 h-4 w-4 " />
+            <IconComponent name="Settings2" className="mr-2 h-4 w-4 " />
           </DialogTitle>
           <DialogDescription>{SETTINGS_DIALOG_SUBTITLE}</DialogDescription>
         </DialogHeader>

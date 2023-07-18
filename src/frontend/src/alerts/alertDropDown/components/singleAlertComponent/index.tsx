@@ -31,7 +31,7 @@ export default function SingleAlert({
           <div className="flex-shrink-0">
             <IconComponent
               name="XCircle"
-              TWstyle="h-5 w-5 text-status-red"
+              className="h-5 w-5 text-status-red"
               aria-hidden="true"
             />
           </div>
@@ -68,7 +68,7 @@ export default function SingleAlert({
                 <span className="sr-only">Dismiss</span>
                 <IconComponent
                   name="X"
-                  TWstyle="h-4 w-4 text-error-foreground"
+                  className="h-4 w-4 text-error-foreground"
                   aria-hidden="true"
                 />
               </button>
@@ -83,7 +83,7 @@ export default function SingleAlert({
           <div className="flex-shrink-0">
             <IconComponent
               name="Info"
-              TWstyle="h-5 w-5 text-status-blue "
+              className="h-5 w-5 text-status-blue "
               aria-hidden="true"
             />
           </div>
@@ -119,7 +119,7 @@ export default function SingleAlert({
                 <span className="sr-only">Dismiss</span>
                 <IconComponent
                   name="X"
-                  TWstyle="h-4 w-4 text-info-foreground"
+                  className="h-4 w-4 text-info-foreground"
                   aria-hidden="true"
                 />
               </button>
@@ -134,7 +134,7 @@ export default function SingleAlert({
           <div className="flex-shrink-0">
             <IconComponent
               name="CheckCircle2"
-              TWstyle="h-5 w-5 text-status-green"
+              className="h-5 w-5 text-status-green"
               aria-hidden="true"
             />
           </div>
@@ -158,7 +158,7 @@ export default function SingleAlert({
                 <span className="sr-only">Dismiss</span>
                 <IconComponent
                   name="X"
-                  TWstyle="h-4 w-4 text-success-foreground"
+                  className="h-4 w-4 text-success-foreground"
                   aria-hidden="true"
                 />
               </button>

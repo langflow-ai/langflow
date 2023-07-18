@@ -398,7 +398,7 @@ export default function FormModal({
               <span className="pr-2">Chat</span>
               <IconComponent
                 name="prompts"
-                TWstyle="h-6 w-6 pl-1 text-gray-800 dark:text-white"
+                className="h-6 w-6 pl-1 text-gray-800 dark:text-white"
                 aria-hidden="true"
               />
             </DialogTitle>
@@ -410,7 +410,7 @@ export default function FormModal({
               <div className="file-component-arrangement">
                 <IconComponent
                   name="Variable"
-                  TWstyle=" file-component-variable"
+                  className=" file-component-variable"
                 />
                 <span className="file-component-variables-span text-md">
                   Input Variables
@@ -507,7 +507,7 @@ export default function FormModal({
                   <button disabled={lockChat} onClick={() => clearChat()}>
                     <IconComponent
                       name="Eraser"
-                      TWstyle={classNames(
+                      className={classNames(
                         "h-5 w-5",
                         lockChat
                           ? "animate-pulse text-primary"

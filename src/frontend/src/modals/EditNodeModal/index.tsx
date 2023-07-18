@@ -111,7 +111,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
               <div className="flex pt-3">
                 <IconComponent
                   name="Variable"
-                  TWstyle="edit-node-modal-variable "
+                  className="edit-node-modal-variable "
                 />
                 <span className="edit-node-modal-span">Parameters</span>
               </div>

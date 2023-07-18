@@ -36,13 +36,13 @@ export default function AlertDropdown({}: AlertDropdownType) {
               setTimeout(clearNotificationList, 100);
             }}
           >
-            <IconComponent name="Trash2" TWstyle="h-[1.1rem] w-[1.1rem]" />
+            <IconComponent name="Trash2" className="h-[1.1rem] w-[1.1rem]" />
           </button>
           <button
             className="text-foreground hover:text-status-red"
             onClick={closePopUp}
           >
-            <IconComponent name="X" TWstyle="h-5 w-5" />
+            <IconComponent name="X" className="h-5 w-5" />
           </button>
         </div>
       </div>

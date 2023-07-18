@@ -43,7 +43,7 @@ export default function FileCard({ fileName, content, fileType }) {
             >
               <IconComponent
                 name="DownloadCloud"
-                TWstyle="h-5 w-5 text-current hover:scale-110"
+                className="h-5 w-5 text-current hover:scale-110"
               />
             </button>
           </div>
@@ -63,7 +63,7 @@ export default function FileCard({ fileName, content, fileType }) {
             className="h-8 w-8"
           />
         ) : (
-          <IconComponent name="File" TWstyle="h-8 w-8" />
+          <IconComponent name="File" className="h-8 w-8" />
         )}
         <div className="file-card-modal-footer">
           {" "}
@@ -72,7 +72,7 @@ export default function FileCard({ fileName, content, fileType }) {
         </div>
         <IconComponent
           name="DownloadCloud"
-          TWstyle="ml-auto h-6 w-6 text-current"
+          className="ml-auto h-6 w-6 text-current"
         />
       </div>
     </button>

@@ -83,7 +83,7 @@ export default function GenericNode({
           <div className="generic-node-title-arrangement">
             <IconComponent
               name={name}
-              TWstyle="generic-node-icon"
+              className="generic-node-icon"
               iconColor={`${nodeColors[types[data.type]]}`}
             />
             <div className="generic-node-tooltip-div">
@@ -114,7 +114,7 @@ export default function GenericNode({
                       Build{" "}
                       <IconComponent
                         name="Zap"
-                        TWstyle="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1"
+                        className="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1"
                       />{" "}
                       flow to validate status.
                     </span>

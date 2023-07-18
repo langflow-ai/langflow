@@ -162,7 +162,7 @@ export default function ChatMessage({
                 Display Prompt
                 <IconComponent
                   name="ChevronDown"
-                  TWstyle={
+                  className={
                     "h-3 w-3 transition-all " + (promptOpen ? "rotate-180" : "")
                   }
                 />

@@ -3,9 +3,9 @@ import { nodeIconsLucide } from "../../utils";
 
 export default function IconComponent({
   name,
-  TWstyle,
+  className,
   iconColor,
 }: IconComponentProps): JSX.Element {
   const TargetIcon = nodeIconsLucide[name] ?? nodeIconsLucide["unknown"];
-  return <TargetIcon className={TWstyle} style={{ color: iconColor }} />;
+  return <TargetIcon className={className} style={{ color: iconColor }} />;
 }

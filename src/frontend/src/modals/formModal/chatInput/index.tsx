@@ -79,19 +79,19 @@ export default function ChatInput({
           {lockChat ? (
             <IconComponent
               name="Lock"
-              TWstyle="form-modal-lock-icon"
+              className="form-modal-lock-icon"
               aria-hidden="true"
             />
           ) : noInput ? (
             <IconComponent
               name="Sparkles"
-              TWstyle="form-modal-play-icon"
+              className="form-modal-play-icon"
               aria-hidden="true"
             />
           ) : (
             <IconComponent
               name="LucideSend"
-              TWstyle="form-modal-send-icon "
+              className="form-modal-send-icon "
               aria-hidden="true"
             />
           )}

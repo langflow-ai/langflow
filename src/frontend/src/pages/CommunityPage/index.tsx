@@ -40,7 +40,7 @@ export default function CommunityPage() {
     <div className="community-page-arrangement">
       <div className="community-page-nav-arrangement">
         <span className="community-page-nav-title">
-          <IconComponent name="Users2" TWstyle="w-6" />
+          <IconComponent name="Users2" className="w-6" />
           Community Examples
         </span>
         <div className="community-page-nav-button">
@@ -50,7 +50,10 @@ export default function CommunityPage() {
             rel="noreferrer"
           >
             <Button variant="primary">
-              <IconComponent name="GithubIcon" TWstyle="main-page-nav-button" />
+              <IconComponent
+                name="GithubIcon"
+                className="main-page-nav-button"
+              />
               Add Your Example
             </Button>
           </a>
@@ -81,7 +84,7 @@ export default function CommunityPage() {
                 >
                   <IconComponent
                     name="GitFork"
-                    TWstyle="main-page-nav-button"
+                    className="main-page-nav-button"
                   />
                   Fork Example
                 </Button>

@@ -67,7 +67,7 @@ export default function InputListComponent({
               >
                 <IconComponent
                   name="Plus"
-                  TWstyle={"h-4 w-4 hover:text-accent-foreground"}
+                  className={"h-4 w-4 hover:text-accent-foreground"}
                 />
               </button>
             ) : (
@@ -83,7 +83,7 @@ export default function InputListComponent({
               >
                 <IconComponent
                   name="X"
-                  TWstyle="h-4 w-4 hover:text-status-red"
+                  className="h-4 w-4 hover:text-status-red"
                 />
               </button>
             )}
