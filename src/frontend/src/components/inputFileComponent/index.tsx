@@ -18,6 +18,8 @@ export default function InputFileComponent({
   const [loading, setLoading] = useState(false);
   const { setErrorData } = useContext(alertContext);
   const { tabId } = useContext(TabsContext);
+
+  // Clear component state
   useEffect(() => {
     if (disabled) {
       setMyValue("");
