@@ -1,6 +1,7 @@
-import { Download, Home, Plus, Upload } from "lucide-react";
+import { Download, ExternalLink, Home, Plus, Upload } from "lucide-react";
 import { useContext, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { CardComponent } from "../../components/cardComponent";
 import { Button } from "../../components/ui/button";
 import { USER_PROJECTS_HEADER } from "../../constants";
 import { TabsContext } from "../../contexts/tabsContext";
@@ -14,6 +15,7 @@ export default function HomePage() {
   const navigate = useNavigate();
   return (
     <div className="main-page-panel">
+      <ChatWidget className="absolute bottom-10 right-10" />
       <div className="main-page-nav-arrangement">
         <span className="main-page-nav-title">
           <Home className="w-6" />
@@ -56,7 +58,26 @@ export default function HomePage() {
       </span>
       <div className="main-page-flows-display">
         {flows.map((flow, idx) => (
-          <ChatWidget />
+          <CardComponent
+            key={idx}
+            flow={flow}
+            id={flow.id}
+            button={
+              <Link to={"/flow/" + flow.id}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="whitespace-nowrap "
+                >
+                  <ExternalLink className="main-page-nav-button" />
+                  Edit Flow
+                </Button>
+              </Link>
+            }
+            onDelete={() => {
+              removeFlow(flow.id);
+            }}
+          />
         ))}
       </div>
     </div>
