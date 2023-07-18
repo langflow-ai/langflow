@@ -1,11 +1,11 @@
 import { useContext, useEffect, useState } from "react";
 
+import { TypeModal } from "../../constants";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { typesContext } from "../../contexts/typesContext";
 import { postValidatePrompt } from "../../controllers/API";
 import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
-import { TypeModal } from "../../utils";
 import IconComponent from "../genericIconComponent";
 
 export default function PromptAreaComponent({
