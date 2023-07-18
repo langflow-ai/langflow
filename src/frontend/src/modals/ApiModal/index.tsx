@@ -341,6 +341,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                           {tweaksList.current.includes(t["data"]["id"]) && (
                             <AccordionComponent
                               trigger={t["data"]["id"]}
+                              keyValue={t["data"]["id"]}
                               open={openAccordion}
                             >
                               <div className="api-modal-table-arrangement">
