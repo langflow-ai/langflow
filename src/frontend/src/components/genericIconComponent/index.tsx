@@ -1,5 +1,5 @@
 import { IconComponentProps } from "../../types/components";
-import { nodeIconsLucide } from "../../utils";
+import { nodeIconsLucide } from "../../utils/styleUtils";
 
 export default function IconComponent({
   name,
