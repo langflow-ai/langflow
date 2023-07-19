@@ -4,18 +4,7 @@ import React from "react";
 import { Tooltip as ReactTooltip } from "react-tooltip";
 import "react-tooltip/dist/react-tooltip.css";
 import { classNames } from "../../utils/utils";
-
-type TooltipProps = {
-  selector: string;
-  content?: string;
-  disabled?: boolean;
-  htmlContent?: React.ReactNode;
-  className?: string; // This should use !impornant to override the default styles eg: '!bg-white'
-  position?: "top" | "right" | "bottom" | "left";
-  clickable?: boolean;
-  children: React.ReactNode;
-  delayShow?: number;
-};
+import { TooltipProps } from "../../types/components";
 
 const TooltipReact: FC<TooltipProps> = ({
   selector,
