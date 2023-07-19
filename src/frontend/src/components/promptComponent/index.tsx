@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect } from "react";
 import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
 
@@ -15,17 +15,14 @@ export default function PromptAreaComponent({
   disabled,
   editNode = false,
 }: TextAreaComponentType) {
-  const [myValue, setMyValue] = useState(value);
   const { reactFlowInstance } = useContext(typesContext);
   useEffect(() => {
     if (disabled) {
-      setMyValue("");
       onChange("");
     }
   }, [disabled, onChange]);
 
   useEffect(() => {
-    setMyValue(value);
     if (value !== "" && !editNode) {
       postValidatePrompt(field_name, value, nodeClass).then((apiReturn) => {
         if (apiReturn.data) {
@@ -36,33 +33,14 @@ export default function PromptAreaComponent({
     }
   }, [value, reactFlowInstance]);
 
-  // useEffect(() => {
-  //   if (value !== "" && myValue !== value && reactFlowInstance) {
-  //     // only executed once
-  //     setMyValue(value);
-  //     postValidatePrompt(field_name, value, nodeClass)
-  //       .then((apiReturn) => {
-  //         if (apiReturn.data) {
-  //           setNodeClass(apiReturn.data.frontend_node);
-  //           // need to update reactFlowInstance to re-render the nodes.
-  //           reactFlowInstance.setEdges(
-  //             _.cloneDeep(reactFlowInstance.getEdges())
-  //           );
-  //         }
-  //       })
-  //       .catch((error) => {});
-  //   }
-  // }, [reactFlowInstance, field_name, myValue, nodeClass, setNodeClass, value]);
-
   return (
     <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
       <GenericModal
         type={"prompt"}
-        value={myValue}
+        value={value}
         buttonText="Check & Save"
         modalTitle="Edit Prompt"
         setValue={(t: string) => {
-          setMyValue(t);
           onChange(t);
         }}
         nodeClass={nodeClass}
@@ -77,7 +55,7 @@ export default function PromptAreaComponent({
                   " input-primary text-muted-foreground "
             }
           >
-            {myValue !== "" ? myValue : "Type your prompt here"}
+            {value !== "" ? value : "Type your prompt here"}
           </span>
           {!editNode && (
             <ExternalLink
