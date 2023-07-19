@@ -3,8 +3,8 @@ import type { FC } from "react";
 import React from "react";
 import { Tooltip as ReactTooltip } from "react-tooltip";
 import "react-tooltip/dist/react-tooltip.css";
-import { classNames } from "../../utils/utils";
 import { TooltipProps } from "../../types/components";
+import { classNames } from "../../utils/utils";
 
 const TooltipReact: FC<TooltipProps> = ({
   selector,
