@@ -1,8 +1,16 @@
 import _ from "lodash";
 import { Connection, ReactFlowInstance } from "reactflow";
 import { APITemplateType } from "../types/api";
-import { FlowType, NodeType } from "../types/flow";
-import { cleanEdgesType } from "../types/utils/reactflowUtils";
+import {
+  FlowType,
+  NodeType,
+  sourceHandleType,
+  targetHandleType,
+} from "../types/flow";
+import {
+  cleanEdgesType,
+  updateEdgesHandleIdsType,
+} from "../types/utils/reactflowUtils";
 import { toNormalCase } from "./utils";
 
 export function cleanEdges({
@@ -231,4 +239,32 @@ export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
   }
 
   return newName;
+}
+
+export function updateEdgesHandleIds({
+  edges,
+  nodes,
+  setEdges,
+}: updateEdgesHandleIdsType) {
+  let newEdges = _.cloneDeep(edges);
+  newEdges.forEach((edge) => {
+    const sourceNode = edge.source;
+    const targetNode = edge.target;
+    let source = edge.sourceHandle;
+    let target = edge.targetHandle;
+    //right
+    let newSource: sourceHandleType;
+    //left
+    let newTarget: targetHandleType;
+    if (target) {
+      let splittedtarget = target.split("|");
+      let inputTypes: string[];
+      if (splittedtarget[0].split(";").length > 1) {
+        newTarget.inputTypes = splittedtarget[0].split(";");
+      } else {
+        newTarget.type = splittedtarget[0];
+      }
+    }
+  });
+  setEdges(newEdges);
 }
