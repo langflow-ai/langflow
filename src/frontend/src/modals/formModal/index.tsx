@@ -586,7 +586,10 @@ export default function FormModal({
                         <span className="langflow-chat-desc-span">
                           Start a conversation and click the agent's thoughts{" "}
                           <span>
-                            <IconComponent name="MessageSquare" className="mx-1 inline h-5 w-5 animate-bounce " />
+                            <IconComponent
+                              name="MessageSquare"
+                              className="mx-1 inline h-5 w-5 animate-bounce "
+                            />
                           </span>{" "}
                           to inspect the chaining process.
                         </span>

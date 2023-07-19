@@ -60,7 +60,10 @@ export default function ChatMessage({
                 onClick={() => setHidden((prev) => !prev)}
                 className="form-modal-chat-icon-div"
               >
-                <IconComponent name="MessageSquare" className="form-modal-chat-icon" />
+                <IconComponent
+                  name="MessageSquare"
+                  className="form-modal-chat-icon"
+                />
               </div>
             )}
             {chat.thought && chat.thought !== "" && !hidden && (
