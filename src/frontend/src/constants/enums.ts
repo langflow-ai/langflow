@@ -3,6 +3,6 @@
  * @enum
  */
 export enum TypeModal {
-    TEXT = 1,
-    PROMPT = 2,
-  }
+  TEXT = 1,
+  PROMPT = 2,
+}

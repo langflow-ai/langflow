@@ -1,6 +1,5 @@
 // src/constants/constants.ts
 
-import { MessageSquare } from "lucide-react";
 import { languageMap } from "../types/components";
 
 /**

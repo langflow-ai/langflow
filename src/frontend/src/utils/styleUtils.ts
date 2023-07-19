@@ -38,6 +38,7 @@ import {
   LucideSend,
   Menu,
   MessageCircle,
+  MessageSquare,
   MessagesSquare,
   MoonIcon,
   Paperclip,
@@ -61,7 +62,6 @@ import {
   X,
   XCircle,
   Zap,
-  MessageSquare,
 } from "lucide-react";
 import { Edge, Node } from "reactflow";
 import { AirbyteIcon } from "../icons/Airbyte";
