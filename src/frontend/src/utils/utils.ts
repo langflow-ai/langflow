@@ -256,7 +256,7 @@ export function getRandomKeyByssmm(): string {
   return seconds + milliseconds + Math.abs(Math.floor(Math.random() * 10001));
 }
 
-export const varHighlightHTML = ({ name }: IVarHighlightType) => {
+export function varHighlightHTML({ name }: IVarHighlightType): string {
   const html = `<span class="font-semibold chat-message-highlight">{${name}}</span>`;
   return html;
 };
@@ -281,11 +281,11 @@ export function buildTweakObject(tweak) {
  * @param {string} flowId - The id of the flow
  * @returns {string} - The python code
  */
-export const getPythonApiCode = (
+export function getPythonApiCode(
   flow: FlowType,
   tweak?: any[],
   tabsState?: TabsState
-): string => {
+): string {
   const flowId = flow.id;
 
   // create a dictionary of node ids and the values is an empty dictionary
@@ -338,11 +338,11 @@ print(run_flow(inputs, flow_id=FLOW_ID, tweaks=TWEAKS))`;
  * @param {string} flowId - The id of the flow
  * @returns {string} - The curl code
  */
-export const getCurlCode = (
+export function getCurlCode(
   flow: FlowType,
   tweak?: any[],
   tabsState?: TabsState
-): string => {
+): string {
   const flowId = flow.id;
   const tweaks = buildTweaks(flow);
   const inputs = buildInputs(tabsState, flow.id);
@@ -364,11 +364,11 @@ export const getCurlCode = (
  * @param {string} flowName - The name of the flow
  * @returns {string} - The python code
  */
-export const getPythonCode = (
+export function getPythonCode(
   flow: FlowType,
   tweak?: any[],
   tabsState?: TabsState
-): string => {
+): string {
   const flowName = flow.name;
   const tweaks = buildTweaks(flow);
   const inputs = buildInputs(tabsState, flow.id);
