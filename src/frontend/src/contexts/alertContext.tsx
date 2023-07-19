@@ -1,29 +1,8 @@
 import { createContext, ReactNode, useState } from "react";
 import { AlertItemType } from "../types/alerts";
+import { alertContextType } from "../types/typesContext";
 
 import _ from "lodash";
-
-//types for alertContextType
-type alertContextType = {
-  errorData: { title: string; list?: Array<string> };
-  setErrorData: (newState: { title: string; list?: Array<string> }) => void;
-  errorOpen: boolean;
-  setErrorOpen: (newState: boolean) => void;
-  noticeData: { title: string; link?: string };
-  setNoticeData: (newState: { title: string; link?: string }) => void;
-  noticeOpen: boolean;
-  setNoticeOpen: (newState: boolean) => void;
-  successData: { title: string };
-  setSuccessData: (newState: { title: string }) => void;
-  successOpen: boolean;
-  setSuccessOpen: (newState: boolean) => void;
-  notificationCenter: boolean;
-  setNotificationCenter: (newState: boolean) => void;
-  notificationList: Array<AlertItemType>;
-  pushNotificationList: (Object: AlertItemType) => void;
-  clearNotificationList: () => void;
-  removeFromNotificationList: (index: string) => void;
-};
 
 //initial values to alertContextType
 const initialValue: alertContextType = {
