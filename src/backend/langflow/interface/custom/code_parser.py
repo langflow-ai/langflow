@@ -1,7 +1,8 @@
 import ast
+import inspect
 import traceback
 
-from typing import Dict, Any, Union
+from typing import Dict, Any, Type, Union
 from fastapi import HTTPException
 
 
@@ -14,10 +15,15 @@ class CodeParser:
     A parser for Python source code, extracting code details.
     """
 
-    def __init__(self, code: str) -> None:
+    def __init__(self, code: Union[str, Type]) -> None:
         """
         Initializes the parser with the provided code.
         """
+        if isinstance(code, type):
+            if not inspect.isclass(code):
+                raise ValueError("The provided code must be a class.")
+            # If the code is a class, get its source code
+            code = inspect.getsource(code)
         self.code = code
         self.data: Dict[str, Any] = {
             "imports": [],
