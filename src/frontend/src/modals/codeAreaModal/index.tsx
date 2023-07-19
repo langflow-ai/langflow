@@ -11,8 +11,10 @@ import { Button } from "../../components/ui/button";
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
+import { typesContext } from "../../contexts/typesContext";
 import { postCustomComponent, postValidateCode } from "../../controllers/API";
 import { APIClassType } from "../../types/api";
+import { cleanEdges } from "../../util/reactflowUtils";
 import BaseModal from "../baseModal";
 
 export default function CodeAreaModal({
@@ -32,6 +34,7 @@ export default function CodeAreaModal({
 }) {
   const [code, setCode] = useState(value);
   const { dark } = useContext(darkContext);
+  const { reactFlowInstance } = useContext(typesContext);
   const [height, setHeight] = useState(null);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [error, setError] = useState<{
@@ -111,6 +114,13 @@ export default function CodeAreaModal({
   }
 
   function handleClick() {
+    cleanEdges({
+      flow: {
+        nodes: reactFlowInstance.getNodes(),
+        edges: reactFlowInstance.getEdges(),
+      },
+      updateEdge: reactFlowInstance.setEdges,
+    });
     processCode();
   }
 
