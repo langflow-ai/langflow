@@ -233,6 +233,3 @@ def build_langchain_template_custom_component(custom_component: CustomComponent)
         frontend_node.get("base_classes").append(base_class)
 
     return frontend_node
-
-
-langchain_types_dict = build_langchain_types_dict()
