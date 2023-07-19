@@ -128,7 +128,6 @@ export default function GenericModal({
     postValidatePrompt(field_name, inputValue, nodeClass)
       .then((apiReturn) => {
         if (apiReturn.data) {
-          setNodeClass(apiReturn.data?.frontend_node);
           let inputVariables = apiReturn.data.input_variables ?? [];
           if (inputVariables && inputVariables.length === 0) {
             setIsEdit(true);
@@ -140,6 +139,7 @@ export default function GenericModal({
             setSuccessData({
               title: "Prompt is ready",
             });
+            setNodeClass(apiReturn.data?.frontend_node);
             setModalOpen(closeModal);
             setValue(inputValue);
           }
