@@ -62,7 +62,9 @@ export default function ParameterComponent({
 
   const { reactFlowInstance } = useContext(typesContext);
   let disabled =
-    reactFlowInstance?.getEdges().some((e) => e.targetHandle === id) ?? false;
+    reactFlowInstance
+      ?.getEdges()
+      .some((e) => e.targetHandle === JSON.stringify(id)) ?? false;
 
   const { data: myData } = useContext(typesContext);
 
@@ -205,7 +207,7 @@ export default function ParameterComponent({
             <Handle
               type={left ? "target" : "source"}
               position={left ? Position.Left : Position.Right}
-              id={id}
+              id={JSON.stringify(id)}
               isValidConnection={(connection) =>
                 isValidConnection(connection, reactFlowInstance)
               }

@@ -2,6 +2,7 @@ import { ReactElement, ReactNode } from "react";
 import { APIClassType } from "../api";
 import { NodeDataType } from "../flow/index";
 import { typesContextType } from "../typesContext";
+import { sourceHandleType, targetHandleType } from "./../flow/index";
 export type InputComponentType = {
   value: string;
   disabled?: boolean;
@@ -29,7 +30,7 @@ export type ParameterComponentType = {
   data: NodeDataType;
   setData: (value: NodeDataType) => void;
   title: string;
-  id: string;
+  id: sourceHandleType | targetHandleType;
   color: string;
   left: boolean;
   type: string;
