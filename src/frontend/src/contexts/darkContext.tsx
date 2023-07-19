@@ -1,9 +1,5 @@
 import { createContext, useEffect, useState } from "react";
-
-type darkContextType = {
-  dark: {};
-  setDark: (newState: {}) => void;
-};
+import { darkContextType } from "../types/typesContext";
 
 const initialValue = {
   dark: {},

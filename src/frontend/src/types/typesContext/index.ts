@@ -38,3 +38,8 @@ export type alertContextType = {
   clearNotificationList: () => void;
   removeFromNotificationList: (index: string) => void;
 };
+
+export type darkContextType = {
+  dark: {};
+  setDark: (newState: {}) => void;
+};
