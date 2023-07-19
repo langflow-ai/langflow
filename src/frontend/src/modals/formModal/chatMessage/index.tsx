@@ -8,7 +8,7 @@ import MaleTechnology from "../../../assets/male-technologist.png";
 import Robot from "../../../assets/robot.png";
 import SanitizedHTMLWrapper from "../../../components/SanitizedHTMLWrapper";
 import IconComponent from "../../../components/genericIconComponent";
-import { THOUGHTS_ICON } from "../../../constants";
+import { THOUGHTS_ICON } from "../../../constants/constants";
 import { ChatMessageType } from "../../../types/chat";
 import { classNames } from "../../../utils/utils";
 import FileCard from "../fileComponent";

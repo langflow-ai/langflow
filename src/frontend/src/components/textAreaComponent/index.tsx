@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from "react";
-import { TypeModal } from "../../constants";
+import { TypeModal } from "../../constants/constants";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import GenericModal from "../../modals/genericModal";

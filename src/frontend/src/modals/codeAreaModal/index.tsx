@@ -8,7 +8,7 @@ import { useContext, useState } from "react";
 import AceEditor from "react-ace";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
-import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants";
+import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
 import { PopUpContext } from "../../contexts/popUpContext";

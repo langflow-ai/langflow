@@ -1,7 +1,7 @@
 import { Dialog, Transition } from "@headlessui/react";
 import { Fragment, useContext, useRef, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
-import { limitScrollFieldsModal } from "../../constants";
+import { limitScrollFieldsModal } from "../../constants/constants";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";

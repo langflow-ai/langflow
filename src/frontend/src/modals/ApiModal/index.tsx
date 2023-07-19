@@ -46,7 +46,7 @@ import {
   getCurlCode,
   getPythonApiCode,
   getPythonCode,
-} from "../../constants";
+} from "../../constants/constants";
 import { darkContext } from "../../contexts/darkContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";

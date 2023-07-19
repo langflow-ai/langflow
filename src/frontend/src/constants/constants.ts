@@ -1,11 +1,11 @@
 // src/constants.tsx
 
 import { MessageSquare } from "lucide-react";
-import { IVarHighlightType } from "./types/components";
-import { FlowType } from "./types/flow";
-import { TabsState } from "./types/tabs";
-import { buildTweaks } from "./utils/reactflowUtils";
-import { buildInputs } from "./utils/utils";
+import { IVarHighlightType } from "../types/components";
+import { FlowType } from "../types/flow";
+import { TabsState } from "../types/tabs";
+import { buildTweaks } from "../utils/reactflowUtils";
+import { buildInputs } from "../utils/utils";
 
 /**
  * constants fpr programming languages box on chat form
