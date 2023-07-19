@@ -4,7 +4,7 @@ import { alertContext } from '../../contexts/alertContext';
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
-  baseURL: '', // Replace with your actual API URL
+  baseURL: '',
 });
 
 // Create a map to store the retry counts per endpoint
@@ -25,7 +25,7 @@ function ApiInterceptor() {
 
         const retryCount = retryCounts.get(url)!;
 
-        if (retryCount < 3) {
+        if (retryCount < 5) {
           retryCounts.set(url, retryCount + 1);
 
           try {
@@ -35,9 +35,18 @@ function ApiInterceptor() {
             return Promise.reject(error);
           }
         } else {
-          setErrorData({
-            title: 'There was an error on web connection, please: ',
-            list: ['Refresh the page', 'Use a new flow tab', 'Check if the backend is up'],
+          const keysToDelete: string[] = [];
+          retryCounts.forEach((value, key) => {
+              if (value === 5) {
+                  keysToDelete.push(key);
+                  setErrorData({
+                    title: 'There was an error on web connection, please: ',
+                    list: ['Refresh the page', 'Use a new flow tab', 'Check if the backend is up', 'Endpoint: ' + key],
+                  });
+              }
+          });
+          keysToDelete.forEach(key => {
+            retryCounts.delete(key);
           });
         }
       }

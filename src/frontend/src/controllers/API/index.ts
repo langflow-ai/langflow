@@ -18,7 +18,7 @@ import { api, ApiInterceptor } from "../../controllers/API/api";
  * @returns {Promise<AxiosResponse<APIObjectType>>} A promise that resolves to an AxiosResponse containing all the objects.
  */
 export async function getAll(): Promise<AxiosResponse<APIObjectType>> {
-  return await api.get(`/api/v1/wall`);
+  return await api.get(`/api/v1/all`);
 }
 
 const GITHUB_API_URL = "https://api.github.com";
@@ -63,7 +63,7 @@ export async function postValidatePrompt(
   template: string,
   frontend_node: APIClassType
 ): Promise<AxiosResponse<PromptTypeAPI>> {
-  return await axios.post("/api/v1/validate/prompt", {
+  return await api.post("/api/v1/validate/prompt", {
     name: name,
     template: template,
     frontend_node: frontend_node,
@@ -78,14 +78,14 @@ export async function postValidatePrompt(
 export async function getExamples(): Promise<FlowType[]> {
   const url =
     "https://api.github.com/repos/logspace-ai/langflow_examples/contents/examples?ref=fix_examples";
-  const response = await axios.get(url);
+  const response = await api.get(url);
 
   const jsonFiles = response.data.filter((file: any) => {
     return file.name.endsWith(".json");
   });
 
   const contentsPromises = jsonFiles.map(async (file: any) => {
-    const contentResponse = await axios.get(file.download_url);
+    const contentResponse = await api.get(file.download_url);
     return contentResponse.data;
   });
 
@@ -107,11 +107,12 @@ export async function saveFlowToDatabase(newFlow: {
   style?: FlowStyleType;
 }): Promise<FlowType> {
   try {
-    const response = await axios.post("/api/v1/flows/", {
+    const response = await api.post("/api/v1/flows/", {
       name: newFlow.name,
       data: newFlow.data,
       description: newFlow.description,
     });
+    
     if (response.status !== 201) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -132,7 +133,7 @@ export async function updateFlowInDatabase(
   updatedFlow: FlowType
 ): Promise<FlowType> {
   try {
-    const response = await axios.patch(`/api/v1/flows/${updatedFlow.id}`, {
+    const response = await api.patch(`/api/v1/flows/${updatedFlow.id}`, {
       name: updatedFlow.name,
       data: updatedFlow.data,
       description: updatedFlow.description,
@@ -156,7 +157,7 @@ export async function updateFlowInDatabase(
  */
 export async function readFlowsFromDatabase() {
   try {
-    const response = await axios.get("/api/v1/flows/");
+    const response = await api.get("/api/v1/flows/");
     if (response.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -169,7 +170,7 @@ export async function readFlowsFromDatabase() {
 
 export async function downloadFlowsFromDatabase() {
   try {
-    const response = await axios.get("/api/v1/flows/download/");
+    const response = await api.get("/api/v1/flows/download/");
     if (response.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -182,7 +183,7 @@ export async function downloadFlowsFromDatabase() {
 
 export async function uploadFlowsToDatabase(flows) {
   try {
-    const response = await axios.post(`/api/v1/flows/upload/`, flows);
+    const response = await api.post(`/api/v1/flows/upload/`, flows);
 
     if (response.status !== 201) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -203,7 +204,7 @@ export async function uploadFlowsToDatabase(flows) {
  */
 export async function deleteFlowFromDatabase(flowId: string) {
   try {
-    const response = await axios.delete(`/api/v1/flows/${flowId}`);
+    const response = await api.delete(`/api/v1/flows/${flowId}`);
     if (response.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -223,7 +224,7 @@ export async function deleteFlowFromDatabase(flowId: string) {
  */
 export async function getFlowFromDatabase(flowId: number) {
   try {
-    const response = await axios.get(`/api/v1/flows/${flowId}`);
+    const response = await api.get(`/api/v1/flows/${flowId}`);
     if (response.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -242,7 +243,7 @@ export async function getFlowFromDatabase(flowId: number) {
  */
 export async function getFlowStylesFromDatabase() {
   try {
-    const response = await axios.get("/api/v1/flow_styles/");
+    const response = await api.get("/api/v1/flow_styles/");
     if (response.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -262,7 +263,7 @@ export async function getFlowStylesFromDatabase() {
  */
 export async function saveFlowStyleToDatabase(flowStyle: FlowStyleType) {
   try {
-    const response = await axios.post("/api/v1/flow_styles/", flowStyle, {
+    const response = await api.post("/api/v1/flow_styles/", flowStyle, {
       headers: {
         accept: "application/json",
         "Content-Type": "application/json",
@@ -285,7 +286,7 @@ export async function saveFlowStyleToDatabase(flowStyle: FlowStyleType) {
  * @returns {Promise<AxiosResponse<any>>} A promise that resolves to an AxiosResponse containing the version information.
  */
 export async function getVersion() {
-  const respnose = await axios.get("/api/v1/version");
+  const respnose = await api.get("/api/v1/version");
   return respnose.data;
 }
 
@@ -295,7 +296,7 @@ export async function getVersion() {
  * @returns {Promise<AxiosResponse<any>>} A promise that resolves to an AxiosResponse containing the health status.
  */
 export async function getHealth() {
-  return await axios.get("/health"); // Health is the only endpoint that doesn't require /api/v1
+  return await api.get("/health"); // Health is the only endpoint that doesn't require /api/v1
 }
 
 /**
@@ -307,7 +308,7 @@ export async function getHealth() {
 export async function getBuildStatus(
   flowId: string
 ): Promise<BuildStatusTypeAPI> {
-  return await axios.get(`/api/v1/build/${flowId}/status`);
+  return await api.get(`/api/v1/build/${flowId}/status`);
 }
 
 //docs for postbuildinit
@@ -320,7 +321,7 @@ export async function getBuildStatus(
 export async function postBuildInit(
   flow: FlowType
 ): Promise<AxiosResponse<InitTypeAPI>> {
-  return await axios.post(`/api/v1/build/init/${flow.id}`, flow);
+  return await api.post(`/api/v1/build/init/${flow.id}`, flow);
 }
 
 // fetch(`/upload/${id}`, {
@@ -338,5 +339,5 @@ export async function uploadFile(
 ): Promise<AxiosResponse<UploadFileTypeAPI>> {
   const formData = new FormData();
   formData.append("file", file);
-  return await axios.post(`/api/v1/upload/${id}`, formData);
+  return await api.post(`/api/v1/upload/${id}`, formData);
 }
