@@ -194,14 +194,12 @@ export default function GenericNode({
                         data.node.template[t].type
                       }
                       required={data.node.template[t].required}
-                      id={
-                        (data.node.template[t].input_types?.join(";") ??
-                          data.node.template[t].type) +
-                        "|" +
-                        t +
-                        "|" +
-                        data.id
-                      }
+                      id={{
+                        inputTypes: data.node.template[t].input_types,
+                        type: data.node.template[t].type,
+                        id: data.id,
+                        fieldName: t,
+                      }}
                       left={true}
                       type={data.node.template[t].type}
                       optionalHandle={data.node.template[t].input_types}
@@ -230,7 +228,11 @@ export default function GenericNode({
                   : data.type
               }
               tooltipTitle={data.node.base_classes.join("\n")}
-              id={[data.type, data.id, ...data.node.base_classes].join("|")}
+              id={{
+                baseClasses: data.node.base_classes,
+                id: data.id,
+                dataType: data.type,
+              }}
               type={data.node.base_classes.join("|")}
               left={false}
             />
