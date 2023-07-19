@@ -43,3 +43,32 @@ export type darkContextType = {
   dark: {};
   setDark: (newState: {}) => void;
 };
+
+export type locationContextType = {
+  current: Array<string>;
+  setCurrent: (newState: Array<string>) => void;
+  isStackedOpen: boolean;
+  setIsStackedOpen: (newState: boolean) => void;
+  showSideBar: boolean;
+  setShowSideBar: (newState: boolean) => void;
+  extraNavigation: {
+    title: string;
+    options?: Array<{
+      name: string;
+      href: string;
+      icon: any;
+      children?: Array<any>;
+    }>;
+  };
+  setExtraNavigation: (newState: {
+    title: string;
+    options?: Array<{
+      name: string;
+      href: string;
+      icon: any;
+      children?: Array<any>;
+    }>;
+  }) => void;
+  extraComponent: any;
+  setExtraComponent: (newState: any) => void;
+};
