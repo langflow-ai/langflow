@@ -8,7 +8,6 @@ import MaleTechnology from "../../../assets/male-technologist.png";
 import Robot from "../../../assets/robot.png";
 import SanitizedHTMLWrapper from "../../../components/SanitizedHTMLWrapper";
 import IconComponent from "../../../components/genericIconComponent";
-import { THOUGHTS_ICON } from "../../../constants/constants";
 import { ChatMessageType } from "../../../types/chat";
 import { classNames } from "../../../utils/utils";
 import FileCard from "../fileComponent";
@@ -61,7 +60,7 @@ export default function ChatMessage({
                 onClick={() => setHidden((prev) => !prev)}
                 className="form-modal-chat-icon-div"
               >
-                <THOUGHTS_ICON className="form-modal-chat-icon" />
+                <IconComponent name="MessageSquare" className="form-modal-chat-icon" />
               </div>
             )}
             {chat.thought && chat.thought !== "" && !hidden && (

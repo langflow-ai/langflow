@@ -168,3 +168,7 @@ export type IconComponentProps = {
   className: string;
   iconColor?: string;
 };
+
+export interface languageMap {
+  [key: string]: string | undefined;
+};
