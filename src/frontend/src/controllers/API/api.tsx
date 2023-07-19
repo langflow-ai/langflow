@@ -1,6 +1,6 @@
-import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
-import { useContext } from 'react';
-import { alertContext } from "../../contexts/alertContext";
+import React, { useEffect, useContext } from 'react';
+import axios, { AxiosError, AxiosInstance, AxiosResponse } from 'axios';
+import { alertContext } from '../../contexts/alertContext';
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
@@ -10,44 +10,46 @@ const api: AxiosInstance = axios.create({
 // Create a map to store the retry counts per endpoint
 const retryCounts: Map<string, number> = new Map();
 
-// Custom hook to handle errors and retries
-function useInterceptor() {
+function ApiInterceptor() {
   const { setErrorData } = useContext(alertContext);
 
-  api.interceptors.response.use(
-    response => response,
-    async (error: AxiosError) => {
+  useEffect(() => {
+    const interceptor = api.interceptors.response.use(
+      response => response,
+      async (error: AxiosError) => {
+        const { url } = error.config;
 
-      const { url }: AxiosRequestConfig = error.config;
-
-      if (!retryCounts.has(url)) {
-        retryCounts.set(url, 0);
-      }
-
-      const retryCount = retryCounts.get(url)!;
-
-      if (retryCount < 3) {
-        retryCounts.set(url, retryCount + 1);
-
-        try {
-          const response = await axios.request(error.config);
-          return response;
-        } catch (error) {
-          return Promise.reject(error);
+        if (!retryCounts.has(url)) {
+          retryCounts.set(url, 0);
         }
-      } else {
-        setErrorData({
-          title: "There was an error on web connection, please: ",
-          list: [
-            "Refresh the page",
-            "Use a new flow tab",
-            "Check if the backend is up",
-          ],
-        });
+
+        const retryCount = retryCounts.get(url)!;
+
+        if (retryCount < 3) {
+          retryCounts.set(url, retryCount + 1);
+
+          try {
+            const response = await axios.request(error.config);
+            return response;
+          } catch (error) {
+            return Promise.reject(error);
+          }
+        } else {
+          setErrorData({
+            title: 'There was an error on web connection, please: ',
+            list: ['Refresh the page', 'Use a new flow tab', 'Check if the backend is up'],
+          });
+        }
       }
-    }
-  );
+    );
+
+    return () => {
+      // Clean up the interceptor when the component unmounts
+      api.interceptors.response.eject(interceptor);
+    };
+  }, [setErrorData]);
+
+  return null;
 }
 
-export { useInterceptor };
-export default api;
+export { api, ApiInterceptor };
