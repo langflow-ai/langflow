@@ -17,7 +17,6 @@ import { MAX_LENGTH_TO_SCROLL_TOOLTIP } from "../../../../constants";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
-import { cleanEdges } from "../../../../util/reactflowUtils";
 import {
   classNames,
   getRandomKeyByssmm,
@@ -314,15 +313,6 @@ export default function ParameterComponent({
               field_name={name}
               setNodeClass={(nodeClass) => {
                 data.node = nodeClass;
-                if (reactFlowInstance) {
-                  cleanEdges({
-                    flow: {
-                      edges: reactFlowInstance.getEdges(),
-                      nodes: reactFlowInstance.getNodes(),
-                    },
-                    updateEdge: (edge) => reactFlowInstance.setEdges(edge),
-                  });
-                }
               }}
               nodeClass={data.node}
               disabled={disabled}
