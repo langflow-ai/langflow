@@ -1,6 +1,6 @@
-import { ReactFlowInstance, Edge, Node } from "reactflow";
-import { APIClassType } from "../api";
+import { Edge, Node, ReactFlowInstance } from "reactflow";
 import { AlertItemType } from "../alerts";
+import { APIClassType } from "../api";
 
 const types: { [char: string]: string } = {};
 const template: { [char: string]: APIClassType } = {};

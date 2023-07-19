@@ -7,8 +7,12 @@ import {
   useState,
 } from "react";
 import { useReactFlow } from "reactflow";
+import {
+  HistoryItem,
+  UseUndoRedoOptions,
+  undoRedoContextType,
+} from "../types/typesContext";
 import { TabsContext } from "./tabsContext";
-import { undoRedoContextType, UseUndoRedoOptions , UseUndoRedo, HistoryItem } from "../types/typesContext";
 
 const initialValue = {
   undo: () => {},
