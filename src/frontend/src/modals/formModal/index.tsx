@@ -22,7 +22,7 @@ import {
   DialogTrigger,
 } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
-import { CHAT_FORM_DIALOG_SUBTITLE, THOUGHTS_ICON } from "../../constants";
+import { CHAT_FORM_DIALOG_SUBTITLE, THOUGHTS_ICON } from "../../constants/constants";
 import { TabsContext } from "../../contexts/tabsContext";
 import { validateNodes } from "../../utils/reactflowUtils";
 
