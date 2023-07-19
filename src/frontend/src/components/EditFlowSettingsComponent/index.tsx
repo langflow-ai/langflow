@@ -2,17 +2,7 @@ import React, { ChangeEvent, useState } from "react";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
-
-type InputProps = {
-  name: string | null;
-  description: string | null;
-  maxLength?: number;
-  flows: Array<{ id: string; name: string }>;
-  tabId: string;
-  setName: (name: string) => void;
-  setDescription: (description: string) => void;
-  updateFlow: (flow: { id: string; name: string }) => void;
-};
+import { InputProps } from "../../types/components";
 
 export const EditFlowSettings: React.FC<InputProps> = ({
   name,
