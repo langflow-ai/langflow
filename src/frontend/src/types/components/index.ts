@@ -171,4 +171,4 @@ export type IconComponentProps = {
 
 export interface languageMap {
   [key: string]: string | undefined;
-};
+}

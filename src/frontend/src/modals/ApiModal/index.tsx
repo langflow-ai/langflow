@@ -41,15 +41,18 @@ import {
   TabsList,
   TabsTrigger,
 } from "../../components/ui/tabs";
-import {
-  EXPORT_CODE_DIALOG,
-} from "../../constants/constants";
+import { EXPORT_CODE_DIALOG } from "../../constants/constants";
 import { darkContext } from "../../contexts/darkContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { FlowType } from "../../types/flow/index";
 import { buildTweaks } from "../../utils/reactflowUtils";
-import { classNames, getPythonApiCode, getCurlCode, getPythonCode, } from "../../utils/utils";
+import {
+  classNames,
+  getCurlCode,
+  getPythonApiCode,
+  getPythonCode,
+} from "../../utils/utils";
 export default function ApiModal({ flow }: { flow: FlowType }) {
   const [open, setOpen] = useState(true);
   const { dark } = useContext(darkContext);
