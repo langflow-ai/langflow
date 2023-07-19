@@ -10,9 +10,7 @@ import {
   DialogTrigger,
 } from "../../components/ui/dialog";
 import { PopUpContext } from "../../contexts/popUpContext";
-
-type ContentProps = { children: ReactNode };
-type HeaderProps = { children: ReactNode; description: string };
+import { ContentProps, HeaderProps } from "../../types/components";
 
 const Content: React.FC<ContentProps> = ({ children }) => {
   return <div className="h-full w-full">{children}</div>;
