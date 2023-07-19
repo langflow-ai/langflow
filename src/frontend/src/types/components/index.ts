@@ -179,3 +179,15 @@ export type InputProps = {
   setDescription: (description: string) => void;
   updateFlow: (flow: { id: string; name: string }) => void;
 };
+
+export type TooltipProps = {
+  selector: string;
+  content?: string;
+  disabled?: boolean;
+  htmlContent?: React.ReactNode;
+  className?: string; // This should use !impornant to override the default styles eg: '!bg-white'
+  position?: "top" | "right" | "bottom" | "left";
+  clickable?: boolean;
+  children: React.ReactNode;
+  delayShow?: number;
+};
