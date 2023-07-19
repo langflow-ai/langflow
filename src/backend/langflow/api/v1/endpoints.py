@@ -19,7 +19,7 @@ from langflow.interface.types import (
     build_langchain_template_custom_component,
 )
 
-from langflow.interface.types import langchain_types_dict
+from langflow.interface.types import build_langchain_types_dict
 from langflow.database.base import get_session
 from sqlmodel import Session
 
@@ -29,7 +29,7 @@ router = APIRouter(tags=["Base"])
 
 @router.get("/all")
 def get_all():
-    return langchain_types_dict
+    return build_langchain_types_dict()
 
 
 # For backwards compatibility we will keep the old endpoint
