@@ -98,7 +98,7 @@ class DocumentLoaderVertex(Vertex):
                 self._built_object
             )
             return f"""{self.vertex_type}({len(self._built_object)} documents)
-            \nAvg. Document Length (characters): {avg_length}
+            \nAvg. Document Length (characters): {int(avg_length)}
             Documents: {self._built_object[:3]}..."""
         return f"{self.vertex_type}()"
 
@@ -136,7 +136,7 @@ class TextSplitterVertex(Vertex):
                 self._built_object
             )
             return f"""{self.vertex_type}({len(self._built_object)} documents)
-            \nAvg. Document Length (characters): {avg_length}
+            \nAvg. Document Length (characters): {int(avg_length)}
             \nDocuments: {self._built_object[:3]}..."""
         return f"{self.vertex_type}()"
 
