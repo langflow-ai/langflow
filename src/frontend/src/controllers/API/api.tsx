@@ -1,53 +1,37 @@
-import React, { useEffect, useContext } from 'react';
-import axios, { AxiosError, AxiosInstance, AxiosResponse } from 'axios';
-import { alertContext } from '../../contexts/alertContext';
+import axios, { AxiosError, AxiosInstance } from "axios";
+import { useContext, useEffect, useRef } from "react";
+import { alertContext } from "../../contexts/alertContext";
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
-  baseURL: '',
+  baseURL: "",
 });
 
-// Create a map to store the retry counts per endpoint
-const retryCounts: Map<string, number> = new Map();
-
 function ApiInterceptor() {
+  const retryCounts = useRef([]);
   const { setErrorData } = useContext(alertContext);
 
   useEffect(() => {
     const interceptor = api.interceptors.response.use(
-      response => response,
+      (response) => response,
       async (error: AxiosError) => {
-        const { url } = error.config;
-
-        if (!retryCounts.has(url)) {
-          retryCounts.set(url, 0);
-        }
-
-        const retryCount = retryCounts.get(url)!;
-
-        if (retryCount < 5) {
-          retryCounts.set(url, retryCount + 1);
-
+        let retryCount = 0;
+        
+        while (retryCount < 4) {
+          await sleep(5000); // Sleep for 5 seconds
+          retryCount++;
           try {
             const response = await axios.request(error.config);
             return response;
           } catch (error) {
-            return Promise.reject(error);
+            if(retryCount === 3){
+              setErrorData({
+                title: 'There was an error on web connection, please: ',
+                list: ['Refresh the page', 'Use a new flow tab', 'Check if the backend is up', 'Endpoint: ' + error.config.url],
+              });
+              return Promise.reject(error);
+            }
           }
-        } else {
-          const keysToDelete: string[] = [];
-          retryCounts.forEach((value, key) => {
-              if (value === 5) {
-                  keysToDelete.push(key);
-                  setErrorData({
-                    title: 'There was an error on web connection, please: ',
-                    list: ['Refresh the page', 'Use a new flow tab', 'Check if the backend is up', 'Endpoint: ' + key],
-                  });
-              }
-          });
-          keysToDelete.forEach(key => {
-            retryCounts.delete(key);
-          });
         }
       }
     );
@@ -56,9 +40,14 @@ function ApiInterceptor() {
       // Clean up the interceptor when the component unmounts
       api.interceptors.response.eject(interceptor);
     };
-  }, [setErrorData]);
+  }, [retryCounts]);
 
   return null;
+}
+
+// Function to sleep for a given duration in milliseconds
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 export { api, ApiInterceptor };
