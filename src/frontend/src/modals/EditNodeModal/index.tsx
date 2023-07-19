@@ -29,7 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
-import { limitScrollFieldsModal } from "../../constants";
+import { limitScrollFieldsModal } from "../../constants/constants";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";

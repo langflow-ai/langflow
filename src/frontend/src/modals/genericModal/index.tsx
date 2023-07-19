@@ -14,7 +14,7 @@ import {
   TypeModal,
   regexHighlight,
   varHighlightHTML,
-} from "../../constants";
+} from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
 import { PopUpContext } from "../../contexts/popUpContext";

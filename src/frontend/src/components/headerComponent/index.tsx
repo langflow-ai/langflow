@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
 import { Link, useLocation, useParams } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
-import { USER_PROJECTS_HEADER } from "../../constants";
+import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
 import { PopUpContext } from "../../contexts/popUpContext";
