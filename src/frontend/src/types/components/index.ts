@@ -191,3 +191,7 @@ export type TooltipProps = {
   children: React.ReactNode;
   delayShow?: number;
 };
+
+export type LoadingComponentProps = {
+  remSize: number;
+};
