@@ -1,4 +1,4 @@
-import { ReactFlowInstance } from "reactflow";
+import { ReactFlowInstance, Edge, Node } from "reactflow";
 import { APIClassType } from "../api";
 import { AlertItemType } from "../alerts";
 
@@ -71,4 +71,28 @@ export type locationContextType = {
   }) => void;
   extraComponent: any;
   setExtraComponent: (newState: any) => void;
+};
+
+export type undoRedoContextType = {
+  undo: () => void;
+  redo: () => void;
+  takeSnapshot: () => void;
+};
+
+export type UseUndoRedoOptions = {
+  maxHistorySize: number;
+  enableShortcuts: boolean;
+};
+
+export type UseUndoRedo = (options?: UseUndoRedoOptions) => {
+  undo: () => void;
+  redo: () => void;
+  takeSnapshot: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+};
+
+export type HistoryItem = {
+  nodes: Node[];
+  edges: Edge[];
 };
