@@ -460,7 +460,7 @@ export default function FormModal({
                           </div>
                         )}
                         <Textarea
-                        className="custom-scroll"
+                          className="custom-scroll"
                           value={
                             tabsState[id.current].formKeysData.input_keys[i]
                           }

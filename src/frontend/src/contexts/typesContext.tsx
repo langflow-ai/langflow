@@ -71,7 +71,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
         // Clear the interval if successful.
         clearInterval(intervalId);
       } catch (error) {
-       console.error("An error has occurred while fetching types.");
+        console.error("An error has occurred while fetching types.");
       }
     }
 

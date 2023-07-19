@@ -1,5 +1,6 @@
-import axios, { AxiosResponse } from "axios";
+import { AxiosResponse } from "axios";
 import { ReactFlowJsonObject } from "reactflow";
+import { api } from "../../controllers/API/api";
 import { APIObjectType, sendAllProps } from "../../types/api/index";
 import { FlowStyleType, FlowType } from "../../types/flow";
 import {
@@ -10,7 +11,6 @@ import {
   UploadFileTypeAPI,
   errorsTypeAPI,
 } from "./../../types/api/index";
-import { api, ApiInterceptor } from "../../controllers/API/api";
 
 /**
  * Fetches all objects from the API endpoint.
@@ -25,9 +25,7 @@ const GITHUB_API_URL = "https://api.github.com";
 
 export async function getRepoStars(owner, repo) {
   try {
-    const response = await api.get(
-      `${GITHUB_API_URL}/repos/${owner}/${repo}`
-    );
+    const response = await api.get(`${GITHUB_API_URL}/repos/${owner}/${repo}`);
     return response.data.stargazers_count;
   } catch (error) {
     console.error("Error fetching repository data:", error);
@@ -112,7 +110,7 @@ export async function saveFlowToDatabase(newFlow: {
       data: newFlow.data,
       description: newFlow.description,
     });
-    
+
     if (response.status !== 201) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }

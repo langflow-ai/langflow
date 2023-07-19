@@ -16,7 +16,7 @@ function ApiInterceptor() {
       (response) => response,
       async (error: AxiosError) => {
         let retryCount = 0;
-        
+
         while (retryCount < 4) {
           await sleep(5000); // Sleep for 5 seconds
           retryCount++;
@@ -24,10 +24,15 @@ function ApiInterceptor() {
             const response = await axios.request(error.config);
             return response;
           } catch (error) {
-            if(retryCount === 3){
+            if (retryCount === 3) {
               setErrorData({
-                title: 'There was an error on web connection, please: ',
-                list: ['Refresh the page', 'Use a new flow tab', 'Check if the backend is up', 'Endpoint: ' + error.config.url],
+                title: "There was an error on web connection, please: ",
+                list: [
+                  "Refresh the page",
+                  "Use a new flow tab",
+                  "Check if the backend is up",
+                  "Endpoint: " + error.config.url,
+                ],
               });
               return Promise.reject(error);
             }
@@ -47,7 +52,7 @@ function ApiInterceptor() {
 
 // Function to sleep for a given duration in milliseconds
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export { api, ApiInterceptor };
