@@ -11,16 +11,15 @@ import {
   MAX_WORDS_HIGHLIGHT,
   PROMPT_DIALOG_SUBTITLE,
   TEXT_DIALOG_SUBTITLE,
-  TypeModal,
   regexHighlight,
-  varHighlightHTML,
 } from "../../constants/constants";
+import { TypeModal } from "../../constants/enums";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { postValidatePrompt } from "../../controllers/API";
 import { APIClassType } from "../../types/api";
-import { classNames, getRandomKeyByssmm } from "../../utils/utils";
+import { classNames, getRandomKeyByssmm, varHighlightHTML } from "../../utils/utils";
 import BaseModal from "../baseModal";
 
 export default function GenericModal({

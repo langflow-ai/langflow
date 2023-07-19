@@ -61,6 +61,7 @@ import {
   X,
   XCircle,
   Zap,
+  MessageSquare,
 } from "lucide-react";
 import { Edge, Node } from "reactflow";
 import { AirbyteIcon } from "../icons/Airbyte";
@@ -266,6 +267,7 @@ export const nodeIconsLucide = {
   Search,
   Copy,
   Upload,
+  MessageSquare,
 };
 export function getConnectedNodes(edge: Edge, nodes: Array<Node>): Array<Node> {
   const sourceId = edge.source;
