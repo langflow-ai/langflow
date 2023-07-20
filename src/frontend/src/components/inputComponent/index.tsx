@@ -17,6 +17,7 @@ export default function InputComponent({
   const { setDisableCopyPaste } = useContext(TabsContext);
   const { closePopUp } = useContext(PopUpContext);
 
+  // Clear component state
   useEffect(() => {
     if (disabled) {
       setMyValue("");

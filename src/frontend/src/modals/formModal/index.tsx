@@ -22,7 +22,7 @@ import {
   DialogTrigger,
 } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
-import { CHAT_FORM_DIALOG_SUBTITLE, THOUGHTS_ICON } from "../../constants";
+import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
 import { TabsContext } from "../../contexts/tabsContext";
 import { validateNodes } from "../../utils/reactflowUtils";
 
@@ -586,7 +586,10 @@ export default function FormModal({
                         <span className="langflow-chat-desc-span">
                           Start a conversation and click the agent's thoughts{" "}
                           <span>
-                            <THOUGHTS_ICON className="mx-1 inline h-5 w-5 animate-bounce " />
+                            <IconComponent
+                              name="MessageSquare"
+                              className="mx-1 inline h-5 w-5 animate-bounce "
+                            />
                           </span>{" "}
                           to inspect the chaining process.
                         </span>

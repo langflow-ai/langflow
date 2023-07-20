@@ -199,3 +199,7 @@ export type LoadingComponentProps = {
 
 export type ContentProps = { children: ReactNode };
 export type HeaderProps = { children: ReactNode; description: string };
+
+export interface languageMap {
+  [key: string]: string | undefined;
+}

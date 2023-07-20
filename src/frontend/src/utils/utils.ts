@@ -1,6 +1,10 @@
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
+import { IVarHighlightType } from "../types/components";
+import { FlowType } from "../types/flow";
+import { TabsState } from "../types/tabs";
+import { buildTweaks } from "./reactflowUtils";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -251,3 +255,131 @@ export function getRandomKeyByssmm(): string {
   const milliseconds = String(now.getMilliseconds()).padStart(3, "0");
   return seconds + milliseconds + Math.abs(Math.floor(Math.random() * 10001));
 }
+
+export function varHighlightHTML({ name }: IVarHighlightType): string {
+  const html = `<span class="font-semibold chat-message-highlight">{${name}}</span>`;
+  return html;
+};
+
+export function buildTweakObject(tweak) {
+  tweak.forEach((el) => {
+    Object.keys(el).forEach((key) => {
+      for (let kp in el[key]) {
+        try {
+          el[key][kp] = JSON.parse(el[key][kp]);
+        } catch {}
+      }
+    });
+  });
+
+  const tweakString = JSON.stringify(tweak, null, 2);
+  return tweakString;
+}
+
+/**
+ * Function to get the python code for the API
+ * @param {string} flowId - The id of the flow
+ * @returns {string} - The python code
+ */
+export function getPythonApiCode(
+  flow: FlowType,
+  tweak?: any[],
+  tabsState?: TabsState
+): string {
+  const flowId = flow.id;
+
+  // create a dictionary of node ids and the values is an empty dictionary
+  // flow.data.nodes.forEach((node) => {
+  //   node.data.id
+  // }
+  const tweaks = buildTweaks(flow);
+  const inputs = buildInputs(tabsState, flow.id);
+  return `import requests
+from typing import Optional
+
+BASE_API_URL = "${window.location.protocol}//${
+    window.location.host
+  }/api/v1/process"
+FLOW_ID = "${flowId}"
+# You can tweak the flow by adding a tweaks dictionary
+# e.g {"OpenAI-XXXXX": {"model_name": "gpt-4"}}
+TWEAKS = ${
+    tweak && tweak.length > 0
+      ? buildTweakObject(tweak)
+      : JSON.stringify(tweaks, null, 2)
+  }
+
+def run_flow(inputs: dict, flow_id: str, tweaks: Optional[dict] = None) -> dict:
+    """
+    Run a flow with a given message and optional tweaks.
+
+    :param message: The message to send to the flow
+    :param flow_id: The ID of the flow to run
+    :param tweaks: Optional tweaks to customize the flow
+    :return: The JSON response from the flow
+    """
+    api_url = f"{BASE_API_URL}/{flow_id}"
+
+    payload = {"inputs": inputs}
+
+    if tweaks:
+        payload["tweaks"] = tweaks
+
+    response = requests.post(api_url, json=payload)
+    return response.json()
+
+# Setup any tweaks you want to apply to the flow
+inputs = ${inputs}
+print(run_flow(inputs, flow_id=FLOW_ID, tweaks=TWEAKS))`;
+};
+
+/**
+ * Function to get the curl code for the API
+ * @param {string} flowId - The id of the flow
+ * @returns {string} - The curl code
+ */
+export function getCurlCode(
+  flow: FlowType,
+  tweak?: any[],
+  tabsState?: TabsState
+): string {
+  const flowId = flow.id;
+  const tweaks = buildTweaks(flow);
+  const inputs = buildInputs(tabsState, flow.id);
+
+  return `curl -X POST \\
+  ${window.location.protocol}//${
+    window.location.host
+  }/api/v1/process/${flowId} \\
+  -H 'Content-Type: application/json' \\
+  -d '{"inputs": ${inputs}, "tweaks": ${
+    tweak && tweak.length > 0
+      ? buildTweakObject(tweak)
+      : JSON.stringify(tweaks, null, 2)
+  }}'`;
+};
+
+/**
+ * Function to get the python code for the API
+ * @param {string} flowName - The name of the flow
+ * @returns {string} - The python code
+ */
+export function getPythonCode(
+  flow: FlowType,
+  tweak?: any[],
+  tabsState?: TabsState
+): string {
+  const flowName = flow.name;
+  const tweaks = buildTweaks(flow);
+  const inputs = buildInputs(tabsState, flow.id);
+  return `from langflow import load_flow_from_json
+TWEAKS = ${
+    tweak && tweak.length > 0
+      ? buildTweakObject(tweak)
+      : JSON.stringify(tweaks, null, 2)
+  }
+flow = load_flow_from_json("${flowName}.json", tweaks=TWEAKS)
+# Now you can use it like any chain
+inputs = ${inputs}
+flow(inputs)`;
+};

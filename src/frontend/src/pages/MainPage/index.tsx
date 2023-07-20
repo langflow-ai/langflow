@@ -3,15 +3,19 @@ import { Link, useNavigate } from "react-router-dom";
 import { CardComponent } from "../../components/cardComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
-import { USER_PROJECTS_HEADER } from "../../constants";
+import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { TabsContext } from "../../contexts/tabsContext";
 export default function HomePage() {
   const { flows, setTabId, downloadFlows, uploadFlows, addFlow, removeFlow } =
     useContext(TabsContext);
+  
+  // Set a null id
   useEffect(() => {
     setTabId("");
   }, []);
   const navigate = useNavigate();
+
+  // Personal flows display
   return (
     <div className="main-page-panel">
       <div className="main-page-nav-arrangement">
