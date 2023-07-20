@@ -67,6 +67,7 @@ export default function ParameterComponent({
   const { data: myData } = useContext(typesContext);
 
   const handleOnNewValue = (newValue: any) => {
+    console.log("9euihfw9uebfw9eubgwpirbg");
     let newData = cloneDeep(data);
     newData.node.template[name].value = newValue;
     setData(newData);
