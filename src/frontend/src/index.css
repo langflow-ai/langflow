@@ -1120,3 +1120,40 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply rounded-md bg-indigo-100 px-0.5 dark:bg-indigo-900;
   }
 }
+
+@keyframes gradient-motion-start {
+  0% {
+    stop-color: rgb(156, 138, 236);
+  }
+  50% {
+    stop-color: rgb(255, 130, 184);
+  }
+  80% {
+    stop-color: rgb(255, 165, 100);
+  }
+  100% {
+    stop-color: rgb(156, 138, 236);
+  }
+}
+
+@keyframes gradient-motion-end {
+  0% {
+    stop-color: rgb(156, 138, 236);
+  }
+  50% {
+    stop-color: rgb(255, 165, 100);
+  }
+  80% {
+    stop-color: rgb(255, 130, 184);
+  }
+  100% {
+    stop-color: rgb(156, 138, 236);
+  }
+}
+
+.gradient-end {
+  animation: gradient-motion-end 3s infinite forwards;
+}
+.gradient-start {
+  animation: gradient-motion-start 4s infinite forwards;
+}
