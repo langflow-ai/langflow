@@ -36,6 +36,7 @@ export default function PromptAreaComponent({
       <GenericModal
         type={"prompt"}
         value={value}
+        value={value}
         buttonText="Check & Save"
         modalTitle="Edit Prompt"
         setValue={(t: string) => {
