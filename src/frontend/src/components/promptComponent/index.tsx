@@ -1,9 +1,8 @@
-import { useContext, useEffect } from "react";
+import { useEffect } from "react";
 import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
 
 import { ExternalLink } from "lucide-react";
-import { typesContext } from "../../contexts/typesContext";
 import { postValidatePrompt } from "../../controllers/API";
 
 export default function PromptAreaComponent({
@@ -15,12 +14,11 @@ export default function PromptAreaComponent({
   disabled,
   editNode = false,
 }: TextAreaComponentType) {
-  const { reactFlowInstance } = useContext(typesContext);
   useEffect(() => {
     if (disabled) {
       onChange("");
     }
-  }, [disabled, onChange]);
+  }, [disabled]);
 
   useEffect(() => {
     if (value !== "" && !editNode) {
@@ -31,7 +29,7 @@ export default function PromptAreaComponent({
         }
       });
     }
-  }, [value, reactFlowInstance]);
+  }, []);
 
   return (
     <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
@@ -55,7 +53,7 @@ export default function PromptAreaComponent({
                   " input-primary text-muted-foreground "
             }
           >
-            {value !== "" ? value : "Type your prompt here"}
+            {value !== "" ? value : "Type your prompt here..."}
           </span>
           {!editNode && (
             <ExternalLink
