@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import IconComponent from "../../../components/genericIconComponent";
+import { chatInputType } from "../../../types/components";
 import { classNames } from "../../../utils/utils";
 
 export default function ChatInput({
@@ -9,7 +10,7 @@ export default function ChatInput({
   setChatValue,
   inputRef,
   noInput,
-}) {
+}: chatInputType): JSX.Element {
   useEffect(() => {
     if (!lockChat && inputRef.current) {
       inputRef.current.focus();

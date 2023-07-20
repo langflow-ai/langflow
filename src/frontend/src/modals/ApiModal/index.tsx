@@ -53,7 +53,7 @@ import {
   getPythonApiCode,
   getPythonCode,
 } from "../../utils/utils";
-export default function ApiModal({ flow }: { flow: FlowType }) {
+export default function ApiModal({ flow }: { flow: FlowType }): JSX.Element {
   const [open, setOpen] = useState(true);
   const { dark } = useContext(darkContext);
   const { closePopUp, closeEdit, setCloseEdit } = useContext(PopUpContext);

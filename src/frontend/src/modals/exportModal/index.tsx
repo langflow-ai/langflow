@@ -18,7 +18,7 @@ import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { removeApiKeys } from "../../utils/reactflowUtils";
 
-export default function ExportModal() {
+export default function ExportModal(): JSX.Element {
   const [open, setOpen] = useState(true);
   const { closePopUp } = useContext(PopUpContext);
   const ref = useRef();

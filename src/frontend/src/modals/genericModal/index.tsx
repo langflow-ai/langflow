@@ -44,7 +44,7 @@ export default function GenericModal({
   type: number;
   nodeClass?: APIClassType;
   setNodeClass?: (Class: APIClassType) => void;
-}) {
+}): JSX.Element {
   const [myButtonText] = useState(buttonText);
   const [myModalTitle] = useState(modalTitle);
   const [myModalType] = useState(type);
@@ -56,7 +56,7 @@ export default function GenericModal({
     useContext(alertContext);
   const { closePopUp, setCloseEdit } = useContext(PopUpContext);
   const ref = useRef();
-  function setModalOpen(x: boolean) {
+  function setModalOpen(x: boolean): void {
     if (x === false) {
       setCloseEdit("generic");
       closePopUp();
@@ -65,7 +65,7 @@ export default function GenericModal({
   const divRef = useRef(null);
   const divRefPrompt = useRef(null);
 
-  function checkVariables(valueToCheck) {
+  function checkVariables(valueToCheck: string): void {
     const regex = /\{([^{}]+)\}/g;
     const matches = [];
     let match;
@@ -111,7 +111,7 @@ export default function GenericModal({
     .replace(regexHighlight, varHighlightHTML({ name: "$1" }))
     .replace(/\n/g, "<br />");
 
-  const TextAreaContentView = () => {
+  const TextAreaContentView = (): JSX.Element => {
     return (
       <SanitizedHTMLWrapper
         className={getClassByNumberLength()}
@@ -124,7 +124,7 @@ export default function GenericModal({
     );
   };
 
-  function getClassByNumberLength() {
+  function getClassByNumberLength(): string {
     let sumOfCaracteres: number = 0;
     wordsHighlight.forEach((element) => {
       sumOfCaracteres = sumOfCaracteres + element.replace(/[{}]/g, "").length;

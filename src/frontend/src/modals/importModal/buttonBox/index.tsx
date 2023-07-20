@@ -19,7 +19,7 @@ export default function ButtonBox({
   textColor: string;
   deactivate?: boolean;
   size: "small" | "medium" | "big";
-}) {
+}): JSX.Element {
   let bigCircle: string;
   let smallCircle: string;
   let titleFontSize: string;

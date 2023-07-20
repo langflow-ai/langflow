@@ -226,7 +226,7 @@ export type documentloadersType = {
   BSHTMLLoader: dataObjType;
   CSVLoader: dataObjType;
   CoNLLULoader: dataObjType;
-  CollegeConfidentialLoader: dataObjType; 
+  CollegeConfidentialLoader: dataObjType;
   DirectoryLoader: dataObjType;
   EverNoteLoader: dataObjType;
   FacebookChatLoader: dataObjType;
@@ -269,12 +269,12 @@ export type chainsType = {
   LLMCheckerChain: dataObjType;
   LLMMathChain: dataObjType;
   MidJourneyPromptChain: dataObjType;
-  RetrievalQA: dataObjType
+  RetrievalQA: dataObjType;
   RetrievalQAWithSourcesChain: dataObjType;
   SQLDatabaseChain: dataObjType;
   SeriesCharacterChain: dataObjType;
   TimeTravelGuideChain: dataObjType;
-}
+};
 
 export type embeddingsType = {
   CohereEmbeddings: dataObjType;
@@ -292,7 +292,7 @@ export type llmsTypes = {
   LlamaCpp: dataObjType;
   OpenAI: dataObjType;
   VertexAI: dataObjType;
-}
+};
 
 export type memoriesType = {
   ConversationBufferMemory: dataObjType;
@@ -316,7 +316,7 @@ export type promptsType = {
   HumanMessagePromptTemplate: dataObjType;
   PromptTemplate: dataObjType;
   SystemMessagePromptTemplate: dataObjType;
-}
+};
 
 export type retrieversType = {
   MultiQueryRetriever: dataObjType;
@@ -347,7 +347,7 @@ export type toolsType = {
   JsonSpec: dataObjType;
   ListSQLDatabaseTool: dataObjType;
   "News API": dataObjType;
-  'PAL-MATH': dataObjType;
+  "PAL-MATH": dataObjType;
   "Podcast API": dataObjType;
   PythonAstREPLTool: dataObjType;
   PythonFunction: dataObjType;
@@ -360,7 +360,7 @@ export type toolsType = {
   RequestsPostTool: dataObjType;
   RequestsPutTool: dataObjType;
   Search: dataObjType;
-  'TMDB API': dataObjType;
+  "TMDB API": dataObjType;
   Tool: dataObjType;
   WikipediaQueryRun: dataObjType;
   WolframAlphaQueryRun: dataObjType;
@@ -388,7 +388,7 @@ export type vectorStoresType = {
 
 export type wrappersType = {
   SQLDatabase: dataObjType;
-  TextRequestsWrapper: dataObjType; 
+  TextRequestsWrapper: dataObjType;
 };
 
 export type dataType = {
@@ -403,7 +403,7 @@ export type dataType = {
   retrievers?: retrieversType;
   textsplitters?: textSplittersType;
   toolkits?: toolkitsType;
-  tools?: toolsType
+  tools?: toolsType;
   utilities?: utilitiesType;
   vectorstores?: vectorStoresType;
   wrappers?: wrappersType;
@@ -414,7 +414,7 @@ export type tweakType = {
   "LLMChain-zPC3w": object;
   "PromptTemplate-iNj5W": object;
   "ConversationBufferMemory-JnodM": object;
-}
+};
 
 export type nodeToolbarType = {
   data: {
@@ -438,7 +438,7 @@ export type chatTriggerPropType = {
   isBuilt: boolean;
   canOpen: boolean;
   setOpen: (can: boolean) => void;
-}
+};
 
 export type headerFlowsType = {
   data: object;
@@ -446,9 +446,20 @@ export type headerFlowsType = {
   id: string;
   name: string;
   style?: FlowStyleType;
-}
+};
 
 export type menuBarPropsType = {
   flows: Array<headerFlowsType>;
   tabId: string;
-}
+};
+
+export type chatInputType = {
+  chatValue: string;
+  inputRef: {
+    current: any;
+  };
+  lockChat: boolean;
+  noInput: boolean;
+  sendMessage: () => void;
+  setChatValue: (value: string) => void;
+};
