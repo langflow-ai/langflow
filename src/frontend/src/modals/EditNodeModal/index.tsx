@@ -36,7 +36,11 @@ import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
 import { classNames } from "../../utils/utils";
 
-export default function EditNodeModal({ data }: { data: NodeDataType }) {
+export default function EditNodeModal({
+  data,
+}: {
+  data: NodeDataType;
+}): JSX.Element {
   const [open, setOpen] = useState(true);
   const [nodeLength, setNodeLength] = useState(
     Object.keys(data.node.template).filter(
@@ -66,7 +70,7 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
     closePopUp();
   }
 
-  function setModalOpen(x: boolean) {
+  function setModalOpen(x: boolean): void {
     setOpen(x);
     if (x === false) {
       closePopUp();

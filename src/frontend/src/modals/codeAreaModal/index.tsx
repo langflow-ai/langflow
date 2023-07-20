@@ -26,21 +26,21 @@ export default function CodeAreaModal({
   value: string;
   nodeClass: APIClassType;
   setNodeClass: (Class: APIClassType) => void;
-}) {
+}): JSX.Element {
   const [code, setCode] = useState(value);
   const { dark } = useContext(darkContext);
   const { closePopUp, setCloseEdit } = useContext(PopUpContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
 
-  function setModalOpen(x: boolean) {
+  function setModalOpen(x: boolean): void {
     if (x === false) {
       setCloseEdit("codearea");
       closePopUp();
     }
   }
 
-  // Check for custom code errors 
-  function handleClick() {
+  // Check for custom code errors
+  function handleClick(): void {
     postValidateCode(code)
       .then((apiReturn) => {
         if (apiReturn.data) {

@@ -9,7 +9,7 @@ interface Props {
   value: string;
 }
 
-export function CodeBlock({ language, value }) {
+export function CodeBlock({ language, value }: Props): JSX.Element {
   const [isCopied, setIsCopied] = useState<Boolean>(false);
 
   const copyToClipboard = () => {

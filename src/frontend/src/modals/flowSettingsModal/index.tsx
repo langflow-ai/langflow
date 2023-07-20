@@ -16,7 +16,7 @@ import { alertContext } from "../../contexts/alertContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 
-export default function FlowSettingsModal() {
+export default function FlowSettingsModal(): JSX.Element {
   const [open, setOpen] = useState(true);
   const { closePopUp } = useContext(PopUpContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
@@ -28,7 +28,7 @@ export default function FlowSettingsModal() {
   const [description, setDescription] = useState(
     flows.find((f) => f.id === tabId).description
   );
-  function setModalOpen(x: boolean) {
+  function setModalOpen(x: boolean): void {
     setOpen(x);
     if (x === false) {
       setTimeout(() => {
@@ -36,7 +36,7 @@ export default function FlowSettingsModal() {
       }, 300);
     }
   }
-  function handleClick() {
+  function handleClick(): void {
     let savedFlow = flows.find((f) => f.id === tabId);
     savedFlow.name = name;
     savedFlow.description = description;

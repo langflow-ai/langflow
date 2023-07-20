@@ -20,7 +20,7 @@ export default function ChatMessage({
   chat: ChatMessageType;
   lockChat: boolean;
   lastMessage: boolean;
-}) {
+}): JSX.Element {
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
   const template = chat.template;

@@ -34,7 +34,7 @@ export default function FormModal({
   open: boolean;
   setOpen: Function;
   flow: FlowType;
-}) {
+}): JSX.Element {
   const { tabsState, setTabsState } = useContext(TabsContext);
   const [chatValue, setChatValue] = useState(() => {
     try {
@@ -147,7 +147,7 @@ export default function FormModal({
     });
   }
 
-  function handleOnClose(event: CloseEvent) {
+  function handleOnClose(event: CloseEvent): void {
     if (isOpen.current) {
       setErrorData({ title: event.reason });
       setTimeout(() => {
@@ -157,7 +157,10 @@ export default function FormModal({
     }
   }
 
-  function getWebSocketUrl(chatId, isDevelopment = false) {
+  function getWebSocketUrl(
+    chatId: string,
+    isDevelopment: boolean = false
+  ): string {
     const isSecureProtocol = window.location.protocol === "https:";
     const webSocketProtocol = isSecureProtocol ? "wss" : "ws";
     const host = isDevelopment ? "localhost:7860" : window.location.host;
@@ -238,7 +241,7 @@ export default function FormModal({
     }
   }
 
-  function connectWS() {
+  function connectWS(): void {
     try {
       const urlWs = getWebSocketUrl(
         id.current,
@@ -305,7 +308,7 @@ export default function FormModal({
     // do not add connectWS on dependencies array
   }, [lockChat]);
 
-  async function sendAll(data: sendAllProps) {
+  async function sendAll(data: sendAllProps): Promise<void> {
     try {
       if (ws) {
         ws.current.send(JSON.stringify(data));
@@ -332,7 +335,7 @@ export default function FormModal({
     }
   }, [open]);
 
-  function sendMessage() {
+  function sendMessage(): void {
     let nodeValidationErrors = validateNodes(reactFlowInstance);
     if (nodeValidationErrors.length === 0) {
       setLockChat(true);
@@ -365,17 +368,17 @@ export default function FormModal({
       });
     }
   }
-  function clearChat() {
+  function clearChat(): void {
     setChatHistory([]);
     ws.current.send(JSON.stringify({ clear_history: true }));
     if (lockChat) setLockChat(false);
   }
 
-  function setModalOpen(x: boolean) {
+  function setModalOpen(x: boolean): void {
     setOpen(x);
   }
 
-  function handleOnCheckedChange(checked: boolean, i: string) {
+  function handleOnCheckedChange(checked: boolean, i: string): void {
     if (checked === true) {
       setChatKey(i);
       setChatValue(tabsState[flow.id].formKeysData.input_keys[i]);

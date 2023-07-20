@@ -13,9 +13,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { alertContext } from "../../../../contexts/alertContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
+import { menuBarPropsType } from "../../../../types/components";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
-import { menuBarPropsType } from "../../../../types/components";
 
 export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
   const { updateFlow, setTabId, addFlow } = useContext(TabsContext);

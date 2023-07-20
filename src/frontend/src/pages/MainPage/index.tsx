@@ -8,7 +8,7 @@ import { TabsContext } from "../../contexts/tabsContext";
 export default function HomePage(): JSX.Element {
   const { flows, setTabId, downloadFlows, uploadFlows, addFlow, removeFlow } =
     useContext(TabsContext);
-  
+
   // Set a null id
   useEffect(() => {
     setTabId("");

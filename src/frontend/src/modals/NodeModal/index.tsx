@@ -9,7 +9,11 @@ import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, toTitleCase } from "../../utils/utils";
 import ModalField from "./components/ModalField";
 
-export default function NodeModal({ data }: { data: NodeDataType }) {
+export default function NodeModal({
+  data,
+}: {
+  data: NodeDataType;
+}): JSX.Element {
   const [open, setOpen] = useState(true);
   const { closePopUp } = useContext(PopUpContext);
   const { types } = useContext(typesContext);
