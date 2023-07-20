@@ -28,3 +28,7 @@ def configure(log_level: str = "INFO", log_file: Path = None):  # type: ignore
     logger.info(f"Logger set up with log level: {log_level_value}({log_level})")
     if log_file:
         logger.info(f"Log file: {log_file}")
+
+
+# Configure default logger
+configure()
