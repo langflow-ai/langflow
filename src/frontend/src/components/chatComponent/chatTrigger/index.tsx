@@ -6,7 +6,7 @@ import {
   CHAT_CANNOT_OPEN_TITLE,
   FLOW_NOT_BUILT_DESCRIPTION,
   FLOW_NOT_BUILT_TITLE,
-} from "../../../constants";
+} from "../../../constants/constants";
 import { alertContext } from "../../../contexts/alertContext";
 import IconComponent from "../../genericIconComponent";
 

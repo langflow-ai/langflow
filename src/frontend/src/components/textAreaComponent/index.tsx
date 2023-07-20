@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from "react";
-import { TypeModal } from "../../constants";
+import { TypeModal } from "../../constants/enums";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import GenericModal from "../../modals/genericModal";
@@ -16,6 +16,7 @@ export default function TextAreaComponent({
   const { openPopUp, closePopUp } = useContext(PopUpContext);
   const { setDisableCopyPaste } = useContext(TabsContext);
 
+  // Clear text area
   useEffect(() => {
     if (disabled) {
       setMyValue("");

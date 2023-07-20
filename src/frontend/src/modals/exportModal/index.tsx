@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-import { EXPORT_DIALOG_SUBTITLE } from "../../constants";
+import { EXPORT_DIALOG_SUBTITLE } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";

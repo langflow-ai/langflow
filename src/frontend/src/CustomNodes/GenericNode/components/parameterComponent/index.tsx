@@ -12,7 +12,7 @@ import IntComponent from "../../../../components/intComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
-import { MAX_LENGTH_TO_SCROLL_TOOLTIP } from "../../../../constants";
+import { MAX_LENGTH_TO_SCROLL_TOOLTIP } from "../../../../constants/constants";
 import { PopUpContext } from "../../../../contexts/popUpContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
@@ -54,6 +54,7 @@ export default function ParameterComponent({
   const { closePopUp } = useContext(PopUpContext);
   const { setTabsState, tabId, save } = useContext(TabsContext);
 
+  // Update component position
   useEffect(() => {
     if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
       setPosition(ref.current.offsetTop + ref.current.clientHeight / 2);

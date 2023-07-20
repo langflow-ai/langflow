@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 
-import { TypeModal } from "../../constants";
+import { TypeModal } from "../../constants/enums";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { typesContext } from "../../contexts/typesContext";
 import { postValidatePrompt } from "../../controllers/API";

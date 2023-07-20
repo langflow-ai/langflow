@@ -11,12 +11,16 @@ import { FlowType } from "../../types/flow";
 export default function CommunityPage() {
   const { flows, setTabId, downloadFlows, uploadFlows, addFlow } =
     useContext(TabsContext);
+
+  // set null id
   useEffect(() => {
     setTabId("");
   }, []);
   const { setErrorData } = useContext(alertContext);
   const [loadingExamples, setLoadingExamples] = useState(false);
   const [examples, setExamples] = useState<FlowType[]>([]);
+
+  // Show community examples on screen
   function handleExamples() {
     setLoadingExamples(true);
     getExamples()
@@ -33,6 +37,7 @@ export default function CommunityPage() {
   }
   const navigate = useNavigate();
 
+  // Show community examples on page start
   useEffect(() => {
     handleExamples();
   }, []);
