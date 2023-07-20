@@ -15,6 +15,7 @@ export default function FloatComponent({
   const min = 0;
   const max = 1;
 
+  // Clear component state
   useEffect(() => {
     if (disabled) {
       onChange("");

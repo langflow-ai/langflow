@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { InputListComponentType } from "../../types/components";
 
 import _ from "lodash";
-import { Plus, X } from "lucide-react";
+import IconComponent from "../genericIconComponent";
 
 export default function InputListComponent({
   value,
@@ -65,7 +65,10 @@ export default function InputListComponent({
                   onChange(inputList);
                 }}
               >
-                <Plus className={"h-4 w-4 hover:text-accent-foreground"} />
+                <IconComponent
+                  name="Plus"
+                  className={"h-4 w-4 hover:text-accent-foreground"}
+                />
               </button>
             ) : (
               <button
@@ -78,7 +81,10 @@ export default function InputListComponent({
                   onChange(inputList);
                 }}
               >
-                <X className="h-4 w-4 hover:text-status-red" />
+                <IconComponent
+                  name="X"
+                  className="h-4 w-4 hover:text-status-red"
+                />
               </button>
             )}
           </div>

@@ -1,11 +1,11 @@
-import { Download } from "lucide-react";
 import { ReactNode, forwardRef, useContext, useState } from "react";
 import EditFlowSettings from "../../components/EditFlowSettingsComponent";
+import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
-import { EXPORT_DIALOG_SUBTITLE } from "../../constants";
+import { EXPORT_DIALOG_SUBTITLE } from "../../constants/constants";
 import { TabsContext } from "../../contexts/tabsContext";
-import { removeApiKeys } from "../../utils";
+import { removeApiKeys } from "../../utils/reactflowUtils";
 import BaseModal from "../baseModal";
 
 const ExportModal = forwardRef((props: { children: ReactNode }, ref) => {
@@ -22,9 +22,9 @@ const ExportModal = forwardRef((props: { children: ReactNode }, ref) => {
       <BaseModal.Trigger>{props.children}</BaseModal.Trigger>
       <BaseModal.Header description={EXPORT_DIALOG_SUBTITLE}>
         <span className="pr-2">Export</span>
-        <Download
-          strokeWidth={1.5}
-          className="h-6 w-6 pl-1 text-primary "
+        <IconComponent
+          name="Download"
+          className="h-6 w-6 pl-1 text-foreground"
           aria-hidden="true"
         />
       </BaseModal.Header>

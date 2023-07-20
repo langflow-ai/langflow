@@ -7,6 +7,8 @@ import Page from "./components/PageComponent";
 export default function FlowPage() {
   const { flows, tabId, setTabId } = useContext(TabsContext);
   const { id } = useParams();
+
+  // Set flow tab id
   useEffect(() => {
     setTabId(id);
   }, [id]);

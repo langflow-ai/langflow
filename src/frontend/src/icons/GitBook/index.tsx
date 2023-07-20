@@ -1,9 +1,9 @@
 import React, { forwardRef } from "react";
-import { ReactComponent as GitBookSVG } from "./gitbook-svgrepo-com.svg";
+import SvgGitbookSvgrepoCom from "./GitbookSvgrepoCom";
 
 export const GitBookIcon = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<{}>
 >((props, ref) => {
-  return <GitBookSVG ref={ref} {...props} />;
+  return <SvgGitbookSvgrepoCom ref={ref} {...props} />;
 });

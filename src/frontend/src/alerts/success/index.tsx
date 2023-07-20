@@ -1,6 +1,6 @@
 import { Transition } from "@headlessui/react";
-import { CheckCircle2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import IconComponent from "../../components/genericIconComponent";
 import { SuccessAlertType } from "../../types/alerts";
 
 export default function SuccessAlert({
@@ -38,7 +38,11 @@ export default function SuccessAlert({
       >
         <div className="flex">
           <div className="flex-shrink-0">
-            <CheckCircle2 className="success-alert-icon" aria-hidden="true" />
+            <IconComponent
+              name="CheckCircle2"
+              className="success-alert-icon"
+              aria-hidden="true"
+            />
           </div>
           <div className="ml-3">
             <p className="success-alert-message">{title}</p>

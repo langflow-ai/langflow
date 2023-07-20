@@ -1,5 +1,4 @@
 import Convert from "ansi-to-html";
-import { ChevronDown } from "lucide-react";
 import { useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
@@ -9,9 +8,9 @@ import MaleTechnology from "../../../assets/male-technologist.png";
 import Robot from "../../../assets/robot.png";
 import SanitizedHTMLWrapper from "../../../components/SanitizedHTMLWrapper";
 import CodeTabsComponent from "../../../components/codeTabsComponent";
-import { THOUGHTS_ICON } from "../../../constants";
+import IconComponent from "../../../components/genericIconComponent";
 import { ChatMessageType } from "../../../types/chat";
-import { classNames } from "../../../utils";
+import { classNames } from "../../../utils/utils";
 import FileCard from "../fileComponent";
 export default function ChatMessage({
   chat,
@@ -61,7 +60,10 @@ export default function ChatMessage({
                 onClick={() => setHidden((prev) => !prev)}
                 className="form-modal-chat-icon-div"
               >
-                <THOUGHTS_ICON className="form-modal-chat-icon" />
+                <IconComponent
+                  name="MessageSquare"
+                  className="form-modal-chat-icon"
+                />
               </div>
             )}
             {chat.thought && chat.thought !== "" && !hidden && (
@@ -80,9 +82,12 @@ export default function ChatMessage({
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm, remarkMath]}
                         rehypePlugins={[rehypeMathjax]}
-                        className="markdown inline-block break-words text-primary
+                        className="markdown prose inline-block break-words text-primary dark:prose-invert
                       sm:w-[30vw] sm:max-w-[30vw] lg:w-[40vw] lg:max-w-[40vw]"
                         components={{
+                          pre({ node, ...props }) {
+                            return <>{props.children}</>;
+                          },
                           code: ({
                             node,
                             inline,
@@ -169,7 +174,8 @@ export default function ChatMessage({
                 }}
               >
                 Display Prompt
-                <ChevronDown
+                <IconComponent
+                  name="ChevronDown"
                   className={
                     "h-3 w-3 transition-all " + (promptOpen ? "rotate-180" : "")
                   }
