@@ -11,7 +11,7 @@ export default function InputComponent({
   disabled,
   password,
   editNode = false,
-}: InputComponentType) {
+}: InputComponentType): JSX.Element {
   const [myValue, setMyValue] = useState(value ?? "");
   const [pwdVisible, setPwdVisible] = useState(false);
   const { setDisableCopyPaste } = useContext(TabsContext);

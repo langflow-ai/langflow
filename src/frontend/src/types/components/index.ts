@@ -1,6 +1,6 @@
 import { ReactElement, ReactNode } from "react";
 import { APIClassType } from "../api";
-import { NodeDataType } from "../flow/index";
+import { FlowStyleType, NodeDataType } from "../flow/index";
 import { typesContextType } from "../typesContext";
 
 export type InputComponentType = {
@@ -430,5 +430,25 @@ export type nodeToolbarType = {
     value: void;
   };
   deleteNode: (idx: string) => void;
-  openPopUp: (element: any) => void;
+  openPopUp: (element) => JSX.Element;
 };
+
+export type chatTriggerPropType = {
+  open: boolean;
+  isBuilt: boolean;
+  canOpen: boolean;
+  setOpen: (can: boolean) => void;
+}
+
+export type headerFlowsType = {
+  data: object;
+  description: string;
+  id: string;
+  name: string;
+  style?: FlowStyleType;
+}
+
+export type menuBarPropsType = {
+  flows: Array<headerFlowsType>;
+  tabId: string;
+}

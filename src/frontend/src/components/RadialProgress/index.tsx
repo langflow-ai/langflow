@@ -3,7 +3,7 @@ import { RadialProgressType } from "../../types/components";
 export default function RadialProgressComponent({
   value,
   color,
-}: RadialProgressType) {
+}: RadialProgressType): JSX.Element {
   const style = {
     "--value": value * 100,
     "--size": "1.5rem",

@@ -11,7 +11,7 @@ export default function TextAreaComponent({
   onChange,
   disabled,
   editNode = false,
-}: TextAreaComponentType) {
+}: TextAreaComponentType): JSX.Element {
   const [myValue, setMyValue] = useState(value);
   const { openPopUp, closePopUp } = useContext(PopUpContext);
   const { setDisableCopyPaste } = useContext(TabsContext);

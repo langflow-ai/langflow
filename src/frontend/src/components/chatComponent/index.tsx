@@ -10,7 +10,7 @@ import { getBuildStatus } from "../../controllers/API";
 import FormModal from "../../modals/formModal";
 import { NodeType } from "../../types/flow";
 
-export default function Chat({ flow }: ChatType) {
+export default function Chat({ flow }: ChatType): JSX.Element {
   const [open, setOpen] = useState(false);
   const [isBuilt, setIsBuilt] = useState(false);
   const [canOpen, setCanOpen] = useState(false);

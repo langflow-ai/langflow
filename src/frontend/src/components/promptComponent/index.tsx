@@ -16,7 +16,7 @@ export default function PromptAreaComponent({
   onChange,
   disabled,
   editNode = false,
-}: TextAreaComponentType) {
+}: TextAreaComponentType): JSX.Element {
   const [myValue, setMyValue] = useState(value);
   const { openPopUp } = useContext(PopUpContext);
   const { reactFlowInstance } = useContext(typesContext);

@@ -11,7 +11,7 @@ export default function InputListComponent({
   disabled,
   editNode = false,
   onAddInput,
-}: InputListComponentType) {
+}: InputListComponentType): JSX.Element {
   const [inputList, setInputList] = useState(value ?? [""]);
   const { closePopUp } = useContext(PopUpContext);
 

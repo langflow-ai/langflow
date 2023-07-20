@@ -12,7 +12,7 @@ export default function Dropdown({
   editNode = false,
   numberOfOptions = 0,
   apiModal = false,
-}: DropDownComponentType) {
+}: DropDownComponentType): JSX.Element {
   const { closePopUp } = useContext(PopUpContext);
 
   let [internalValue, setInternalValue] = useState(

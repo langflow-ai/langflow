@@ -16,7 +16,7 @@ const TooltipReact: FC<TooltipProps> = ({
   className,
   clickable,
   delayShow,
-}) => {
+}: TooltipProps): JSX.Element => {
   return (
     <div className="tooltip-container">
       {React.cloneElement(children as React.ReactElement, {

@@ -12,7 +12,7 @@ export default function AccordionComponent({
   children,
   open = [],
   keyValue,
-}: AccordionComponentType) {
+}: AccordionComponentType): JSX.Element {
   const [value, setValue] = useState(
     open.length === 0 ? "" : getOpenAccordion()
   );

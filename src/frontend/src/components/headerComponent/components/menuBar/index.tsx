@@ -15,8 +15,9 @@ import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
+import { menuBarPropsType } from "../../../../types/components";
 
-export const MenuBar = ({ flows, tabId }) => {
+export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
   const { updateFlow, setTabId, addFlow } = useContext(TabsContext);
   const { setErrorData } = useContext(alertContext);
   const { openPopUp } = useContext(PopUpContext);
