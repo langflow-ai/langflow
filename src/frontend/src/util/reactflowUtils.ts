@@ -45,8 +45,8 @@ export function cleanEdges({
         }
       }
     }
-    if (changed) {
-      updateEdge(newEdges);
-    }
   });
+  if (changed) {
+    updateEdge(newEdges);
+  }
 }
