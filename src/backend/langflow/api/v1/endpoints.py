@@ -10,6 +10,10 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile
 
 from langflow.interface.custom.custom_component import CustomComponent
 
+from langflow.interface.custom.load_custom_component_from_path import (
+    CustomComponentPathValueError,
+)
+
 from langflow.api.v1.schemas import (
     ProcessResponse,
     UploadFileResponse,
@@ -36,7 +40,15 @@ def get_all():
 
 @router.get("/load_custom_component_from_path")
 def get_load_custom_component_from_path(path: str):
-    return build_langchain_custom_component_list_from_path(path)
+    try:
+        data = build_langchain_custom_component_list_from_path(path)
+    except CustomComponentPathValueError as err:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": type(err).__name__, "traceback": str(err)},
+        ) from err
+
+    return data
 
 
 @router.get("/load_custom_component_from_path_TEST")
@@ -52,8 +64,6 @@ def get_load_custom_component_from_path_test(path: str):
 
 
 # For backwards compatibility we will keep the old endpoint
-
-
 @router.post("/predict/{flow_id}", response_model=ProcessResponse)
 @router.post("/process/{flow_id}", response_model=ProcessResponse)
 async def process_flow(

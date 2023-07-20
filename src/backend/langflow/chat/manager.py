@@ -203,7 +203,7 @@ class ChatManager:
             await self.close_connection(
                 client_id=client_id,
                 code=status.WS_1011_INTERNAL_ERROR,
-                reason=str(e)[:120],
+                reason=str(exc)[:120],
             )
         finally:
             try:
