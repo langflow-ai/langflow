@@ -5,7 +5,9 @@ from langflow.interface.custom.component import Component
 
 from langflow.utils import validate
 
-from langflow.api.v1.endpoints import process_flow
+from uuid import UUID
+from langflow.database.base import get_session
+from langflow.database.models.flow import Flow
 
 
 class CustomComponent(Component):
@@ -128,10 +130,12 @@ class CustomComponent(Component):
     def get_function(self):
         return validate.create_function(self.code, self.function_entrypoint_name)
 
-    def load_flow(
-        self, flow_id: str, inputs: Optional[dict] = None, tweaks: Optional[dict] = None
-    ):
-        return process_flow(flow_id, inputs, tweaks)
+    def load_flow(self, flow_id: UUID = None):
+        from langflow.processing.process import build_sorted_vertices_with_caching
+
+        session = next(get_session())
+        data_graph = flow.data if (flow := session.get(Flow, flow_id)) else None
+        return build_sorted_vertices_with_caching(data_graph)
 
     def build(self):
         raise NotImplementedError
