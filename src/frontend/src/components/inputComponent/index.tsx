@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { InputComponentType } from "../../types/components";
 import { classNames } from "../../utils/utils";
+import { Input } from "../ui/input";
 
 export default function InputComponent({
   value,
@@ -19,16 +20,15 @@ export default function InputComponent({
   }, [disabled, onChange]);
 
   return (
-    <div className={disabled ? "input-component-div" : "relative"}>
-      <input
+    <div className="relative w-full">
+      <Input
         value={value}
+        disabled={disabled}
         className={classNames(
-          disabled ? " input-disable " : "",
           password && !pwdVisible && value !== "" ? " text-clip password " : "",
-          editNode ? " input-edit-node " : " input-primary ",
+          editNode ? " input-edit-node " : "",
           password && editNode ? "pr-8" : "",
-          password && !editNode ? "pr-10" : "",
-          "nopan nodrag noundo nocopy"
+          password && !editNode ? "pr-10" : ""
         )}
         placeholder={password && editNode ? "Key" : "Type something..."}
         onChange={(e) => {

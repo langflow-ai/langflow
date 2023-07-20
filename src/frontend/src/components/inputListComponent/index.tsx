@@ -3,6 +3,7 @@ import { InputListComponentType } from "../../types/components";
 
 import _ from "lodash";
 import IconComponent from "../genericIconComponent";
+import { Input } from "../ui/input";
 
 export default function InputListComponent({
   value,
@@ -27,23 +28,19 @@ export default function InputListComponent({
   }, [disabled, onChange]);
 
   return (
-    <div
-      className={
-        (disabled ? "pointer-events-none cursor-not-allowed" : "") +
-        "flex flex-col gap-3"
-      }
+    <div className="flex flex-col gap-3"
     >
       {inputList.map((i, idx) => {
         return (
           <div key={idx} className="flex w-full gap-3">
-            <input
+            <Input
+            disabled={disabled}
               type="text"
               value={i}
               className={
-                "nopan nodrag noundo nocopy " +
-                (editNode
-                  ? "input-edit-node "
-                  : "input-primary " + (disabled ? "input-disable" : ""))
+                editNode
+                  ? "input-edit-node"
+                  : ""
               }
               placeholder="Type something..."
               onChange={(e) => {
