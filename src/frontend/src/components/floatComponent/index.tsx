@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { FloatComponentType } from "../../types/components";
+import { Input } from "../ui/input";
 
 export default function FloatComponent({
   value,
@@ -19,8 +20,8 @@ export default function FloatComponent({
   }, [disabled, onChange]);
 
   return (
-    <div className={"w-full " + (disabled ? "float-component-pointer" : "")}>
-      <input
+    <div className="w-full">
+      <Input
         type="number"
         step={step}
         min={min}
@@ -34,11 +35,9 @@ export default function FloatComponent({
         }}
         max={max}
         value={value ?? ""}
+        disabled={disabled}
         className={
-          "nopan nodrag noundo nocopy " +
-          (editNode
-            ? "input-edit-node"
-            : "input-primary" + (disabled ? " input-disable " : ""))
+          (editNode ? "input-edit-node" : "")
         }
         placeholder={
           editNode ? "Number 0 to 1" : "Type a number from zero to one"

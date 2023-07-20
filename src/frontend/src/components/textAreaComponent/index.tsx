@@ -3,6 +3,7 @@ import { TypeModal } from "../../constants/enums";
 import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
+import { Input } from "../ui/input";
 
 export default function TextAreaComponent({
   value,
@@ -18,15 +19,14 @@ export default function TextAreaComponent({
   }, [disabled]);
 
   return (
-    <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
       <div className="flex w-full items-center">
-        <input
+        <Input
           value={value}
+          disabled={disabled}
           className={
             (editNode
-              ? " input-edit-node "
-              : " input-primary " + (disabled ? " input-disable" : "")) +
-            " nopan nodrag noundo nocopy w-full"
+              ? "input-edit-node"
+              : "")
           }
           placeholder={"Type something..."}
           onChange={(e) => {
@@ -55,6 +55,5 @@ export default function TextAreaComponent({
           </GenericModal>
         </div>
       </div>
-    </div>
   );
 }

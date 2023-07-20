@@ -239,11 +239,9 @@ The cursor: default; property value restores the browser's default cursor style 
   .button-div-style {
     @apply gap-2 flex
   }
-  .input-primary:focus{
-    @apply focus:placeholder-transparent focus:ring-ring focus:border-ring
-  }
-  .input-primary {
-    @apply bg-background block text-left border-border form-input px-3 placeholder:text-muted-foreground rounded-md shadow-sm sm:text-sm truncate w-full;
+ 
+  .input-primary{
+    @apply placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 focus:placeholder-transparent focus:ring-ring focus:border-ring bg-background block text-left border-border form-input px-3 placeholder:text-muted-foreground rounded-md shadow-sm sm:text-sm truncate w-full
   }
 
   .input-edit-node{
@@ -550,7 +548,7 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply z-10 mt-1 max-h-60 overflow-auto rounded-md bg-background py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm
   }
   .dropdown-component-true-options {
-    @apply dropdown-component-options lg:w-[31.5%]
+    @apply dropdown-component-options lg:w-[32%]
   }
   .dropdown-component-false-options {
     @apply dropdown-component-options w-full

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { FloatComponentType } from "../../types/components";
+import { Input } from "../ui/input";
 
 export default function IntComponent({
   value,
@@ -17,13 +18,9 @@ export default function IntComponent({
   }, [disabled, onChange]);
 
   return (
-    <div
-      className={
-        "w-full " +
-        (disabled ? "pointer-events-none w-full cursor-not-allowed" : "")
-      }
+    <div className="w-full"
     >
-      <input
+      <Input
         onKeyDown={(event) => {
           if (
             event.key !== "Backspace" &&
@@ -52,11 +49,11 @@ export default function IntComponent({
         }}
         value={value ?? ""}
         className={
-          "nopan nodrag noundo nocopy " +
-          (editNode
-            ? " input-edit-node "
-            : " input-primary " + (disabled ? " input-disable" : ""))
+          editNode
+            ? "input-edit-node"
+            : ""
         }
+        disabled={disabled}
         placeholder={editNode ? "Integer number" : "Type an integer number"}
         onChange={(e) => {
           onChange(e.target.value);

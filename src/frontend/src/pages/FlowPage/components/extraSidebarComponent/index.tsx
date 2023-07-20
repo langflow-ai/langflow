@@ -15,6 +15,7 @@ import {
 } from "../../../../utils/styleUtils";
 import { classNames } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
+import { Input } from "../../../../components/ui/input";
 
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);
@@ -109,7 +110,7 @@ export default function ExtraSidebar() {
       </div>
       <Separator />
       <div className="side-bar-search-div-placement">
-        <input
+        <Input
           type="text"
           name="search"
           id="search"
