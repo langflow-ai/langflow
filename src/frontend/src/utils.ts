@@ -17,7 +17,6 @@ import {
   Paperclip,
   Rocket,
   Scissors,
-  Sparkles,
   TerminalSquare,
   Wand2,
   Wrench,
@@ -35,6 +34,7 @@ import { EvernoteIcon } from "./icons/Evernote";
 import { FBIcon } from "./icons/FacebookMessenger";
 import { GitBookIcon } from "./icons/GitBook";
 import { GoogleIcon } from "./icons/Google";
+import GradientSparkles from "./icons/GradientSparkles";
 import { HuggingFaceIcon } from "./icons/HuggingFace";
 import { IFixIcon } from "./icons/IFixIt";
 import { MetaIcon } from "./icons/Meta";
@@ -303,7 +303,7 @@ export const nodeIconsLucide: {
   retrievers: FileSearch as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
-  custom_components: Sparkles as React.ForwardRefExoticComponent<
+  custom_components: GradientSparkles as React.ForwardRefExoticComponent<
     ComponentType<SVGProps<SVGSVGElement>>
   >,
   unknown: HelpCircle as React.ForwardRefExoticComponent<
