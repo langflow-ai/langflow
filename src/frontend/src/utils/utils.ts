@@ -1,20 +1,20 @@
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
-import { IVarHighlightType } from "../types/components";
+import { IVarHighlightType, dataType, groupedObjType, tweakType } from "../types/components";
 import { FlowType } from "../types/flow";
 import { TabsState } from "../types/tabs";
 import { buildTweaks } from "./reactflowUtils";
 
-export function classNames(...classes: Array<string>) {
+export function classNames(...classes: Array<string>): string {
   return classes.filter(Boolean).join(" ");
 }
 
-export function cn(...inputs: ClassValue[]) {
+export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
 
-export function toNormalCase(str: string) {
+export function toNormalCase(str: string): string {
   let result = str
     .split("_")
     .map((word, index) => {
@@ -36,7 +36,7 @@ export function toNormalCase(str: string) {
     .join(" ");
 }
 
-export function normalCaseToSnakeCase(str: string) {
+export function normalCaseToSnakeCase(str: string): string {
   return str
     .split(" ")
     .map((word, index) => {
@@ -48,7 +48,7 @@ export function normalCaseToSnakeCase(str: string) {
     .join("_");
 }
 
-export function toTitleCase(str: string) {
+export function toTitleCase(str: string): string {
   let result = str
     .split("_")
     .map((word, index) => {
@@ -75,7 +75,7 @@ export function toTitleCase(str: string) {
 }
 
 export const upperCaseWords: string[] = ["llm", "uri"];
-export function checkUpperWords(str: string) {
+export function checkUpperWords(str: string): string {
   const words = str.split(" ").map((word) => {
     return upperCaseWords.includes(word.toLowerCase())
       ? word.toUpperCase()
@@ -85,7 +85,7 @@ export function checkUpperWords(str: string) {
   return words.join(" ");
 }
 
-export function groupByFamily(data, baseClasses, left, type) {
+export function groupByFamily(data: dataType, baseClasses: string, left: boolean, type: string): groupedObjType[] {
   let parentOutput: string;
   let arrOfParent: string[] = [];
   let arrOfType: { family: string; type: string; component: string }[] = [];
@@ -200,7 +200,7 @@ export function groupByFamily(data, baseClasses, left, type) {
   }
 }
 
-export function buildInputs(tabsState, id) {
+export function buildInputs(tabsState: object, id: string): string {
   return tabsState &&
     tabsState[id] &&
     tabsState[id].formKeysData &&
@@ -261,7 +261,8 @@ export function varHighlightHTML({ name }: IVarHighlightType): string {
   return html;
 };
 
-export function buildTweakObject(tweak) {
+export function buildTweakObject(tweak: tweakType[]): string {
+  console.log(tweak)
   tweak.forEach((el) => {
     Object.keys(el).forEach((key) => {
       for (let kp in el[key]) {
