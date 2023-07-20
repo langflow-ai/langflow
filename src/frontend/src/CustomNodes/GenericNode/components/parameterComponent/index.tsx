@@ -152,7 +152,7 @@ export default function ParameterComponent({
   return (
     <div
       ref={ref}
-      className="nopan nodrag noundo nocopy mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2"
+      className="mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2"
     >
       <>
         <div
@@ -242,7 +242,6 @@ export default function ParameterComponent({
             ) : (
               <InputComponent
                 disabled={disabled}
-                disableCopyPaste={true}
                 password={data.node.template[name].password ?? false}
                 value={data.node.template[name].value ?? ""}
                 onChange={handleOnNewValue}
@@ -264,7 +263,6 @@ export default function ParameterComponent({
           <div className="mt-2 w-full">
             <FloatComponent
               disabled={disabled}
-              disableCopyPaste={true}
               value={data.node.template[name].value ?? ""}
               onChange={handleOnNewValue}
             />
@@ -309,7 +307,6 @@ export default function ParameterComponent({
           <div className="mt-2 w-full">
             <IntComponent
               disabled={disabled}
-              disableCopyPaste={true}
               value={data.node.template[name].value ?? ""}
               onChange={handleOnNewValue}
             />
