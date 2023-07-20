@@ -6,7 +6,7 @@ export default function DisclosureComponent({
   button: { title, Icon, buttons = [] },
   children,
   openDisc,
-}: DisclosureComponentType) {
+}: DisclosureComponentType): JSX.Element {
   return (
     <Disclosure as="div" key={title}>
       {({ open }) => (

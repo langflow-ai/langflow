@@ -18,7 +18,7 @@ import {
 import { classNames } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 
-export default function ExtraSidebar() {
+export default function ExtraSidebar(): JSX.Element {
   const { data } = useContext(typesContext);
   const { openPopUp } = useContext(PopUpContext);
   const { flows, tabId, uploadFlow, tabsState, saveFlow } =
