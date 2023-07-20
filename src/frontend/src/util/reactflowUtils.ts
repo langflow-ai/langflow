@@ -6,12 +6,14 @@ export function cleanEdges({
   updateEdge,
 }: cleanEdgesType) {
   let newEdges = _.cloneDeep(edges);
+  let changed = false;
   edges.forEach((edge) => {
     // check if the source and target node still exists
     const sourceNode = nodes.find((node) => node.id === edge.source);
     const targetNode = nodes.find((node) => node.id === edge.target);
     if (!sourceNode || !targetNode) {
       newEdges = newEdges.filter((e) => e.id !== edge.id);
+      changed = true;
     }
     // check if the source and target handle still exists
     if (sourceNode && targetNode) {
@@ -28,6 +30,7 @@ export function cleanEdges({
           targetNode.data.id;
         if (id !== targetHandle) {
           newEdges = newEdges.filter((e) => e.id !== edge.id);
+          changed = true;
         }
       }
       if (sourceHandle) {
@@ -38,9 +41,12 @@ export function cleanEdges({
         ].join("|");
         if (id !== sourceHandle) {
           newEdges = newEdges.filter((e) => e.id !== edge.id);
+          changed = true;
         }
       }
     }
+    if (changed) {
+      updateEdge(newEdges);
+    }
   });
-  updateEdge(newEdges);
 }

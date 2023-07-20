@@ -17,7 +17,7 @@ export default function TextAreaComponent({
     if (disabled) {
       onChange("");
     }
-  }, [disabled, onChange]);
+  }, [disabled]);
 
   return (
     <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
