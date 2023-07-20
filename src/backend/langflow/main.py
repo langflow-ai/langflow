@@ -71,6 +71,8 @@ def setup_app(static_files_dir: Optional[Path] = None) -> FastAPI:
     if not static_files_dir:
         static_files_dir = get_static_files_dir()
 
+    if not static_files_dir or not static_files_dir.exists():
+        raise RuntimeError(f"Static files directory {static_files_dir} does not exist.")
     app = create_app()
     setup_static_files(app, static_files_dir)
     return app
