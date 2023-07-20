@@ -152,7 +152,7 @@ export default function ParameterComponent({
   return (
     <div
       ref={ref}
-      className="mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2"
+      className="nopan nodrag mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2"
     >
       <>
         <div
