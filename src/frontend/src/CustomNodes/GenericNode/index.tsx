@@ -1,13 +1,16 @@
+import { cloneDeep } from "lodash";
 import { Zap } from "lucide-react";
 import { useContext, useEffect, useRef, useState } from "react";
-import { NodeToolbar } from "reactflow";
+import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import Tooltip from "../../components/TooltipComponent";
 import { useSSE } from "../../contexts/SSEContext";
 import { alertContext } from "../../contexts/alertContext";
+import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { NodeDataType } from "../../types/flow";
+import { cleanEdges } from "../../util/reactflowUtils";
 import {
   classNames,
   nodeColors,
@@ -25,6 +28,8 @@ export default function GenericNode({
 }) {
   const [data, setData] = useState(olddata);
   const { setErrorData } = useContext(alertContext);
+  const { updateFlow, flows, tabId } = useContext(TabsContext);
+  const updateNodeInternals = useUpdateNodeInternals();
   const showError = useRef(true);
   const { types, deleteNode, reactFlowInstance } = useContext(typesContext);
   // any to avoid type conflict
@@ -33,10 +38,26 @@ export default function GenericNode({
   const [validationStatus, setValidationStatus] = useState(null);
   // State for outline color
   const { sseData, isBuilding } = useSSE();
-  const refHtml = useRef(null);
   useEffect(() => {
     olddata.node = data.node;
-  }, [data, reactFlowInstance]);
+    let myFlow = flows.find((flow) => flow.id === tabId);
+    if (reactFlowInstance && myFlow) {
+      let flow = cloneDeep(myFlow);
+      flow.data = reactFlowInstance.toObject();
+      cleanEdges({
+        flow: {
+          edges: flow.data.edges,
+          nodes: flow.data.nodes,
+        },
+        updateEdge: (edge) => {
+          flow.data.edges = edge;
+          reactFlowInstance.setEdges(edge);
+          updateNodeInternals(data.id);
+        },
+      });
+      updateFlow(flow);
+    }
+  }, [data]);
 
   // New useEffect to watch for changes in sseData and update validation status
   useEffect(() => {
