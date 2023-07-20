@@ -125,7 +125,7 @@ export default function Page({ flow }: { flow: FlowType }) {
       updateFlow(flow);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodes, edges]);
+  }, [edges]);
   //update flow when tabs change
   useEffect(() => {
     setNodes(flow?.data?.nodes ?? []);
