@@ -1,9 +1,9 @@
 import { cloneDeep } from "lodash";
-import { Variable } from "lucide-react";
 import { ReactNode, forwardRef, useContext, useEffect, useState } from "react";
 import CodeAreaComponent from "../../components/codeAreaComponent";
 import Dropdown from "../../components/dropdownComponent";
 import FloatComponent from "../../components/floatComponent";
+import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
 import InputFileComponent from "../../components/inputFileComponent";
 import InputListComponent from "../../components/inputListComponent";
@@ -21,10 +21,11 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
+import { limitScrollFieldsModal } from "../../constants/constants";
 import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
-import { classNames, limitScrollFieldsModal } from "../../utils";
+import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";
 
 const EditNodeModal = forwardRef(
@@ -80,7 +81,10 @@ const EditNodeModal = forwardRef(
         </BaseModal.Header>
         <BaseModal.Content>
           <div className="flex pb-2">
-            <Variable className="edit-node-modal-variable "></Variable>
+            <IconComponent
+              name="Variable"
+              className="edit-node-modal-variable "
+            />
             <span className="edit-node-modal-span">Parameters</span>
           </div>
 

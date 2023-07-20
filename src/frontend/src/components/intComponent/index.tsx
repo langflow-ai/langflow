@@ -12,6 +12,7 @@ export default function IntComponent({
   const { setDisableCopyPaste } = useContext(TabsContext);
   const min = 0;
 
+  // Clear component state
   useEffect(() => {
     if (disabled) {
       onChange("");

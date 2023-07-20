@@ -1,25 +1,26 @@
-import { FileText, Variable } from "lucide-react";
 import { ReactNode, useContext, useEffect, useRef, useState } from "react";
 import SanitizedHTMLWrapper from "../../components/SanitizedHTMLWrapper";
 import ShadTooltip from "../../components/ShadTooltipComponent";
+import IconComponent from "../../components/genericIconComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
 import {
+  INVALID_CHARACTERS,
   MAX_WORDS_HIGHLIGHT,
   PROMPT_DIALOG_SUBTITLE,
   TEXT_DIALOG_SUBTITLE,
-} from "../../constants";
+  regexHighlight,
+} from "../../constants/constants";
+import { TypeModal } from "../../constants/enums";
 import { alertContext } from "../../contexts/alertContext";
 import { postValidatePrompt } from "../../controllers/API";
 import { APIClassType } from "../../types/api";
 import {
-  INVALID_CHARACTERS,
   classNames,
   getRandomKeyByssmm,
-  regexHighlight,
   varHighlightHTML,
-} from "../../utils";
+} from "../../utils/utils";
 import BaseModal from "../baseModal";
 
 export default function GenericModal({
@@ -38,7 +39,7 @@ export default function GenericModal({
   value: string;
   buttonText: string;
   modalTitle: string;
-  type: "prompt" | "text";
+  type: number;
   children: ReactNode;
   nodeClass?: APIClassType;
   setNodeClass?: (Class: APIClassType) => void;
@@ -90,7 +91,7 @@ export default function GenericModal({
   }
 
   useEffect(() => {
-    if (type === "prompt" && inputValue && inputValue != "") {
+    if (type === TypeModal.PROMPT && inputValue && inputValue != "") {
       checkVariables(inputValue);
     }
   }, [inputValue, type]);
@@ -180,8 +181,8 @@ export default function GenericModal({
         })()}
       >
         <span className="pr-2">{myModalTitle}</span>
-        <FileText
-          strokeWidth={1.5}
+        <IconComponent
+          name="FileText"
           className="h-6 w-6 pl-1 text-primary "
           aria-hidden="true"
         />
@@ -194,7 +195,7 @@ export default function GenericModal({
               "flex h-full w-full"
             )}
           >
-            {type === "prompt" && isEdit ? (
+            {type === TypeModal.PROMPT && isEdit ? (
               <Textarea
                 ref={divRefPrompt}
                 className="form-input h-full w-full rounded-lg custom-scroll focus-visible:ring-1"
@@ -209,9 +210,9 @@ export default function GenericModal({
                 }}
                 placeholder="Type message here."
               />
-            ) : type === "prompt" && !isEdit ? (
+            ) : type === TypeModal.PROMPT && !isEdit ? (
               <TextAreaContentView />
-            ) : type !== "prompt" ? (
+            ) : type !== TypeModal.PROMPT ? (
               <Textarea
                 ref={ref}
                 className="form-input h-full w-full rounded-lg focus-visible:ring-1"
@@ -228,14 +229,17 @@ export default function GenericModal({
 
           <div className="mt-6 flex h-fit w-full items-end justify-between">
             <div className="mb-auto flex-1">
-              {type === "prompt" && (
+              {type === TypeModal.PROMPT && (
                 <div className=" mr-2">
                   <div
                     ref={divRef}
                     className="max-h-20 overflow-y-auto custom-scroll"
                   >
                     <div className="flex flex-wrap items-center">
-                      <Variable className=" -ml-px mr-1 flex h-4 w-4 text-primary"></Variable>
+                      <IconComponent
+                        name="Variable"
+                        className=" -ml-px mr-1 flex h-4 w-4 text-primary"
+                      />
                       <span className="text-md font-semibold text-primary">
                         Prompt Variables:
                       </span>
@@ -275,11 +279,11 @@ export default function GenericModal({
             <Button
               onClick={() => {
                 switch (myModalType) {
-                  case "text":
+                  case TypeModal.TEXT:
                     setValue(inputValue);
                     setModalOpen(false);
                     break;
-                  case "prompt":
+                  case TypeModal.PROMPT:
                     !inputValue || inputValue === ""
                       ? setModalOpen(false)
                       : validatePrompt(false);

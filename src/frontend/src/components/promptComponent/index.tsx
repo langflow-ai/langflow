@@ -1,9 +1,10 @@
 import { useEffect } from "react";
+
+import { TypeModal } from "../../constants/enums";
+import { postValidatePrompt } from "../../controllers/API";
 import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
-
-import { ExternalLink } from "lucide-react";
-import { postValidatePrompt } from "../../controllers/API";
+import IconComponent from "../genericIconComponent";
 
 export default function PromptAreaComponent({
   field_name,
@@ -34,7 +35,7 @@ export default function PromptAreaComponent({
   return (
     <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
       <GenericModal
-        type={"prompt"}
+        type={TypeModal.PROMPT}
         value={value}
         buttonText="Check & Save"
         modalTitle="Edit Prompt"
@@ -56,8 +57,8 @@ export default function PromptAreaComponent({
             {value !== "" ? value : "Type your prompt here..."}
           </span>
           {!editNode && (
-            <ExternalLink
-              strokeWidth={1.5}
+            <IconComponent
+              name="ExternalLink"
               className={
                 "icons-parameters-comp" +
                 (disabled ? " text-ring" : " hover:text-accent-foreground")
