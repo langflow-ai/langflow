@@ -1,15 +1,15 @@
-import { Bell, Home, MoonIcon, SunIcon, Users2 } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
 import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
 import { Link, useLocation, useParams } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
-import { USER_PROJECTS_HEADER } from "../../constants";
+import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { getRepoStars } from "../../controllers/API";
+import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import MenuBar from "./components/menuBar";
@@ -27,6 +27,7 @@ export default function Header() {
 
   const [stars, setStars] = useState(null);
 
+  // Get and set numbers of stars on header
   useEffect(() => {
     async function fetchStars() {
       const starsCount = await getRepoStars("logspace-ai", "langflow");
@@ -51,7 +52,7 @@ export default function Header() {
             variant={location.pathname === "/" ? "primary" : "secondary"}
             size="sm"
           >
-            <Home className="h-4 w-4" />
+            <IconComponent name="Home" className="h-4 w-4" />
             <div className="flex-1">{USER_PROJECTS_HEADER}</div>
           </Button>
         </Link>
@@ -63,7 +64,7 @@ export default function Header() {
             }
             size="sm"
           >
-            <Users2 className="h-4 w-4" />
+            <IconComponent name="Users2" className="h-4 w-4" />
             <div className="flex-1">Community Examples</div>
           </Button>
         </Link>
@@ -105,9 +106,9 @@ export default function Header() {
             }}
           >
             {dark ? (
-              <SunIcon className="side-bar-button-size" />
+              <IconComponent name="SunIcon" className="side-bar-button-size" />
             ) : (
-              <MoonIcon className="side-bar-button-size" />
+              <IconComponent name="MoonIcon" className="side-bar-button-size" />
             )}
           </button>
           <button
@@ -131,7 +132,11 @@ export default function Header() {
             }}
           >
             {notificationCenter && <div className="header-notifications"></div>}
-            <Bell className="side-bar-button-size" aria-hidden="true" />
+            <IconComponent
+              name="Bell"
+              className="side-bar-button-size"
+              aria-hidden="true"
+            />
           </button>
         </div>
       </div>

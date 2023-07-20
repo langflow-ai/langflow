@@ -1,9 +1,9 @@
 import { useContext, useEffect } from "react";
+import { TypeModal } from "../../constants/enums";
+import { TabsContext } from "../../contexts/tabsContext";
 import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
-
-import { ExternalLink } from "lucide-react";
-import { TabsContext } from "../../contexts/tabsContext";
+import IconComponent from "../genericIconComponent";
 
 export default function TextAreaComponent({
   value,
@@ -13,6 +13,7 @@ export default function TextAreaComponent({
 }: TextAreaComponentType) {
   const { setDisableCopyPaste } = useContext(TabsContext);
 
+  // Clear text area
   useEffect(() => {
     if (disabled) {
       onChange("");
@@ -43,7 +44,7 @@ export default function TextAreaComponent({
         />
         <div>
           <GenericModal
-            type={"text"}
+            type={TypeModal.TEXT}
             buttonText="Finishing Editing"
             modalTitle="Edit Text"
             value={value}
@@ -52,8 +53,8 @@ export default function TextAreaComponent({
             }}
           >
             {!editNode && (
-              <ExternalLink
-                strokeWidth={1.5}
+              <IconComponent
+                name="ExternalLink"
                 className={
                   "icons-parameters-comp" +
                   (disabled ? " text-ring" : " hover:text-accent-foreground")

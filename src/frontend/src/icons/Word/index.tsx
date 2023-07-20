@@ -1,8 +1,8 @@
 import React, { forwardRef } from "react";
-import { ReactComponent as WordSVG } from "./word.svg";
+import SvgWord from "./Word";
 
 export const WordIcon = forwardRef<SVGSVGElement, React.PropsWithChildren<{}>>(
   (props, ref) => {
-    return <WordSVG ref={ref} {...props} />;
+    return <SvgWord ref={ref} {...props} />;
   }
 );

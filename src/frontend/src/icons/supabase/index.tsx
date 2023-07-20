@@ -1,9 +1,9 @@
 import React, { forwardRef } from "react";
-import { ReactComponent as SupabaseSvg } from "./supabase-icon.svg";
+import SvgSupabaseIcon from "./SupabaseIcon";
 
 export const SupabaseIcon = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<{}>
 >((props, ref) => {
-  return <SupabaseSvg ref={ref} {...props} />;
+  return <SvgSupabaseIcon ref={ref} {...props} />;
 });
