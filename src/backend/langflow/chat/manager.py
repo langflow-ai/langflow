@@ -111,7 +111,7 @@ class ChatManager:
                 # This is to catch the following error:
                 #  Unexpected ASGI message 'websocket.close', after sending 'websocket.close'
                 if "after sending" in str(exc):
-                    logger.error(exc)
+                    logger.error(f"Error closing connection: {exc}")
 
     async def process_message(
         self, client_id: str, payload: Dict, langchain_object: Any
@@ -197,9 +197,9 @@ class ChatManager:
                     langchain_object = self.in_memory_cache.get(client_id)
                     await self.process_message(client_id, payload, langchain_object)
 
-        except Exception as e:
+        except Exception as exc:
             # Handle any exceptions that might occur
-            logger.error(e)
+            logger.error(f"Error handling websocket: {exc}")
             await self.close_connection(
                 client_id=client_id,
                 code=status.WS_1011_INTERNAL_ERROR,
@@ -212,6 +212,6 @@ class ChatManager:
                     code=status.WS_1000_NORMAL_CLOSURE,
                     reason="Client disconnected",
                 )
-            except Exception as e:
-                logger.error(e)
+            except Exception as exc:
+                logger.error(f"Error closing connection: {exc}")
             self.disconnect(client_id)
