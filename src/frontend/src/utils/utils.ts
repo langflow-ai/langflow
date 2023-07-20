@@ -262,7 +262,6 @@ export function varHighlightHTML({ name }: IVarHighlightType): string {
 };
 
 export function buildTweakObject(tweak: tweakType[]): string {
-  console.log(tweak)
   tweak.forEach((el) => {
     Object.keys(el).forEach((key) => {
       for (let kp in el[key]) {
