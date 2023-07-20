@@ -379,12 +379,15 @@ export default function Page({ flow }: { flow: FlowType }) {
                   }}
                   edges={edges}
                   onPaneClick={() => {
+                    console.log("enableCopyPastePaneClick");
                     setDisableCopyPaste(false);
                   }}
                   onPaneMouseLeave={() => {
+                    console.log("enableCopyPastePaneLeave");
                     setDisableCopyPaste(true);
                   }}
                   onPaneMouseEnter={() => {
+                    console.log("enableCopyPastePaneEnter");
                     setDisableCopyPaste(false);
                   }}
                   onNodesChange={onNodesChangeMod}
@@ -407,8 +410,6 @@ export default function Page({ flow }: { flow: FlowType }) {
                   onDrop={onDrop}
                   onNodesDelete={onDelete}
                   onSelectionChange={onSelectionChange}
-                  nodesDraggable={!disableCopyPaste}
-                  panOnDrag={!disableCopyPaste}
                   zoomOnDoubleClick={!disableCopyPaste}
                   className="theme-attribution"
                   minZoom={0.01}

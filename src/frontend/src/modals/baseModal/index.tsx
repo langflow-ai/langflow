@@ -97,25 +97,24 @@ function BaseModal({
       break;
   }
 
-  const { setDisableCopyPaste } = useContext(TabsContext);
-  const [openInner, setOpenInner] = useState(open ?? false);
+  const { disableCopyPaste, setDisableCopyPaste } = useContext(TabsContext);
+  const [keepDisabling, setKeepDisabling] = useState(false);
 
   useEffect(() => {
-    setOpenInner(open);
-  }, [open]);
-
-  useEffect(() => {
-    setOpen(openInner);
-    if (openInner) {
+    if (keepDisabling) {
       setDisableCopyPaste(true);
-    } else {
-      setDisableCopyPaste(false);
     }
-  }, [openInner]);
+  }, [disableCopyPaste]);
+
+  useEffect(() => {
+    if (!open) {
+      setKeepDisabling(false);
+    }
+  }, [open]);
 
   //UPDATE COLORS AND STYLE CLASSSES
   return (
-    <Dialog open={openInner} onOpenChange={setOpenInner}>
+    <Dialog modal={true} open={open} onOpenChange={setOpen}>
       <DialogTrigger className="w-full" hidden={triggerChild ? false : true}>
         {triggerChild}
       </DialogTrigger>

@@ -20,14 +20,6 @@ type UseUndoRedoOptions = {
   enableShortcuts: boolean;
 };
 
-type UseUndoRedo = (options?: UseUndoRedoOptions) => {
-  undo: () => void;
-  redo: () => void;
-  takeSnapshot: () => void;
-  canUndo: boolean;
-  canRedo: boolean;
-};
-
 type HistoryItem = {
   nodes: Node[];
   edges: Edge[];
