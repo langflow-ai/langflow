@@ -30,13 +30,13 @@ class StringCompressor:
 
 
 class DirectoryReader:
-    def __init__(self, directory_path, compress_code=False):
+    def __init__(self, directory_path, compress_code_field=False):
         """
         Initialize DirectoryReader with a directory path
         and a flag indicating whether to compress the code.
         """
         self.directory_path = directory_path
-        self.compress_code = compress_code
+        self.compress_code_field = compress_code_field
 
     def is_empty_file(self, file_content):
         """
@@ -115,7 +115,7 @@ class DirectoryReader:
         elif not self.validate_build(file_content):
             return False, "Missing build function"
         else:
-            if self.compress_code:
+            if self.compress_code_field:
                 file_content = str(self.compress_string(file_content))
 
             return True, file_content

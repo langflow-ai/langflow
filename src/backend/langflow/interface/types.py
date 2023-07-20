@@ -20,6 +20,8 @@ from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.tools import CustomComponentNode
 from langflow.interface.retrievers.base import retriever_creator
 
+from langflow.interface.custom.load_custom_component_from_path import DirectoryReader
+
 import re
 import warnings
 import traceback
@@ -233,3 +235,19 @@ def build_langchain_template_custom_component(custom_component: CustomComponent)
         frontend_node.get("base_classes").append(base_class)
 
     return frontend_node
+
+
+def build_langchain_custom_component_list_from_path(path: str):
+    # Load all files from Path
+    reader = DirectoryReader(path, False)
+    file_list = reader.get_files()
+
+    # Build and validate all files
+    data = reader.build_component_menu_list(file_list)
+
+    raw_code = data.get("menu")[0].get("components")[0].get("code")
+
+    extractor = CustomComponent(code=raw_code)
+    extractor.is_check_valid()
+
+    return build_langchain_template_custom_component(extractor)

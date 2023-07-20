@@ -1,5 +1,6 @@
 from http import HTTPStatus
 from typing import Optional
+
 from langflow.cache.utils import save_uploaded_file
 from langflow.database.models.flow import Flow
 from langflow.processing.process import process_graph_cached, process_tweaks
@@ -16,10 +17,11 @@ from langflow.api.v1.schemas import (
 )
 
 from langflow.interface.types import (
+    build_langchain_types_dict,
     build_langchain_template_custom_component,
+    build_langchain_custom_component_list_from_path,
 )
 
-from langflow.interface.types import build_langchain_types_dict
 from langflow.database.base import get_session
 from sqlmodel import Session
 
@@ -32,7 +34,26 @@ def get_all():
     return build_langchain_types_dict()
 
 
+@router.get("/load_custom_component_from_path")
+def get_load_custom_component_from_path(path: str):
+    return build_langchain_custom_component_list_from_path(path)
+
+
+@router.get("/load_custom_component_from_path_TEST")
+def get_load_custom_component_from_path_test(path: str):
+    from langflow.interface.custom.load_custom_component_from_path import (
+        DirectoryReader,
+    )
+
+    reader = DirectoryReader(path, False)
+    file_list = reader.get_files()
+
+    return reader.build_component_menu_list(file_list)
+
+
 # For backwards compatibility we will keep the old endpoint
+
+
 @router.post("/predict/{flow_id}", response_model=ProcessResponse)
 @router.post("/process/{flow_id}", response_model=ProcessResponse)
 async def process_flow(
