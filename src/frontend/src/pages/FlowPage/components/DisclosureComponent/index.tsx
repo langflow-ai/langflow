@@ -1,5 +1,5 @@
 import { Disclosure } from "@headlessui/react";
-import { ChevronRight } from "lucide-react";
+import IconComponent from "../../../../components/genericIconComponent";
 import { DisclosureComponentType } from "../../../../types/components";
 
 export default function DisclosureComponent({
@@ -24,7 +24,8 @@ export default function DisclosureComponent({
                   </button>
                 ))}
                 <div>
-                  <ChevronRight
+                  <IconComponent
+                    name="ChevronRight"
                     className={`${
                       open || openDisc ? "rotate-90 transform" : ""
                     } h-4 w-4 text-foreground`}

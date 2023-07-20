@@ -1,15 +1,11 @@
 import { Dialog, Transition } from "@headlessui/react";
-import { X } from "lucide-react";
 import { Fragment, useContext, useRef, useState } from "react";
+import IconComponent from "../../components/genericIconComponent";
+import { limitScrollFieldsModal } from "../../constants/constants";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
-import {
-  classNames,
-  limitScrollFieldsModal,
-  nodeColors,
-  nodeIconsLucide,
-  toTitleCase,
-} from "../../utils";
+import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
+import { classNames, toTitleCase } from "../../utils/utils";
 import ModalField from "./components/ModalField";
 
 export default function NodeModal({ data }: { data: NodeDataType }) {
@@ -59,7 +55,11 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
                   }}
                 >
                   <span className="sr-only">Close</span>
-                  <X className="h-6 w-6" aria-hidden="true" />
+                  <IconComponent
+                    name="X"
+                    className="h-6 w-6"
+                    aria-hidden="true"
+                  />
                 </button>
               </div>
               <div className="node-modal-dialog-icon-div">

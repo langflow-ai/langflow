@@ -15,12 +15,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-import { IMPORT_DIALOG_SUBTITLE } from "../../constants";
+import { IMPORT_DIALOG_SUBTITLE } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { getExamples } from "../../controllers/API";
 import { FlowType } from "../../types/flow";
-import { classNames } from "../../utils";
+import { classNames } from "../../utils/utils";
 import ButtonBox from "./buttonBox";
 
 export default function ImportModal() {
