@@ -44,7 +44,7 @@ export default function ParameterComponent({
   required = false,
   optionalHandle = null,
   info = "",
-}: ParameterComponentType) {
+}: ParameterComponentType): JSX.Element {
   const ref = useRef(null);
   const refHtml = useRef(null);
   const refNumberComponents = useRef(0);

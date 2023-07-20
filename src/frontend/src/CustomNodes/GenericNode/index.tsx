@@ -20,7 +20,7 @@ export default function GenericNode({
 }: {
   data: NodeDataType;
   selected: boolean;
-}) {
+}): JSX.Element {
   const { setErrorData } = useContext(alertContext);
   const showError = useRef(true);
   const { types, deleteNode } = useContext(typesContext);
