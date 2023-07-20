@@ -21,7 +21,7 @@ export const CardComponent = ({
   id: string;
   onDelete?: () => void;
   button?: JSX.Element;
-}) => {
+}): JSX.Element => {
   const { removeFlow } = useContext(TabsContext);
 
   return (

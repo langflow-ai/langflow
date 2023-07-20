@@ -13,7 +13,7 @@ export default function InputFileComponent({
   fileTypes,
   onFileChange,
   editNode = false,
-}: FileComponentType) {
+}: FileComponentType): JSX.Element {
   const [myValue, setMyValue] = useState(value);
   const [loading, setLoading] = useState(false);
   const { setErrorData } = useContext(alertContext);

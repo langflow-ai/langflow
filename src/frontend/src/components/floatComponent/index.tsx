@@ -9,7 +9,7 @@ export default function FloatComponent({
   disableCopyPaste = false,
   disabled,
   editNode = false,
-}: FloatComponentType) {
+}: FloatComponentType): JSX.Element {
   const [myValue, setMyValue] = useState(value ?? "");
   const { setDisableCopyPaste } = useContext(TabsContext);
   const { closePopUp } = useContext(PopUpContext);

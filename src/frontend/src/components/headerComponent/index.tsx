@@ -14,7 +14,7 @@ import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import MenuBar from "./components/menuBar";
 
-export default function Header() {
+export default function Header(): JSX.Element {
   const { flows, addFlow, tabId } = useContext(TabsContext);
   const { openPopUp } = useContext(PopUpContext);
   const { templates } = useContext(typesContext);

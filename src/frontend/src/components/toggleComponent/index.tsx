@@ -7,7 +7,7 @@ export default function ToggleComponent({
   enabled,
   setEnabled,
   disabled,
-}: ToggleComponentType) {
+}: ToggleComponentType): JSX.Element {
 
   // set component state as disabled
   useEffect(() => {

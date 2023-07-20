@@ -9,7 +9,7 @@ export default function IntComponent({
   disableCopyPaste = false,
   disabled,
   editNode = false,
-}: FloatComponentType) {
+}: FloatComponentType): JSX.Element {
   const [myValue, setMyValue] = useState(value ?? "");
   const { setDisableCopyPaste } = useContext(TabsContext);
   const min = 0;

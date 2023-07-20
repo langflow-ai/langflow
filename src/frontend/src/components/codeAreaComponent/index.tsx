@@ -12,7 +12,7 @@ export default function CodeAreaComponent({
   editNode = false,
   nodeClass,
   setNodeClass,
-}: TextAreaComponentType) {
+}: TextAreaComponentType): JSX.Element {
   const [myValue, setMyValue] = useState(
     typeof value == "string" ? value : JSON.stringify(value)
   );

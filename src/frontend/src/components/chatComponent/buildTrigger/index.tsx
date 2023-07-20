@@ -21,7 +21,7 @@ export default function BuildTrigger({
   flow: FlowType;
   setIsBuilt: any;
   isBuilt: boolean;
-}) {
+}): JSX.Element {
   const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
   const { reactFlowInstance } = useContext(typesContext);
   const { setTabsState } = useContext(TabsContext);

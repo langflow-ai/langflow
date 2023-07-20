@@ -5,7 +5,7 @@ const SanitizedHTMLWrapper = ({
   content,
   onClick,
   suppressWarning = false,
-}) => {
+}): JSX.Element => {
   const sanitizedHTML = DOMPurify.sanitize(content);
 
   return (
