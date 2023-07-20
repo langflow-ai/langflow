@@ -6,7 +6,7 @@ import { AlertDropdownType } from "../../types/alerts";
 import { useOnClickOutside } from "../hooks/useOnClickOutside";
 import SingleAlert from "./components/singleAlertComponent";
 
-export default function AlertDropdown({}: AlertDropdownType) {
+export default function AlertDropdown({}: AlertDropdownType): JSX.Element {
   const { closePopUp } = useContext(PopUpContext);
   const componentRef = useRef<HTMLDivElement>(null);
 
