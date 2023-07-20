@@ -14,7 +14,6 @@ import { darkContext } from "../../contexts/darkContext";
 import { typesContext } from "../../contexts/typesContext";
 import { postCustomComponent, postValidateCode } from "../../controllers/API";
 import { APIClassType } from "../../types/api";
-import { cleanEdges } from "../../utils/reactflowUtils";
 import BaseModal from "../baseModal";
 
 export default function CodeAreaModal({
@@ -114,13 +113,6 @@ export default function CodeAreaModal({
   }
 
   function handleClick() {
-    cleanEdges({
-      flow: {
-        nodes: reactFlowInstance.getNodes(),
-        edges: reactFlowInstance.getEdges(),
-      },
-      updateEdge: reactFlowInstance.setEdges,
-    });
     processCode();
   }
 
