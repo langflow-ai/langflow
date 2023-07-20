@@ -27,6 +27,7 @@ import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import { APIClassType } from "../../../../types/api";
 import { FlowType, NodeType } from "../../../../types/flow";
 import { isValidConnection } from "../../../../utils/reactflowUtils";
+import { isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import ExtraSidebar from "../extraSidebarComponent";
 
@@ -38,7 +39,6 @@ export default function Page({ flow }: { flow: FlowType }) {
   let {
     updateFlow,
     uploadFlow,
-    disableCopyPaste,
     addFlow,
     getNodeId,
     paste,
@@ -63,34 +63,34 @@ export default function Page({ flow }: { flow: FlowType }) {
     // this effect is used to attach the global event handlers
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (
-        (event.ctrlKey || event.metaKey) &&
-        event.key === "c" &&
-        lastSelection &&
-        !disableCopyPaste
-      ) {
-        event.preventDefault();
-        setLastCopiedSelection(_.cloneDeep(lastSelection));
-      }
-      if (
-        (event.ctrlKey || event.metaKey) &&
-        event.key === "v" &&
-        lastCopiedSelection &&
-        !disableCopyPaste
-      ) {
-        event.preventDefault();
-        let bounds = reactFlowWrapper.current.getBoundingClientRect();
-        paste(lastCopiedSelection, {
-          x: position.x - bounds.left,
-          y: position.y - bounds.top,
-        });
-      }
-      if (
-        (event.ctrlKey || event.metaKey) &&
-        event.key === "g" &&
-        lastSelection
-      ) {
-        event.preventDefault();
+      if (!isWrappedWithClass(event, "nocopy")) {
+        if (
+          (event.ctrlKey || event.metaKey) &&
+          event.key === "c" &&
+          lastSelection
+        ) {
+          event.preventDefault();
+          setLastCopiedSelection(_.cloneDeep(lastSelection));
+        }
+        if (
+          (event.ctrlKey || event.metaKey) &&
+          event.key === "v" &&
+          lastCopiedSelection
+        ) {
+          event.preventDefault();
+          let bounds = reactFlowWrapper.current.getBoundingClientRect();
+          paste(lastCopiedSelection, {
+            x: position.x - bounds.left,
+            y: position.y - bounds.top,
+          });
+        }
+        if (
+          (event.ctrlKey || event.metaKey) &&
+          event.key === "g" &&
+          lastSelection
+        ) {
+          event.preventDefault();
+        }
       }
     };
     const handleMouseMove = (event) => {
@@ -355,8 +355,6 @@ export default function Page({ flow }: { flow: FlowType }) {
     setLastSelection(flow);
   }, []);
 
-  const { setDisableCopyPaste } = useContext(TabsContext);
-
   return (
     <div className="flex h-full overflow-hidden">
       <ExtraSidebar />
@@ -378,18 +376,6 @@ export default function Page({ flow }: { flow: FlowType }) {
                       });
                   }}
                   edges={edges}
-                  onPaneClick={() => {
-                    console.log("enableCopyPastePaneClick");
-                    setDisableCopyPaste(false);
-                  }}
-                  onPaneMouseLeave={() => {
-                    console.log("enableCopyPastePaneLeave");
-                    setDisableCopyPaste(true);
-                  }}
-                  onPaneMouseEnter={() => {
-                    console.log("enableCopyPastePaneEnter");
-                    setDisableCopyPaste(false);
-                  }}
                   onNodesChange={onNodesChangeMod}
                   onEdgesChange={onEdgesChangeMod}
                   onConnect={onConnect}
@@ -410,7 +396,6 @@ export default function Page({ flow }: { flow: FlowType }) {
                   onDrop={onDrop}
                   onNodesDelete={onDelete}
                   onSelectionChange={onSelectionChange}
-                  zoomOnDoubleClick={!disableCopyPaste}
                   className="theme-attribution"
                   minZoom={0.01}
                   maxZoom={8}
