@@ -1,4 +1,4 @@
-import { ReactNode, useContext, useEffect, useState } from "react";
+import { ReactNode } from "react";
 
 import React from "react";
 import {
@@ -9,7 +9,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-import { TabsContext } from "../../contexts/tabsContext";
 
 type ContentProps = { children: ReactNode };
 type HeaderProps = { children: ReactNode; description: string };
@@ -97,25 +96,9 @@ function BaseModal({
       break;
   }
 
-  const { setDisableCopyPaste } = useContext(TabsContext);
-  const [openInner, setOpenInner] = useState(open ?? false);
-
-  useEffect(() => {
-    setOpenInner(open);
-  }, [open]);
-
-  useEffect(() => {
-    setOpen(openInner);
-    if (openInner) {
-      setDisableCopyPaste(true);
-    } else {
-      setDisableCopyPaste(false);
-    }
-  }, [openInner]);
-
   //UPDATE COLORS AND STYLE CLASSSES
   return (
-    <Dialog open={openInner} onOpenChange={setOpenInner}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger className="w-full" hidden={triggerChild ? false : true}>
         {triggerChild}
       </DialogTrigger>

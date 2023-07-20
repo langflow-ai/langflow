@@ -114,7 +114,7 @@ export default function ExtraSidebar() {
           name="search"
           id="search"
           placeholder="Search"
-          className="input-search"
+          className="nopan nodrag noundo nocopy input-search"
           onChange={(e) => {
             handleSearchInput(e.target.value);
             // Set search input state

@@ -243,7 +243,6 @@ export default function ParameterComponent({
             ) : (
               <InputComponent
                 disabled={disabled}
-                disableCopyPaste={true}
                 password={data.node.template[name].password ?? false}
                 value={data.node.template[name].value ?? ""}
                 onChange={handleOnNewValue}
@@ -265,7 +264,6 @@ export default function ParameterComponent({
           <div className="mt-2 w-full">
             <FloatComponent
               disabled={disabled}
-              disableCopyPaste={true}
               value={data.node.template[name].value ?? ""}
               onChange={handleOnNewValue}
             />
@@ -311,7 +309,6 @@ export default function ParameterComponent({
           <div className="mt-2 w-full">
             <IntComponent
               disabled={disabled}
-              disableCopyPaste={true}
               value={data.node.template[name].value ?? ""}
               onChange={handleOnNewValue}
             />
