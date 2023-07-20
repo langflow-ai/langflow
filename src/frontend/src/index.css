@@ -241,8 +241,8 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply form-input block w-full truncate rounded-md border-border bg-background px-3 text-left shadow-sm placeholder:text-muted-foreground sm:text-sm;
   }
 
-  .input-edit-node {
-    @apply input-primary border-border pb-0.5 pt-0.5;
+  .input-edit-node{
+    @apply input-primary border-border pt-0.5 pb-0.5 text-left w-full
   }
   .input-search {
     @apply input-primary mx-2 pr-7;

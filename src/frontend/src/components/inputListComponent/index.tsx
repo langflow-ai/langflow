@@ -40,9 +40,10 @@ export default function InputListComponent({
               type="text"
               value={i}
               className={
-                editNode
+                "nopan nodrag noundo nocopy " +
+                (editNode
                   ? "input-edit-node "
-                  : "input-primary " + (disabled ? "input-disable" : "")
+                  : "input-primary " + (disabled ? "input-disable" : ""))
               }
               placeholder="Type something..."
               onChange={(e) => {

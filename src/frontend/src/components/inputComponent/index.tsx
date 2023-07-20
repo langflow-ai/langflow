@@ -1,18 +1,15 @@
-import { useContext, useEffect, useState } from "react";
-import { TabsContext } from "../../contexts/tabsContext";
+import { useEffect, useState } from "react";
 import { InputComponentType } from "../../types/components";
 import { classNames } from "../../utils/utils";
 
 export default function InputComponent({
   value,
   onChange,
-  disableCopyPaste = false,
   disabled,
   password,
   editNode = false,
 }: InputComponentType) {
   const [pwdVisible, setPwdVisible] = useState(false);
-  const { setDisableCopyPaste } = useContext(TabsContext);
 
   // Clear component state
   useEffect(() => {
@@ -25,18 +22,13 @@ export default function InputComponent({
     <div className={disabled ? "input-component-div" : "relative"}>
       <input
         value={value}
-        onFocus={() => {
-          if (disableCopyPaste) setDisableCopyPaste(true);
-        }}
-        onBlur={() => {
-          if (disableCopyPaste) setDisableCopyPaste(false);
-        }}
         className={classNames(
           disabled ? " input-disable " : "",
           password && !pwdVisible && value !== "" ? " text-clip password " : "",
           editNode ? " input-edit-node " : " input-primary ",
           password && editNode ? "pr-8" : "",
-          password && !editNode ? "pr-10" : ""
+          password && !editNode ? "pr-10" : "",
+          "nopan nodrag noundo nocopy"
         )}
         placeholder={password && editNode ? "Key" : "Type something..."}
         onChange={(e) => {

@@ -1,16 +1,12 @@
-import { useContext, useEffect } from "react";
-import { TabsContext } from "../../contexts/tabsContext";
+import { useEffect } from "react";
 import { FloatComponentType } from "../../types/components";
 
 export default function FloatComponent({
   value,
   onChange,
-  disableCopyPaste = false,
   disabled,
   editNode = false,
 }: FloatComponentType) {
-  const { setDisableCopyPaste } = useContext(TabsContext);
-
   const step = 0.1;
   const min = 0;
   const max = 1;
@@ -25,12 +21,6 @@ export default function FloatComponent({
   return (
     <div className={"w-full " + (disabled ? "float-component-pointer" : "")}>
       <input
-        onFocus={() => {
-          if (disableCopyPaste) setDisableCopyPaste(true);
-        }}
-        onBlur={() => {
-          if (disableCopyPaste) setDisableCopyPaste(false);
-        }}
         type="number"
         step={step}
         min={min}
@@ -45,9 +35,10 @@ export default function FloatComponent({
         max={max}
         value={value ?? ""}
         className={
-          editNode
+          "nopan nodrag noundo nocopy " +
+          (editNode
             ? "input-edit-node"
-            : "input-primary" + (disabled ? " input-disable " : "")
+            : "input-primary" + (disabled ? " input-disable " : ""))
         }
         placeholder={
           editNode ? "Number 0 to 1" : "Type a number from zero to one"
