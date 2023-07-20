@@ -35,6 +35,7 @@ module.exports = {
         "components/loaders",
         "components/memories",
         "components/prompts",
+        "components/retrievers",
         "components/text-splitters",
         "components/toolkits",
         "components/tools",
