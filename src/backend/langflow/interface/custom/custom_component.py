@@ -133,8 +133,10 @@ class CustomComponent(Component):
     def load_flow(self, flow_id: UUID = None):
         from langflow.processing.process import build_sorted_vertices_with_caching
 
-        session = next(get_session())
-        data_graph = flow.data if (flow := session.get(Flow, flow_id)) else None
+        with get_session() as session:
+            data_graph = flow.data if (flow := session.get(Flow, flow_id)) else None
+        if not data_graph:
+            raise ValueError(f"Flow {flow_id} not found")
         return build_sorted_vertices_with_caching(data_graph)
 
     def build(self):
