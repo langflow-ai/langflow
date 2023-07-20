@@ -1,8 +1,8 @@
-import { Trash2 } from "lucide-react";
 import { useContext } from "react";
 import { TabsContext } from "../../contexts/tabsContext";
 import { FlowType } from "../../types/flow";
-import { gradients } from "../../utils";
+import { gradients } from "../../utils/styleUtils";
+import IconComponent from "../genericIconComponent";
 import {
   Card,
   CardDescription,
@@ -37,7 +37,10 @@ export const CardComponent = ({
           <span className="card-component-title-size">{flow.name}</span>
           {onDelete && (
             <button className="card-component-delete-button" onClick={onDelete}>
-              <Trash2 className="card-component-delete-icon" />
+              <IconComponent
+                name="Trash2"
+                className="card-component-delete-icon"
+              />
             </button>
           )}
         </CardTitle>
@@ -51,15 +54,7 @@ export const CardComponent = ({
 
       <CardFooter>
         <div className="card-component-footer-arrangement">
-          <div className="card-component-footer">
-            {/* <Badge variant="secondary">Agent</Badge>
-            <Badge variant="secondary">
-              <div className="w-3">
-                <OpenAiIcon />
-              </div>
-              <span className="text-base">&nbsp;</span>OpenAI+
-            </Badge> */}
-          </div>
+          <div className="card-component-footer"></div>
           {button && button}
         </div>
       </CardFooter>

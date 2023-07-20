@@ -1,9 +1,9 @@
 import React, { forwardRef } from "react";
-import { ReactComponent as CohereSVG } from "./cohere.svg";
+import SvgCohere from "./Cohere";
 
 export const CohereIcon = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<{}>
 >((props, ref) => {
-  return <CohereSVG ref={ref} {...props} />;
+  return <SvgCohere ref={ref} {...props} />;
 });

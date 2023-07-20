@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import CodeAreaModal from "../../modals/codeAreaModal";
 import { CodeAreaComponentType } from "../../types/components";
 
-import { ExternalLink } from "lucide-react";
+import IconComponent from "../genericIconComponent";
 
 export default function CodeAreaComponent({
   value,
@@ -51,9 +51,12 @@ export default function CodeAreaComponent({
             {myValue !== "" ? myValue : "Type something..."}
           </span>
           {!editNode && (
-            <ExternalLink
-              strokeWidth={1.5}
-              className="ml-3 h-6 w-6  hover:text-accent-foreground"
+            <IconComponent
+              name="ExternalLink"
+              className={
+                "icons-parameters-comp" +
+                (disabled ? " text-ring" : " hover:text-accent-foreground")
+              }
             />
           )}
         </div>

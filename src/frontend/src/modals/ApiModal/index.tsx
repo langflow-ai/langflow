@@ -11,17 +11,17 @@ import {
   useState,
 } from "react";
 // import "ace-builds/webpack-resolver";
-import { Code2 } from "lucide-react";
 import CodeTabsComponent from "../../components/codeTabsComponent";
+import IconComponent from "../../components/genericIconComponent";
+import { EXPORT_CODE_DIALOG } from "../../constants/constants";
+import { TabsContext } from "../../contexts/tabsContext";
+import { FlowType } from "../../types/flow/index";
+import { buildTweaks } from "../../utils/reactflowUtils";
 import {
-  EXPORT_CODE_DIALOG,
   getCurlCode,
   getPythonApiCode,
   getPythonCode,
-} from "../../constants";
-import { TabsContext } from "../../contexts/tabsContext";
-import { FlowType } from "../../types/flow/index";
-import { buildTweaks } from "../../utils";
+} from "../../utils/utils";
 import BaseModal from "../baseModal";
 
 const ApiModal = forwardRef(
@@ -257,9 +257,9 @@ const ApiModal = forwardRef(
         <BaseModal.Trigger>{children}</BaseModal.Trigger>
         <BaseModal.Header description={EXPORT_CODE_DIALOG}>
           <span className="pr-2">Code</span>
-          <Code2
-            strokeWidth={1.5}
-            className="h-6 w-6 pl-1 text-primary "
+          <IconComponent
+            name="Code2"
+            className="h-6 w-6 pl-1 text-gray-800 dark:text-white"
             aria-hidden="true"
           />
         </BaseModal.Header>

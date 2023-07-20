@@ -1,13 +1,14 @@
 import { Switch } from "@headlessui/react";
 import { useEffect } from "react";
 import { ToggleComponentType } from "../../types/components";
-import { classNames } from "../../utils";
+import { classNames } from "../../utils/utils";
 
 export default function ToggleComponent({
   enabled,
   setEnabled,
   disabled,
 }: ToggleComponentType) {
+  // set component state as disabled
   useEffect(() => {
     if (disabled) {
       setEnabled(false);

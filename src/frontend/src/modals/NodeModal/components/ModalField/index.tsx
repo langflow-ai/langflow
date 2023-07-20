@@ -9,7 +9,7 @@ import IntComponent from "../../../../components/intComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleComponent from "../../../../components/toggleComponent";
-import { classNames } from "../../../../utils";
+import { classNames } from "../../../../utils/utils";
 
 export default function ModalField({
   data,
