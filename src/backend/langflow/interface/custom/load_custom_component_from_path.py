@@ -3,6 +3,10 @@ import ast
 import zlib
 
 
+class CustomComponentPathValueError(ValueError):
+    pass
+
+
 class StringCompressor:
     def __init__(self, input_string):
         """Initialize StringCompressor with a string to compress."""
@@ -30,6 +34,8 @@ class StringCompressor:
 
 
 class DirectoryReader:
+    base_path = "/custom_component_files"
+
     def __init__(self, directory_path, compress_code_field=False):
         """
         Initialize DirectoryReader with a directory path
@@ -37,6 +43,15 @@ class DirectoryReader:
         """
         self.directory_path = directory_path
         self.compress_code_field = compress_code_field
+
+    def get_safe_path(self):
+        """Check if the path is valid and return it, or None if it's not."""
+        return self.directory_path if self.is_valid_path() else None
+
+    def is_valid_path(self) -> bool:
+        """Check if the directory path is valid by comparing it to the base path."""
+        fullpath = os.path.normpath(os.path.join(self.directory_path))
+        return fullpath.startswith(self.base_path)
 
     def is_empty_file(self, file_content):
         """
@@ -64,27 +79,21 @@ class DirectoryReader:
         """
         Read and return the content of a file.
         """
+        if not os.path.isfile(file_path):
+            return None
         with open(file_path, "r") as file:
             return file.read()
-
-    def compress_string(self, content: str):
-        """
-        Compress a string and return the compressed data.
-        """
-        return StringCompressor(content).compress_string()
-
-    def decompress_string(self, content: str):
-        """
-        Decompress a string and return the original string.
-        """
-        return StringCompressor(content).decompress_string()
 
     def get_files(self):
         """
         Walk through the directory path and return a list of all .py files.
         """
+        if not (safe_path := self.get_safe_path()):
+            raise CustomComponentPathValueError(
+                f"The path needs to start with '{self.base_path}'."
+            )
         file_list = []
-        for root, _, files in os.walk(self.directory_path):
+        for root, _, files in os.walk(safe_path):
             file_list.extend(
                 os.path.join(root, filename)
                 for filename in files
@@ -107,6 +116,8 @@ class DirectoryReader:
         returning the result and content/error message.
         """
         file_content = self.read_file_content(file_path)
+        if file_content is None:
+            return False, f"Could not read {file_path}"
 
         if self.is_empty_file(file_content):
             return False, "Empty file"
@@ -116,8 +127,7 @@ class DirectoryReader:
             return False, "Missing build function"
         else:
             if self.compress_code_field:
-                file_content = str(self.compress_string(file_content))
-
+                file_content = str(StringCompressor(file_content).compress_string())
             return True, file_content
 
     def build_component_menu_list(self, file_paths):
