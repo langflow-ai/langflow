@@ -1,6 +1,6 @@
-import { Code2, FileDown, FileUp, Menu, Save, Search } from "lucide-react";
 import { useContext, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
+import IconComponent from "../../../../components/genericIconComponent";
 import { Separator } from "../../../../components/ui/separator";
 import { alertContext } from "../../../../contexts/alertContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
@@ -9,11 +9,11 @@ import ApiModal from "../../../../modals/ApiModal";
 import ExportModal from "../../../../modals/exportModal";
 import { APIClassType, APIObjectType } from "../../../../types/api";
 import {
-  classNames,
   nodeColors,
   nodeIconsLucide,
   nodeNames,
-} from "../../../../utils";
+} from "../../../../utils/styleUtils";
+import { classNames } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 
 export default function ExtraSidebar() {
@@ -39,6 +39,7 @@ export default function ExtraSidebar() {
     event.dataTransfer.setData("nodedata", JSON.stringify(data));
   }
 
+  // Handle showing components after use search input
   function handleSearchInput(e: string) {
     setFilterData((_) => {
       let ret = {};
@@ -66,20 +67,14 @@ export default function ExtraSidebar() {
               uploadFlow();
             }}
           >
-            <FileUp
-              strokeWidth={1.5}
-              className="side-bar-button-size "
-            ></FileUp>
+            <IconComponent name="FileUp" className="side-bar-button-size " />
           </button>
         </ShadTooltip>
 
         <ShadTooltip content="Export" side="top">
           <ExportModal>
             <div className={classNames("extra-side-bar-buttons")}>
-              <FileDown
-                strokeWidth={1.5}
-                className="side-bar-button-size"
-              ></FileDown>
+              <IconComponent name="FileDown" className="side-bar-button-size" />
             </div>
           </ExportModal>
         </ShadTooltip>
@@ -87,10 +82,7 @@ export default function ExtraSidebar() {
           {flow && flow.data && (
             <ApiModal flow={flow}>
               <div className={classNames("extra-side-bar-buttons")}>
-                <Code2
-                  strokeWidth={1.5}
-                  className="side-bar-button-size"
-                ></Code2>
+                <IconComponent name="Code2" className="side-bar-button-size" />
               </div>
             </ApiModal>
           )}
@@ -105,13 +97,13 @@ export default function ExtraSidebar() {
             }}
             disabled={!isPending}
           >
-            <Save
-              strokeWidth={1.5}
+            <IconComponent
+              name="Save"
               className={
                 "side-bar-button-size" +
                 (isPending ? " " : " extra-side-bar-save-disable")
               }
-            ></Save>
+            />
           </button>
         </ShadTooltip>
       </div>
@@ -125,12 +117,16 @@ export default function ExtraSidebar() {
           className="input-search"
           onChange={(e) => {
             handleSearchInput(e.target.value);
+            // Set search input state
             setSearch(e.target.value);
           }}
         />
         <div className="search-icon">
-          {/* ! replace hash color here */}
-          <Search size={20} strokeWidth={1.5} className="text-primary" />
+          <IconComponent
+            name="Search"
+            className={"h-5 w-5 stroke-[1.5] text-primary"}
+            aria-hidden="true"
+          />
         </div>
       </div>
 
@@ -184,7 +180,10 @@ export default function ExtraSidebar() {
                               <span className="side-bar-components-text">
                                 {data[d][t].display_name}
                               </span>
-                              <Menu className="side-bar-components-icon " />
+                              <IconComponent
+                                name="Menu"
+                                className="side-bar-components-icon "
+                              />
                             </div>
                           </div>
                         </div>

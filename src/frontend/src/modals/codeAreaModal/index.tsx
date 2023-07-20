@@ -4,17 +4,17 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 // import "ace-builds/webpack-resolver";
-import { TerminalSquare } from "lucide-react";
 import { ReactNode, useContext, useEffect, useState } from "react";
 import AceEditor from "react-ace";
+import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
-import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants";
+import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
 import { typesContext } from "../../contexts/typesContext";
 import { postCustomComponent, postValidateCode } from "../../controllers/API";
 import { APIClassType } from "../../types/api";
-import { cleanEdges } from "../../util/reactflowUtils";
+import { cleanEdges } from "../../utils/reactflowUtils";
 import BaseModal from "../baseModal";
 
 export default function CodeAreaModal({
@@ -27,9 +27,9 @@ export default function CodeAreaModal({
 }: {
   setValue: (value: string) => void;
   value: string;
-  nodeClass: APIClassType;
+  nodeClass?: APIClassType;
   children: ReactNode;
-  setNodeClass: (Class: APIClassType) => void;
+  setNodeClass?: (Class: APIClassType) => void;
   dynamic?: boolean;
 }) {
   const [code, setCode] = useState(value);
@@ -147,8 +147,8 @@ export default function CodeAreaModal({
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Header description={CODE_PROMPT_DIALOG_SUBTITLE}>
         <span className="pr-2">Edit Code</span>
-        <TerminalSquare
-          strokeWidth={1.5}
+        <IconComponent
+          name="prompts"
           className="h-6 w-6 pl-1 text-primary "
           aria-hidden="true"
         />

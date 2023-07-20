@@ -26,7 +26,7 @@ import { typesContext } from "../../../../contexts/typesContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import { APIClassType } from "../../../../types/api";
 import { FlowType, NodeType } from "../../../../types/flow";
-import { isValidConnection } from "../../../../utils";
+import { isValidConnection } from "../../../../utils/reactflowUtils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import ExtraSidebar from "../extraSidebarComponent";
 
@@ -91,7 +91,6 @@ export default function Page({ flow }: { flow: FlowType }) {
         lastSelection
       ) {
         event.preventDefault();
-        // addFlow(newFlow, false);
       }
     };
     const handleMouseMove = (event) => {

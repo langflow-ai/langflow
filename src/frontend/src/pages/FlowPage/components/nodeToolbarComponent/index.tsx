@@ -1,10 +1,10 @@
-import { Copy, FileText, Settings2, Trash2 } from "lucide-react";
 import { useContext, useState } from "react";
 import { useReactFlow } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
+import IconComponent from "../../../../components/genericIconComponent";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import EditNodeModal from "../../../../modals/EditNodeModal";
-import { classNames } from "../../../../utils";
+import { classNames } from "../../../../utils/utils";
 
 export default function NodeToolbarComponent({ data, setData, deleteNode }) {
   const [nodeLength, setNodeLength] = useState(
@@ -36,7 +36,7 @@ export default function NodeToolbarComponent({ data, setData, deleteNode }) {
                 deleteNode(data.id);
               }}
             >
-              <Trash2 className="h-4 w-4"></Trash2>
+              <IconComponent name="Trash2" className="h-4 w-4" />
             </button>
           </ShadTooltip>
 
@@ -61,7 +61,7 @@ export default function NodeToolbarComponent({ data, setData, deleteNode }) {
                 );
               }}
             >
-              <Copy className="h-4 w-4"></Copy>
+              <IconComponent name="Copy" className="h-4 w-4" />
             </button>
           </ShadTooltip>
 
@@ -88,7 +88,7 @@ export default function NodeToolbarComponent({ data, setData, deleteNode }) {
                 }
               }}
             >
-              <FileText className="h-4 w-4 "></FileText>
+              <IconComponent name="FileText" className="h-4 w-4 " />
             </a>
           </ShadTooltip>
 
@@ -106,7 +106,7 @@ export default function NodeToolbarComponent({ data, setData, deleteNode }) {
                       : " text-foreground")
                 )}
               >
-                <Settings2 className="h-4 w-4 "></Settings2>
+                <IconComponent name="Settings2" className="h-4 w-4 " />
               </div>
             </EditNodeModal>
           </ShadTooltip>

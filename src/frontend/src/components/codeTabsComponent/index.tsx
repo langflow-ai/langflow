@@ -1,4 +1,3 @@
-import { Check, Clipboard, Download } from "lucide-react";
 import { useContext, useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
@@ -30,7 +29,8 @@ import {
 } from "../../components/ui/tabs";
 import { darkContext } from "../../contexts/darkContext";
 import { FlowType } from "../../types/flow/index";
-import { classNames } from "../../utils";
+import { classNames } from "../../utils/utils";
+import IconComponent from "../genericIconComponent";
 
 export default function CodeTabsComponent({
   flow,
@@ -143,14 +143,18 @@ export default function CodeTabsComponent({
               className="flex items-center gap-1.5 rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
               onClick={copyToClipboard}
             >
-              {isCopied ? <Check size={18} /> : <Clipboard size={15} />}
+              {isCopied ? (
+                <IconComponent name="Check" className="h-4 w-4" />
+              ) : (
+                <IconComponent name="Clipboard" className="h-4 w-4" />
+              )}
               {isCopied ? "Copied!" : "Copy code"}
             </button>
             <button
               className="flex items-center gap-1.5 rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
               onClick={downloadAsFile}
             >
-              <Download size={18} />
+              <IconComponent name="Download" className="h-5 w-5" />
             </button>
           </div>
         )}
