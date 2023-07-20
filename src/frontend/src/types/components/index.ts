@@ -415,3 +415,20 @@ export type tweakType = {
   "PromptTemplate-iNj5W": object;
   "ConversationBufferMemory-JnodM": object;
 }
+
+export type nodeToolbarType = {
+  data: {
+    id: string;
+    type: string;
+    node: {
+      base_classes: string[];
+      description: string;
+      display_name: string;
+      documentation: string;
+      template: object;
+    };
+    value: void;
+  };
+  deleteNode: (idx: string) => void;
+  openPopUp: (element: any) => void;
+};

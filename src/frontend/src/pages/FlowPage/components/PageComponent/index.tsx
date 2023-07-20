@@ -34,7 +34,7 @@ const nodeTypes = {
   genericNode: GenericNode,
 };
 
-export default function Page({ flow }: { flow: FlowType }) {
+export default function Page({ flow }: { flow: FlowType }): JSX.Element {
   let {
     updateFlow,
     uploadFlow,

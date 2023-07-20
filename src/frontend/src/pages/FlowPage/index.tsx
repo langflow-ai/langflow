@@ -4,7 +4,7 @@ import { TabsContext } from "../../contexts/tabsContext";
 import { getVersion } from "../../controllers/API";
 import Page from "./components/PageComponent";
 
-export default function FlowPage() {
+export default function FlowPage(): JSX.Element {
   const { flows, tabId, setTabId } = useContext(TabsContext);
   const { id } = useParams();
 

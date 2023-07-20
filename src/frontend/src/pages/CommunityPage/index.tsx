@@ -8,7 +8,7 @@ import { CardComponent } from "../../components/cardComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { getExamples } from "../../controllers/API";
 import { FlowType } from "../../types/flow";
-export default function CommunityPage() {
+export default function CommunityPage(): JSX.Element {
   const { flows, setTabId, downloadFlows, uploadFlows, addFlow } =
     useContext(TabsContext);
 

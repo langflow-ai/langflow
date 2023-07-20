@@ -5,8 +5,10 @@ import IconComponent from "../../../../components/genericIconComponent";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import { classNames } from "../../../../utils/utils";
+import { nodeToolbarType } from "../../../../types/components";
 
-const NodeToolbarComponent = (props) => {
+const NodeToolbarComponent = (props): JSX.Element => {
+  console.log(props);
   const [nodeLength, setNodeLength] = useState(
     Object.keys(props.data.node.template).filter(
       (t) =>
