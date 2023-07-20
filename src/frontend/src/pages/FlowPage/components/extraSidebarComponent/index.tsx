@@ -1,6 +1,7 @@
 import { useContext, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
+import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
 import { alertContext } from "../../../../contexts/alertContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
@@ -15,7 +16,6 @@ import {
 } from "../../../../utils/styleUtils";
 import { classNames } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
-import { Input } from "../../../../components/ui/input";
 
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);

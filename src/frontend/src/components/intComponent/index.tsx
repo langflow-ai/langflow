@@ -18,8 +18,7 @@ export default function IntComponent({
   }, [disabled, onChange]);
 
   return (
-    <div className="w-full"
-    >
+    <div className="w-full">
       <Input
         onKeyDown={(event) => {
           if (
@@ -48,11 +47,7 @@ export default function IntComponent({
           }
         }}
         value={value ?? ""}
-        className={
-          editNode
-            ? "input-edit-node"
-            : ""
-        }
+        className={editNode ? "input-edit-node" : ""}
         disabled={disabled}
         placeholder={editNode ? "Integer number" : "Type an integer number"}
         onChange={(e) => {

@@ -9,10 +9,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     return (
       <input
         type={type}
-        className={cn(
-          "input-primary nopan nodrag noundo nocopy",
-          className
-        )}
+        className={cn("nopan nodrag noundo nocopy input-primary", className)}
         ref={ref}
         {...props}
       />

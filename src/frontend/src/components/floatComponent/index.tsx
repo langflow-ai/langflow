@@ -36,9 +36,7 @@ export default function FloatComponent({
         max={max}
         value={value ?? ""}
         disabled={disabled}
-        className={
-          (editNode ? "input-edit-node" : "")
-        }
+        className={editNode ? "input-edit-node" : ""}
         placeholder={
           editNode ? "Number 0 to 1" : "Type a number from zero to one"
         }

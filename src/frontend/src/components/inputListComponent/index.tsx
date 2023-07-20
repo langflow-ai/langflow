@@ -28,20 +28,15 @@ export default function InputListComponent({
   }, [disabled, onChange]);
 
   return (
-    <div className="flex flex-col gap-3"
-    >
+    <div className="flex flex-col gap-3">
       {inputList.map((i, idx) => {
         return (
           <div key={idx} className="flex w-full gap-3">
             <Input
-            disabled={disabled}
+              disabled={disabled}
               type="text"
               value={i}
-              className={
-                editNode
-                  ? "input-edit-node"
-                  : ""
-              }
+              className={editNode ? "input-edit-node" : ""}
               placeholder="Type something..."
               onChange={(e) => {
                 setInputList((old) => {
