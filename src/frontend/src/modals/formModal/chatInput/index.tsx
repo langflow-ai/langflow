@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import IconComponent from "../../../components/genericIconComponent";
-import { classNames } from "../../../utils/utils";
 import { Textarea } from "../../../components/ui/textarea";
+import { classNames } from "../../../utils/utils";
 
 export default function ChatInput({
   lockChat,
@@ -26,7 +26,7 @@ export default function ChatInput({
 
   return (
     <div className="relative">
-      <Textarea 
+      <Textarea
         onKeyDown={(event) => {
           if (event.key === "Enter" && !lockChat && !event.shiftKey) {
             sendMessage();
