@@ -1,6 +1,5 @@
-import { useContext, useEffect } from "react";
+import { useEffect } from "react";
 import { TypeModal } from "../../constants/enums";
-import { TabsContext } from "../../contexts/tabsContext";
 import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
@@ -11,8 +10,6 @@ export default function TextAreaComponent({
   disabled,
   editNode = false,
 }: TextAreaComponentType) {
-  const { setDisableCopyPaste } = useContext(TabsContext);
-
   // Clear text area
   useEffect(() => {
     if (disabled) {
@@ -25,17 +22,11 @@ export default function TextAreaComponent({
       <div className="flex w-full items-center">
         <input
           value={value}
-          onFocus={() => {
-            setDisableCopyPaste(true);
-          }}
-          onBlur={() => {
-            setDisableCopyPaste(false);
-          }}
           className={
             (editNode
               ? " input-edit-node "
               : " input-primary " + (disabled ? " input-disable" : "")) +
-            " w-full"
+            " nopan nodrag noundo nocopy w-full"
           }
           placeholder={"Type something..."}
           onChange={(e) => {

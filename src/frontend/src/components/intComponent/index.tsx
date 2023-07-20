@@ -1,15 +1,12 @@
-import { useContext, useEffect } from "react";
-import { TabsContext } from "../../contexts/tabsContext";
+import { useEffect } from "react";
 import { FloatComponentType } from "../../types/components";
 
 export default function IntComponent({
   value,
   onChange,
-  disableCopyPaste = false,
   disabled,
   editNode = false,
 }: FloatComponentType) {
-  const { setDisableCopyPaste } = useContext(TabsContext);
   const min = 0;
 
   // Clear component state
@@ -27,12 +24,6 @@ export default function IntComponent({
       }
     >
       <input
-        onFocus={() => {
-          if (disableCopyPaste) setDisableCopyPaste(true);
-        }}
-        onBlur={() => {
-          if (disableCopyPaste) setDisableCopyPaste(false);
-        }}
         onKeyDown={(event) => {
           if (
             event.key !== "Backspace" &&
@@ -61,9 +52,10 @@ export default function IntComponent({
         }}
         value={value ?? ""}
         className={
-          editNode
+          "nopan nodrag noundo nocopy " +
+          (editNode
             ? " input-edit-node "
-            : " input-primary " + (disabled ? " input-disable" : "")
+            : " input-primary " + (disabled ? " input-disable" : ""))
         }
         placeholder={editNode ? "Integer number" : "Type an integer number"}
         onChange={(e) => {

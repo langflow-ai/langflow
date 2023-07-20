@@ -7,7 +7,6 @@ export type InputComponentType = {
   disabled?: boolean;
   onChange: (value: string) => void;
   password: boolean;
-  disableCopyPaste?: boolean;
   editNode?: boolean;
   onChangePass?: (value: boolean | boolean) => void;
   showPass?: boolean;
@@ -94,7 +93,6 @@ export type DisclosureComponentType = {
 export type FloatComponentType = {
   value: string;
   disabled?: boolean;
-  disableCopyPaste?: boolean;
   onChange: (value: string) => void;
   editNode?: boolean;
 };

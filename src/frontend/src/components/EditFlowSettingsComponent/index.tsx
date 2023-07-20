@@ -51,7 +51,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           )}
         </div>
         <Input
-          className="mt-2 font-normal"
+          className="nopan nodrag noundo nocopy mt-2 font-normal"
           onChange={handleNameChange}
           type="text"
           name="name"
