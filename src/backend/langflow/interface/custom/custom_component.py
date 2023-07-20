@@ -5,11 +5,7 @@ from langflow.interface.custom.component import Component
 
 from langflow.utils import validate
 
-from uuid import UUID
-from sqlmodel import Session
-from fastapi import Depends, HTTPException
-from langflow.database.base import get_session
-from langflow.database.models.flow import Flow
+from langflow.api.v1.endpoints import process_flow
 
 
 class CustomComponent(Component):
@@ -132,8 +128,10 @@ class CustomComponent(Component):
     def get_function(self):
         return validate.create_function(self.code, self.function_entrypoint_name)
 
-    def load_flow(self, session: Session = Depends(get_session), flow_id: UUID = None):
-        return flow if (flow := session.get(Flow, flow_id)) else "Flow not found"
+    def load_flow(
+        self, flow_id: str, inputs: Optional[dict] = None, tweaks: Optional[dict] = None
+    ):
+        return process_flow(flow_id, inputs, tweaks)
 
     def build(self):
         raise NotImplementedError
