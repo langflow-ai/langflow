@@ -8,7 +8,7 @@ import { getExamples } from "../../controllers/API";
 import { FlowType } from "../../types/flow";
 import { CardComponent } from "../../components/cardComponent";
 import { useNavigate } from "react-router-dom";
-export default function CommunityPage() {
+export default function TemplatesPage() {
   const { flows, setTabId, downloadFlows, uploadFlows, addFlow } =
     useContext(TabsContext);
   useEffect(() => {
@@ -41,7 +41,7 @@ export default function CommunityPage() {
       <div className="w-full flex justify-between py-12 pb-2 px-6">
         <span className="text-2xl flex items-center justify-center gap-2 font-semibold">
           <Users2 className="w-6" />
-          Community Examples
+          Templates
         </span>
         <div className="flex gap-2">
           <a

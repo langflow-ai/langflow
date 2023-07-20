@@ -157,7 +157,7 @@ function buildTweakObject(tweak) {
  * @constant
  */
 export const IMPORT_DIALOG_SUBTITLE =
-  "Upload a JSON file or select from the available community examples.";
+  "Upload a JSON file or select from the available templates.";
 
 /**
  * The base text for subtitle of code dialog
@@ -178,4 +178,4 @@ export const INPUT_STYLE =
  * @constant
  *
  */
-export const USER_PROJECTS_HEADER = "My Collection";
+export const USER_PROJECTS_HEADER = "Team Flows";
