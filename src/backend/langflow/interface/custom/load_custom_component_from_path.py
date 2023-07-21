@@ -34,7 +34,9 @@ class StringCompressor:
 
 
 class DirectoryReader:
-    base_path = "/custom_component_files"
+    # Ensure the base path to read the files that contain
+    # the custom components from this directory.
+    base_path = ""
 
     def __init__(self, directory_path, compress_code_field=False):
         """
@@ -58,6 +60,22 @@ class DirectoryReader:
         Check if the file content is empty.
         """
         return len(file_content.strip()) == 0
+
+    def filter_loaded_components(self, data: dict, with_errors: bool) -> dict:
+        items = [
+            {
+                "name": menu["name"],
+                "path": menu["path"],
+                "components": [
+                    component
+                    for component in menu["components"]
+                    if (component["error"] if with_errors else not component["error"])
+                ],
+            }
+            for menu in data["menu"]
+        ]
+        filtred = [menu for menu in items if menu["components"]]
+        return {"menu": filtred}
 
     def validate_code(self, file_content):
         """
@@ -92,6 +110,7 @@ class DirectoryReader:
             raise CustomComponentPathValueError(
                 f"The path needs to start with '{self.base_path}'."
             )
+
         file_list = []
         for root, _, files in os.walk(safe_path):
             file_list.extend(
