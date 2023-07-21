@@ -34,18 +34,29 @@ from sqlmodel import Session
 router = APIRouter(tags=["Base"])
 
 
+# TODO: Move to correct local
+def merge_nested_dicts(dict1, dict2):
+    for key, value in dict2.items():
+        if isinstance(value, dict) and isinstance(dict1.get(key), dict):
+            dict1[key] = merge_nested_dicts(dict1[key], value)
+        else:
+            dict1[key] = value
+    return dict1
+
+
 @router.get("/all")
 def get_all():
     native_components = build_langchain_types_dict()
 
     if settings.component_path:
+        # TODO: Iterate in a list of component_path
         custom_components_from_file = build_langchain_custom_component_list_from_path(
             str(settings.component_path[0])
         )
     else:
         custom_components_from_file = {}
 
-    return {**native_components, **custom_components_from_file}
+    return merge_nested_dicts(native_components, custom_components_from_file)
 
 
 @router.get("/load_custom_component_from_path")
