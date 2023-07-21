@@ -244,10 +244,26 @@ def build_langchain_custom_component_list_from_path(path: str):
 
     # Build and validate all files
     data = reader.build_component_menu_list(file_list)
+    valid_components = reader.filter_loaded_components(data, False)
 
-    raw_code = data.get("menu")[0].get("components")[0].get("code")
+    # TODO: Handle those invalid components
+    reader.filter_loaded_components(data, True)
 
-    extractor = CustomComponent(code=raw_code)
-    extractor.is_check_valid()
+    menu = {}
+    for menu_item in valid_components["menu"]:
+        menu_name = menu_item["name"]
+        menu[menu_name] = {}
 
-    return build_langchain_template_custom_component(extractor)
+        for component in menu_item["components"]:
+            component_name = component["name"]
+            component_code = component["code"]
+
+            component_extractor = CustomComponent(code=component_code)
+            component_extractor.is_check_valid()
+            component_template = build_langchain_template_custom_component(
+                component_extractor
+            )
+
+            menu[menu_name][component_name] = component_template
+
+    return menu

@@ -24,9 +24,9 @@ from langchain.schema import Document
 import requests
 
 class YourComponent(CustomComponent):
-    langflow_display_name: str = "Your Component"
-    langflow_description: str = "Your description"
-    langflow_field_config = { "url": { "multiline": True, "required": True } }
+    display_name: str = "Your Component"
+    description: str = "Your description"
+    field_config = { "url": { "multiline": True, "required": True } }
 
     def build(self, url: str, llm: BaseLLM, template: Prompt) -> Document:
         response = requests.get(url)

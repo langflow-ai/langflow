@@ -56,13 +56,13 @@ class Component(BaseModel):
             item_name = item.get("name")
 
             if item_value := item.get("value"):
-                if "langflow_display_name" in item_name:
+                if "display_name" in item_name:
                     template_config["display_name"] = ast.literal_eval(item_value)
 
-                elif "langflow_description" in item_name:
+                elif "description" in item_name:
                     template_config["description"] = ast.literal_eval(item_value)
 
-                elif "langflow_field_config" in item_name:
+                elif "field_config" in item_name:
                     template_config["field_config"] = ast.literal_eval(item_value)
 
         return template_config

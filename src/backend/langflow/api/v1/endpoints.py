@@ -5,6 +5,7 @@ from langflow.cache.utils import save_uploaded_file
 from langflow.database.models.flow import Flow
 from langflow.processing.process import process_graph_cached, process_tweaks
 from langflow.utils.logger import logger
+from langflow.settings import settings
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 
@@ -35,7 +36,16 @@ router = APIRouter(tags=["Base"])
 
 @router.get("/all")
 def get_all():
-    return build_langchain_types_dict()
+    native_components = build_langchain_types_dict()
+
+    if settings.component_path:
+        custom_components_from_file = build_langchain_custom_component_list_from_path(
+            str(settings.component_path[0])
+        )
+    else:
+        custom_components_from_file = {}
+
+    return {**native_components, **custom_components_from_file}
 
 
 @router.get("/load_custom_component_from_path")
@@ -59,8 +69,9 @@ def get_load_custom_component_from_path_test(path: str):
 
     reader = DirectoryReader(path, False)
     file_list = reader.get_files()
+    data = reader.build_component_menu_list(file_list)
 
-    return reader.build_component_menu_list(file_list)
+    return reader.filter_loaded_components(data, True)
 
 
 # For backwards compatibility we will keep the old endpoint
