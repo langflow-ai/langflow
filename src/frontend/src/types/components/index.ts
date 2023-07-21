@@ -2,6 +2,7 @@ import { ReactElement, ReactNode } from "react";
 import { APIClassType } from "../api";
 import { FlowStyleType, NodeDataType } from "../flow/index";
 import { typesContextType } from "../typesContext";
+import { BlobOptions } from "buffer";
 
 export type InputComponentType = {
   value: string;
@@ -462,4 +463,17 @@ export type chatInputType = {
   noInput: boolean;
   sendMessage: () => void;
   setChatValue: (value: string) => void;
+};
+
+export type editNodeToggleType = {
+  advanced: boolean;
+  info: string;
+  list: boolean;
+  multiline: boolean;
+  name: string;
+  password: boolean;
+  placeholder: string;
+  required: boolean;
+  show: boolean;
+  type: string;
 };

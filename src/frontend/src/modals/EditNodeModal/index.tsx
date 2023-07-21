@@ -35,6 +35,7 @@ import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
 import { classNames } from "../../utils/utils";
+import { editNodeToggleType } from "../../types/components";
 
 export default function EditNodeModal({
   data,
@@ -87,7 +88,8 @@ export default function EditNodeModal({
     setNodeValue(!nodeValue);
   }
 
-  const handleOnNewValue = (newValue: any, name) => {
+  const handleOnNewValue = (newValue, name) => {
+    console.log({ newValue, name })
     data.node.template[name].value = newValue;
     // Set state to pending
     setTabsState((prev) => {
@@ -210,6 +212,7 @@ export default function EditNodeModal({
                             ) : data.node.template[n].type === "bool" ? (
                               <div className="ml-auto">
                                 {" "}
+                                oi
                                 <ToggleShadComponent
                                   disabled={disabled}
                                   enabled={data.node.template[n].value}
@@ -230,7 +233,7 @@ export default function EditNodeModal({
                                   }}
                                 />
                               </div>
-                            ) : data.node.template[n].type === "str" &&
+                            ) : data.node.template[n].type === "str" && 
                               data.node.template[n].options ? (
                               <div className="mx-auto">
                                 <Dropdown

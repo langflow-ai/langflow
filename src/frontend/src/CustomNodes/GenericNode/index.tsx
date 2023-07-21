@@ -7,7 +7,6 @@ import { useSSE } from "../../contexts/SSEContext";
 import { alertContext } from "../../contexts/alertContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { typesContext } from "../../contexts/typesContext";
-import NodeModal from "../../modals/NodeModal";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { NodeDataType } from "../../types/flow";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
@@ -91,13 +90,6 @@ export default function GenericNode({
             </div>
           </div>
           <div className="round-button-div">
-            <button
-              className="relative"
-              onClick={(event) => {
-                event.preventDefault();
-                openPopUp(<NodeModal data={data} />);
-              }}
-            ></button>
           </div>
           <div className="round-button-div">
             <div>
