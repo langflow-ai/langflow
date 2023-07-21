@@ -26,6 +26,9 @@ class CustomComponent(Component, extra=Extra.allow):
     def custom_repr(self):
         return self.repr_value
 
+    def build_config(self):
+        return self.field_config
+
     def _class_template_validation(self, code: str) -> bool:
         if not code:
             raise HTTPException(
