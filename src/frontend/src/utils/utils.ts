@@ -259,7 +259,7 @@ export function getRandomKeyByssmm(): string {
 export function varHighlightHTML({ name }: IVarHighlightType): string {
   const html = `<span class="font-semibold chat-message-highlight">{${name}}</span>`;
   return html;
-};
+}
 
 export function buildTweakObject(tweak) {
   tweak.forEach((el) => {
@@ -331,7 +331,7 @@ def run_flow(inputs: dict, flow_id: str, tweaks: Optional[dict] = None) -> dict:
 # Setup any tweaks you want to apply to the flow
 inputs = ${inputs}
 print(run_flow(inputs, flow_id=FLOW_ID, tweaks=TWEAKS))`;
-};
+}
 
 /**
  * Function to get the curl code for the API
@@ -357,7 +357,7 @@ export function getCurlCode(
       ? buildTweakObject(tweak)
       : JSON.stringify(tweaks, null, 2)
   }}'`;
-};
+}
 
 /**
  * Function to get the python code for the API
@@ -382,4 +382,4 @@ flow = load_flow_from_json("${flowName}.json", tweaks=TWEAKS)
 # Now you can use it like any chain
 inputs = ${inputs}
 flow(inputs)`;
-};
+}
