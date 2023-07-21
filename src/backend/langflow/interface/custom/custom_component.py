@@ -6,20 +6,25 @@ from langflow.interface.custom.component import Component
 from langflow.utils import validate
 
 from uuid import UUID
-from langflow.database.base import get_session
+from langflow.database.base import session_getter
 from langflow.database.models.flow import Flow
+from pydantic import Extra
 
 
-class CustomComponent(Component):
+class CustomComponent(Component, extra=Extra.allow):
     code: Optional[str]
     field_config: dict = {}
     code_class_base_inheritance = "CustomComponent"
     function_entrypoint_name = "build"
     function: Optional[Callable] = None
     return_type_valid_list = list(LANGCHAIN_BASE_TYPES.keys())
+    repr_value: Optional[str] = ""
 
     def __init__(self, **data):
         super().__init__(**data)
+
+    def custom_repr(self):
+        return self.repr_value
 
     def _class_template_validation(self, code: str) -> bool:
         if not code:
@@ -133,8 +138,8 @@ class CustomComponent(Component):
     def load_flow(self, flow_id: UUID = None):
         from langflow.processing.process import build_sorted_vertices_with_caching
 
-        session = next(get_session())
-        data_graph = flow.data if (flow := session.get(Flow, flow_id)) else None
+        with session_getter() as session:
+            data_graph = flow.data if (flow := session.get(Flow, flow_id)) else None
         if not data_graph:
             raise ValueError(f"Flow {flow_id} not found")
         return build_sorted_vertices_with_caching(data_graph)
