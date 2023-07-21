@@ -4,6 +4,7 @@ import { InputListComponentType } from "../../types/components";
 import _ from "lodash";
 import IconComponent from "../genericIconComponent";
 import { Input } from "../ui/input";
+import { classNames } from "../../utils/utils";
 
 export default function InputListComponent({
   value,
@@ -28,7 +29,13 @@ export default function InputListComponent({
   }, [disabled, onChange]);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div 
+    className={
+    classNames(
+      inputList.length > 1 && editNode ? "my-1" : "",
+      "flex flex-col gap-3"
+    )
+  }>
       {inputList.map((i, idx) => {
         return (
           <div key={idx} className="flex w-full gap-3">
