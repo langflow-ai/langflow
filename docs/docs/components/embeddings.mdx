@@ -1,2 +1,67 @@
 # Embeddings
-(coming soon)
+
+Embeddings are vector representations of text that capture the semantic meaning of the text. They are created using text embedding models and allow us to think about the text in a vector space, enabling us to perform tasks like semantic search, where we look for pieces of text that are most similar in the vector space.
+
+---
+
+### CohereEmbeddings
+
+Used to load [Cohere’s](https://cohere.com/) embedding models.
+
+**Params**
+
+- **cohere_api_key:** Holds the API key required to authenticate with the Cohere service.
+
+- **model:** The language model used for embedding text documents and performing queries —defaults to `embed-english-v2.0`.
+
+- **truncate:** Used to specify whether or not to truncate the input text. Truncation is useful when dealing with long texts that exceed the model's maximum input length. By truncating the text, the user can ensure that it fits within the model's constraints.
+
+---
+
+### HuggingFaceEmbeddings
+
+Used to load [HuggingFace’s](https://huggingface.co) embedding models.
+
+**Params**
+
+- **cache_folder:** Used to specify the folder where the embeddings will be cached. When embeddings are computed for a text, they can be stored in the cache folder so that they can be reused later without the need to recompute them. This can improve the performance of the application by avoiding redundant computations.
+
+- **encode_kwargs:** Used to pass additional keyword arguments to the encoding method of the underlying HuggingFace model. These keyword arguments can be used to customize the encoding process, such as specifying the maximum length of the input sequence or enabling truncation or padding.
+
+- **model_kwargs:** Used to customize the behavior of the model, such as specifying the model architecture, the tokenizer, or any other model-specific configuration options. By using `model_kwargs`, the user can configure the HuggingFace model according to specific needs and preferences.
+
+- **model_name:** Used to specify the name or identifier of the HuggingFace model that will be used for generating embeddings. It allows users to choose a specific pre-trained model from the Hugging Face model hub — defaults to `sentence-transformers/all-mpnet-base-v2`.
+
+---
+
+### OpenAIEmbeddings
+
+Used to load [OpenAI’s](https://openai.com/) embedding models.
+
+**Params**
+
+- **chunk_size:** Determines the maximum size of each chunk of text that is processed for embedding. If any of the incoming text chunks exceeds `chunk_size` characters, it will be split into multiple chunks of size `chunk_size` or less before being embedded — defaults to `1000`.
+
+- **deployment:** Used to specify the deployment name or identifier of the text embedding model. It allows the user to choose a specific deployment of the model to use for embedding. When the deployment is provided, this can be useful when the user has multiple deployments of the same model with different configurations or versions — defaults to `text-embedding-ada-002`.
+
+- **embedding_ctx_length:** This parameter determines the maximum context length for the text embedding model. It specifies the number of tokens that the model considers when generating embeddings for a piece of text — defaults to `8191` (this means that the model will consider up to 8191 tokens when generating embeddings).
+
+- **max_retries:** Determines the maximum number of times to retry a request if the model provider returns an error from their API — defaults to `6`.
+
+- **model:** Defines which pre-trained text embedding model to use — defaults to `text-embedding-ada-002`.
+
+- **openai_api_base:** Refers to the base URL for the Azure OpenAI resource. It is used to configure the API to connect to the Azure OpenAI service. The base URL can be found in the Azure portal under the user Azure OpenAI resource.
+
+- **openai_api_key:** Is used to authenticate and authorize access to the OpenAI service.
+
+- **openai_api_type:** Is used to specify the type of OpenAI API being used, either the regular OpenAI API or the Azure OpenAI API. This parameter allows the `OpenAIEmbeddings` class to connect to the appropriate API service.
+
+- **openai_api_version:** Is used to specify the version of the OpenAI API being used. This parameter allows the `OpenAIEmbeddings` class to connect to the appropriate version of the OpenAI API service.
+
+- **openai_organization:** Is used to specify the organization associated with the OpenAI API key. If not provided, the default organization associated with the API key will be used.
+
+- **openai_proxy:** Proxy enables better budgeting and cost management for making OpenAI API calls, including more transparency into pricing.
+
+- **request_timeout:** Used to specify the maximum amount of time, in milliseconds, to wait for a response from the OpenAI API when generating embeddings for a given text.
+
+- **tiktoken_model_name:** Used to count the number of tokens in documents to constrain them to be under a certain limit. By default, when set to None, this will be the same as the embedding model name.
