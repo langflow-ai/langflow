@@ -109,7 +109,9 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
 
 def instantiate_custom_component(node_type, class_object, params):
     class_object = get_function_custom(params.pop("code"))
-    return class_object().build(**params)
+    custom_component = class_object()
+    built_object = custom_component.build(**params)
+    return built_object, {"repr": custom_component.custom_repr()}
 
 
 def instantiate_wrapper(node_type, class_object, params):
