@@ -8,6 +8,7 @@ FORCE_SHOW_FIELDS = [
     "headers",
     "max_value_length",
     "max_tokens",
+    "google_cse_id",
 ]
 
 DEFAULT_PROMPT = """
