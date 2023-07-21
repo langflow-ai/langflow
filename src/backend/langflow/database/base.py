@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from langflow.settings import settings
 from sqlmodel import SQLModel, Session, create_engine
 from langflow.utils.logger import logger
@@ -32,6 +33,19 @@ def create_db_and_tables():
         logger.debug("Database and tables created successfully")
 
 
+@contextmanager
+def session_getter():
+    try:
+        session = Session(engine)
+        yield session
+    except Exception as e:
+        print("Session rollback because of exception:", e)
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
 def get_session():
-    with Session(engine) as session:
+    with session_getter() as session:
         yield session
