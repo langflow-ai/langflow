@@ -3,6 +3,7 @@ from langflow.interface.chains.base import chain_creator
 from langflow.interface.custom.constants import LANGCHAIN_BASE_TYPES
 from langflow.interface.document_loaders.base import documentloader_creator
 from langflow.interface.embeddings.base import embedding_creator
+from langflow.interface.importing.utils import get_function_custom
 from langflow.interface.llms.base import llm_creator
 from langflow.interface.memories.base import memory_creator
 from langflow.interface.prompts.base import prompt_creator
@@ -21,7 +22,7 @@ from langflow.template.frontend_node.tools import CustomComponentNode
 from langflow.interface.retrievers.base import retriever_creator
 
 from langflow.interface.custom.load_custom_component_from_path import DirectoryReader
-
+from langflow.utils.logger import logger
 import re
 import warnings
 import traceback
@@ -163,10 +164,10 @@ def build_langchain_template_custom_component(custom_component: CustomComponent)
 
     function_args = custom_component.get_function_entrypoint_args
     return_type = custom_component.get_function_entrypoint_return_type
-    template_config = custom_component.build_template_config
-
     # Rewrite diplay_name and description values
     if frontend_node:
+        template_config = custom_component.build_template_config
+
         if "display_name" in template_config:
             frontend_node["display_name"] = template_config["display_name"]
 
@@ -174,7 +175,12 @@ def build_langchain_template_custom_component(custom_component: CustomComponent)
             frontend_node["description"] = template_config["description"]
 
     # Rewrite field configurations
-    field_config = template_config.get("field_config", {})
+    try:
+        custom_class = get_function_custom(custom_component.code)
+        field_config = custom_class().build_config()
+    except Exception as exc:
+        logger.error(f"Error while building custom component: {exc}")
+        field_config = {}
 
     if function_args is not None:
         # Add extra fields
