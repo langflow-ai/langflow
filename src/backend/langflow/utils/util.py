@@ -8,6 +8,8 @@ from docstring_parser import parse  # type: ignore
 
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants
+from langflow.utils.logger import logger
+from multiprocess import cpu_count
 
 
 def build_template_from_function(
@@ -451,3 +453,10 @@ def add_options_to_field(
         value["options"] = options_map[class_name]
         value["list"] = True
         value["value"] = options_map[class_name][0]
+
+
+def get_number_of_workers(workers=None):
+    if workers == -1 or workers is None:
+        workers = (cpu_count() * 2) + 1
+    logger.debug(f"Number of workers: {workers}")
+    return workers
