@@ -2,7 +2,8 @@ import os
 import sys
 import time
 import httpx
-from multiprocess import Process, cpu_count  # type: ignore
+from langflow.utils.util import get_number_of_workers
+from multiprocess import Process  # type: ignore
 import platform
 from pathlib import Path
 from typing import Optional
@@ -18,12 +19,6 @@ import webbrowser
 from dotenv import load_dotenv
 
 app = typer.Typer()
-
-
-def get_number_of_workers(workers=None):
-    if workers == -1:
-        workers = (cpu_count() * 2) + 1
-    return workers
 
 
 def update_settings(
@@ -120,7 +115,7 @@ def serve(
         "127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"
     ),
     workers: int = typer.Option(
-        1, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"
+        -1, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"
     ),
     timeout: int = typer.Option(60, help="Worker timeout in seconds."),
     port: int = typer.Option(7860, help="Port to listen on.", envvar="LANGFLOW_PORT"),
@@ -298,7 +293,7 @@ def run_langflow(host, port, log_level, options, app):
     Run Langflow server on localhost
     """
     try:
-        if platform.system() in ["Darwin", "Windows"]:
+        if platform.system() in ["Windows"]:
             # Run using uvicorn on MacOS and Windows
             # Windows doesn't support gunicorn
             # MacOS requires an env variable to be set to use gunicorn
