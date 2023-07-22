@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import { InputListComponentType } from "../../types/components";
 
-import _ from "lodash";
+import _, { set } from "lodash";
 import IconComponent from "../genericIconComponent";
+import { PopUpContext } from "../../contexts/popUpContext";
 
 export default function InputListComponent({
   value,
@@ -12,6 +13,13 @@ export default function InputListComponent({
   onAddInput,
 }: InputListComponentType) {
   const [inputList, setInputList] = useState(value ?? [""]);
+  const { closeEdit } = useContext(PopUpContext);
+
+  useEffect(() => {
+    if (value) {
+      setInputList(value);
+    }
+  }, [closeEdit]);
 
   useEffect(() => {
     if (disabled) {
