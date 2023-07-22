@@ -25,8 +25,9 @@ import { limitScrollFieldsModal } from "../../constants/constants";
 import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
-import { classNames } from "../../utils/utils";
+import { classNames, getRandomKeyByssmm } from "../../utils/utils";
 import BaseModal from "../baseModal";
+import { PopUpContext } from "../../contexts/popUpContext";
 
 const EditNodeModal = forwardRef(
   (
@@ -47,6 +48,7 @@ const EditNodeModal = forwardRef(
     const [myData, setMyData] = useState(data);
     const { setTabsState, tabId } = useContext(TabsContext);
     const { reactFlowInstance } = useContext(typesContext);
+    const { setCloseEdit } = useContext(PopUpContext);
 
     let disabled =
       reactFlowInstance?.getEdges().some((e) => e.targetHandle === data.id) ??
@@ -70,7 +72,9 @@ const EditNodeModal = forwardRef(
 
     useEffect(() => {
       setMyData(data); // reset data to what it is on node when opening modal
+      setCloseEdit(getRandomKeyByssmm().toString());
     }, [modalOpen]);
+
 
     return (
       <BaseModal size="large-h-full" open={modalOpen} setOpen={setModalOpen}>
