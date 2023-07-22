@@ -8,10 +8,15 @@ from fastapi.staticfiles import StaticFiles
 from langflow.api import router
 from langflow.database.base import create_db_and_tables
 from langflow.interface.utils import setup_llm_caching
+from langflow.utils.logger import configure
 
 
 def create_app():
     """Create the FastAPI app and include the router."""
+    # get the current log level
+    # log_level = logging.getLogger().getEffectiveLevel()
+    # log_level_name = logging.getLevelName(log_level)
+    configure()
 
     app = FastAPI()
 
@@ -73,10 +78,16 @@ def setup_app(static_files_dir: Optional[Path] = None) -> FastAPI:
     return app
 
 
-app = create_app()
-
-
 if __name__ == "__main__":
     import uvicorn
+    from langflow.utils.util import get_number_of_workers
 
-    uvicorn.run(app, host="127.0.0.1", port=7860)
+    configure()
+    uvicorn.run(
+        create_app,
+        host="127.0.0.1",
+        port=7860,
+        workers=get_number_of_workers(),
+        log_level="debug",
+        reload=True,
+    )
