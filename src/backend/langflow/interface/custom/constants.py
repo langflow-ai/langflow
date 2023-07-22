@@ -20,6 +20,7 @@ LANGCHAIN_BASE_TYPES = {
     "VectorStore": VectorStore,
     "Embeddings": Embeddings,
     "BaseRetriever": BaseRetriever,
+    "str": str,
 }
 
 
