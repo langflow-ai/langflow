@@ -93,6 +93,7 @@ export default function NodeToolbarComponent({ data, setData, deleteNode }) {
           </ShadTooltip>
 
           <ShadTooltip content="Edit" side="top">
+            <div>
             <EditNodeModal
               data={data}
               setData={setData}
@@ -109,6 +110,8 @@ export default function NodeToolbarComponent({ data, setData, deleteNode }) {
                 <IconComponent name="Settings2" className="h-4 w-4 " />
               </div>
             </EditNodeModal>
+            </div>
+
           </ShadTooltip>
         </span>
       </div>

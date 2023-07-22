@@ -16,12 +16,6 @@ export default function InputListComponent({
   const [inputList, setInputList] = useState(value ?? [""]);
 
   useEffect(() => {
-    if (value) {
-      setInputList(value);
-    }
-  }, [value]);
-
-  useEffect(() => {
     if (disabled) {
       setInputList([""]);
       onChange([""]);
@@ -47,7 +41,7 @@ export default function InputListComponent({
               placeholder="Type something..."
               onChange={(e) => {
                 setInputList((old) => {
-                  let newInputList = _.cloneDeep(old);
+                  let newInputList = _.cloneDeep(inputList);
                   newInputList[idx] = e.target.value;
                   return newInputList;
                 });
