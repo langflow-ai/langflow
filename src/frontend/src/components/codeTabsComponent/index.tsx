@@ -191,6 +191,7 @@ export default function CodeTabsComponent({
                         <AccordionComponent
                           trigger={t["data"]["id"]}
                           open={openAccordion}
+                          keyValue={t["data"]["id"]}
                         >
                           <div className="api-modal-table-arrangement">
                             <Table className="table-fixed bg-muted outline-1">
@@ -224,8 +225,6 @@ export default function CodeTabsComponent({
                                         t.data.node.template[n].type === "int")
                                   )
                                   .map((n, i) => {
-                                    //console.log(t.data.node.template[n]);
-
                                     return (
                                       <TableRow
                                         key={i}
