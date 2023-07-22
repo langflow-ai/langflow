@@ -147,5 +147,10 @@ class CustomComponent(Component, extra=Extra.allow):
             raise ValueError(f"Flow {flow_id} not found")
         return build_sorted_vertices_with_caching(data_graph)
 
+    def list_flow_names(self):
+        with session_getter() as session:
+            flows = session.query(Flow).all()
+        return [flow.name for flow in flows]
+
     def build(self):
         raise NotImplementedError
