@@ -94,24 +94,23 @@ export default function NodeToolbarComponent({ data, setData, deleteNode }) {
 
           <ShadTooltip content="Edit" side="top">
             <div>
-            <EditNodeModal
-              data={data}
-              setData={setData}
-              nodeLength={nodeLength}
-            >
-              <div
-                className={classNames(
-                  "relative -ml-px inline-flex items-center rounded-r-md bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
-                    (nodeLength == 0
-                      ? " text-muted-foreground"
-                      : " text-foreground")
-                )}
+              <EditNodeModal
+                data={data}
+                setData={setData}
+                nodeLength={nodeLength}
               >
-                <IconComponent name="Settings2" className="h-4 w-4 " />
-              </div>
-            </EditNodeModal>
+                <div
+                  className={classNames(
+                    "relative -ml-px inline-flex items-center rounded-r-md bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
+                      (nodeLength == 0
+                        ? " text-muted-foreground"
+                        : " text-foreground")
+                  )}
+                >
+                  <IconComponent name="Settings2" className="h-4 w-4 " />
+                </div>
+              </EditNodeModal>
             </div>
-
           </ShadTooltip>
         </span>
       </div>

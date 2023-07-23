@@ -22,12 +22,12 @@ import {
   TableRow,
 } from "../../components/ui/table";
 import { limitScrollFieldsModal } from "../../constants/constants";
+import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
 import { classNames, getRandomKeyByssmm } from "../../utils/utils";
 import BaseModal from "../baseModal";
-import { PopUpContext } from "../../contexts/popUpContext";
 
 const EditNodeModal = forwardRef(
   (
@@ -74,7 +74,6 @@ const EditNodeModal = forwardRef(
       setMyData(data); // reset data to what it is on node when opening modal
       setCloseEdit(getRandomKeyByssmm().toString());
     }, [modalOpen]);
-
 
     return (
       <BaseModal size="large-h-full" open={modalOpen} setOpen={setModalOpen}>
