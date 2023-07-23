@@ -1,9 +1,9 @@
-import { useEffect, useState, useContext } from "react";
+import { useContext, useEffect, useState } from "react";
 import { InputListComponentType } from "../../types/components";
 
-import _, { set } from "lodash";
-import IconComponent from "../genericIconComponent";
+import _ from "lodash";
 import { PopUpContext } from "../../contexts/popUpContext";
+import IconComponent from "../genericIconComponent";
 
 export default function InputListComponent({
   value,
