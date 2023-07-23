@@ -73,7 +73,7 @@ google-cloud-aiplatform = "^1.26.1"
 psycopg = "^3.1.9"
 psycopg-binary = "^3.1.9"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
 ipykernel = "^6.21.2"
 mypy = "^1.1.1"
