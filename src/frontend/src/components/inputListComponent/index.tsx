@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { InputListComponentType } from "../../types/components";
 
 import _ from "lodash";
+import { PopUpContext } from "../../contexts/popUpContext";
 import IconComponent from "../genericIconComponent";
 
 export default function InputListComponent({
@@ -12,12 +13,13 @@ export default function InputListComponent({
   onAddInput,
 }: InputListComponentType) {
   const [inputList, setInputList] = useState(value ?? [""]);
+  const { closeEdit } = useContext(PopUpContext);
 
   useEffect(() => {
     if (value) {
       setInputList(value);
     }
-  }, [value]);
+  }, [closeEdit]);
 
   useEffect(() => {
     if (disabled) {
@@ -48,7 +50,7 @@ export default function InputListComponent({
               placeholder="Type something..."
               onChange={(e) => {
                 setInputList((old) => {
-                  let newInputList = _.cloneDeep(old);
+                  let newInputList = _.cloneDeep(inputList);
                   newInputList[idx] = e.target.value;
                   return newInputList;
                 });

@@ -134,6 +134,7 @@ async def stream_build(flow_id: str):
                         # to set the input_keys values
                         artifacts.update(vertex.artifacts)
                 except Exception as exc:
+                    logger.exception(exc)
                     params = str(exc)
                     valid = False
                     flow_data_store[flow_id]["status"] = BuildStatus.FAILURE

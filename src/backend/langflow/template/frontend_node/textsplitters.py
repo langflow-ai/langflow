@@ -15,6 +15,7 @@ class TextSplittersFrontendNode(FrontendNode):
                 required=True,
                 show=True,
                 name="documents",
+                is_list=True,
             )
         )
         name = "separator"
