@@ -1,6 +1,6 @@
 import { Disclosure } from "@headlessui/react";
-import { DisclosureComponentType } from "../../../../types/components";
 import { ChevronRight } from "lucide-react";
+import { DisclosureComponentType } from "../../../../types/components";
 
 export default function DisclosureComponent({
   button: { title, Icon, buttons = [] },
@@ -12,14 +12,12 @@ export default function DisclosureComponent({
       {({ open }) => (
         <>
           <div>
-            <Disclosure.Button className="select-none bg-muted dark:bg-gray-700/60 dark:border-y-gray-600 w-full flex justify-between items-center -mt-px px-3 py-2 border-y border-y-gray-200">
+            <Disclosure.Button className="components-disclosure-arrangement">
               <div className="flex gap-4">
-                <Icon size={22} className="text-gray-800 dark:text-white/80" />
-                <span className="flex items-center text-sm text-gray-800 dark:text-white/80 font-medium">
-                  {title}
-                </span>
+                <Icon strokeWidth={1.5} size={22} className="text-primary" />
+                <span className="components-disclosure-title">{title}</span>
               </div>
-              <div className="flex gap-2">
+              <div className="components-disclosure-div">
                 {buttons.map((x, index) => (
                   <button key={index} onClick={x.onClick}>
                     {x.Icon}
@@ -29,13 +27,13 @@ export default function DisclosureComponent({
                   <ChevronRight
                     className={`${
                       open || openDisc ? "rotate-90 transform" : ""
-                    } h-4 w-4 text-gray-800 dark:text-white`}
+                    } h-4 w-4 text-foreground`}
                   />
                 </div>
               </div>
             </Disclosure.Button>
           </div>
-          <Disclosure.Panel as="div" className="-mt-px" static={openDisc}>
+          <Disclosure.Panel as="div" static={openDisc}>
             {children}
           </Disclosure.Panel>
         </>

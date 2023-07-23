@@ -42,7 +42,7 @@ def test_conversation_chain(client: TestClient):
     assert template["verbose"] == {
         "required": False,
         "placeholder": "",
-        "show": True,
+        "show": False,
         "multiline": False,
         "password": False,
         "name": "verbose",
@@ -128,7 +128,7 @@ def test_llm_chain(client: TestClient):
     assert template["verbose"] == {
         "required": False,
         "placeholder": "",
-        "show": True,
+        "show": False,
         "multiline": False,
         "value": False,
         "password": False,
@@ -228,7 +228,7 @@ def test_llm_math_chain(client: TestClient):
     assert template["verbose"] == {
         "required": False,
         "placeholder": "",
-        "show": True,
+        "show": False,
         "multiline": False,
         "value": False,
         "password": False,

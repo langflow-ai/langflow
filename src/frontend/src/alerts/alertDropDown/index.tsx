@@ -1,10 +1,10 @@
-import { useContext, useEffect, useRef } from "react";
+import { Trash2, X } from "lucide-react";
+import { useContext, useRef } from "react";
 import { alertContext } from "../../contexts/alertContext";
-import SingleAlert from "./components/singleAlertComponent";
-import { AlertDropdownType } from "../../types/alerts";
 import { PopUpContext } from "../../contexts/popUpContext";
+import { AlertDropdownType } from "../../types/alerts";
 import { useOnClickOutside } from "../hooks/useOnClickOutside";
-import { X, Trash2 } from "lucide-react";
+import SingleAlert from "./components/singleAlertComponent";
 
 export default function AlertDropdown({}: AlertDropdownType) {
   const { closePopUp } = useContext(PopUpContext);
@@ -24,29 +24,29 @@ export default function AlertDropdown({}: AlertDropdownType) {
   return (
     <div
       ref={componentRef}
-      className="z-10 py-3 pb-4 px-2 rounded-md bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 shadow-lg focus:outline-none overflow-hidden w-[400px] h-[500px] flex flex-col"
+      className="z-10 flex h-[500px] w-[400px] flex-col overflow-hidden rounded-md bg-muted px-2 py-3 pb-4 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
     >
-      <div className="flex pl-3 flex-row justify-between text-md font-medium text-gray-800 dark:text-gray-200">
+      <div className="text-md flex flex-row justify-between pl-3 font-medium text-foreground">
         Notifications
         <div className="flex gap-3 pr-3 ">
           <button
-            className="text-gray-800 hover:text-red-500 dark:text-gray-200 dark:hover:text-red-500"
+            className="text-foreground hover:text-status-red"
             onClick={() => {
               closePopUp();
               setTimeout(clearNotificationList, 100);
             }}
           >
-            <Trash2 className="w-[1.1rem] h-[1.1rem]" />
+            <Trash2 className="h-[1.1rem] w-[1.1rem]" />
           </button>
           <button
-            className="text-gray-800 hover:text-red-500 dark:text-gray-200 dark:hover:text-red-500"
+            className="text-foreground hover:text-status-red"
             onClick={closePopUp}
           >
             <X className="h-5 w-5" />
           </button>
         </div>
       </div>
-      <div className="mt-3 flex flex-col overflow-y-scroll w-full h-full scrollbar-hide text-gray-900 dark:text-gray-300">
+      <div className="text-high-foreground mt-3 flex h-full w-full flex-col overflow-y-scroll scrollbar-hide">
         {notificationList.length !== 0 ? (
           notificationList.map((alertItem, index) => (
             <SingleAlert
@@ -56,7 +56,7 @@ export default function AlertDropdown({}: AlertDropdownType) {
             />
           ))
         ) : (
-          <div className="h-full w-full pb-16 text-gray-500 dark:text-gray-500 flex justify-center items-center">
+          <div className="flex h-full w-full items-center justify-center pb-16 text-ring">
             No new notifications
           </div>
         )}

@@ -1,14 +1,15 @@
-import {
-  BuildStatusTypeAPI,
-  PromptTypeAPI,
-  errorsTypeAPI,
-  InitTypeAPI,
-  UploadFileTypeAPI,
-} from "./../../types/api/index";
-import { APIObjectType, sendAllProps } from "../../types/api/index";
 import axios, { AxiosResponse } from "axios";
-import { FlowStyleType, FlowType } from "../../types/flow";
 import { ReactFlowJsonObject } from "reactflow";
+import { APIObjectType, sendAllProps } from "../../types/api/index";
+import { FlowStyleType, FlowType } from "../../types/flow";
+import {
+  APIClassType,
+  BuildStatusTypeAPI,
+  InitTypeAPI,
+  PromptTypeAPI,
+  UploadFileTypeAPI,
+  errorsTypeAPI,
+} from "./../../types/api/index";
 
 /**
  * Fetches all objects from the API endpoint.
@@ -51,14 +52,21 @@ export async function postValidateCode(
 
 /**
  * Checks the prompt for the code block by sending it to an API endpoint.
- *
+ * @param {string} name - The name of the field to check.
  * @param {string} template - The template string of the prompt to check.
+ * @param {APIClassType} frontend_node - The frontend node to check.
  * @returns {Promise<AxiosResponse<PromptTypeAPI>>} A promise that resolves to an AxiosResponse containing the validation results.
  */
-export async function checkPrompt(
-  template: string
+export async function postValidatePrompt(
+  name: string,
+  template: string,
+  frontend_node: APIClassType
 ): Promise<AxiosResponse<PromptTypeAPI>> {
-  return await axios.post("/api/v1/validate/prompt", { template });
+  return await axios.post("/api/v1/validate/prompt", {
+    name: name,
+    template: template,
+    frontend_node: frontend_node,
+  });
 }
 
 /**
@@ -68,7 +76,7 @@ export async function checkPrompt(
  */
 export async function getExamples(): Promise<FlowType[]> {
   const url =
-    "https://api.github.com/repos/logspace-ai/langflow_examples/contents/examples";
+    "https://api.github.com/repos/logspace-ai/langflow_examples/contents/examples?ref=main";
   const response = await axios.get(url);
 
   const jsonFiles = response.data.filter((file: any) => {

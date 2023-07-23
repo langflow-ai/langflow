@@ -3,83 +3,21 @@ const { fontFamily } = require("tailwindcss/defaultTheme");
 
 import plugin from "tailwindcss/plugin";
 
+// ! Check if removing the other module.exports made sense
 module.exports = {
   darkMode: ["class"],
-  content: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}"],
-  theme: {
-    container: {
-      center: true,
-      padding: "2rem",
-      screens: {
-        "2xl": "1400px",
-      },
-    },
-    extend: {
-      colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
-        },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
-        },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
-        },
-        muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
-        },
-        popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
-        },
-        card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
-        },
-      },
-      borderRadius: {
-        lg: `var(--radius)`,
-        md: `calc(var(--radius) - 2px)`,
-        sm: "calc(var(--radius) - 4px)",
-      },
-      fontFamily: {
-        sans: ["var(--font-sans)", ...fontFamily.sans],
-      },
-      keyframes: {
-        "accordion-down": {
-          from: { height: 0 },
-          to: { height: "var(--radix-accordion-content-height)" },
-        },
-        "accordion-up": {
-          from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: 0 },
-        },
-      },
-      animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
-      },
-    },
-  },
-  plugins: [require("tailwindcss-animate")],
-};
-
-module.exports = {
-  content: ["./index.html", "./src/**/*.{js,ts,tsx,jsx}"],
-  darkMode: "class",
+  content: [
+    "app/**/*.{ts,tsx}",
+    "components/**/*.{ts,tsx}",
+    "./index.html",
+    "./src/**/*.{js,ts,tsx,jsx}",
+  ],
+  safelist: [
+    "bg-status-blue",
+    "bg-status-green",
+    "bg-status-red",
+    "bg-status-yellow",
+  ],
   important: true,
   theme: {
     container: {
@@ -105,6 +43,50 @@ module.exports = {
         "accordion-up": "accordion-up 0.2s ease-out",
       },
       colors: {
+        connection: "var(--connection)",
+        "almost-dark-gray": "var(--almost-dark-gray)",
+        "almost-light-blue": "var(--almost-light-blue)",
+        "almost-medium-blue": "var(--almost-medium-blue)",
+        "almost-medium-gray": "var(--almost-medium-gray)",
+        "almost-medium-green": "var(--almost-medium-green)",
+        "almost-medium-red": "var(--almost-medium-red)",
+        "btn-shadow": "var(--round-btn-shadow)",
+        "build-trigger": "var(--build-trigger)",
+        "chat-trigger": "var(--chat-trigger)",
+        "chat-trigger-disabled": "var(--chat-trigger-disabled)",
+        "blur-shared": "var(--blur-shared)",
+        "dark-blue": "var(--dark-blue)",
+        "dark-gray": "var(--dark-gray)",
+        "dark-red": "var(--dark-red)",
+        "error-background": "var(--error-background)",
+        "error-foreground": "var(--error-foreground)",
+        "high-dark-gray": "var(--high-dark-gray)",
+        "high-indigo": "var(--high-indigo)",
+        "high-light-gray": "var(--high-light-gray)",
+        "info-background": "var(--info-background)",
+        "info-foreground": "var(--info-foreground)",
+        "light-blue": "var(--light-blue)",
+        "light-gray": "var(--light-gray)",
+        "light-slate": "var(--light-slate)",
+        "medium-blue": "var(--medium-blue)",
+        "status-blue": "var(--status-blue)",
+        "medium-dark-gray": "var(--medium-dark-gray)",
+        "medium-dark-green": "var(--medium-dark-green)",
+        "medium-dark-red": "var(--medium-dark-red)",
+        "medium-emerald": "var(--medium-emerald)",
+        "medium-gray": "var(--medium-gray)",
+        "medium-high-indigo": "var(--medium-high-indigo)",
+        "medium-indigo": "var(--medium-indigo)",
+        "medium-low-gray": "var(--medium-low-gray)",
+        "status-green": "var(--status-green)",
+        "status-red": "var(--status-red)",
+        "status-yellow": "var(--status-yellow)",
+        "success-background": "var(--success-background)",
+        "success-foreground": "var(--success-foreground)",
+        "chat-bot-icon": "var(--chat-bot-icon)",
+        "chat-user-icon": "var(--chat-user-icon)",
+
+        white: "var(--white)",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -148,35 +130,22 @@ module.exports = {
         sans: ["var(--font-sans)", ...fontFamily.sans],
       },
       keyframes: {
-        "accordion-down": {
+        slideDown: {
           from: { height: 0 },
-          to: { height: "var(--radix-accordion-content-height)" },
+          to: { height: 100 },
         },
-        "accordion-up": {
+        slideUp: {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: 0 },
         },
-        pulseGreen: {
-          "0%": { boxShadow: "0 0 0 0 rgba(72, 187, 120, 0.7)" },
-          "100%": { boxShadow: "0 0 0 10px rgba(72, 187, 120, 0)" },
-        },
       },
       animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
-        "pulse-green": "pulseGreen 1s linear",
-        "spin-once": "spin 1s linear 0.7",
-      },
-      borderColor: {
-        "red-outline": "rgba(255, 0, 0, 0.8)",
-        "green-outline": "rgba(72, 187, 120, 0.7)",
-      },
-      boxShadow: {
-        "red-outline": "0 0 5px rgba(255, 0, 0, 0.5)",
-        "green-outline": "0 0 5px rgba(72, 187, 120, 0.7)",
+        "accordion-down": "slideDown 300ms ease-out",
+        "accordion-up": "slideUp 300ms ease-in",
       },
     },
   },
+
   plugins: [
     require("tailwindcss-animate"),
     require("@tailwindcss/forms")({
@@ -233,6 +202,7 @@ module.exports = {
         ".custom-scroll": {
           "&::-webkit-scrollbar": {
             width: "8px",
+            height: "8px",
           },
           "&::-webkit-scrollbar-track": {
             backgroundColor: "#f1f1f1",

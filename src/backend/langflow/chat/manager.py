@@ -104,16 +104,22 @@ class ChatManager:
 
     async def close_connection(self, client_id: str, code: int, reason: str):
         if websocket := self.active_connections[client_id]:
-            await websocket.close(code=code, reason=reason)
-            self.disconnect(client_id)
+            try:
+                await websocket.close(code=code, reason=reason)
+                self.disconnect(client_id)
+            except RuntimeError as exc:
+                # This is to catch the following error:
+                #  Unexpected ASGI message 'websocket.close', after sending 'websocket.close'
+                if "after sending" in str(exc):
+                    logger.error(exc)
 
     async def process_message(
         self, client_id: str, payload: Dict, langchain_object: Any
     ):
         # Process the graph data and chat message
-        chat_message = payload.pop("message", "")
-        chat_message = ChatMessage(message=chat_message)
-        self.chat_history.add_message(client_id, chat_message)
+        chat_inputs = payload.pop("inputs", "")
+        chat_inputs = ChatMessage(message=chat_inputs)
+        self.chat_history.add_message(client_id, chat_inputs)
 
         # graph_data = payload
         start_resp = ChatResponse(message=None, type="start", intermediate_steps="")
@@ -126,7 +132,7 @@ class ChatManager:
 
             result, intermediate_steps = await process_graph(
                 langchain_object=langchain_object,
-                chat_message=chat_message,
+                chat_inputs=chat_inputs,
                 websocket=self.active_connections[client_id],
             )
         except Exception as e:

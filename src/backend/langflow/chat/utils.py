@@ -7,7 +7,7 @@ from langflow.utils.logger import logger
 
 async def process_graph(
     langchain_object,
-    chat_message: ChatMessage,
+    chat_inputs: ChatMessage,
     websocket: WebSocket,
 ):
     langchain_object = try_setting_streaming_options(langchain_object, websocket)
@@ -21,9 +21,13 @@ async def process_graph(
 
     # Generate result and thought
     try:
+        if not chat_inputs.message:
+            logger.debug("No message provided")
+            raise ValueError("No message provided")
+
         logger.debug("Generating result and thought")
         result, intermediate_steps = await get_result_and_steps(
-            langchain_object, chat_message.message or "", websocket=websocket
+            langchain_object, chat_inputs.message, websocket=websocket
         )
         logger.debug("Generated result and intermediate_steps")
         return result, intermediate_steps

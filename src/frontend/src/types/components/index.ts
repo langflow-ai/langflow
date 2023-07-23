@@ -1,4 +1,5 @@
 import { ReactElement, ReactNode } from "react";
+import { APIClassType } from "../api";
 import { NodeDataType } from "../flow/index";
 import { typesContextType } from "../typesContext";
 export type InputComponentType = {
@@ -36,6 +37,7 @@ export type ParameterComponentType = {
   name?: string;
   tooltipTitle: string;
   dataContext?: typesContextType;
+  optionalHandle?: Array<String>;
   info?: string;
 };
 export type InputListComponentType = {
@@ -47,10 +49,22 @@ export type InputListComponentType = {
 };
 
 export type TextAreaComponentType = {
+  field_name?: string;
+  nodeClass?: APIClassType;
+  setNodeClass?: (value: APIClassType) => void;
   disabled: boolean;
   onChange: (value: string[] | string) => void;
   value: string;
   editNode?: boolean;
+};
+
+export type CodeAreaComponentType = {
+  disabled: boolean;
+  onChange: (value: string[] | string) => void;
+  value: string;
+  editNode?: boolean;
+  nodeClass: APIClassType;
+  setNodeClass: (value: APIClassType) => void;
 };
 
 export type FileComponentType = {
@@ -125,4 +139,25 @@ export type ShadTooltipProps = {
   side?: Side;
   content: ReactNode;
   children: ReactNode;
+  style?: string;
 };
+export type ShadToolTipType = {
+  content?: ReactNode;
+  side?: "top" | "right" | "bottom" | "left";
+  asChild?: boolean;
+  children?: ReactElement;
+  delayDuration?: number;
+  styleClasses?: string;
+};
+
+export type TextHighlightType = {
+  value?: string;
+  side?: "top" | "right" | "bottom" | "left";
+  asChild?: boolean;
+  children?: ReactElement;
+  delayDuration?: number;
+};
+
+export interface IVarHighlightType {
+  name: string;
+}

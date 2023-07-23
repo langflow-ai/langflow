@@ -1,8 +1,8 @@
 import { Transition } from "@headlessui/react";
+import { Info } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { NoticeAlertType } from "../../types/alerts";
-import { Info } from "lucide-react";
 
 export default function NoticeAlert({
   title,
@@ -36,22 +36,19 @@ export default function NoticeAlert({
           setShow(false);
           removeAlert(id);
         }}
-        className="rounded-md w-96 mt-6 shadow-xl bg-blue-50 dark:bg-blue-900 p-4"
+        className="mt-6 w-96 rounded-md bg-info-background p-4 shadow-xl"
       >
         <div className="flex">
           <div className="flex-shrink-0">
-            <Info
-              className="h-5 w-5 text-blue-400 dark:text-blue-50"
-              aria-hidden="true"
-            />
+            <Info className="h-5 w-5 text-status-blue " aria-hidden="true" />
           </div>
           <div className="ml-3 flex-1 md:flex md:justify-between">
-            <p className="text-sm text-blue-700 dark:text-white/80">{title}</p>
-            <p className="mt-3 text-sm md:mt-0 md:ml-6">
+            <p className="text-sm text-info-foreground">{title}</p>
+            <p className="mt-3 text-sm md:ml-6 md:mt-0">
               {link !== "" ? (
                 <Link
                   to={link}
-                  className="whitespace-nowrap font-medium text-blue-700 dark:text-blue-50 hover:dark:text-blue-10 hover:text-ring"
+                  className="whitespace-nowrap font-medium text-info-foreground hover:text-accent-foreground"
                 >
                   Details
                 </Link>
