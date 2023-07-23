@@ -545,7 +545,7 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply z-10 mt-1 max-h-60 overflow-auto rounded-md bg-background py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm;
   }
   .dropdown-component-true-options {
-    @apply dropdown-component-options w-[215px];
+    @apply dropdown-component-options lg:w-[32%]
   }
   .dropdown-component-false-options {
     @apply dropdown-component-options w-full;
