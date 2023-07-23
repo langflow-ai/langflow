@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 
 import yaml
 from pydantic import BaseSettings, root_validator
@@ -20,17 +21,20 @@ class Settings(BaseSettings):
     toolkits: dict = {}
     textsplitters: dict = {}
     utilities: dict = {}
+    output_parsers: dict = {}
     dev: bool = False
-    database_url: str
+    database_url: Optional[str] = None
     cache: str = "InMemoryCache"
     remove_api_keys: bool = False
 
     @root_validator(pre=True)
     def set_database_url(cls, values):
         if "database_url" not in values:
-            logger.debug("No database_url provided, trying DATABASE_URL env variable")
-            if database_url := os.getenv("DATABASE_URL"):
-                values["database_url"] = database_url
+            logger.debug(
+                "No database_url provided, trying LANGFLOW_DATABASE_URL env variable"
+            )
+            if langflow_database_url := os.getenv("LANGFLOW_DATABASE_URL"):
+                values["database_url"] = langflow_database_url
             else:
                 logger.debug("No DATABASE_URL env variable, using sqlite database")
                 values["database_url"] = "sqlite:///./langflow.db"
@@ -39,7 +43,6 @@ class Settings(BaseSettings):
     class Config:
         validate_assignment = True
         extra = "ignore"
-        env_prefix = "LANGFLOW_"
 
     @root_validator(allow_reuse=True)
     def validate_lists(cls, values):
@@ -64,7 +67,7 @@ class Settings(BaseSettings):
         self.vectorstores = new_settings.vectorstores or {}
         self.documentloaders = new_settings.documentloaders or {}
         self.retrievers = new_settings.retrievers or {}
-
+        self.output_parsers = new_settings.output_parsers or {}
         self.dev = dev
 
     def update_settings(self, **kwargs):

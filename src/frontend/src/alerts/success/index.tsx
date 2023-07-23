@@ -1,7 +1,7 @@
 import { Transition } from "@headlessui/react";
+import { CheckCircle2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { SuccessAlertType } from "../../types/alerts";
-import { CheckCircle2 } from "lucide-react";
 
 export default function SuccessAlert({
   title,
@@ -34,19 +34,14 @@ export default function SuccessAlert({
           setShow(false);
           removeAlert(id);
         }}
-        className="rounded-md w-96 mt-6 shadow-xl bg-green-50 dark:bg-green-900 p-4"
+        className="success-alert"
       >
         <div className="flex">
           <div className="flex-shrink-0">
-            <CheckCircle2
-              className="h-5 w-5 text-green-400 dark:text-green-50"
-              aria-hidden="true"
-            />
+            <CheckCircle2 className="success-alert-icon" aria-hidden="true" />
           </div>
           <div className="ml-3">
-            <p className="text-sm font-medium text-green-800 dark:text-white/80">
-              {title}
-            </p>
+            <p className="success-alert-message">{title}</p>
           </div>
         </div>
       </div>

@@ -12,6 +12,7 @@ from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.tools.base import tool_creator
 from langflow.interface.vector_store.base import vectorstore_creator
 from langflow.interface.wrappers.base import wrapper_creator
+from langflow.interface.output_parsers.base import output_parser_creator
 from langflow.interface.retrievers.base import retriever_creator
 
 from typing import Dict, Type
@@ -30,5 +31,6 @@ VERTEX_TYPE_MAP: Dict[str, Type[Vertex]] = {
     **{t: types.VectorStoreVertex for t in vectorstore_creator.to_list()},
     **{t: types.DocumentLoaderVertex for t in documentloader_creator.to_list()},
     **{t: types.TextSplitterVertex for t in textsplitter_creator.to_list()},
+    **{t: types.OutputParserVertex for t in output_parser_creator.to_list()},
     **{t: types.RetrieverVertex for t in retriever_creator.to_list()},
 }

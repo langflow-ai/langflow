@@ -16,17 +16,15 @@ def load_file_into_dict(file_path: str) -> dict:
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found: {file_path}")
 
-    file_extension = os.path.splitext(file_path)[1].lower()
-
-    if file_extension == ".json":
-        with open(file_path, "r") as json_file:
-            data = json.load(json_file)
-    elif file_extension in [".yaml", ".yml"]:
-        with open(file_path, "r") as yaml_file:
-            data = yaml.safe_load(yaml_file)
-    else:
-        raise ValueError("Unsupported file type. Please provide a JSON or YAML file.")
-
+    # Files names are UUID, so we can't find the extension
+    with open(file_path, "r") as file:
+        try:
+            data = json.load(file)
+        except json.JSONDecodeError:
+            file.seek(0)
+            data = yaml.safe_load(file)
+        except ValueError as exc:
+            raise ValueError("Invalid file type. Expected .json or .yaml.") from exc
     return data
 
 
@@ -66,17 +64,24 @@ def extract_input_variables_from_prompt(prompt: str) -> list[str]:
 def setup_llm_caching():
     """Setup LLM caching."""
 
+    from langflow.settings import settings
+
     try:
-        import langchain
-        from langflow.settings import settings
-        from langflow.interface.importing.utils import import_class
-
-        cache_class = import_class(f"langchain.cache.{settings.cache}")
-
-        logger.debug(f"Setting up LLM caching with {cache_class.__name__}")
-        langchain.llm_cache = cache_class()
-        logger.info(f"LLM caching setup with {cache_class.__name__}")
+        set_langchain_cache(settings)
     except ImportError:
         logger.warning(f"Could not import {settings.cache}. ")
     except Exception as exc:
         logger.warning(f"Could not setup LLM caching. Error: {exc}")
+
+
+# TODO Rename this here and in `setup_llm_caching`
+def set_langchain_cache(settings):
+    import langchain
+    from langflow.interface.importing.utils import import_class
+
+    cache_type = os.getenv("LANGFLOW_LANGCHAIN_CACHE")
+    cache_class = import_class(f"langchain.cache.{cache_type or settings.cache}")
+
+    logger.debug(f"Setting up LLM caching with {cache_class.__name__}")
+    langchain.llm_cache = cache_class()
+    logger.info(f"LLM caching setup with {cache_class.__name__}")

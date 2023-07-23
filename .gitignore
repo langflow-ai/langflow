@@ -1,3 +1,5 @@
+# This is to avoid Opencommit hook from getting pushed
+prepare-commit-msg
 # Logs
 logs
 *.log
@@ -242,4 +244,10 @@ dmypy.json
 # Poetry
 .testenv/*
 langflow.db
-langchain.db
+
+
+.githooks/prepare-commit-msg
+.langchain.db
+
+# docusaurus
+.docusaurus/

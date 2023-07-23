@@ -8,6 +8,7 @@ FORCE_SHOW_FIELDS = [
     "headers",
     "max_value_length",
     "max_tokens",
+    "google_cse_id",
 ]
 
 DEFAULT_PROMPT = """
@@ -58,3 +59,7 @@ The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.
 
 You can change this to use other APIs like JinaChat, LocalAI and Prem.
 """
+
+
+INPUT_KEY_INFO = """The variable to be used as Chat Input when more than one variable is available."""
+OUTPUT_KEY_INFO = """The variable to be used as Chat Output (e.g. answer in a ConversationalRetrievalChain)"""

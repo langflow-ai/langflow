@@ -32,7 +32,7 @@
     "base64-js": "^1.5.1",
     "class-variance-authority": "^0.6.0",
     "clsx": "^1.2.1",
-    "dompurify": "^3.0.3",
+    "dompurify": "^3.0.4",
     "esbuild": "^0.17.18",
     "lodash": "^4.17.21",
     "lucide-react": "^0.233.0",
@@ -105,6 +105,9 @@
     "autoprefixer": "^10.4.14",
     "daisyui": "^3.1.1",
     "postcss": "^8.4.23",
+    "prettier": "^2.8.8",
+    "prettier-plugin-organize-imports": "^3.2.2",
+    "prettier-plugin-tailwindcss": "^0.3.0",
     "tailwindcss": "^3.3.2",
     "typescript": "^5.0.2",
     "vite": "^4.3.9"

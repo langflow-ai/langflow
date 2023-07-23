@@ -65,6 +65,7 @@ class VectorStoreFrontendNode(FrontendNode):
                 show=True,
                 advanced=True,
                 multiline=False,
+                password=True,
                 value="",
             )
             extra_field2 = TemplateField(
@@ -142,6 +143,7 @@ class VectorStoreFrontendNode(FrontendNode):
                 show=True,
                 advanced=True,
                 multiline=False,
+                password=True,
                 value="",
             )
             extra_fields.extend((extra_field, extra_field2, extra_field3, extra_field4))
@@ -252,12 +254,12 @@ class VectorStoreFrontendNode(FrontendNode):
             # when instantiating the vectorstores
             field.name = "documents"
 
-            field.field_type = "TextSplitter"
+            field.field_type = "Document"
             field.display_name = "Documents"
             field.required = False
             field.show = True
             field.advanced = False
-
+            field.is_list = True
         elif "embedding" in field.name:
             # for backwards compatibility
             field.name = "embedding"
