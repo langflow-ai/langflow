@@ -27,6 +27,7 @@ import {
   classNames,
   getRandomKeyByssmm,
   groupByFamily,
+  groupByFamilyCustom,
 } from "../../../../utils/utils";
 
 export default function ParameterComponent({
@@ -99,46 +100,48 @@ export default function ParameterComponent({
     );
   }, [info]);
 
+
+
   useEffect(() => {
-
-
-    console.log("mydata", myData);
-    console.log("tooltipTitle", tooltipTitle);
-    console.log("left", left);
-    console.log("data.type", data.type);
-    console.log("flows", flows);
+    let groupedObj = groupByFamily(myData, tooltipTitle, left, data.type, flows.find((f) => f.id === tabId).data.nodes);
     
+    if(groupedObj?.length === 0){
+      groupedObj = groupByFamilyCustom(myData, tooltipTitle, left, data.type, flows.find((f) => f.id === tabId).data.nodes)
+    } 
 
-    const groupedObj = groupByFamily(myData, tooltipTitle, left, data.type);
 
-    refNumberComponents.current = groupedObj[0]?.type?.length;
+    if(groupedObj){
+      refNumberComponents.current = groupedObj[0]?.type?.length;
 
-    refHtml.current = groupedObj.map((item, i) => {
-      const Icon: any = nodeIconsLucide[item.family];
+      refHtml.current = groupedObj.map((item, i) => {
 
-      return (
-        <span
-          key={getRandomKeyByssmm() + item.family + i}
-          className={classNames(
-            i > 0 ? "mt-2 flex items-center" : "flex items-center"
-          )}
-        >
-          <div
-            className="h-5 w-5"
-            style={{
-              color: nodeColors[item.family],
-            }}
+        
+
+        const Icon: any = nodeIconsLucide[item.family];
+  
+        return (
+          <span
+            key={getRandomKeyByssmm() + item.family + i}
+            className={classNames(
+              i > 0 ? "mt-2 flex items-center" : "flex items-center"
+            )}
           >
-            <Icon
+            <div
               className="h-5 w-5"
-              strokeWidth={1.5}
               style={{
-                color: nodeColors[item.family] ?? nodeColors.unknown,
+                color: nodeColors[item.family],
               }}
-            />
-          </div>
-          <span className="ps-2 text-xs text-foreground">
-            {nodeNames[item.family] ?? ""}{" "}
+            >
+              <Icon
+                className="h-5 w-5"
+                strokeWidth={1.5}
+                style={{
+                  color: nodeColors[item.family] ?? nodeColors.unknown,
+                }}
+              />
+            </div>
+            <span className="ps-2 text-xs text-foreground">
+            {item.family !== 'custom_components' ? nodeNames[item.family] : item.component ?? ""}{" "}
             <span className="text-xs">
               {" "}
               {item.type === "" ? "" : " - "}
@@ -155,10 +158,14 @@ export default function ParameterComponent({
                 : item.type}
             </span>
           </span>
-        </span>
-      );
-    });
-  }, [tooltipTitle]);
+
+          </span>
+        );
+      });
+    }
+
+    
+  }, [tooltipTitle, flows.find((f) => f.id === tabId).data.nodes]);
   return (
     <div
       ref={ref}
