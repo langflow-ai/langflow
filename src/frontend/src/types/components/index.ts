@@ -1,8 +1,7 @@
-import { ReactElement, ReactNode, RefObject } from "react";
+import { ReactElement, ReactNode } from "react";
 import { APIClassType } from "../api";
 import { FlowStyleType, NodeDataType } from "../flow/index";
 import { typesContextType } from "../typesContext";
-import { BlobOptions } from "buffer";
 
 export type InputComponentType = {
   value: string;
@@ -481,7 +480,7 @@ export type editNodeToggleType = {
 export interface Props {
   language: string;
   value: string;
-};
+}
 
 export type fileCardPropsType = {
   fileName: string;
@@ -493,7 +492,7 @@ export type nodeToolbarPropsType = {
   data: NodeDataType;
   deleteNode: (idx: string) => void;
   openPopUp: (element: JSX.Element) => void;
-}
+};
 
 export type parsedDataType = {
   id: string;

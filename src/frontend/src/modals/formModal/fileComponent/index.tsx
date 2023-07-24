@@ -3,7 +3,11 @@ import { useState } from "react";
 import IconComponent from "../../../components/genericIconComponent";
 import { fileCardPropsType } from "../../../types/components";
 
-export default function FileCard({ fileName, content, fileType }: fileCardPropsType): JSX.Element {
+export default function FileCard({
+  fileName,
+  content,
+  fileType,
+}: fileCardPropsType): JSX.Element {
   const handleDownload = (): void => {
     const byteArray = new Uint8Array(base64js.toByteArray(content));
     const blob = new Blob([byteArray], { type: "application/octet-stream" });
@@ -56,8 +60,7 @@ export default function FileCard({ fileName, content, fileType }: fileCardPropsT
   return (
     <button onClick={handleDownload} className="file-card-modal-button">
       <div className="file-card-modal-div">
-        ooooooooooooooo
-        {" "}
+        ooooooooooooooo{" "}
         {fileType === "image" ? (
           <img
             src={`data:image/png;base64,${content}`}

@@ -33,9 +33,9 @@ import { limitScrollFieldsModal } from "../../constants/constants";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
+import { editNodeToggleType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
 import { classNames } from "../../utils/utils";
-import { editNodeToggleType } from "../../types/components";
 
 export default function EditNodeModal({
   data,
@@ -88,7 +88,10 @@ export default function EditNodeModal({
     setNodeValue(!nodeValue);
   }
 
-  const handleOnNewValue = (newValue: string | string[] | boolean, name: string): void => {
+  const handleOnNewValue = (
+    newValue: string | string[] | boolean,
+    name: string
+  ): void => {
     data.node.template[name].value = newValue;
     // Set state to pending
     setTabsState((prev) => {
@@ -182,7 +185,7 @@ export default function EditNodeModal({
                                         : data.node.template[n].value
                                     }
                                     onChange={(t: string[]) => {
-                                      console.log(t)
+                                      console.log(t);
                                       handleOnNewValue(t, n);
                                     }}
                                   />
@@ -233,7 +236,7 @@ export default function EditNodeModal({
                                   }}
                                 />
                               </div>
-                            ) : data.node.template[n].type === "str" && 
+                            ) : data.node.template[n].type === "str" &&
                               data.node.template[n].options ? (
                               <div className="mx-auto">
                                 <Dropdown

@@ -4,8 +4,8 @@ import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import EditNodeModal from "../../../../modals/EditNodeModal";
-import { classNames } from "../../../../utils/utils";
 import { nodeToolbarPropsType } from "../../../../types/components";
+import { classNames } from "../../../../utils/utils";
 
 const NodeToolbarComponent = (props: nodeToolbarPropsType): JSX.Element => {
   const [nodeLength, setNodeLength] = useState(

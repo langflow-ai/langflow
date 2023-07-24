@@ -89,8 +89,7 @@ export default function GenericNode({
               </ShadTooltip>
             </div>
           </div>
-          <div className="round-button-div">
-          </div>
+          <div className="round-button-div"></div>
           <div className="round-button-div">
             <div>
               <Tooltip
@@ -111,7 +110,9 @@ export default function GenericNode({
                       {validationStatus.params
                         ? validationStatus.params
                             .split("\n")
-                            .map((line: string, index: number) => <div key={index}>{line}</div>)
+                            .map((line: string, index: number) => (
+                              <div key={index}>{line}</div>
+                            ))
                         : ""}
                     </div>
                   )
