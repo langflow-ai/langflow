@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { FloatComponentType } from "../../types/components";
 
 export default function IntComponent({
@@ -8,6 +8,12 @@ export default function IntComponent({
   editNode = false,
 }: FloatComponentType) {
   const min = 0;
+
+  const [myValue, setMyValue] = useState(value);
+
+  useEffect(() => {
+    setMyValue(value);
+  }, [value]);
 
   // Clear component state
   useEffect(() => {
@@ -50,7 +56,7 @@ export default function IntComponent({
             e.target.value = min.toString();
           }
         }}
-        value={value ?? ""}
+        value={myValue ?? ""}
         className={
           "nopan nodrag noundo nocopy " +
           (editNode
@@ -60,6 +66,7 @@ export default function IntComponent({
         placeholder={editNode ? "Integer number" : "Type an integer number"}
         onChange={(e) => {
           onChange(e.target.value);
+          setMyValue(e.target.value);
         }}
       />
     </div>

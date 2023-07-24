@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { FloatComponentType } from "../../types/components";
 
 export default function FloatComponent({
@@ -10,6 +10,12 @@ export default function FloatComponent({
   const step = 0.1;
   const min = 0;
   const max = 1;
+
+  const [myValue, setMyValue] = useState(value);
+
+  useEffect(() => {
+    setMyValue(value);
+  }, [value]);
 
   // Clear component state
   useEffect(() => {
@@ -33,7 +39,7 @@ export default function FloatComponent({
           }
         }}
         max={max}
-        value={value ?? ""}
+        value={myValue ?? ""}
         className={
           "nopan nodrag noundo nocopy " +
           (editNode
@@ -45,6 +51,7 @@ export default function FloatComponent({
         }
         onChange={(e) => {
           onChange(e.target.value);
+          setMyValue(e.target.value);
         }}
       />
     </div>

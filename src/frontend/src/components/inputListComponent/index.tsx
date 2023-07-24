@@ -10,7 +10,6 @@ export default function InputListComponent({
   onChange,
   disabled,
   editNode = false,
-  onAddInput,
 }: InputListComponentType) {
   const [inputList, setInputList] = useState(value ?? [""]);
   const { closeEdit } = useContext(PopUpContext);
