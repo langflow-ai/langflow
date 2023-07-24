@@ -1,0 +1,49 @@
+name: pre-release
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - dev
+    paths:
+      - "pyproject.toml"
+
+env:
+  POETRY_VERSION: "1.4.0"
+
+jobs:
+  if_release:
+    if: |
+      ${{ github.event.pull_request.merged == true }}
+      && ${{ contains(github.event.pull_request.labels.*.name, 'pre-release') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install poetry
+        run: pipx install poetry==$POETRY_VERSION
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+          cache: "poetry"
+      - name: Build project for distribution
+        run: make build
+      - name: Check Version
+        id: check-version
+        run: |
+          echo version=$(poetry version --short) >> $GITHUB_OUTPUT
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "dist/*"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          generateReleaseNotes: true
+          tag: v${{ steps.check-version.outputs.version }}
+          commit: main
+      - name: Publish to PyPI
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          poetry publish
