@@ -1,5 +1,5 @@
 import { cloneDeep } from "lodash";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import AccordionComponent from "../../components/AccordionComponent";
@@ -55,9 +55,15 @@ export default function CodeTabsComponent({
   };
 }) {
   const [isCopied, setIsCopied] = useState<Boolean>(false);
-  const [data, setData] = useState(flow["data"]["nodes"]);
+  const [data, setData] = useState(flow ? flow["data"]["nodes"] : null);
   const [openAccordion, setOpenAccordion] = useState([]);
   const { dark } = useContext(darkContext);
+
+  useEffect(() => {
+    if (flow && flow["data"]["nodes"]) {
+      setData(flow["data"]["nodes"]);
+    }
+  }, [flow]);
 
   const copyToClipboard = () => {
     if (!navigator.clipboard || !navigator.clipboard.writeText) {
