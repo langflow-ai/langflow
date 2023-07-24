@@ -8,10 +8,10 @@ import { postBuildInit } from "../../../controllers/API";
 import { FlowType } from "../../../types/flow";
 
 import { TabsContext } from "../../../contexts/tabsContext";
+import { parsedDataType } from "../../../types/components";
 import { validateNodes } from "../../../utils/reactflowUtils";
 import RadialProgressComponent from "../../RadialProgress";
 import IconComponent from "../../genericIconComponent";
-import { parsedDataType } from "../../../types/components";
 
 export default function BuildTrigger({
   open,
@@ -129,7 +129,7 @@ export default function BuildTrigger({
     // Process each chunk of data here
     // Parse the chunk and update the context
     try {
-      console.log(parsedData)
+      console.log(parsedData);
       updateSSEData({ [parsedData.id]: parsedData });
     } catch (err) {
       console.log("Error parsing stream data: ", err);
