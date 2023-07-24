@@ -45,7 +45,7 @@ import { EXPORT_CODE_DIALOG } from "../../constants/constants";
 import { darkContext } from "../../contexts/darkContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
-import { FlowType } from "../../types/flow/index";
+import { FlowType, NodeDataType } from "../../types/flow/index";
 import { buildTweaks } from "../../utils/reactflowUtils";
 import {
   classNames,
@@ -173,7 +173,8 @@ export default function ApiModal({ flow }: { flow: FlowType }): JSX.Element {
     });
   }
 
-  function buildTweakObject(tw, changes, template) {
+  // DIFICULT IN FIND WHERE TW,CHANGES AND TEMPLATE ARE USED
+  function buildTweakObject(tw, changes, template): void {
     if (template.type === "float") {
       changes = parseFloat(changes);
     }
@@ -221,7 +222,7 @@ export default function ApiModal({ flow }: { flow: FlowType }): JSX.Element {
     setTweak(tweak.current);
   }
 
-  function buildContent(value) {
+  function buildContent(value: string): JSX.Element {
     const htmlContent = (
       <div className="w-[200px]">
         <span>{value != null && value != "" ? value : "None"}</span>
@@ -230,7 +231,8 @@ export default function ApiModal({ flow }: { flow: FlowType }): JSX.Element {
     return htmlContent;
   }
 
-  function getValue(value, node, template) {
+  // DIFICULT FINDIND WHERE TEMPLATE IS USED
+  function getValue(value: string, node: NodeDataType, template): string {
     let returnValue = value ?? "";
 
     if (getTweak.length > 0) {
@@ -252,7 +254,7 @@ export default function ApiModal({ flow }: { flow: FlowType }): JSX.Element {
     return returnValue;
   }
 
-  function openAccordions() {
+  function openAccordions(): void {
     let accordionsToOpen = [];
     tweak.current.forEach((el) => {
       Object.keys(el).forEach((key) => {

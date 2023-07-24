@@ -26,6 +26,7 @@ export default function GenericNode({
 
   const { closePopUp, openPopUp } = useContext(PopUpContext);
   // any to avoid type conflict
+  // PROBLEM HERE OTAVIO
   const Icon: any =
     nodeIconsLucide[data.type] || nodeIconsLucide[types[data.type]];
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
