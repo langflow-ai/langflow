@@ -11,6 +11,7 @@ import { TabsContext } from "../../../contexts/tabsContext";
 import { validateNodes } from "../../../utils/reactflowUtils";
 import RadialProgressComponent from "../../RadialProgress";
 import IconComponent from "../../genericIconComponent";
+import { parsedDataType } from "../../../types/components";
 
 export default function BuildTrigger({
   open,
@@ -30,7 +31,7 @@ export default function BuildTrigger({
   const eventClick = isBuilding ? "pointer-events-none" : "";
   const [progress, setProgress] = useState(0);
 
-  async function handleBuild(flow: FlowType) {
+  async function handleBuild(flow: FlowType): Promise<void> {
     try {
       if (isBuilding) {
         return;
@@ -69,7 +70,7 @@ export default function BuildTrigger({
     const response = await postBuildInit(flow);
     const { flowId } = response.data;
     // Step 2: Use the session ID to establish an SSE connection using EventSource
-    let validationResults = [];
+    let validationResults: boolean[] = [];
     let finished = false;
     const apiUrl = `/api/v1/build/stream/${flowId}`;
     const eventSource = new EventSource(apiUrl);
@@ -124,10 +125,11 @@ export default function BuildTrigger({
     return validationResults.every((result) => result);
   }
 
-  function processStreamResult(parsedData) {
+  function processStreamResult(parsedData: parsedDataType) {
     // Process each chunk of data here
     // Parse the chunk and update the context
     try {
+      console.log(parsedData)
       updateSSEData({ [parsedData.id]: parsedData });
     } catch (err) {
       console.log("Error parsing stream data: ", err);

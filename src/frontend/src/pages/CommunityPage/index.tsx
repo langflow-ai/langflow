@@ -21,7 +21,7 @@ export default function CommunityPage(): JSX.Element {
   const [examples, setExamples] = useState<FlowType[]>([]);
 
   // Show community examples on screen
-  function handleExamples() {
+  function handleExamples(): void {
     setLoadingExamples(true);
     getExamples()
       .then((result) => {

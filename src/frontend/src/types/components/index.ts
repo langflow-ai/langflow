@@ -1,4 +1,4 @@
-import { ReactElement, ReactNode } from "react";
+import { ReactElement, ReactNode, RefObject } from "react";
 import { APIClassType } from "../api";
 import { FlowStyleType, NodeDataType } from "../flow/index";
 import { typesContextType } from "../typesContext";
@@ -84,7 +84,7 @@ export type DisclosureComponentType = {
   openDisc: boolean;
   button: {
     title: string;
-    Icon: any;
+    Icon: React.Component;
     buttons?: {
       Icon: ReactElement;
       title: string;
@@ -431,7 +431,7 @@ export type nodeToolbarType = {
     value: void;
   };
   deleteNode: (idx: string) => void;
-  openPopUp: (element) => JSX.Element;
+  openPopUp: (element: JSX.Element) => JSX.Element;
 };
 
 export type chatTriggerPropType = {
@@ -487,4 +487,24 @@ export type fileCardPropsType = {
   fileName: string;
   content: string;
   fileType: string;
+};
+
+export type nodeToolbarPropsType = {
+  data: NodeDataType;
+  deleteNode: (idx: string) => void;
+  openPopUp: (element: JSX.Element) => void;
+}
+
+export type parsedDataType = {
+  id: string;
+  params: string;
+  progress: number;
+  valid: boolean;
+};
+
+export type SanitizedHTMLWrapperType = {
+  className: string;
+  content: string;
+  onClick: () => void;
+  suppressWarning: boolean;
 };

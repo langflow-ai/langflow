@@ -111,7 +111,7 @@ export default function GenericNode({
                       {validationStatus.params
                         ? validationStatus.params
                             .split("\n")
-                            .map((line, index) => <div key={index}>{line}</div>)
+                            .map((line: string, index: number) => <div key={index}>{line}</div>)
                         : ""}
                     </div>
                   )
