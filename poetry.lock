@@ -146,13 +146,13 @@ files = [
 
 [[package]]
 name = "anthropic"
-version = "0.3.7"
+version = "0.3.6"
 description = "Client library for the anthropic API"
 optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "anthropic-0.3.7-py3-none-any.whl", hash = "sha256:ca57635d7f13d609aa8a5b93a834e067760d96b9657bdf81e0c7444ddf41fc64"},
-    {file = "anthropic-0.3.7.tar.gz", hash = "sha256:0453f80ba8224364c8b0dae0b5088becd67277de57708d7b887ebb6c2ceb3c49"},
+    {file = "anthropic-0.3.6-py3-none-any.whl", hash = "sha256:45036a96f38598be82237c12d77d7aefe814a3bceb9da0bc6721a381c29821b1"},
+    {file = "anthropic-0.3.6.tar.gz", hash = "sha256:6e644c84ad9375dc12e07b36aab1862ca4db98eb1750e08acfe4847e62afe0dd"},
 ]
 
 [package.dependencies]
@@ -924,13 +924,13 @@ test-randomorder = ["pytest-randomly"]
 
 [[package]]
 name = "ctransformers"
-version = "0.2.17"
+version = "0.2.14"
 description = "Python bindings for the Transformer models implemented in C/C++ using GGML library."
 optional = true
 python-versions = "*"
 files = [
-    {file = "ctransformers-0.2.17-py3-none-any.whl", hash = "sha256:903c16b38f5b2750ee34b90107c3a72351d7a9a201a6987a6560bd50874e9698"},
-    {file = "ctransformers-0.2.17.tar.gz", hash = "sha256:0c9de34cc8295ba6cb940e413130e6658fac54a99cecfa6098ac04638fd9301e"},
+    {file = "ctransformers-0.2.14-py3-none-any.whl", hash = "sha256:80064fd1b724a4b6020e1f7ee6b54eb5004eb52a1c81aef734565c6573962190"},
+    {file = "ctransformers-0.2.14.tar.gz", hash = "sha256:0b58ad4da874a363ae2eb89d2cdb1956108d9c3b894cb16787001111a2075328"},
 ]
 
 [package.dependencies]
@@ -942,13 +942,13 @@ tests = ["pytest"]
 
 [[package]]
 name = "dataclasses-json"
-version = "0.5.14"
+version = "0.5.13"
 description = "Easily serialize dataclasses to and from JSON."
 optional = false
 python-versions = ">=3.7,<3.13"
 files = [
-    {file = "dataclasses_json-0.5.14-py3-none-any.whl", hash = "sha256:5ec6fed642adb1dbdb4182badb01e0861badfd8fda82e3b67f44b2d1e9d10d21"},
-    {file = "dataclasses_json-0.5.14.tar.gz", hash = "sha256:d82896a94c992ffaf689cd1fafc180164e2abdd415b8f94a7f78586af5886236"},
+    {file = "dataclasses_json-0.5.13-py3-none-any.whl", hash = "sha256:97b13447f2e0b96aa6e52509040c12d70c61df8a972f3feb5cc89a6da5e177bd"},
+    {file = "dataclasses_json-0.5.13.tar.gz", hash = "sha256:425810e1356fb6917eb7c323e3aaee0c9398fc55b5001d3532381679f727fc18"},
 ]
 
 [package.dependencies]
@@ -1028,6 +1028,7 @@ packaging = "*"
 name = "dill"
 version = "0.3.7"
 description = "serialize all of Python"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -2952,12 +2953,12 @@ test = ["coverage", "pytest", "pytest-cov"]
 
 [[package]]
 name = "llama-cpp-python"
-version = "0.1.77"
+version = "0.1.76"
 description = "A Python wrapper for llama.cpp"
 optional = true
 python-versions = ">=3.7"
 files = [
-    {file = "llama_cpp_python-0.1.77.tar.gz", hash = "sha256:76c7fae8f5386edecf38cb149bf119127e1208883f0456c6998465648d6c242e"},
+    {file = "llama_cpp_python-0.1.76.tar.gz", hash = "sha256:139c6b7b9924ff2681d4ebc419592022c8882dd128c8cbf40edef58655c3aeca"},
 ]
 
 [package.dependencies]
@@ -3441,6 +3442,7 @@ files = [
 name = "multiprocess"
 version = "0.70.15"
 description = "better multiprocessing and multithreading in Python"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -5057,13 +5059,13 @@ diagrams = ["jinja2", "railroad-diagrams"]
 
 [[package]]
 name = "pypdf"
-version = "3.14.0"
+version = "3.13.0"
 description = "A pure-python PDF library capable of splitting, merging, cropping, and transforming PDF files"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "pypdf-3.14.0-py3-none-any.whl", hash = "sha256:55a5943d9a598ff6b9d301acf8fa33303656a1ea86fd3d754c6d20d417636c6f"},
-    {file = "pypdf-3.14.0.tar.gz", hash = "sha256:1fb4edffa5d3a448f964d0ad2a31cd8e408ea5d76d45efac042a8c3448c83b0a"},
+    {file = "pypdf-3.13.0-py3-none-any.whl", hash = "sha256:b77ded83c019fc9554837182de8397d34fbc9eb634b1e6a1b87c1484b52d4f3f"},
+    {file = "pypdf-3.13.0.tar.gz", hash = "sha256:417e2ee36178e0540dba7f25121359de81e99e899f07ef4bdc4da75a3e17cabc"},
 ]
 
 [package.dependencies]
