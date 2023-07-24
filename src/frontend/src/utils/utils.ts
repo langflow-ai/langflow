@@ -208,7 +208,6 @@ export function groupByFamily(data, baseClasses, left, type, flow) {
 export function groupByFamilyCustom(data, baseClasses, left, type, flow) {
   let arrOfParentCustom: string[] = [];
   let arrOfType: { family: string; type: string; component: string }[] = [];
-  
 
   if (type === "CustomComponent") {
     const uniqueValuesSet = new Set();
@@ -222,8 +221,6 @@ export function groupByFamilyCustom(data, baseClasses, left, type, flow) {
     });
   }
 
-  
-
   if (left === false) {
     arrOfParentCustom.map((n) => {
       try {
@@ -236,13 +233,13 @@ export function groupByFamilyCustom(data, baseClasses, left, type, flow) {
         console.log(e);
       }
     });
-    
-  }
-
-  else{
+  } else {
     flow.forEach((element) => {
       Object.keys(element["data"]["node"]["template"]).map((el) => {
-        if(element["data"]["node"]["template"][el].input_types &&  element["data"]["node"]["template"][el].input_types.length > 0){
+        if (
+          element["data"]["node"]["template"][el].input_types &&
+          element["data"]["node"]["template"][el].input_types.length > 0
+        ) {
           element["data"]["node"]["template"][el].input_types.map((n) => {
             try {
               arrOfType.push({
@@ -255,52 +252,47 @@ export function groupByFamilyCustom(data, baseClasses, left, type, flow) {
             }
           });
         }
-        
       });
     });
-    
   }
 
-const groupedResult = {};
+  const groupedResult = {};
 
-arrOfType.forEach((item) => {
-  const { family, type, component } = item;
-  if (groupedResult.hasOwnProperty(family)) {
-    if (!groupedResult[family].type.includes(type)) {
-      groupedResult[family].type += `, ${type}`;
-    }
-  } else {
-    groupedResult[family] = { family, type, component };
-  }
-});
-
-
-const result = Object.values(groupedResult);
-
-if(left === false)
-{
-  let resultFiltered = [];
-  flow.forEach((element) => {
-    Object.keys(element["data"]["node"]["template"]).map((el) => {
-      if(element["data"]["node"]["template"][el].input_types &&  element["data"]["node"]["template"][el].input_types.length > 0){
-        element["data"]["node"]["template"][el].input_types.map((n) => {
-          resultFiltered.push({
-            family: "custom_components",
-            type: n,
-            component: element["data"]["node"]["display_name"],
-          })
-        });
+  arrOfType.forEach((item) => {
+    const { family, type, component } = item;
+    if (groupedResult.hasOwnProperty(family)) {
+      if (!groupedResult[family].type.includes(type)) {
+        groupedResult[family].type += `, ${type}`;
       }
-    });
+    } else {
+      groupedResult[family] = { family, type, component };
+    }
   });
-  return resultFiltered;
-}
 
-else{
-  return result;
-}
+  const result = Object.values(groupedResult);
 
-
+  if (left === false) {
+    let resultFiltered = [];
+    flow.forEach((element) => {
+      Object.keys(element["data"]["node"]["template"]).map((el) => {
+        if (
+          element["data"]["node"]["template"][el].input_types &&
+          element["data"]["node"]["template"][el].input_types.length > 0
+        ) {
+          element["data"]["node"]["template"][el].input_types.map((n) => {
+            resultFiltered.push({
+              family: "custom_components",
+              type: n,
+              component: element["data"]["node"]["display_name"],
+            });
+          });
+        }
+      });
+    });
+    return resultFiltered;
+  } else {
+    return result;
+  }
 }
 
 export function buildInputs(tabsState, id) {

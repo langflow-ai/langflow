@@ -1,4 +1,4 @@
-import { cloneDeep, flow } from "lodash";
+import { cloneDeep } from "lodash";
 import React, { useContext, useEffect, useRef, useState } from "react";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
@@ -14,6 +14,7 @@ import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { MAX_LENGTH_TO_SCROLL_TOOLTIP } from "../../../../constants/constants";
+import { PopUpContext } from "../../../../contexts/popUpContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
@@ -51,6 +52,7 @@ export default function ParameterComponent({
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   const { setTabsState, tabId, save, flows } = useContext(TabsContext);
+  const { closeEdit } = useContext(PopUpContext);
 
   // Update component position
   useEffect(() => {
@@ -100,25 +102,33 @@ export default function ParameterComponent({
     );
   }, [info]);
 
-
-
   useEffect(() => {
-    let groupedObj = groupByFamily(myData, tooltipTitle, left, data.type, flows.find((f) => f.id === tabId).data.nodes);
-    
-    if(groupedObj?.length === 0){
-      groupedObj = groupByFamilyCustom(myData, tooltipTitle, left, data.type, flows.find((f) => f.id === tabId).data.nodes)
-    } 
+    console.log(flows.find((f) => f.id === tabId).data.nodes);
 
+    let groupedObj = groupByFamily(
+      myData,
+      tooltipTitle,
+      left,
+      data.type,
+      flows.find((f) => f.id === tabId).data.nodes
+    );
 
-    if(groupedObj){
+    if (groupedObj?.length === 0) {
+      groupedObj = groupByFamilyCustom(
+        myData,
+        tooltipTitle,
+        left,
+        data.type,
+        flows.find((f) => f.id === tabId).data.nodes
+      );
+    }
+
+    if (groupedObj) {
       refNumberComponents.current = groupedObj[0]?.type?.length;
 
       refHtml.current = groupedObj.map((item, i) => {
-
-        
-
         const Icon: any = nodeIconsLucide[item.family];
-  
+
         return (
           <span
             key={getRandomKeyByssmm() + item.family + i}
@@ -141,31 +151,34 @@ export default function ParameterComponent({
               />
             </div>
             <span className="ps-2 text-xs text-foreground">
-            {item.family !== 'custom_components' ? nodeNames[item.family] : item.component ?? ""}{" "}
-            <span className="text-xs">
-              {" "}
-              {item.type === "" ? "" : " - "}
-              {item.type.split(", ").length > 2
-                ? item.type.split(", ").map((el, i) => (
-                    <React.Fragment key={el + i}>
-                      <span>
-                        {i === item.type.split(", ").length - 1
-                          ? el
-                          : (el += `, `)}
-                      </span>
-                    </React.Fragment>
-                  ))
-                : item.type}
+              {item.family !== "custom_components"
+                ? nodeNames[item.family]
+                : item.component ?? ""}{" "}
+              <span className="text-xs">
+                {" "}
+                {item.type === "" ? "" : " - "}
+                {item.type.split(", ").length > 2
+                  ? item.type.split(", ").map((el, i) => (
+                      <React.Fragment key={el + i}>
+                        <span>
+                          {i === item.type.split(", ").length - 1
+                            ? el
+                            : (el += `, `)}
+                        </span>
+                      </React.Fragment>
+                    ))
+                  : item.type}
+              </span>
             </span>
-          </span>
-
           </span>
         );
       });
     }
-
-    
-  }, [tooltipTitle, flows.find((f) => f.id === tabId).data.nodes]);
+  }, [
+    tooltipTitle,
+    flows.find((f) => f.id === tabId).data.nodes.length,
+    closeEdit,
+  ]);
   return (
     <div
       ref={ref}
