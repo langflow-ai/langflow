@@ -57,7 +57,7 @@ export default function ChatMessage({
           <div className="form-modal-chat-text">
             {hidden && chat.thought && chat.thought !== "" && (
               <div
-                onClick={() => setHidden((prev) => !prev)}
+                onClick={(): void => setHidden((prev) => !prev)}
                 className="form-modal-chat-icon-div"
               >
                 <IconComponent

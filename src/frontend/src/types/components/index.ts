@@ -477,3 +477,14 @@ export type editNodeToggleType = {
   show: boolean;
   type: string;
 };
+
+export interface Props {
+  language: string;
+  value: string;
+};
+
+export type fileCardPropsType = {
+  fileName: string;
+  content: string;
+  fileType: string;
+};

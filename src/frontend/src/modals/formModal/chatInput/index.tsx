@@ -27,7 +27,7 @@ export default function ChatInput({
   return (
     <div className="relative">
       <textarea
-        onKeyDown={(event) => {
+        onKeyDown={(event): void => {
           if (event.key === "Enter" && !lockChat && !event.shiftKey) {
             sendMessage();
           }
@@ -46,7 +46,7 @@ export default function ChatInput({
           }`,
         }}
         value={lockChat ? "Thinking..." : chatValue}
-        onChange={(e) => {
+        onChange={(e): void => {
           setChatValue(e.target.value);
         }}
         className={classNames(
@@ -75,7 +75,7 @@ export default function ChatInput({
               : "bg-emerald-600 text-background"
           )}
           disabled={lockChat}
-          onClick={() => sendMessage()}
+          onClick={(): void => sendMessage()}
         >
           {lockChat ? (
             <IconComponent

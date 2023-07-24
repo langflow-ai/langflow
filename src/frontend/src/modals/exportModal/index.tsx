@@ -26,7 +26,7 @@ export default function ExportModal(): JSX.Element {
   const { flows, tabId, updateFlow, downloadFlow, saveFlow } =
     useContext(TabsContext);
   const [isMaxLength, setIsMaxLength] = useState(false);
-  function setModalOpen(x: boolean) {
+  function setModalOpen(x: boolean): void {
     setOpen(x);
     if (x === false) {
       setTimeout(() => {
@@ -67,7 +67,7 @@ export default function ExportModal(): JSX.Element {
         <div className="flex items-center space-x-2">
           <Checkbox
             id="terms"
-            onCheckedChange={(event: boolean) => {
+            onCheckedChange={(event: boolean): void => {
               setChecked(event);
             }}
           />
