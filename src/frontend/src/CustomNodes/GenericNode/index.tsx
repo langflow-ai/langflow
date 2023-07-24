@@ -1,8 +1,8 @@
-import { Zap } from "lucide-react";
 import { useContext, useEffect, useRef, useState } from "react";
 import { NodeToolbar } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import Tooltip from "../../components/TooltipComponent";
+import IconComponent from "../../components/genericIconComponent";
 import { useSSE } from "../../contexts/SSEContext";
 import { alertContext } from "../../contexts/alertContext";
 import { PopUpContext } from "../../contexts/popUpContext";
@@ -10,12 +10,8 @@ import { typesContext } from "../../contexts/typesContext";
 import NodeModal from "../../modals/NodeModal";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { NodeDataType } from "../../types/flow";
-import {
-  classNames,
-  nodeColors,
-  nodeIconsLucide,
-  toTitleCase,
-} from "../../utils";
+import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
+import { classNames, toTitleCase } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
 
 export default function GenericNode({
@@ -33,16 +29,11 @@ export default function GenericNode({
   // any to avoid type conflict
   const Icon: any =
     nodeIconsLucide[data.type] || nodeIconsLucide[types[data.type]];
+  const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [validationStatus, setValidationStatus] = useState(null);
   // State for outline color
   const { sseData, isBuilding } = useSSE();
   const refHtml = useRef(null);
-
-  // useEffect(() => {
-  //   if (reactFlowInstance) {
-  //     setParams(Object.values(reactFlowInstance.toObject()));
-  //   }
-  // }, [save]);
 
   // New useEffect to watch for changes in sseData and update validation status
   useEffect(() => {
@@ -86,12 +77,10 @@ export default function GenericNode({
       >
         <div className="generic-node-div-title">
           <div className="generic-node-title-arrangement">
-            <Icon
-              strokeWidth={1.5}
+            <IconComponent
+              name={name}
               className="generic-node-icon"
-              style={{
-                color: nodeColors[types[data.type]] ?? nodeColors.unknown,
-              }}
+              iconColor={`${nodeColors[types[data.type]]}`}
             />
             <div className="generic-node-tooltip-div">
               <ShadTooltip content={data.node.display_name}>
@@ -119,9 +108,9 @@ export default function GenericNode({
                   ) : !validationStatus ? (
                     <span className="flex">
                       Build{" "}
-                      <Zap
+                      <IconComponent
+                        name="Zap"
                         className="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1"
-                        strokeWidth={1.5}
                       />{" "}
                       flow to validate status.
                     </span>
@@ -175,25 +164,6 @@ export default function GenericNode({
               .filter((t) => t.charAt(0) !== "_")
               .map((t: string, idx) => (
                 <div key={idx}>
-                  {/* {idx === 0 ? (
-                                <div
-                                    className={classNames(
-                                        "px-5 py-2 mt-2 text-center",
-                                        Object.keys(data.node.template).filter(
-                                            (key) =>
-                                                !key.startsWith("_") &&
-                                                data.node.template[key].show &&
-                                                !data.node.template[key].advanced
-                                        ).length === 0
-                                            ? "hidden"
-                                            : ""
-                                    )}
-                                >
-                                    Inputs
-                                </div>
-                            ) : (
-                                <></>
-                            )} */}
                   {data.node.template[t].show &&
                   !data.node.template[t].advanced ? (
                     <ParameterComponent
@@ -242,9 +212,6 @@ export default function GenericNode({
             >
               {" "}
             </div>
-            {/* <div className="px-5 py-2 mt-2 text-center">
-                  Output
-              </div> */}
             <ParameterComponent
               data={data}
               color={nodeColors[types[data.type]] ?? nodeColors.unknown}

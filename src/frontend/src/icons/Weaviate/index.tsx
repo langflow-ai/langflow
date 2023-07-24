@@ -1,9 +1,9 @@
 import React, { forwardRef } from "react";
-import { ReactComponent as WeaviateSVG } from "./weaviate.svg";
+import SvgWeaviate from "./Weaviate";
 
 export const WeaviateIcon = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<{}>
 >((props, ref) => {
-  return <WeaviateSVG ref={ref} {...props} />;
+  return <SvgWeaviate ref={ref} {...props} />;
 });

@@ -1,9 +1,9 @@
 import { Listbox, Transition } from "@headlessui/react";
-import { Check, ChevronsUpDown } from "lucide-react";
 import { Fragment, useContext, useEffect, useState } from "react";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { DropDownComponentType } from "../../types/components";
-import { classNames } from "../../utils";
+import { classNames } from "../../utils/utils";
+import IconComponent from "../genericIconComponent";
 
 export default function Dropdown({
   value,
@@ -46,7 +46,8 @@ export default function Dropdown({
                   {internalValue}
                 </span>
                 <span className={"dropdown-component-arrow"}>
-                  <ChevronsUpDown
+                  <IconComponent
+                    name="ChevronsUpDown"
                     className="dropdown-component-arrow-color"
                     aria-hidden="true"
                   />
@@ -99,7 +100,8 @@ export default function Dropdown({
                                 "dropdown-component-choosal"
                               )}
                             >
-                              <Check
+                              <IconComponent
+                                name="Check"
                                 className={
                                   active
                                     ? "dropdown-component-check-icon"

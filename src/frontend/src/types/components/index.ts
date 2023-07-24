@@ -162,3 +162,13 @@ export type TextHighlightType = {
 export interface IVarHighlightType {
   name: string;
 }
+
+export type IconComponentProps = {
+  name: string;
+  className: string;
+  iconColor?: string;
+};
+
+export interface languageMap {
+  [key: string]: string | undefined;
+}

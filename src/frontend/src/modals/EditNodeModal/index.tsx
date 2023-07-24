@@ -1,8 +1,8 @@
-import { Variable } from "lucide-react";
 import { useContext, useRef, useState } from "react";
 import CodeAreaComponent from "../../components/codeAreaComponent";
 import Dropdown from "../../components/dropdownComponent";
 import FloatComponent from "../../components/floatComponent";
+import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
 import InputFileComponent from "../../components/inputFileComponent";
 import InputListComponent from "../../components/inputListComponent";
@@ -29,11 +29,12 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
+import { limitScrollFieldsModal } from "../../constants/constants";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
-import { classNames, limitScrollFieldsModal } from "../../utils";
+import { classNames } from "../../utils/utils";
 
 export default function EditNodeModal({ data }: { data: NodeDataType }) {
   const [open, setOpen] = useState(true);
@@ -109,7 +110,10 @@ export default function EditNodeModal({ data }: { data: NodeDataType }) {
             <div>
               {data.node?.description}
               <div className="flex pt-3">
-                <Variable className="edit-node-modal-variable "></Variable>
+                <IconComponent
+                  name="Variable"
+                  className="edit-node-modal-variable "
+                />
                 <span className="edit-node-modal-span">Parameters</span>
               </div>
             </div>
