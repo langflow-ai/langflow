@@ -243,7 +243,7 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply disabled:cursor-not-allowed disabled:opacity-50 focus:placeholder-transparent focus:ring-ring focus:border-ring bg-background block text-left border-border form-input px-3 placeholder:text-muted-foreground rounded-md shadow-sm sm:text-sm w-full truncate
   }
   
-/* The same as input-primary but no-truncate*/
+/* The same as input-primary but no-truncate */
   .textarea-primary{
     @apply disabled:cursor-not-allowed disabled:opacity-50 focus:placeholder-transparent focus:ring-ring focus:border-ring bg-background block text-left border-border form-input px-3 placeholder:text-muted-foreground rounded-md shadow-sm sm:text-sm w-full
   }
