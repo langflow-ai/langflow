@@ -103,6 +103,8 @@ export default function ParameterComponent({
 
 
   useEffect(() => {
+    console.log("flows.find((f) => f.id === tabId).data.nodes", flows.find((f) => f.id === tabId).data.nodes);
+    
     let groupedObj = groupByFamily(myData, tooltipTitle, left, data.type, flows.find((f) => f.id === tabId).data.nodes);
     
     if(groupedObj?.length === 0){
@@ -114,9 +116,6 @@ export default function ParameterComponent({
       refNumberComponents.current = groupedObj[0]?.type?.length;
 
       refHtml.current = groupedObj.map((item, i) => {
-
-        
-
         const Icon: any = nodeIconsLucide[item.family];
   
         return (

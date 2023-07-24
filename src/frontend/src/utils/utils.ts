@@ -221,9 +221,7 @@ export function groupByFamilyCustom(data, baseClasses, left, type, flow) {
       });
     });
   }
-
   
-
   if (left === false) {
     arrOfParentCustom.map((n) => {
       try {
@@ -266,40 +264,14 @@ const groupedResult = {};
 arrOfType.forEach((item) => {
   const { family, type, component } = item;
   if (groupedResult.hasOwnProperty(family)) {
-    if (!groupedResult[family].type.includes(type)) {
-      groupedResult[family].type += `, ${type}`;
-    }
+    groupedResult[family].type += `, ${type}`;
   } else {
     groupedResult[family] = { family, type, component };
   }
 });
 
-
 const result = Object.values(groupedResult);
-
-if(left === false)
-{
-  let resultFiltered = [];
-  flow.forEach((element) => {
-    Object.keys(element["data"]["node"]["template"]).map((el) => {
-      if(element["data"]["node"]["template"][el].input_types &&  element["data"]["node"]["template"][el].input_types.length > 0){
-        element["data"]["node"]["template"][el].input_types.map((n) => {
-          resultFiltered.push({
-            family: "custom_components",
-            type: n,
-            component: element["data"]["node"]["display_name"],
-          })
-        });
-      }
-    });
-  });
-  return resultFiltered;
-}
-
-else{
-  return result;
-}
-
+  return result
 
 }
 
