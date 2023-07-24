@@ -7,7 +7,7 @@ def task(ct_type, use_covalent=False):
         @wraps(function)
         def wrapper(*args, **kwargs):
             # Check for the presence of the environment variable
-            if ct_type:
+            if ct_type in ["electron", "lattice"] and use_covalent:
                 # Apply the covalent decorator if the variable is present
                 decorator = ct.electron if ct_type == "electron" else ct.lattice
                 decorated_function = decorator(function)
