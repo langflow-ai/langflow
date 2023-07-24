@@ -1,8 +1,7 @@
-import { useContext, useEffect, useState } from "react";
+import { useEffect } from "react";
 import { InputListComponentType } from "../../types/components";
 
 import _ from "lodash";
-import { PopUpContext } from "../../contexts/popUpContext";
 import IconComponent from "../genericIconComponent";
 
 export default function InputListComponent({
@@ -11,21 +10,11 @@ export default function InputListComponent({
   disabled,
   editNode = false,
 }: InputListComponentType) {
-  const [inputList, setInputList] = useState(value ?? [""]);
-  const { closeEdit } = useContext(PopUpContext);
-
-  useEffect(() => {
-    if (value) {
-      setInputList(value);
-    }
-  }, [closeEdit]);
-
   useEffect(() => {
     if (disabled) {
-      setInputList([""]);
       onChange([""]);
     }
-  }, [disabled, onChange]);
+  }, [disabled]);
 
   return (
     <div
@@ -34,7 +23,7 @@ export default function InputListComponent({
         "flex flex-col gap-3"
       }
     >
-      {inputList.map((i, idx) => {
+      {value.map((i, idx) => {
         return (
           <div key={idx} className="flex w-full gap-3">
             <input
@@ -48,23 +37,17 @@ export default function InputListComponent({
               }
               placeholder="Type something..."
               onChange={(e) => {
-                setInputList((old) => {
-                  let newInputList = _.cloneDeep(inputList);
-                  newInputList[idx] = e.target.value;
-                  return newInputList;
-                });
-                onChange(inputList);
+                let newInputList = _.cloneDeep(value);
+                newInputList[idx] = e.target.value;
+                onChange(newInputList);
               }}
             />
-            {idx === inputList.length - 1 ? (
+            {idx === value.length - 1 ? (
               <button
                 onClick={() => {
-                  setInputList((old) => {
-                    let newInputList = _.cloneDeep(old);
-                    newInputList.push("");
-                    return newInputList;
-                  });
-                  onChange(inputList);
+                  let newInputList = _.cloneDeep(value);
+                  newInputList.push("");
+                  onChange(newInputList);
                 }}
               >
                 <IconComponent
@@ -75,12 +58,9 @@ export default function InputListComponent({
             ) : (
               <button
                 onClick={() => {
-                  setInputList((old) => {
-                    let newInputList = _.cloneDeep(old);
-                    newInputList.splice(idx, 1);
-                    return newInputList;
-                  });
-                  onChange(inputList);
+                  let newInputList = _.cloneDeep(value);
+                  newInputList.splice(idx, 1);
+                  onChange(newInputList);
                 }}
               >
                 <IconComponent

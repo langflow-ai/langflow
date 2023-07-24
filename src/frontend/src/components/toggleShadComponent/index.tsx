@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { ToggleComponentType } from "../../types/components";
 import { Switch } from "../ui/switch";
 
@@ -27,12 +26,6 @@ export default function ToggleShadComponent({
       scaleY = 1;
   }
 
-  const [myValue, setMyValue] = useState(enabled);
-
-  useEffect(() => {
-    setMyValue(enabled);
-  }, [enabled]);
-
   return (
     <div className={disabled ? "pointer-events-none cursor-not-allowed " : ""}>
       <Switch
@@ -41,10 +34,9 @@ export default function ToggleShadComponent({
         }}
         disabled={disabled}
         className=""
-        checked={myValue}
+        checked={enabled}
         onCheckedChange={(x: boolean) => {
           setEnabled(x);
-          setMyValue(x);
         }}
       ></Switch>
     </div>
