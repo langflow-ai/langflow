@@ -130,8 +130,8 @@ def initialize_pinecone(class_object: Type[Pinecone], params: dict):
 
     import pinecone  # type: ignore
 
-    pinecone_api_key = params.get("pinecone_api_key")
-    pinecone_env = params.get("pinecone_env")
+    pinecone_api_key = params.pop("pinecone_api_key", None)
+    pinecone_env = params.pop("pinecone_env", None)
 
     if pinecone_api_key is None or pinecone_env is None:
         if os.getenv("PINECONE_API_KEY") is not None:
@@ -141,7 +141,8 @@ def initialize_pinecone(class_object: Type[Pinecone], params: dict):
 
     if pinecone_api_key is None or pinecone_env is None:
         raise ValueError(
-            "Pinecone API key and environment must be provided in the params"
+            "Pinecone API key and environment must be provided through the component params"
+            " or through environment variables"
         )
 
     # initialize pinecone
