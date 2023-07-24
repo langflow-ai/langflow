@@ -5,6 +5,7 @@ import { IVarHighlightType } from "../types/components";
 import { FlowType } from "../types/flow";
 import { TabsState } from "../types/tabs";
 import { buildTweaks } from "./reactflowUtils";
+import { nodeNames } from "./styleUtils";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -88,12 +89,13 @@ export function checkUpperWords(str: string) {
 export const isWrappedWithClass = (event: any, className: string | undefined) =>
   event.target.closest(`.${className}`);
 
-export function groupByFamily(data, baseClasses, left, type) {
+export function groupByFamily(data, baseClasses, left, type, flow) {
   let parentOutput: string;
   let arrOfParent: string[] = [];
   let arrOfType: { family: string; type: string; component: string }[] = [];
   let arrOfLength: { length: number; type: string }[] = [];
   let lastType = "";
+
   Object.keys(data).forEach((d) => {
     Object.keys(data[d]).forEach((n) => {
       try {
@@ -200,6 +202,96 @@ export function groupByFamily(data, baseClasses, left, type) {
       }
     });
     return groupedArray;
+  }
+}
+
+export function groupByFamilyCustom(data, baseClasses, left, type, flow) {
+  let arrOfParentCustom: string[] = [];
+  let arrOfType: { family: string; type: string; component: string }[] = [];
+
+  if (type === "CustomComponent") {
+    const uniqueValuesSet = new Set();
+    flow.forEach((element) => {
+      element["data"]["node"]["base_classes"].forEach((el) => {
+        if (!uniqueValuesSet.has(el)) {
+          arrOfParentCustom.push(el);
+          uniqueValuesSet.add(el);
+        }
+      });
+    });
+  }
+
+  if (left === false) {
+    arrOfParentCustom.map((n) => {
+      try {
+        arrOfType.push({
+          family: "custom_components",
+          type: n,
+          component: nodeNames["custom_components"],
+        });
+      } catch (e) {
+        console.log(e);
+      }
+    });
+  } else {
+    flow.forEach((element) => {
+      Object.keys(element["data"]["node"]["template"]).map((el) => {
+        if (
+          element["data"]["node"]["template"][el].input_types &&
+          element["data"]["node"]["template"][el].input_types.length > 0
+        ) {
+          element["data"]["node"]["template"][el].input_types.map((n) => {
+            try {
+              arrOfType.push({
+                family: "custom_components",
+                type: n,
+                component: nodeNames["custom_components"],
+              });
+            } catch (e) {
+              console.log(e);
+            }
+          });
+        }
+      });
+    });
+  }
+
+  const groupedResult = {};
+
+  arrOfType.forEach((item) => {
+    const { family, type, component } = item;
+    if (groupedResult.hasOwnProperty(family)) {
+      if (!groupedResult[family].type.includes(type)) {
+        groupedResult[family].type += `, ${type}`;
+      }
+    } else {
+      groupedResult[family] = { family, type, component };
+    }
+  });
+
+  const result = Object.values(groupedResult);
+
+  if (left === false) {
+    let resultFiltered = [];
+    flow.forEach((element) => {
+      Object.keys(element["data"]["node"]["template"]).map((el) => {
+        if (
+          element["data"]["node"]["template"][el].input_types &&
+          element["data"]["node"]["template"][el].input_types.length > 0
+        ) {
+          element["data"]["node"]["template"][el].input_types.map((n) => {
+            resultFiltered.push({
+              family: "custom_components",
+              type: n,
+              component: element["data"]["node"]["display_name"],
+            });
+          });
+        }
+      });
+    });
+    return resultFiltered;
+  } else {
+    return result;
   }
 }
 

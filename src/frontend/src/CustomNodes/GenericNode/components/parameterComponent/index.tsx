@@ -14,6 +14,7 @@ import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { MAX_LENGTH_TO_SCROLL_TOOLTIP } from "../../../../constants/constants";
+import { PopUpContext } from "../../../../contexts/popUpContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
@@ -27,6 +28,7 @@ import {
   classNames,
   getRandomKeyByssmm,
   groupByFamily,
+  groupByFamilyCustom,
 } from "../../../../utils/utils";
 
 export default function ParameterComponent({
@@ -49,7 +51,8 @@ export default function ParameterComponent({
   const infoHtml = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
-  const { setTabsState, tabId, save } = useContext(TabsContext);
+  const { setTabsState, tabId, save, flows } = useContext(TabsContext);
+  const { closeEdit } = useContext(PopUpContext);
 
   // Update component position
   useEffect(() => {
@@ -100,56 +103,80 @@ export default function ParameterComponent({
   }, [info]);
 
   useEffect(() => {
-    const groupedObj = groupByFamily(myData, tooltipTitle, left, data.type);
+    let groupedObj = groupByFamily(
+      myData,
+      tooltipTitle,
+      left,
+      data.type,
+      flows.find((f) => f.id === tabId).data.nodes
+    );
 
-    refNumberComponents.current = groupedObj[0]?.type?.length;
+    if (groupedObj?.length === 0) {
+      groupedObj = groupByFamilyCustom(
+        myData,
+        tooltipTitle,
+        left,
+        data.type,
+        flows.find((f) => f.id === tabId).data.nodes
+      );
+    }
 
-    refHtml.current = groupedObj.map((item, i) => {
-      const Icon: any = nodeIconsLucide[item.family];
+    if (groupedObj) {
+      refNumberComponents.current = groupedObj[0]?.type?.length;
 
-      return (
-        <span
-          key={getRandomKeyByssmm() + item.family + i}
-          className={classNames(
-            i > 0 ? "mt-2 flex items-center" : "flex items-center"
-          )}
-        >
-          <div
-            className="h-5 w-5"
-            style={{
-              color: nodeColors[item.family],
-            }}
+      refHtml.current = groupedObj.map((item, i) => {
+        const Icon: any = nodeIconsLucide[item.family];
+
+        return (
+          <span
+            key={getRandomKeyByssmm() + item.family + i}
+            className={classNames(
+              i > 0 ? "mt-2 flex items-center" : "flex items-center"
+            )}
           >
-            <Icon
+            <div
               className="h-5 w-5"
-              strokeWidth={1.5}
               style={{
-                color: nodeColors[item.family] ?? nodeColors.unknown,
+                color: nodeColors[item.family],
               }}
-            />
-          </div>
-          <span className="ps-2 text-xs text-foreground">
-            {nodeNames[item.family] ?? ""}{" "}
-            <span className="text-xs">
-              {" "}
-              {item.type === "" ? "" : " - "}
-              {item.type.split(", ").length > 2
-                ? item.type.split(", ").map((el, i) => (
-                    <React.Fragment key={el + i}>
-                      <span>
-                        {i === item.type.split(", ").length - 1
-                          ? el
-                          : (el += `, `)}
-                      </span>
-                    </React.Fragment>
-                  ))
-                : item.type}
+            >
+              <Icon
+                className="h-5 w-5"
+                strokeWidth={1.5}
+                style={{
+                  color: nodeColors[item.family] ?? nodeColors.unknown,
+                }}
+              />
+            </div>
+            <span className="ps-2 text-xs text-foreground">
+              {item.family !== "custom_components"
+                ? nodeNames[item.family]
+                : item.component ?? ""}{" "}
+              <span className="text-xs">
+                {" "}
+                {item.type === "" ? "" : " - "}
+                {item.type.split(", ").length > 2
+                  ? item.type.split(", ").map((el, i) => (
+                      <React.Fragment key={el + i}>
+                        <span>
+                          {i === item.type.split(", ").length - 1
+                            ? el
+                            : (el += `, `)}
+                        </span>
+                      </React.Fragment>
+                    ))
+                  : item.type}
+              </span>
             </span>
           </span>
-        </span>
-      );
-    });
-  }, [tooltipTitle]);
+        );
+      });
+    }
+  }, [
+    tooltipTitle,
+    flows.find((f) => f.id === tabId).data.nodes.length,
+    closeEdit,
+  ]);
   return (
     <div
       ref={ref}
