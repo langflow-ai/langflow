@@ -4,6 +4,7 @@ import App from "./App";
 import ContextWrapper from "./contexts";
 import reportWebVitals from "./reportWebVitals";
 
+import { ApiInterceptor } from "./controllers/API/api";
 import "./index.css";
 
 const root = ReactDOM.createRoot(
@@ -13,6 +14,7 @@ root.render(
   <ContextWrapper>
     <BrowserRouter>
       <App />
+      <ApiInterceptor />
     </BrowserRouter>
   </ContextWrapper>
 );
