@@ -176,6 +176,8 @@ class Vertex:
         for node in nodes:
             built = node.build()
             if isinstance(built, list):
+                if key not in self.params:
+                    self.params[key] = []
                 self.params[key].extend(built)
             else:
                 self.params[key].append(built)

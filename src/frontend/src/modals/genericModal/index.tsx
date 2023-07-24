@@ -97,10 +97,8 @@ export default function GenericModal({
   }, [inputValue, type]);
 
   useEffect(() => {
-    setInputValue(value)
-  }, [value])
-
-  
+    setInputValue(value);
+  }, [value]);
 
   const coloredContent = (inputValue || "")
     .replace(/</g, "&lt;")
