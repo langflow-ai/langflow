@@ -41,7 +41,7 @@ export default function InputFileComponent({
     setMyValue(value);
   }, [value]);
 
-  const handleButtonClick = () => {
+  const handleButtonClick = (): void => {
     // Create a file input element
     const input = document.createElement("input");
     input.type = "file";
@@ -49,7 +49,7 @@ export default function InputFileComponent({
     input.style.display = "none"; // Hidden from view
     input.multiple = false; // Allow only one file selection
 
-    input.onchange = (e: Event) => {
+    input.onchange = (e: Event): void => {
       setLoading(true);
 
       // Get the selected file

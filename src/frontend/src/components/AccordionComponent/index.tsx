@@ -17,7 +17,7 @@ export default function AccordionComponent({
     open.length === 0 ? "" : getOpenAccordion()
   );
 
-  function getOpenAccordion() {
+  function getOpenAccordion(): string {
     let value = "";
     open.forEach((el) => {
       if (el == trigger) {
@@ -28,7 +28,7 @@ export default function AccordionComponent({
     return value;
   }
 
-  function handleClick() {
+  function handleClick(): void {
     value === "" ? setValue(keyValue) : setValue("");
   }
 

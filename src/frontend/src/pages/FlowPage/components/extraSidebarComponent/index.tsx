@@ -30,7 +30,7 @@ export default function ExtraSidebar(): JSX.Element {
   function onDragStart(
     event: React.DragEvent<any>,
     data: { type: string; node?: APIClassType }
-  ) {
+  ): void {
     //start drag event
     var crt = event.currentTarget.cloneNode(true);
     crt.style.position = "absolute";
@@ -65,7 +65,7 @@ export default function ExtraSidebar(): JSX.Element {
         <ShadTooltip content="Import" side="top">
           <button
             className="extra-side-bar-buttons"
-            onClick={() => {
+            onClick={(): void => {
               uploadFlow();
             }}
           >
@@ -76,7 +76,7 @@ export default function ExtraSidebar(): JSX.Element {
         <ShadTooltip content="Export" side="top">
           <button
             className={classNames("extra-side-bar-buttons")}
-            onClick={(event) => {
+            onClick={(event): void => {
               openPopUp(<ExportModal />);
             }}
           >
@@ -86,7 +86,7 @@ export default function ExtraSidebar(): JSX.Element {
         <ShadTooltip content="Code" side="top">
           <button
             className={classNames("extra-side-bar-buttons")}
-            onClick={(event) => {
+            onClick={(event): void => {
               openPopUp(<ApiModal flow={flows.find((f) => f.id === tabId)} />);
             }}
           >
@@ -97,7 +97,7 @@ export default function ExtraSidebar(): JSX.Element {
         <ShadTooltip content="Save" side="top">
           <button
             className="extra-side-bar-buttons"
-            onClick={(event) => {
+            onClick={(event): void => {
               saveFlow(flows.find((f) => f.id === tabId));
               setSuccessData({ title: "Changes saved successfully" });
             }}

@@ -35,7 +35,7 @@ export type sendAllProps = {
   name: string;
   description: string;
   viewport: Viewport;
-  inputs: any;
+  inputs: { text: string; };
 
   chatHistory: { message: string | object; isSend: boolean }[];
 };

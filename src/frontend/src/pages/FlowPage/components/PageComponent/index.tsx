@@ -93,7 +93,7 @@ export default function Page({ flow }: { flow: FlowType }): JSX.Element {
         event.preventDefault();
       }
     };
-    const handleMouseMove = (event) => {
+    const handleMouseMove = (event: MouseEvent) => {
       setPosition({ x: event.clientX, y: event.clientY });
     };
 

@@ -13,7 +13,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
   setName,
   setDescription,
   updateFlow,
-}): JSX.Element => {
+}: InputProps): JSX.Element => {
   const [isMaxLength, setIsMaxLength] = useState(false);
 
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
