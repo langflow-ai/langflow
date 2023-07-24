@@ -324,7 +324,8 @@ export default function Page({ flow }: { flow: FlowType }): JSX.Element {
     [reactFlowInstance, setEdges]
   );
 
-  const onEdgeUpdateEnd = useCallback((_, edge) => {
+  // IS THIS RIGHT?
+  const onEdgeUpdateEnd = useCallback((_, edge: { id: string }): void => {
     if (!edgeUpdateSuccessful.current) {
       setEdges((eds) => eds.filter((e) => e.id !== edge.id));
     }
@@ -351,7 +352,7 @@ export default function Page({ flow }: { flow: FlowType }): JSX.Element {
     }
   }, [selectionEnded, lastSelection]);
 
-  const onSelectionChange = useCallback((flow) => {
+  const onSelectionChange = useCallback((flow): void => {
     setLastSelection(flow);
   }, []);
 
