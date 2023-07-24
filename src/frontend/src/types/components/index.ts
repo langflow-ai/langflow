@@ -466,13 +466,13 @@ export type chatInputType = {
 };
 
 export type editNodeToggleType = {
-  advanced: boolean;
-  info: string;
+  advanced?: boolean;
+  info?: string;
   list: boolean;
-  multiline: boolean;
-  name: string;
-  password: boolean;
-  placeholder: string;
+  multiline?: boolean;
+  name?: string;
+  password?: boolean;
+  placeholder?: string;
   required: boolean;
   show: boolean;
   type: string;
