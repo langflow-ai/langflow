@@ -1,4 +1,4 @@
-import { cloneDeep } from "lodash";
+import { cloneDeep, flow } from "lodash";
 import React, { useContext, useEffect, useRef, useState } from "react";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
@@ -49,7 +49,7 @@ export default function ParameterComponent({
   const infoHtml = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
-  const { setTabsState, tabId, save } = useContext(TabsContext);
+  const { setTabsState, tabId, save, flows } = useContext(TabsContext);
 
   // Update component position
   useEffect(() => {
@@ -100,6 +100,15 @@ export default function ParameterComponent({
   }, [info]);
 
   useEffect(() => {
+
+
+    console.log("mydata", myData);
+    console.log("tooltipTitle", tooltipTitle);
+    console.log("left", left);
+    console.log("data.type", data.type);
+    console.log("flows", flows);
+    
+
     const groupedObj = groupByFamily(myData, tooltipTitle, left, data.type);
 
     refNumberComponents.current = groupedObj[0]?.type?.length;
