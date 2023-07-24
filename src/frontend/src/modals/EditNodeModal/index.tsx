@@ -78,7 +78,7 @@ export default function EditNodeModal({
     }
   }
 
-  function changeAdvanced(node) {
+  function changeAdvanced(node: editNodeToggleType): void {
     Object.keys(data.node.template).map((n, i) => {
       if (n === node.name) {
         data.node.template[n].advanced = !data.node.template[n].advanced;
@@ -88,8 +88,7 @@ export default function EditNodeModal({
     setNodeValue(!nodeValue);
   }
 
-  const handleOnNewValue = (newValue, name) => {
-    console.log({ newValue, name })
+  const handleOnNewValue = (newValue: string | string[] | boolean, name: string): void => {
     data.node.template[name].value = newValue;
     // Set state to pending
     setTabsState((prev) => {
@@ -183,6 +182,7 @@ export default function EditNodeModal({
                                         : data.node.template[n].value
                                     }
                                     onChange={(t: string[]) => {
+                                      console.log(t)
                                       handleOnNewValue(t, n);
                                     }}
                                   />
