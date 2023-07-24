@@ -1,3 +1,4 @@
+import { cloneDeep } from "lodash";
 import { useContext, useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
@@ -54,6 +55,7 @@ export default function CodeTabsComponent({
   };
 }) {
   const [isCopied, setIsCopied] = useState<Boolean>(false);
+  const [data, setData] = useState(flow["data"]["nodes"]);
   const [openAccordion, setOpenAccordion] = useState([]);
   const { dark } = useContext(darkContext);
 
@@ -185,7 +187,7 @@ export default function CodeTabsComponent({
                       : "overflow-hidden"
                   )}
                 >
-                  {flow["data"]["nodes"].map((t: any, index) => (
+                  {data.map((t: any, index) => (
                     <div className="px-3" key={index}>
                       {tweaks.tweaksList.current.includes(t["data"]["id"]) && (
                         <AccordionComponent
@@ -255,6 +257,16 @@ export default function CodeTabsComponent({
                                                           ].value
                                                     }
                                                     onChange={(k) => {
+                                                      setData((old) => {
+                                                        let newInputList =
+                                                          cloneDeep(old);
+                                                        newInputList[
+                                                          index
+                                                        ].data.node.template[
+                                                          n
+                                                        ].value = k;
+                                                        return newInputList;
+                                                      });
                                                       tweaks.buildTweakObject(
                                                         t["data"]["id"],
                                                         k,
@@ -274,16 +286,29 @@ export default function CodeTabsComponent({
                                                       <TextAreaComponent
                                                         disabled={false}
                                                         editNode={true}
-                                                        value={tweaks.getValue(
+                                                        value={
+                                                          !t.data.node.template[
+                                                            n
+                                                          ].value ||
                                                           t.data.node.template[
                                                             n
-                                                          ].value,
-                                                          t.data,
-                                                          t.data.node.template[
-                                                            n
-                                                          ]
-                                                        )}
+                                                          ].value === ""
+                                                            ? ""
+                                                            : t.data.node
+                                                                .template[n]
+                                                                .value
+                                                        }
                                                         onChange={(k) => {
+                                                          setData((old) => {
+                                                            let newInputList =
+                                                              cloneDeep(old);
+                                                            newInputList[
+                                                              index
+                                                            ].data.node.template[
+                                                              n
+                                                            ].value = k;
+                                                            return newInputList;
+                                                          });
                                                           tweaks.buildTweakObject(
                                                             t["data"]["id"],
                                                             k,
@@ -302,13 +327,27 @@ export default function CodeTabsComponent({
                                                       t.data.node.template[n]
                                                         .password ?? false
                                                     }
-                                                    value={tweaks.getValue(
+                                                    value={
+                                                      !t.data.node.template[n]
+                                                        .value ||
                                                       t.data.node.template[n]
-                                                        .value,
-                                                      t.data,
-                                                      t.data.node.template[n]
-                                                    )}
+                                                        .value === ""
+                                                        ? ""
+                                                        : t.data.node.template[
+                                                            n
+                                                          ].value
+                                                    }
                                                     onChange={(k) => {
+                                                      setData((old) => {
+                                                        let newInputList =
+                                                          cloneDeep(old);
+                                                        newInputList[
+                                                          index
+                                                        ].data.node.template[
+                                                          n
+                                                        ].value = k;
+                                                        return newInputList;
+                                                      });
                                                       tweaks.buildTweakObject(
                                                         t["data"]["id"],
                                                         k,
@@ -328,9 +367,16 @@ export default function CodeTabsComponent({
                                                       .value
                                                   }
                                                   setEnabled={(e) => {
-                                                    t.data.node.template[
-                                                      n
-                                                    ].value = e;
+                                                    setData((old) => {
+                                                      let newInputList =
+                                                        cloneDeep(old);
+                                                      newInputList[
+                                                        index
+                                                      ].data.node.template[
+                                                        n
+                                                      ].value = e;
+                                                      return newInputList;
+                                                    });
                                                     tweaks.buildTweakObject(
                                                       t["data"]["id"],
                                                       e,
@@ -345,12 +391,13 @@ export default function CodeTabsComponent({
                                               "file" ? (
                                               <ShadTooltip
                                                 content={tweaks.buildContent(
-                                                  tweaks.getValue(
+                                                  !t.data.node.template[n]
+                                                    .value ||
                                                     t.data.node.template[n]
-                                                      .value,
-                                                    t.data,
-                                                    t.data.node.template[n]
-                                                  )
+                                                      .value === ""
+                                                    ? ""
+                                                    : t.data.node.template[n]
+                                                        .value
                                                 )}
                                               >
                                                 <div className="mx-auto">
@@ -382,13 +429,26 @@ export default function CodeTabsComponent({
                                                 <FloatComponent
                                                   disabled={false}
                                                   editNode={true}
-                                                  value={tweaks.getValue(
+                                                  value={
+                                                    !t.data.node.template[n]
+                                                      .value ||
                                                     t.data.node.template[n]
-                                                      .value,
-                                                    t.data,
-                                                    t.data.node.template[n]
-                                                  )}
+                                                      .value === ""
+                                                      ? ""
+                                                      : t.data.node.template[n]
+                                                          .value
+                                                  }
                                                   onChange={(k) => {
+                                                    setData((old) => {
+                                                      let newInputList =
+                                                        cloneDeep(old);
+                                                      newInputList[
+                                                        index
+                                                      ].data.node.template[
+                                                        n
+                                                      ].value = k;
+                                                      return newInputList;
+                                                    });
                                                     tweaks.buildTweakObject(
                                                       t["data"]["id"],
                                                       k,
@@ -410,18 +470,31 @@ export default function CodeTabsComponent({
                                                       .options
                                                   }
                                                   onSelect={(k) => {
+                                                    setData((old) => {
+                                                      let newInputList =
+                                                        cloneDeep(old);
+                                                      newInputList[
+                                                        index
+                                                      ].data.node.template[
+                                                        n
+                                                      ].value = k;
+                                                      return newInputList;
+                                                    });
                                                     tweaks.buildTweakObject(
                                                       t["data"]["id"],
                                                       k,
                                                       t.data.node.template[n]
                                                     );
                                                   }}
-                                                  value={tweaks.getValue(
+                                                  value={
+                                                    !t.data.node.template[n]
+                                                      .value ||
                                                     t.data.node.template[n]
-                                                      .value,
-                                                    t.data,
-                                                    t.data.node.template[n]
-                                                  )}
+                                                      .value === ""
+                                                      ? ""
+                                                      : t.data.node.template[n]
+                                                          .value
+                                                  }
                                                 ></Dropdown>
                                               </div>
                                             ) : t.data.node.template[n].type ===
@@ -430,13 +503,26 @@ export default function CodeTabsComponent({
                                                 <IntComponent
                                                   disabled={false}
                                                   editNode={true}
-                                                  value={tweaks.getValue(
+                                                  value={
+                                                    !t.data.node.template[n]
+                                                      .value ||
                                                     t.data.node.template[n]
-                                                      .value,
-                                                    t.data,
-                                                    t.data.node.template[n]
-                                                  )}
+                                                      .value === ""
+                                                      ? ""
+                                                      : t.data.node.template[n]
+                                                          .value
+                                                  }
                                                   onChange={(k) => {
+                                                    setData((old) => {
+                                                      let newInputList =
+                                                        cloneDeep(old);
+                                                      newInputList[
+                                                        index
+                                                      ].data.node.template[
+                                                        n
+                                                      ].value = k;
+                                                      return newInputList;
+                                                    });
                                                     tweaks.buildTweakObject(
                                                       t["data"]["id"],
                                                       k,
@@ -449,25 +535,40 @@ export default function CodeTabsComponent({
                                               "prompt" ? (
                                               <ShadTooltip
                                                 content={tweaks.buildContent(
-                                                  tweaks.getValue(
+                                                  !t.data.node.template[n]
+                                                    .value ||
                                                     t.data.node.template[n]
-                                                      .value,
-                                                    t.data,
-                                                    t.data.node.template[n]
-                                                  )
+                                                      .value === ""
+                                                    ? ""
+                                                    : t.data.node.template[n]
+                                                        .value
                                                 )}
                                               >
                                                 <div className="mx-auto">
                                                   <PromptAreaComponent
                                                     editNode={true}
                                                     disabled={false}
-                                                    value={tweaks.getValue(
+                                                    value={
+                                                      !t.data.node.template[n]
+                                                        .value ||
                                                       t.data.node.template[n]
-                                                        .value,
-                                                      t.data,
-                                                      t.data.node.template[n]
-                                                    )}
+                                                        .value === ""
+                                                        ? ""
+                                                        : t.data.node.template[
+                                                            n
+                                                          ].value
+                                                    }
                                                     onChange={(k) => {
+                                                      setData((old) => {
+                                                        let newInputList =
+                                                          cloneDeep(old);
+                                                        newInputList[
+                                                          index
+                                                        ].data.node.template[
+                                                          n
+                                                        ].value = k;
+                                                        return newInputList;
+                                                      });
                                                       tweaks.buildTweakObject(
                                                         t["data"]["id"],
                                                         k,
@@ -493,13 +594,27 @@ export default function CodeTabsComponent({
                                                   <CodeAreaComponent
                                                     disabled={false}
                                                     editNode={true}
-                                                    value={tweaks.getValue(
+                                                    value={
+                                                      !t.data.node.template[n]
+                                                        .value ||
                                                       t.data.node.template[n]
-                                                        .value,
-                                                      t.data,
-                                                      t.data.node.template[n]
-                                                    )}
+                                                        .value === ""
+                                                        ? ""
+                                                        : t.data.node.template[
+                                                            n
+                                                          ].value
+                                                    }
                                                     onChange={(k) => {
+                                                      setData((old) => {
+                                                        let newInputList =
+                                                          cloneDeep(old);
+                                                        newInputList[
+                                                          index
+                                                        ].data.node.template[
+                                                          n
+                                                        ].value = k;
+                                                        return newInputList;
+                                                      });
                                                       tweaks.buildTweakObject(
                                                         t["data"]["id"],
                                                         k,
