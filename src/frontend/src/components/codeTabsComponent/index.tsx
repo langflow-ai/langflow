@@ -254,8 +254,7 @@ export default function CodeTabsComponent({
                                                             n
                                                           ].value
                                                     }
-                                                    onChange={(k) => {}}
-                                                    onAddInput={(k) => {
+                                                    onChange={(k) => {
                                                       tweaks.buildTweakObject(
                                                         t["data"]["id"],
                                                         k,

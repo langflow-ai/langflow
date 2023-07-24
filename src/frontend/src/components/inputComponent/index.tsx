@@ -11,6 +11,11 @@ export default function InputComponent({
   editNode = false,
 }: InputComponentType) {
   const [pwdVisible, setPwdVisible] = useState(false);
+  const [myValue, setMyValue] = useState(value);
+
+  useEffect(() => {
+    setMyValue(value);
+  }, [value]);
 
   // Clear component state
   useEffect(() => {
@@ -33,6 +38,7 @@ export default function InputComponent({
         placeholder={password && editNode ? "Key" : "Type something..."}
         onChange={(e) => {
           onChange(e.target.value);
+          setMyValue(e.target.value);
         }}
       />
       {password && (

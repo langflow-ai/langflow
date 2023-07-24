@@ -45,7 +45,6 @@ export type InputListComponentType = {
   onChange: (value: string[]) => void;
   disabled: boolean;
   editNode?: boolean;
-  onAddInput?: (value?: string[]) => void;
 };
 
 export type TextAreaComponentType = {
