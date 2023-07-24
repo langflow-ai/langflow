@@ -103,8 +103,6 @@ export default function ParameterComponent({
   }, [info]);
 
   useEffect(() => {
-    console.log(flows.find((f) => f.id === tabId).data.nodes);
-
     let groupedObj = groupByFamily(
       myData,
       tooltipTitle,
