@@ -21,6 +21,8 @@ from langflow.api.v1.schemas import (
     CustomComponentCode,
 )
 
+from langflow.api.utils import merge_nested_dicts
+
 from langflow.interface.types import (
     build_langchain_types_dict,
     build_langchain_template_custom_component,
@@ -32,16 +34,6 @@ from sqlmodel import Session
 
 # build router
 router = APIRouter(tags=["Base"])
-
-
-# TODO: Move to correct local
-def merge_nested_dicts(dict1, dict2):
-    for key, value in dict2.items():
-        if isinstance(value, dict) and isinstance(dict1.get(key), dict):
-            dict1[key] = merge_nested_dicts(dict1[key], value)
-        else:
-            dict1[key] = value
-    return dict1
 
 
 @router.get("/all")
