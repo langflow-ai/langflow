@@ -1,10 +1,8 @@
-import { Search } from "lucide-react";
 import { useContext, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { Separator } from "../../../../components/ui/separator";
 import { alertContext } from "../../../../contexts/alertContext";
-import { PopUpContext } from "../../../../contexts/popUpContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import ApiModal from "../../../../modals/ApiModal";
@@ -20,7 +18,6 @@ import DisclosureComponent from "../DisclosureComponent";
 
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);
-  const { openPopUp } = useContext(PopUpContext);
   const { flows, tabId, uploadFlow, tabsState, saveFlow } =
     useContext(TabsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
@@ -58,6 +55,7 @@ export default function ExtraSidebar() {
       return ret;
     });
   }
+  const flow = flows.find((f) => f.id === tabId);
 
   return (
     <div className="side-bar-arrangement">
@@ -74,31 +72,27 @@ export default function ExtraSidebar() {
         </ShadTooltip>
 
         <ShadTooltip content="Export" side="top">
-          <button
-            className={classNames("extra-side-bar-buttons")}
-            onClick={(event) => {
-              openPopUp(<ExportModal />);
-            }}
-          >
-            <IconComponent name="FileDown" className="side-bar-button-size" />
-          </button>
+          <ExportModal>
+            <div className={classNames("extra-side-bar-buttons")}>
+              <IconComponent name="FileDown" className="side-bar-button-size" />
+            </div>
+          </ExportModal>
         </ShadTooltip>
         <ShadTooltip content="Code" side="top">
-          <button
-            className={classNames("extra-side-bar-buttons")}
-            onClick={(event) => {
-              openPopUp(<ApiModal flow={flows.find((f) => f.id === tabId)} />);
-            }}
-          >
-            <IconComponent name="Code2" className="side-bar-button-size" />
-          </button>
+          {flow && flow.data && (
+            <ApiModal flow={flow}>
+              <div className={classNames("extra-side-bar-buttons")}>
+                <IconComponent name="Code2" className="side-bar-button-size" />
+              </div>
+            </ApiModal>
+          )}
         </ShadTooltip>
 
         <ShadTooltip content="Save" side="top">
           <button
             className="extra-side-bar-buttons"
             onClick={(event) => {
-              saveFlow(flows.find((f) => f.id === tabId));
+              saveFlow(flow);
               setSuccessData({ title: "Changes saved successfully" });
             }}
             disabled={!isPending}
@@ -120,7 +114,7 @@ export default function ExtraSidebar() {
           name="search"
           id="search"
           placeholder="Search"
-          className="input-search"
+          className="nopan nodrag noundo nocopy input-search"
           onChange={(e) => {
             handleSearchInput(e.target.value);
             // Set search input state
@@ -128,7 +122,11 @@ export default function ExtraSidebar() {
           }}
         />
         <div className="search-icon">
-          <Search size={20} strokeWidth={1.5} className="text-primary" />
+          <IconComponent
+            name="Search"
+            className={"h-5 w-5 stroke-[1.5] text-primary"}
+            aria-hidden="true"
+          />
         </div>
       </div>
 
