@@ -325,11 +325,10 @@ export default function Page({ flow }: { flow: FlowType }): JSX.Element {
   );
 
   // IS THIS RIGHT?
-  const onEdgeUpdateEnd = useCallback((_, edge: { id: string }): void => {
+  const onEdgeUpdateEnd = useCallback((_, edge: Edge): void => {
     if (!edgeUpdateSuccessful.current) {
       setEdges((eds) => eds.filter((e) => e.id !== edge.id));
     }
-
     edgeUpdateSuccessful.current = true;
   }, []);
 
