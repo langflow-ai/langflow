@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { classNames } from "../../../utils/utils";
+import { buttonBoxPropsType } from "../../../types/components";
 
 export default function ButtonBox({
   onClick,
@@ -10,16 +11,7 @@ export default function ButtonBox({
   textColor,
   deactivate,
   size,
-}: {
-  onClick: () => void;
-  title: string;
-  description: string;
-  icon: ReactNode;
-  bgColor: string;
-  textColor: string;
-  deactivate?: boolean;
-  size: "small" | "medium" | "big";
-}): JSX.Element {
+}: buttonBoxPropsType): JSX.Element {
   let bigCircle: string;
   let smallCircle: string;
   let titleFontSize: string;

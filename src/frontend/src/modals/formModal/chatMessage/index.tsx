@@ -12,15 +12,12 @@ import { ChatMessageType } from "../../../types/chat";
 import { classNames } from "../../../utils/utils";
 import FileCard from "../fileComponent";
 import { CodeBlock } from "./codeBlock";
+import { chatMessagePropsType } from "../../../types/components";
 export default function ChatMessage({
   chat,
   lockChat,
   lastMessage,
-}: {
-  chat: ChatMessageType;
-  lockChat: boolean;
-  lastMessage: boolean;
-}): JSX.Element {
+}: chatMessagePropsType): JSX.Element {
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
   const template = chat.template;
