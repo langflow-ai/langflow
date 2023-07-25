@@ -7,7 +7,7 @@ type InputProps = {
   name: string | null;
   description: string | null;
   maxLength?: number;
-  flows: Array<{ id: string; name: string }>;
+  flows: Array<{ id: string; name: string; description: string }>;
   tabId: string;
   setName: (name: string) => void;
   setDescription: (description: string) => void;
@@ -37,7 +37,13 @@ export const EditFlowSettings: React.FC<InputProps> = ({
     setName(value);
   };
 
+  const [desc, setDesc] = useState(
+    flows.find((f) => f.id === tabId).description
+  );
+
   const handleDescriptionChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    flows.find((f) => f.id === tabId).description = event.target.value;
+    setDesc(flows.find((f) => f.id === tabId).description);
     setDescription(event.target.value);
   };
 
@@ -51,7 +57,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           )}
         </div>
         <Input
-          className="mt-2 font-normal"
+          className="nopan nodrag noundo nocopy mt-2 font-normal"
           onChange={handleNameChange}
           type="text"
           name="name"
@@ -62,12 +68,15 @@ export const EditFlowSettings: React.FC<InputProps> = ({
         />
       </Label>
       <Label>
-        <span className="font-medium">Description (optional)</span>
+        <div className="edit-flow-arrangement mt-3">
+          <span className="font-medium ">Description (optional)</span>
+        </div>
+
         <Textarea
           name="description"
           id="description"
           onChange={handleDescriptionChange}
-          value={description ?? ""}
+          value={desc}
           placeholder="Flow description"
           className="mt-2 max-h-[100px] font-normal"
           rows={3}
