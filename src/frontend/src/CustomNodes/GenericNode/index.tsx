@@ -95,15 +95,11 @@ export default function GenericNode({
           "generic-node-div"
         )}
       >
-        <div className="absolute right-0 top-0">
-          {data.node.beta && (
-            <div className="h-16 w-16 overflow-hidden rounded-tr-lg">
-              <div className="mt-2 w-24 rotate-45 bg-status-blue text-center text-xs font-semibold text-destructive-foreground">
-                BETA
-              </div>
-            </div>
-          )}
-        </div>
+        {data.node.beta && (
+          <div className="beta-badge-wrapper">
+            <div className="beta-badge-content">BETA</div>
+          </div>
+        )}
         <div className="generic-node-div-title">
           <div className="generic-node-title-arrangement">
             <IconComponent
