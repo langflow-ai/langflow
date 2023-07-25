@@ -35,14 +35,18 @@ def update_settings(
     database_url = database_url or os.getenv("langflow_database_url")
 
     if config:
+        logger.debug(f"Loading settings from {config}")
         settings.update_from_yaml(config, dev=dev)
     if database_url:
         settings.update_settings(database_url=database_url)
     if remove_api_keys:
+        logger.debug(f"Setting remove_api_keys to {remove_api_keys}")
         settings.update_settings(remove_api_keys=remove_api_keys)
     if cache:
+        logger.debug(f"Setting cache to {cache}")
         settings.update_settings(cache=cache)
     if component_path:
+        logger.debug(f"Adding component path {component_path}")
         settings.update_settings(component_path=component_path)
 
 
