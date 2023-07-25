@@ -1,14 +1,17 @@
 [tool.poetry]
 name = "langflow"
-version = "0.3.1"
+version = "0.3.3"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
+    "Carlos Coelho <carlos@logspace.ai>",
     "Cristhian Zanforlin <cristhian.lousa@gmail.com>",
     "Gabriel Almeida <gabriel@logspace.ai>",
     "Gustavo Schaedler <gustavopoa@gmail.com>",
+    "Igor Carvalho <igorr.ackerman@gmail.com>",
     "Lucas Eduoli <lucaseduoli@gmail.com>",
     "Otávio Anovazzi <otavio2204@gmail.com>",
+    "Rodrigo Nader <rodrigo@logspace.ai>",
 ]
 repository = "https://github.com/logspace-ai/langflow"
 license = "MIT"
@@ -30,7 +33,7 @@ google-search-results = "^2.4.1"
 google-api-python-client = "^2.79.0"
 typer = "^0.9.0"
 gunicorn = "^20.1.0"
-langchain = "^0.0.233"
+langchain = "^0.0.237"
 openai = "^0.27.8"
 pandas = "^2.0.0"
 chromadb = "^0.3.21"
