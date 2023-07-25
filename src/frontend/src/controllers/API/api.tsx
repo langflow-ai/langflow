@@ -55,4 +55,4 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export { api, ApiInterceptor };
+export { ApiInterceptor, api };
