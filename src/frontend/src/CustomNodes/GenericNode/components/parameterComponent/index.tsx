@@ -1,10 +1,10 @@
-import { Info } from "lucide-react";
 import React, { useContext, useEffect, useRef, useState } from "react";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
 import Dropdown from "../../../../components/dropdownComponent";
 import FloatComponent from "../../../../components/floatComponent";
+import IconComponent from "../../../../components/genericIconComponent";
 import InputComponent from "../../../../components/inputComponent";
 import InputFileComponent from "../../../../components/inputFileComponent";
 import InputListComponent from "../../../../components/inputListComponent";
@@ -12,21 +12,25 @@ import IntComponent from "../../../../components/intComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
-import { MAX_LENGTH_TO_SCROLL_TOOLTIP } from "../../../../constants";
+import { MAX_LENGTH_TO_SCROLL_TOOLTIP } from "../../../../constants/constants";
 import { PopUpContext } from "../../../../contexts/popUpContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
-import { cleanEdges } from "../../../../util/reactflowUtils";
+import {
+  cleanEdges,
+  isValidConnection,
+} from "../../../../utils/reactflowUtils";
+import {
+  nodeColors,
+  nodeIconsLucide,
+  nodeNames,
+} from "../../../../utils/styleUtils";
 import {
   classNames,
   getRandomKeyByssmm,
   groupByFamily,
-  isValidConnection,
-  nodeColors,
-  nodeIconsLucide,
-  nodeNames,
-} from "../../../../utils";
+} from "../../../../utils/utils";
 
 export default function ParameterComponent({
   left,
@@ -50,6 +54,7 @@ export default function ParameterComponent({
   const { closePopUp } = useContext(PopUpContext);
   const { setTabsState, tabId, save } = useContext(TabsContext);
 
+  // Update component position
   useEffect(() => {
     if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
       setPosition(ref.current.offsetTop + ref.current.clientHeight / 2);
@@ -83,6 +88,7 @@ export default function ParameterComponent({
   };
 
   useEffect(() => {
+    if (name === "openai_api_base") console.log(info);
     infoHtml.current = (
       <div className="h-full w-full break-words">
         {info.split("\n").map((line, i) => (
@@ -145,7 +151,6 @@ export default function ParameterComponent({
       );
     });
   }, [tooltipTitle]);
-
   return (
     <div
       ref={ref}
@@ -164,7 +169,13 @@ export default function ParameterComponent({
           <div className="">
             {info !== "" && (
               <ShadTooltip content={infoHtml.current}>
-                <Info className="relative bottom-0.5 ml-2 h-3 w-3" />
+                {/* put div to avoid bug that does not display tooltip */}
+                <div>
+                  <IconComponent
+                    name="Info"
+                    className="relative bottom-0.5 ml-2 h-3 w-4"
+                  />
+                </div>
               </ShadTooltip>
             )}
           </div>

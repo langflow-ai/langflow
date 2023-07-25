@@ -1,11 +1,10 @@
 import { useContext, useEffect, useState } from "react";
+import { TypeModal } from "../../constants/enums";
 import { PopUpContext } from "../../contexts/popUpContext";
+import { TabsContext } from "../../contexts/tabsContext";
 import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
-import { TypeModal } from "../../utils";
-
-import { ExternalLink } from "lucide-react";
-import { TabsContext } from "../../contexts/tabsContext";
+import IconComponent from "../genericIconComponent";
 
 export default function TextAreaComponent({
   value,
@@ -17,6 +16,7 @@ export default function TextAreaComponent({
   const { openPopUp, closePopUp } = useContext(PopUpContext);
   const { setDisableCopyPaste } = useContext(TabsContext);
 
+  // Clear text area
   useEffect(() => {
     if (disabled) {
       setMyValue("");
@@ -68,8 +68,8 @@ export default function TextAreaComponent({
           }}
         >
           {!editNode && (
-            <ExternalLink
-              strokeWidth={1.5}
+            <IconComponent
+              name="ExternalLink"
               className={
                 "icons-parameters-comp" +
                 (disabled ? " text-ring" : " hover:text-accent-foreground")

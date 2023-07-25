@@ -1,4 +1,3 @@
-import { GitFork, GithubIcon, Users2 } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { alertContext } from "../../contexts/alertContext";
@@ -6,17 +5,22 @@ import { TabsContext } from "../../contexts/tabsContext";
 
 import { useNavigate } from "react-router-dom";
 import { CardComponent } from "../../components/cardComponent";
+import IconComponent from "../../components/genericIconComponent";
 import { getExamples } from "../../controllers/API";
 import { FlowType } from "../../types/flow";
 export default function CommunityPage() {
   const { flows, setTabId, downloadFlows, uploadFlows, addFlow } =
     useContext(TabsContext);
+
+  // set null id
   useEffect(() => {
     setTabId("");
   }, []);
   const { setErrorData } = useContext(alertContext);
   const [loadingExamples, setLoadingExamples] = useState(false);
   const [examples, setExamples] = useState<FlowType[]>([]);
+
+  // Show community examples on screen
   function handleExamples() {
     setLoadingExamples(true);
     getExamples()
@@ -33,6 +37,7 @@ export default function CommunityPage() {
   }
   const navigate = useNavigate();
 
+  // Show community examples on page start
   useEffect(() => {
     handleExamples();
   }, []);
@@ -40,7 +45,7 @@ export default function CommunityPage() {
     <div className="community-page-arrangement">
       <div className="community-page-nav-arrangement">
         <span className="community-page-nav-title">
-          <Users2 className="w-6" />
+          <IconComponent name="Users2" className="w-6" />
           Community Examples
         </span>
         <div className="community-page-nav-button">
@@ -50,7 +55,10 @@ export default function CommunityPage() {
             rel="noreferrer"
           >
             <Button variant="primary">
-              <GithubIcon className="main-page-nav-button" />
+              <IconComponent
+                name="GithubIcon"
+                className="main-page-nav-button"
+              />
               Add Your Example
             </Button>
           </a>
@@ -79,7 +87,10 @@ export default function CommunityPage() {
                     });
                   }}
                 >
-                  <GitFork className="main-page-nav-button" />
+                  <IconComponent
+                    name="GitFork"
+                    className="main-page-nav-button"
+                  />
                   Fork Example
                 </Button>
               }

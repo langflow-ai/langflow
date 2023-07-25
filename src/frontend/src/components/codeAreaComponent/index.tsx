@@ -3,7 +3,7 @@ import { PopUpContext } from "../../contexts/popUpContext";
 import CodeAreaModal from "../../modals/codeAreaModal";
 import { TextAreaComponentType } from "../../types/components";
 
-import { ExternalLink } from "lucide-react";
+import IconComponent from "../genericIconComponent";
 
 export default function CodeAreaComponent({
   value,
@@ -70,8 +70,8 @@ export default function CodeAreaComponent({
           }}
         >
           {!editNode && (
-            <ExternalLink
-              strokeWidth={1.5}
+            <IconComponent
+              name="ExternalLink"
               className={
                 "icons-parameters-comp" +
                 (disabled ? " text-ring" : " hover:text-accent-foreground")

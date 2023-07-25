@@ -1,9 +1,9 @@
 import React, { forwardRef } from "react";
-import { ReactComponent as NotionSVG } from "./Notion-logo.svg";
+import SvgNotionLogo from "./NotionLogo";
 
 export const NotionIcon = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<{}>
 >((props, ref) => {
-  return <NotionSVG ref={ref} {...props} />;
+  return <SvgNotionLogo ref={ref} {...props} />;
 });

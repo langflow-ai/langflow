@@ -1,25 +1,29 @@
-import { FileText, Variable } from "lucide-react";
 import { useContext, useEffect, useRef, useState } from "react";
 import SanitizedHTMLWrapper from "../../components/SanitizedHTMLWrapper";
 import ShadTooltip from "../../components/ShadTooltipComponent";
+import IconComponent from "../../components/genericIconComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { DialogTitle } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
-import { PROMPT_DIALOG_SUBTITLE, TEXT_DIALOG_SUBTITLE } from "../../constants";
+import {
+  INVALID_CHARACTERS,
+  MAX_WORDS_HIGHLIGHT,
+  PROMPT_DIALOG_SUBTITLE,
+  TEXT_DIALOG_SUBTITLE,
+  regexHighlight,
+} from "../../constants/constants";
+import { TypeModal } from "../../constants/enums";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { postValidatePrompt } from "../../controllers/API";
 import { APIClassType } from "../../types/api";
 import {
-  INVALID_CHARACTERS,
-  TypeModal,
   classNames,
   getRandomKeyByssmm,
-  regexHighlight,
   varHighlightHTML,
-} from "../../utils";
+} from "../../utils/utils";
 import BaseModal from "../baseModal";
 
 export default function GenericModal({
@@ -58,6 +62,8 @@ export default function GenericModal({
       closePopUp();
     }
   }
+  const divRef = useRef(null);
+  const divRefPrompt = useRef(null);
 
   function checkVariables(valueToCheck) {
     const regex = /\{([^{}]+)\}/g;
@@ -108,7 +114,7 @@ export default function GenericModal({
   const TextAreaContentView = () => {
     return (
       <SanitizedHTMLWrapper
-        className="code-highlight"
+        className={getClassByNumberLength()}
         content={coloredContent}
         onClick={() => {
           setIsEdit(true);
@@ -117,6 +123,16 @@ export default function GenericModal({
       />
     );
   };
+
+  function getClassByNumberLength() {
+    let sumOfCaracteres: number = 0;
+    wordsHighlight.forEach((element) => {
+      sumOfCaracteres = sumOfCaracteres + element.replace(/[{}]/g, "").length;
+    });
+    return sumOfCaracteres > MAX_WORDS_HIGHLIGHT
+      ? "code-highlight"
+      : "code-nohighlight";
+  }
 
   function validatePrompt(closeModal: boolean) {
     postValidatePrompt(field_name, inputValue, nodeClass)
@@ -165,7 +181,6 @@ export default function GenericModal({
             case "Edit Prompt":
               return PROMPT_DIALOG_SUBTITLE;
 
-
             default:
               return null;
           }
@@ -173,8 +188,8 @@ export default function GenericModal({
       >
         <DialogTitle className="flex items-center">
           <span className="pr-2">{myModalTitle}</span>
-          <FileText
-            strokeWidth={1.5}
+          <IconComponent
+            name="FileText"
             className="h-6 w-6 pl-1 text-primary "
             aria-hidden="true"
           />
@@ -190,7 +205,7 @@ export default function GenericModal({
           >
             {type === TypeModal.PROMPT && isEdit ? (
               <Textarea
-                ref={ref}
+                ref={divRefPrompt}
                 className="form-input h-full w-full rounded-lg custom-scroll focus-visible:ring-1"
                 value={inputValue}
                 onBlur={() => {
@@ -224,9 +239,15 @@ export default function GenericModal({
             <div className="mb-auto flex-1">
               {type === TypeModal.PROMPT && (
                 <div className=" mr-2">
-                  <div className="max-h-20 overflow-y-auto custom-scroll">
+                  <div
+                    ref={divRef}
+                    className="max-h-20 overflow-y-auto custom-scroll"
+                  >
                     <div className="flex flex-wrap items-center">
-                      <Variable className=" -ml-px mr-1 flex h-4 w-4 text-primary"></Variable>
+                      <IconComponent
+                        name="Variable"
+                        className=" -ml-px mr-1 flex h-4 w-4 text-primary"
+                      />
                       <span className="text-md font-semibold text-primary">
                         Prompt Variables:
                       </span>
