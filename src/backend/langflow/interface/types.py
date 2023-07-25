@@ -18,9 +18,8 @@ from langflow.interface.custom.base import custom_component_creator
 from langflow.interface.custom.custom_component import CustomComponent
 
 from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.tools import (
-    CustomComponentNode,
-    CustomComponentEmptyNode,
+from langflow.template.frontend_node.custom_components import (
+    CustomComponentFrontendNode,
 )
 from langflow.interface.retrievers.base import retriever_creator
 
@@ -165,7 +164,9 @@ def extract_type_from_optional(field_type):
 
 def build_langchain_template_custom_component(custom_component: CustomComponent):
     # Build base "CustomComponent" template
-    frontend_node = CustomComponentNode().to_dict().get(type(custom_component).__name__)
+    frontend_node = (
+        CustomComponentFrontendNode().to_dict().get(type(custom_component).__name__)
+    )
 
     function_args = custom_component.get_function_entrypoint_args
     return_type = custom_component.get_function_entrypoint_return_type

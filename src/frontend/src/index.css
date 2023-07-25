@@ -43,6 +43,9 @@
     --chat-bot-icon: #afe6ef;
     --chat-user-icon: #aface9;
 
+    --beta-background: rgb(219 234 254);
+    --beta-foreground: rgb(37 99 235);
+
     /* Colors that are shared in dark and light mode */
     --blur-shared: #151923de;
     --build-trigger: #dc735b;
@@ -100,6 +103,9 @@
 
     --high-indigo: #4338ca;
     --medium-indigo: #6366f1;
+
+    --beta-background: rgb(37 99 235);
+    --beta-foreground: rgb(219 234 254);
 
     /* Colors that are shared in dark and light mode */
     --blur-shared: #151923d2;
@@ -369,7 +375,7 @@ The cursor: default; property value restores the browser's default cursor style 
   }
 
   .generic-node-status-position {
-    @apply relative top-[3px] h-5 w-5;
+    @apply relative top-[1.5px] h-5 w-5;
   }
 
   .generic-node-status-animation {
@@ -1111,7 +1117,12 @@ The cursor: default; property value restores the browser's default cursor style 
   .ace-editor-save-btn {
     @apply flex-max-width h-fit justify-end;
   }
-
+  .beta-badge-wrapper {
+    @apply absolute right-0 top-0 h-16 w-16 overflow-hidden rounded-tr-lg;
+  }
+  .beta-badge-content {
+    @apply mt-2 w-24 rotate-45 bg-beta-background text-center text-xs font-semibold text-beta-foreground
+  }
   .export-modal-save-api {
     @apply font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70;
   }
