@@ -21,7 +21,7 @@ from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.tools import CustomComponentNode
 from langflow.interface.retrievers.base import retriever_creator
 
-from langflow.interface.custom.load_custom_component_from_path import DirectoryReader
+from langflow.interface.custom.directory_loader import DirectoryReader
 from langflow.utils.logger import logger
 import re
 import warnings
