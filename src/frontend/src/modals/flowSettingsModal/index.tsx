@@ -23,6 +23,8 @@ export default function FlowSettingsModal({
   const [description, setDescription] = useState(
     flows.find((f) => f.id === tabId).description
   );
+  const [invalidName, setInvalidName] = useState(false);
+
   function handleClick() {
     let savedFlow = flows.find((f) => f.id === tabId);
     savedFlow.name = name;
@@ -39,6 +41,8 @@ export default function FlowSettingsModal({
       </BaseModal.Header>
       <BaseModal.Content>
         <EditFlowSettings
+          invalidName={invalidName}
+          setInvalidName={setInvalidName}
           name={name}
           description={description}
           flows={flows}
@@ -50,7 +54,7 @@ export default function FlowSettingsModal({
       </BaseModal.Content>
 
       <BaseModal.Footer>
-        <Button onClick={handleClick} type="submit">
+        <Button disabled={invalidName} onClick={handleClick} type="submit">
           Save
         </Button>
       </BaseModal.Footer>
