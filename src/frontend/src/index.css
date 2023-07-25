@@ -38,9 +38,10 @@
 
   --info-background: #f0f4fd;
   --info-foreground: #141653;
-  
+
   --high-indigo: #4338ca;
   --medium-indigo: #6366f1;
+  --low-indigo: #e0e7ff;
 
   --chat-bot-icon: #afe6ef;
   --chat-user-icon: #aface9;
@@ -52,6 +53,7 @@
   --chat-trigger-disabled: #b4c3da;
   --status-red: #ef4444;
   --status-yellow: #eab308;
+  --chat-send: #059669;
   --status-green: #4ade80;
   --status-blue:#2563eb;
   --connection: #555;
@@ -104,6 +106,7 @@
 
   --high-indigo: #4338ca;
   --medium-indigo: #6366f1;
+  --low-indigo: #e0e7ff;
 
   /* Colors that are shared in dark and light mode */
   --blur-shared: #151923d2;
@@ -112,6 +115,7 @@
   --chat-trigger-disabled: #2d3b54;
   --status-red: #ef4444;
   --status-yellow: #eab308;
+  --chat-send: #059669;
   --status-green: #4ade80;
   --status-blue: #2563eb;
   --connection: #555;
