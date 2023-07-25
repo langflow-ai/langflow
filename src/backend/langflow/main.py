@@ -13,9 +13,6 @@ from langflow.utils.logger import configure
 
 def create_app():
     """Create the FastAPI app and include the router."""
-    # get the current log level
-    # log_level = logging.getLogger().getEffectiveLevel()
-    # log_level_name = logging.getLevelName(log_level)
     configure()
 
     app = FastAPI()
