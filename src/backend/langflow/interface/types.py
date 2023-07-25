@@ -291,7 +291,7 @@ def build_langchain_custom_component_list_from_path(path: str):
                 component_code = component["code"]
 
                 component_template = (
-                    CustomComponentNode(
+                    CustomComponentFrontendNode(
                         description="ERROR - Check your Python Code",
                         display_name=f"ERROR - {component_name}",
                     )
