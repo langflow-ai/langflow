@@ -71,18 +71,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
         // Clear the interval if successful.
         clearInterval(intervalId);
       } catch (error) {
-        retryCount++;
-        // On error, double the delay for the next attempt up to a maximum.
-        delay = Math.min(30000, delay * 2);
-        // Log errors but don't do anything else - the function will try again on the next interval.
-        console.error(error);
-        // Clear the old interval and start a new one with the new delay.
-        if (retryCount <= maxRetryCount) {
-          clearInterval(intervalId);
-          intervalId = setInterval(getTypes, delay);
-        } else {
-          console.error("Max retry attempts reached. Stopping retries.");
-        }
+        console.error("An error has occurred while fetching types.");
       }
     }
 
