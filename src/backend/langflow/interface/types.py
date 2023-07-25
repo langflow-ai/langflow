@@ -275,68 +275,6 @@ def build_langchain_template_custom_component(custom_component: CustomComponent)
     return frontend_node
 
 
-# def build_langchain_custom_component_list_from_path(path: str):
-#     # Load all files from Path
-#     reader = DirectoryReader(path, False)
-#     file_list = reader.get_files()
-
-#     # Build and validate all files
-#     data = reader.build_component_menu_list(file_list)
-
-#     valid_components = reader.filter_loaded_components(
-#         data=data, with_errors=False)
-#     invalid_components = reader.filter_loaded_components(
-#         data=data, with_errors=True)
-
-#     valid_menu = {}
-#     for menu_item in valid_components["menu"]:
-#         menu_name = menu_item["name"]
-#         valid_menu[menu_name] = {}
-
-#         for component in menu_item["components"]:
-#             try:
-#                 component_name = component["name"]
-#                 component_code = component["code"]
-
-#                 component_extractor = CustomComponent(code=component_code)
-#                 component_extractor.is_check_valid()
-#                 component_template = build_langchain_template_custom_component(
-#                     component_extractor
-#                 )
-
-#                 valid_menu[menu_name][component_name] = component_template
-#             except Exception as exc:
-#                 logger.error(f"Error while building custom component: {exc}")
-
-#     invalid_menu = {}
-#     for menu_item in invalid_components["menu"]:
-#         menu_name = menu_item["name"]
-#         invalid_menu[menu_name] = {}
-
-#         for component in menu_item["components"]:
-#             try:
-#                 component_name = component["name"]
-#                 component_code = component["code"]
-
-#                 component_template = (
-#                     CustomComponentFrontendNode(
-#                         description="ERROR - Check your Python Code",
-#                         display_name=f"ERROR - {component_name}",
-#                     )
-#                     .to_dict()
-#                     .get(type(CustomComponent()).__name__)
-#                 )
-
-#                 component_template.get("template").get("code")[
-#                     "value"] = component_code
-
-#                 invalid_menu[menu_name][component_name] = component_template
-#             except Exception as exc:
-#                 logger.error(f"Error while creating custom component: {exc}")
-
-#     return merge_nested_dicts(valid_menu, invalid_menu)
-
-
 def load_files_from_path(path: str):
     """Load all files from a given path"""
     reader = DirectoryReader(path, False)
