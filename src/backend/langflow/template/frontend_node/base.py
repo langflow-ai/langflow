@@ -84,6 +84,7 @@ class FrontendNode(BaseModel):
                 "custom_fields": self.custom_fields,
                 "output_types": self.output_types,
                 "documentation": self.documentation,
+                "beta": self.beta,
             },
         }
 
