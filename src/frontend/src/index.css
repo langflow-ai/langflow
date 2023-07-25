@@ -145,6 +145,9 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
 }
+pre {
+  font-family: inherit;
+}
 
 /* The style below sets the cursor property of the element with the class .react-flow__pane to the default cursor.
 The cursor: default; property value restores the browser's default cursor style for the targeted element. By applying this style, the element will no longer have a custom cursor appearance such as "grab" or any other custom cursor defined elsewhere in the application. Instead, it will revert to the default cursor style determined by the browser, typically an arrow-shaped cursor. */
@@ -240,11 +243,11 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply focus:placeholder-transparent focus:ring-ring focus:border-ring
   }
   .input-primary {
-    @apply bg-background block border-border form-input px-3 placeholder:text-muted-foreground rounded-md shadow-sm sm:text-sm truncate w-full;
+    @apply bg-background block text-left border-border form-input px-3 placeholder:text-muted-foreground rounded-md shadow-sm sm:text-sm truncate w-full;
   }
 
   .input-edit-node{
-    @apply input-primary border-border placeholder:text-center pt-0.5 pb-0.5 text-center
+    @apply input-primary border-border pt-0.5 pb-0.5 text-left w-full
   }
   .input-search{
     @apply input-primary pr-7 mx-2
@@ -547,7 +550,7 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply z-10 mt-1 max-h-60 overflow-auto rounded-md bg-background py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm
   }
   .dropdown-component-true-options {
-    @apply dropdown-component-options w-[215px]
+    @apply dropdown-component-options lg:w-[32%]
   }
   .dropdown-component-false-options {
     @apply dropdown-component-options w-full
@@ -932,7 +935,7 @@ The cursor: default; property value restores the browser's default cursor style 
   }
 
   .api-modal-tabs {
-    @apply w-full h-full overflow-hidden text-center bg-muted rounded-md border
+    @apply lg:w-full h-full flex flex-col overflow-hidden text-center bg-muted rounded-md border sm:w-[75vw]
   }
   .api-modal-tablist-div {
     @apply flex items-center justify-between px-2
