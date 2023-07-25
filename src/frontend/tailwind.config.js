@@ -29,6 +29,8 @@ module.exports = {
     },
     extend: {
       colors: {
+        "low-indigo": "var(--low-indigo)",
+        "chat-send": "var(--chat-send)",
         connection: "var(--connection)",
         "almost-dark-gray": "var(--almost-dark-gray)",
         "almost-light-blue": "var(--almost-light-blue)",
