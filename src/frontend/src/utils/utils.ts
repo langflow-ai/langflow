@@ -85,6 +85,9 @@ export function checkUpperWords(str: string) {
   return words.join(" ");
 }
 
+export const isWrappedWithClass = (event: any, className: string | undefined) =>
+  event.target.closest(`.${className}`);
+
 export function groupByFamily(data, baseClasses, left, type) {
   let parentOutput: string;
   let arrOfParent: string[] = [];
@@ -272,7 +275,7 @@ export function buildTweakObject(tweak) {
     });
   });
 
-  const tweakString = JSON.stringify(tweak, null, 2);
+  const tweakString = JSON.stringify(tweak.at(-1), null, 2);
   return tweakString;
 }
 
