@@ -1,10 +1,10 @@
 import { useEffect } from "react";
 import { InputListComponentType } from "../../types/components";
 
-import { Input } from "../ui/input";
-import { classNames } from "../../utils/utils";
 import _ from "lodash";
+import { classNames } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
+import { Input } from "../ui/input";
 
 export default function InputListComponent({
   value,
@@ -19,13 +19,12 @@ export default function InputListComponent({
   }, [disabled]);
 
   return (
-    <div 
-    className={
-    classNames(
-      value.length > 1 && editNode ? "my-1" : "",
-      "flex flex-col gap-3"
-    )
-  }>
+    <div
+      className={classNames(
+        value.length > 1 && editNode ? "my-1" : "",
+        "flex flex-col gap-3"
+      )}
+    >
       {value.map((i, idx) => {
         return (
           <div key={idx} className="flex w-full gap-3">
