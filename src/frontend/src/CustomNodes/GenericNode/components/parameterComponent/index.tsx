@@ -14,7 +14,6 @@ import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { MAX_LENGTH_TO_SCROLL_TOOLTIP } from "../../../../constants/constants";
-import { PopUpContext } from "../../../../contexts/popUpContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
@@ -52,7 +51,8 @@ export default function ParameterComponent({
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   const { setTabsState, tabId, save, flows } = useContext(TabsContext);
-  const { closeEdit } = useContext(PopUpContext);
+
+  const flow = flows.find((f) => f.id === tabId).data.nodes;
 
   // Update component position
   useEffect(() => {
@@ -87,6 +87,7 @@ export default function ParameterComponent({
         },
       };
     });
+    renderTooltips();
   };
 
   useEffect(() => {
@@ -102,14 +103,8 @@ export default function ParameterComponent({
     );
   }, [info]);
 
-  useEffect(() => {
-    let groupedObj = groupByFamily(
-      myData,
-      tooltipTitle,
-      left,
-      data.type,
-      flows.find((f) => f.id === tabId).data.nodes
-    );
+  function renderTooltips() {
+    let groupedObj = groupByFamily(myData, tooltipTitle, left, data.type, flow);
 
     if (groupedObj?.length === 0) {
       groupedObj = groupByFamilyCustom(
@@ -117,7 +112,7 @@ export default function ParameterComponent({
         tooltipTitle,
         left,
         data.type,
-        flows.find((f) => f.id === tabId).data.nodes
+        flow
       );
     }
 
@@ -172,11 +167,11 @@ export default function ParameterComponent({
         );
       });
     }
-  }, [
-    tooltipTitle,
-    flows.find((f) => f.id === tabId).data.nodes.length,
-    closeEdit,
-  ]);
+  }
+
+  useEffect(() => {
+    renderTooltips();
+  }, [tooltipTitle, flow.length]);
   return (
     <div
       ref={ref}
