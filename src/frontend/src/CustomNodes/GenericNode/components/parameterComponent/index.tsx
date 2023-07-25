@@ -118,8 +118,8 @@ export default function ParameterComponent({
       if (groupedObj?.length === 0) {
         groupedObj.push({
           family: "custom_components",
-          type: '',
-          component: 'Please try adding a custom component.',
+          type: "",
+          component: "Please try adding a custom component.",
         });
       }
     }
