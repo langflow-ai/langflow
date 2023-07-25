@@ -27,6 +27,7 @@ def update_settings(
     dev: bool = False,
     database_url: Optional[str] = None,
     remove_api_keys: bool = False,
+    component_path: Optional[Path] = None,
 ):
     """Update the settings from a config file."""
 
@@ -41,6 +42,8 @@ def update_settings(
         settings.update_settings(remove_api_keys=remove_api_keys)
     if cache:
         settings.update_settings(cache=cache)
+    if component_path:
+        settings.update_settings(component_path=component_path)
 
 
 def load_params():
@@ -117,8 +120,13 @@ def serve(
     workers: int = typer.Option(
         -1, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"
     ),
-    timeout: int = typer.Option(60, help="Worker timeout in seconds."),
+    timeout: int = typer.Option(300, help="Worker timeout in seconds."),
     port: int = typer.Option(7860, help="Port to listen on.", envvar="LANGFLOW_PORT"),
+    component_path: Optional[Path] = typer.Option(
+        Path(__file__).parent,
+        help="Path to the directory containing custom components.",
+        envvar="LANGFLOW_COMPONENT_PATH",
+    ),
     config: str = typer.Option("config.yaml", help="Path to the configuration file."),
     # .env file param
     env_file: Path = typer.Option(
@@ -176,6 +184,7 @@ def serve(
         database_url=database_url,
         remove_api_keys=remove_api_keys,
         cache=cache,
+        component_path=component_path,
     )
     # create path object if path is provided
     static_files_dir: Optional[Path] = Path(path) if path else None
