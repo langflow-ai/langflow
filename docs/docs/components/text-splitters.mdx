@@ -1,2 +1,49 @@
+import Admonition from '@theme/Admonition';
+
 # Text Splitters
-(coming soon)
+
+<Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
+    <p>
+        We appreciate your understanding as we polish our documentation – it may contain some rough edges. Share your feedback or report issues to help us improve! 🛠️📝
+    </p>
+</Admonition>
+
+A text splitter is a tool that divides a document or text into smaller chunks or segments. It is used to break down large texts into more manageable pieces for analysis or processing.
+
+---
+
+### CharacterTextSplitter
+
+The `CharacterTextSplitter` is used to split a long text into smaller chunks based on a specified character. It splits the text by trying to keep paragraphs, sentences, and words together as long as possible, as these are semantically related pieces of text.
+
+**Params**
+
+- **Documents:** Input documents to split.
+
+- **chunk_overlap:** Determines the number of characters that overlap between consecutive chunks when splitting text. It specifies how much of the previous chunk should be included in the next chunk.
+
+    For example, if the `chunk_overlap` is set to 20 and the `chunk_size` is set to 100, the splitter will create chunks of 100 characters each, but the last 20 characters of each chunk will overlap with the first 20 characters of the next chunk. This allows for a smoother transition between chunks and ensures that no information is lost – defaults to `200`.
+
+- **chunk_size:** Determines the maximum number of characters in each chunk when splitting a text. It specifies the size or length of each chunk.
+
+    For example, if the chunk_size is set to 100, the splitter will create chunks of 100 characters each. If the text is longer than 100 characters, it will be divided into multiple chunks of equal size, except for the last chunk, which may be smaller if there are remaining characters –defaults to `1000`.
+
+- **separator:** Specifies the character that will be used to split the text into chunks – defaults to `.` 
+
+---
+
+### RecursiveCharacterTextSplitter
+
+The `RecursiveCharacterTextSplitter` splits the text by trying to keep paragraphs, sentences, and words together as long as possible, similar to the `CharacterTextSplitter`. However, it also recursively splits the text into smaller chunks if the chunk size exceeds a specified threshold.
+
+**Params**
+
+- **Documents:** Input documents to split.
+
+- **chunk_overlap:** Determines the number of characters that overlap between consecutive chunks when splitting text. It specifies how much of the previous chunk should be included in the next chunk.
+
+- **chunk_size:** Determines the maximum number of characters in each chunk when splitting a text. It specifies the size or length of each chunk.
+
+- **separator_type:** The parameter allows the user to split the code with multiple language support. It supports various languages such as Text, Ruby, Python, Solidity, Java, and more. Defaults to `Text`.
+
+- **separators:** The `separators` in RecursiveCharacterTextSplitter are the characters used to split the text into chunks. The text splitter tries to create chunks based on splitting on the first character in the list of `separators`. If any chunks are too large, it moves on to the next character in the list and continues splitting. Defaults to `.`
