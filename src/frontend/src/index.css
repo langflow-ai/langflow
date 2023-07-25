@@ -369,7 +369,7 @@ The cursor: default; property value restores the browser's default cursor style 
   }
 
   .generic-node-status-position {
-    @apply relative top-[3px] h-5 w-5;
+    @apply relative top-[1.5px] h-5 w-5;
   }
 
   .generic-node-status-animation {
