@@ -42,6 +42,7 @@ import {
   MessageSquare,
   MessagesSquare,
   MoonIcon,
+  MoreHorizontal,
   Paperclip,
   Plus,
   Redo,
@@ -274,6 +275,7 @@ export const nodeIconsLucide = {
   Copy,
   Upload,
   MessageSquare,
+  MoreHorizontal,
 };
 export function getConnectedNodes(edge: Edge, nodes: Array<Node>): Array<Node> {
   const sourceId = edge.source;
