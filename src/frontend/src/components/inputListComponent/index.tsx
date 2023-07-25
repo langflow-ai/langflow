@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { InputListComponentType } from "../../types/components";
 
+import { Input } from "../ui/input";
+import { classNames } from "../../utils/utils";
 import _ from "lodash";
 import IconComponent from "../genericIconComponent";
 
@@ -17,24 +19,21 @@ export default function InputListComponent({
   }, [disabled]);
 
   return (
-    <div
-      className={
-        (disabled ? "pointer-events-none cursor-not-allowed" : "") +
-        "flex flex-col gap-3"
-      }
-    >
+    <div 
+    className={
+    classNames(
+      value.length > 1 && editNode ? "my-1" : "",
+      "flex flex-col gap-3"
+    )
+  }>
       {value.map((i, idx) => {
         return (
           <div key={idx} className="flex w-full gap-3">
-            <input
+            <Input
+              disabled={disabled}
               type="text"
               value={i}
-              className={
-                "nopan nodrag noundo nocopy " +
-                (editNode
-                  ? "input-edit-node "
-                  : "input-primary " + (disabled ? "input-disable" : ""))
-              }
+              className={editNode ? "input-edit-node" : ""}
               placeholder="Type something..."
               onChange={(e) => {
                 let newInputList = _.cloneDeep(value);

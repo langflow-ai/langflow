@@ -1,6 +1,7 @@
 import { useContext, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
+import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
 import { alertContext } from "../../../../contexts/alertContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
@@ -109,7 +110,7 @@ export default function ExtraSidebar() {
       </div>
       <Separator />
       <div className="side-bar-search-div-placement">
-        <input
+        <Input
           type="text"
           name="search"
           id="search"
