@@ -1,0 +1,52 @@
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+
+# Deploy on Railway
+
+Railway is a deployment platform where you can provision infrastructure, develop with that infrastructure locally, and then deploy to the cloud.
+
+Click the following prebuilt [template](https://railway.app/template/Emy2sU?referralCode=MnPSdg).
+
+Click Deploy Now.
+
+
+<div
+  style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
+>
+  <ZoomableImage
+    alt="Docusaurus themed image"
+    sources={{
+      light: "img/langflow-railway.png",
+    }}
+    width="100px" // Set the width you desire
+  />
+</div>
+
+
+:::note
+Log in using your **GitHub** account to deploy and authorize Railway's access to it. Afterward, accept their Privacy and Data Policy.
+:::
+
+Change to your preferred repository name and click Deploy.
+
+<div
+  style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
+>
+  <ZoomableImage
+    alt="Docusaurus themed image"
+    sources={{
+      light: "img/langflow-railway2.png",
+    }}
+    width="100px" // Set the width you desire
+  />
+</div>
+
+
+After clicking on Deploy, you should be able to see a deployed URL.
+
+All deployments will appear in the deployments view on your selected service. Clicking on the deployment will bring up the build and deploy logs. Each deployment has the option to configure a Railway-provided domain as well as attach a custom domain.
+
+:::info
+Check out the [Railway Docs](https://docs.railway.app/deploy/deployments) for more deployment information.
+:::
