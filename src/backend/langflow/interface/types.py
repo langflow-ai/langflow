@@ -18,6 +18,7 @@ from langflow.interface.custom.base import custom_component_creator
 from langflow.interface.custom.custom_component import CustomComponent
 
 from langflow.template.field.base import TemplateField
+from langflow.template.frontend_node.constants import CLASSES_TO_REMOVE
 from langflow.template.frontend_node.custom_components import (
     CustomComponentFrontendNode,
 )
@@ -247,7 +248,8 @@ def add_base_classes(frontend_node, return_type):
     base_classes = get_base_classes(return_type_instance)
 
     for base_class in base_classes:
-        frontend_node.get("base_classes").append(base_class)
+        if base_class not in CLASSES_TO_REMOVE:
+            frontend_node.get("base_classes").append(base_class)
 
 
 def build_langchain_template_custom_component(custom_component: CustomComponent):
