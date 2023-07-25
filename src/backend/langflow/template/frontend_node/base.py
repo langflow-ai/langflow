@@ -52,6 +52,7 @@ class FrontendNode(BaseModel):
     custom_fields: defaultdict = defaultdict(list)
     output_types: List[str] = []
     field_formatters: FieldFormatters = Field(default_factory=FieldFormatters)
+    beta: bool = False
 
     # field formatters is an instance attribute but it is not used in the class
     # so we need to create a method to get it
