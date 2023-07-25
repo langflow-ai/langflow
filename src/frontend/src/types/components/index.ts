@@ -1,4 +1,4 @@
-import { ReactElement, ReactNode } from "react";
+import { ForwardRefExoticComponent, ReactElement, ReactNode, RefAttributes, SVGProps } from "react";
 import { APIClassType } from "../api";
 import { FlowStyleType, NodeDataType } from "../flow/index";
 import { typesContextType } from "../typesContext";
@@ -83,7 +83,7 @@ export type DisclosureComponentType = {
   openDisc: boolean;
   button: {
     title: string;
-    Icon: React.Component;
+    Icon: React.ElementType;
     buttons?: {
       Icon: ReactElement;
       title: string;
@@ -304,4 +304,8 @@ export type SanitizedHTMLWrapperType = {
   content: string;
   onClick: () => void;
   suppressWarning: boolean;
+};
+
+export type iconsType = {
+  [key: string]: React.ElementType;
 };
