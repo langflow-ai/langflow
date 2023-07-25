@@ -78,69 +78,75 @@ export default function ChatMessage({
               <div className="w-full dark:text-white">
                 <div className="w-full">
                   {useMemo(
-                    () => (
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm, remarkMath]}
-                        rehypePlugins={[rehypeMathjax]}
-                        className="markdown prose inline-block break-words text-primary dark:prose-invert
+                    () =>
+                      chat.message.toString() === "" && lockChat ? (
+                        <IconComponent
+                          name="MoreHorizontal"
+                          className="h-8 w-8 animate-pulse"
+                        />
+                      ) : (
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm, remarkMath]}
+                          rehypePlugins={[rehypeMathjax]}
+                          className="markdown prose inline-block break-words text-primary dark:prose-invert
                       sm:w-[30vw] sm:max-w-[30vw] lg:w-[40vw] lg:max-w-[40vw]"
-                        components={{
-                          pre({ node, ...props }) {
-                            return <>{props.children}</>;
-                          },
-                          code: ({
-                            node,
-                            inline,
-                            className,
-                            children,
-                            ...props
-                          }) => {
-                            if (children.length) {
-                              if (children[0] === "▍") {
-                                return (
-                                  <span className="form-modal-markdown-span">
-                                    ▍
-                                  </span>
+                          components={{
+                            pre({ node, ...props }) {
+                              return <>{props.children}</>;
+                            },
+                            code: ({
+                              node,
+                              inline,
+                              className,
+                              children,
+                              ...props
+                            }) => {
+                              if (children.length) {
+                                if (children[0] === "▍") {
+                                  return (
+                                    <span className="form-modal-markdown-span">
+                                      ▍
+                                    </span>
+                                  );
+                                }
+
+                                children[0] = (children[0] as string).replace(
+                                  "`▍`",
+                                  "▍"
                                 );
                               }
 
-                              children[0] = (children[0] as string).replace(
-                                "`▍`",
-                                "▍"
+                              const match = /language-(\w+)/.exec(
+                                className || ""
                               );
-                            }
 
-                            const match = /language-(\w+)/.exec(
-                              className || ""
-                            );
-
-                            return !inline ? (
-                              <CodeTabsComponent
-                                isMessage
-                                tabs={[
-                                  {
-                                    name: (match && match[1]) || "",
-                                    mode: (match && match[1]) || "",
-                                    image:
-                                      "https://curl.se/logo/curl-symbol-transparent.png",
-                                    language: (match && match[1]) || "",
-                                    code: String(children).replace(/\n$/, ""),
-                                  },
-                                ]}
-                                activeTab={"0"}
-                                setActiveTab={() => {}}
-                              />
-                            ) : (
-                              <code className={className} {...props}>
-                                {children}
-                              </code>
-                            );
-                          },
-                        }}
-                      >
-                        {chat.message.toString()}
-                      </ReactMarkdown>
-                    ),
+                              return !inline ? (
+                                <CodeTabsComponent
+                                  isMessage
+                                  tabs={[
+                                    {
+                                      name: (match && match[1]) || "",
+                                      mode: (match && match[1]) || "",
+                                      image:
+                                        "https://curl.se/logo/curl-symbol-transparent.png",
+                                      language: (match && match[1]) || "",
+                                      code: String(children).replace(/\n$/, ""),
+                                    },
+                                  ]}
+                                  activeTab={"0"}
+                                  setActiveTab={() => {}}
+                                />
+                              ) : (
+                                <code className={className} {...props}>
+                                  {children}
+                                </code>
+                              );
+                            },
+                          }}
+                        >
+                          {chat.message.toString()}
+                        </ReactMarkdown>
+                      ),
                     [chat.message, chat.message.toString()]
                   )}
                 </div>
