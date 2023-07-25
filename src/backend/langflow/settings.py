@@ -6,6 +6,8 @@ import yaml
 from pydantic import BaseSettings, root_validator
 from langflow.utils.logger import logger
 
+BASE_COMPONENTS_PATH = Path(__file__).parent / "components"
+
 
 class Settings(BaseSettings):
     chains: dict = {}
@@ -43,11 +45,18 @@ class Settings(BaseSettings):
                 logger.debug("No DATABASE_URL env variable, using sqlite database")
                 values["database_url"] = "sqlite:///./langflow.db"
 
-        values["component_path"] = [Path(__file__).parent / "components"]
+        if not values.get("component_path"):
+            values["component_path"] = [BASE_COMPONENTS_PATH]
+        elif BASE_COMPONENTS_PATH not in values["component_path"]:
+            values["component_path"].append(BASE_COMPONENTS_PATH)
 
         if os.getenv("LANGFLOW_COMPONENT_PATH"):
-            values["component_path"].append(Path(os.getenv("LANGFLOW_COMPONENT_PATH")))
-
+            langflow_component_path = Path(os.getenv("LANGFLOW_COMPONENT_PATH"))
+            if (
+                langflow_component_path.exists()
+                and langflow_component_path not in values["component_path"]
+            ):
+                values["component_path"].append(langflow_component_path)
         return values
 
     class Config:
