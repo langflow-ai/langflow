@@ -48,14 +48,18 @@ def merge_nested_dicts(dict1, dict2):
 def get_all():
     native_components = build_langchain_types_dict()
 
+    # custom_components is a list of dicts
+    # need to merge all the keys into one dict
+    custom_components_from_file = {}
     if settings.component_path:
-        # TODO: Iterate in a list of component_path
-        custom_components_from_file = build_langchain_custom_component_list_from_path(
-            str(settings.component_path[0])
-        )
-    else:
-        custom_components_from_file = {}
-
+        custom_component_dicts = [
+            build_langchain_custom_component_list_from_path(str(path))
+            for path in settings.component_path
+        ]
+        for custom_component_dict in custom_component_dicts:
+            custom_components_from_file = merge_nested_dicts(
+                custom_components_from_file, custom_component_dict
+            )
     return merge_nested_dicts(native_components, custom_components_from_file)
 
 
