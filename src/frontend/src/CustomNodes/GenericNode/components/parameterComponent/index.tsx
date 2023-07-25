@@ -107,6 +107,7 @@ export default function ParameterComponent({
     let groupedObj = groupByFamily(myData, tooltipTitle, left, data.type, flow);
 
     if (groupedObj?.length === 0 && flow && flow.length > 0) {
+      
       groupedObj = groupByFamilyCustom(
         myData,
         tooltipTitle,
@@ -114,15 +115,9 @@ export default function ParameterComponent({
         data.type,
         flow
       );
-
-      if (groupedObj?.length === 0) {
-        groupedObj.push({
-          family: "custom_components",
-          type: "",
-          component: "Please try adding a custom component.",
-        });
-      }
     }
+
+    
 
     if (groupedObj) {
       refNumberComponents.current = groupedObj[0]?.type?.length;
@@ -180,6 +175,7 @@ export default function ParameterComponent({
   useEffect(() => {
     renderTooltips();
   }, [tooltipTitle, flow]);
+
   return (
     <div
       ref={ref}
