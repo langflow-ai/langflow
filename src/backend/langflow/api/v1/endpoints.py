@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile
 
 from langflow.interface.custom.custom_component import CustomComponent
 
-from langflow.interface.custom.directory_loader import (
+from langflow.interface.custom.directory_reader import (
     CustomComponentPathValueError,
 )
 
@@ -74,7 +74,7 @@ def get_load_custom_component_from_path(path: str):
 
 @router.get("/load_custom_component_from_path_TEST")
 def get_load_custom_component_from_path_test(path: str):
-    from langflow.interface.custom.directory_loader import (
+    from langflow.interface.custom.directory_reader import (
         DirectoryReader,
     )
 
