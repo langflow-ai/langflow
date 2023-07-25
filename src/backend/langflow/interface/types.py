@@ -261,15 +261,18 @@ def build_langchain_custom_component_list_from_path(path: str):
         menu[menu_name] = {}
 
         for component in menu_item["components"]:
-            component_name = component["name"]
-            component_code = component["code"]
+            try:
+                component_name = component["name"]
+                component_code = component["code"]
 
-            component_extractor = CustomComponent(code=component_code)
-            component_extractor.is_check_valid()
-            component_template = build_langchain_template_custom_component(
-                component_extractor
-            )
+                component_extractor = CustomComponent(code=component_code)
+                component_extractor.is_check_valid()
+                component_template = build_langchain_template_custom_component(
+                    component_extractor
+                )
 
-            menu[menu_name][component_name] = component_template
+                menu[menu_name][component_name] = component_template
+            except Exception as exc:
+                logger.error(f"Error while building custom component: {exc}")
 
     return menu
