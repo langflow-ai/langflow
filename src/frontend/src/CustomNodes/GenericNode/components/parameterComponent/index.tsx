@@ -114,6 +114,14 @@ export default function ParameterComponent({
         data.type,
         flow
       );
+
+      if (groupedObj?.length === 0) {
+        groupedObj.push({
+          family: "custom_components",
+          type: '',
+          component: 'Try add a custom component',
+        });
+      }
     }
 
     if (groupedObj) {
