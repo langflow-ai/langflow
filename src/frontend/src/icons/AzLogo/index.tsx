@@ -1,8 +1,8 @@
 import React, { forwardRef } from "react";
-import { ReactComponent as AzSVG } from "./az_logo.svg";
+import SvgAzLogo from "./AzLogo";
 
 export const AzIcon = forwardRef<SVGSVGElement, React.PropsWithChildren<{}>>(
   (props, ref) => {
-    return <AzSVG ref={ref} {...props} />;
+    return <SvgAzLogo ref={ref} {...props} />;
   }
 );

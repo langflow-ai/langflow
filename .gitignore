@@ -244,5 +244,10 @@ dmypy.json
 # Poetry
 .testenv/*
 langflow.db
+
+
 .githooks/prepare-commit-msg
-langchain.db
+.langchain.db
+
+# docusaurus
+.docusaurus/

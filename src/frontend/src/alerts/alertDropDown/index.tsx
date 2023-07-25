@@ -1,5 +1,5 @@
-import { Trash2, X } from "lucide-react";
 import { useContext, useRef } from "react";
+import IconComponent from "../../components/genericIconComponent";
 import { alertContext } from "../../contexts/alertContext";
 import { PopUpContext } from "../../contexts/popUpContext";
 import { AlertDropdownType } from "../../types/alerts";
@@ -36,13 +36,13 @@ export default function AlertDropdown({}: AlertDropdownType) {
               setTimeout(clearNotificationList, 100);
             }}
           >
-            <Trash2 className="h-[1.1rem] w-[1.1rem]" />
+            <IconComponent name="Trash2" className="h-[1.1rem] w-[1.1rem]" />
           </button>
           <button
             className="text-foreground hover:text-status-red"
             onClick={closePopUp}
           >
-            <X className="h-5 w-5" />
+            <IconComponent name="X" className="h-5 w-5" />
           </button>
         </div>
       </div>

@@ -2,10 +2,8 @@ import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
+import { Check, Clipboard } from "lucide-react";
 import { useContext, useEffect, useRef, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
-// import "ace-builds/webpack-resolver";
-import { Check, Clipboard, Code2 } from "lucide-react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import AccordionComponent from "../../components/AccordionComponent";
@@ -13,6 +11,7 @@ import ShadTooltip from "../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../components/codeAreaComponent";
 import Dropdown from "../../components/dropdownComponent";
 import FloatComponent from "../../components/floatComponent";
+import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
 import InputFileComponent from "../../components/inputFileComponent";
 import InputListComponent from "../../components/inputListComponent";
@@ -42,17 +41,18 @@ import {
   TabsList,
   TabsTrigger,
 } from "../../components/ui/tabs";
+import { EXPORT_CODE_DIALOG } from "../../constants/constants";
+import { darkContext } from "../../contexts/darkContext";
+import { PopUpContext } from "../../contexts/popUpContext";
+import { TabsContext } from "../../contexts/tabsContext";
+import { FlowType } from "../../types/flow/index";
+import { buildTweaks } from "../../utils/reactflowUtils";
 import {
-  EXPORT_CODE_DIALOG,
+  classNames,
   getCurlCode,
   getPythonApiCode,
   getPythonCode,
-} from "../../constants";
-import { darkContext } from "../../contexts/darkContext";
-import { TabsContext } from "../../contexts/tabsContext";
-import { FlowType } from "../../types/flow/index";
-import { buildTweaks, classNames } from "../../utils";
-
+} from "../../utils/utils";
 export default function ApiModal({ flow }: { flow: FlowType }) {
   const [open, setOpen] = useState(true);
   const { dark } = useContext(darkContext);
@@ -271,7 +271,8 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <span className="pr-2">Code</span>
-            <Code2
+            <IconComponent
+              name="Code2"
               className="h-6 w-6 pl-1 text-gray-800 dark:text-white"
               aria-hidden="true"
             />
@@ -340,6 +341,7 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                           {tweaksList.current.includes(t["data"]["id"]) && (
                             <AccordionComponent
                               trigger={t["data"]["id"]}
+                              keyValue={t["data"]["id"]}
                               open={openAccordion}
                             >
                               <div className="api-modal-table-arrangement">
@@ -376,8 +378,6 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                                               "int")
                                       )
                                       .map((n, i) => {
-                                        //console.log(t.data.node.template[n]);
-
                                         return (
                                           <TableRow
                                             key={i}
@@ -720,34 +720,6 @@ export default function ApiModal({ flow }: { flow: FlowType }) {
                           )}
                         </div>
                       ))}
-
-                      {/*
-                      <div className="flex flex-col gap-5 bg-muted">
-                        <Table className="table-fixed bg-muted outline-1">
-                          <TableHeader className="border-gray-200 text-gray-500 text-xs font-medium h-10">
-                            <TableRow className="dark:border-b-muted">
-                              <TableHead className="h-5 text-center">
-                                TWEAK
-                              </TableHead>
-                              <TableHead className="p-0 h-5 text-center">
-                                VALUE
-                              </TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {invoices.map((invoice) => (
-                              <TableRow className="p-0 text-center text-gray-900 text-sm">
-                                <TableCell className="p-2 text-center text-gray-900 text-sm truncate">
-                                  {invoice.paymentStatus}
-                                </TableCell>
-                                <TableCell className="p-2 text-center text-gray-900 text-sm truncate">
-                                  {invoice.paymentMethod}
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div> */}
                     </div>
                   </div>
                 </>

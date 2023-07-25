@@ -1,6 +1,7 @@
-import { Code2, FileDown, FileUp, Menu, Save, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { useContext, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
+import IconComponent from "../../../../components/genericIconComponent";
 import { Separator } from "../../../../components/ui/separator";
 import { alertContext } from "../../../../contexts/alertContext";
 import { PopUpContext } from "../../../../contexts/popUpContext";
@@ -10,11 +11,11 @@ import ApiModal from "../../../../modals/ApiModal";
 import ExportModal from "../../../../modals/exportModal";
 import { APIClassType, APIObjectType } from "../../../../types/api";
 import {
-  classNames,
   nodeColors,
   nodeIconsLucide,
   nodeNames,
-} from "../../../../utils";
+} from "../../../../utils/styleUtils";
+import { classNames } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 
 export default function ExtraSidebar() {
@@ -41,6 +42,7 @@ export default function ExtraSidebar() {
     event.dataTransfer.setData("nodedata", JSON.stringify(data));
   }
 
+  // Handle showing components after use search input
   function handleSearchInput(e: string) {
     setFilterData((_) => {
       let ret = {};
@@ -64,14 +66,10 @@ export default function ExtraSidebar() {
           <button
             className="extra-side-bar-buttons"
             onClick={() => {
-              // openPopUp(<ImportModal />);
               uploadFlow();
             }}
           >
-            <FileUp
-              strokeWidth={1.5}
-              className="side-bar-button-size "
-            ></FileUp>
+            <IconComponent name="FileUp" className="side-bar-button-size " />
           </button>
         </ShadTooltip>
 
@@ -82,10 +80,7 @@ export default function ExtraSidebar() {
               openPopUp(<ExportModal />);
             }}
           >
-            <FileDown
-              strokeWidth={1.5}
-              className="side-bar-button-size"
-            ></FileDown>
+            <IconComponent name="FileDown" className="side-bar-button-size" />
           </button>
         </ShadTooltip>
         <ShadTooltip content="Code" side="top">
@@ -95,7 +90,7 @@ export default function ExtraSidebar() {
               openPopUp(<ApiModal flow={flows.find((f) => f.id === tabId)} />);
             }}
           >
-            <Code2 strokeWidth={1.5} className="side-bar-button-size"></Code2>
+            <IconComponent name="Code2" className="side-bar-button-size" />
           </button>
         </ShadTooltip>
 
@@ -108,13 +103,13 @@ export default function ExtraSidebar() {
             }}
             disabled={!isPending}
           >
-            <Save
-              strokeWidth={1.5}
+            <IconComponent
+              name="Save"
               className={
                 "side-bar-button-size" +
                 (isPending ? " " : " extra-side-bar-save-disable")
               }
-            ></Save>
+            />
           </button>
         </ShadTooltip>
       </div>
@@ -128,11 +123,11 @@ export default function ExtraSidebar() {
           className="input-search"
           onChange={(e) => {
             handleSearchInput(e.target.value);
+            // Set search input state
             setSearch(e.target.value);
           }}
         />
         <div className="search-icon">
-          {/* ! replace hash color here */}
           <Search size={20} strokeWidth={1.5} className="text-primary" />
         </div>
       </div>
@@ -187,7 +182,10 @@ export default function ExtraSidebar() {
                               <span className="side-bar-components-text">
                                 {data[d][t].display_name}
                               </span>
-                              <Menu className="side-bar-components-icon " />
+                              <IconComponent
+                                name="Menu"
+                                className="side-bar-components-icon "
+                              />
                             </div>
                           </div>
                         </div>
