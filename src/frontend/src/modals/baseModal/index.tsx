@@ -10,7 +10,7 @@ import {
   DialogTrigger,
 } from "../../components/ui/dialog";
 import { PopUpContext } from "../../contexts/popUpContext";
-import { ContentProps, HeaderProps } from "../../types/components";
+import { ContentProps, HeaderProps, headerConstType } from "../../types/components";
 
 const Content: React.FC<ContentProps> = ({ children }) => {
   return <div className="h-full w-full">{children}</div>;
@@ -19,7 +19,7 @@ const Content: React.FC<ContentProps> = ({ children }) => {
 const Header: React.FC<{ children: ReactNode; description: string }> = ({
   children,
   description,
-}) => {
+}: headerConstType): JSX.Element => {
   return (
     <DialogHeader>
       <DialogTitle className="flex items-center">{children}</DialogTitle>
@@ -32,10 +32,10 @@ interface BaseModalProps {
   open: boolean;
   setOpen: (open: boolean) => void;
 }
-function BaseModal({ open, setOpen, children }: BaseModalProps) {
+function BaseModal({ open, setOpen, children }: BaseModalProps): JSX.Element {
   const { closePopUp, setCloseEdit } = useContext(PopUpContext);
 
-  function setModalOpen(x: boolean) {
+  function setModalOpen(x: boolean): void {
     setOpen(x);
     if (x === false) {
       setTimeout(() => {

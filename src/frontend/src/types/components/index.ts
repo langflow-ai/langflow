@@ -1,7 +1,8 @@
 import { ForwardRefExoticComponent, ReactElement, ReactNode, RefAttributes, SVGProps } from "react";
 import { APIClassType } from "../api";
-import { FlowStyleType, NodeDataType } from "../flow/index";
+import { FlowStyleType, FlowType, NodeDataType } from "../flow/index";
 import { typesContextType } from "../typesContext";
+import { ChatMessageType } from "../chat";
 
 export type InputComponentType = {
   value: string;
@@ -303,9 +304,55 @@ export type SanitizedHTMLWrapperType = {
   className: string;
   content: string;
   onClick: () => void;
-  suppressWarning: boolean;
+  suppressWarning?: boolean;
 };
 
 export type iconsType = {
   [key: string]: React.ElementType;
+};
+
+export type headerConstType = {
+  children: ReactNode;
+  description: string;
+};
+
+export type codeAreaModalPropsType = {
+  setValue: (value: string) => void;
+  value: string;
+  nodeClass: APIClassType;
+  setNodeClass: (Class: APIClassType) => void;
+};
+
+export type chatMessagePropsType = {
+  chat: ChatMessageType;
+  lockChat: boolean;
+  lastMessage: boolean;
+};
+
+export type formModalPropsType = {
+  open: boolean;
+  setOpen: Function;
+  flow: FlowType;
+};
+
+export type genericModalPropsType = {
+  field_name?: string;
+  setValue: (value: string) => void;
+  value: string;
+  buttonText: string;
+  modalTitle: string;
+  type: number;
+  nodeClass?: APIClassType;
+  setNodeClass?: (Class: APIClassType) => void;
+};
+
+export type buttonBoxPropsType = {
+  onClick: () => void;
+  title: string;
+  description: string;
+  icon: ReactNode;
+  bgColor: string;
+  textColor: string;
+  deactivate?: boolean;
+  size: "small" | "medium" | "big";
 };

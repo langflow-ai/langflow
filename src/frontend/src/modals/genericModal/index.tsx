@@ -25,6 +25,7 @@ import {
   varHighlightHTML,
 } from "../../utils/utils";
 import BaseModal from "../baseModal";
+import { genericModalPropsType } from "../../types/components";
 
 export default function GenericModal({
   field_name = "",
@@ -35,16 +36,7 @@ export default function GenericModal({
   type,
   nodeClass,
   setNodeClass,
-}: {
-  field_name?: string;
-  setValue: (value: string) => void;
-  value: string;
-  buttonText: string;
-  modalTitle: string;
-  type: number;
-  nodeClass?: APIClassType;
-  setNodeClass?: (Class: APIClassType) => void;
-}): JSX.Element {
+}: genericModalPropsType): JSX.Element {
   const [myButtonText] = useState(buttonText);
   const [myModalTitle] = useState(modalTitle);
   const [myModalType] = useState(type);

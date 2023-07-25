@@ -15,18 +15,14 @@ import { PopUpContext } from "../../contexts/popUpContext";
 import { postValidateCode } from "../../controllers/API";
 import { APIClassType } from "../../types/api";
 import BaseModal from "../baseModal";
+import { codeAreaModalPropsType } from "../../types/components";
 
 export default function CodeAreaModal({
   value,
   setValue,
   nodeClass,
   setNodeClass,
-}: {
-  setValue: (value: string) => void;
-  value: string;
-  nodeClass: APIClassType;
-  setNodeClass: (Class: APIClassType) => void;
-}): JSX.Element {
+}: codeAreaModalPropsType): JSX.Element {
   const [code, setCode] = useState(value);
   const { dark } = useContext(darkContext);
   const { closePopUp, setCloseEdit } = useContext(PopUpContext);
