@@ -3,13 +3,13 @@ import { twMerge } from "tailwind-merge";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
 import {
   IVarHighlightType,
-  dataType,
   groupedObjType,
   tweakType,
 } from "../types/components";
 import { FlowType } from "../types/flow";
 import { TabsState } from "../types/tabs";
 import { buildTweaks } from "./reactflowUtils";
+import { APIClassType } from "../types/api";
 
 export function classNames(...classes: Array<string>): string {
   return classes.filter(Boolean).join(" ");
@@ -91,7 +91,7 @@ export function checkUpperWords(str: string): string {
 }
 
 export function groupByFamily(
-  data: dataType,
+  data: APIClassType,
   baseClasses: string,
   left: boolean,
   type: string
@@ -210,7 +210,8 @@ export function groupByFamily(
   }
 }
 
-export function buildInputs(tabsState: object, id: string): string {
+export function buildInputs(tabsState: TabsState, id: string): string {
+  console.log(tabsState)
   return tabsState &&
     tabsState[id] &&
     tabsState[id].formKeysData &&
@@ -353,6 +354,7 @@ export function getCurlCode(
   tweak?: any[],
   tabsState?: TabsState
 ): string {
+  console.log(tweak)
   const flowId = flow.id;
   const tweaks = buildTweaks(flow);
   const inputs = buildInputs(tabsState, flow.id);
