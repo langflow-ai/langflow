@@ -52,7 +52,7 @@ export default function ParameterComponent({
   const [position, setPosition] = useState(0);
   const { setTabsState, tabId, save, flows } = useContext(TabsContext);
 
-  const flow = flows.find((f) => f.id === tabId).data.nodes;
+  const flow = flows.find((f) => f.id === tabId).data?.nodes ?? null;
 
   // Update component position
   useEffect(() => {
@@ -106,7 +106,7 @@ export default function ParameterComponent({
   function renderTooltips() {
     let groupedObj = groupByFamily(myData, tooltipTitle, left, data.type, flow);
 
-    if (groupedObj?.length === 0) {
+    if (groupedObj?.length === 0 && flow && flow.length > 0) {
       groupedObj = groupByFamilyCustom(
         myData,
         tooltipTitle,
@@ -171,7 +171,7 @@ export default function ParameterComponent({
 
   useEffect(() => {
     renderTooltips();
-  }, [tooltipTitle, flow.length]);
+  }, [tooltipTitle, flow]);
   return (
     <div
       ref={ref}
