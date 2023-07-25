@@ -4,7 +4,6 @@ import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import Tooltip from "../../components/TooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
-import { Badge } from "../../components/ui/badge";
 import { useSSE } from "../../contexts/SSEContext";
 import { alertContext } from "../../contexts/alertContext";
 import { TabsContext } from "../../contexts/tabsContext";
@@ -96,6 +95,15 @@ export default function GenericNode({
           "generic-node-div"
         )}
       >
+        <div className="absolute right-0 top-0">
+          {data.node.beta && (
+            <div className="h-16 w-16 overflow-hidden rounded-tr-lg">
+              <div className="mt-2 w-24 rotate-45 bg-destructive text-center text-xs font-semibold text-background">
+                BETA
+              </div>
+            </div>
+          )}
+        </div>
         <div className="generic-node-div-title">
           <div className="generic-node-title-arrangement">
             <IconComponent
@@ -112,11 +120,6 @@ export default function GenericNode({
             </div>
           </div>
           <div className="round-button-div">
-            {data.node.beta && (
-              <Badge size="sm" variant="destructive">
-                Beta
-              </Badge>
-            )}
             <div>
               <Tooltip
                 title={
