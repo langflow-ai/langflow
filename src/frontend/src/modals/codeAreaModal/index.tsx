@@ -11,11 +11,9 @@ import { Button } from "../../components/ui/button";
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
-import { PopUpContext } from "../../contexts/popUpContext";
 import { typesContext } from "../../contexts/typesContext";
 import { postCustomComponent, postValidateCode } from "../../controllers/API";
 import { APIClassType } from "../../types/api";
-import { getRandomKeyByssmm } from "../../utils/utils";
 import BaseModal from "../baseModal";
 
 export default function CodeAreaModal({
@@ -41,7 +39,6 @@ export default function CodeAreaModal({
   const [error, setError] = useState<{
     detail: { error: string; traceback: string };
   }>(null);
-  const { setCloseEdit } = useContext(PopUpContext);
 
   useEffect(() => {
     // if nodeClass.template has more fields other than code and dynamic is true
@@ -64,7 +61,6 @@ export default function CodeAreaModal({
             });
             setOpen(false);
             setValue(code);
-            setCloseEdit(getRandomKeyByssmm().toString());
             // setValue(code);
           } else {
             if (funcErrors.length !== 0) {
@@ -101,7 +97,6 @@ export default function CodeAreaModal({
           setNodeClass(data);
           setValue(code);
           setOpen(false);
-          setCloseEdit(getRandomKeyByssmm().toString());
         }
       })
       .catch((err) => {
