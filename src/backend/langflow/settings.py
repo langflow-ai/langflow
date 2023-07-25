@@ -85,7 +85,13 @@ class Settings(BaseSettings):
     def update_settings(self, **kwargs):
         for key, value in kwargs.items():
             if hasattr(self, key):
-                setattr(self, key, value)
+                if isinstance(getattr(self, key), list):
+                    if isinstance(value, list):
+                        getattr(self, key).extend(value)
+                    else:
+                        getattr(self, key).append(value)
+                else:
+                    setattr(self, key, value)
 
 
 def save_settings_to_yaml(settings: Settings, file_path: str):
