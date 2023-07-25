@@ -1,11 +1,11 @@
-name: release
+name: pre-release
 
 on:
   pull_request:
     types:
       - closed
     branches:
-      - main
+      - dev
     paths:
       - "pyproject.toml"
 
@@ -16,7 +16,7 @@ jobs:
   if_release:
     if: |
       ${{ github.event.pull_request.merged == true }}
-      && ${{ contains(github.event.pull_request.labels.*.name, 'Release') }}
+      && ${{ contains(github.event.pull_request.labels.*.name, 'pre-release') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -47,11 +47,3 @@ jobs:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           poetry publish
-
-      - name: Trigger build and push on langchain-serve
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.SERVE_GITHUB_TOKEN }}
-          repository: jina-ai/langchain-serve
-          event-type: langflow-push
-          client-payload: '{"push_token": "${{ secrets.LCSERVE_PUSH_TOKEN }}", "branch": "main"}'
