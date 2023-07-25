@@ -256,6 +256,8 @@ export function groupByFamilyCustom(data, baseClasses, left, type, flow) {
     });
   }
 
+  
+
   const groupedResult = {};
 
   arrOfType.forEach((item) => {
@@ -269,7 +271,9 @@ export function groupByFamilyCustom(data, baseClasses, left, type, flow) {
     }
   });
 
+
   const result = Object.values(groupedResult);
+
 
   if (left === false) {
     let resultFiltered = [];
@@ -283,12 +287,23 @@ export function groupByFamilyCustom(data, baseClasses, left, type, flow) {
             resultFiltered.push({
               family: "custom_components",
               type: n,
-              component: element["data"]["node"]["display_name"],
+              component: element["data"]["node"]["display_name"]
             });
           });
         }
       });
     });
+
+    if(resultFiltered.length === 0) {
+      Object.keys(groupedResult).forEach((el) => {
+        resultFiltered.push({
+          family: "custom_components",
+          type: groupedResult[el].type,
+          component: nodeNames["custom_components"]
+        })
+      })
+    }
+    
     return resultFiltered;
   } else {
     return result;
