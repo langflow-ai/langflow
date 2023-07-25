@@ -18,16 +18,21 @@ from langflow.interface.custom.base import custom_component_creator
 from langflow.interface.custom.custom_component import CustomComponent
 
 from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.tools import CustomComponentNode
+from langflow.template.frontend_node.tools import (
+    CustomComponentNode,
+    CustomComponentEmptyNode,
+)
 from langflow.interface.retrievers.base import retriever_creator
 
 from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.utils.logger import logger
+from langflow.utils.util import get_base_classes
+from langflow.api.utils import merge_nested_dicts
+
 import re
 import warnings
 import traceback
 from fastapi import HTTPException
-from langflow.utils.util import get_base_classes
 
 
 # Used to get the base_classes list
@@ -250,15 +255,14 @@ def build_langchain_custom_component_list_from_path(path: str):
 
     # Build and validate all files
     data = reader.build_component_menu_list(file_list)
-    valid_components = reader.filter_loaded_components(data, False)
 
-    # TODO: Handle those invalid components
-    reader.filter_loaded_components(data, True)
+    valid_components = reader.filter_loaded_components(data=data, with_errors=False)
+    invalid_components = reader.filter_loaded_components(data=data, with_errors=True)
 
-    menu = {}
+    valid_menu = {}
     for menu_item in valid_components["menu"]:
         menu_name = menu_item["name"]
-        menu[menu_name] = {}
+        valid_menu[menu_name] = {}
 
         for component in menu_item["components"]:
             try:
@@ -271,8 +275,33 @@ def build_langchain_custom_component_list_from_path(path: str):
                     component_extractor
                 )
 
-                menu[menu_name][component_name] = component_template
+                valid_menu[menu_name][component_name] = component_template
             except Exception as exc:
                 logger.error(f"Error while building custom component: {exc}")
 
-    return menu
+    invalid_menu = {}
+    for menu_item in invalid_components["menu"]:
+        menu_name = menu_item["name"]
+        invalid_menu[menu_name] = {}
+
+        for component in menu_item["components"]:
+            try:
+                component_name = component["name"]
+                component_code = component["code"]
+
+                component_template = (
+                    CustomComponentNode(
+                        description="ERROR - Check your Python Code",
+                        display_name=f"ERROR - {component_name}",
+                    )
+                    .to_dict()
+                    .get(type(CustomComponent()).__name__)
+                )
+
+                component_template.get("template").get("code")["value"] = component_code
+
+                invalid_menu[menu_name][component_name] = component_template
+            except Exception as exc:
+                logger.error(f"Error while creating custom component: {exc}")
+
+    return merge_nested_dicts(valid_menu, invalid_menu)

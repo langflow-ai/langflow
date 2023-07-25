@@ -57,3 +57,12 @@ def build_input_keys_response(langchain_object, artifacts):
         input_keys_response["template"] = langchain_object.prompt.template
 
     return input_keys_response
+
+
+def merge_nested_dicts(dict1, dict2):
+    for key, value in dict2.items():
+        if isinstance(value, dict) and isinstance(dict1.get(key), dict):
+            dict1[key] = merge_nested_dicts(dict1[key], value)
+        else:
+            dict1[key] = value
+    return dict1
