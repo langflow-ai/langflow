@@ -107,7 +107,6 @@ export default function ParameterComponent({
     let groupedObj = groupByFamily(myData, tooltipTitle, left, data.type, flow);
 
     if (groupedObj?.length === 0 && flow && flow.length > 0) {
-      
       groupedObj = groupByFamilyCustom(
         myData,
         tooltipTitle,
@@ -116,8 +115,6 @@ export default function ParameterComponent({
         flow
       );
     }
-
-    
 
     if (groupedObj) {
       refNumberComponents.current = groupedObj[0]?.type?.length;
