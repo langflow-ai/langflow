@@ -65,8 +65,9 @@ This will install the following dependencies:
 
 - [CTransformers](https://github.com/marella/ctransformers)
 - [llama-cpp-python](https://github.com/abetlen/llama-cpp-python)
-- [huggingface-hub](https://github.com/huggingface/huggingface_hub)
 - [sentence-transformers](https://github.com/UKPLab/sentence-transformers)
+
+You can still use models from projects like LocalAI
 
 Next, run:
 
