@@ -87,20 +87,20 @@
     .button-div-style {
       @apply gap-2 flex
     }
-    .input-primary{
+    .primary-input{
       @apply disabled:cursor-not-allowed disabled:opacity-50 focus:placeholder-transparent focus:ring-ring focus:border-ring bg-background block text-left border-border form-input px-3 placeholder:text-muted-foreground rounded-md shadow-sm sm:text-sm w-full truncate
     }
     
-  /* The same as input-primary but no-truncate */
+  /* The same as primary-input but no-truncate */
     .textarea-primary{
       @apply disabled:cursor-not-allowed disabled:opacity-50 focus:placeholder-transparent focus:ring-ring focus:border-ring bg-background block text-left border-border form-input px-3 placeholder:text-muted-foreground rounded-md shadow-sm sm:text-sm w-full
     }
     
     .input-edit-node{
-      @apply input-primary pt-0.5 pb-0.5 text-left w-full
+      @apply primary-input pt-0.5 pb-0.5 text-left w-full
     }
     .input-search{
-      @apply input-primary pr-7 mx-2
+      @apply primary-input pr-7 mx-2
     }
     .input-disable{
       @apply bg-border placeholder:text-ring border-transparent
@@ -385,7 +385,7 @@
       @apply  input-edit-node relative pr-8
     }
     .dropdown-component-false-outline {
-      @apply input-primary py-2 pl-3 pr-10 text-left
+      @apply primary-input py-2 pl-3 pr-10 text-left
     }
     .dropdown-component-display {
       @apply block w-full truncate bg-background

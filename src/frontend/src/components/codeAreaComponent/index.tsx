@@ -43,7 +43,7 @@ export default function CodeAreaComponent({
               editNode
                 ? "input-edit-node input-dialog"
                 : (disabled ? " input-disable input-ring " : "") +
-                  " input-primary text-muted-foreground "
+                  " primary-input text-muted-foreground "
             }
           >
             {myValue !== "" ? myValue : "Type something..."}
