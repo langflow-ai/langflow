@@ -27,7 +27,12 @@ module.exports = {
       /** @type {import('@docusaurus/preset-classic').Options} */
       ({
         docs: {
-          beforeDefaultRemarkPlugins: [[remarkCodeHike, { theme: "nord" }]],
+          beforeDefaultRemarkPlugins: [
+            [
+              remarkCodeHike,
+              { theme: "monokai", showCopyButton: true, lineNumbers: true },
+            ],
+          ],
           routeBasePath: "/",
           sidebarPath: require.resolve("./sidebars.js"),
           path: "docs",
