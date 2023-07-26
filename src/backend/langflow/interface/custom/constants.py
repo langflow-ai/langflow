@@ -20,7 +20,17 @@ LANGCHAIN_BASE_TYPES = {
     "VectorStore": VectorStore,
     "Embeddings": Embeddings,
     "BaseRetriever": BaseRetriever,
+}
+
+# Langchain base types plus Python base types
+CUSTOM_COMPONENT_SUPPORTED_TYPES = {
+    **LANGCHAIN_BASE_TYPES,
     "str": str,
+    "int": int,
+    "float": float,
+    "bool": bool,
+    "list": list,
+    "dict": dict,
 }
 
 
