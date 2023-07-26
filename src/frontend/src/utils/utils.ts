@@ -399,7 +399,7 @@ export function getWidgetCode(flow: FlowType, tabsState?: TabsState): string {
 
   return `<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
 
-<!-- chat_inputs: Stringified JSON with all the input keys and its values. The key that is defined
+<!-- chat_inputs: Stringified JSON with all the input keys and its values. The value of the key that is defined
 as chat_input_field will be overwritten by the chat message.
 chat_input_field: Input key that you want the chat to send the user message with. -->
 <langflow-chat
