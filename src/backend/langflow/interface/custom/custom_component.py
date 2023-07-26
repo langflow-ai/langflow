@@ -5,7 +5,6 @@ from langflow.interface.custom.component import Component
 
 from langflow.utils import validate
 
-from uuid import UUID
 from langflow.database.base import session_getter
 from langflow.database.models.flow import Flow
 from pydantic import Extra
@@ -44,13 +43,15 @@ class CustomComponent(Component, extra=Extra.allow):
         return True
 
     def is_check_valid(self) -> bool:
-        return self._class_template_validation(self.code)
+        return self._class_template_validation(self.code) if self.code else False
 
     def get_code_tree(self, code: str):
         return super().get_code_tree(code)
 
     @property
     def get_function_entrypoint_args(self) -> str:
+        if not self.code:
+            return ""
         tree = self.get_code_tree(self.code)
 
         component_classes = [
@@ -78,6 +79,8 @@ class CustomComponent(Component, extra=Extra.allow):
 
     @property
     def get_function_entrypoint_return_type(self) -> str:
+        if not self.code:
+            return ""
         tree = self.get_code_tree(self.code)
 
         component_classes = [
@@ -138,7 +141,7 @@ class CustomComponent(Component, extra=Extra.allow):
     def get_function(self):
         return validate.create_function(self.code, self.function_entrypoint_name)
 
-    def load_flow(self, flow_id: UUID = None):
+    def load_flow(self, flow_id: str):
         from langflow.processing.process import build_sorted_vertices_with_caching
 
         with session_getter() as session:
