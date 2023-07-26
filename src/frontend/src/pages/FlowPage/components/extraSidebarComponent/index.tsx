@@ -74,19 +74,19 @@ export default function ExtraSidebar() {
           </ShadTooltip>
         </div>
         <div className="side-bar-button">
-          <ShadTooltip content="Export" side="top">
-            <ExportModal>
+          <ExportModal>
+            <ShadTooltip content="Export" side="top">
               <div className={classNames("extra-side-bar-buttons")}>
                 <IconComponent
                   name="FileDown"
                   className="side-bar-button-size"
                 />
               </div>
-            </ExportModal>
-          </ShadTooltip>
+            </ShadTooltip>
+          </ExportModal>
         </div>
-        <div className="side-bar-button">
-          <ShadTooltip content="Code" side="top">
+        <ShadTooltip content={"Code"} side="top">
+          <div className="side-bar-button">
             {flow && flow.data && (
               <ApiModal flow={flow} disable={!isBuilt}>
                 <div className={classNames("extra-side-bar-buttons")}>
@@ -100,8 +100,8 @@ export default function ExtraSidebar() {
                 </div>
               </ApiModal>
             )}
-          </ShadTooltip>
-        </div>
+          </div>
+        </ShadTooltip>
         <div className="side-bar-button">
           <ShadTooltip content="Save" side="top">
             <button
