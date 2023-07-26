@@ -13,6 +13,7 @@ import {
   undoRedoContextType,
 } from "../types/typesContext";
 import { TabsContext } from "./tabsContext";
+import { isWrappedWithClass } from "../utils/utils";
 
 const initialValue = {
   undo: () => {},
@@ -137,17 +138,21 @@ export function UndoRedoProvider({ children }) {
     }
 
     const keyDownHandler = (event: KeyboardEvent) => {
-      if (
-        event.key === "z" &&
-        (event.ctrlKey || event.metaKey) &&
-        event.shiftKey
-      ) {
-        redo();
-      } else if (event.key === "y" && (event.ctrlKey || event.metaKey)) {
-        event.preventDefault(); // prevent the default action
-        redo();
-      } else if (event.key === "z" && (event.ctrlKey || event.metaKey)) {
-        undo();
+      if (!isWrappedWithClass(event, "noundo")) {
+        if (
+          event.key === "z" &&
+          (event.ctrlKey || event.metaKey) &&
+          event.shiftKey
+        ) {
+          event.preventDefault();
+          redo();
+        } else if (event.key === "y" && (event.ctrlKey || event.metaKey)) {
+          event.preventDefault(); // prevent the default action
+          redo();
+        } else if (event.key === "z" && (event.ctrlKey || event.metaKey)) {
+          event.preventDefault();
+          undo();
+        }
       }
     };
 

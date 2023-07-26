@@ -1,46 +1,25 @@
-import { useContext, useEffect, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
-import { TabsContext } from "../../contexts/tabsContext";
+import { useEffect } from "react";
 import { FloatComponentType } from "../../types/components";
+import { Input } from "../ui/input";
 
 export default function IntComponent({
   value,
   onChange,
-  disableCopyPaste = false,
   disabled,
   editNode = false,
 }: FloatComponentType): JSX.Element {
-  const [myValue, setMyValue] = useState(value ?? "");
-  const { setDisableCopyPaste } = useContext(TabsContext);
   const min = 0;
-  const { closePopUp } = useContext(PopUpContext);
 
   // Clear component state
   useEffect(() => {
     if (disabled) {
-      setMyValue("");
       onChange("");
     }
   }, [disabled, onChange]);
 
-  useEffect(() => {
-    setMyValue(value);
-  }, [closePopUp]);
-
   return (
-    <div
-      className={
-        "w-full " +
-        (disabled ? "pointer-events-none w-full cursor-not-allowed" : "")
-      }
-    >
-      <input
-        onFocus={() => {
-          if (disableCopyPaste) setDisableCopyPaste(true);
-        }}
-        onBlur={() => {
-          if (disableCopyPaste) setDisableCopyPaste(false);
-        }}
+    <div className="w-full">
+      <Input
         onKeyDown={(event) => {
           if (
             event.key !== "Backspace" &&
@@ -67,15 +46,11 @@ export default function IntComponent({
             e.target.value = min.toString();
           }
         }}
-        value={myValue}
-        className={
-          editNode
-            ? " input-edit-node "
-            : " input-primary " + (disabled ? " input-disable" : "")
-        }
+        value={value ?? ""}
+        className={editNode ? "input-edit-node" : ""}
+        disabled={disabled}
         placeholder={editNode ? "Integer number" : "Type an integer number"}
         onChange={(e) => {
-          setMyValue(e.target.value);
           onChange(e.target.value);
         }}
       />

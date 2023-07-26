@@ -90,12 +90,10 @@ export function checkUpperWords(str: string): string {
   return words.join(" ");
 }
 
-export function groupByFamily(
-  data: APIClassType,
-  baseClasses: string,
-  left: boolean,
-  type: string
-): groupedObjType[] {
+export const isWrappedWithClass = (event: any, className: string | undefined) =>
+  event.target.closest(`.${className}`);
+
+export function groupByFamily(data: APIClassType, baseClasses: string, left: boolean, type: string): groupedObjType[] {
   let parentOutput: string;
   let arrOfParent: string[] = [];
   let arrOfType: { family: string; type: string; component: string }[] = [];
@@ -283,7 +281,7 @@ export function buildTweakObject(tweak: tweakType[]): string {
     });
   });
 
-  const tweakString = JSON.stringify(tweak, null, 2);
+  const tweakString = JSON.stringify(tweak.at(-1), null, 2);
   return tweakString;
 }
 

@@ -1,5 +1,5 @@
 import { ForwardRefExoticComponent, ReactElement, ReactNode, RefAttributes, SVGProps } from "react";
-import { APIClassType } from "../api";
+import { APIClassType, APITemplateType } from "../api";
 import { FlowStyleType, FlowType, NodeDataType } from "../flow/index";
 import { typesContextType } from "../typesContext";
 import { ChatMessageType } from "../chat";
@@ -9,7 +9,6 @@ export type InputComponentType = {
   disabled?: boolean;
   onChange: (value: string) => void;
   password: boolean;
-  disableCopyPaste?: boolean;
   editNode?: boolean;
   onChangePass?: (value: boolean | boolean) => void;
   showPass?: boolean;
@@ -30,6 +29,7 @@ export type DropDownComponentType = {
 };
 export type ParameterComponentType = {
   data: NodeDataType;
+  setData: (value: NodeDataType) => void;
   title: string;
   id: string;
   color: string;
@@ -47,7 +47,6 @@ export type InputListComponentType = {
   onChange: (value: string[]) => void;
   disabled: boolean;
   editNode?: boolean;
-  onAddInput?: (value?: string[]) => void;
 };
 
 export type TextAreaComponentType = {
@@ -95,7 +94,6 @@ export type DisclosureComponentType = {
 export type FloatComponentType = {
   value: string;
   disabled?: boolean;
-  disableCopyPaste?: boolean;
   onChange: (value: string) => void;
   editNode?: boolean;
 };
@@ -175,7 +173,7 @@ export type InputProps = {
   name: string | null;
   description: string | null;
   maxLength?: number;
-  flows: Array<{ id: string; name: string }>;
+  flows: Array<{ id: string; name: string; description: string }>;
   tabId: string;
   setName: (name: string) => void;
   setDescription: (description: string) => void;
@@ -224,7 +222,7 @@ export type nodeToolbarType = {
       description: string;
       display_name: string;
       documentation: string;
-      template: object;
+      template: APITemplateType;
     };
     value: void;
   };
@@ -290,7 +288,7 @@ export type fileCardPropsType = {
 export type nodeToolbarPropsType = {
   data: NodeDataType;
   deleteNode: (idx: string) => void;
-  openPopUp: (element: JSX.Element) => void;
+  setData: (newState: {}) => void;
 };
 
 export type parsedDataType = {
@@ -321,6 +319,7 @@ export type codeAreaModalPropsType = {
   value: string;
   nodeClass: APIClassType;
   setNodeClass: (Class: APIClassType) => void;
+  children: ReactNode;
 };
 
 export type chatMessagePropsType = {
@@ -344,6 +343,7 @@ export type genericModalPropsType = {
   type: number;
   nodeClass?: APIClassType;
   setNodeClass?: (Class: APIClassType) => void;
+  children: ReactNode;
 };
 
 export type buttonBoxPropsType = {
@@ -355,4 +355,9 @@ export type buttonBoxPropsType = {
   textColor: string;
   deactivate?: boolean;
   size: "small" | "medium" | "big";
+};
+
+export type FlowSettingsPropsType = {
+  open: boolean;
+  setOpen: (open: boolean) => void;
 };

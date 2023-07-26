@@ -25,6 +25,7 @@ export default function ToggleShadComponent({
       scaleX = 1;
       scaleY = 1;
   }
+
   return (
     <div className={disabled ? "pointer-events-none cursor-not-allowed " : ""}>
       <Switch

@@ -1,56 +1,37 @@
-import { useContext, useEffect, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
-import { TabsContext } from "../../contexts/tabsContext";
+import { useEffect, useState } from "react";
 import { InputComponentType } from "../../types/components";
 import { classNames } from "../../utils/utils";
+import { Input } from "../ui/input";
 
 export default function InputComponent({
   value,
   onChange,
-  disableCopyPaste = false,
   disabled,
   password,
   editNode = false,
 }: InputComponentType): JSX.Element {
-  const [myValue, setMyValue] = useState(value ?? "");
   const [pwdVisible, setPwdVisible] = useState(false);
-  const { setDisableCopyPaste } = useContext(TabsContext);
-  const { closePopUp } = useContext(PopUpContext);
 
   // Clear component state
   useEffect(() => {
     if (disabled) {
-      setMyValue("");
       onChange("");
     }
   }, [disabled, onChange]);
 
-  useEffect(() => {
-    setMyValue(value ?? "");
-  }, [closePopUp]);
-
   return (
-    <div className={disabled ? "input-component-div" : "relative"}>
-      <input
-        value={myValue}
-        onFocus={() => {
-          if (disableCopyPaste) setDisableCopyPaste(true);
-        }}
-        onBlur={() => {
-          if (disableCopyPaste) setDisableCopyPaste(false);
-        }}
+    <div className="relative w-full">
+      <Input
+        value={value}
+        disabled={disabled}
         className={classNames(
-          disabled ? " input-disable " : "",
-          password && !pwdVisible && myValue !== ""
-            ? " text-clip password "
-            : "",
-          editNode ? " input-edit-node " : " input-primary ",
+          password && !pwdVisible && value !== "" ? " text-clip password " : "",
+          editNode ? " input-edit-node " : "",
           password && editNode ? "pr-8" : "",
           password && !editNode ? "pr-10" : ""
         )}
         placeholder={password && editNode ? "Key" : "Type something..."}
         onChange={(e) => {
-          setMyValue(e.target.value);
           onChange(e.target.value);
         }}
       />

@@ -1,10 +1,9 @@
-import { useContext, useEffect, useRef, useState } from "react";
+import { ReactNode, useContext, useEffect, useRef, useState } from "react";
 import SanitizedHTMLWrapper from "../../components/SanitizedHTMLWrapper";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
-import { DialogTitle } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
 import {
   INVALID_CHARACTERS,
@@ -15,8 +14,6 @@ import {
 } from "../../constants/constants";
 import { TypeModal } from "../../constants/enums";
 import { alertContext } from "../../contexts/alertContext";
-import { darkContext } from "../../contexts/darkContext";
-import { PopUpContext } from "../../contexts/popUpContext";
 import { postValidatePrompt } from "../../controllers/API";
 import { APIClassType } from "../../types/api";
 import {
@@ -36,6 +33,7 @@ export default function GenericModal({
   type,
   nodeClass,
   setNodeClass,
+  children,
 }: genericModalPropsType): JSX.Element {
   const [myButtonText] = useState(buttonText);
   const [myModalTitle] = useState(modalTitle);
@@ -43,17 +41,9 @@ export default function GenericModal({
   const [inputValue, setInputValue] = useState(value);
   const [isEdit, setIsEdit] = useState(true);
   const [wordsHighlight, setWordsHighlight] = useState([]);
-  const { dark } = useContext(darkContext);
   const { setErrorData, setSuccessData, setNoticeData } =
     useContext(alertContext);
-  const { closePopUp, setCloseEdit } = useContext(PopUpContext);
   const ref = useRef();
-  function setModalOpen(x: boolean): void {
-    if (x === false) {
-      setCloseEdit("generic");
-      closePopUp();
-    }
-  }
   const divRef = useRef(null);
   const divRefPrompt = useRef(null);
 
@@ -97,6 +87,10 @@ export default function GenericModal({
     }
   }, [inputValue, type]);
 
+  useEffect(() => {
+    setInputValue(value);
+  }, [value]);
+
   const coloredContent = (inputValue || "")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -130,7 +124,6 @@ export default function GenericModal({
     postValidatePrompt(field_name, inputValue, nodeClass)
       .then((apiReturn) => {
         if (apiReturn.data) {
-          setNodeClass(apiReturn.data?.frontend_node);
           let inputVariables = apiReturn.data.input_variables ?? [];
           if (inputVariables && inputVariables.length === 0) {
             setIsEdit(true);
@@ -142,6 +135,7 @@ export default function GenericModal({
             setSuccessData({
               title: "Prompt is ready",
             });
+            setNodeClass(apiReturn.data?.frontend_node);
             setModalOpen(closeModal);
             setValue(inputValue);
           }
@@ -162,8 +156,11 @@ export default function GenericModal({
       });
   }
 
+  const [modalOpen, setModalOpen] = useState(false);
+
   return (
-    <BaseModal open={true} setOpen={setModalOpen}>
+    <BaseModal open={modalOpen} setOpen={setModalOpen}>
+      <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Header
         description={(() => {
           switch (myModalTitle) {
@@ -178,14 +175,12 @@ export default function GenericModal({
           }
         })()}
       >
-        <DialogTitle className="flex items-center">
-          <span className="pr-2">{myModalTitle}</span>
-          <IconComponent
-            name="FileText"
-            className="h-6 w-6 pl-1 text-primary "
-            aria-hidden="true"
-          />
-        </DialogTitle>
+        <span className="pr-2">{myModalTitle}</span>
+        <IconComponent
+          name="FileText"
+          className="h-6 w-6 pl-1 text-primary "
+          aria-hidden="true"
+        />
       </BaseModal.Header>
       <BaseModal.Content>
         <div className="flex h-full flex-col">
@@ -269,7 +264,7 @@ export default function GenericModal({
                       ))}
                     </div>
                   </div>
-                  <span className="mt-1 text-xs text-muted-foreground">
+                  <span className="mt-2 text-xs text-muted-foreground">
                     Prompt variables can be created with any chosen name inside
                     curly brackets, e.g. {"{variable_name}"}
                   </span>
@@ -279,11 +274,11 @@ export default function GenericModal({
             <Button
               onClick={() => {
                 switch (myModalType) {
-                  case 1:
+                  case TypeModal.TEXT:
                     setValue(inputValue);
                     setModalOpen(false);
                     break;
-                  case 2:
+                  case TypeModal.PROMPT:
                     !inputValue || inputValue === ""
                       ? setModalOpen(false)
                       : validatePrompt(false);

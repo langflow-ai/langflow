@@ -1,5 +1,4 @@
-import { useContext } from "react";
-import { PopUpContext } from "../../../../contexts/popUpContext";
+import { useContext, useState } from "react";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import {
   DropdownMenu,
@@ -18,10 +17,10 @@ import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
 
 export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
-  const { updateFlow, setTabId, addFlow } = useContext(TabsContext);
+  const { addFlow } = useContext(TabsContext);
   const { setErrorData } = useContext(alertContext);
-  const { openPopUp } = useContext(PopUpContext);
   const { undo, redo } = useContext(undoRedoContext);
+  const [openSettings, setOpenSettings] = useState(false);
 
   const navigate = useNavigate();
 
@@ -63,9 +62,10 @@ export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
               <IconComponent name="Plus" className="header-menu-options" />
               New
             </DropdownMenuItem>
+
             <DropdownMenuItem
               onClick={() => {
-                openPopUp(<FlowSettingsModal />);
+                setOpenSettings(true);
               }}
               className="cursor-pointer"
             >
@@ -75,6 +75,7 @@ export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
               />
               Settings
             </DropdownMenuItem>
+
             <DropdownMenuItem
               onClick={() => {
                 undo();
@@ -95,6 +96,10 @@ export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <FlowSettingsModal
+          open={openSettings}
+          setOpen={setOpenSettings}
+        ></FlowSettingsModal>
       </div>
     </div>
   );

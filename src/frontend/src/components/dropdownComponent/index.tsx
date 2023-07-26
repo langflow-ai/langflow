@@ -1,6 +1,5 @@
 import { Listbox, Transition } from "@headlessui/react";
-import { Fragment, useContext, useEffect, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
+import { Fragment, useEffect, useState } from "react";
 import { DropDownComponentType } from "../../types/components";
 import { classNames } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
@@ -13,15 +12,13 @@ export default function Dropdown({
   numberOfOptions = 0,
   apiModal = false,
 }: DropDownComponentType): JSX.Element {
-  const { closePopUp } = useContext(PopUpContext);
-
   let [internalValue, setInternalValue] = useState(
     value === "" || !value ? "Choose an option" : value
   );
 
   useEffect(() => {
     setInternalValue(value === "" || !value ? "Choose an option" : value);
-  }, [closePopUp]);
+  }, [value]);
 
   return (
     <>
