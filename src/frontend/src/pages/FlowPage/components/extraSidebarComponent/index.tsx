@@ -19,7 +19,7 @@ import DisclosureComponent from "../DisclosureComponent";
 
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);
-  const { flows, tabId, uploadFlow, tabsState, saveFlow } =
+  const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt } =
     useContext(TabsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
@@ -88,11 +88,14 @@ export default function ExtraSidebar() {
         <div className="side-bar-button">
           <ShadTooltip content="Code" side="top">
             {flow && flow.data && (
-              <ApiModal flow={flow}>
+              <ApiModal flow={flow} disable={!isBuilt}>
                 <div className={classNames("extra-side-bar-buttons")}>
                   <IconComponent
                     name="Code2"
-                    className="side-bar-button-size"
+                    className={
+                      "side-bar-button-size" +
+                      (isBuilt ? " " : " extra-side-bar-save-disable")
+                    }
                   />
                 </div>
               </ApiModal>
@@ -102,12 +105,13 @@ export default function ExtraSidebar() {
         <div className="side-bar-button">
           <ShadTooltip content="Save" side="top">
             <button
-              className="extra-side-bar-buttons"
+              className={
+                "extra-side-bar-buttons " + (isPending ? "" : "button-disable")
+              }
               onClick={(event) => {
                 saveFlow(flow);
                 setSuccessData({ title: "Changes saved successfully" });
               }}
-              disabled={!isPending}
             >
               <IconComponent
                 name="Save"
