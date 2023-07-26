@@ -1,8 +1,6 @@
-import { useContext, useEffect, useState } from "react";
+import { useEffect } from "react";
 
 import { TypeModal } from "../../constants/enums";
-import { PopUpContext } from "../../contexts/popUpContext";
-import { typesContext } from "../../contexts/typesContext";
 import { postValidatePrompt } from "../../controllers/API";
 import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
@@ -17,18 +15,13 @@ export default function PromptAreaComponent({
   disabled,
   editNode = false,
 }: TextAreaComponentType): JSX.Element {
-  const [myValue, setMyValue] = useState(value);
-  const { openPopUp } = useContext(PopUpContext);
-  const { reactFlowInstance } = useContext(typesContext);
   useEffect(() => {
     if (disabled) {
-      setMyValue("");
       onChange("");
     }
-  }, [disabled, onChange]);
+  }, [disabled]);
 
   useEffect(() => {
-    setMyValue(value);
     if (value !== "" && !editNode) {
       postValidatePrompt(field_name, value, nodeClass).then((apiReturn) => {
         if (apiReturn.data) {
@@ -37,56 +30,32 @@ export default function PromptAreaComponent({
         }
       });
     }
-  }, [value, reactFlowInstance]);
+  }, []);
 
   return (
     <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
-      <div className="flex w-full items-center">
-        <span
-          onClick={() => {
-            openPopUp(
-              <GenericModal
-                type={TypeModal.PROMPT}
-                value={myValue}
-                buttonText="Check & Save"
-                modalTitle="Edit Prompt"
-                setValue={(t: string) => {
-                  setMyValue(t);
-                  onChange(t);
-                }}
-                nodeClass={nodeClass}
-                setNodeClass={setNodeClass}
-              />
-            );
-          }}
-          className={
-            editNode
-              ? "input-edit-node input-dialog"
-              : (disabled ? " input-disable text-ring " : "") +
-                " input-primary text-muted-foreground "
-          }
-        >
-          {myValue !== "" ? myValue : "Type your prompt here"}
-        </span>
-        <button
-          onClick={() => {
-            openPopUp(
-              <GenericModal
-                field_name={field_name}
-                type={TypeModal.PROMPT}
-                value={myValue}
-                buttonText="Check & Save"
-                modalTitle="Edit Prompt"
-                setValue={(t: string) => {
-                  setMyValue(t);
-                  onChange(t);
-                }}
-                nodeClass={nodeClass}
-                setNodeClass={setNodeClass}
-              />
-            );
-          }}
-        >
+      <GenericModal
+        type={TypeModal.PROMPT}
+        value={value}
+        buttonText="Check & Save"
+        modalTitle="Edit Prompt"
+        setValue={(t: string) => {
+          onChange(t);
+        }}
+        nodeClass={nodeClass}
+        setNodeClass={setNodeClass}
+      >
+        <div className="flex w-full items-center">
+          <span
+            className={
+              editNode
+                ? "input-edit-node input-dialog"
+                : (disabled ? " input-disable text-ring " : "") +
+                  " input-primary text-muted-foreground "
+            }
+          >
+            {value !== "" ? value : "Type your prompt here..."}
+          </span>
           {!editNode && (
             <IconComponent
               name="ExternalLink"
@@ -96,8 +65,8 @@ export default function PromptAreaComponent({
               }
             />
           )}
-        </button>
-      </div>
+        </div>
+      </GenericModal>
     </div>
   );
 }

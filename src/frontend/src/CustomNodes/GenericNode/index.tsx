@@ -1,30 +1,33 @@
+import { cloneDeep } from "lodash";
 import { useContext, useEffect, useRef, useState } from "react";
-import { NodeToolbar } from "reactflow";
+import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import Tooltip from "../../components/TooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { useSSE } from "../../contexts/SSEContext";
 import { alertContext } from "../../contexts/alertContext";
-import { PopUpContext } from "../../contexts/popUpContext";
+import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { NodeDataType } from "../../types/flow";
+import { cleanEdges } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, toTitleCase } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
 
 export default function GenericNode({
-  data,
+  data: olddata,
   selected,
 }: {
   data: NodeDataType;
   selected: boolean;
 }): JSX.Element {
+  const [data, setData] = useState(olddata);
   const { setErrorData } = useContext(alertContext);
+  const { updateFlow, flows, tabId } = useContext(TabsContext);
+  const updateNodeInternals = useUpdateNodeInternals();
   const showError = useRef(true);
-  const { types, deleteNode } = useContext(typesContext);
-
-  const { closePopUp, openPopUp } = useContext(PopUpContext);
+  const { types, deleteNode, reactFlowInstance } = useContext(typesContext);
   // any to avoid type conflict
   // PROBLEM HERE OTAVIO
   const Icon: any =
@@ -33,7 +36,26 @@ export default function GenericNode({
   const [validationStatus, setValidationStatus] = useState(null);
   // State for outline color
   const { sseData, isBuilding } = useSSE();
-  const refHtml = useRef(null);
+  useEffect(() => {
+    olddata.node = data.node;
+    let myFlow = flows.find((flow) => flow.id === tabId);
+    if (reactFlowInstance && myFlow) {
+      let flow = cloneDeep(myFlow);
+      flow.data = reactFlowInstance.toObject();
+      cleanEdges({
+        flow: {
+          edges: flow.data.edges,
+          nodes: flow.data.nodes,
+        },
+        updateEdge: (edge) => {
+          flow.data.edges = edge;
+          reactFlowInstance.setEdges(edge);
+          updateNodeInternals(data.id);
+        },
+      });
+      updateFlow(flow);
+    }
+  }, [data]);
 
   // New useEffect to watch for changes in sseData and update validation status
   useEffect(() => {
@@ -58,13 +80,12 @@ export default function GenericNode({
     deleteNode(data.id);
     return;
   }
-  useEffect(() => {}, [closePopUp, data.node.template]);
   return (
     <>
       <NodeToolbar>
         <NodeToolbarComponent
           data={data}
-          openPopUp={openPopUp}
+          setData={setData}
           deleteNode={deleteNode}
         ></NodeToolbarComponent>
       </NodeToolbar>
@@ -90,7 +111,6 @@ export default function GenericNode({
               </ShadTooltip>
             </div>
           </div>
-          <div className="round-button-div"></div>
           <div className="round-button-div">
             <div>
               <Tooltip
@@ -162,6 +182,7 @@ export default function GenericNode({
                   !data.node.template[t].advanced ? (
                     <ParameterComponent
                       data={data}
+                      setData={setData}
                       color={
                         nodeColors[types[data.node.template[t].type]] ??
                         nodeColors[data.node.template[t].type] ??
@@ -208,6 +229,7 @@ export default function GenericNode({
             </div>
             <ParameterComponent
               data={data}
+              setData={setData}
               color={nodeColors[types[data.type]] ?? nodeColors.unknown}
               title={
                 data.node.output_types && data.node.output_types.length > 0
