@@ -397,16 +397,20 @@ export function getWidgetCode(flow: FlowType, tabsState?: TabsState): string {
   const flowName = flow.name;
   const inputs = buildInputs(tabsState, flow.id);
 
-  return `<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
-
-<langflow-chat window_title="${flowName}"
-flow_id="${flowId}"
-${
-  tabsState[flow.id] && tabsState[flow.id].formKeysData
-    ? `chat_inputs='${inputs}'
-chat_input_field="${Object.keys(tabsState[flow.id].formKeysData.input_keys)[0]}"
-`
-    : ""
-}host_url="http://localhost:7860" 
+  return `<!-- Insert this code anywhere in your <body> tag. To use with react, check our docs. -->
+  
+<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
+<langflow-chat
+  window_title="${flowName}"
+  flow_id="${flowId}"
+  ${
+    tabsState[flow.id] && tabsState[flow.id].formKeysData
+      ? `chat_inputs='${inputs}'
+  chat_input_field="${
+    Object.keys(tabsState[flow.id].formKeysData.input_keys)[0]
+  }"
+  `
+      : ""
+  }host_url="http://localhost:7860" 
 ></langflow-chat>`;
 }
