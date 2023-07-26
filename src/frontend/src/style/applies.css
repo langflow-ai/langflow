@@ -2,127 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* TODO: Confirm that all colors here are found in tailwind config */
-
-@layer base {
-  :root {
-    --background: 0 0% 100%; /* hsl(0 0% 100%) */
-    --foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
-    --muted: 210 40% 98%; /* hsl(210 40% 98%) */
-    --muted-foreground: 215.4 16.3% 46.9%; /* hsl(215 16% 46%) */
-    --popover: 0 0% 100%; /* hsl(0 0% 100%) */
-    --popover-foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
-    --card: 0 0% 100%; /* hsl(0 0% 100%) */
-    --card-foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
-    --border: 214.3 21.8% 91.4%; /* hsl(214 32% 91%) */
-    --input: 214.3 21.8% 91.4%; /* hsl(214 32% 91%) */
-    --primary: 222.2 27% 11.2%; /* hsl(222 27% 18%) */
-    --primary-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
-    --secondary: 210 40% 96.1%; /* hsl(210 40% 96%) */
-    --secondary-foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
-    --accent: 210 30% 96.1%; /* hsl(210 30% 96%) */
-    --accent-foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
-    --destructive: 0 100% 50%; /* hsl(0 100% 50%) */
-    --destructive-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
-    --radius: 0.5rem;
-    --ring: 215 20.2% 65.1%; /* hsl(215 20% 65%) */
-    --round-btn-shadow: #00000063;
-
-    --error-background: #fef2f2;
-    --error-foreground: #991b1b;
-
-    --success-background: #f0fdf4;
-    --success-foreground: #14532d;
-
-    --info-background: #f0f4fd;
-    --info-foreground: #141653;
-
-    --high-indigo: #4338ca;
-    --medium-indigo: #6366f1;
-
-    --chat-bot-icon: #afe6ef;
-    --chat-user-icon: #aface9;
-
-    --beta-background: rgb(219 234 254);
-    --beta-foreground: rgb(37 99 235);
-
-    /* Colors that are shared in dark and light mode */
-    --blur-shared: #151923de;
-    --build-trigger: #dc735b;
-    --chat-trigger: #5c8be1;
-    --chat-trigger-disabled: #b4c3da;
-    --status-red: #ef4444;
-    --status-yellow: #eab308;
-    --status-green: #4ade80;
-    --status-blue: #2563eb;
-    --connection: #555;
-  }
-
-  .dark {
-    --background: 224 35% 7.5%; /* hsl(224 40% 10%) */
-    --foreground: 213 31% 80%; /* hsl(213 31% 91%) */
-
-    --muted: 223 27% 11%; /* hsl(223 27% 11%) */
-    --muted-foreground: 215.4 16.3% 56.9%; /* hsl(215 16% 56%) */
-
-    --popover: 224 71% 4%; /* hsl(224 71% 4%) */
-    --popover-foreground: 215 20.2% 65.1%; /* hsl(215 20% 65%) */
-
-    --card: 224 25% 15.5%; /* hsl(224 71% 4%) */
-    --card-foreground: 213 31% 80%; /* hsl(213 31% 91%) */
-
-    --border: 216 24% 17%; /* hsl(216 34% 17%) */
-    --input: 216 24% 17%; /* hsl(216 34% 17%) */
-
-    --primary: 210 20% 80%; /* hsl(210 20% 80%) */
-    --primary-foreground: 222.2 27.4% 1.2%; /* hsl(222 47% 1%) */
-
-    --secondary: 222.2 37.4% 7.2%; /* hsl(222 47% 11%) */
-    --secondary-foreground: 210 40% 80%; /* hsl(210 40% 80%) */
-
-    --accent: 216 24% 20%; /* hsl(216 34% 17%) */
-    --accent-foreground: 210 30% 98%; /* hsl(210 40% 98%) */
-
-    --destructive: 0 63% 31%; /* hsl(0 63% 31%) */
-    --destructive-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
-
-    --ring: 216 24% 30%; /* hsl(216 24% 30%) */
-
-    --radius: 0.5rem;
-
-    --round-btn-shadow: #00000063;
-
-    --success-background: #022c22;
-    --success-foreground: #ecfdf5;
-
-    --error-foreground: #fef2f2;
-    --error-background: #450a0a;
-
-    --info-foreground: #eff6ff;
-    --info-background: #172554;
-
-    --high-indigo: #4338ca;
-    --medium-indigo: #6366f1;
-
-    --beta-background: rgb(37 99 235);
-    --beta-foreground: rgb(219 234 254);
-
-    /* Colors that are shared in dark and light mode */
-    --blur-shared: #151923d2;
-    --build-trigger: #dc735b;
-    --chat-trigger: #5c8be1;
-    --chat-trigger-disabled: #2d3b54;
-    --status-red: #ef4444;
-    --status-yellow: #eab308;
-    --status-green: #4ade80;
-    --status-blue: #2563eb;
-    --connection: #555;
-
-    --chat-bot-icon: #235d70;
-    --chat-user-icon: #4f3d6e;
-  }
-}
-
 @layer base {
   * {
     @apply border-border;
@@ -132,39 +11,6 @@
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
-}
-
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
-    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
-    monospace;
-}
-pre {
-  font-family: inherit;
-}
-
-/* The style below sets the cursor property of the element with the class .react-flow__pane to the default cursor.
-The cursor: default; property value restores the browser's default cursor style for the targeted element. By applying this style, the element will no longer have a custom cursor appearance such as "grab" or any other custom cursor defined elsewhere in the application. Instead, it will revert to the default cursor style determined by the browser, typically an arrow-shaped cursor. */
-.react-flow__pane {
-  cursor: default;
-}
-
-.AccordionContent {
-  overflow: hidden;
-}
-.AccordionContent[data-state="open"] {
-  animation: slideDown 300ms ease-out;
-}
-.AccordionContent[data-state="closed"] {
-  animation: slideUp 300ms ease-out;
 }
 
 @keyframes slideDown {
@@ -182,6 +28,36 @@ The cursor: default; property value restores the browser's default cursor style 
   }
   to {
     height: 0;
+  }
+}
+
+@keyframes gradient-motion-start {
+  0% {
+    stop-color: rgb(156, 138, 236);
+  }
+  50% {
+    stop-color: rgb(255, 130, 184);
+  }
+  80% {
+    stop-color: rgb(255, 165, 100);
+  }
+  100% {
+    stop-color: rgb(156, 138, 236);
+  }
+}
+
+@keyframes gradient-motion-end {
+  0% {
+    stop-color: rgb(156, 138, 236);
+  }
+  50% {
+    stop-color: rgb(255, 165, 100);
+  }
+  80% {
+    stop-color: rgb(255, 130, 184);
+  }
+  100% {
+    stop-color: rgb(156, 138, 236);
   }
 }
 
@@ -240,15 +116,17 @@ The cursor: default; property value restores the browser's default cursor style 
   .button-div-style {
     @apply flex gap-2;
   }
-  .input-primary:focus {
-    @apply focus:border-ring focus:placeholder-transparent focus:ring-ring;
-  }
   .input-primary {
-    @apply form-input block w-full truncate rounded-md border-border bg-background px-3 text-left shadow-sm placeholder:text-muted-foreground sm:text-sm;
+    @apply form-input block w-full truncate rounded-md border-border bg-background px-3 text-left shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm;
   }
 
-  .input-edit-node{
-    @apply input-primary border-border pt-0.5 pb-0.5 text-left w-full
+  /* The same as input-primary but no-truncate */
+  .textarea-primary {
+    @apply form-input block w-full rounded-md border-border bg-background px-3 text-left shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm;
+  }
+
+  .input-edit-node {
+    @apply input-primary w-full border-border pb-0.5 pt-0.5 text-left;
   }
   .input-search {
     @apply input-primary mx-2 pr-7;
@@ -375,7 +253,7 @@ The cursor: default; property value restores the browser's default cursor style 
   }
 
   .generic-node-status-position {
-    @apply relative top-[1.5px] h-5 w-5;
+    @apply relative top-[3px] h-5 w-5;
   }
 
   .generic-node-status-animation {
@@ -551,7 +429,7 @@ The cursor: default; property value restores the browser's default cursor style 
     @apply z-10 mt-1 max-h-60 overflow-auto rounded-md bg-background py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm;
   }
   .dropdown-component-true-options {
-    @apply dropdown-component-options lg:w-[32%]
+    @apply dropdown-component-options lg:w-[32%];
   }
   .dropdown-component-false-options {
     @apply dropdown-component-options w-full;
@@ -597,7 +475,7 @@ The cursor: default; property value restores the browser's default cursor style 
   }
 
   .header-arrangement {
-    @apply flex-max-width h-12 items-center justify-between border-b bg-muted;
+    @apply flex-max-width h-12 items-center justify-between border-border bg-muted;
   }
   .header-start-display {
     @apply flex w-96 items-center justify-start gap-2;
@@ -1117,54 +995,19 @@ The cursor: default; property value restores the browser's default cursor style 
   .ace-editor-save-btn {
     @apply flex-max-width h-fit justify-end;
   }
+
+  .export-modal-save-api {
+    @apply font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70;
+  }
+
   .beta-badge-wrapper {
     @apply absolute right-0 top-0 h-16 w-16 overflow-hidden rounded-tr-lg;
   }
   .beta-badge-content {
-    @apply mt-2 w-24 rotate-45 bg-beta-background text-center text-xs font-semibold text-beta-foreground
-  }
-  .export-modal-save-api {
-    @apply font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70;
+    @apply mt-2 w-24 rotate-45 bg-beta-background text-center text-xs font-semibold text-beta-foreground;
   }
 
   .chat-message-highlight {
     @apply rounded-md bg-indigo-100 px-0.5 dark:bg-indigo-900;
   }
-}
-
-@keyframes gradient-motion-start {
-  0% {
-    stop-color: rgb(156, 138, 236);
-  }
-  50% {
-    stop-color: rgb(255, 130, 184);
-  }
-  80% {
-    stop-color: rgb(255, 165, 100);
-  }
-  100% {
-    stop-color: rgb(156, 138, 236);
-  }
-}
-
-@keyframes gradient-motion-end {
-  0% {
-    stop-color: rgb(156, 138, 236);
-  }
-  50% {
-    stop-color: rgb(255, 165, 100);
-  }
-  80% {
-    stop-color: rgb(255, 130, 184);
-  }
-  100% {
-    stop-color: rgb(156, 138, 236);
-  }
-}
-
-.gradient-end {
-  animation: gradient-motion-end 3s infinite forwards;
-}
-.gradient-start {
-  animation: gradient-motion-start 4s infinite forwards;
 }

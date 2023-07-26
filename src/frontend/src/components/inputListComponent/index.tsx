@@ -2,7 +2,9 @@ import { useEffect } from "react";
 import { InputListComponentType } from "../../types/components";
 
 import _ from "lodash";
+import { classNames } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
+import { Input } from "../ui/input";
 
 export default function InputListComponent({
   value,
@@ -18,23 +20,19 @@ export default function InputListComponent({
 
   return (
     <div
-      className={
-        (disabled ? "pointer-events-none cursor-not-allowed" : "") +
+      className={classNames(
+        value.length > 1 && editNode ? "my-1" : "",
         "flex flex-col gap-3"
-      }
+      )}
     >
       {value.map((i, idx) => {
         return (
           <div key={idx} className="flex w-full gap-3">
-            <input
+            <Input
+              disabled={disabled}
               type="text"
               value={i}
-              className={
-                "nopan nodrag noundo nocopy " +
-                (editNode
-                  ? "input-edit-node "
-                  : "input-primary " + (disabled ? "input-disable" : ""))
-              }
+              className={editNode ? "input-edit-node" : ""}
               placeholder="Type something..."
               onChange={(e) => {
                 let newInputList = _.cloneDeep(value);

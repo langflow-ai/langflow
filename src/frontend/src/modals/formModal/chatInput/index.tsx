@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import IconComponent from "../../../components/genericIconComponent";
+import { Textarea } from "../../../components/ui/textarea";
 import { classNames } from "../../../utils/utils";
 
 export default function ChatInput({
@@ -25,7 +26,7 @@ export default function ChatInput({
 
   return (
     <div className="relative">
-      <textarea
+      <Textarea
         onKeyDown={(event) => {
           if (event.key === "Enter" && !lockChat && !event.shiftKey) {
             sendMessage();
@@ -68,10 +69,10 @@ export default function ChatInput({
           className={classNames(
             "form-modal-send-button",
             noInput
-              ? "bg-indigo-600 text-background"
+              ? "bg-high-indigo text-background"
               : chatValue === ""
               ? "text-primary"
-              : "bg-emerald-600 text-background"
+              : "bg-chat-send text-background"
           )}
           disabled={lockChat}
           onClick={() => sendMessage()}
