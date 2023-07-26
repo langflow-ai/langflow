@@ -1,10 +1,61 @@
-// src/constants.tsx
+// src/constants/constants.ts
 
-import { MessageSquare } from "lucide-react";
-import { FlowType } from "./types/flow";
-import { TabsState } from "./types/tabs";
-import { buildInputs, buildTweaks } from "./utils";
+import { languageMap } from "../types/components";
 
+/**
+ * invalid characters for flow name
+ * @constant
+ */
+export const INVALID_CHARACTERS = [
+  " ",
+  ",",
+  ".",
+  ":",
+  ";",
+  "!",
+  "?",
+  "/",
+  "\\",
+  "(",
+  ")",
+  "[",
+  "]",
+  "\n",
+];
+
+/**
+ * regex to highlight the variables in the text
+ * @constant
+ */
+
+export const regexHighlight = /\{([^}]+)\}/g;
+
+export const programmingLanguages: languageMap = {
+  javascript: ".js",
+  python: ".py",
+  java: ".java",
+  c: ".c",
+  cpp: ".cpp",
+  "c++": ".cpp",
+  "c#": ".cs",
+  ruby: ".rb",
+  php: ".php",
+  swift: ".swift",
+  "objective-c": ".m",
+  kotlin: ".kt",
+  typescript: ".ts",
+  go: ".go",
+  perl: ".pl",
+  rust: ".rs",
+  scala: ".scala",
+  haskell: ".hs",
+  lua: ".lua",
+  shell: ".sh",
+  sql: ".sql",
+  html: ".html",
+  css: ".css",
+  // add more file extensions here, make sure the key is same as language prop in CodeBlock.tsx component
+};
 /**
  * Number maximum of components to scroll on tooltips
  * @constant
@@ -16,6 +67,12 @@ export const MAX_LENGTH_TO_SCROLL_TOOLTIP = 200;
  * @constant
  */
 export const MAX_WORDS_HIGHLIGHT = 79;
+
+/**
+ * Limit of items before show scroll on fields modal
+ * @constant
+ */
+export const limitScrollFieldsModal = 10;
 
 /**
  * The base text for subtitle of Export Dialog (Toolbar)
@@ -70,8 +127,6 @@ export const CHAT_CANNOT_OPEN_DESCRIPTION = "This is not a chat flow.";
 
 export const FLOW_NOT_BUILT_TITLE = "Flow not built";
 
-export const THOUGHTS_ICON = MessageSquare;
-
 export const FLOW_NOT_BUILT_DESCRIPTION =
   "Please build the flow before chatting.";
 
@@ -80,127 +135,6 @@ export const FLOW_NOT_BUILT_DESCRIPTION =
  * @constant
  */
 export const TEXT_DIALOG_SUBTITLE = "Edit your text.";
-
-/**
- * Function to get the python code for the API
- * @param {string} flowId - The id of the flow
- * @returns {string} - The python code
- */
-export const getPythonApiCode = (
-  flow: FlowType,
-  tweak?: any[],
-  tabsState?: TabsState
-): string => {
-  const flowId = flow.id;
-
-  // create a dictionary of node ids and the values is an empty dictionary
-  // flow.data.nodes.forEach((node) => {
-  //   node.data.id
-  // }
-  const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(tabsState, flow.id);
-  return `import requests
-from typing import Optional
-
-BASE_API_URL = "${window.location.protocol}//${
-    window.location.host
-  }/api/v1/process"
-FLOW_ID = "${flowId}"
-# You can tweak the flow by adding a tweaks dictionary
-# e.g {"OpenAI-XXXXX": {"model_name": "gpt-4"}}
-TWEAKS = ${
-    tweak && tweak.length > 0
-      ? buildTweakObject(tweak)
-      : JSON.stringify(tweaks, null, 2)
-  }
-
-def run_flow(inputs: dict, flow_id: str, tweaks: Optional[dict] = None) -> dict:
-    """
-    Run a flow with a given message and optional tweaks.
-
-    :param message: The message to send to the flow
-    :param flow_id: The ID of the flow to run
-    :param tweaks: Optional tweaks to customize the flow
-    :return: The JSON response from the flow
-    """
-    api_url = f"{BASE_API_URL}/{flow_id}"
-
-    payload = {"inputs": inputs}
-
-    if tweaks:
-        payload["tweaks"] = tweaks
-
-    response = requests.post(api_url, json=payload)
-    return response.json()
-
-# Setup any tweaks you want to apply to the flow
-inputs = ${inputs}
-print(run_flow(inputs, flow_id=FLOW_ID, tweaks=TWEAKS))`;
-};
-/**
- * Function to get the curl code for the API
- * @param {string} flowId - The id of the flow
- * @returns {string} - The curl code
- */
-export const getCurlCode = (
-  flow: FlowType,
-  tweak?: any[],
-  tabsState?: TabsState
-): string => {
-  const flowId = flow.id;
-  const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(tabsState, flow.id);
-
-  return `curl -X POST \\
-  ${window.location.protocol}//${
-    window.location.host
-  }/api/v1/process/${flowId} \\
-  -H 'Content-Type: application/json' \\
-  -d '{"inputs": ${inputs}, "tweaks": ${
-    tweak && tweak.length > 0
-      ? buildTweakObject(tweak)
-      : JSON.stringify(tweaks, null, 2)
-  }}'`;
-};
-/**
- * Function to get the python code for the API
- * @param {string} flowName - The name of the flow
- * @returns {string} - The python code
- */
-export const getPythonCode = (
-  flow: FlowType,
-  tweak?: any[],
-  tabsState?: TabsState
-): string => {
-  const flowName = flow.name;
-  const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(tabsState, flow.id);
-  return `from langflow import load_flow_from_json
-TWEAKS = ${
-    tweak && tweak.length > 0
-      ? buildTweakObject(tweak)
-      : JSON.stringify(tweaks, null, 2)
-  }
-flow = load_flow_from_json("${flowName}.json", tweaks=TWEAKS)
-# Now you can use it like any chain
-inputs = ${inputs}
-flow(inputs)`;
-};
-
-function buildTweakObject(tweak) {
-  tweak.forEach((el) => {
-    Object.keys(el).forEach((key) => {
-      for (let kp in el[key]) {
-        try {
-          el[key][kp] = JSON.parse(el[key][kp]);
-        } catch {}
-      }
-    });
-  });
-
-  const tweakString = JSON.stringify(tweak[0], null, 2);
-  return tweakString;
-}
 
 /**
  * The base text for subtitle of Import Dialog

@@ -7,7 +7,6 @@ export type InputComponentType = {
   disabled?: boolean;
   onChange: (value: string) => void;
   password: boolean;
-  disableCopyPaste?: boolean;
   editNode?: boolean;
   onChangePass?: (value: boolean | boolean) => void;
   showPass?: boolean;
@@ -28,6 +27,7 @@ export type DropDownComponentType = {
 };
 export type ParameterComponentType = {
   data: NodeDataType;
+  setData: (value: NodeDataType) => void;
   title: string;
   id: string;
   color: string;
@@ -45,7 +45,6 @@ export type InputListComponentType = {
   onChange: (value: string[]) => void;
   disabled: boolean;
   editNode?: boolean;
-  onAddInput?: (value?: string[]) => void;
 };
 
 export type TextAreaComponentType = {
@@ -93,7 +92,6 @@ export type DisclosureComponentType = {
 export type FloatComponentType = {
   value: string;
   disabled?: boolean;
-  disableCopyPaste?: boolean;
   onChange: (value: string) => void;
   editNode?: boolean;
 };
@@ -130,7 +128,8 @@ export type RadialProgressType = {
 export type AccordionComponentType = {
   children?: ReactElement;
   open?: string[];
-  trigger?: string;
+  trigger?: string | ReactElement;
+  keyValue?: string;
 };
 export type Side = "top" | "right" | "bottom" | "left";
 
@@ -160,4 +159,14 @@ export type TextHighlightType = {
 
 export interface IVarHighlightType {
   name: string;
+}
+
+export type IconComponentProps = {
+  name: string;
+  className: string;
+  iconColor?: string;
+};
+
+export interface languageMap {
+  [key: string]: string | undefined;
 }
