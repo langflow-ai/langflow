@@ -2,12 +2,37 @@ import ast
 import inspect
 import traceback
 
-from typing import Dict, Any, Type, Union
+from typing import Dict, Any, Optional, Type, Union
 from fastapi import HTTPException
+from pydantic import BaseModel
 
 
 class CodeSyntaxError(HTTPException):
     pass
+
+
+class CallableCodeDetails(BaseModel):
+    """
+    A dataclass for storing details about a callable.
+    """
+
+    name: str
+    doc: Optional[str]
+    args: list
+    body: list
+    return_type: Optional[str]
+
+
+class ClassCodeDetails(BaseModel):
+    """
+    A dataclass for storing details about a class.
+    """
+
+    name: str
+    doc: str
+    bases: list
+    attributes: list
+    methods: list
 
 
 class CodeParser:
@@ -92,13 +117,20 @@ class CodeParser:
         """
         Extracts details from a single function or method node.
         """
-        func = {
-            "name": node.name,
-            "doc": ast.get_docstring(node),
-            "args": [],
-            "body": [],
-            "return_type": ast.unparse(node.returns) if node.returns else None,
-        }
+        # func = {
+        #     "name": node.name,
+        #     "doc": ast.get_docstring(node),
+        #     "args": [],
+        #     "body": [],
+        #     "return_type": ast.unparse(node.returns) if node.returns else None,
+        # }
+        func = CallableCodeDetails(
+            name=node.name,
+            doc=ast.get_docstring(node),
+            args=[],
+            body=[],
+            return_type=ast.unparse(node.returns) if node.returns else None,
+        )
 
         # Handle positional arguments with default values
         defaults = [None] * (len(node.args.args) - len(node.args.defaults)) + [
@@ -106,11 +138,11 @@ class CodeParser:
         ]
 
         for arg, default in zip(node.args.args, defaults):
-            func["args"].append(self.parse_arg(arg, default))
+            func.args.append(self.parse_arg(arg, default))
 
         # Handle *args
         if node.args.vararg:
-            func["args"].append(self.parse_arg(node.args.vararg, None))
+            func.args.append(self.parse_arg(node.args.vararg, None))
 
         # Handle keyword-only arguments with default values
         kw_defaults = [None] * (
@@ -121,15 +153,15 @@ class CodeParser:
         ]
 
         for arg, default in zip(node.args.kwonlyargs, kw_defaults):
-            func["args"].append(self.parse_arg(arg, default))
+            func.args.append(self.parse_arg(arg, default))
 
         # Handle **kwargs
         if node.args.kwarg:
-            func["args"].append(self.parse_arg(node.args.kwarg, None))
+            func.args.append(self.parse_arg(node.args.kwarg, None))
 
         for line in node.body:
-            func["body"].append(ast.unparse(line))
-        return func
+            func.body.append(ast.unparse(line))
+        return func.dict()
 
     def parse_assign(self, stmt):
         """
