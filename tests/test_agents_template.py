@@ -170,6 +170,7 @@ def test_csv_agent(client: TestClient):
         "multiline": False,
         "value": "",
         "suffixes": [".csv"],
+        "fileTypes": ["csv"],
         "password": False,
         "name": "path",
         "type": "file",
