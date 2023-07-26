@@ -6,7 +6,7 @@ import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
 import { TabsContext } from "../../contexts/tabsContext";
-import { getRepoStars } from "../../controllers/API";
+import { getRepoStars, getVersion } from "../../controllers/API";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
@@ -28,6 +28,15 @@ export default function Header() {
     }
     fetchStars();
   }, []);
+
+  // Initialize state variable for the version
+  const [version, setVersion] = useState("");
+  useEffect(() => {
+    getVersion().then((data) => {
+      setVersion(data.version);
+    });
+  }, []);
+
   return (
     <div className="header-arrangement">
       <div className="header-start-display">
@@ -62,8 +71,19 @@ export default function Header() {
           </Button>
         </Link>
       </div>
+
       <div className="header-end-division">
         <div className="header-end-display">
+        <a
+        target={"_blank"}
+        href="https://logspace.ai/"
+        className="text-sm ring-offset-background text-muted-foreground header-github-link-box w-40 text-center leading-[13px] text-[10px] pl-0"
+      >
+        {version && <div className="border-r-2 relative top-0.5">⛓️ Langflow v{version}</div>}
+        <div>Created by Logspace</div>
+      </a>
+
+
           <a
             href="https://github.com/logspace-ai/langflow"
             target="_blank"
