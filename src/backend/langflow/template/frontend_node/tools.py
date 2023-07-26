@@ -4,7 +4,6 @@ from langflow.template.template.base import Template
 from langflow.utils.constants import (
     DEFAULT_PYTHON_FUNCTION,
 )
-from typing import Optional
 
 
 class ToolNode(FrontendNode):
