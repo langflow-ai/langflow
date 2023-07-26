@@ -71,17 +71,15 @@ export default function Header() {
           </Button>
         </Link>
       </div>
-     {/* ⛓️  */}
       <div className="header-end-division">
         <div className="header-end-display">
-        <span className="text-xl relative left-3 cursor-default">⛓️</span>
         <a
         target={"_blank"}
         href="https://logspace.ai/"
-        className="grid text-sm ring-offset-background text-muted-foreground header-github-link-box w-32 text-center leading-[12px] text-[10px] py-1 px-0"
+        className="font-medium grid text-sm ring-offset-background text-muted-foreground header-github-link-box w-32 text-center leading-[14px] text-[10px] py-1 px-0"
       >
-        {version && <div className="">Langflow v{version}</div>}
-        <div>Created by Logspace</div>
+        {version && <div className="">Version v{version}</div>}
+        <div>Logspace</div>
       </a>
 
 
