@@ -26,7 +26,8 @@ import { typesContext } from "../../../../contexts/typesContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import { APIClassType } from "../../../../types/api";
 import { FlowType, NodeType } from "../../../../types/flow";
-import { isValidConnection } from "../../../../utils";
+import { isValidConnection } from "../../../../utils/reactflowUtils";
+import { isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import ExtraSidebar from "../extraSidebarComponent";
 
@@ -38,7 +39,6 @@ export default function Page({ flow }: { flow: FlowType }) {
   let {
     updateFlow,
     uploadFlow,
-    disableCopyPaste,
     addFlow,
     getNodeId,
     paste,
@@ -63,35 +63,34 @@ export default function Page({ flow }: { flow: FlowType }) {
     // this effect is used to attach the global event handlers
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (
-        (event.ctrlKey || event.metaKey) &&
-        event.key === "c" &&
-        lastSelection &&
-        !disableCopyPaste
-      ) {
-        event.preventDefault();
-        setLastCopiedSelection(_.cloneDeep(lastSelection));
-      }
-      if (
-        (event.ctrlKey || event.metaKey) &&
-        event.key === "v" &&
-        lastCopiedSelection &&
-        !disableCopyPaste
-      ) {
-        event.preventDefault();
-        let bounds = reactFlowWrapper.current.getBoundingClientRect();
-        paste(lastCopiedSelection, {
-          x: position.x - bounds.left,
-          y: position.y - bounds.top,
-        });
-      }
-      if (
-        (event.ctrlKey || event.metaKey) &&
-        event.key === "g" &&
-        lastSelection
-      ) {
-        event.preventDefault();
-        // addFlow(newFlow, false);
+      if (!isWrappedWithClass(event, "nocopy")) {
+        if (
+          (event.ctrlKey || event.metaKey) &&
+          event.key === "c" &&
+          lastSelection
+        ) {
+          event.preventDefault();
+          setLastCopiedSelection(_.cloneDeep(lastSelection));
+        }
+        if (
+          (event.ctrlKey || event.metaKey) &&
+          event.key === "v" &&
+          lastCopiedSelection
+        ) {
+          event.preventDefault();
+          let bounds = reactFlowWrapper.current.getBoundingClientRect();
+          paste(lastCopiedSelection, {
+            x: position.x - bounds.left,
+            y: position.y - bounds.top,
+          });
+        }
+        if (
+          (event.ctrlKey || event.metaKey) &&
+          event.key === "g" &&
+          lastSelection
+        ) {
+          event.preventDefault();
+        }
       }
     };
     const handleMouseMove = (event) => {
@@ -125,7 +124,7 @@ export default function Page({ flow }: { flow: FlowType }) {
       updateFlow(flow);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodes, edges]);
+  }, [edges]);
   //update flow when tabs change
   useEffect(() => {
     setNodes(flow?.data?.nodes ?? []);
@@ -356,8 +355,6 @@ export default function Page({ flow }: { flow: FlowType }) {
     setLastSelection(flow);
   }, []);
 
-  const { setDisableCopyPaste } = useContext(TabsContext);
-
   return (
     <div className="flex h-full overflow-hidden">
       <ExtraSidebar />
@@ -379,15 +376,6 @@ export default function Page({ flow }: { flow: FlowType }) {
                       });
                   }}
                   edges={edges}
-                  onPaneClick={() => {
-                    setDisableCopyPaste(false);
-                  }}
-                  onPaneMouseLeave={() => {
-                    setDisableCopyPaste(true);
-                  }}
-                  onPaneMouseEnter={() => {
-                    setDisableCopyPaste(false);
-                  }}
                   onNodesChange={onNodesChangeMod}
                   onEdgesChange={onEdgesChangeMod}
                   onConnect={onConnect}
@@ -408,9 +396,6 @@ export default function Page({ flow }: { flow: FlowType }) {
                   onDrop={onDrop}
                   onNodesDelete={onDelete}
                   onSelectionChange={onSelectionChange}
-                  nodesDraggable={!disableCopyPaste}
-                  panOnDrag={!disableCopyPaste}
-                  zoomOnDoubleClick={!disableCopyPaste}
                   className="theme-attribution"
                   minZoom={0.01}
                   maxZoom={8}

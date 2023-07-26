@@ -1,25 +1,24 @@
-import { Code2, FileDown, FileUp, Menu, Save, Search } from "lucide-react";
 import { useContext, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
+import IconComponent from "../../../../components/genericIconComponent";
+import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
 import { alertContext } from "../../../../contexts/alertContext";
-import { PopUpContext } from "../../../../contexts/popUpContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import ApiModal from "../../../../modals/ApiModal";
 import ExportModal from "../../../../modals/exportModal";
 import { APIClassType, APIObjectType } from "../../../../types/api";
 import {
-  classNames,
   nodeColors,
   nodeIconsLucide,
   nodeNames,
-} from "../../../../utils";
+} from "../../../../utils/styleUtils";
+import { classNames } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);
-  const { openPopUp } = useContext(PopUpContext);
   const { flows, tabId, uploadFlow, tabsState, saveFlow } =
     useContext(TabsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
@@ -41,6 +40,7 @@ export default function ExtraSidebar() {
     event.dataTransfer.setData("nodedata", JSON.stringify(data));
   }
 
+  // Handle showing components after use search input
   function handleSearchInput(e: string) {
     setFilterData((_) => {
       let ret = {};
@@ -56,6 +56,7 @@ export default function ExtraSidebar() {
       return ret;
     });
   }
+  const flow = flows.find((f) => f.id === tabId);
 
   return (
     <div className="side-bar-arrangement">
@@ -64,76 +65,69 @@ export default function ExtraSidebar() {
           <button
             className="extra-side-bar-buttons"
             onClick={() => {
-              // openPopUp(<ImportModal />);
               uploadFlow();
             }}
           >
-            <FileUp
-              strokeWidth={1.5}
-              className="side-bar-button-size "
-            ></FileUp>
+            <IconComponent name="FileUp" className="side-bar-button-size " />
           </button>
         </ShadTooltip>
 
         <ShadTooltip content="Export" side="top">
-          <button
-            className={classNames("extra-side-bar-buttons")}
-            onClick={(event) => {
-              openPopUp(<ExportModal />);
-            }}
-          >
-            <FileDown
-              strokeWidth={1.5}
-              className="side-bar-button-size"
-            ></FileDown>
-          </button>
+          <ExportModal>
+            <div className={classNames("extra-side-bar-buttons")}>
+              <IconComponent name="FileDown" className="side-bar-button-size" />
+            </div>
+          </ExportModal>
         </ShadTooltip>
         <ShadTooltip content="Code" side="top">
-          <button
-            className={classNames("extra-side-bar-buttons")}
-            onClick={(event) => {
-              openPopUp(<ApiModal flow={flows.find((f) => f.id === tabId)} />);
-            }}
-          >
-            <Code2 strokeWidth={1.5} className="side-bar-button-size"></Code2>
-          </button>
+          {flow && flow.data && (
+            <ApiModal flow={flow}>
+              <div className={classNames("extra-side-bar-buttons")}>
+                <IconComponent name="Code2" className="side-bar-button-size" />
+              </div>
+            </ApiModal>
+          )}
         </ShadTooltip>
 
         <ShadTooltip content="Save" side="top">
           <button
             className="extra-side-bar-buttons"
             onClick={(event) => {
-              saveFlow(flows.find((f) => f.id === tabId));
+              saveFlow(flow);
               setSuccessData({ title: "Changes saved successfully" });
             }}
             disabled={!isPending}
           >
-            <Save
-              strokeWidth={1.5}
+            <IconComponent
+              name="Save"
               className={
                 "side-bar-button-size" +
                 (isPending ? " " : " extra-side-bar-save-disable")
               }
-            ></Save>
+            />
           </button>
         </ShadTooltip>
       </div>
       <Separator />
       <div className="side-bar-search-div-placement">
-        <input
+        <Input
           type="text"
           name="search"
           id="search"
           placeholder="Search"
-          className="input-search"
+          className="nopan nodrag noundo nocopy input-search"
           onChange={(e) => {
             handleSearchInput(e.target.value);
+            // Set search input state
             setSearch(e.target.value);
           }}
         />
         <div className="search-icon">
-          {/* ! replace hash color here */}
-          <Search size={20} strokeWidth={1.5} className="text-primary" />
+          <IconComponent
+            name="Search"
+            className={"h-5 w-5 stroke-[1.5] text-primary"}
+            aria-hidden="true"
+          />
         </div>
       </div>
 
@@ -187,7 +181,10 @@ export default function ExtraSidebar() {
                               <span className="side-bar-components-text">
                                 {data[d][t].display_name}
                               </span>
-                              <Menu className="side-bar-components-icon " />
+                              <IconComponent
+                                name="Menu"
+                                className="side-bar-components-icon "
+                              />
                             </div>
                           </div>
                         </div>
