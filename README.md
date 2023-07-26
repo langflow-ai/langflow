@@ -13,7 +13,6 @@
 <img alt="Github License" src="https://img.shields.io/github/license/logspace-ai/langflow" />
 </p>
 
-
 <p>
 <a href="https://discord.gg/EqksyE2EX9"><img alt="Discord Server" src="https://dcbadge.vercel.app/api/server/EqksyE2EX9?compact=true&style=flat"/></a>
 <a href="https://huggingface.co/spaces/Logspace/Langflow"><img src="https://huggingface.co/datasets/huggingface/badges/raw/main/open-in-hf-spaces-sm.svg" alt="HuggingFace Spaces"></a>
@@ -22,58 +21,74 @@
 <a href="https://github.com/logspace-ai/langflow">
     <img width="100%" src="https://github.com/logspace-ai/langflow/blob/main/img/langflow-demo.gif?raw=true"></a>
 
-
 <p>
 </p>
 
 # Table of Contents
+
 - [⛓️ Langflow](#️-langflow)
 - [Table of Contents](#table-of-contents)
 - [📦 Installation](#-installation)
-    - [Locally](#locally)
-    - [HuggingFace Spaces](#huggingface-spaces)
+  - [Locally](#locally)
+  - [HuggingFace](#huggingface)
 - [🖥️ Command Line Interface (CLI)](#️-command-line-interface-cli)
-    - [Usage](#usage)
+  - [Usage](#usage)
     - [Environment Variables](#environment-variables)
 - [Deployment](#deployment)
   - [Deploy Langflow on Google Cloud Platform](#deploy-langflow-on-google-cloud-platform)
   - [Deploy Langflow on Jina AI Cloud](#deploy-langflow-on-jina-ai-cloud)
       - [API Usage](#api-usage)
+  - [Deploy on Railway](#deploy-on-railway)
+  - [Deploy on Render](#deploy-on-render)
 - [🎨 Creating Flows](#-creating-flows)
 - [👋 Contributing](#-contributing)
 - [📄 License](#-license)
 
-
 # 📦 Installation
-### <b>Locally</b>
+
+## Locally
+
 You can install Langflow from pip:
 
 ```shell
+# This installs the package without dependencies for local models
 pip install langflow
-# to install with dependencies for local models use:
-pip install langflow[local]
-# to install with all dependencies use:
-pip install langflow[all]
 ```
+
+To use local models (e.g llama-cpp-python) run:
+
+```shell
+pip install langflow[local]
+```
+
+This will install the following dependencies:
+
+- [CTransformers](https://github.com/marella/ctransformers)
+- [llama-cpp-python](https://github.com/abetlen/llama-cpp-python)
+- [huggingface-hub](https://github.com/huggingface/huggingface_hub)
+- [sentence-transformers](https://github.com/UKPLab/sentence-transformers)
 
 Next, run:
 
 ```shell
 python -m langflow
 ```
+
 or
+
 ```shell
 langflow # or langflow --help
 ```
 
-### HuggingFace Spaces
+## HuggingFace
+
 You can also check it out on [HuggingFace Spaces](https://huggingface.co/spaces/Logspace/Langflow) and run it in your browser! You can even clone it and have your own copy of Langflow to play with.
 
 # 🖥️ Command Line Interface (CLI)
 
 Langflow provides a command-line interface (CLI) for easy management and configuration.
 
-### Usage
+## Usage
 
 You can run the Langflow using the following command:
 
@@ -118,7 +133,6 @@ Alternatively, click the **"Open in Cloud Shell"** button below to launch Google
 
 [![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/open?git_repo=https://github.com/logspace-ai/langflow&working_dir=scripts&shellonly=true&tutorial=walkthroughtutorial_spot.md)
 
-
 ## Deploy Langflow on [Jina AI Cloud](https://github.com/jina-ai/langchain-serve)
 
 Langflow integrates with langchain-serve to provide a one-command deployment to Jina AI Cloud.
@@ -126,6 +140,8 @@ Langflow integrates with langchain-serve to provide a one-command deployment to 
 Start by installing `langchain-serve` with
 
 ```bash
+pip install langflow[deploy]
+# or
 pip install -U langchain-serve
 ```
 
@@ -227,9 +243,11 @@ print(run_flow("Your message", flow_id=FLOW_ID, tweaks=TWEAKS))
 > Read more about resource customization, cost, and management of Langflow apps on Jina AI Cloud in the **[langchain-serve](https://github.com/jina-ai/langchain-serve)** repository.
 
 ## Deploy on Railway
+
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/Emy2sU?referralCode=MnPSdg)
 
 ## Deploy on Render
+
 <a href="https://render.com/deploy?repo=https://github.com/logspace-ai/langflow/tree/main">
 <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" />
 </a>
@@ -252,11 +270,9 @@ flow = load_flow_from_json("path/to/flow.json")
 flow("Hey, have you heard of Langflow?")
 ```
 
-
 # 👋 Contributing
 
 We welcome contributions from developers of all levels to our open-source project on GitHub. If you'd like to contribute, please check our [contributing guidelines](./CONTRIBUTING.md) and help make Langflow more accessible.
-
 
 Join our [Discord](https://discord.com/invite/EqksyE2EX9) server to ask questions, make suggestions and showcase your projects! 🦾
 
@@ -264,7 +280,6 @@ Join our [Discord](https://discord.com/invite/EqksyE2EX9) server to ask question
 </p>
 
 [![Star History Chart](https://api.star-history.com/svg?repos=logspace-ai/langflow&type=Timeline)](https://star-history.com/#logspace-ai/langflow&Date)
-
 
 # 📄 License
 
