@@ -21,6 +21,7 @@ import {
   getCurlCode,
   getPythonApiCode,
   getPythonCode,
+  getWidgetCode,
 } from "../../utils/utils";
 import BaseModal from "../baseModal";
 
@@ -43,6 +44,7 @@ const ApiModal = forwardRef(
     const pythonApiCode = getPythonApiCode(flow, tweak.current, tabsState);
     const curl_code = getCurlCode(flow, tweak.current, tabsState);
     const pythonCode = getPythonCode(flow, tweak.current, tabsState);
+    const widgetCode = getWidgetCode(flow, tabsState);
     const tweaksCode = buildTweaks(flow);
     const [tabs, setTabs] = useState([
       {
@@ -66,6 +68,13 @@ const ApiModal = forwardRef(
         image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
         language: "py",
         code: pythonCode,
+      },
+      {
+        name: "Chat Widget HTML",
+        mode: "html",
+        image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+        language: "py",
+        code: widgetCode,
       },
     ]);
 
@@ -112,6 +121,13 @@ const ApiModal = forwardRef(
             code: pythonCode,
           },
           {
+            name: "Chat Widget HTML",
+            mode: "html",
+            image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+            language: "py",
+            code: widgetCode,
+          },
+          {
             name: "Tweaks",
             mode: "python",
             image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
@@ -142,6 +158,13 @@ const ApiModal = forwardRef(
             image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
             language: "py",
             code: pythonCode,
+          },
+          {
+            name: "Chat Widget HTML",
+            mode: "html",
+            image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+            language: "py",
+            code: widgetCode,
           },
         ]);
       }
@@ -210,13 +233,15 @@ const ApiModal = forwardRef(
         tweak.current.push(newTweak);
       }
 
-      const pythonApiCode = getPythonApiCode(flow, tweak.current);
-      const curl_code = getCurlCode(flow, tweak.current);
-      const pythonCode = getPythonCode(flow, tweak.current);
+      const pythonApiCode = getPythonApiCode(flow, tweak.current, tabsState);
+      const curl_code = getCurlCode(flow, tweak.current, tabsState);
+      const pythonCode = getPythonCode(flow, tweak.current, tabsState);
+      const widgetCode = getWidgetCode(flow, tabsState);
 
       tabs[0].code = curl_code;
       tabs[1].code = pythonApiCode;
       tabs[2].code = pythonCode;
+      tabs[3].code = widgetCode;
 
       setTweak(tweak.current);
     }
