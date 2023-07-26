@@ -248,23 +248,34 @@ export function updateEdgesHandleIds({
 }: updateEdgesHandleIdsType) {
   let newEdges = _.cloneDeep(edges);
   newEdges.forEach((edge) => {
-    const sourceNode = edge.source;
-    const targetNode = edge.target;
+    const sourceNodeId = edge.source;
+    const targetNodeId = edge.target;
+    const sourceNode = nodes.find((node) => node.id === sourceNodeId);
+    const targetNode = nodes.find((node) => node.id === targetNodeId);
     let source = edge.sourceHandle;
     let target = edge.targetHandle;
     //right
     let newSource: sourceHandleType;
     //left
     let newTarget: targetHandleType;
-    if (target) {
-      let splittedtarget = target.split("|");
-      let inputTypes: string[];
-      if (splittedtarget[0].split(";").length > 1) {
-        newTarget.inputTypes = splittedtarget[0].split(";");
-      } else {
-        newTarget.type = splittedtarget[0];
-      }
+    if (target && targetNode) {
+      let field = target.split("|")[1];
+      newTarget = {
+        type: targetNode.data.node.template[field].type,
+        fieldName: field,
+        id: targetNode.data.id,
+        inputTypes: targetNode.data.node.template[field].input_types,
+      };
     }
+    if (source && sourceNode) {
+      newSource = {
+        dataType: sourceNode.data.type,
+        id: sourceNode.data.id,
+        baseClasses: sourceNode.data.node.base_classes,
+      };
+    }
+    edge.sourceHandle = JSON.stringify(newSource);
+    edge.targetHandle = JSON.stringify(newTarget);
   });
   setEdges(newEdges);
 }
