@@ -55,7 +55,7 @@ TOOL_INPUTS = {
         show=True,
         value="",
         suffixes=[".json", ".yaml", ".yml"],
-        fileTypes=["json", "yaml", "yml"],
+        file_types=["json", "yaml", "yml"],
     ),
 }
 
