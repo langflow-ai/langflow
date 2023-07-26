@@ -175,13 +175,21 @@ export default function CodeTabsComponent({
           key={index} // Remember to add a unique key prop
         >
           {index < 4 ? (
-            <SyntaxHighlighter
-              className="mt-0 h-full w-full overflow-auto custom-scroll"
-              language={tab.mode}
-              style={oneDark}
-            >
-              {tab.code}
-            </SyntaxHighlighter>
+            <>
+              {tab.description && (
+                <div
+                  className="mb-2 w-full text-left text-sm"
+                  dangerouslySetInnerHTML={{ __html: tab.description }}
+                ></div>
+              )}
+              <SyntaxHighlighter
+                className="mt-0 h-full w-full overflow-auto custom-scroll"
+                language={tab.mode}
+                style={oneDark}
+              >
+                {tab.code}
+              </SyntaxHighlighter>
+            </>
           ) : index === 4 ? (
             <>
               <div className="api-modal-according-display">
