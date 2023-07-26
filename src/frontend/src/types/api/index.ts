@@ -15,7 +15,7 @@ export type APIClassType = {
   input_types?: Array<string>;
   output_types?: Array<string>;
   documentation: string;
-  [key: string]: Array<string> | string | APITemplateType;
+  [key: string]: Array<string> | string | APITemplateType | undefined;
 };
 
 export type TemplateVariableType = {
