@@ -97,7 +97,7 @@
     }
     
     .input-edit-node{
-      @apply input-primary border-border pt-0.5 pb-0.5 text-left w-full
+      @apply input-primary pt-0.5 pb-0.5 text-left w-full
     }
     .input-search{
       @apply input-primary pr-7 mx-2
