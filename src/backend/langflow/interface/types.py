@@ -1,6 +1,6 @@
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
-from langflow.interface.custom.constants import LANGCHAIN_BASE_TYPES
+from langflow.interface.custom.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.document_loaders.base import documentloader_creator
 from langflow.interface.embeddings.base import embedding_creator
 from langflow.interface.importing.utils import get_function_custom
@@ -232,19 +232,19 @@ def get_field_properties(extra_field):
 
 def add_base_classes(frontend_node, return_type):
     """Add base classes to the frontend node"""
-    if return_type not in LANGCHAIN_BASE_TYPES or return_type is None:
+    if return_type not in CUSTOM_COMPONENT_SUPPORTED_TYPES or return_type is None:
         raise HTTPException(
             status_code=400,
             detail={
                 "error": (
                     "Invalid return type should be one of: "
-                    f"{list(LANGCHAIN_BASE_TYPES.keys())}"
+                    f"{list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())}"
                 ),
                 "traceback": traceback.format_exc(),
             },
         )
 
-    return_type_instance = LANGCHAIN_BASE_TYPES.get(return_type)
+    return_type_instance = CUSTOM_COMPONENT_SUPPORTED_TYPES.get(return_type)
     base_classes = get_base_classes(return_type_instance)
 
     for base_class in base_classes:

@@ -1,6 +1,6 @@
 from typing import Callable, Optional
 from fastapi import HTTPException
-from langflow.interface.custom.constants import LANGCHAIN_BASE_TYPES
+from langflow.interface.custom.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.component import Component
 
 from langflow.utils import validate
@@ -16,7 +16,7 @@ class CustomComponent(Component, extra=Extra.allow):
     code_class_base_inheritance = "CustomComponent"
     function_entrypoint_name = "build"
     function: Optional[Callable] = None
-    return_type_valid_list = list(LANGCHAIN_BASE_TYPES.keys())
+    return_type_valid_list = list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
     repr_value: Optional[str] = ""
 
     def __init__(self, **data):
