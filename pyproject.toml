@@ -37,7 +37,7 @@ langchain = "^0.0.237"
 openai = "^0.27.8"
 pandas = "^2.0.0"
 chromadb = "^0.3.21"
-huggingface-hub = { version = "^0.15.0", optional = true }
+huggingface-hub = { version = "^0.16.0", extras = ["inference"] }
 rich = "^13.4.2"
 llama-cpp-python = { version = "~0.1.0", optional = true }
 networkx = "^3.1"
@@ -94,12 +94,7 @@ types-pyyaml = "^6.0.12.8"
 
 [tool.poetry.extras]
 deploy = ["langchain-serve"]
-local = [
-    "llama-cpp-python",
-    "sentence-transformers",
-    "ctransformers",
-    "huggingface-hub",
-]
+local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
 all = ["deploy", "local"]
 
 
