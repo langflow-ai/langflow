@@ -757,6 +757,9 @@
     .node-modal-button-box {
       @apply flex-max-width flex-row-reverse bg-input px-4 pb-3
     }
+    .link-color{
+      @apply text-foreground font-semibold
+    }
     .node-modal-button {
       @apply inline-flex w-full justify-center rounded-md border border-transparent bg-status-red px-4 py-2 text-base font-medium text-background shadow-sm hover:bg-ring sm:ml-3 sm:w-auto sm:text-sm
     }
