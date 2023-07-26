@@ -26,7 +26,7 @@ export default function CommunityPage() {
     getExamples()
       .then((result) => {
         setLoadingExamples(false);
-        setExamples(result);
+        setExamples(addVersionToDuplicates(result));
       })
       .catch((error) =>
         setErrorData({
@@ -35,6 +35,25 @@ export default function CommunityPage() {
         })
       );
   }
+
+
+  function addVersionToDuplicates(flows: FlowType[]) {
+    const f = flows;
+    const counts = {};
+    const result = [];
+    for (const item of f) {
+      if (counts[item.name]) {
+        counts[item.name]++;
+        item.name = `${item.name} (${counts[item.name]})`;
+        result.push(item);
+      } else {
+        counts[item.name] = 1;
+        result.push(item);
+      }
+    }
+    return result;
+  }
+
   const navigate = useNavigate();
 
   // Show community examples on page start
