@@ -61,52 +61,64 @@ export default function ExtraSidebar() {
   return (
     <div className="side-bar-arrangement">
       <div className="side-bar-buttons-arrangement">
-        <ShadTooltip content="Import" side="top">
-          <button
-            className="extra-side-bar-buttons"
-            onClick={() => {
-              uploadFlow();
-            }}
-          >
-            <IconComponent name="FileUp" className="side-bar-button-size " />
-          </button>
-        </ShadTooltip>
-
-        <ShadTooltip content="Export" side="top">
-          <ExportModal>
-            <div className={classNames("extra-side-bar-buttons")}>
-              <IconComponent name="FileDown" className="side-bar-button-size" />
-            </div>
-          </ExportModal>
-        </ShadTooltip>
-        <ShadTooltip content="Code" side="top">
-          {flow && flow.data && (
-            <ApiModal flow={flow}>
+        <div className="side-bar-button">
+          <ShadTooltip content="Import" side="top">
+            <button
+              className="extra-side-bar-buttons"
+              onClick={() => {
+                uploadFlow();
+              }}
+            >
+              <IconComponent name="FileUp" className="side-bar-button-size " />
+            </button>
+          </ShadTooltip>
+        </div>
+        <div className="side-bar-button">
+          <ShadTooltip content="Export" side="top">
+            <ExportModal>
               <div className={classNames("extra-side-bar-buttons")}>
-                <IconComponent name="Code2" className="side-bar-button-size" />
+                <IconComponent
+                  name="FileDown"
+                  className="side-bar-button-size"
+                />
               </div>
-            </ApiModal>
-          )}
-        </ShadTooltip>
-
-        <ShadTooltip content="Save" side="top">
-          <button
-            className="extra-side-bar-buttons"
-            onClick={(event) => {
-              saveFlow(flow);
-              setSuccessData({ title: "Changes saved successfully" });
-            }}
-            disabled={!isPending}
-          >
-            <IconComponent
-              name="Save"
-              className={
-                "side-bar-button-size" +
-                (isPending ? " " : " extra-side-bar-save-disable")
-              }
-            />
-          </button>
-        </ShadTooltip>
+            </ExportModal>
+          </ShadTooltip>
+        </div>
+        <div className="side-bar-button">
+          <ShadTooltip content="Code" side="top">
+            {flow && flow.data && (
+              <ApiModal flow={flow}>
+                <div className={classNames("extra-side-bar-buttons")}>
+                  <IconComponent
+                    name="Code2"
+                    className="side-bar-button-size"
+                  />
+                </div>
+              </ApiModal>
+            )}
+          </ShadTooltip>
+        </div>
+        <div className="side-bar-button">
+          <ShadTooltip content="Save" side="top">
+            <button
+              className="extra-side-bar-buttons"
+              onClick={(event) => {
+                saveFlow(flow);
+                setSuccessData({ title: "Changes saved successfully" });
+              }}
+              disabled={!isPending}
+            >
+              <IconComponent
+                name="Save"
+                className={
+                  "side-bar-button-size" +
+                  (isPending ? " " : " extra-side-bar-save-disable")
+                }
+              />
+            </button>
+          </ShadTooltip>
+        </div>
       </div>
       <Separator />
       <div className="side-bar-search-div-placement">
