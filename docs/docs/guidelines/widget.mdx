@@ -6,23 +6,27 @@ import ReactPlayer from "react-player";
 # Chat Widget
 
 <div style={{ marginBottom: "20px" }}>
-  The <b>Langflow Embedded Chat</b> is a powerful web component that enables seamless communication with Langflow. This widget provides a <b>chat interface</b>, allowing you to integrate Langflow into your web applications effortlessly.
+  The <b>Langflow Embedded Chat</b> is a powerful web component that enables
+  seamless communication with Langflow. This widget provides a{" "}
+  <b>chat interface</b>, allowing you to integrate Langflow into your web
+  applications effortlessly.
 </div>
 
 ## Features
 
-🌟 __Seamless Integration:__ Easily integrate the Langflow Widget into your website or web application with just a few lines of JavaScript.
+🌟 **Seamless Integration:** Easily integrate the Langflow Widget into your website or web application with just a few lines of JavaScript.
 
-🚀 __Interactive Chat Interface:__ Engage your users with a user-friendly chat interface, powered by Langflow's advanced language understanding capabilities.
+🚀 **Interactive Chat Interface:** Engage your users with a user-friendly chat interface, powered by Langflow's advanced language understanding capabilities.
 
-🎛️ __Customizable Styling:__ Customize the appearance of the chat widget to match your application's design and branding.
+🎛️ **Customizable Styling:** Customize the appearance of the chat widget to match your application's design and branding.
 
-🌐 __Multilingual Support:__ Communicate with users in multiple languages, opening up your application to a global audience.
+🌐 **Multilingual Support:** Communicate with users in multiple languages, opening up your application to a global audience.
 
 ## Usage
 
 <div style={{ marginBottom: "20px" }}>
-  You can get the HTML code to embed the chat by clicking the <b>Code</b> button at the Sidebar after you build the flow.
+  You can get the HTML code to embed the chat by clicking the <b>Code</b> button
+  at the Sidebar after you build the flow.
 </div>
 
 <div
@@ -38,10 +42,11 @@ import ReactPlayer from "react-player";
 </div>
 
 <div style={{ marginBottom: "20px" }}>
-  After clicking the Chat Widget HTML tab, you get the code that needs to be inserted anywhere in the &lt;body&gt; tag of any HTML page.
+  After clicking the Chat Widget HTML tab, you get the code that needs to be
+  inserted anywhere in the &lt;body&gt; tag of any HTML page.
 </div>
 
-<div style={{ marginBottom: "20px" }}>  
+<div style={{ marginBottom: "20px" }}>
   <ZoomableImage
     alt="Docusaurus themed image"
     sources={{
@@ -120,7 +125,7 @@ When you use a custom web component in an Angular template, the Angular compiler
 - Import 'CUSTOM_ELEMENTS_SCHEMA' at the top of the file:
 
 ```ts
-import { NgModule, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { NgModule, CUSTOM_ELEMENTS_SCHEMA } from "@angular/core";
 ```
 
 - Add 'CUSTOM_ELEMENTS_SCHEMA' to the 'schemas' array within the '@NgModule' decorator:
@@ -135,7 +140,7 @@ import { NgModule, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA], // Add the CUSTOM_ELEMENTS_SCHEMA here
 })
-export class YourModule { }
+export class YourModule {}
 ```
 
 In your Angular project, locate the component that belongs to the module where you added the 'CUSTOM_ELEMENTS_SCHEMA'.
@@ -143,12 +148,12 @@ In your Angular project, locate the component that belongs to the module where y
 - Inside the template, add the langflow-chat tag to include the Chat Widget in your component's view:
 
 ```html
-  <langflow-chat
-    chat_inputs='{"your_key":"value"}'
-    chat_input_field="your_chat_key"
-    flow_id="your_flow_id"
-    host_url="langflow_url"
-  ></langflow-chat>
+<langflow-chat
+  chat_inputs='{"your_key":"value"}' // JSON object
+  chat_input_field="your_chat_key"
+  flow_id="your_flow_id"
+  host_url="langflow_url"
+></langflow-chat>
 ```
 
 Here are some additional notes:
@@ -161,148 +166,32 @@ You now have the flexibility to utilize the Chat Widget seamlessly in any Angula
 
 ---
 
-
 ## Configuration
 
 Use the widget API to customize your widget:
 
-| Prop                  | Type      | Required |
-|-----------------------|-----------|----------|
-| bot_message_style     | json      | No       |
-| chat_input_field      | string    | Yes      |
-| chat_inputs           | json      | Yes      |
-| chat_position         | string    | No       |
-| chat_trigger_style    | json      | No       |
-| chat_window_style     | json      | No       |
-| chat_output_key       | string    | No       |
-| error_message_style   | json      | No       |
-| flow_id               | string    | Yes      |
-| height                | number    | No       |
-| host_url              | string    | Yes      |
-| input_container_style | json      | No       |
-| input_style           | json      | No       |
-| online                | boolean   | No       |
-| online_message        | string    | No       |
-| placeholder           | string    | No       |
-| placeholder_sending   | string    | No       |
-| send_button_style     | json      | No       |
-| send_icon_style       | json      | No       |
-| tweaks                | json      | No       |
-| user_message_style    | json      | No       |
-| width                 | number    | No       |
-| window_title          | string    | No       |
-
-- **bot_message_style:**
-  - Type: JSON
-  - Required: No
-  - Description: Styling options for formatting bot messages in the chat window.
-
-- **chat_input_field:**
-  - Type: String
-  - Required: Yes
-  - Description: Specifies the input field type for chat messages.
-
-- **chat_inputs:**
-  - Type: JSON
-  - Required: Yes
-  - Description: Defines the chat input elements and their values.
- 
-- **chat_output_key:**
-  - Type: String
-  - Required: No
-  - Description: Specify which output to choose if there is more than one output.
-
-- **chat_position:**
-  - Type: String
-  - Required: No
-  - Description: Determines the position of the chat window (top-left, top-center, top-right, center-left, center-right, bottom-right, bottom-center, bottom-left).
-
-- **chat_trigger_style:**
-  - Type: JSON
-  - Required: No
-  - Description: Styling options for the chat trigger.
-
-- **chat_window_style:**
-  - Type: JSON
-  - Required: No
-  - Description: Styling options for the overall chat window.
-
-- **error_message_style:**
-  - Type: JSON
-  - Required: No
-  - Description: Styling options for error messages in the chat window.
-
-- **flow_id:**
-  - Type: String
-  - Required: Yes
-  - Description: Identifier for the flow associated with the component.
-
-- **height:**
-  - Type: Number
-  - Required: No
-  - Description: Specifies the height of the chat window in pixels.
-
-- **host_url:**
-  - Type: String
-  - Required: Yes
-  - Description: The URL of the host for communication with the chat component.
-
-- **input_container_style:**
-  - Type: JSON
-  - Required: No
-  - Description: Styling options for the input container where chat messages are typed.
-
-- **input_style:**
-  - Type: JSON
-  - Required: No
-  - Description: Styling options for the chat input field.
-
-- **Online:**
-  - Type: Boolean
-  - Required: No
-  - Description: Indicates if the chat component is online or offline.
-
-- **online_message:**
-  - Type: String
-  - Required: No
-  - Description: Custom message to display when the chat component is online.
-
-- **placeholder:**
-  - Type: String
-  - Required: No
-  - Description: Placeholder text for the chat input field.
-
-- **placeholder_sending:**
-  - Type: String
-  - Required: No
-  - Description: Placeholder text to display while a message is being sent.
-
-- **send_button_style:**
-  - Type: JSON
-  - Required: No
-  - Description: Styling options for the send button in the chat window.
-
-- **send_icon_style:**
-  - Type: JSON
-  - Required: No
-  - Description: Styling options for the send icon in the chat window.
-
-- **tweaks:**
-  - Type: JSON
-  - Required: No
-  - Description: Additional custom tweaks for the associated flow.
-
-- **user_message_style:**
-  - Type: JSON
-  - Required: No
-  - Description: Styling options for formatting user messages in the chat window.
-
-- **width:**
-  - Type: Number
-  - Required: No
-  - Description: Specifies the width of the chat window in pixels.
-
-- **window_title:**
-  - Type: String
-  - Required: No
-  - Description: Title for the chat window, displayed in the header or title bar.
+| Prop                  | Type    | Required | Description                                                                                                                                                      |
+| --------------------- | ------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| bot_message_style     | JSON    | No       | Applies custom formatting to bot messages.                                                                                                                       |
+| chat_input_field      | String  | Yes      | Defines the type of the input field for chat messages.                                                                                                           |
+| chat_inputs           | JSON    | Yes      | Determines the chat input elements and their respective values.                                                                                                  |
+| chat_output_key       | String  | No       | Specifies which output to display if multiple outputs are available.                                                                                             |
+| chat_position         | String  | No       | Positions the chat window on the screen (options include: top-left, top-center, top-right, center-left, center-right, bottom-right, bottom-center, bottom-left). |
+| chat_trigger_style    | JSON    | No       | Styles the chat trigger button.                                                                                                                                  |
+| chat_window_style     | JSON    | No       | Customizes the overall appearance of the chat window.                                                                                                            |
+| error_message_style   | JSON    | No       | Sets the format for error messages within the chat window.                                                                                                       |
+| flow_id               | String  | Yes      | Identifies the flow that the component is associated with.                                                                                                       |
+| height                | Number  | No       | Sets the height of the chat window in pixels.                                                                                                                    |
+| host_url              | String  | Yes      | Specifies the URL of the host for chat component communication.                                                                                                  |
+| input_container_style | JSON    | No       | Applies styling to the container where chat messages are entered.                                                                                                |
+| input_style           | JSON    | No       | Sets the style for the chat input field.                                                                                                                         |
+| online                | Boolean | No       | Toggles the online status of the chat component.                                                                                                                 |
+| online_message        | String  | No       | Sets a custom message to display when the chat component is online.                                                                                              |
+| placeholder           | String  | No       | Sets the placeholder text for the chat input field.                                                                                                              |
+| placeholder_sending   | String  | No       | Sets the placeholder text to display while a message is being sent.                                                                                              |
+| send_button_style     | JSON    | No       | Sets the style for the send button in the chat window.                                                                                                           |
+| send_icon_style       | JSON    | No       | Sets the style for the send icon in the chat window.                                                                                                             |
+| tweaks                | JSON    | No       | Applies additional custom adjustments for the associated flow.                                                                                                   |
+| user_message_style    | JSON    | No       | Determines the formatting for user messages in the chat window.                                                                                                  |
+| width                 | Number  | No       | Sets the width of the chat window in pixels.                                                                                                                     |
+| window_title          | String  | No       | Sets the title displayed in the chat window's header or title bar.                                                                                               |
