@@ -9,10 +9,9 @@ import Robot from "../../../assets/robot.png";
 import SanitizedHTMLWrapper from "../../../components/SanitizedHTMLWrapper";
 import CodeTabsComponent from "../../../components/codeTabsComponent";
 import IconComponent from "../../../components/genericIconComponent";
-import { ChatMessageType } from "../../../types/chat";
+import { chatMessagePropsType } from "../../../types/components";
 import { classNames } from "../../../utils/utils";
 import FileCard from "../fileComponent";
-import { chatMessagePropsType } from "../../../types/components";
 
 export default function ChatMessage({
   chat,

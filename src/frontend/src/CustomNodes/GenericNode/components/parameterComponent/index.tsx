@@ -28,7 +28,6 @@ import {
   getRandomKeyByssmm,
   groupByFamily,
 } from "../../../../utils/utils";
-import { NodeDataType } from "../../../../types/flow";
 
 export default function ParameterComponent({
   left,

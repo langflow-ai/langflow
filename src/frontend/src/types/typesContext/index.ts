@@ -8,7 +8,7 @@ const data: { [char: string]: string } = {};
 
 export type typesContextType = {
   reactFlowInstance: ReactFlowInstance | null;
-  setReactFlowInstance: any;
+  setReactFlowInstance: () => void;
   deleteNode: (idx: string) => void;
   types: typeof types;
   setTypes: (newState: {}) => void;
@@ -56,8 +56,8 @@ export type locationContextType = {
     options?: Array<{
       name: string;
       href: string;
-      icon: any;
-      children?: Array<any>;
+      icon: React.ElementType;
+      children?: Array<JSX.Element>;
     }>;
   };
   setExtraNavigation: (newState: {
@@ -65,12 +65,12 @@ export type locationContextType = {
     options?: Array<{
       name: string;
       href: string;
-      icon: any;
-      children?: Array<any>;
+      icon: React.ElementType;
+      children?: Array<JSX.Element>;
     }>;
   }) => void;
   extraComponent: any;
-  setExtraComponent: (newState: any) => void;
+  setExtraComponent: (newState: JSX.Element) => void;
 };
 
 export type undoRedoContextType = {

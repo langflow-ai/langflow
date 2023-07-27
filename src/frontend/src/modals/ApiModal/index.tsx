@@ -15,7 +15,7 @@ import CodeTabsComponent from "../../components/codeTabsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { EXPORT_CODE_DIALOG } from "../../constants/constants";
 import { TabsContext } from "../../contexts/tabsContext";
-import { FlowType, NodeDataType } from "../../types/flow/index";
+import { FlowType } from "../../types/flow/index";
 import { buildTweaks } from "../../utils/reactflowUtils";
 import {
   getCurlCode,

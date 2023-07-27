@@ -10,7 +10,6 @@ import {
 import { FlowType } from "../types/flow";
 import { TabsState } from "../types/tabs";
 import { buildTweaks } from "./reactflowUtils";
-import { APIClassType, APIObjectType, APITemplateType } from "../types/api";
 
 export function classNames(...classes: Array<string>): string {
   return classes.filter(Boolean).join(" ");
@@ -94,7 +93,12 @@ export function checkUpperWords(str: string): string {
 export const isWrappedWithClass = (event: any, className: string | undefined) =>
   event.target.closest(`.${className}`);
 
-export function groupByFamily(data: groupDataType, baseClasses: string, left: boolean, type: string): groupedObjType[] {
+export function groupByFamily(
+  data: groupDataType,
+  baseClasses: string,
+  left: boolean,
+  type: string
+): groupedObjType[] {
   let parentOutput: string;
   let arrOfParent: string[] = [];
   let arrOfType: { family: string; type: string; component: string }[] = [];

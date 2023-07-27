@@ -7,7 +7,11 @@ import EditNodeModal from "../../../../modals/EditNodeModal";
 import { nodeToolbarPropsType } from "../../../../types/components";
 import { classNames } from "../../../../utils/utils";
 
-export default function NodeToolbarComponent({ data, setData, deleteNode }: nodeToolbarPropsType): JSX.Element {
+export default function NodeToolbarComponent({
+  data,
+  setData,
+  deleteNode,
+}: nodeToolbarPropsType): JSX.Element {
   const [nodeLength, setNodeLength] = useState(
     Object.keys(data.node.template).filter(
       (t) =>

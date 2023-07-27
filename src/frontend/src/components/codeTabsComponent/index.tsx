@@ -29,7 +29,7 @@ import {
   TabsTrigger,
 } from "../../components/ui/tabs";
 import { darkContext } from "../../contexts/darkContext";
-import { FlowType } from "../../types/flow/index";
+import { codeTabsPropsType } from "../../types/components";
 import { classNames } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 
@@ -40,20 +40,7 @@ export default function CodeTabsComponent({
   setActiveTab,
   isMessage,
   tweaks,
-}: {
-  flow?: FlowType;
-  tabs: any;
-  activeTab: string;
-  setActiveTab: any;
-  isMessage?: boolean;
-  tweaks?: {
-    tweak?: any;
-    tweaksList?: any;
-    buildContent?: any;
-    getValue?: any;
-    buildTweakObject?: any;
-  };
-}) {
+}: codeTabsPropsType) {
   const [isCopied, setIsCopied] = useState<Boolean>(false);
   const [data, setData] = useState(flow ? flow["data"]["nodes"] : null);
   const [openAccordion, setOpenAccordion] = useState([]);

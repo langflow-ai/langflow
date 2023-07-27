@@ -3,7 +3,7 @@ import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
-import { ReactNode, useContext, useState } from "react";
+import { useContext, useState } from "react";
 import AceEditor from "react-ace";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
@@ -11,9 +11,8 @@ import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
 import { postValidateCode } from "../../controllers/API";
-import { APIClassType } from "../../types/api";
-import BaseModal from "../baseModal";
 import { codeAreaModalPropsType } from "../../types/components";
+import BaseModal from "../baseModal";
 
 export default function CodeAreaModal({
   value,
