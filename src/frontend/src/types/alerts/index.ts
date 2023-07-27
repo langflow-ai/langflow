@@ -19,7 +19,9 @@ export type SingleAlertComponentType = {
   dropItem: AlertItemType;
   removeAlert: (index: string) => void;
 };
-export type AlertDropdownType = {};
+export type AlertDropdownType = {
+  children: JSX.Element;
+};
 export type AlertItemType = {
   type: "notice" | "error" | "success";
   title: string;
