@@ -344,5 +344,5 @@ export async function postCustomComponent(
   code: string,
   apiClass: APIClassType
 ): Promise<AxiosResponse<APIClassType>> {
-  return await axios.post(`/api/v1/custom_component`, { code });
+  return await api.post(`/api/v1/custom_component`, { code });
 }

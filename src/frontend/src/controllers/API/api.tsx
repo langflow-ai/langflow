@@ -1,6 +1,7 @@
 import axios, { AxiosError, AxiosInstance } from "axios";
 import { useContext, useEffect, useRef } from "react";
 import { alertContext } from "../../contexts/alertContext";
+import { URL_EXCLUDED_FROM_ERROR_RETRIES } from "../../constants/constants";
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
@@ -15,6 +16,9 @@ function ApiInterceptor() {
     const interceptor = api.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
+        if (URL_EXCLUDED_FROM_ERROR_RETRIES.includes(error.config?.url)) {
+          return Promise.reject(error);
+        }
         let retryCount = 0;
 
         while (retryCount < 4) {
@@ -31,7 +35,7 @@ function ApiInterceptor() {
                   "Refresh the page",
                   "Use a new flow tab",
                   "Check if the backend is up",
-                  "Endpoint: " + error.config.url,
+                  "Endpoint: " + error.config?.url,
                 ],
               });
               return Promise.reject(error);
