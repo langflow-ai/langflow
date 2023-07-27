@@ -106,6 +106,49 @@ Finally, you can use this component anywhere in your code to show the Chat Widge
 
 ---
 
+### Angular
+
+To use the Chat Widget in Angular, first, you need to insert this &lt;script&gt; tag into the Angular index.html file, inside the &lt;body&gt; tag.
+
+```html
+<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
+```
+
+When you use a custom web component in an Angular template, the Angular compiler might show a warning because it doesn't recognize the custom elements by default. To suppress this warning, you can add the 'CUSTOM_ELEMENTS_SCHEMA' to the '@NgModule.schemas' of the module.
+
+- Open the module file (usually ends with .module.ts) where you use the 'langflow-chat' web component.
+- Import 'CUSTOM_ELEMENTS_SCHEMA' at the top of the file:
+
+```ts
+import { NgModule, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+```
+
+- Add 'CUSTOM_ELEMENTS_SCHEMA' to the 'schemas' array within the '@NgModule' decorator:
+
+```ts
+@NgModule({
+  declarations: [
+    // ... Other components and directives ...
+  ],
+  imports: [
+    // ... Other imported modules ...
+  ],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA], // Add the CUSTOM_ELEMENTS_SCHEMA here
+})
+export class YourModule { }
+```
+
+Here are some additional notes:
+
+- The CUSTOM_ELEMENTS_SCHEMA is a built-in schema that allows Angular to recognize custom elements.
+- Adding 'CUSTOM_ELEMENTS_SCHEMA' tells Angular to allow custom elements in your templates, and it will suppress the warning related to unknown elements like 'langflow-chat'.
+- You can only use the Chat Widget in components that are part of the module where you added the CUSTOM_ELEMENTS_SCHEMA.
+
+You now have the flexibility to utilize the Chat Widget seamlessly in any Angular application.
+
+---
+
+
 ## Configuration
 
 Use the widget API to customize your widget:
