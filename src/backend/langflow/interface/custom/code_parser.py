@@ -131,6 +131,12 @@ class CodeParser:
             ast.unparse(default).strip("'") if default else None
             for default in node.args.defaults
         ]
+        # Now check all default values to see if there
+        # are any "None" values in the middle
+        default_values = [
+            None if value == "None" else value for value in default_values
+        ]
+
         defaults = missing_defaults + default_values
 
         args = [
