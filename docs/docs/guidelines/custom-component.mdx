@@ -49,15 +49,13 @@ class BestComponent(CustomComponent):
 
 </CH.Code>
 
-## Now, let's go over the rules one by one.
-
-## Rules:
+## Now, let's go over the rules one by one:
 
 <CH.Scrollycoding rows={20} className={""}>
 
 ## Rule 1
 
-The class must inherit from _`CustomComponent`_.
+The script must contain a **single class** that inherits from _`CustomComponent`_.
 
 ```python
 # focus
@@ -82,9 +80,9 @@ class BestComponent(CustomComponent):
 
 ---
 
-## Rule 2:
+## Rule 2
 
-The class must have a _`build`_ method
+The class must have a _`build`_ method which defines the fields of the component and is used to run it.
 
 ```python
 from langflow import CustomComponent
@@ -110,7 +108,7 @@ class BestComponent(CustomComponent):
 
 ## Rule 3
 
-The type annotations of the _`build`_ method will be used to create the fields of the component
+The type annotations of the _`build`_ method will be used to create the fields of the component.
 
 The types supported are:
 
@@ -168,7 +166,7 @@ class BestComponent(CustomComponent):
         ...
 ```
 
-## Rule 4:
+## Rule 4
 
 The class can have a [_`build_config`_](focus://11:19) method
 
@@ -180,12 +178,12 @@ The _`dict`_ should have the following format:
 - The top level keys are the names of the fields
 - The values are _`dict`_ with the following keys:
 
-  - _`field_type: str`_: The type of the field (can be str, int, float, bool, file or any of the types supported by the _`build`_ method)
-  - _`is_list: bool`_: If the field is a list
-  - _`options: List[str]`_: If the field is a list, the options that will be displayed
-  - _`multiline: bool`_: If the field is a string, if it should be multiline
+  - _`field_type: str`_: The type of the field (can be any of the types supported by the _`build`_ method)
+  - _`is_list: bool`_: If the field is a list.
+  - _`options: List[str]`_: If the field is a list, the options that will be displayed.
+  - _`multiline: bool`_: If the field is a string, if it should be multiline.
   - _`input_types: List[str]`_: To be used when you want a _`str`_ field to have connectable handles.
-  - _`dispaly_name: str`_: To change the name of the field
+  - _`display_name: str`_: To change the name of the field
   - _`advanced: bool`_: To hide the field in the default view
   - _`password: bool`_: To mask the input
   - _`required: bool`_: To make the field required
@@ -281,9 +279,10 @@ class BestComponent(CustomComponent):
 
 The _`build_config`_ method will be used to configure the fields of the component.
 
-- _`multiline`_ is a special option that will give the option to open a text editor.
+- _`multiline`_ will add the possibility of editing text in a spaceous text editor.
 
-- _`is_list`_ is a special option that will give the option to add multiple values. When paired with _`options`_ it will transform it into a select field.
+- _`is_list`_ is a special option that allows you to add many values. When paired with _`options`_ it will transform it into a dropdown menu with the options you provide.
+  If you set the _`value`_ attribute to one of the options, it will be selected by default.
 
 ```python focus=12:19
 from langflow import CustomComponent
@@ -349,5 +348,118 @@ The parameters used are:
 - The return type is Tool
 
 We then instantiate a Tool and return it.
+
+</CH.Scrollycoding>
+
+## FlowRunner Example
+
+Now let's see how to create a component that runs other flows.
+
+<CH.Scrollycoding rows={20} className={""}>
+
+```python
+from langflow.interface.custom.custom_component import CustomComponent
+
+class MyComponent(CustomComponent):
+    display_name = "Custom Component"
+
+    def build_config(self):
+        ...
+
+    def build(self):
+        ...
+
+```
+
+So, let's start by adding the _`display_name`_ and a _`description`_.
+
+---
+
+```python
+from langflow.interface.custom.custom_component import CustomComponent
+
+# focus
+class FlowRunner(CustomComponent):
+    # focus
+    display_name = "Flow Runner"
+    # focus
+    description = "Run other flows"
+
+    def build_config(self):
+        ...
+
+    def build(self):
+        ...
+
+```
+
+That's better.
+
+---
+
+```python
+from langflow.interface.custom.custom_component import CustomComponent
+from langchain.schema import Document
+
+# focus[6:16]
+class FlowRunner(CustomComponent):
+    # focus[19:35]
+    display_name = "Flow Runner"
+    # focus[18:35]
+    description = "Run other flows"
+
+    def build_config(self):
+        ...
+
+    def build(self):
+        ...
+
+```
+
+Now let's import Document from the schema module which will be our return type for the _`build`_ method.
+
+---
+
+```python
+from langflow.interface.custom.custom_component import CustomComponent
+from langchain.schema import Document
+
+class FlowRunner(CustomComponent):
+    display_name = "Flow Runner"
+    description = "Run other flows using a document as input."
+
+    def build_config(self):
+        ...
+
+    # focus
+    def build(self, flow_name: str, document: Document) -> Document:
+        ...
+
+```
+
+Let's add the parameters and the return type to the _`build`_ method.
+
+---
+
+```python
+from langflow.interface.custom.custom_component import CustomComponent
+from langchain.schema import Document
+
+# focus
+class FlowRunner(CustomComponent):
+    # focus
+    display_name = "Flow Runner"
+    # focus
+    description = "Run other flows using a document as input."
+
+    def build_config(self):
+        ...
+
+    def build(self, flow_name: str, document: Document) -> Document:
+        ...
+
+```
+
+---
 
 </CH.Scrollycoding>
