@@ -192,10 +192,11 @@ body {
 }
 
 .ch-scrollycoding-content {
-  max-width: 40% !important;
+  max-width: 50% !important;
+  min-width: 40% !important;
 }
 
 .ch-scrollycoding-sticker {
   max-width: 60% !important;
-  min-width: 60% !important;
+  min-width: 50% !important;
 }
