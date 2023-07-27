@@ -138,6 +138,19 @@ import { NgModule, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 export class YourModule { }
 ```
 
+In your Angular project, locate the component that belongs to the module where you added the 'CUSTOM_ELEMENTS_SCHEMA'.
+
+- Inside the template, add the langflow-chat tag to include the Chat Widget in your component's view:
+
+```html
+  <langflow-chat
+    chat_inputs='{"your_key":"value"}'
+    chat_input_field="your_chat_key"
+    flow_id="your_flow_id"
+    host_url="langflow_url"
+  ></langflow-chat>
+```
+
 Here are some additional notes:
 
 - The CUSTOM_ELEMENTS_SCHEMA is a built-in schema that allows Angular to recognize custom elements.
