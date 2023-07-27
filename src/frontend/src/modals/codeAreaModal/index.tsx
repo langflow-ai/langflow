@@ -96,6 +96,7 @@ export default function CodeAreaModal({
         if (data) {
           setNodeClass(data);
           setValue(code);
+          setError({ detail: { error: undefined, traceback: undefined } });
           setOpen(false);
         }
       })
