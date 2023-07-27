@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import IconComponent from "../../../components/genericIconComponent";
-import { chatInputType } from "../../../types/components";
 import { Textarea } from "../../../components/ui/textarea";
+import { chatInputType } from "../../../types/components";
 import { classNames } from "../../../utils/utils";
 
 export default function ChatInput({

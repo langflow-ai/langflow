@@ -6,7 +6,6 @@ import ReactFlow, {
   Controls,
   Edge,
   EdgeChange,
-  Node,
   NodeChange,
   NodeDragHandler,
   OnEdgesDelete,
@@ -263,7 +262,6 @@ export default function Page({ flow }: { flow: FlowType }): JSX.Element {
             data: {
               ...data,
               id: newId,
-              value: null,
             },
           };
         } else {
@@ -275,7 +273,6 @@ export default function Page({ flow }: { flow: FlowType }): JSX.Element {
             data: {
               ...data,
               id: newId,
-              value: null,
             },
           };
 

@@ -5,8 +5,8 @@ import { Button } from "../../components/ui/button";
 import { SETTINGS_DIALOG_SUBTITLE } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { TabsContext } from "../../contexts/tabsContext";
-import BaseModal from "../baseModal";
 import { FlowSettingsPropsType } from "../../types/components";
+import BaseModal from "../baseModal";
 
 export default function FlowSettingsModal({
   open,

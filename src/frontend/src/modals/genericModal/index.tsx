@@ -1,4 +1,4 @@
-import { ReactNode, useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import SanitizedHTMLWrapper from "../../components/SanitizedHTMLWrapper";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -15,14 +15,13 @@ import {
 import { TypeModal } from "../../constants/enums";
 import { alertContext } from "../../contexts/alertContext";
 import { postValidatePrompt } from "../../controllers/API";
-import { APIClassType } from "../../types/api";
+import { genericModalPropsType } from "../../types/components";
 import {
   classNames,
   getRandomKeyByssmm,
   varHighlightHTML,
 } from "../../utils/utils";
 import BaseModal from "../baseModal";
-import { genericModalPropsType } from "../../types/components";
 
 export default function GenericModal({
   field_name = "",

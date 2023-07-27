@@ -1,6 +1,5 @@
-import { ReactNode } from "react";
-import { classNames } from "../../../utils/utils";
 import { buttonBoxPropsType } from "../../../types/components";
+import { classNames } from "../../../utils/utils";
 
 export default function ButtonBox({
   onClick,

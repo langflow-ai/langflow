@@ -1,6 +1,6 @@
 import { useContext } from "react";
 import { TabsContext } from "../../contexts/tabsContext";
-import { FlowType } from "../../types/flow";
+import { cardComponentPropsType } from "../../types/components";
 import { gradients } from "../../utils/styleUtils";
 import IconComponent from "../genericIconComponent";
 import {
@@ -10,7 +10,6 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/card";
-import { cardComponentPropsType } from "../../types/components";
 
 export const CardComponent = ({
   flow,

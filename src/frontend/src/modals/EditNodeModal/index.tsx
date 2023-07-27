@@ -24,7 +24,6 @@ import {
 import { limitScrollFieldsModal } from "../../constants/constants";
 import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
-import { editNodeToggleType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
 import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";
@@ -61,7 +60,10 @@ const EditNodeModal = forwardRef(
       });
     }
 
-    const handleOnNewValue = (newValue: string | string[] | boolean, name: string) => {
+    const handleOnNewValue = (
+      newValue: string | string[] | boolean,
+      name: string
+    ) => {
       setMyData((old) => {
         let newData = cloneDeep(old);
         newData.node.template[name].value = newValue;

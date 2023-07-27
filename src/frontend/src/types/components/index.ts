@@ -1,9 +1,9 @@
-import { ForwardRefExoticComponent, ReactElement, ReactNode, RefAttributes, SVGProps } from "react";
-import { APIClassType, APITemplateType } from "../api";
-import { FlowStyleType, FlowType, NodeDataType } from "../flow/index";
-import { typesContextType } from "../typesContext";
-import { ChatMessageType } from "../chat";
+import { ReactElement, ReactNode } from "react";
 import { ReactFlowJsonObject } from "reactflow";
+import { APIClassType, APITemplateType } from "../api";
+import { ChatMessageType } from "../chat";
+import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
+import { typesContextType } from "../typesContext";
 
 export type InputComponentType = {
   value: string;
@@ -365,11 +365,61 @@ export type FlowSettingsPropsType = {
 
 export type groupDataType = {
   [char: string]: string;
-}
+};
 
 export type cardComponentPropsType = {
   flow: FlowType;
   id: string;
   onDelete?: () => void;
   button?: JSX.Element;
+};
+
+type tabsArrayType = {
+  code: string;
+  image: string;
+  language: string;
+  mode: string;
+  name: string;
+};
+
+type getValueNodeType = {
+  id: string;
+  node: NodeType;
+  type: string;
+  value: null;
+};
+
+type codeTabsFuncTempType = {
+  [key: string]: string | boolean;
+};
+
+export type codeTabsPropsType = {
+  flow?: FlowType;
+  tabs: Array<tabsArrayType>;
+  activeTab: string;
+  setActiveTab: (value: string) => void;
+  isMessage?: boolean;
+  tweaks?: {
+    tweak?: { current: Array<tweakType> };
+    tweaksList?: { current: Array<string> };
+    buildContent?: (value: string) => ReactNode;
+    getValue?: (
+      value: string,
+      node: getValueNodeType,
+      template: codeTabsFuncTempType
+    ) => string;
+    buildTweakObject?: (
+      tw: string,
+      changes: string | string[] | boolean,
+      template: codeTabsFuncTempType
+    ) => string;
+  };
+};
+
+export type crashComponentPropsType = {
+  error: {
+    message: string;
+    stack: string;
+  };
+  resetErrorBoundary: (args) => void;
 };

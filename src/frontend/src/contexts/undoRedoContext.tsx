@@ -12,8 +12,8 @@ import {
   UseUndoRedoOptions,
   undoRedoContextType,
 } from "../types/typesContext";
-import { TabsContext } from "./tabsContext";
 import { isWrappedWithClass } from "../utils/utils";
+import { TabsContext } from "./tabsContext";
 
 const initialValue = {
   undo: () => {},
