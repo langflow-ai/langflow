@@ -12,7 +12,11 @@ Let's take a look at the basic rules, then we'll talk about the ones that are no
 
 ## TL;DR
 
-This is a simple example of a Custom Component. We will go over the rules in detail later.
+You need to create a class that inherits from _`CustomComponent`_ and has a _`build`_ method.
+Use the type annotations of the _`build`_ method to create the fields of the component.
+Use the _`build_config`_ method to create the config fields of the component (if any).
+
+Here is an example:
 
 <CH.Code linuNumbers={false}>
 
@@ -44,6 +48,8 @@ class BestComponent(CustomComponent):
 ```
 
 </CH.Code>
+
+## Now, let's go over the rules one by one.
 
 ## Rules:
 
@@ -135,7 +141,7 @@ class BestComponent(CustomComponent):
     def build_config(self) -> dict:
         ...
 
-    # focus[14:75]
+    # mark
     def build(self):
         ...
 ```
@@ -195,6 +201,32 @@ The _`dict`_ should have the following format:
 
 ---
 
+```python
+from langflow import CustomComponent
+from langchain.chains import LLMChain
+from langchain.chains.base import Chain
+from langchain import PromptTemplate
+from langchain.llms.base import BaseLLM
+from langchain import Tool
+
+class BestComponent(CustomComponent):
+    display_name = "Custom Component"
+    description = "This is a custom component"
+
+    # focus
+    def build_config(self) -> dict:
+        ...
+
+    def build(self):
+        ...
+```
+
+# Example
+
+Now let's create a custom component that creates a Tool from a name, a description and a chain.
+
+---
+
 # Change the name
 
 We can change the name of the component by adding a _`display_name`_ attribute.
@@ -247,7 +279,7 @@ class BestComponent(CustomComponent):
 
 # Add a config
 
-The _`build_config`_ method will be used to create the config fields of the component (if any).
+The _`build_config`_ method will be used to configure the fields of the component.
 
 - _`multiline`_ is a special option that will give the option to open a text editor.
 
@@ -309,9 +341,13 @@ class BestComponent(CustomComponent):
 
 # Add the build method
 
+The parameters used are:
+
 - name is a string
 - description is a string
 - chain is a Chain
 - The return type is Tool
+
+We then instantiate a Tool and return it.
 
 </CH.Scrollycoding>
