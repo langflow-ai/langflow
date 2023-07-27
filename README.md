@@ -39,6 +39,8 @@
   - [Deploy Langflow on Google Cloud Platform](#deploy-langflow-on-google-cloud-platform)
   - [Deploy Langflow on Jina AI Cloud](#deploy-langflow-on-jina-ai-cloud)
       - [API Usage](#api-usage)
+  - [Deploy on Railway](#deploy-on-railway)
+  - [Deploy on Render](#deploy-on-render)
 - [🎨 Creating Flows](#-creating-flows)
 - [👋 Contributing](#-contributing)
 - [📄 License](#-license)
@@ -87,6 +89,7 @@ Each option is detailed below:
 - `--config`: Defines the path to the configuration file. The default is `config.yaml`.
 - `--env-file`: Specifies the path to the .env file containing environment variables. The default is `.env`.
 - `--log-level`: Defines the logging level. Can be set using the `LANGFLOW_LOG_LEVEL` environment variable. The default is `critical`.
+- `component-path`: Specifies the path to the directory containing custom components. Can be set using the `LANGFLOW_COMPONENT_PATH` environment variable. The default is `langflow/components`.
 - `--log-file`: Specifies the path to the log file. Can be set using the `LANGFLOW_LOG_FILE` environment variable. The default is `logs/langflow.log`.
 - `--cache`: Selects the type of cache to use. Options are `InMemoryCache` and `SQLiteCache`. Can be set using the `LANGFLOW_LANGCHAIN_CACHE` environment variable. The default is `SQLiteCache`.
 - `--jcloud/--no-jcloud`: Toggles the option to deploy on Jina AI Cloud. The default is `no-jcloud`.

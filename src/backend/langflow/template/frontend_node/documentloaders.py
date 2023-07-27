@@ -14,7 +14,7 @@ def build_file_field(
         name=name,
         value="",
         suffixes=suffixes,
-        fileTypes=fileTypes,
+        file_types=fileTypes,
     )
 
 

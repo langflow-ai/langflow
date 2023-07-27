@@ -20,6 +20,7 @@ def test_prompt_template(client: TestClient):
     template = prompt["template"]
     assert template["input_variables"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -30,8 +31,10 @@ def test_prompt_template(client: TestClient):
         "advanced": False,
         "info": "",
     }
+
     assert template["output_parser"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -42,8 +45,10 @@ def test_prompt_template(client: TestClient):
         "advanced": False,
         "info": "",
     }
+
     assert template["partial_variables"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -54,8 +59,10 @@ def test_prompt_template(client: TestClient):
         "advanced": False,
         "info": "",
     }
+
     assert template["template"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": True,
@@ -66,8 +73,10 @@ def test_prompt_template(client: TestClient):
         "advanced": False,
         "info": "",
     }
+
     assert template["template_format"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -79,8 +88,10 @@ def test_prompt_template(client: TestClient):
         "advanced": False,
         "info": "",
     }
+
     assert template["validate_template"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,

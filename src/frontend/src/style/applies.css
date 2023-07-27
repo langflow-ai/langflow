@@ -31,6 +31,36 @@
   }
 }
 
+@keyframes gradient-motion-start {
+  0% {
+    stop-color: rgb(156, 138, 236);
+  }
+  50% {
+    stop-color: rgb(255, 130, 184);
+  }
+  80% {
+    stop-color: rgb(255, 165, 100);
+  }
+  100% {
+    stop-color: rgb(156, 138, 236);
+  }
+}
+
+@keyframes gradient-motion-end {
+  0% {
+    stop-color: rgb(156, 138, 236);
+  }
+  50% {
+    stop-color: rgb(255, 165, 100);
+  }
+  80% {
+    stop-color: rgb(255, 130, 184);
+  }
+  100% {
+    stop-color: rgb(156, 138, 236);
+  }
+}
+
 @layer components {
   .round-buttons-position {
     @apply fixed right-4;
@@ -977,6 +1007,13 @@
 
   .export-modal-save-api {
     @apply font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70;
+  }
+
+  .beta-badge-wrapper {
+    @apply absolute right-0 top-0 h-16 w-16 overflow-hidden rounded-tr-lg;
+  }
+  .beta-badge-content {
+    @apply mt-2 w-24 rotate-45 bg-beta-background text-center text-xs font-semibold text-beta-foreground;
   }
 
   .chat-message-highlight {

@@ -22,6 +22,7 @@ module.exports = {
         "guidelines/prompt-customization",
         "guidelines/chat-interface",
         "guidelines/chat-widget",
+        "guidelines/custom-component",
       ],
     },
     {
@@ -31,6 +32,7 @@ module.exports = {
       items: [
         "components/agents",
         "components/chains",
+        "components/custom",
         "components/embeddings",
         "components/llms",
         "components/loaders",

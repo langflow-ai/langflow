@@ -1,0 +1,465 @@
+---
+description: Custom Components
+hide_table_of_contents: true
+---
+
+# Custom Components
+
+A Custom Component has almost infinite possibilities. It can be a simple function that takes a string and returns a string,
+or it can be a complex function that takes other components, calls APIs, and returns a custom object only you know how to use (which might not be ideal).
+
+Let's take a look at the basic rules, then we'll talk about the ones that are not so basic.
+
+## TL;DR
+
+You need to create a class that inherits from _`CustomComponent`_ and has a _`build`_ method.
+Use the type annotations of the _`build`_ method to create the fields of the component.
+Use the _`build_config`_ method to create the config fields of the component (if any).
+
+Here is an example:
+
+<CH.Code linuNumbers={false}>
+
+```python
+from langflow import CustomComponent
+from langchain.chains import LLMChain
+from langchain.chains.base import Chain
+from langchain import PromptTemplate
+from langchain.llms.base import BaseLLM
+from langchain import Tool
+
+class BestComponent(CustomComponent):
+    display_name = "Best Component"
+    description = "This is the best component ever"
+
+    def build_config(self) -> dict:
+        cool_tool_names = ["Cool Tool",
+                           "Cooler Tool",
+                           "Coolest Tool"]
+        return {
+            "description": {"multiline": True},
+            "name": {"is_list": True,
+                     "options": cool_tool_names}}
+
+    def build(self, name: str, description: str, chain: Chain) -> Tool:
+        return Tool(name=name,
+                    description=description,
+                    func=chain.run)
+```
+
+</CH.Code>
+
+## Now, let's go over the rules one by one:
+
+<CH.Scrollycoding rows={20} className={""}>
+
+## Rule 1
+
+The script must contain a **single class** that inherits from _`CustomComponent`_.
+
+```python
+# focus
+from langflow import CustomComponent
+from langchain.chains import LLMChain
+from langchain.chains.base import Chain
+from langchain import PromptTemplate
+from langchain.llms.base import BaseLLM
+from langchain import Tool
+
+# focus
+class BestComponent(CustomComponent):
+    display_name = "Custom Component"
+    description = "This is a custom component"
+
+    def build_config(self) -> dict:
+        ...
+
+    def build(self):
+        ...
+```
+
+---
+
+## Rule 2
+
+The class must have a _`build`_ method which defines the fields of the component and is used to run it.
+
+```python
+from langflow import CustomComponent
+from langchain.chains import LLMChain
+from langchain.chains.base import Chain
+from langchain import PromptTemplate
+from langchain.llms.base import BaseLLM
+from langchain import Tool
+
+class BestComponent(CustomComponent):
+    display_name = "Custom Component"
+    description = "This is a custom component"
+
+    def build_config(self) -> dict:
+        ...
+
+    # focus[5:13]
+    def build(self):
+        ...
+```
+
+---
+
+## Rule 3
+
+The type annotations of the _`build`_ method will be used to create the fields of the component.
+
+The types supported are:
+
+- _`str`_, _`int`_, _`float`_, _`bool`_, _`list`_, _`dict`_
+- [_`langchain.chains.base.Chain`_](focus://3)
+- [_`langchain.PromptTemplate`_](focus://4)
+- [_`langchain.llms.base.BaseLLM`_](focus://5)
+- [_`langchain.Tool`_](focus://6)
+- _`langchain.document_loaders.base.BaseLoader`_
+- _`langchain.schema.Document`_
+- _`langchain.text_splitters.TextSplitter`_
+- _`langchain.vectorstores.base.VectorStore`_
+- _`langchain.embeddings.base.Embeddings`_
+- _`langchain.schema.BaseRetriever`_
+
+```python
+from langflow import CustomComponent
+from langchain.chains import LLMChain
+from langchain.chains.base import Chain
+from langchain import PromptTemplate
+from langchain.llms.base import BaseLLM
+from langchain import Tool
+
+class BestComponent(CustomComponent):
+    display_name = "Custom Component"
+    description = "This is a custom component"
+
+    def build_config(self) -> dict:
+        ...
+
+    # mark
+    def build(self):
+        ...
+```
+
+---
+
+```python
+from langflow import CustomComponent
+from langchain.chains import LLMChain
+from langchain.chains.base import Chain
+from langchain import PromptTemplate
+from langchain.llms.base import BaseLLM
+from langchain import Tool
+
+class BestComponent(CustomComponent):
+    display_name = "Custom Component"
+    description = "This is a custom component"
+
+    # focus
+    def build_config(self) -> dict:
+        ...
+
+    def build(self):
+        ...
+```
+
+## Rule 4
+
+The class can have a [_`build_config`_](focus://11:19) method
+
+- The _`build_config`_ method will be used to create the config fields of the component (if any)
+- It should always return a _`dict`_
+
+The _`dict`_ should have the following format:
+
+- The top level keys are the names of the fields
+- The values are _`dict`_ with the following keys:
+
+  - _`field_type: str`_: The type of the field (can be any of the types supported by the _`build`_ method)
+  - _`is_list: bool`_: If the field is a list.
+  - _`options: List[str]`_: If the field is a list, the options that will be displayed.
+  - _`multiline: bool`_: If the field is a string, if it should be multiline.
+  - _`input_types: List[str]`_: To be used when you want a _`str`_ field to have connectable handles.
+  - _`display_name: str`_: To change the name of the field
+  - _`advanced: bool`_: To hide the field in the default view
+  - _`password: bool`_: To mask the input
+  - _`required: bool`_: To make the field required
+  - _`info: str`_: To add a tooltip to the field
+  - _`file_types: List[str]`_: This is a requirement if the _`field_type`_ is 'file'
+    (must be used in conjunction with _`suffixes`_)
+
+    Example: _`["json", "yaml", "yml"]`_
+
+  - _`suffixes: List[str]`_: This is a requirement if the _`field_type`_ is 'file' (must be used in conjunction with _`file_types`_, and it must be a list of strings like 'json')
+
+    Example: _`[".json", ".yaml", ".yml"]`_
+
+---
+
+```python
+from langflow import CustomComponent
+from langchain.chains import LLMChain
+from langchain.chains.base import Chain
+from langchain import PromptTemplate
+from langchain.llms.base import BaseLLM
+from langchain import Tool
+
+class BestComponent(CustomComponent):
+    display_name = "Custom Component"
+    description = "This is a custom component"
+
+    # focus
+    def build_config(self) -> dict:
+        ...
+
+    def build(self):
+        ...
+```
+
+# Example
+
+Now let's create a custom component that creates a Tool from a name, a description and a chain.
+
+---
+
+# Change the name
+
+We can change the name of the component by adding a _`display_name`_ attribute.
+
+```python focus=9
+from langflow import CustomComponent
+from langchain.chains import LLMChain
+from langchain.chains.base import Chain
+from langchain import PromptTemplate
+from langchain.llms.base import BaseLLM
+from langchain import Tool
+
+class BestComponent(CustomComponent):
+    display_name = "Best Component"
+    description = "This is a custom component"
+
+    def build_config(self) -> dict:
+        ...
+
+    def build(self):
+        ...
+```
+
+---
+
+# Change the description
+
+We can change the description of the component by adding a _`description`_ attribute.
+
+```python focus=10
+from langflow import CustomComponent
+from langchain.chains import LLMChain
+from langchain.chains.base import Chain
+from langchain import PromptTemplate
+from langchain.llms.base import BaseLLM
+from langchain import Tool
+
+class BestComponent(CustomComponent):
+    display_name = "Best Component"
+    description = "This is the best component ever"
+
+    def build_config(self) -> dict:
+        ...
+
+    def build(self):
+        ...
+```
+
+---
+
+# Add a config
+
+The _`build_config`_ method will be used to configure the fields of the component.
+
+- _`multiline`_ will add the possibility of editing text in a spaceous text editor.
+
+- _`is_list`_ is a special option that allows you to add many values. When paired with _`options`_ it will transform it into a dropdown menu with the options you provide.
+  If you set the _`value`_ attribute to one of the options, it will be selected by default.
+
+```python focus=12:19
+from langflow import CustomComponent
+from langchain.chains import LLMChain
+from langchain.chains.base import Chain
+from langchain import PromptTemplate
+from langchain.llms.base import BaseLLM
+from langchain import Tool
+
+class BestComponent(CustomComponent):
+    display_name = "Best Component"
+    description = "This is the best component ever"
+
+    def build_config(self) -> dict:
+        cool_tool_names = ["Cool Tool",
+                           "Cooler Tool",
+                           "Coolest Tool"]
+        return {
+            "description": {"multiline": True},
+            "name": {"is_list": True,
+                     "options": cool_tool_names}}
+
+    def build(self):
+        ...
+```
+
+---
+
+```python focus=21:25
+from langflow import CustomComponent
+from langchain.chains import LLMChain
+from langchain.chains.base import Chain
+from langchain import PromptTemplate
+from langchain.llms.base import BaseLLM
+from langchain import Tool
+
+class BestComponent(CustomComponent):
+    display_name = "Best Component"
+    description = "This is the best component ever"
+
+    def build_config(self) -> dict:
+        cool_tool_names = ["Cool Tool",
+                           "Cooler Tool",
+                           "Coolest Tool"]
+        return {
+            "description": {"multiline": True},
+            "name": {"is_list": True,
+                     "options": cool_tool_names}}
+
+    def build(self, name: str, description: str, chain: Chain) -> Tool:
+        return Tool(name=name,
+                    description=description,
+                    func=chain.run)
+```
+
+# Add the build method
+
+The parameters used are:
+
+- name is a string
+- description is a string
+- chain is a Chain
+- The return type is Tool
+
+We then instantiate a Tool and return it.
+
+</CH.Scrollycoding>
+
+## FlowRunner Example
+
+Now let's see how to create a component that runs other flows.
+
+<CH.Scrollycoding rows={20} className={""}>
+
+```python
+from langflow.interface.custom.custom_component import CustomComponent
+
+class MyComponent(CustomComponent):
+    display_name = "Custom Component"
+
+    def build_config(self):
+        ...
+
+    def build(self):
+        ...
+
+```
+
+So, let's start by adding the _`display_name`_ and a _`description`_.
+
+---
+
+```python
+from langflow.interface.custom.custom_component import CustomComponent
+
+# focus
+class FlowRunner(CustomComponent):
+    # focus
+    display_name = "Flow Runner"
+    # focus
+    description = "Run other flows"
+
+    def build_config(self):
+        ...
+
+    def build(self):
+        ...
+
+```
+
+That's better.
+
+---
+
+```python
+from langflow.interface.custom.custom_component import CustomComponent
+from langchain.schema import Document
+
+# focus[6:16]
+class FlowRunner(CustomComponent):
+    # focus[19:35]
+    display_name = "Flow Runner"
+    # focus[18:35]
+    description = "Run other flows"
+
+    def build_config(self):
+        ...
+
+    def build(self):
+        ...
+
+```
+
+Now let's import Document from the schema module which will be our return type for the _`build`_ method.
+
+---
+
+```python
+from langflow.interface.custom.custom_component import CustomComponent
+from langchain.schema import Document
+
+class FlowRunner(CustomComponent):
+    display_name = "Flow Runner"
+    description = "Run other flows using a document as input."
+
+    def build_config(self):
+        ...
+
+    # focus
+    def build(self, flow_name: str, document: Document) -> Document:
+        ...
+
+```
+
+Let's add the parameters and the return type to the _`build`_ method.
+
+---
+
+```python
+from langflow.interface.custom.custom_component import CustomComponent
+from langchain.schema import Document
+
+# focus
+class FlowRunner(CustomComponent):
+    # focus
+    display_name = "Flow Runner"
+    # focus
+    description = "Run other flows using a document as input."
+
+    def build_config(self):
+        ...
+
+    def build(self, flow_name: str, document: Document) -> Document:
+        ...
+
+```
+
+---
+
+</CH.Scrollycoding>
