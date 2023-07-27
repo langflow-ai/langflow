@@ -190,13 +190,21 @@ body {
     width: 140px;
   }
 }
+/*
+.ch-scrollycoding {
+  gap: 10rem !important;
+} */
 
 .ch-scrollycoding-content {
-  max-width: 50% !important;
+  max-width: 55% !important;
   min-width: 40% !important;
 }
 
 .ch-scrollycoding-sticker {
   max-width: 60% !important;
-  min-width: 50% !important;
+  min-width: 45% !important;
+}
+
+.ch-scrollycoding-step-content {
+  min-height: 70px;
 }
