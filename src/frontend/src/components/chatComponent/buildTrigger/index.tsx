@@ -129,7 +129,6 @@ export default function BuildTrigger({
     // Process each chunk of data here
     // Parse the chunk and update the context
     try {
-      console.log(parsedData);
       updateSSEData({ [parsedData.id]: parsedData });
     } catch (err) {
       console.log("Error parsing stream data: ", err);
