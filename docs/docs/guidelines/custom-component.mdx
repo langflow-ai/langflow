@@ -3,12 +3,16 @@ description: Custom Components
 hide_table_of_contents: true
 ---
 
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+
 # Custom Components
 
 A Custom Component has almost infinite possibilities. It can be a simple function that takes a string and returns a string,
 or it can be a complex function that takes other components, calls APIs, and returns a custom object only you know how to use (which might not be ideal).
 
-Let's take a look at the basic rules, then we'll talk about the ones that are not so basic.
+The CustomComponent is a Python Class that has all the tools you need to create a custom component.
+
+Let's take a look at the basic rules and features, then we'll go over a more complex example.
 
 ## TL;DR
 
@@ -55,7 +59,7 @@ class BestComponent(CustomComponent):
 
 ## Rule 1
 
-The script must contain a **single class** that inherits from _`CustomComponent`_.
+The script must contain a **single Python class** that inherits from _`CustomComponent`_.
 
 ```python
 # focus
@@ -351,6 +355,32 @@ We then instantiate a Tool and return it.
 
 </CH.Scrollycoding>
 
+In Langflow, the code will look like this:
+
+<div
+  style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
+>
+  <ZoomableImage
+    alt="Docusaurus themed image"
+    sources={{
+      light: "img/new_langflow2.gif",
+    }}
+  />
+</div>
+
+And our new component that builds a Tool from a Chain will look like this:
+
+<div
+  style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
+>
+  <ZoomableImage
+    alt="Docusaurus themed image"
+    sources={{
+      light: "img/new_langflow2.gif",
+    }}
+  />
+</div>
+
 ## FlowRunner Example
 
 Now let's see how to create a component that runs other flows.
@@ -371,7 +401,7 @@ class MyComponent(CustomComponent):
 
 ```
 
-So, let's start by adding the _`display_name`_ and a _`description`_.
+This is the basic structure of a custom component.
 
 ---
 
@@ -393,19 +423,20 @@ class FlowRunner(CustomComponent):
 
 ```
 
-That's better.
+So, let's start by adding the _`display_name`_ and a _`description`_.
 
 ---
 
 ```python
 from langflow.interface.custom.custom_component import CustomComponent
+# focus
 from langchain.schema import Document
 
-# focus[6:16]
+
 class FlowRunner(CustomComponent):
-    # focus[19:35]
+
     display_name = "Flow Runner"
-    # focus[18:35]
+
     description = "Run other flows"
 
     def build_config(self):
@@ -437,7 +468,7 @@ class FlowRunner(CustomComponent):
 
 ```
 
-Let's add the parameters and the return type to the _`build`_ method.
+Let's add the [parameters](focus://11[20:55]) and the [return type](focus://11[60:69]) to the _`build`_ method.
 
 ---
 
@@ -445,19 +476,143 @@ Let's add the parameters and the return type to the _`build`_ method.
 from langflow.interface.custom.custom_component import CustomComponent
 from langchain.schema import Document
 
-# focus
+
 class FlowRunner(CustomComponent):
-    # focus
+
     display_name = "Flow Runner"
-    # focus
+
     description = "Run other flows using a document as input."
 
     def build_config(self):
         ...
 
     def build(self, flow_name: str, document: Document) -> Document:
+        # focus
+        # List the flows
+        # focus
+        flows = self.list_flows()
+
+```
+
+---
+
+```python
+from langflow.interface.custom.custom_component import CustomComponent
+from langchain.schema import Document
+
+
+class FlowRunner(CustomComponent):
+
+    display_name = "Flow Runner"
+
+    description = "Run other flows using a document as input."
+
+    def build_config(self):
         ...
 
+    def build(self, flow_name: str, document: Document) -> Document:
+        # List the flows
+        flows = self.list_flows()
+        # focus
+        # Get the flow that matches the selected name
+        # focus
+        flow = next(filter(lambda f: f.name == flow_name, flows))
+
+```
+
+With the _`list_flows`_ method we can get a list of all the flows in the collection.
+
+We can then get the flow that matches the selected name.
+
+---
+
+```python
+from langflow.interface.custom.custom_component import CustomComponent
+from langchain.schema import Document
+
+
+class FlowRunner(CustomComponent):
+
+    display_name = "Flow Runner"
+
+    description = "Run other flows using a document as input."
+
+    def build_config(self):
+        ...
+
+    def build(self, flow_name: str, document: Document) -> Document:
+        # List the flows
+        flows = self.list_flows()
+        # Get the flow that matches the selected name
+        flow = next(filter(lambda f: f.name == flow_name, flows))
+        # focus
+        # Load the flow
+        # focus
+        tweaks = {}
+        # focus
+        flow = self.load_flow(flow.id, tweaks)
+
+```
+
+---
+
+```python
+from langflow.interface.custom.custom_component import CustomComponent
+from langchain.schema import Document
+
+
+class FlowRunner(CustomComponent):
+
+    display_name = "Flow Runner"
+
+    description = "Run other flows using a document as input."
+
+    def build_config(self):
+        ...
+
+    def build(self, flow_name: str, document: Document) -> Document:
+        # List the flows
+        flows = self.list_flows()
+        # Get the flow that matches the selected name
+        flow = next(filter(lambda f: f.name == flow_name, flows))
+        # Load the flow
+        tweaks = {}
+        flow = self.load_flow(flow.id, tweaks)
+        # focus
+        # Get the page_content from the document
+        # focus
+        page_content = document.page_content
+```
+
+---
+
+```python
+from langflow.interface.custom.custom_component import CustomComponent
+from langchain.schema import Document
+
+
+class FlowRunner(CustomComponent):
+
+    display_name = "Flow Runner"
+
+    description = "Run other flows using a document as input."
+
+    def build_config(self):
+        ...
+
+    def build(self, flow_name: str, document: Document) -> Document:
+        # List the flows
+        flows = self.list_flows()
+        # Get the flow that matches the selected name
+        flow = next(filter(lambda f: f.name == flow_name, flows))
+        # Load the flow
+        tweaks = {}
+        flow = self.load_flow(flow.id, tweaks)
+        # Get the page_content from the document
+        page_content = document.page_content
+        # Use it in the flow
+        result = flow(page_content)
+        return Document(page_content=str(result))
 ```
 
 ---
