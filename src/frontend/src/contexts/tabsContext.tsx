@@ -20,7 +20,7 @@ import {
 import { APIClassType, APITemplateType } from "../types/api";
 import { FlowType, NodeType } from "../types/flow";
 import { TabsContextType, TabsState } from "../types/tabs";
-import { updateIds, updateTemplate } from "../utils/reactflowUtils";
+import { addVersionToDuplicates, updateIds, updateTemplate } from "../utils/reactflowUtils";
 import { getRandomDescription, getRandomName } from "../utils/utils";
 import { alertContext } from "./alertContext";
 import { typesContext } from "./typesContext";
@@ -443,10 +443,17 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         flowData.description = getRandomDescription();
       }
 
+
+
       // Create a new flow with a default name if no flow is provided.
       const newFlow = createNewFlow(flowData, flow);
+      
       processFlowEdges(newFlow);
       processFlowNodes(newFlow);
+
+      const flowName = addVersionToDuplicates(newFlow, flows);
+
+      newFlow.name = flowName;      
 
       try {
         const { id } = await saveFlowToDatabase(newFlow);
