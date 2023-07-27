@@ -467,7 +467,7 @@ export function getCurlCode(
 
 /**
  * Function to get the python code for the API
- * @param {string} flowName - The name of the flow
+ * @param {string} flow - The current flow
  * @returns {string} - The python code
  */
 export function getPythonCode(
@@ -488,4 +488,34 @@ flow = load_flow_from_json("${flowName}.json", tweaks=TWEAKS)
 # Now you can use it like any chain
 inputs = ${inputs}
 flow(inputs)`;
+}
+
+/**
+ * Function to get the widget code for the API
+ * @param {string} flow - The current flow.
+ * @returns {string} - The widget code
+ */
+export function getWidgetCode(flow: FlowType, tabsState?: TabsState): string {
+  const flowId = flow.id;
+  const flowName = flow.name;
+  const inputs = buildInputs(tabsState, flow.id);
+
+  return `<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
+
+<!-- chat_inputs: Stringified JSON with all the input keys and its values. The value of the key that is defined
+as chat_input_field will be overwritten by the chat message.
+chat_input_field: Input key that you want the chat to send the user message with. -->
+<langflow-chat
+  window_title="${flowName}"
+  flow_id="${flowId}"
+  ${
+    tabsState[flow.id] && tabsState[flow.id].formKeysData
+      ? `chat_inputs='${inputs}'
+  chat_input_field="${
+    Object.keys(tabsState[flow.id].formKeysData.input_keys)[0]
+  }"
+  `
+      : ""
+  }host_url="http://localhost:7860" 
+></langflow-chat>`;
 }

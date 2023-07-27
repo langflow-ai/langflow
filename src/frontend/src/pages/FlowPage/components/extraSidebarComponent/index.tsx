@@ -19,7 +19,7 @@ import DisclosureComponent from "../DisclosureComponent";
 
 export default function ExtraSidebar() {
   const { data } = useContext(typesContext);
-  const { flows, tabId, uploadFlow, tabsState, saveFlow } =
+  const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt } =
     useContext(TabsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
@@ -61,52 +61,68 @@ export default function ExtraSidebar() {
   return (
     <div className="side-bar-arrangement">
       <div className="side-bar-buttons-arrangement">
-        <ShadTooltip content="Import" side="top">
-          <button
-            className="extra-side-bar-buttons"
-            onClick={() => {
-              uploadFlow();
-            }}
-          >
-            <IconComponent name="FileUp" className="side-bar-button-size " />
-          </button>
-        </ShadTooltip>
-
-        <ShadTooltip content="Export" side="top">
+        <div className="side-bar-button">
+          <ShadTooltip content="Import" side="top">
+            <button
+              className="extra-side-bar-buttons"
+              onClick={() => {
+                uploadFlow();
+              }}
+            >
+              <IconComponent name="FileUp" className="side-bar-button-size " />
+            </button>
+          </ShadTooltip>
+        </div>
+        <div className="side-bar-button">
           <ExportModal>
-            <div className={classNames("extra-side-bar-buttons")}>
-              <IconComponent name="FileDown" className="side-bar-button-size" />
-            </div>
-          </ExportModal>
-        </ShadTooltip>
-        <ShadTooltip content="Code" side="top">
-          {flow && flow.data && (
-            <ApiModal flow={flow}>
+            <ShadTooltip content="Export" side="top">
               <div className={classNames("extra-side-bar-buttons")}>
-                <IconComponent name="Code2" className="side-bar-button-size" />
+                <IconComponent
+                  name="FileDown"
+                  className="side-bar-button-size"
+                />
               </div>
-            </ApiModal>
-          )}
+            </ShadTooltip>
+          </ExportModal>
+        </div>
+        <ShadTooltip content={"Code"} side="top">
+          <div className="side-bar-button">
+            {flow && flow.data && (
+              <ApiModal flow={flow} disable={!isBuilt}>
+                <div className={classNames("extra-side-bar-buttons")}>
+                  <IconComponent
+                    name="Code2"
+                    className={
+                      "side-bar-button-size" +
+                      (isBuilt ? " " : " extra-side-bar-save-disable")
+                    }
+                  />
+                </div>
+              </ApiModal>
+            )}
+          </div>
         </ShadTooltip>
-
-        <ShadTooltip content="Save" side="top">
-          <button
-            className="extra-side-bar-buttons"
-            onClick={(event) => {
-              saveFlow(flow);
-              setSuccessData({ title: "Changes saved successfully" });
-            }}
-            disabled={!isPending}
-          >
-            <IconComponent
-              name="Save"
+        <div className="side-bar-button">
+          <ShadTooltip content="Save" side="top">
+            <button
               className={
-                "side-bar-button-size" +
-                (isPending ? " " : " extra-side-bar-save-disable")
+                "extra-side-bar-buttons " + (isPending ? "" : "button-disable")
               }
-            />
-          </button>
-        </ShadTooltip>
+              onClick={(event) => {
+                saveFlow(flow);
+                setSuccessData({ title: "Changes saved successfully" });
+              }}
+            >
+              <IconComponent
+                name="Save"
+                className={
+                  "side-bar-button-size" +
+                  (isPending ? " " : " extra-side-bar-save-disable")
+                }
+              />
+            </button>
+          </ShadTooltip>
+        </div>
       </div>
       <Separator />
       <div className="side-bar-search-div-placement">
