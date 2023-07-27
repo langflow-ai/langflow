@@ -48,16 +48,14 @@ module.exports = {
       collapsed: false,
       items: ["guides/loading_document", "guides/chatprompttemplate_guide"],
     },
-    // {
-    //   type: 'category',
-    //   label: 'Components',
-    //   collapsed: false,
-    //   items: [
-    //     'components/agents', 'components/chains', 'components/loaders', 'components/embeddings', 'components/llms',
-    //     'components/memories', 'components/prompts','components/text-splitters', 'components/toolkits', 'components/tools',
-    //     'components/utilities', 'components/vector-stores', 'components/wrappers',
-    //   ],
-    // },
+    {
+      type: 'category',
+      label: 'Widget',
+      collapsed: false,
+      items: [
+        'widget/embedded-chat'
+      ],
+    },
     {
       type: "category",
       label: "Examples",
