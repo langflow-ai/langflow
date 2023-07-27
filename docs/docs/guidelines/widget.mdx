@@ -2,6 +2,7 @@ import ThemedImage from "@theme/ThemedImage";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 import ReactPlayer from "react-player";
+import Admonition from '@theme/Admonition';
 
 # Chat Widget
 
@@ -156,11 +157,15 @@ In your Angular project, locate the component that belongs to the module where y
 ></langflow-chat>
 ```
 
-Here are some additional notes:
+<Admonition type="info">
+  <ul>
+    <li>The CUSTOM_ELEMENTS_SCHEMA is a built-in schema that allows Angular to recognize custom elements.</li>
+    <li>Adding 'CUSTOM_ELEMENTS_SCHEMA' tells Angular to allow custom elements in your templates, and it will suppress the warning related to unknown elements like 'langflow-chat'.</li>
+    <li>You can only use the Chat Widget in components that are part of the module where you added the CUSTOM_ELEMENTS_SCHEMA.</li>
+  </ul>
+</Admonition>
 
-- The CUSTOM_ELEMENTS_SCHEMA is a built-in schema that allows Angular to recognize custom elements.
-- Adding 'CUSTOM_ELEMENTS_SCHEMA' tells Angular to allow custom elements in your templates, and it will suppress the warning related to unknown elements like 'langflow-chat'.
-- You can only use the Chat Widget in components that are part of the module where you added the CUSTOM_ELEMENTS_SCHEMA.
+
 
 You now have the flexibility to utilize the Chat Widget seamlessly in any Angular application.
 
@@ -170,9 +175,10 @@ You now have the flexibility to utilize the Chat Widget seamlessly in any Angula
 
 Use the widget API to customize your widget:
 
-:::caution
-Props with the type JSON need to be passed as Stringified JSONs, with the format '{"key": "value"}'.
-:::
+<Admonition type="caution">
+  Props with the type JSON need to be passed as Stringified JSONs, with the format &#123;<span>"key":"value"</span>&#125;.
+</Admonition>
+
 
 | Prop                  | Type    | Required | Description                                                                                                                                                      |
 | --------------------- | ------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
