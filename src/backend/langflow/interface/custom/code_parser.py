@@ -128,7 +128,8 @@ class CodeParser:
         num_missing_defaults = num_args - num_defaults
         missing_defaults = [None] * num_missing_defaults
         default_values = [
-            ast.unparse(default) if default else None for default in node.args.defaults
+            ast.unparse(default).strip("'") if default else None
+            for default in node.args.defaults
         ]
         defaults = missing_defaults + default_values
 
