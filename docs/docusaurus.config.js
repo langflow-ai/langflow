@@ -132,5 +132,10 @@ module.exports = {
       // prism: {
       //   theme: require("prism-react-renderer/themes/dracula"),
       // },
+      docs: {
+        sidebar: {
+          hideable: true,
+        },
+      },
     }),
 };
