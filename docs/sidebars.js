@@ -21,6 +21,7 @@ module.exports = {
         "guidelines/collection",
         "guidelines/prompt-customization",
         "guidelines/chat-interface",
+        "guidelines/widget",
       ],
     },
     {
