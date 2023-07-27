@@ -98,6 +98,7 @@ def add_new_custom_field(
     display_name = field_config.pop("display_name", field_name)
     field_type = field_config.pop("field_type", field_type)
     field_type = process_type(field_type)
+    field_value = field_config.pop("value", field_value)
 
     if "name" in field_config:
         warnings.warn(
