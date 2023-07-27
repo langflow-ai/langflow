@@ -1,7 +1,7 @@
 import axios, { AxiosError, AxiosInstance } from "axios";
 import { useContext, useEffect, useRef } from "react";
-import { alertContext } from "../../contexts/alertContext";
 import { URL_EXCLUDED_FROM_ERROR_RETRIES } from "../../constants/constants";
+import { alertContext } from "../../contexts/alertContext";
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({

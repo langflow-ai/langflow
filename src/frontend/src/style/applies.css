@@ -107,6 +107,12 @@
   .side-bar-buttons-arrangement {
     @apply mb-2 mt-2 flex w-full items-center justify-between gap-2 px-2;
   }
+  .side-bar-button {
+    @apply flex w-full;
+  }
+  .button-disable {
+    @apply pointer-events-none;
+  }
   .extra-side-bar-buttons {
     @apply relative inline-flex w-full items-center justify-center rounded-md bg-background   px-2 py-2 text-foreground shadow-sm ring-1 ring-inset ring-input transition-all duration-500 ease-in-out;
   }
@@ -116,20 +122,20 @@
   .button-div-style {
     @apply flex gap-2;
   }
-  .input-primary {
+  .primary-input {
     @apply form-input block w-full truncate rounded-md border-border bg-background px-3 text-left shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm;
   }
 
-  /* The same as input-primary but no-truncate */
+  /* The same as primary-input but no-truncate */
   .textarea-primary {
     @apply form-input block w-full rounded-md border-border bg-background px-3 text-left shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm;
   }
 
   .input-edit-node {
-    @apply input-primary w-full border-border pb-0.5 pt-0.5 text-left;
+    @apply primary-input w-full pb-0.5 pt-0.5 text-left;
   }
   .input-search {
-    @apply input-primary mx-2 pr-7;
+    @apply primary-input mx-2 pr-7;
   }
   .input-disable {
     @apply border-transparent bg-border placeholder:text-ring;
@@ -414,7 +420,7 @@
     @apply input-edit-node relative pr-8;
   }
   .dropdown-component-false-outline {
-    @apply input-primary py-2 pl-3 pr-10 text-left;
+    @apply primary-input py-2 pl-3 pr-10 text-left;
   }
   .dropdown-component-display {
     @apply block w-full truncate bg-background;
@@ -779,6 +785,9 @@
   }
   .node-modal-button-box {
     @apply flex-max-width flex-row-reverse bg-input px-4 pb-3;
+  }
+  .link-color {
+    @apply font-semibold text-foreground;
   }
   .node-modal-button {
     @apply inline-flex w-full justify-center rounded-md border border-transparent bg-status-red px-4 py-2 text-base font-medium text-background shadow-sm hover:bg-ring sm:ml-3 sm:w-auto sm:text-sm;
