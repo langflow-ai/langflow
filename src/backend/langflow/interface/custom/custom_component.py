@@ -141,14 +141,17 @@ class CustomComponent(Component, extra=Extra.allow):
     def get_function(self):
         return validate.create_function(self.code, self.function_entrypoint_name)
 
-    def load_flow(self, flow_id: str):
+    def load_flow(self, flow_id: str, tweaks: Optional[dict] = None):
         from langflow.processing.process import build_sorted_vertices_with_caching
+        from langflow.processing.process import process_tweaks
 
         with session_getter() as session:
-            data_graph = flow.data if (flow := session.get(Flow, flow_id)) else None
-        if not data_graph:
+            graph_data = flow.data if (flow := session.get(Flow, flow_id)) else None
+        if not graph_data:
             raise ValueError(f"Flow {flow_id} not found")
-        return build_sorted_vertices_with_caching(data_graph)
+        if tweaks:
+            graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks)
+        return build_sorted_vertices_with_caching(graph_data)
 
     def list_flows(self):
         with session_getter() as session:
