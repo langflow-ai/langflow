@@ -1,17 +1,15 @@
-import contextlib
 import json
-from typing import Any, Callable, Dict, List, Sequence, Type
+from typing import Any, Callable, Dict, Sequence, Type
 
-from langchain.agents import ZeroShotAgent
 from langchain.agents import agent as agent_module
 from langchain.agents.agent import AgentExecutor
 from langchain.agents.agent_toolkits.base import BaseToolkit
 from langchain.agents.tools import BaseTool
 from langflow.interface.initialize.llm import initialize_vertexai
+from langflow.interface.initialize.utils import handle_format_kwargs, handle_node_type
 
 from langflow.interface.initialize.vector_store import vecstore_initializer
 
-from langchain.schema import Document, BaseOutputParser
 from pydantic import ValidationError
 
 from langflow.interface.importing.utils import (
@@ -212,68 +210,8 @@ def instantiate_agent(node_type, class_object: Type[agent_module.Agent], params:
 
 
 def instantiate_prompt(node_type, class_object, params: Dict):
-    if node_type == "ZeroShotPrompt":
-        if "tools" not in params:
-            params["tools"] = []
-        return ZeroShotAgent.create_prompt(**params)
-    elif "MessagePromptTemplate" in node_type:
-        # Then we only need the template
-        from_template_params = {
-            "template": params.pop("prompt", params.pop("template", ""))
-        }
-
-        if not from_template_params.get("template"):
-            raise ValueError("Prompt template is required")
-        prompt = class_object.from_template(**from_template_params)
-
-    elif node_type == "ChatPromptTemplate":
-        prompt = class_object.from_messages(**params)
-    else:
-        prompt = class_object(**params)
-
-    format_kwargs: Dict[str, Any] = {}
-    for input_variable in prompt.input_variables:
-        if input_variable in params:
-            variable = params[input_variable]
-            if isinstance(variable, str):
-                format_kwargs[input_variable] = variable
-            elif isinstance(variable, BaseOutputParser) and hasattr(
-                variable, "get_format_instructions"
-            ):
-                format_kwargs[input_variable] = variable.get_format_instructions()
-            elif isinstance(variable, List) and all(
-                isinstance(item, Document) for item in variable
-            ):
-                # Format document to contain page_content and metadata
-                # as one string separated by a newline
-                if len(variable) > 1:
-                    content = "\n".join(
-                        [item.page_content for item in variable if item.page_content]
-                    )
-                else:
-                    content = variable[0].page_content
-                    # content could be a json list of strings
-                    with contextlib.suppress(json.JSONDecodeError):
-                        content = json.loads(content)
-                        if isinstance(content, list):
-                            content = ",".join([str(item) for item in content])
-                format_kwargs[input_variable] = content
-                # handle_keys will be a list but it does not exist yet
-                # so we need to create it
-
-            if (
-                isinstance(variable, List)
-                and all(isinstance(item, Document) for item in variable)
-            ) or (
-                isinstance(variable, BaseOutputParser)
-                and hasattr(variable, "get_format_instructions")
-            ):
-                if "handle_keys" not in format_kwargs:
-                    format_kwargs["handle_keys"] = []
-
-                # Add the handle_keys to the list
-                format_kwargs["handle_keys"].append(input_variable)
-
+    params, prompt = handle_node_type(node_type, class_object, params)
+    format_kwargs = handle_format_kwargs(prompt, params)
     return prompt, format_kwargs
 
 
