@@ -46,7 +46,7 @@ export default function FormModal({
       const handleKeys = formKeysData.handle_keys;
 
       const keyToUse = Object.keys(inputKeys).find(
-        (k) => !handleKeys.some((j) => j === k) && inputKeys[k] === ""
+        (k) => !handleKeys?.some((j) => j === k) && inputKeys[k] === ""
       );
 
       return inputKeys[keyToUse];
@@ -311,7 +311,7 @@ export default function FormModal({
   async function sendAll(data: sendAllProps): Promise<void> {
     try {
       if (ws) {
-        ws.current.send(JSON.stringify(data));
+        ws.current?.send(JSON.stringify(data));
       }
     } catch (error) {
       setErrorData({
@@ -349,7 +349,7 @@ export default function FormModal({
         tabsState[flow.id].formKeysData.template
       );
       sendAll({
-        ...reactFlowInstance.toObject(),
+        ...reactFlowInstance?.toObject(),
         inputs: inputs,
         chatHistory,
         name: flow.name,
@@ -370,7 +370,7 @@ export default function FormModal({
   }
   function clearChat(): void {
     setChatHistory([]);
-    ws.current.send(JSON.stringify({ clear_history: true }));
+    ws.current?.send(JSON.stringify({ clear_history: true }));
     if (lockChat) setLockChat(false);
   }
 
@@ -451,7 +451,7 @@ export default function FormModal({
                               size="small"
                               disabled={tabsState[
                                 id.current
-                              ].formKeysData.handle_keys.some((t) => t === i)}
+                              ].formKeysData.handle_keys?.some((t) => t === i)}
                             />
                           </div>
                         </div>
@@ -460,7 +460,7 @@ export default function FormModal({
                       keyValue={i}
                     >
                       <div className="file-component-tab-column">
-                        {tabsState[id.current].formKeysData.handle_keys.some(
+                        {tabsState[id.current].formKeysData.handle_keys?.some(
                           (t) => t === i
                         ) && (
                           <div className="font-normal text-muted-foreground ">
@@ -489,7 +489,7 @@ export default function FormModal({
                   </div>
                 )
               )}
-              {tabsState[id.current].formKeysData.memory_keys.map((i, k) => (
+              {tabsState[id.current].formKeysData.memory_keys?.map((i, k) => (
                 <div className="file-component-accordion-div" key={k}>
                   <AccordionComponent
                     trigger={
@@ -512,7 +512,7 @@ export default function FormModal({
                             size="small"
                             disabled={tabsState[
                               id.current
-                            ].formKeysData.handle_keys.some((t) => t === i)}
+                            ].formKeysData.handle_keys?.some((t) => t === i)}
                           />
                         </div>
                       </div>
@@ -521,7 +521,7 @@ export default function FormModal({
                     keyValue={i}
                   >
                     <div className="file-component-tab-column">
-                      {tabsState[id.current].formKeysData.handle_keys.some(
+                      {tabsState[id.current].formKeysData.handle_keys?.some(
                         (t) => t === i
                       ) && (
                         <div className="font-normal text-muted-foreground ">

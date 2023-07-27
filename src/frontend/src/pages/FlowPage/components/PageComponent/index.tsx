@@ -6,6 +6,7 @@ import ReactFlow, {
   Controls,
   Edge,
   EdgeChange,
+  Node,
   NodeChange,
   NodeDragHandler,
   OnEdgesDelete,
@@ -78,7 +79,7 @@ export default function Page({ flow }: { flow: FlowType }): JSX.Element {
           lastCopiedSelection
         ) {
           event.preventDefault();
-          let bounds = reactFlowWrapper.current.getBoundingClientRect();
+          let bounds = reactFlowWrapper.current?.getBoundingClientRect();
           paste(lastCopiedSelection, {
             x: position.x - bounds.left,
             y: position.y - bounds.top,
@@ -185,10 +186,10 @@ export default function Page({ flow }: { flow: FlowType }): JSX.Element {
             ...params,
             style: { stroke: "#555" },
             className:
-              (params.targetHandle.split("|")[0] === "Text"
+              (params.targetHandle?.split("|")[0] === "Text"
                 ? "stroke-foreground "
                 : "stroke-foreground ") + " stroke-connection",
-            animated: params.targetHandle.split("|")[0] === "Text",
+            animated: params.targetHandle?.split("|")[0] === "Text",
           },
           eds
         )
@@ -234,7 +235,7 @@ export default function Page({ flow }: { flow: FlowType }): JSX.Element {
 
         // Get the current bounds of the ReactFlow wrapper element
         const reactflowBounds =
-          reactFlowWrapper.current.getBoundingClientRect();
+          reactFlowWrapper.current?.getBoundingClientRect();
 
         // Extract the data from the drag event and parse it as a JSON object
         let data: { type: string; node?: APIClassType } = JSON.parse(
@@ -243,7 +244,7 @@ export default function Page({ flow }: { flow: FlowType }): JSX.Element {
 
         // If data type is not "chatInput" or if there are no "chatInputNode" nodes present in the ReactFlow instance, create a new node
         // Calculate the position where the node should be created
-        const position = reactFlowInstance.project({
+        const position = reactFlowInstance?.project({
           x: event.clientX - reactflowBounds.left,
           y: event.clientY - reactflowBounds.top,
         });

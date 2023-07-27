@@ -23,7 +23,7 @@ export default function RenameLabel(props) {
       });
       if (inputRef.current) {
         setTimeout(() => {
-          inputRef.current.focus();
+          inputRef.current?.focus();
         }, 100);
       }
     }

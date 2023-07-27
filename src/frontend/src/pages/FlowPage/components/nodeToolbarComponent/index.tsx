@@ -12,7 +12,7 @@ export default function NodeToolbarComponent({ data, setData, deleteNode }: node
     Object.keys(data.node.template).filter(
       (t) =>
         t.charAt(0) !== "_" &&
-        data.node.template[t].show &&
+        data.node?.template[t].show &&
         (data.node.template[t].type === "str" ||
           data.node.template[t].type === "bool" ||
           data.node.template[t].type === "float" ||
@@ -56,8 +56,8 @@ export default function NodeToolbarComponent({ data, setData, deleteNode }: node
                   {
                     x: 50,
                     y: 10,
-                    paneX: reactFlowInstance.getNode(data.id).position.x,
-                    paneY: reactFlowInstance.getNode(data.id).position.y,
+                    paneX: reactFlowInstance.getNode(data.id)?.position.x,
+                    paneY: reactFlowInstance.getNode(data.id)?.position.y,
                   }
                 );
               }}
@@ -68,23 +68,23 @@ export default function NodeToolbarComponent({ data, setData, deleteNode }: node
 
           <ShadTooltip
             content={
-              data.node.documentation === "" ? "Coming Soon" : "Documentation"
+              data.node?.documentation === "" ? "Coming Soon" : "Documentation"
             }
             side="top"
           >
             <a
               className={classNames(
                 "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
-                  (data.node.documentation === ""
+                  (data.node?.documentation === ""
                     ? " text-muted-foreground"
                     : " text-foreground")
               )}
               target="_blank"
               rel="noopener noreferrer"
-              href={data.node.documentation}
+              href={data.node?.documentation}
               // deactivate link if no documentation is provided
               onClick={(event) => {
-                if (data.node.documentation === "") {
+                if (data.node?.documentation === "") {
                   event.preventDefault();
                 }
               }}

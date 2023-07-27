@@ -103,7 +103,7 @@ export default function CodeTabsComponent({
 
   function openAccordions() {
     let accordionsToOpen = [];
-    tweaks.tweak.current.forEach((el) => {
+    tweaks?.tweak.current.forEach((el) => {
       Object.keys(el).forEach((key) => {
         if (Object.keys(el[key]).length > 0) {
           accordionsToOpen.push(key);
@@ -193,9 +193,9 @@ export default function CodeTabsComponent({
                       : "overflow-hidden"
                   )}
                 >
-                  {data.map((t: any, index) => (
+                  {data?.map((t: any, index) => (
                     <div className="px-3" key={index}>
-                      {tweaks.tweaksList.current.includes(t["data"]["id"]) && (
+                      {tweaks?.tweaksList.current.includes(t["data"]["id"]) && (
                         <AccordionComponent
                           trigger={t["data"]["id"]}
                           open={openAccordion}
@@ -647,7 +647,7 @@ export default function CodeTabsComponent({
                         </AccordionComponent>
                       )}
 
-                      {tweaks.tweaksList.current.length === 0 && (
+                      {tweaks?.tweaksList.current.length === 0 && (
                         <>
                           <div className="pt-3">
                             No tweaks are available for this flow.

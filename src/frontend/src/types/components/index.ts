@@ -3,6 +3,7 @@ import { APIClassType, APITemplateType } from "../api";
 import { FlowStyleType, FlowType, NodeDataType } from "../flow/index";
 import { typesContextType } from "../typesContext";
 import { ChatMessageType } from "../chat";
+import { ReactFlowJsonObject } from "reactflow";
 
 export type InputComponentType = {
   value: string;
@@ -16,7 +17,7 @@ export type InputComponentType = {
 export type ToggleComponentType = {
   enabled: boolean;
   setEnabled: (state: boolean) => void;
-  disabled: boolean;
+  disabled: boolean | undefined;
   size: "small" | "medium" | "large";
 };
 export type DropDownComponentType = {
@@ -34,12 +35,12 @@ export type ParameterComponentType = {
   id: string;
   color: string;
   left: boolean;
-  type: string;
+  type: string | undefined;
   required?: boolean;
   name?: string;
-  tooltipTitle: string;
+  tooltipTitle: string | undefined;
   dataContext?: typesContextType;
-  optionalHandle?: Array<String>;
+  optionalHandle?: Array<String> | null;
   info?: string;
 };
 export type InputListComponentType = {
@@ -238,7 +239,7 @@ export type chatTriggerPropType = {
 };
 
 export type headerFlowsType = {
-  data: object;
+  data: ReactFlowJsonObject;
   description: string;
   id: string;
   name: string;
@@ -288,7 +289,7 @@ export type fileCardPropsType = {
 export type nodeToolbarPropsType = {
   data: NodeDataType;
   deleteNode: (idx: string) => void;
-  setData: (newState: {}) => void;
+  setData: (newState: NodeDataType) => void;
 };
 
 export type parsedDataType = {
@@ -309,16 +310,16 @@ export type iconsType = {
   [key: string]: React.ElementType;
 };
 
-export type headerConstType = {
+export type modalHeaderType = {
   children: ReactNode;
-  description: string;
+  description: string | null;
 };
 
 export type codeAreaModalPropsType = {
   setValue: (value: string) => void;
   value: string;
-  nodeClass: APIClassType;
-  setNodeClass: (Class: APIClassType) => void;
+  nodeClass: APIClassType | undefined;
+  setNodeClass: (Class: APIClassType) => void | undefined;
   children: ReactNode;
 };
 
@@ -360,4 +361,15 @@ export type buttonBoxPropsType = {
 export type FlowSettingsPropsType = {
   open: boolean;
   setOpen: (open: boolean) => void;
+};
+
+export type groupDataType = {
+  [char: string]: string;
+}
+
+export type cardComponentPropsType = {
+  flow: FlowType;
+  id: string;
+  onDelete?: () => void;
+  button?: JSX.Element;
 };

@@ -3,13 +3,14 @@ import { twMerge } from "tailwind-merge";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
 import {
   IVarHighlightType,
+  groupDataType,
   groupedObjType,
   tweakType,
 } from "../types/components";
 import { FlowType } from "../types/flow";
 import { TabsState } from "../types/tabs";
 import { buildTweaks } from "./reactflowUtils";
-import { APIClassType } from "../types/api";
+import { APIClassType, APIObjectType, APITemplateType } from "../types/api";
 
 export function classNames(...classes: Array<string>): string {
   return classes.filter(Boolean).join(" ");
@@ -93,7 +94,7 @@ export function checkUpperWords(str: string): string {
 export const isWrappedWithClass = (event: any, className: string | undefined) =>
   event.target.closest(`.${className}`);
 
-export function groupByFamily(data: APIClassType, baseClasses: string, left: boolean, type: string): groupedObjType[] {
+export function groupByFamily(data: groupDataType, baseClasses: string, left: boolean, type: string): groupedObjType[] {
   let parentOutput: string;
   let arrOfParent: string[] = [];
   let arrOfType: { family: string; type: string; component: string }[] = [];
@@ -198,7 +199,7 @@ export function groupByFamily(data: APIClassType, baseClasses: string, left: boo
 
     groupedArray.forEach((object, index, self) => {
       const findObj = arrOfLength.find((x) => x.type === object.family);
-      if (object.component.length === findObj.length) {
+      if (object.component.length === findObj?.length) {
         self[index]["type"] = "";
       } else {
         self[index]["type"] = object.component.join(", ");
@@ -209,7 +210,6 @@ export function groupByFamily(data: APIClassType, baseClasses: string, left: boo
 }
 
 export function buildInputs(tabsState: TabsState, id: string): string {
-  console.log(tabsState)
   return tabsState &&
     tabsState[id] &&
     tabsState[id].formKeysData &&
@@ -352,7 +352,6 @@ export function getCurlCode(
   tweak?: any[],
   tabsState?: TabsState
 ): string {
-  console.log(tweak)
   const flowId = flow.id;
   const tweaks = buildTweaks(flow);
   const inputs = buildInputs(tabsState, flow.id);
