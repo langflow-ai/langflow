@@ -10,18 +10,14 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/card";
+import { cardComponentPropsType } from "../../types/components";
 
 export const CardComponent = ({
   flow,
   id,
   onDelete,
   button,
-}: {
-  flow: FlowType;
-  id: string;
-  onDelete?: () => void;
-  button?: JSX.Element;
-}): JSX.Element => {
+}: cardComponentPropsType): JSX.Element => {
   const { removeFlow } = useContext(TabsContext);
 
   return (

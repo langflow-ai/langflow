@@ -53,7 +53,7 @@ const EditNodeModal = forwardRef(
       reactFlowInstance?.getEdges().some((e) => e.targetHandle === data.id) ??
       false;
 
-    function changeAdvanced(n) {
+    function changeAdvanced(n: string): void {
       setMyData((old) => {
         let newData = cloneDeep(old);
         newData.node.template[n].advanced = !newData.node.template[n].advanced;
@@ -61,7 +61,7 @@ const EditNodeModal = forwardRef(
       });
     }
 
-    const handleOnNewValue = (newValue: any, name) => {
+    const handleOnNewValue = (newValue: string | string[] | boolean, name: string) => {
       setMyData((old) => {
         let newData = cloneDeep(old);
         newData.node.template[name].value = newValue;
@@ -115,7 +115,7 @@ const EditNodeModal = forwardRef(
                         .filter(
                           (t) =>
                             t.charAt(0) !== "_" &&
-                            myData.node.template[t].show &&
+                            myData.node?.template[t].show &&
                             (myData.node.template[t].type === "str" ||
                               myData.node.template[t].type === "bool" ||
                               myData.node.template[t].type === "float" ||
@@ -127,12 +127,12 @@ const EditNodeModal = forwardRef(
                         .map((n, i) => (
                           <TableRow key={i} className="h-10">
                             <TableCell className="truncate p-0 text-center text-sm text-foreground sm:px-3">
-                              {myData.node.template[n].name
+                              {myData.node?.template[n].name
                                 ? myData.node.template[n].name
-                                : myData.node.template[n].display_name}
+                                : myData.node?.template[n].display_name}
                             </TableCell>
                             <TableCell className="w-[300px] p-0 text-center text-xs text-foreground ">
-                              {myData.node.template[n].type === "str" &&
+                              {myData.node?.template[n].type === "str" &&
                               !myData.node.template[n].options ? (
                                 <div className="mx-auto">
                                   {myData.node.template[n].list ? (
@@ -177,7 +177,7 @@ const EditNodeModal = forwardRef(
                                     />
                                   )}
                                 </div>
-                              ) : myData.node.template[n].type === "bool" ? (
+                              ) : myData.node?.template[n].type === "bool" ? (
                                 <div className="ml-auto">
                                   {" "}
                                   <ToggleShadComponent
@@ -189,7 +189,7 @@ const EditNodeModal = forwardRef(
                                     size="small"
                                   />
                                 </div>
-                              ) : myData.node.template[n].type === "float" ? (
+                              ) : myData.node?.template[n].type === "float" ? (
                                 <div className="mx-auto">
                                   <FloatComponent
                                     disabled={disabled}
@@ -200,7 +200,7 @@ const EditNodeModal = forwardRef(
                                     }}
                                   />
                                 </div>
-                              ) : myData.node.template[n].type === "str" &&
+                              ) : myData.node?.template[n].type === "str" &&
                                 myData.node.template[n].options ? (
                                 <div className="mx-auto">
                                   <Dropdown
@@ -214,7 +214,7 @@ const EditNodeModal = forwardRef(
                                     }
                                   ></Dropdown>
                                 </div>
-                              ) : myData.node.template[n].type === "int" ? (
+                              ) : myData.node?.template[n].type === "int" ? (
                                 <div className="mx-auto">
                                   <IntComponent
                                     disabled={disabled}
@@ -225,7 +225,7 @@ const EditNodeModal = forwardRef(
                                     }}
                                   />
                                 </div>
-                              ) : myData.node.template[n].type === "file" ? (
+                              ) : myData.node?.template[n].type === "file" ? (
                                 <div className="mx-auto">
                                   <InputFileComponent
                                     editNode={true}
@@ -243,7 +243,7 @@ const EditNodeModal = forwardRef(
                                     }}
                                   ></InputFileComponent>
                                 </div>
-                              ) : myData.node.template[n].type === "prompt" ? (
+                              ) : myData.node?.template[n].type === "prompt" ? (
                                 <div className="mx-auto">
                                   <PromptAreaComponent
                                     field_name={n}
@@ -259,7 +259,7 @@ const EditNodeModal = forwardRef(
                                     }}
                                   />
                                 </div>
-                              ) : myData.node.template[n].type === "code" ? (
+                              ) : myData.node?.template[n].type === "code" ? (
                                 <div className="mx-auto">
                                   <CodeAreaComponent
                                     disabled={disabled}
@@ -270,7 +270,7 @@ const EditNodeModal = forwardRef(
                                     }}
                                   />
                                 </div>
-                              ) : myData.node.template[n].type === "Any" ? (
+                              ) : myData.node?.template[n].type === "Any" ? (
                                 "-"
                               ) : (
                                 <div className="hidden"></div>
@@ -279,7 +279,7 @@ const EditNodeModal = forwardRef(
                             <TableCell className="p-0 text-right">
                               <div className="items-center text-center">
                                 <ToggleShadComponent
-                                  enabled={!myData.node.template[n].advanced}
+                                  enabled={!myData.node?.template[n].advanced}
                                   setEnabled={(e) => changeAdvanced(n)}
                                   disabled={disabled}
                                   size="small"

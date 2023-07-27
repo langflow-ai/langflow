@@ -28,6 +28,7 @@ import {
   getRandomKeyByssmm,
   groupByFamily,
 } from "../../../../utils/utils";
+import { NodeDataType } from "../../../../types/flow";
 
 export default function ParameterComponent({
   left,
@@ -43,7 +44,7 @@ export default function ParameterComponent({
   optionalHandle = null,
   info = "",
 }: ParameterComponentType): JSX.Element {
-  const ref = useRef(null);
+  const ref = useRef<HTMLDivElement>(null);
   const refHtml = useRef(null);
   const refNumberComponents = useRef(0);
   const infoHtml = useRef(null);
@@ -69,7 +70,7 @@ export default function ParameterComponent({
 
   const { data: myData } = useContext(typesContext);
 
-  const handleOnNewValue = (newValue: any) => {
+  const handleOnNewValue = (newValue: string | string[] | boolean): void => {
     let newData = cloneDeep(data);
     newData.node.template[name].value = newValue;
     setData(newData);
@@ -220,9 +221,9 @@ export default function ParameterComponent({
 
         {left === true &&
         type === "str" &&
-        !data.node.template[name].options ? (
+        !data.node?.template[name].options ? (
           <div className="mt-2 w-full">
-            {data.node.template[name].list ? (
+            {data.node?.template[name].list ? (
               <InputListComponent
                 disabled={disabled}
                 value={
@@ -233,7 +234,7 @@ export default function ParameterComponent({
                 }
                 onChange={handleOnNewValue}
               />
-            ) : data.node.template[name].multiline ? (
+            ) : data.node?.template[name].multiline ? (
               <TextAreaComponent
                 disabled={disabled}
                 value={data.node.template[name].value ?? ""}
@@ -242,8 +243,8 @@ export default function ParameterComponent({
             ) : (
               <InputComponent
                 disabled={disabled}
-                password={data.node.template[name].password ?? false}
-                value={data.node.template[name].value ?? ""}
+                password={data.node?.template[name].password ?? false}
+                value={data.node?.template[name].value ?? ""}
                 onChange={handleOnNewValue}
               />
             )}
@@ -252,7 +253,7 @@ export default function ParameterComponent({
           <div className="mt-2 w-full">
             <ToggleShadComponent
               disabled={disabled}
-              enabled={data.node.template[name].value}
+              enabled={data.node?.template[name].value}
               setEnabled={(t) => {
                 handleOnNewValue(t);
               }}
@@ -263,13 +264,13 @@ export default function ParameterComponent({
           <div className="mt-2 w-full">
             <FloatComponent
               disabled={disabled}
-              value={data.node.template[name].value ?? ""}
+              value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
             />
           </div>
         ) : left === true &&
           type === "str" &&
-          data.node.template[name].options ? (
+          data.node?.template[name].options ? (
           <div className="mt-2 w-full">
             <Dropdown
               options={data.node.template[name].options}
@@ -285,7 +286,7 @@ export default function ParameterComponent({
               }}
               nodeClass={data.node}
               disabled={disabled}
-              value={data.node.template[name].value ?? ""}
+              value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
             />
           </div>
@@ -293,10 +294,10 @@ export default function ParameterComponent({
           <div className="mt-2 w-full">
             <InputFileComponent
               disabled={disabled}
-              value={data.node.template[name].value ?? ""}
+              value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
-              fileTypes={data.node.template[name].fileTypes}
-              suffixes={data.node.template[name].suffixes}
+              fileTypes={data.node?.template[name].fileTypes}
+              suffixes={data.node?.template[name].suffixes}
               onFileChange={(t: string) => {
                 data.node.template[name].file_path = t;
                 save();
@@ -307,7 +308,7 @@ export default function ParameterComponent({
           <div className="mt-2 w-full">
             <IntComponent
               disabled={disabled}
-              value={data.node.template[name].value ?? ""}
+              value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
             />
           </div>
@@ -320,7 +321,7 @@ export default function ParameterComponent({
               }}
               nodeClass={data.node}
               disabled={disabled}
-              value={data.node.template[name].value ?? ""}
+              value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
             />
           </div>

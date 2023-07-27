@@ -24,8 +24,8 @@ export function cleanEdges({
       if (targetHandle) {
         const field = targetHandle.split("|")[1];
         const id =
-          (targetNode.data.node.template[field]?.input_types?.join(";") ??
-            targetNode.data.node.template[field]?.type) +
+          (targetNode.data.node?.template[field]?.input_types?.join(";") ??
+            targetNode.data.node?.template[field]?.type) +
           "|" +
           field +
           "|" +
@@ -38,7 +38,7 @@ export function cleanEdges({
         const id = [
           sourceNode.data.type,
           sourceNode.data.id,
-          ...sourceNode.data.node.base_classes,
+          ...sourceNode.data.node?.base_classes,
         ].join("|");
         if (id !== sourceHandle) {
           newEdges = newEdges.filter((e) => e.id !== edge.id);
@@ -55,19 +55,19 @@ export function isValidConnection(
 ) {
   if (
     targetHandle
-      .split("|")[0]
+      ?.split("|")[0]
       .split(";")
-      .some((n) => n === sourceHandle.split("|")[0]) ||
+      .some((n) => n === sourceHandle?.split("|")[0]) ||
     sourceHandle
-      .split("|")
+      ?.split("|")
       .slice(2)
       .some((t) =>
         targetHandle
-          .split("|")[0]
+          ?.split("|")[0]
           .split(";")
           .some((n) => n === t)
       ) ||
-    targetHandle.split("|")[0] === "str"
+    targetHandle?.split("|")[0] === "str"
   ) {
     let targetNode = reactFlowInstance?.getNode(target)?.data?.node;
     if (!targetNode) {
@@ -79,11 +79,11 @@ export function isValidConnection(
         return true;
       }
     } else if (
-      (!targetNode.template[targetHandle.split("|")[1]].list &&
+      (!targetNode.template[targetHandle?.split("|")[1]].list &&
         !reactFlowInstance
           .getEdges()
           .find((e) => e.targetHandle === targetHandle)) ||
-      targetNode.template[targetHandle.split("|")[1]].list
+      targetNode.template[targetHandle?.split("|")[1]].list
     ) {
       return true;
     }
@@ -195,7 +195,7 @@ export function validateNode(
             .getEdges()
             .some(
               (e) =>
-                e.targetHandle.split("|")[1] === t &&
+                e.targetHandle?.split("|")[1] === t &&
                 e.targetHandle.split("|")[2] === n.id
             )
           ? [

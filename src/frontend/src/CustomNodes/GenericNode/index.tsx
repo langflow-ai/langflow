@@ -104,9 +104,9 @@ export default function GenericNode({
               iconColor={`${nodeColors[types[data.type]]}`}
             />
             <div className="generic-node-tooltip-div">
-              <ShadTooltip content={data.node.display_name}>
+              <ShadTooltip content={data.node?.display_name}>
                 <div className="generic-node-tooltip-div text-primary">
-                  {data.node.display_name}
+                  {data.node?.display_name}
                 </div>
               </ShadTooltip>
             </div>
@@ -171,7 +171,7 @@ export default function GenericNode({
         </div>
 
         <div className="generic-node-desc">
-          <div className="generic-node-desc-text">{data.node.description}</div>
+          <div className="generic-node-desc-text">{data.node?.description}</div>
 
           <>
             {Object.keys(data.node.template)
@@ -184,35 +184,35 @@ export default function GenericNode({
                       data={data}
                       setData={setData}
                       color={
-                        nodeColors[types[data.node.template[t].type]] ??
-                        nodeColors[data.node.template[t].type] ??
+                        nodeColors[types[data.node?.template[t].type]] ??
+                        nodeColors[data.node?.template[t].type] ??
                         nodeColors.unknown
                       }
                       title={
-                        data.node.template[t].display_name
+                        data.node?.template[t].display_name
                           ? data.node.template[t].display_name
-                          : data.node.template[t].name
+                          : data.node?.template[t].name
                           ? toTitleCase(data.node.template[t].name)
                           : toTitleCase(t)
                       }
-                      info={data.node.template[t].info}
+                      info={data.node?.template[t].info}
                       name={t}
                       tooltipTitle={
-                        data.node.template[t].input_types?.join("\n") ??
-                        data.node.template[t].type
+                        data.node?.template[t].input_types?.join("\n") ??
+                        data.node?.template[t].type
                       }
-                      required={data.node.template[t].required}
+                      required={data.node?.template[t].required}
                       id={
-                        (data.node.template[t].input_types?.join(";") ??
-                          data.node.template[t].type) +
+                        (data.node?.template[t].input_types?.join(";") ??
+                          data.node?.template[t].type) +
                         "|" +
                         t +
                         "|" +
                         data.id
                       }
                       left={true}
-                      type={data.node.template[t].type}
-                      optionalHandle={data.node.template[t].input_types}
+                      type={data.node?.template[t].type}
+                      optionalHandle={data.node?.template[t].input_types}
                     />
                   ) : (
                     <></>
@@ -232,13 +232,13 @@ export default function GenericNode({
               setData={setData}
               color={nodeColors[types[data.type]] ?? nodeColors.unknown}
               title={
-                data.node.output_types && data.node.output_types.length > 0
+                data.node?.output_types && data.node.output_types.length > 0
                   ? data.node.output_types.join("|")
                   : data.type
               }
-              tooltipTitle={data.node.base_classes.join("\n")}
+              tooltipTitle={data.node?.base_classes.join("\n")}
               id={[data.type, data.id, ...data.node.base_classes].join("|")}
-              type={data.node.base_classes.join("|")}
+              type={data.node?.base_classes.join("|")}
               left={false}
             />
           </>

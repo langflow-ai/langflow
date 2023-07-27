@@ -120,7 +120,7 @@ export default function GenericModal({
       : "code-nohighlight";
   }
 
-  function validatePrompt(closeModal: boolean) {
+  function validatePrompt(closeModal: boolean): void {
     postValidatePrompt(field_name, inputValue, nodeClass)
       .then((apiReturn) => {
         if (apiReturn.data) {

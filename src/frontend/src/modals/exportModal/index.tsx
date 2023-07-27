@@ -12,9 +12,9 @@ const ExportModal = forwardRef((props: { children: ReactNode }, ref): JSX.Elemen
   const { flows, tabId, updateFlow, downloadFlow, saveFlow } =
     useContext(TabsContext);
   const [checked, setChecked] = useState(false);
-  const [name, setName] = useState(flows.find((f) => f.id === tabId).name);
+  const [name, setName] = useState(flows.find((f) => f.id === tabId)?.name);
   const [description, setDescription] = useState(
-    flows.find((f) => f.id === tabId).description
+    flows.find((f) => f.id === tabId)?.description
   );
   const [open, setOpen] = useState(false);
   return (
