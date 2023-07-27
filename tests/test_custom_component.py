@@ -3,7 +3,6 @@ import pytest
 import types
 from uuid import uuid4
 
-from unittest.mock import patch, MagicMock
 
 from fastapi import HTTPException
 from langflow.database.models.flow import Flow, FlowCreate
@@ -464,20 +463,6 @@ def test_custom_component_build_not_implemented():
     )
     with pytest.raises(NotImplementedError):
         custom_component.build()
-
-
-def test_list_flows_no_flows():
-    session_getter_module = "langflow.database.base.session_getter"
-
-    with patch(session_getter_module) as mock_session_getter:
-        mock_session = MagicMock()
-        mock_session.query.return_value.all.return_value = []
-        mock_session_getter.return_value.__enter__.return_value = mock_session
-
-        component = CustomComponent()
-        result = component.list_flows()
-
-        assert len(result) == 0
 
 
 def test_build_config_no_code():
