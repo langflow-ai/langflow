@@ -73,7 +73,7 @@ function BaseModal({
   switch (size) {
     case "smaller":
       minWidth = "min-w-[40vw]";
-      height = "h-[25vh]";
+      height = "h-[27vh]";
       break;
     case "small":
       minWidth = "min-w-[40vw]";
