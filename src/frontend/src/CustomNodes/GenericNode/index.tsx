@@ -95,6 +95,11 @@ export default function GenericNode({
           "generic-node-div"
         )}
       >
+        {data.node.beta && (
+          <div className="beta-badge-wrapper">
+            <div className="beta-badge-content">BETA</div>
+          </div>
+        )}
         <div className="generic-node-div-title">
           <div className="generic-node-title-arrangement">
             <IconComponent
@@ -127,7 +132,7 @@ export default function GenericNode({
                     </span>
                   ) : (
                     <div className="max-h-96 overflow-auto">
-                      {validationStatus.params
+                      {typeof validationStatus.params === "string"
                         ? validationStatus.params
                             .split("\n")
                             .map((line, index) => <div key={index}>{line}</div>)
@@ -178,6 +183,14 @@ export default function GenericNode({
                   {data.node.template[t].show &&
                   !data.node.template[t].advanced ? (
                     <ParameterComponent
+                      key={
+                        (data.node.template[t].input_types?.join(";") ??
+                          data.node.template[t].type) +
+                        "|" +
+                        t +
+                        "|" +
+                        data.id
+                      }
                       data={data}
                       setData={setData}
                       color={
@@ -225,6 +238,7 @@ export default function GenericNode({
               {" "}
             </div>
             <ParameterComponent
+              key={[data.type, data.id, ...data.node.base_classes].join("|")}
               data={data}
               setData={setData}
               color={nodeColors[types[data.type]] ?? nodeColors.unknown}

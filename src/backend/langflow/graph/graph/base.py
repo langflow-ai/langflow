@@ -77,6 +77,8 @@ class Graph:
 
     def _validate_nodes(self) -> None:
         """Check that all nodes have edges"""
+        if len(self.nodes) == 1:
+            return
         for node in self.nodes:
             if not self._validate_node(node):
                 raise ValueError(

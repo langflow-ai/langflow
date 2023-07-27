@@ -112,8 +112,9 @@ function BaseModal({
         <div className={`mt-2 flex flex-col ${height} w-full `}>
           {ContentChild}
         </div>
-
-        <div className="flex flex-row-reverse">{ContentFooter}</div>
+        {ContentFooter && (
+          <div className="flex flex-row-reverse">{ContentFooter}</div>
+        )}
       </DialogContent>
     </Dialog>
   );
