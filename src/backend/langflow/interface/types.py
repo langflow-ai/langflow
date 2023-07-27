@@ -99,6 +99,7 @@ def add_new_custom_field(
     field_type = field_config.pop("field_type", field_type)
     field_type = process_type(field_type)
     field_value = field_config.pop("value", field_value)
+    field_advanced = field_config.pop("advanced", False)
 
     if "name" in field_config:
         warnings.warn(
@@ -115,7 +116,7 @@ def add_new_custom_field(
         value=field_value,
         show=True,
         required=required,
-        advanced=False,
+        advanced=field_advanced,
         placeholder=placeholder,
         display_name=display_name,
         **field_config,
@@ -127,8 +128,9 @@ def add_new_custom_field(
 
 
 # TODO: Move to correct place
-def add_code_field(template, raw_code):
+def add_code_field(template, raw_code, field_config):
     # Field with the Python code to allow update
+
     code_field = {
         "code": {
             "dynamic": True,
@@ -139,7 +141,7 @@ def add_code_field(template, raw_code):
             "value": raw_code,
             "password": False,
             "name": "code",
-            "advanced": False,
+            "advanced": field_config.pop("advanced", False),
             "type": "code",
             "list": False,
         }
@@ -199,6 +201,8 @@ def add_extra_fields(frontend_node, field_config, function_args):
     """Add extra fields to the frontend node"""
     if function_args is None:
         return
+    # sort function_args which is a list of dicts
+    function_args.sort(key=lambda x: x["name"])
 
     for extra_field in function_args:
         if "name" not in extra_field or extra_field["name"] == "self":
@@ -269,7 +273,9 @@ def build_langchain_template_custom_component(custom_component: CustomComponent)
         frontend_node, field_config, custom_component.get_function_entrypoint_args
     )
 
-    frontend_node = add_code_field(frontend_node, custom_component.code)
+    frontend_node = add_code_field(
+        frontend_node, custom_component.code, field_config.get("code", {})
+    )
 
     add_base_classes(
         frontend_node, custom_component.get_function_entrypoint_return_type
