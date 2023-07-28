@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { FloatComponentType } from "../../types/components";
 import { Input } from "../ui/input";
+import { handleKeyDown } from "../../utils/reactflowUtils";
 
 export default function IntComponent({
   value,
@@ -17,13 +18,7 @@ export default function IntComponent({
     }
   }, [disabled, onChange]);
 
-  const handleKeyDown = (e: React.ChangeEvent<HTMLInputElement>) => {
-    
-    if (e.ctrlKey && value === '0' && e.key === "Backspace") {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  };
+
 
   return (
     <div className="w-full">
@@ -45,6 +40,7 @@ export default function IntComponent({
           ) {
             event.preventDefault();
           }
+          handleKeyDown(event, value, '0');
         }}
         type="number"
         step="1"
@@ -61,7 +57,6 @@ export default function IntComponent({
         onChange={(e) => {
           onChange(e.target.value);
         }}
-        onKeyDown={handleKeyDown}
       />
     </div>
   );

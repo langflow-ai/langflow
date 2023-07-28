@@ -22,6 +22,7 @@ import {
   varHighlightHTML,
 } from "../../utils/utils";
 import BaseModal from "../baseModal";
+import { handleKeyDown } from "../../utils/reactflowUtils";
 
 export default function GenericModal({
   field_name = "",
@@ -165,13 +166,6 @@ export default function GenericModal({
       });
   }
 
-  const handleKeyDown = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.ctrlKey && inputValue === '' && e.key === "Backspace") {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  };
-
   const [modalOpen, setModalOpen] = useState(false);
 
   return (
@@ -219,8 +213,10 @@ export default function GenericModal({
                   setInputValue(e.target.value);
                   checkVariables(e.target.value);
                 }}
-                onKeyDown={handleKeyDown}
                 placeholder="Type message here."
+                onKeyDown={(e) => {
+                  handleKeyDown(e, inputValue, '');
+                }}
               />
             ) : type === TypeModal.PROMPT && !isEdit ? (
               <TextAreaContentView />
@@ -232,8 +228,10 @@ export default function GenericModal({
                 onChange={(e) => {
                   setInputValue(e.target.value);
                 }}
-                onKeyDown={handleKeyDown}
                 placeholder="Type message here."
+                onKeyDown={(e) => {
+                  handleKeyDown(e, value, '');
+                }}
               />
             ) : (
               <></>

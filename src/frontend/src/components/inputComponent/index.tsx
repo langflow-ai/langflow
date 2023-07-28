@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { InputComponentType } from "../../types/components";
 import { classNames } from "../../utils/utils";
 import { Input } from "../ui/input";
+import { handleKeyDown } from "../../utils/reactflowUtils";
 
 export default function InputComponent({
   value,
@@ -19,13 +20,6 @@ export default function InputComponent({
     }
   }, [disabled, onChange]);
 
-  const handleKeyDown = (e) => {
-    if (e.ctrlKey && value === '' && e.key === "Backspace") {
-      
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  };
 
   return (
     <div className="relative w-full">
@@ -42,7 +36,9 @@ export default function InputComponent({
         onChange={(e) => {
           onChange(e.target.value);
         }}
-        onKeyDown={handleKeyDown}
+        onKeyDown={(e) => {
+          handleKeyDown(e, value, '');
+        }}
       />
       {password && (
         <button

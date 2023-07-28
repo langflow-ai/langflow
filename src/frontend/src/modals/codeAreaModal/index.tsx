@@ -72,13 +72,6 @@ export default function CodeAreaModal({
 
   const [open, setOpen] = useState(false);
 
-  const handleKeyDown = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.ctrlKey && code === '' && e.key === "Backspace") {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  };
-
   return (
     <BaseModal open={open} setOpen={setOpen}>
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
@@ -106,7 +99,6 @@ export default function CodeAreaModal({
               onChange={(value) => {
                 setCode(value);
               }}
-              onKeyDown={handleKeyDown}
               className="h-full w-full rounded-lg border-[1px] border-border custom-scroll"
             />
           </div>
