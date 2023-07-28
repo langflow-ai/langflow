@@ -66,6 +66,7 @@ module.exports = {
       label: "Examples",
       collapsed: false,
       items: [
+        "examples/flow-runner",
         "examples/conversation-chain",
         "examples/buffer-memory",
         "examples/midjourney-prompt-chain",
