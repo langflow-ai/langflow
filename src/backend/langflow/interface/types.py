@@ -359,7 +359,7 @@ def build_invalid_menu(invalid_components):
                     .get(type(CustomComponent()).__name__)
                 )
 
-                component_template["error"] = component.get("error", "")
+                component_template["error"] = component.get("error", None)
                 component_template.get("template").get("code")["value"] = component_code
 
                 invalid_menu[menu_name][component_name] = component_template
