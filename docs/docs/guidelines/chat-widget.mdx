@@ -2,14 +2,15 @@ import ThemedImage from "@theme/ThemedImage";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 import ReactPlayer from "react-player";
-import Admonition from '@theme/Admonition';
+import Admonition from "@theme/Admonition";
 
 # Chat Widget
 
 <div style={{ marginBottom: "20px" }}>
   The <b>Langflow Chat Widget</b> is a powerful web component that enables
-  communication with a Langflow project. This widget allows for a chat interface embedding,
-  allowing the integration of Langflow into web applications effortlessly.
+  communication with a Langflow project. This widget allows for a chat interface
+  embedding, allowing the integration of Langflow into web applications
+  effortlessly.
 </div>
 
 ## Features
@@ -31,32 +32,30 @@ import Admonition from '@theme/Admonition';
   at the Sidebar after building a flow.
 </div>
 
-<div
-  style={{ marginBottom: "20px", width: "100%", display: "flex", justifyContent: "center" }}
->
-  <ZoomableImage
-    alt="Docusaurus themed image"
-    sources={{
-      light: useBaseUrl("img/widget-sidebar.png"),
-    }}
-    style={{ width: "100%", maxWidth: "600px", margin: "0 auto" }}
-  />
-</div>
+{" "}
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: useBaseUrl("img/widget-sidebar.png"),
+  }}
+  style={{ width: "50%", maxWidth: "600px", margin: "0 auto" }}
+/>
 
 <div style={{ marginBottom: "20px" }}>
-  Clicking the Chat Widget HTML tab, you'll get the code to be
-  inserted. Read below to learn how to use it with HTML, React and Angular.
+  Clicking the Chat Widget HTML tab, you'll get the code to be inserted. Read
+  below to learn how to use it with HTML, React and Angular.
 </div>
 
-<div style={{ marginBottom: "20px" }}>
-  <ZoomableImage
-    alt="Docusaurus themed image"
-    sources={{
-      light: useBaseUrl("img/widget-code.png"),
-    }}
-    style={{ width: "100%", maxWidth: "800px", margin: "0 auto" }}
-  />
-</div>
+{" "}
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: useBaseUrl("img/widget-code.png"),
+  }}
+  style={{ width: "100%", maxWidth: "800px", margin: "0 auto" }}
+/>
 
 ---
 
@@ -74,7 +73,7 @@ The Chat Widget can be embedded into any HTML page, inside a _`<body>`_ tag, as 
 
 ### React
 
-To embed the Chat Widget using React, you'll need to insert this _`<script>`_ tag into the React *index.html* file, inside the _`<body>`_ tag:
+To embed the Chat Widget using React, you'll need to insert this _`<script>`_ tag into the React _index.html_ file, inside the _`<body>`_ tag:
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
@@ -111,7 +110,7 @@ Finally, you can place the component anywhere in your code to display the Chat W
 
 ### Angular
 
-To use it in Angular, first add this _`<script>`_ tag into the Angular *index.html* file, inside the _`<body>`_ tag.
+To use it in Angular, first add this _`<script>`_ tag into the Angular _index.html_ file, inside the _`<body>`_ tag.
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
@@ -119,7 +118,7 @@ To use it in Angular, first add this _`<script>`_ tag into the Angular *index.ht
 
 When you use a custom web component in an Angular template, the Angular compiler might show a warning when it doesn't recognize the custom elements by default. To suppress this warning, add _`CUSTOM_ELEMENTS_SCHEMA`_ to the module's _`@NgModule.schemas`_.
 
-- Open the module file (it typically ends with *.module.ts*) where you'd add the _`langflow-chat`_ web component.
+- Open the module file (it typically ends with _.module.ts_) where you'd add the _`langflow-chat`_ web component.
 - Import _`CUSTOM_ELEMENTS_SCHEMA`_ at the top of the file:
 
 ```ts
@@ -156,9 +155,19 @@ In your Angular project, find the component belonging to the module where _`CUST
 
 <Admonition type="info">
   <ul>
-    <li>_`CUSTOM_ELEMENTS_SCHEMA`_ is a built-in schema that allows Angular to recognize custom elements.</li>
-    <li>Adding _`CUSTOM_ELEMENTS_SCHEMA`_ tells Angular to allow custom elements in your templates, and it will suppress the warning related to unknown elements like _`langflow-chat`_.</li>
-    <li>Notice that you can only use the Chat Widget in components that are part of the module where you added _`CUSTOM_ELEMENTS_SCHEMA`_.</li>
+    <li>
+      _`CUSTOM_ELEMENTS_SCHEMA`_ is a built-in schema that allows Angular to
+      recognize custom elements.
+    </li>
+    <li>
+      Adding _`CUSTOM_ELEMENTS_SCHEMA`_ tells Angular to allow custom elements
+      in your templates, and it will suppress the warning related to unknown
+      elements like _`langflow-chat`_.
+    </li>
+    <li>
+      Notice that you can only use the Chat Widget in components that are part
+      of the module where you added _`CUSTOM_ELEMENTS_SCHEMA`_.
+    </li>
   </ul>
 </Admonition>
 
@@ -169,9 +178,9 @@ In your Angular project, find the component belonging to the module where _`CUST
 Use the widget API to customize your Chat Widget:
 
 <Admonition type="caution">
-  Props with the type JSON need to be passed as Stringified JSONs, with the format &#123;<span>"key":"value"</span>&#125;.
+  Props with the type JSON need to be passed as Stringified JSONs, with the
+  format &#123;<span>"key":"value"</span>&#125;.
 </Admonition>
-
 
 | Prop                  | Type    | Required | Description                                                                                                                                                      |
 | --------------------- | ------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
