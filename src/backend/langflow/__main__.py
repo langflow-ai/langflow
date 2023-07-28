@@ -122,7 +122,7 @@ def serve(
         "127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"
     ),
     workers: int = typer.Option(
-        -1, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"
+        2, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"
     ),
     timeout: int = typer.Option(300, help="Worker timeout in seconds."),
     port: int = typer.Option(7860, help="Port to listen on.", envvar="LANGFLOW_PORT"),
