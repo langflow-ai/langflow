@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
@@ -18,7 +18,7 @@ import { classNames } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 
 export default function ExtraSidebar() {
-  const { data } = useContext(typesContext);
+  const { data,templates } = useContext(typesContext);
   const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt } =
     useContext(TabsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
@@ -57,6 +57,16 @@ export default function ExtraSidebar() {
     });
   }
   const flow = flows.find((f) => f.id === tabId);
+  useEffect(() => {
+    // show components with error on load
+    let errors= [];
+    Object.keys(templates).forEach(component => {
+      if(templates[component].error){
+        errors.push(component);
+      }
+    });
+    setErrorData({title:" Components with errors: ",list:errors})
+  },[]);
 
   return (
     <div className="side-bar-arrangement">
@@ -167,13 +177,13 @@ export default function ExtraSidebar() {
                       <ShadTooltip
                         content={data[d][t].display_name}
                         side="right"
-                        key={data[d][t].display_name}
+                        key={k}
                       >
                         <div key={k} data-tooltip-id={t}>
                           <div
-                            draggable
+                            draggable={!data[d][t].error}
                             className={
-                              "side-bar-components-border bg-background"
+                              "side-bar-components-border bg-background" + (data[d][t].error ? " select-none cursor-not-allowed" : "")
                             }
                             style={{
                               borderLeftColor:
