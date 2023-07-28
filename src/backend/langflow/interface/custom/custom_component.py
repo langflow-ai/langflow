@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from typing import Any, Callable, List, Optional
 from fastapi import HTTPException
 from langflow.interface.custom.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.component import Component
@@ -141,7 +141,7 @@ class CustomComponent(Component, extra=Extra.allow):
     def get_function(self):
         return validate.create_function(self.code, self.function_entrypoint_name)
 
-    def load_flow(self, flow_id: str, tweaks: Optional[dict] = None):
+    def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> Any:
         from langflow.processing.process import build_sorted_vertices_with_caching
         from langflow.processing.process import process_tweaks
 
@@ -153,7 +153,7 @@ class CustomComponent(Component, extra=Extra.allow):
             graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks)
         return build_sorted_vertices_with_caching(graph_data)
 
-    def list_flows(self):
+    def list_flows(self) -> List[Flow]:
         with session_getter() as session:
             flows = session.query(Flow).all()
         return flows
