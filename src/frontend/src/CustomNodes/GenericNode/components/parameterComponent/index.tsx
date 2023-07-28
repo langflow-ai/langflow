@@ -120,7 +120,8 @@ export default function ParameterComponent({
       refNumberComponents.current = groupedObj[0]?.type?.length;
 
       refHtml.current = groupedObj.map((item, i) => {
-        const Icon: any = nodeIconsLucide[item.family];
+        const Icon: any =
+          nodeIconsLucide[item.family] ?? nodeIconsLucide["unknown"];
 
         return (
           <span
