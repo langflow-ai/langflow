@@ -133,4 +133,4 @@ dmypy.json
 .pyre/
 
 # Custom Components
-langflow/components
+langflow/components/*
