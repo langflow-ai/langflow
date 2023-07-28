@@ -305,8 +305,8 @@ def load_files_from_path(path: str):
 def build_and_validate_all_files(reader, file_list):
     """Build and validate all files"""
     data = reader.build_component_menu_list(file_list)
-    valid_components = reader.filter_loaded_components(data=data, with_errors=False)
 
+    valid_components = reader.filter_loaded_components(data=data, with_errors=False)
     invalid_components = reader.filter_loaded_components(data=data, with_errors=True)
 
     return valid_components, invalid_components
@@ -359,6 +359,7 @@ def build_invalid_menu(invalid_components):
                     .get(type(CustomComponent()).__name__)
                 )
 
+                component_template["error"] = component.get("error", "")
                 component_template.get("template").get("code")["value"] = component_code
 
                 invalid_menu[menu_name][component_name] = component_template
