@@ -8,17 +8,17 @@ import Admonition from "@theme/Admonition";
 
 # Custom Components
 
-In Langflow, a Custom Component is a special component type that allows users to extend the functionality of the platform by creating their own reusable and configurable components.
+In Langflow, a Custom Component is a special component type that allows users to extend the platform's functionality by creating their own reusable and configurable components.
 
 A Custom Component is created from a user-defined Python script that uses the _`CustomComponent`_ class provided by the Langflow library. These components can be as simple as a basic function that takes and returns a string or as complex as a combination of multiple sub-components and API calls.
 
-Let's take a look at the basic rules and features, then we'll go over an example.
+Let's take a look at the basic rules and features. Then we'll go over an example.
 
 ## TL;DR
 
 - Create a class that inherits from _`CustomComponent`_ and contains a _`build`_ method.
 - Use arguments with [Type Annotations (or Type Hints)](https://docs.python.org/3/library/typing.html) of the _`build`_ method to create component fields.
-- Use the _`build_config`_ method to customize these fields look and behave.
+- Use the _`build_config`_ method to customize how these fields look and behave.
 
 Here is an example:
 
@@ -87,7 +87,7 @@ class MyComponent(CustomComponent):
 
 ### Rule 2
 
-This class requires a _`build`_ method, which is used to run the component and defines its fields.
+This class requires a _`build`_ method used to run the component and define its fields.
 
 ```python
 from langflow import CustomComponent
@@ -108,7 +108,7 @@ class MyComponent(CustomComponent):
 
 ---
 
-The [Return Type Annotation](https://docs.python.org/3/library/typing.html) of the _`build`_ method defines the component type (e.g., Chain, BaseLLM or basic Python types). Check out all supported types in the [component reference](../components/custom).
+The [Return Type Annotation](https://docs.python.org/3/library/typing.html) of the _`build`_ method defines the component type (e.g., Chain, BaseLLM, or basic Python types). Check out all supported types in the [component reference](../components/custom).
 
 ```python
 from langflow import CustomComponent
@@ -146,7 +146,7 @@ class MyComponent(CustomComponent):
 
 ### Rule 3
 
-The class can have a [_`build_config`_](focus://8) method, which is used to define configuration fields for the component. The [_`build_config`_](focus://8) method should always return a dictionary with specific keys representing the field names and their corresponding configurations. It must follow the format described below:
+The class can have a [_`build_config`_](focus://8) method, which defines configuration fields for the component. The [_`build_config`_](focus://8) method should always return a dictionary with specific keys representing the field names and their corresponding configurations. It must follow the format described below:
 
 - Top-level keys are field names.
 - Their values are also of type _`dict`_. They specify the behavior of the generated fields.
@@ -184,8 +184,7 @@ If you were to do this using Langflow's native components, you would create a To
 
 ### Pick a display name
 
-First, let's choose a name for our component by adding a _`display_name`_ attribute. This is the component name to be displayed in the canvas.
-The name of the class is not important, but let's call it _`DocumentProcessor`_.
+First, let's choose a name for our component by adding a _`display_name`_ attribute. This is the component name to be displayed in the canvas. The name of the class is not important, but let's call it _`DocumentProcessor`_.
 
 ```python
 from langflow import CustomComponent

@@ -28,9 +28,6 @@ export default function GenericNode({
   const updateNodeInternals = useUpdateNodeInternals();
   const showError = useRef(true);
   const { types, deleteNode, reactFlowInstance } = useContext(typesContext);
-  // any to avoid type conflict
-  const Icon: any =
-    nodeIconsLucide[data.type] || nodeIconsLucide[types[data.type]];
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [validationStatus, setValidationStatus] = useState(null);
   // State for outline color
@@ -67,18 +64,6 @@ export default function GenericNode({
     }
   }, [sseData, data.id]);
 
-  if (!Icon) {
-    if (showError.current) {
-      setErrorData({
-        title: data.type
-          ? `The ${data.type} node could not be rendered, please review your json file`
-          : "There was a node that can't be rendered, please review your json file",
-      });
-      showError.current = false;
-    }
-    deleteNode(data.id);
-    return;
-  }
   return (
     <>
       <NodeToolbar>
