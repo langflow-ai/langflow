@@ -4,21 +4,21 @@ hide_table_of_contents: true
 ---
 
 import ZoomableImage from "/src/theme/ZoomableImage.js";
+import Admonition from "@theme/Admonition";
 
 # Custom Components
 
-A Custom Component has almost infinite possibilities. It can be a simple function that takes a string and returns a string,
-or it can be a complex function that takes other components, calls APIs, and returns a custom object only you know how to use (which might not be ideal).
+In Langflow, a Custom Component is a special component type that allows users to extend the functionality of the platform by creating their own reusable and configurable components.
 
-The CustomComponent is a Python Class that has all the tools you need to create a custom component.
+A Custom Component is created from a user-defined Python script that uses the _`CustomComponent`_ class provided by the Langflow library. These components can be as simple as a basic function that takes and returns a string or as complex as a combination of multiple sub-components and API calls.
 
-Let's take a look at the basic rules and features, then we'll go over a more complex example.
+Let's take a look at the basic rules and features, then we'll go over an example.
 
 ## TL;DR
 
-You need to create a class that inherits from _`CustomComponent`_ and has a _`build`_ method.
-Use the type annotations of the _`build`_ method to create the fields of the component.
-Use the _`build_config`_ method to create the config fields of the component (if any).
+- Create a class that inherits from _`CustomComponent`_ and contains a _`build`_ method.
+- Use arguments with [Type Annotations (or Type Hints)](https://docs.python.org/3/library/typing.html) of the _`build`_ method to create component fields.
+- Use the _`build_config`_ method to customize these fields look and behave.
 
 Here is an example:
 
@@ -45,7 +45,7 @@ class BestComponent(CustomComponent):
             "name": {"is_list": True,
                      "options": cool_tool_names}}
 
-    def build(self, name: str, description: str, chain: Chain) -> Tool:
+    def build(self, name: str, description: str, chain: Chain):
         return Tool(name=name,
                     description=description,
                     func=chain.run)
@@ -53,13 +53,17 @@ class BestComponent(CustomComponent):
 
 </CH.Code>
 
-## Now, let's go over the rules one by one:
+---
+
+## Rules
+
+The Python script for every Custom Component should follow a set of rules. Let's go over them, one by one:
 
 <CH.Scrollycoding rows={20} className={""}>
 
-## Rule 1
+### Rule 1
 
-The script must contain a **single Python class** that inherits from _`CustomComponent`_.
+The script must contain a **single class** that inherits from _`CustomComponent`_.
 
 ```python
 # focus
@@ -84,9 +88,9 @@ class BestComponent(CustomComponent):
 
 ---
 
-## Rule 2
+### Rule 2
 
-The class must have a _`build`_ method which defines the fields of the component and is used to run it.
+This class requires a _`build`_ method, which is used to run the component and defines its fields.
 
 ```python
 from langflow import CustomComponent
@@ -103,30 +107,14 @@ class BestComponent(CustomComponent):
     def build_config(self) -> dict:
         ...
 
-    # focus[5:13]
-    def build(self):
+    # focus[1:20]
+    def build(self) -> Tool:
         ...
 ```
 
 ---
 
-## Rule 3
-
-The type annotations of the _`build`_ method will be used to create the fields of the component.
-
-The types supported are:
-
-- _`str`_, _`int`_, _`float`_, _`bool`_, _`list`_, _`dict`_
-- [_`langchain.chains.base.Chain`_](focus://3)
-- [_`langchain.PromptTemplate`_](focus://4)
-- [_`langchain.llms.base.BaseLLM`_](focus://5)
-- [_`langchain.Tool`_](focus://6)
-- _`langchain.document_loaders.base.BaseLoader`_
-- _`langchain.schema.Document`_
-- _`langchain.text_splitters.TextSplitter`_
-- _`langchain.vectorstores.base.VectorStore`_
-- _`langchain.embeddings.base.Embeddings`_
-- _`langchain.schema.BaseRetriever`_
+The [Return Type Annotation](https://docs.python.org/3/library/typing.html) of the _`build`_ method defines the component type (e.g., Chain, BaseLLM or basic Python types). Check out all supported types in the [component reference](../components/custom).
 
 ```python
 from langflow import CustomComponent
@@ -143,8 +131,8 @@ class BestComponent(CustomComponent):
     def build_config(self) -> dict:
         ...
 
-    # mark
-    def build(self):
+    # focus[21:30]
+    def build(self) -> Tool:
         ...
 ```
 
@@ -166,40 +154,18 @@ class BestComponent(CustomComponent):
     def build_config(self) -> dict:
         ...
 
-    def build(self):
+    def build(self) -> Tool:
         ...
 ```
 
-## Rule 4
+### Rule 3
 
-The class can have a [_`build_config`_](focus://11:19) method
+The class can have a [_`build_config`_](focus://11:19) method, which is used to define configuration fields for the component. The _`build_config`_ method should always return a dictionary with specific keys representing the field names and their corresponding configurations. It must follow the format described below:
 
-- The _`build_config`_ method will be used to create the config fields of the component (if any)
-- It should always return a _`dict`_
+- Top level keys are field names.
+- Their values are also of type _`dict`_. They specify the behavior of the generated fields.
 
-The _`dict`_ should have the following format:
-
-- The top level keys are the names of the fields
-- The values are _`dict`_ with the following keys:
-
-  - _`field_type: str`_: The type of the field (can be any of the types supported by the _`build`_ method)
-  - _`is_list: bool`_: If the field is a list.
-  - _`options: List[str]`_: If the field is a list, the options that will be displayed.
-  - _`multiline: bool`_: If the field is a string, if it should be multiline.
-  - _`input_types: List[str]`_: To be used when you want a _`str`_ field to have connectable handles.
-  - _`display_name: str`_: To change the name of the field
-  - _`advanced: bool`_: To hide the field in the default view
-  - _`password: bool`_: To mask the input
-  - _`required: bool`_: To make the field required
-  - _`info: str`_: To add a tooltip to the field
-  - _`file_types: List[str]`_: This is a requirement if the _`field_type`_ is 'file'
-    (must be used in conjunction with _`suffixes`_)
-
-    Example: _`["json", "yaml", "yml"]`_
-
-  - _`suffixes: List[str]`_: This is a requirement if the _`field_type`_ is 'file' (must be used in conjunction with _`file_types`_, and it must be a list of strings like 'json')
-
-    Example: _`[".json", ".yaml", ".yml"]`_
+Check out the [component reference](../components/custom) for more details on the available field configurations.
 
 ---
 
@@ -212,26 +178,29 @@ from langchain.llms.base import BaseLLM
 from langchain import Tool
 
 class BestComponent(CustomComponent):
-    display_name = "Custom Component"
-    description = "This is a custom component"
-
     # focus
     def build_config(self) -> dict:
         ...
 
-    def build(self):
+    def build(self) -> Tool:
         ...
 ```
 
-# Example
+## Example
 
-Now let's create a custom component that creates a Tool from a name, a description and a chain.
+Let's create a custom component that will convert a chain into a tool. It should receive as input a chain component, a tool name and description (for an agent to access it).
+
+<Admonition type="info" label="Tip">
+
+This is also possible with Langflow native components. It's being reproduced here with a custom component for demonstration purposes.
+
+</Admonition>
 
 ---
 
-# Change the name
+### Pick a display name
 
-We can change the name of the component by adding a _`display_name`_ attribute.
+First, let's choose a name for our component by adding a _`display_name`_ attribute. This is the component name to be displayed in the canvas.
 
 ```python focus=9
 from langflow import CustomComponent
@@ -243,20 +212,19 @@ from langchain import Tool
 
 class BestComponent(CustomComponent):
     display_name = "Best Component"
-    description = "This is a custom component"
 
     def build_config(self) -> dict:
         ...
 
-    def build(self):
+    def build(self) -> Tool:
         ...
 ```
 
 ---
 
-# Change the description
+### Write a description
 
-We can change the description of the component by adding a _`description`_ attribute.
+We can also write a description for it using the _`description`_ attribute.
 
 ```python focus=10
 from langflow import CustomComponent
@@ -273,20 +241,19 @@ class BestComponent(CustomComponent):
     def build_config(self) -> dict:
         ...
 
-    def build(self):
+    def build(self) -> Tool:
         ...
 ```
 
 ---
 
-# Add a config
+### Customize the fields
 
 The _`build_config`_ method will be used to configure the fields of the component.
 
-- _`multiline`_ will add the possibility of editing text in a spaceous text editor.
+- _`multiline`_ adds the possibility of editing text in an expansive text editor.
 
-- _`is_list`_ is a special option that allows you to add many values. When paired with _`options`_ it will transform it into a dropdown menu with the options you provide.
-  If you set the _`value`_ attribute to one of the options, it will be selected by default.
+- _`is_list`_ allows for an input field to contain multiple values. When paired with _`options`_, it will transform it into a dropdown menu.
 
 ```python focus=12:19
 from langflow import CustomComponent
@@ -301,15 +268,15 @@ class BestComponent(CustomComponent):
     description = "This is the best component ever"
 
     def build_config(self) -> dict:
-        cool_tool_names = ["Cool Tool",
-                           "Cooler Tool",
-                           "Coolest Tool"]
+        cool_tool_names = ["Summarizer",
+                           "Enhancer",
+                           "Translator"]
         return {
             "description": {"multiline": True},
             "name": {"is_list": True,
                      "options": cool_tool_names}}
 
-    def build(self):
+    def build(self) -> Tool:
         ...
 ```
 
@@ -336,13 +303,14 @@ class BestComponent(CustomComponent):
             "name": {"is_list": True,
                      "options": cool_tool_names}}
 
-    def build(self, name: str, description: str, chain: Chain) -> Tool:
+    def build(self, name: str, description: str,
+    chain: Chain) -> Tool:
         return Tool(name=name,
                     description=description,
                     func=chain.run)
 ```
 
-# Add the build method
+### Add the build method
 
 The parameters used are:
 
@@ -355,7 +323,7 @@ We then instantiate a Tool and return it.
 
 </CH.Scrollycoding>
 
-In Langflow, the code will look like this:
+In Langflow, this is how our script looks like:
 
 <div
   style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
@@ -368,7 +336,7 @@ In Langflow, the code will look like this:
   />
 </div>
 
-And our new component that builds a Tool from a Chain will look like this:
+And here is our brand new custom component:
 
 <div
   style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
