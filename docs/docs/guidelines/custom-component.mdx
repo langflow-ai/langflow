@@ -35,8 +35,7 @@ class DocumentProcessor(CustomComponent):
     def build_config(self) -> dict:
         options = ["Uppercase", "Lowercase", "Titlecase"]
         return {
-            "function": {"is_list": True,
-                     "options": options,
+            "function": {"options": options,
                      "value": options[0]}}
 
     def build(self, document: Document, function: str) -> Document:
@@ -268,8 +267,7 @@ This method is called when the component is built (i.e. when you click the _Buil
 
 The _`build_config`_ method will be used to configure the fields of the component.
 
-- _`is_list`_ allows an input field to contain multiple values. When paired with _`options`_, it will transform it into a dropdown menu.
-- _`options`_ is a list of values to be used in the dropdown menu.
+- _`options`_ defines that the field will be a dropdown menu. The values must be _`str`_ and the type of the field should also be _`str`_.
 - _`value`_ is the default value of the field.
 - _`display_name`_ is the name of the field to be displayed in the canvas.
 
@@ -286,8 +284,7 @@ class DocumentProcessor(CustomComponent):
     def build_config(self) -> dict:
         options = ["Uppercase", "Lowercase", "Titlecase"]
         return {
-            "function": {"is_list": True,
-                     "options": options,
+            "function": {"options": options,
                      "value": options[0],
                      "display_name": "Function"
                         },
