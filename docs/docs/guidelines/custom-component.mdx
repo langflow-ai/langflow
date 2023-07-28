@@ -21,35 +21,52 @@ Let's take a look at the basic rules and features. Then we'll go over an example
 - Use the _`build_config`_ method to customize how these fields look and behave.
 
 Here is an example:
+<div style={{
+        display: "flex",
+        justifyContent: "center",
+    }}>
+    <CH.Code linuNumbers={false}>
 
-<CH.Code linuNumbers={false}>
+    ```python
+    from langflow import CustomComponent
+    from langchain.schema import Document
 
-```python
-from langflow import CustomComponent
-from langchain.schema import Document
+    class DocumentProcessor(CustomComponent):
+        display_name = "Document Processor"
+        description = "This component processes a document"
 
-class DocumentProcessor(CustomComponent):
-    display_name = "Document Processor"
-    description = "This component processes a document"
+        def build_config(self) -> dict:
+            options = ["Uppercase", "Lowercase", "Titlecase"]
+            return {
+                "function": {"options": options,
+                        "value": options[0]}}
 
-    def build_config(self) -> dict:
-        options = ["Uppercase", "Lowercase", "Titlecase"]
-        return {
-            "function": {"options": options,
-                     "value": options[0]}}
+        def build(self, document: Document, function: str) -> Document:
+            page_content = document.page_content
+            if function == "Uppercase":
+                page_content = page_content.upper()
+            elif function == "Lowercase":
+                page_content = page_content.lower()
+            elif function == "Titlecase":
+                page_content = page_content.title()
+            return Document(page_content=page_content)
+    ```
 
-    def build(self, document: Document, function: str) -> Document:
-        page_content = document.page_content
-        if function == "Uppercase":
-            page_content = page_content.upper()
-        elif function == "Lowercase":
-            page_content = page_content.lower()
-        elif function == "Titlecase":
-            page_content = page_content.title()
-        return Document(page_content=page_content)
-```
+    </CH.Code>
 
-</CH.Code>
+    <ZoomableImage
+    alt="Document Processor Component"
+    sources={{
+        light: "img/document_processor.png",
+    }}
+    style={{
+        width: "40%",
+        margin: "0 auto",
+        display: "flex",
+        justifyContent: "center",
+    }}
+    />
+</div>
 
 <Admonition type="tip">
   Check out [FlowRunner Component](../examples/flow-runner) for a more complex
@@ -289,39 +306,42 @@ class DocumentProcessor(CustomComponent):
 
 </CH.Scrollycoding>
 
-In Langflow, this is how our script looks like:
 
-{" "}
+All done! This is what our script and brand-new custom component look like:
 
-<ZoomableImage
-  alt="Document Processor code"
-  sources={{
-    light: "img/document_processor_code.png",
-  }}
-  style={{
-    maxWidth: "70%",
-    margin: "0 auto",
-    display: "flex",
-    justifyContent: "center",
-  }}
+<div style={{
+        display: "flex",
+        justifyContent: "center",
+    }}>
+
+    <ZoomableImage
+    alt="Document Processor Code"
+    sources={{
+        light: "img/document_processor_code.png",
+    }}
+    style={{
+        maxWidth: "100%",
+        margin: "0 auto",
+        display: "flex",
+        justifyContent: "center",
+    }}
 />
 
-And there is our brand new custom component:
 
-{" "}
 
-<ZoomableImage
-  alt="Document Processor component"
-  sources={{
-    light: "img/document_processor.png",
-  }}
-  style={{
-    width: "50%",
-    margin: "0 auto",
-    display: "flex",
-    justifyContent: "center",
-  }}
-/>
+    <ZoomableImage
+    alt="Document Processor Component"
+    sources={{
+        light: "img/document_processor.png",
+    }}
+    style={{
+        width: "40%",
+        margin: "0 auto",
+        display: "flex",
+        justifyContent: "center",
+    }}
+    />
+</div>
 
 
 <Admonition type="tip" label="Tip">
