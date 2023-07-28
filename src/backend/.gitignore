@@ -131,3 +131,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Custom Components
+langflow/components
