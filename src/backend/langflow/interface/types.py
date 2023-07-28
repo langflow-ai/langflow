@@ -186,21 +186,28 @@ def update_display_name_and_description(frontend_node, template_config):
         frontend_node["description"] = template_config["description"]
 
 
-def build_field_config(custom_component):
+def build_field_config(custom_component: CustomComponent):
     """Build the field configuration for a custom component"""
+    is_valid = custom_component.is_check_valid()
+
     try:
         custom_class = get_function_custom(custom_component.code)
-        return custom_class().build_config()
-
     except Exception as exc:
-        logger.error(f"Error while building field config: {exc}")
+        logger.error(f"Error while getting custom function: {str(exc)}")
+        return {}
+
+    try:
+        return custom_class().build_config()
+    except Exception as exc:
+        logger.error(f"Error while building field config: {str(exc)}")
         return {}
 
 
 def add_extra_fields(frontend_node, field_config, function_args):
     """Add extra fields to the frontend node"""
-    if function_args is None:
+    if function_args is None or function_args == "":
         return
+
     # sort function_args which is a list of dicts
     function_args.sort(key=lambda x: x["name"])
 
@@ -353,7 +360,9 @@ def build_invalid_menu(invalid_components):
                 invalid_menu[menu_name][component_name] = component_template
 
             except Exception as exc:
-                logger.error(f"Error while creating custom component: {exc}")
+                logger.error(
+                    f"Error while creating custom component [{component_name}]: {str(exc)}"
+                )
 
     return invalid_menu
 
