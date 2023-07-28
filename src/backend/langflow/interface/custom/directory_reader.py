@@ -129,21 +129,74 @@ class DirectoryReader:
             None,
         )
 
+    def _is_type_hint_imported(self, type_hint_name: str, code: str) -> bool:
+        """
+        Check if a specific type hint is imported
+        from the typing module in the given code.
+        """
+        module = ast.parse(code)
+
+        return any(
+            isinstance(node, ast.ImportFrom)
+            and node.module == "typing"
+            and any(alias.name == type_hint_name for alias in node.names)
+            for node in ast.walk(module)
+        )
+
+    def _is_type_hint_used_in_args(self, type_hint_name: str, code: str) -> bool:
+        """
+        Check if a specific type hint is used in the
+        function definitions within the given code.
+        """
+        module = ast.parse(code)
+
+        for node in ast.walk(module):
+            if isinstance(node, ast.FunctionDef):
+                for arg in node.args.args:
+                    if self._is_type_hint_in_arg_annotation(
+                        arg.annotation, type_hint_name
+                    ):
+                        return True
+        return False
+
+    def _is_type_hint_in_arg_annotation(self, annotation, type_hint_name: str) -> bool:
+        """
+        Helper function to check if a type hint exists in an annotation.
+        """
+        return (
+            annotation is not None
+            and isinstance(annotation, ast.Subscript)
+            and isinstance(annotation.value, ast.Name)
+            and annotation.value.id == type_hint_name
+        )
+
+    def is_type_hint_used_but_not_imported(
+        self, type_hint_name: str, code: str
+    ) -> bool:
+        """
+        Check if a type hint is used but not imported in the given code.
+        """
+        return self._is_type_hint_used_in_args(
+            type_hint_name, code
+        ) and not self._is_type_hint_imported(type_hint_name, code)
+
     def process_file(self, file_path):
         """
         Process a file by validating its content and
         returning the result and content/error message.
         """
         file_content = self.read_file_content(file_path)
+
         if file_content is None:
             return False, f"Could not read {file_path}"
-
-        if self.is_empty_file(file_content):
+        elif self.is_empty_file(file_content):
             return False, "Empty file"
         elif not self.validate_code(file_content):
             return False, "Syntax error"
         elif not self.validate_build(file_content):
             return False, "Missing build function"
+        elif self.is_type_hint_used_but_not_imported("Optional", file_content):
+            return False, "Name hint type 'Optional' is not defined"
         else:
             if self.compress_code_field:
                 file_content = str(StringCompressor(file_content).compress_string())
