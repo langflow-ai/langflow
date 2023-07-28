@@ -167,7 +167,7 @@ export default function ExtraSidebar() {
                       <ShadTooltip
                         content={data[d][t].display_name}
                         side="right"
-                        key={data[d][t].display_name}
+                        key={k}
                       >
                         <div key={k} data-tooltip-id={t}>
                           <div
