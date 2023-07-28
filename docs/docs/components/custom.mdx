@@ -2,7 +2,7 @@ import Admonition from "@theme/Admonition";
 
 # Custom Component
 
-Used to create a custom component, a special type of Langflow component that allows users to extend the functionality of the platform by creating their own reusable and configurable components from a user-defined Python script.
+Used to create a custom component, a special type of Langflow component that allows users to extend the functionality of the platform by creating their own reusable and configurable components from a Python script.
 
 To use a custom component, follow these steps:
 
@@ -23,12 +23,15 @@ For an in depth explanation of custom components, their rules and applications, 
 
 ## The CustomComponent Class
 
+The CustomComponent class serves as the foundation for creating custom components. By inheriting from this class, users can define their own specialized components with configurable fields, tailored to their specific requirements.
 
 **Methods**
 
-- **build**: This is a required method within a Custom Component class. It defines the functionality of the component and specifies how it processes input data to produce output data. The type annotations of the _`build`_ instance method are used to create the fields of the component.
+- **build**: This is a required method within a Custom Component class. It defines the functionality of the component and specifies how it processes input data to produce output data. This method is called when the component is built (i.e. when you click the *Build* ⚡ button in the canvas).
 
-    | Supported types                                           |
+  The type annotations of the _`build`_ instance method are used to create the fields of the component.
+
+    | Supported Types                                           |
     | --------------------------------------------------------- |
     | _`str`_, _`int`_, _`float`_, _`bool`_, _`list`_, _`dict`_ |
     | _`langchain.chains.base.Chain`_                           |
@@ -42,8 +45,11 @@ For an in depth explanation of custom components, their rules and applications, 
     | _`langchain.embeddings.base.Embeddings`_                  |
     | _`langchain.schema.BaseRetriever`_                        |
 
+<Admonition type="info">
+  Notice that, contrary to Langchain types, base Python types do not add a [handle](../guidelines/components) to the field by default. To add handles, use the _`input_types`_ key in the _`build_config`_ method.
+</Admonition>
 
-- **build_config**: Used to define the configuration fields of the component. Should always return a dictionary with specific keys representing the field names and their corresponding configurations. It must follow the format described below:
+- **build_config**: Used to define the configuration fields of the component (if applicable). Should always return a dictionary with specific keys representing the field names and their corresponding configurations. This method is called when the code is processed (i.e. when you click _Check and Save_ in the code editor). It must follow the format described below:
 
   - Top-level keys are field names.
   - Their values are also of type _`dict`_. They specify the behavior of the generated fields.
@@ -53,22 +59,22 @@ For an in depth explanation of custom components, their rules and applications, 
   | Key                        | Description                                                                                                                                                                                                                           |
   | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
   | _`field_type: str`_        | The type of the field (can be any of the types supported by the _`build`_ method).                                                                                                                                                     |
-  | _`is_list: bool`_          | If the field contains a list of values. When paired with _`options`_, becomes a dropdown menu.                                                                                                                                                                                                                |
-  | _`options: List[str]`_     | Defines the options to be displayed in a dropdown menu. If the _`value`_ attribute is set to one of the options, that option becomes the default. For this parameter to work, _`field_type`_ should invariably be _`str`_.  |
-  | _`multiline: bool`_        | When the field is a string, if it should be multiline. Useful for longer texts when a text modal is helpful.                                                                                                                                                                                 |
-  | _`input_types: List[str]`_ | To be used when you want a _`str`_ field to have connectable handles.                                                                                                                                                                  |
-  | _`display_name: str`_      | Defines the field name.                                                                                                                                                                                                       |
-  | _`advanced: bool`_         | To hide the field in canvas view (shown only in the component's settings).                                                                                                                                                                                                     |
-  | _`password: bool`_         | To mask the input text.                                                                                                                                                                                                                |
-  | _`required: bool`_         | To make the field required.                                                                                                                                                                                                            |
-  | _`info: str`_              | To add a tooltip with information to the field.                                                                                                                                                                                                         |
-  | _`file_types: List[str]`_  | This is a requirement if the _`field_type`_ is *file*. Defines which file types will be accepted. For example, *json*, *yaml* or *yml*.                                                                                                        |
+  | _`is_list: bool`_          | If the field can be a list of values, meaning that the user can manually add more inputs to the same field.                                                                                                                                                                                                                |
+  | _`options: List[str]`_     | When defined, the field becomes a dropdown menu where a list of strings defines the options to be displayed. If the _`value`_ attribute is set to one of the options, that option becomes default. For this parameter to work, _`field_type`_ should invariably be _`str`_.  |
+  | _`multiline: bool`_        | Defines if a string field opens a text editor. Useful for longer texts.                                                                                                                                           |
+  | _`input_types: List[str]`_ | Used when you want a _`str`_ field to have connectable handles.                                                                                                                                                                 |
+  | _`display_name: str`_      | Defines the name of the field.                                                                                                                                                                                                      |
+  | _`advanced: bool`_         | Hide the field in the canvas view (displayed component settings only). Useful when a field is for advanced users.                                                                                                   |
+  | _`password: bool`_         | To mask the input text. Useful to hide sensitive text (e.g. API keys).                                                                                                                                |
+  | _`required: bool`_         | Makes the field required.                                                                                                                                                                                                           |
+  | _`info: str`_              | Adds a tooltip to the field.                                                                                                                                                                                                        |
+  | _`file_types: List[str]`_  | This is a requirement if the _`field_type`_ is *file*. Defines which file types will be accepted. For example, *json*, *yaml* or *yml*.                                                                                                            |
 
 
 
-- The CustomComponent class also provides methods to load and use other flows from the Langflow platform:
+- The CustomComponent class also provides helpful methods for specific tasks (e.g., to load and use other flows from the Langflow platform):
 
-  | Method name    | Description                                                   |
+  | Method Name    | Description                                                   |
   | -------------- | ------------------------------------------------------------- |
   | _`list_flows`_ | Returns a list of Flow objects with an _`id`_ and a _`name`_. |
   | _`load_flow`_  | Loads a flow from a given _`id`_.                           |
@@ -76,6 +82,6 @@ For an in depth explanation of custom components, their rules and applications, 
 
   <Admonition type="info" label="Tip">
 
-  Check out the [FlowRunner](../guidelines/custom-component) example to understand how to call a flow from a custom component.
+  Check out the [FlowRunner](../examples/flow-runner) example to understand how to call a flow from a custom component.
 
   </Admonition>
