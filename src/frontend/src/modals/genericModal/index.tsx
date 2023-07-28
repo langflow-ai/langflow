@@ -165,6 +165,13 @@ export default function GenericModal({
       });
   }
 
+  const handleKeyDown = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.ctrlKey && inputValue === '' && e.key === "Backspace") {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
   const [modalOpen, setModalOpen] = useState(false);
 
   return (
@@ -212,6 +219,7 @@ export default function GenericModal({
                   setInputValue(e.target.value);
                   checkVariables(e.target.value);
                 }}
+                onKeyDown={handleKeyDown}
                 placeholder="Type message here."
               />
             ) : type === TypeModal.PROMPT && !isEdit ? (
@@ -224,6 +232,7 @@ export default function GenericModal({
                 onChange={(e) => {
                   setInputValue(e.target.value);
                 }}
+                onKeyDown={handleKeyDown}
                 placeholder="Type message here."
               />
             ) : (

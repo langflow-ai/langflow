@@ -19,6 +19,14 @@ export default function InputComponent({
     }
   }, [disabled, onChange]);
 
+  const handleKeyDown = (e) => {
+    if (e.ctrlKey && value === '' && e.key === "Backspace") {
+      
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
   return (
     <div className="relative w-full">
       <Input
@@ -34,6 +42,7 @@ export default function InputComponent({
         onChange={(e) => {
           onChange(e.target.value);
         }}
+        onKeyDown={handleKeyDown}
       />
       {password && (
         <button

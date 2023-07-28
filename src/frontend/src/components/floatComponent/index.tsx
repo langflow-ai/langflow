@@ -19,6 +19,14 @@ export default function FloatComponent({
     }
   }, [disabled, onChange]);
 
+  const handleKeyDown = (e) => {
+    
+    if (e.ctrlKey && value === '0' && e.key === "Backspace") {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
   return (
     <div className="w-full">
       <Input
@@ -43,6 +51,7 @@ export default function FloatComponent({
         onChange={(e) => {
           onChange(e.target.value);
         }}
+        onKeyDown={handleKeyDown}
       />
     </div>
   );
