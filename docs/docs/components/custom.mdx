@@ -8,7 +8,42 @@ Used to create a custom component. The code is the class that will be converted 
 
 **Params**
 
-- **Code:** The code of the component.
+- **Code:** The Python code to define the component.
+
+
+The type annotations of the _`build`_ method will be used to create the fields of the component. Supported types are:
+
+- _`str`_, _`int`_, _`float`_, _`bool`_, _`list`_, _`dict`_
+- [_`langchain.chains.base.Chain`_]
+- [_`langchain.PromptTemplate`_]
+- [_`langchain.llms.base.BaseLLM`_]
+- [_`langchain.Tool`_]
+- _`langchain.document_loaders.base.BaseLoader`_
+- _`langchain.schema.Document`_
+- _`langchain.text_splitters.TextSplitter`_
+- _`langchain.vectorstores.base.VectorStore`_
+- _`langchain.embeddings.base.Embeddings`_
+- _`langchain.schema.BaseRetriever`_
+
+
+
+
+- The top level keys are the field names.
+- Their values are of type _`dict`_ with the following keys:
+
+  - _`field_type: str`_: The type of the field (can be any of the types supported by the _`build`_ method).
+  - _`is_list: bool`_: If the field is a list.
+  - _`options: List[str]`_: When the field is a list, the options to be displayed. If you set the _`value`_ attribute to one of the options, it will be selected by default.
+  - _`multiline: bool`_: When the field is a string, if it should be multiline.
+  - _`input_types: List[str]`_: To be used when you want a _`str`_ field to have connectable handles.
+  - _`display_name: str`_: To define the name of the field.
+  - _`advanced: bool`_: To hide the field in default view.
+  - _`password: bool`_: To mask the input text.
+  - _`required: bool`_: To make the field required.
+  - _`info: str`_: To add a tooltip to the field.
+  - _`file_types: List[str]`_: This is a requirement if the _`field_type`_ is *file*. Defines which file types will be accepted. For example, *json*, *yaml* or *yml*.
+
+
 
 <Admonition type="info" label="Tip">
 
