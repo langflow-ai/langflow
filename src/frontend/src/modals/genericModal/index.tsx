@@ -16,13 +16,13 @@ import { TypeModal } from "../../constants/enums";
 import { alertContext } from "../../contexts/alertContext";
 import { postValidatePrompt } from "../../controllers/API";
 import { APIClassType } from "../../types/api";
+import { handleKeyDown } from "../../utils/reactflowUtils";
 import {
   classNames,
   getRandomKeyByssmm,
   varHighlightHTML,
 } from "../../utils/utils";
 import BaseModal from "../baseModal";
-import { handleKeyDown } from "../../utils/reactflowUtils";
 
 export default function GenericModal({
   field_name = "",
@@ -215,7 +215,7 @@ export default function GenericModal({
                 }}
                 placeholder="Type message here."
                 onKeyDown={(e) => {
-                  handleKeyDown(e, inputValue, '');
+                  handleKeyDown(e, inputValue, "");
                 }}
               />
             ) : type === TypeModal.PROMPT && !isEdit ? (
@@ -230,7 +230,7 @@ export default function GenericModal({
                 }}
                 placeholder="Type message here."
                 onKeyDown={(e) => {
-                  handleKeyDown(e, value, '');
+                  handleKeyDown(e, value, "");
                 }}
               />
             ) : (
