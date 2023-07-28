@@ -26,29 +26,28 @@ Here is an example:
 
 ```python
 from langflow import CustomComponent
-from langchain.chains import LLMChain
-from langchain.chains.base import Chain
-from langchain import PromptTemplate
-from langchain.llms.base import BaseLLM
-from langchain import Tool
+from langchain.schema import Document
 
-class BestComponent(CustomComponent):
-    display_name = "Best Component"
-    description = "This is the best component ever"
+class DocumentProcessor(CustomComponent):
+    display_name = "Document Processor"
+    description = "This component processes a document"
 
     def build_config(self) -> dict:
-        cool_tool_names = ["Cool Tool",
-                           "Cooler Tool",
-                           "Coolest Tool"]
+        options = ["Uppercase", "Lowercase", "Titlecase"]
         return {
-            "description": {"multiline": True},
-            "name": {"is_list": True,
-                     "options": cool_tool_names}}
+            "function": {"is_list": True,
+                     "options": options,
+                     "value": options[0]}}
 
-    def build(self, name: str, description: str, chain: Chain):
-        return Tool(name=name,
-                    description=description,
-                    func=chain.run)
+    def build(self, document: Document, function: str) -> Document:
+        page_content = document.page_content
+        if function == "Uppercase":
+            page_content = page_content.upper()
+        elif function == "Lowercase":
+            page_content = page_content.lower()
+        elif function == "Titlecase":
+            page_content = page_content.title()
+        return Document(page_content=page_content)
 ```
 
 </CH.Code>
@@ -66,23 +65,17 @@ The Python script for every Custom Component should follow a set of rules. Let's
 The script must contain a **single class** that inherits from _`CustomComponent`_.
 
 ```python
-# focus
 from langflow import CustomComponent
-from langchain.chains import LLMChain
-from langchain.chains.base import Chain
-from langchain import PromptTemplate
-from langchain.llms.base import BaseLLM
-from langchain import Tool
+from langchain.schema import Document
 
-# focus
-class BestComponent(CustomComponent):
+class MyComponent(CustomComponent):
     display_name = "Custom Component"
     description = "This is a custom component"
 
     def build_config(self) -> dict:
         ...
 
-    def build(self):
+    def build(self, document: Document, function: str) -> Document:
         ...
 ```
 
@@ -94,21 +87,18 @@ This class requires a _`build`_ method, which is used to run the component and d
 
 ```python
 from langflow import CustomComponent
-from langchain.chains import LLMChain
-from langchain.chains.base import Chain
-from langchain import PromptTemplate
-from langchain.llms.base import BaseLLM
-from langchain import Tool
+from langchain.schema import Document
 
-class BestComponent(CustomComponent):
+class MyComponent(CustomComponent):
     display_name = "Custom Component"
     description = "This is a custom component"
 
     def build_config(self) -> dict:
         ...
 
-    # focus[1:20]
-    def build(self) -> Tool:
+    # focus
+    # mark
+    def build(self) -> Document:
         ...
 ```
 
@@ -118,21 +108,18 @@ The [Return Type Annotation](https://docs.python.org/3/library/typing.html) of t
 
 ```python
 from langflow import CustomComponent
-from langchain.chains import LLMChain
-from langchain.chains.base import Chain
-from langchain import PromptTemplate
-from langchain.llms.base import BaseLLM
-from langchain import Tool
+from langchain.schema import Document
 
-class BestComponent(CustomComponent):
+class MyComponent(CustomComponent):
     display_name = "Custom Component"
     description = "This is a custom component"
 
     def build_config(self) -> dict:
         ...
 
-    # focus[21:30]
-    def build(self) -> Tool:
+    # focus[20:31]
+    # mark
+    def build(self) -> Document:
         ...
 ```
 
@@ -140,27 +127,22 @@ class BestComponent(CustomComponent):
 
 ```python
 from langflow import CustomComponent
-from langchain.chains import LLMChain
-from langchain.chains.base import Chain
-from langchain import PromptTemplate
-from langchain.llms.base import BaseLLM
-from langchain import Tool
+from langchain.schema import Document
 
-class BestComponent(CustomComponent):
+class MyComponent(CustomComponent):
     display_name = "Custom Component"
     description = "This is a custom component"
 
-    # focus
     def build_config(self) -> dict:
         ...
 
-    def build(self) -> Tool:
+    def build(self) -> Document:
         ...
 ```
 
 ### Rule 3
 
-The class can have a [_`build_config`_](focus://11:19) method, which is used to define configuration fields for the component. The _`build_config`_ method should always return a dictionary with specific keys representing the field names and their corresponding configurations. It must follow the format described below:
+The class can have a [_`build_config`_](focus://8) method, which is used to define configuration fields for the component. The [_`build_config`_](focus://8) method should always return a dictionary with specific keys representing the field names and their corresponding configurations. It must follow the format described below:
 
 - Top-level keys are field names.
 - Their values are also of type _`dict`_. They specify the behavior of the generated fields.
@@ -171,28 +153,26 @@ Check out the [component reference](../components/custom) for more details on th
 
 ```python
 from langflow import CustomComponent
-from langchain.chains import LLMChain
-from langchain.chains.base import Chain
-from langchain import PromptTemplate
-from langchain.llms.base import BaseLLM
-from langchain import Tool
+from langchain.schema import Document
 
-class BestComponent(CustomComponent):
-    # focus
+class MyComponent(CustomComponent):
+    display_name = "Custom Component"
+    description = "This is a custom component"
+
     def build_config(self) -> dict:
         ...
 
-    def build(self) -> Tool:
+    def build(self) -> Document:
         ...
 ```
 
 ## Example
 
-Let's create a custom component that will convert a chain into a tool. It should receive as input a chain component, a tool name, and a description (for an agent to access it).
+Let's create a simple component that takes a document and a function name as input and returns a document with the page content processed by the selected function.
 
 <Admonition type="info" label="Tip">
 
-This is also possible with Langflow native components. It's being reproduced here with a custom component for demonstration purposes.
+If you were to do this using Langflow's native components, you would create a Tool and ask the agent to use it.
 
 </Admonition>
 
@@ -201,22 +181,22 @@ This is also possible with Langflow native components. It's being reproduced her
 ### Pick a display name
 
 First, let's choose a name for our component by adding a _`display_name`_ attribute. This is the component name to be displayed in the canvas.
+The name of the class is not important, but let's call it _`DocumentProcessor`_.
 
-```python focus=9
+```python
 from langflow import CustomComponent
-from langchain.chains import LLMChain
-from langchain.chains.base import Chain
-from langchain import PromptTemplate
-from langchain.llms.base import BaseLLM
-from langchain import Tool
+from langchain.schema import Document
 
-class BestComponent(CustomComponent):
-    display_name = "Best Component"
+# focus
+class DocumentProcessor(CustomComponent):
+    # focus
+    display_name = "Document Processor"
+    description = "This is a custom component"
 
     def build_config(self) -> dict:
         ...
 
-    def build(self) -> Tool:
+    def build(self) -> Document:
         ...
 ```
 
@@ -226,24 +206,61 @@ class BestComponent(CustomComponent):
 
 We can also write a description for it using the _`description`_ attribute.
 
-```python focus=10
+```python
 from langflow import CustomComponent
-from langchain.chains import LLMChain
-from langchain.chains.base import Chain
-from langchain import PromptTemplate
-from langchain.llms.base import BaseLLM
-from langchain import Tool
+from langchain.schema import Document
 
-class BestComponent(CustomComponent):
-    display_name = "Best Component"
-    description = "This is the best component ever"
+class DocumentProcessor(CustomComponent):
+    display_name = "Document Processor"
+    description = "This component processes a document"
 
     def build_config(self) -> dict:
         ...
 
-    def build(self) -> Tool:
+    def build(self) -> Document:
         ...
 ```
+
+---
+
+```python
+from langflow import CustomComponent
+from langchain.schema import Document
+
+class DocumentProcessor(CustomComponent):
+    display_name = "Document Processor"
+    description = "This component processes a document"
+
+    def build_config(self) -> dict:
+        ...
+
+    def build(self, document: Document, function: str) -> Document:
+        page_content = document.page_content
+        if function == "Uppercase":
+            page_content = page_content.upper()
+        elif function == "Lowercase":
+            page_content = page_content.lower()
+        elif function == "Titlecase":
+            page_content = page_content.title()
+        return Document(page_content=page_content)
+```
+
+### Add the build method
+
+The parameters used are:
+
+- _`document`_ is the document to be processed.
+- _`function`_ is the name of the function to be applied to the document.
+
+The return type is _`Document`_.
+
+This method is called when the component is built (i.e. when you click the _Build_ button in the canvas).
+
+<Admonition type="info">
+  One important aspect of the Type Hints is that generally base Python types add
+  different kinds of fields while other types such as Document add a
+  [handle](../guidelines/components) to the component.
+</Admonition>
 
 ---
 
@@ -251,103 +268,78 @@ class BestComponent(CustomComponent):
 
 The _`build_config`_ method will be used to configure the fields of the component.
 
-- _`multiline`_ allows editing text in an expansive text editor.
-
 - _`is_list`_ allows an input field to contain multiple values. When paired with _`options`_, it will transform it into a dropdown menu.
+- _`options`_ is a list of values to be used in the dropdown menu.
+- _`value`_ is the default value of the field.
+- _`display_name`_ is the name of the field to be displayed in the canvas.
 
-```python focus=12:19
+This method is called when the code is processed (i.e. when you click _Check and Save_ in the code editor).
+
+```python
 from langflow import CustomComponent
-from langchain.chains import LLMChain
-from langchain.chains.base import Chain
-from langchain import PromptTemplate
-from langchain.llms.base import BaseLLM
-from langchain import Tool
+from langchain.schema import Document
 
-class BestComponent(CustomComponent):
-    display_name = "Best Component"
-    description = "This is the best component ever"
+class DocumentProcessor(CustomComponent):
+    display_name = "Document Processor"
+    description = "This component processes a document"
 
     def build_config(self) -> dict:
-        cool_tool_names = ["Summarizer",
-                           "Enhancer",
-                           "Translator"]
+        options = ["Uppercase", "Lowercase", "Titlecase"]
         return {
-            "description": {"multiline": True},
-            "name": {"is_list": True,
-                     "options": cool_tool_names}}
+            "function": {"is_list": True,
+                     "options": options,
+                     "value": options[0],
+                     "display_name": "Function"
+                        },
+            "document": {"display_name": "Document"}
+                }
 
-    def build(self) -> Tool:
-        ...
+    def build(self, document: Document, function: str) -> Document:
+        page_content = document.page_content
+        if function == "Uppercase":
+            page_content = page_content.upper()
+        elif function == "Lowercase":
+            page_content = page_content.lower()
+        elif function == "Titlecase":
+            page_content = page_content.title()
+        return Document(page_content=page_content)
 ```
-
----
-
-```python focus=21:25
-from langflow import CustomComponent
-from langchain.chains import LLMChain
-from langchain.chains.base import Chain
-from langchain import PromptTemplate
-from langchain.llms.base import BaseLLM
-from langchain import Tool
-
-class BestComponent(CustomComponent):
-    display_name = "Best Component"
-    description = "This is the best component ever"
-
-    def build_config(self) -> dict:
-        cool_tool_names = ["Cool Tool",
-                           "Cooler Tool",
-                           "Coolest Tool"]
-        return {
-            "description": {"multiline": True},
-            "name": {"is_list": True,
-                     "options": cool_tool_names}}
-
-    def build(self, name: str, description: str,
-    chain: Chain) -> Tool:
-        return Tool(name=name,
-                    description=description,
-                    func=chain.run)
-```
-
-### Add the build method
-
-The parameters used are:
-
-- name is a string
-- description is a string
-- chain is a Chain
-- The return type is Tool
-
-We then instantiate a Tool and return it.
 
 </CH.Scrollycoding>
 
 In Langflow, this is how our script looks like:
 
-<div
-  style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
->
-  <ZoomableImage
-    alt="Docusaurus themed image"
-    sources={{
-      light: "img/new_langflow2.gif",
-    }}
-  />
-</div>
+{" "}
+
+<ZoomableImage
+  alt="Document Processor code"
+  sources={{
+    light: "img/document_processor_code.png",
+  }}
+  style={{
+    maxWidth: "70%",
+    margin: "0 auto",
+    display: "flex",
+    justifyContent: "center",
+  }}
+/>
 
 And here is our brand new custom component:
 
-<div
-  style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
->
-  <ZoomableImage
-    alt="Docusaurus themed image"
-    sources={{
-      light: "img/new_langflow2.gif",
-    }}
-  />
-</div>
+{" "}
+
+<ZoomableImage
+  alt="Document Processor component"
+  sources={{
+    light: "img/document_processor.png",
+  }}
+  style={{
+    width: "50%",
+    margin: "0 auto",
+    display: "flex",
+    justifyContent: "center",
+  }}
+/>
 
 ## FlowRunner Example
 
