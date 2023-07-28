@@ -52,7 +52,7 @@ class DocumentProcessor(CustomComponent):
 </CH.Code>
 
 <Admonition type="tip">
-  Check out [FlowRunner Component](../examples/flow-runner) for a more powerful
+  Check out [FlowRunner Component](../examples/flow-runner) for a more complex
   example.
 </Admonition>
 
@@ -60,7 +60,7 @@ class DocumentProcessor(CustomComponent):
 
 ## Rules
 
-The Python script for every Custom Component should follow a set of rules. Let's go over them, one by one:
+The Python script for every Custom Component should follow a set of rules. Let's go over them one by one:
 
 <CH.Scrollycoding rows={20} className={""}>
 
@@ -172,19 +172,13 @@ class MyComponent(CustomComponent):
 
 ## Example
 
-Let's create a simple component that takes a document and a function name as input and returns a document with the page content processed by the selected function.
-
-<Admonition type="info" label="Tip">
-
-If you were to do this using Langflow's native components, you would create a Tool and ask the agent to use it.
-
-</Admonition>
+Let's create a custom component that processes a document (_`langchain.schema.Document`_) using a simple function.
 
 ---
 
 ### Pick a display name
 
-First, let's choose a name for our component by adding a _`display_name`_ attribute. This is the component name to be displayed in the canvas. The name of the class is not important, but let's call it _`DocumentProcessor`_.
+To start, let's choose a name for our component by adding a _`display_name`_ attribute. This name will appear on the canvas. The name of the class is not relevant, but let's call it _`DocumentProcessor`_.
 
 ```python
 from langflow import CustomComponent
@@ -207,7 +201,7 @@ class DocumentProcessor(CustomComponent):
 
 ### Write a description
 
-We can also write a description for it using the _`description`_ attribute.
+We can also write a description for it using a _`description`_ attribute.
 
 ```python
 from langflow import CustomComponent
@@ -250,32 +244,19 @@ class DocumentProcessor(CustomComponent):
 
 ### Add the build method
 
-The parameters used are:
-
-- _`document`_ is the document to be processed.
-- _`function`_ is the name of the function to be applied to the document.
+Here, the build method takes two input parameters: _`document`_, representing the input document to be processed, and _`function`_, a string representing the selected text transformation to be applied (either "Uppercase," "Lowercase," or "Titlecase"). The method processes the text content of the input Document based on the selected function. 
 
 The return type is _`Document`_.
 
-This method is called when the component is built (i.e. when you click the _Build_ button in the canvas).
-
-<Admonition type="info">
-  One important aspect of the Type Hints is that generally base Python types add
-  different kinds of fields while other types such as Document add a
-  [handle](../guidelines/components) to the component.
-</Admonition>
-
 ---
 
-### Customize the fields
+### Customize the component fields
 
-The _`build_config`_ method will be used to configure the fields of the component.
+The _`build_config`_ method is here defined to customize the component fields.
 
-- _`options`_ defines that the field will be a dropdown menu. The values must be _`str`_ and the type of the field should also be _`str`_.
-- _`value`_ is the default value of the field.
-- _`display_name`_ is the name of the field to be displayed in the canvas.
-
-This method is called when the code is processed (i.e. when you click _Check and Save_ in the code editor).
+- _`options`_ determines that the field will be a dropdown menu. The list values and field type must be _`str`_.
+- _`value`_ is the default option of the dropdown menu.
+- _`display_name`_ is the name of the field to be displayed.
 
 ```python
 from langflow import CustomComponent
@@ -325,7 +306,7 @@ In Langflow, this is how our script looks like:
   }}
 />
 
-And here is our brand new custom component:
+And there is our brand new custom component:
 
 {" "}
 
@@ -341,3 +322,10 @@ And here is our brand new custom component:
     justifyContent: "center",
   }}
 />
+
+
+<Admonition type="tip" label="Tip">
+
+To reproduce this example using Langflow's native components, you could create a Tool and ask an Agent to use it.
+
+</Admonition>
