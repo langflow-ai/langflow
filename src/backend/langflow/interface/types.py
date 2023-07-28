@@ -101,6 +101,11 @@ def add_new_custom_field(
     field_value = field_config.pop("value", field_value)
     field_advanced = field_config.pop("advanced", False)
 
+    # If options is a list, then it's a dropdown
+    # If options is None, then it's a list of strings
+    is_list = isinstance(field_config.get("options"), list)
+    field_config["is_list"] = is_list or field_config.get("is_list", False)
+
     if "name" in field_config:
         warnings.warn(
             "The 'name' key in field_config is used to build the object and can't be changed."
@@ -188,7 +193,6 @@ def update_display_name_and_description(frontend_node, template_config):
 
 def build_field_config(custom_component: CustomComponent):
     """Build the field configuration for a custom component"""
-    is_valid = custom_component.is_check_valid()
 
     try:
         custom_class = get_function_custom(custom_component.code)
