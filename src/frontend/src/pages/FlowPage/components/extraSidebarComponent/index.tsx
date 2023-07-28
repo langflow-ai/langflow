@@ -137,7 +137,7 @@ export default function ExtraSidebar() {
             Object.keys(dataFilter[d]).length > 0 ? (
               <DisclosureComponent
                 openDisc={search.length == 0 ? false : true}
-                key={nodeNames[d]}
+                key={i}
                 button={{
                   title: nodeNames[d] ?? nodeNames.unknown,
                   Icon: nodeIconsLucide[d] ?? nodeIconsLucide.unknown,
