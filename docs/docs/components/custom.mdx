@@ -1,0 +1,79 @@
+import Admonition from "@theme/Admonition";
+
+# Custom Component
+
+Used to create a custom component. The code is the class that will be converted to a Custom Component with the fields and formatting you define.
+
+**Params**
+
+- **Code:** The Python code to define the component.
+
+The code must be a class that inherits from the _`langflow.CustomComponent`_ class.
+
+The type annotations of the _`build`_ instance method will be used to create the fields of the component.
+
+| Supported types                                           |
+| --------------------------------------------------------- |
+| _`str`_, _`int`_, _`float`_, _`bool`_, _`list`_, _`dict`_ |
+| _`langchain.chains.base.Chain`_                           |
+| _`langchain.PromptTemplate`_                              |
+| _`langchain.llms.base.BaseLLM`_                           |
+| _`langchain.Tool`_                                        |
+| _`langchain.document_loaders.base.BaseLoader`_            |
+| _`langchain.schema.Document`_                             |
+| _`langchain.text_splitters.TextSplitter`_                 |
+| _`langchain.vectorstores.base.VectorStore`_               |
+| _`langchain.embeddings.base.Embeddings`_                  |
+| _`langchain.schema.BaseRetriever`_                        |
+
+The class can have a [_`build_config`_](focus://8) instance method, which is used to define configuration fields for the component.
+The [_`build_config`_](focus://8) method should always return a dictionary with specific keys representing the field names and their corresponding configurations.
+It must follow the format described below:
+
+The top-level keys are the field names.
+
+Their values are of type _`dict`_ with any of the following keys (all of them are **optional**):
+
+| Key                        | Description                                                                                                                                                                                                                           |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| _`field_type: str`_        | The type of the field (can be any of the types supported by the _`build`_ method, passed as a string).                                                                                                                                |
+| _`is_list: bool`_          | If the field is a list.                                                                                                                                                                                                               |
+| _`options: List[str]`_     | This defines the options to be displayed. The _`field_type`_ should invariably be _`str`_. If you set the _`value`_ attribute to one of the options, it will be selected by default. Having _`options`_ will display a dropdown menu. |
+| _`multiline: bool`_        | When the field is a string, this would allow the user to open a text editor.                                                                                                                                                          |
+| _`input_types: List[str]`_ | To be used when you want a _`str`_ field to have connectable handles.                                                                                                                                                                 |
+| _`display_name: str`_      | To define the name of the field.                                                                                                                                                                                                      |
+| _`advanced: bool`_         | To hide the field in default view. This is useful when a field is for advanced users or you simply want to remove it from view.                                                                                                       |
+| _`password: bool`_         | To mask the input text. This is used to allow the user to hide the values of the text (e.g. API keys).                                                                                                                                |
+| _`required: bool`_         | To make the field required.                                                                                                                                                                                                           |
+| _`info: str`_              | To add a tooltip to the field.                                                                                                                                                                                                        |
+| _`file_types: List[str]`_  | This is a requirement if the _`field_type`_ is file. Defines which file types will be accepted. For example, json, yaml or yml.                                                                                                       |
+
+The CustomComponent class provides the following methods:
+
+| Method name    | Description                                                   |
+| -------------- | ------------------------------------------------------------- |
+| _`list_flows`_ | Returns a list of Flow objects with an _`id`_ and a _`name`_. |
+| _`load_flow`_  | Loads a flow from the given _`id`_.                           |
+
+### Usage
+
+```python
+# In the CustomComponent class
+def build(self, flow_name: str)
+  # This is a list of Flow objects with an id and a name
+  flows = self.list_flows()
+  found_flow = next((f for f in flows if f.name == flow_name), None)
+  if not found_flow:
+    raise ValueError(f"Flow {flow_name} not found")
+
+  flow = self.load_flow(found_flow.id)
+  result = flow() # Run the flow
+  return result
+
+```
+
+<Admonition type="info" label="Tip">
+
+[Learn more about Custom Components](../guidelines/custom-component)
+
+</Admonition>

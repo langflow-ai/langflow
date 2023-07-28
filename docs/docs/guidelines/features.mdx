@@ -2,6 +2,7 @@ import ThemedImage from "@theme/ThemedImage";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 import ReactPlayer from "react-player";
+import Admonition from "@theme/Admonition";
 
 # Features
 
@@ -12,17 +13,14 @@ import ReactPlayer from "react-player";
   below:
 </div>
 
-<div
-  style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
->
-  <ZoomableImage
-    alt="Docusaurus themed image"
-    sources={{
-      light: useBaseUrl("img/features.png"),
-    }}
-    style={{ width: "100%", maxWidth: "800px", margin: "0 auto" }}
-  />
-</div>
+{" "}
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: useBaseUrl("img/features.png"),
+  }}
+  style={{ width: "100%", maxWidth: "800px", margin: "0 auto" }}
+/>
 
 <div style={{ marginBottom: "20px" }}>
   Further down, we will explain each of these options.
@@ -34,9 +32,10 @@ import ReactPlayer from "react-player";
 
 Flows can be exported and imported as JSON files.
 
-:::caution
+<Admonition type="caution">
 Watch out for API keys being stored in local files.
-:::
+
+</Admonition>
 
 ---
 

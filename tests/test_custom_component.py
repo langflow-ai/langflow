@@ -1,8 +1,11 @@
 import ast
 import pytest
 import types
+from uuid import uuid4
+
 
 from fastapi import HTTPException
+from langflow.database.models.flow import Flow, FlowCreate
 from langflow.interface.custom.base import CustomComponent
 from langflow.interface.custom.component import (
     Component,
@@ -56,7 +59,8 @@ def test_code_parser_get_tree():
 
 def test_code_parser_syntax_error():
     """
-    Test the __get_tree method raises the CodeSyntaxError when given incorrect syntax.
+    Test the __get_tree method raises the
+    CodeSyntaxError when given incorrect syntax.
     """
     code_syntax_error = "zzz import os"
 
@@ -85,7 +89,8 @@ def test_component_get_code_tree():
 
 def test_component_code_null_error():
     """
-    Test the get_function method raises the ComponentCodeNullError when the code is empty.
+    Test the get_function method raises the
+    ComponentCodeNullError when the code is empty.
     """
     component = Component(code="", function_entrypoint_name="")
     with pytest.raises(ComponentCodeNullError):
@@ -139,7 +144,8 @@ def test_custom_component_get_function():
 
 def test_code_parser_parse_imports_import():
     """
-    Test the parse_imports method of the CodeParser class with an import statement.
+    Test the parse_imports method of the CodeParser
+    class with an import statement.
     """
     parser = CodeParser(code_default)
     tree = parser._CodeParser__get_tree()
@@ -151,7 +157,8 @@ def test_code_parser_parse_imports_import():
 
 def test_code_parser_parse_imports_importfrom():
     """
-    Test the parse_imports method of the CodeParser class with an import from statement.
+    Test the parse_imports method of the CodeParser
+    class with an import from statement.
     """
     parser = CodeParser("from os import path")
     tree = parser._CodeParser__get_tree()
@@ -202,16 +209,18 @@ def test_code_parser_parse_global_vars():
 
 def test_component_get_function_valid():
     """
-    Test the get_function method of the Component class with valid code and function_entrypoint_name.
+    Test the get_function method of the Component
+    class with valid code and function_entrypoint_name.
     """
     component = Component(code="def build(): pass", function_entrypoint_name="build")
-    function = component.get_function()
-    assert callable(function)
+    my_function = component.get_function()
+    assert callable(my_function)
 
 
 def test_custom_component_get_function_entrypoint_args():
     """
-    Test the get_function_entrypoint_args property of the CustomComponent class.
+    Test the get_function_entrypoint_args
+    property of the CustomComponent class.
     """
     custom_component = CustomComponent(
         code=code_default, function_entrypoint_name="build"
@@ -225,7 +234,8 @@ def test_custom_component_get_function_entrypoint_args():
 
 def test_custom_component_get_function_entrypoint_return_type():
     """
-    Test the get_function_entrypoint_return_type property of the CustomComponent class.
+    Test the get_function_entrypoint_return_type
+    property of the CustomComponent class.
     """
     custom_component = CustomComponent(
         code=code_default, function_entrypoint_name="build"
@@ -247,7 +257,8 @@ def test_custom_component_get_main_class_name():
 
 def test_custom_component_get_function_valid():
     """
-    Test the get_function property of the CustomComponent class with valid code and function_entrypoint_name.
+    Test the get_function property of the CustomComponent
+    class with valid code and function_entrypoint_name.
     """
     custom_component = CustomComponent(
         code="def build(): pass", function_entrypoint_name="build"
@@ -280,7 +291,8 @@ def test_code_parser_parse_arg_with_annotation():
 
 def test_code_parser_parse_callable_details_no_args():
     """
-    Test the parse_callable_details method of the CodeParser class with a function with no arguments.
+    Test the parse_callable_details method of the
+    CodeParser class with a function with no arguments.
     """
     parser = CodeParser("")
     node = ast.FunctionDef(
@@ -327,7 +339,8 @@ def test_code_parser_parse_ann_assign():
 
 def test_code_parser_parse_function_def_not_init():
     """
-    Test the parse_function_def method of the CodeParser class with a function that is not __init__.
+    Test the parse_function_def method of the
+    CodeParser class with a function that is not __init__.
     """
     parser = CodeParser("")
     stmt = ast.FunctionDef(
@@ -346,7 +359,8 @@ def test_code_parser_parse_function_def_not_init():
 
 def test_code_parser_parse_function_def_init():
     """
-    Test the parse_function_def method of the CodeParser class with an __init__ function.
+    Test the parse_function_def method of the
+    CodeParser class with an __init__ function.
     """
     parser = CodeParser("")
     stmt = ast.FunctionDef(
@@ -385,7 +399,8 @@ def test_custom_component_class_template_validation_no_code():
 
 def test_custom_component_get_code_tree_syntax_error():
     """
-    Test the get_code_tree method of the CustomComponent class raises the CodeSyntaxError when given incorrect syntax.
+    Test the get_code_tree method of the CustomComponent class
+    raises the CodeSyntaxError when given incorrect syntax.
     """
     custom_component = CustomComponent(
         code="import os as", function_entrypoint_name="build"
@@ -396,7 +411,8 @@ def test_custom_component_get_code_tree_syntax_error():
 
 def test_custom_component_get_function_entrypoint_args_no_args():
     """
-    Test the get_function_entrypoint_args property of the CustomComponent class with a build method with no arguments.
+    Test the get_function_entrypoint_args property of
+    the CustomComponent class with a build method with no arguments.
     """
     my_code = """
 class MyMainClass(CustomComponent):
@@ -425,7 +441,8 @@ class MyClass(CustomComponent):
 
 def test_custom_component_get_main_class_name_no_main_class():
     """
-    Test the get_main_class_name property of the CustomComponent class when there is no main class.
+    Test the get_main_class_name property of the
+    CustomComponent class when there is no main class.
     """
     my_code = """
 def build():
@@ -438,7 +455,8 @@ def build():
 
 def test_custom_component_build_not_implemented():
     """
-    Test the build method of the CustomComponent class raises the NotImplementedError.
+    Test the build method of the CustomComponent
+    class raises the NotImplementedError.
     """
     custom_component = CustomComponent(
         code="def build(): pass", function_entrypoint_name="build"
@@ -447,462 +465,94 @@ def test_custom_component_build_not_implemented():
         custom_component.build()
 
 
-# -------------------------------------------------------
-# @pytest.fixture
-# def custom_chain():
-#     return '''
-# from __future__ import annotations
-# from typing import Any, Dict, List, Optional
-
-# from pydantic import Extra
-
-# from langchain.schema import BaseLanguageModel, Document
-# from langchain.callbacks.manager import (
-#     AsyncCallbackManagerForChainRun,
-#     CallbackManagerForChainRun,
-# )
-# from langchain.chains.base import Chain
-# from langchain.prompts import StringPromptTemplate
-# from langflow.interface.custom.base import CustomComponent
-
-# class MyCustomChain(Chain):
-#     """
-#     An example of a custom chain.
-#     """
-
-# from typing import Any, Dict, List, Optional
-
-# from pydantic import Extra
-
-# from langchain.schema import BaseLanguageModel, Document
-# from langchain.callbacks.manager import (
-#     AsyncCallbackManagerForChainRun,
-#     CallbackManagerForChainRun,
-# )
-# from langchain.chains.base import Chain
-# from langchain.prompts import StringPromptTemplate
-# from langflow.interface.custom.base import CustomComponent
-
-# class MyCustomChain(Chain):
-#     """
-#     An example of a custom chain.
-#     """
-
-#     prompt: StringPromptTemplate
-#     """Prompt object to use."""
-#     llm: BaseLanguageModel
-#     output_key: str = "text"  #: :meta private:
-
-#     class Config:
-#         """Configuration for this pydantic object."""
-
-#         extra = Extra.forbid
-#         arbitrary_types_allowed = True
-
-#     @property
-#     def input_keys(self) -> List[str]:
-#         """Will be whatever keys the prompt expects.
-
-#         :meta private:
-#         """
-#         return self.prompt.input_variables
-
-#     @property
-#     def output_keys(self) -> List[str]:
-#         """Will always return text key.
-
-#         :meta private:
-#         """
-#         return [self.output_key]
-
-#     def _call(
-#         self,
-#         inputs: Dict[str, Any],
-#         run_manager: Optional[CallbackManagerForChainRun] = None,
-#     ) -> Dict[str, str]:
-#         # Your custom chain logic goes here
-#         # This is just an example that mimics LLMChain
-#         prompt_value = self.prompt.format_prompt(**inputs)
-
-#         # Whenever you call a language model, or another chain, you should pass
-#         # a callback manager to it. This allows the inner run to be tracked by
-#         # any callbacks that are registered on the outer run.
-#         # You can always obtain a callback manager for this by calling
-#         # `run_manager.get_child()` as shown below.
-#         response = self.llm.generate_prompt(
-#             [prompt_value],
-#             callbacks=run_manager.get_child() if run_manager else None,
-#         )
-
-#         # If you want to log something about this run, you can do so by calling
-#         # methods on the `run_manager`, as shown below. This will trigger any
-#         # callbacks that are registered for that event.
-#         if run_manager:
-#             run_manager.on_text("Log something about this run")
-
-#         return {self.output_key: response.generations[0][0].text}
-
-#     async def _acall(
-#         self,
-#         inputs: Dict[str, Any],
-#         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
-#     ) -> Dict[str, str]:
-#         # Your custom chain logic goes here
-#         # This is just an example that mimics LLMChain
-#         prompt_value = self.prompt.format_prompt(**inputs)
-
-#         # Whenever you call a language model, or another chain, you should pass
-#         # a callback manager to it. This allows the inner run to be tracked by
-#         # any callbacks that are registered on the outer run.
-#         # You can always obtain a callback manager for this by calling
-#         # `run_manager.get_child()` as shown below.
-#         response = await self.llm.agenerate_prompt(
-#             [prompt_value],
-#             callbacks=run_manager.get_child() if run_manager else None,
-#         )
-
-#         # If you want to log something about this run, you can do so by calling
-#         # methods on the `run_manager`, as shown below. This will trigger any
-#         # callbacks that are registered for that event.
-#         if run_manager:
-#             await run_manager.on_text("Log something about this run")
-
-#         return {self.output_key: response.generations[0][0].text}
-
-#     @property
-#     def _chain_type(self) -> str:
-#         return "my_custom_chain"
-
-# class CustomChain(CustomComponent):
-#     display_name: str = "Custom Chain"
-#     field_config = {
-#         "prompt": {"field_type": "prompt"},
-#         "llm": {"field_type": "BaseLanguageModel"},
-#     }
-
-#     def build(self, prompt, llm, input: str) -> Document:
-#         chain = MyCustomChain(prompt=prompt, llm=llm)
-#         return chain(input)
-# '''
-
-
-# @pytest.fixture
-# def data_processing():
-#     return """
-# import pandas as pd
-# from langchain.schema import Document
-# from langflow.interface.custom.base import CustomComponent
-
-# class CSVLoaderComponent(CustomComponent):
-#     display_name: str = "CSV Loader"
-#     field_config = {
-#         "filename": {"field_type": "str", "required": True},
-#         "column_name": {"field_type": "str", "required": True},
-#     }
-
-#     def build(self, filename: str, column_name: str) -> Document:
-#         # Load the CSV file
-#         df = pd.read_csv(filename)
-
-#         # Verify the column exists
-#         if column_name not in df.columns:
-#             raise ValueError(f"Column '{column_name}' not found in the CSV file")
-
-#         # Convert each row of the specified column to a document object
-#         documents = []
-#         for content in df[column_name]:
-#             metadata = {"filename": filename}
-#             documents.append(Document(page_content=str(content), metadata=metadata))
-
-#         return documents
-# """
-
-
-# @pytest.fixture
-# def filter_docs():
-#     return """
-# from langchain.schema import Document
-# from langflow.interface.custom.base import CustomComponent
-# from typing import List
-
-# class DocumentFilterByLengthComponent(CustomComponent):
-#     display_name: str = "Document Filter By Length"
-#     field_config = {
-#         "documents": {"field_type": "Document", "required": True},
-#         "max_length": {"field_type": "int", "required": True},
-#     }
-
-#     def build(self, documents: List[Document], max_length: int) -> List[Document]:
-#         # Filter the documents by length
-#         filtered_documents = [doc for doc in documents if len(doc.page_content) <= max_length]
-
-#         return filtered_documents
-# """
-
-
-# @pytest.fixture
-# def get_request():
-#     return """
-# import requests
-# from typing import Dict, Union
-# from langchain.schema import Document
-# from langflow.interface.custom.base import CustomComponent
-
-# class GetRequestComponent(CustomComponent):
-#     display_name: str = "GET Request"
-#     field_config = {
-#         "url": {"field_type": "str", "required": True},
-#     }
-
-#     def build(self, url: str) -> Document:
-#         # Send a GET request to the URL
-#         response = requests.get(url)
-
-#         # Raise an exception if the request was not successful
-#         if response.status_code != 200:
-#             raise ValueError(f"GET request failed: {response.status_code} status code")
-
-#         # Create a document with the response text and the URL as metadata
-#         document = Document(page_content=response.text, metadata={"url": url})
-
-#         return document
-# """
-
-
-# @pytest.fixture
-# def post_request():
-#     return """
-# import requests
-# from typing import Dict, Union
-# from langchain.schema import Document
-# from langflow.interface.custom.base import CustomComponent
-
-# class PostRequestComponent(CustomComponent):
-#     display_name: str = "POST Request"
-#     field_config = {
-#         "url": {"field_type": "str", "required": True},
-#         "data": {"field_type": "dict", "required": True},
-#     }
-
-#     def build(self, url: str, data: Dict[str, Union[str, int]]) -> Document:
-#         # Send a POST request to the URL
-#         response = requests.post(url, data=data)
-
-#         # Raise an exception if the request was not successful
-#         if response.status_code != 200:
-#             raise ValueError(f"POST request failed: {response.status_code} status code")
-
-#         # Create a document with the response text and the URL and data as metadata
-#         document = Document(page_content=response.text, metadata={"url": url, "data": data})
-
-#         return document
-# """
-
-
-# @pytest.fixture
-# def code_default():
-#     return """
-# from langflow import Prompt
-# from langflow.interface.custom.custom_component import CustomComponent
-
-# from langchain.llms.base import BaseLLM
-# from langchain.chains import LLMChain
-# from langchain import PromptTemplate
-# from langchain.schema import Document
-
-# import requests
-
-# class YourComponent(CustomComponent):
-#     #display_name: str = "Your Component"
-#     #description: str = "Your description"
-#     #field_config = { "url": { "multiline": True, "required": True } }
-
-#     def build(self, url: str, llm: BaseLLM, template: Prompt) -> Document:
-#         response = requests.get(url)
-#         prompt = PromptTemplate.from_template(template)
-#         chain = LLMChain(llm=llm, prompt=prompt)
-#         result = chain.run(response.text[:300])
-#         return Document(page_content=str(result))
-# """
-
-
-# @pytest.fixture(params=[
-#     'code_default', 'custom_chain', 'data_processing',
-#     'filter_docs', 'get_request', 'post_request'])
-# def component_code(
-#         request, code_default, custom_chain, data_processing,
-#         filter_docs, get_request, post_request):
-#     return locals()[request.param]
-
-
-# def test_empty_code_tree(component_code):
-#     """
-#     Test the situation when the code tree is empty.
-#     """
-#     cc = CustomComponent(code=component_code)
-#     with patch.object(cc, 'get_code_tree') as mocked_get_code_tree:
-#         mocked_get_code_tree.return_value = {}
-#         assert cc.get_function_entrypoint_args == ''
-#         assert cc.get_function_entrypoint_return_type == ''
-#         assert cc.get_main_class_name == ''
-#         assert cc.build_template_config == {}
-
-
-# def test_class_template_validation(component_code):
-#     """
-#     Test the _class_template_validation method.
-#     """
-#     cc = CustomComponent(code=component_code)
-#     assert cc._class_template_validation(component_code) == True
-#     with pytest.raises(HTTPException):
-#         cc._class_template_validation(None)
-
-
-# def test_get_code_tree(component_code):
-#     """
-#     Test the get_code_tree method.
-#     """
-#     cc = CustomComponent(code=component_code)
-#     with patch.object(cc, 'get_code_tree') as mocked_get_code_tree:
-#         mocked_get_code_tree.return_value = {'classes': []}
-#         assert cc.get_code_tree(component_code) == {'classes': []}
-
-
-# def test_get_function_entrypoint_args(component_code):
-#     """
-#     Test the get_function_entrypoint_args method.
-#     """
-#     cc = CustomComponent(code=component_code)
-#     with patch.object(cc, 'get_code_tree') as mocked_get_code_tree:
-#         mocked_get_code_tree.return_value = {'classes': []}
-#         assert cc.get_function_entrypoint_args == ''
-
-
-# def test_get_function_entrypoint_return_type(component_code):
-#     """
-#     Test the get_function_entrypoint_return_type method.
-#     """
-#     cc = CustomComponent(code=component_code)
-#     with patch.object(cc, 'get_code_tree') as mocked_get_code_tree:
-#         mocked_get_code_tree.return_value = {'classes': []}
-#         assert cc.get_function_entrypoint_return_type == ''
-
-
-# def test_get_main_class_name(component_code):
-#     """
-#     Test the get_main_class_name method.
-#     """
-#     cc = CustomComponent(code=component_code)
-#     with patch.object(cc, 'get_code_tree') as mocked_get_code_tree:
-#         mocked_get_code_tree.return_value = {'classes': []}
-#         assert cc.get_main_class_name == ''
-
-
-# def test_build_template_config(component_code):
-#     """
-#     Test the build_template_config method.
-#     """
-#     cc = CustomComponent(code=component_code)
-#     with patch.object(cc, 'get_code_tree') as mocked_get_code_tree:
-#         mocked_get_code_tree.return_value = {
-#             'classes': [{'name': '', 'attributes': []}]}
-#         assert cc.build_template_config == {}
-
-
-# def test_get_function(component_code):
-#     """
-#     Test the get_function method.
-#     """
-#     cc = CustomComponent(code=component_code, function_entrypoint_name='build')
-#     assert callable(cc.get_function)
-
-
-# def test_build(component_code):
-#     """
-#     Test the build method.
-#     """
-#     cc = CustomComponent(code=component_code)
-#     with pytest.raises(NotImplementedError):
-#         cc.build()
-
-
-# @pytest.mark.parametrize("entrypoint_name", ["build", "non_exist_method"])
-# def test_set_non_existing_function_entrypoint_name(component_code, entrypoint_name):
-#     """
-#     Test setting a non-existing function entrypoint name.
-#     """
-#     cc = CustomComponent(
-#         code=component_code,
-#         function_entrypoint_name=entrypoint_name
-#     )
-#     with pytest.raises(AttributeError):
-#         cc.get_function
-
-
-# @pytest.mark.parametrize("base_class", ["CustomComponent", "NonExistingClass"])
-# def test_set_non_existing_base_class(component_code, base_class):
-#     """
-#     Test setting a non-existing base class.
-#     """
-#     cc = CustomComponent(code=component_code)
-#     cc.code_class_base_inheritance = base_class
-#     with pytest.raises(AttributeError):
-#         cc.get_main_class_name
-
-
-# def test_class_with_no_methods(component_code):
-#     """
-#     Test a component class with no methods.
-#     """
-#     cc = CustomComponent(code=component_code)
-#     with patch.object(cc, 'get_code_tree') as mocked_get_code_tree:
-#         mocked_get_code_tree.return_value = {
-#             'classes': [
-#                 {
-#                     'name': 'CustomComponent',
-#                     'methods': [],
-#                     'bases': ['CustomComponent']
-#                 }
-#             ]
-#         }
-#         assert cc.get_function_entrypoint_args == ''
-#         assert cc.get_function_entrypoint_return_type == ''
-
-
-# def test_class_with_no_bases(component_code):
-#     """
-#     Test a component class with no bases.
-#     """
-#     cc = CustomComponent(code=component_code)
-#     with patch.object(cc, 'get_code_tree') as mocked_get_code_tree:
-#         mocked_get_code_tree.return_value = {
-#             'classes': [
-#                 {
-#                     'name': 'CustomComponent',
-#                     'methods': [],
-#                     'bases': []
-#                 }
-#             ]
-#         }
-#         assert cc.get_function_entrypoint_args == ''
-#         assert cc.get_function_entrypoint_return_type == ''
-
-
-# def test_class_with_no_name(component_code):
-#     """
-#     Test a component class with no name.
-#     """
-#     cc = CustomComponent(code=component_code)
-#     with patch.object(cc, 'get_code_tree') as mocked_get_code_tree:
-#         mocked_get_code_tree.return_value = {'classes': [
-#             {'name': '', 'methods': [], 'bases': ['CustomComponent']}]}
-#         assert cc.get_main_class_name == ''
-
-
-# @pytest.mark.parametrize("input_code", ["", "not a valid python code"])
-# def test_invalid_input_code(input_code):
-#     """
-#     Test inputting an invalid Python code.
-#     """
-#     with pytest.raises(SyntaxError):
-#         cc = CustomComponent(code=input_code)
+def test_build_config_no_code():
+    component = CustomComponent(code=None)
+
+    assert component.get_function_entrypoint_args == ""
+    assert component.get_function_entrypoint_return_type == ""
+
+
+@pytest.fixture
+def component():
+    return CustomComponent(
+        field_config={
+            "fields": {
+                "llm": {"type": "str"},
+                "url": {"type": "str"},
+                "year": {"type": "int"},
+            }
+        }
+    )
+
+
+@pytest.fixture(scope="session")
+def test_flow(db):
+    flow_data = {
+        "nodes": [{"id": "1"}, {"id": "2"}],
+        "edges": [{"source": "1", "target": "2"}],
+    }
+
+    # Create flow
+    flow = FlowCreate(
+        id=uuid4(), name="Test Flow", description="Fixture flow", data=flow_data
+    )
+
+    # Add to database
+    db.add(flow)
+    db.commit()
+
+    yield flow
+
+    # Clean up
+    db.delete(flow)
+    db.commit()
+
+
+@pytest.fixture(scope="session")
+def db(app):
+    # Setup database for tests
+    yield app.db
+
+    # Teardown
+    app.db.drop_all()
+
+
+def test_list_flows_return_type(component):
+    flows = component.list_flows()
+    assert isinstance(flows, list)
+
+
+def test_list_flows_flow_objects(component):
+    flows = component.list_flows()
+    assert all(isinstance(flow, Flow) for flow in flows)
+
+
+def test_build_config_return_type(component):
+    config = component.build_config()
+    assert isinstance(config, dict)
+
+
+def test_build_config_has_fields(component):
+    config = component.build_config()
+    assert "fields" in config
+
+
+def test_build_config_fields_dict(component):
+    config = component.build_config()
+    assert isinstance(config["fields"], dict)
+
+
+def test_build_config_field_keys(component):
+    config = component.build_config()
+    assert all(isinstance(key, str) for key in config["fields"])
+
+
+def test_build_config_field_values_dict(component):
+    config = component.build_config()
+    assert all(isinstance(value, dict) for value in config["fields"].values())
+
+
+def test_build_config_field_value_keys(component):
+    config = component.build_config()
+    field_values = config["fields"].values()
+    assert all("type" in value for value in field_values)

@@ -1,11 +1,10 @@
-from typing import Callable, Optional
+from typing import Any, Callable, List, Optional
 from fastapi import HTTPException
-from langflow.interface.custom.constants import LANGCHAIN_BASE_TYPES
+from langflow.interface.custom.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.component import Component
 
 from langflow.utils import validate
 
-from uuid import UUID
 from langflow.database.base import session_getter
 from langflow.database.models.flow import Flow
 from pydantic import Extra
@@ -17,14 +16,14 @@ class CustomComponent(Component, extra=Extra.allow):
     code_class_base_inheritance = "CustomComponent"
     function_entrypoint_name = "build"
     function: Optional[Callable] = None
-    return_type_valid_list = list(LANGCHAIN_BASE_TYPES.keys())
+    return_type_valid_list = list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
     repr_value: Optional[str] = ""
 
     def __init__(self, **data):
         super().__init__(**data)
 
     def custom_repr(self):
-        return self.repr_value
+        return str(self.repr_value)
 
     def build_config(self):
         return self.field_config
@@ -44,13 +43,15 @@ class CustomComponent(Component, extra=Extra.allow):
         return True
 
     def is_check_valid(self) -> bool:
-        return self._class_template_validation(self.code)
+        return self._class_template_validation(self.code) if self.code else False
 
     def get_code_tree(self, code: str):
         return super().get_code_tree(code)
 
     @property
     def get_function_entrypoint_args(self) -> str:
+        if not self.code:
+            return ""
         tree = self.get_code_tree(self.code)
 
         component_classes = [
@@ -78,6 +79,8 @@ class CustomComponent(Component, extra=Extra.allow):
 
     @property
     def get_function_entrypoint_return_type(self) -> str:
+        if not self.code:
+            return ""
         tree = self.get_code_tree(self.code)
 
         component_classes = [
@@ -138,16 +141,19 @@ class CustomComponent(Component, extra=Extra.allow):
     def get_function(self):
         return validate.create_function(self.code, self.function_entrypoint_name)
 
-    def load_flow(self, flow_id: UUID = None):
+    def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> Any:
         from langflow.processing.process import build_sorted_vertices_with_caching
+        from langflow.processing.process import process_tweaks
 
         with session_getter() as session:
-            data_graph = flow.data if (flow := session.get(Flow, flow_id)) else None
-        if not data_graph:
+            graph_data = flow.data if (flow := session.get(Flow, flow_id)) else None
+        if not graph_data:
             raise ValueError(f"Flow {flow_id} not found")
-        return build_sorted_vertices_with_caching(data_graph)
+        if tweaks:
+            graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks)
+        return build_sorted_vertices_with_caching(graph_data)
 
-    def list_flows(self):
+    def list_flows(self) -> List[Flow]:
         with session_getter() as session:
             flows = session.query(Flow).all()
         return flows

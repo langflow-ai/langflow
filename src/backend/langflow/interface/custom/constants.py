@@ -20,13 +20,22 @@ LANGCHAIN_BASE_TYPES = {
     "VectorStore": VectorStore,
     "Embeddings": Embeddings,
     "BaseRetriever": BaseRetriever,
+}
+
+# Langchain base types plus Python base types
+CUSTOM_COMPONENT_SUPPORTED_TYPES = {
+    **LANGCHAIN_BASE_TYPES,
     "str": str,
+    "int": int,
+    "float": float,
+    "bool": bool,
+    "list": list,
+    "dict": dict,
 }
 
 
 DEFAULT_CUSTOM_COMPONENT_CODE = """
-from langflow import Prompt
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow import CustomComponent
 
 from langchain.llms.base import BaseLLM
 from langchain.chains import LLMChain
@@ -38,11 +47,12 @@ import requests
 class YourComponent(CustomComponent):
     display_name: str = "Your Component"
     description: str = "Your description"
-    field_config = { "url": { "multiline": True, "required": True } }
 
-    def build(self, url: str, llm: BaseLLM, template: Prompt) -> Document:
+    def build_config(self):
+        return { "url": { "multiline": True, "required": True } }
+
+    def build(self, url: str, llm: BaseLLM, prompt: PromptTemplate) -> Document:
         response = requests.get(url)
-        prompt = PromptTemplate.from_template(template)
         chain = LLMChain(llm=llm, prompt=prompt)
         result = chain.run(response.text[:300])
         return Document(page_content=str(result))
