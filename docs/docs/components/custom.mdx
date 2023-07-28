@@ -36,17 +36,17 @@ Their values are of type _`dict`_ with any of the following keys (all of them ar
 
 | Key                        | Description                                                                                                                                                                                                                           |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| _`field_type: str`_        | The type of the field (can be any of the types supported by the _`build`_ method)                                                                                                                                                     |
-| _`is_list: bool`_          | If the field is a list                                                                                                                                                                                                                |
+| _`field_type: str`_        | The type of the field (can be any of the types supported by the _`build`_ method, passed as a string).                                                                                                                                |
+| _`is_list: bool`_          | If the field is a list.                                                                                                                                                                                                               |
 | _`options: List[str]`_     | This defines the options to be displayed. The _`field_type`_ should invariably be _`str`_. If you set the _`value`_ attribute to one of the options, it will be selected by default. Having _`options`_ will display a dropdown menu. |
-| _`multiline: bool`_        | When the field is a string, if it should be multiline                                                                                                                                                                                 |
-| _`input_types: List[str]`_ | To be used when you want a _`str`_ field to have connectable handles                                                                                                                                                                  |
-| _`display_name: str`_      | To define the name of the field                                                                                                                                                                                                       |
-| _`advanced: bool`_         | To hide the field in default view                                                                                                                                                                                                     |
-| _`password: bool`_         | To mask the input text                                                                                                                                                                                                                |
-| _`required: bool`_         | To make the field required                                                                                                                                                                                                            |
-| _`info: str`_              | To add a tooltip to the field                                                                                                                                                                                                         |
-| _`file_types: List[str]`_  | This is a requirement if the _`field_type`_ is file. Defines which file types will be accepted. For example, json, yaml or yml                                                                                                        |
+| _`multiline: bool`_        | When the field is a string, this would allow the user to open a text editor.                                                                                                                                                          |
+| _`input_types: List[str]`_ | To be used when you want a _`str`_ field to have connectable handles.                                                                                                                                                                 |
+| _`display_name: str`_      | To define the name of the field.                                                                                                                                                                                                      |
+| _`advanced: bool`_         | To hide the field in default view. This is useful when a field is for advanced users or you simply want to remove it from view.                                                                                                       |
+| _`password: bool`_         | To mask the input text. This is used to allow the user to hide the values of the text (e.g. API keys).                                                                                                                                |
+| _`required: bool`_         | To make the field required.                                                                                                                                                                                                           |
+| _`info: str`_              | To add a tooltip to the field.                                                                                                                                                                                                        |
+| _`file_types: List[str]`_  | This is a requirement if the _`field_type`_ is file. Defines which file types will be accepted. For example, json, yaml or yml.                                                                                                       |
 
 The CustomComponent class provides the following methods:
 
@@ -67,7 +67,7 @@ def build(self, flow_name: str)
     raise ValueError(f"Flow {flow_name} not found")
 
   flow = self.load_flow(found_flow.id)
-  result = flow()
+  result = flow() # Run the flow
   return result
 
 ```
