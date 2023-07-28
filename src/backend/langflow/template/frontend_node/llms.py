@@ -19,7 +19,7 @@ class LLMFrontendNode(FrontendNode):
                     name="credentials",
                     value="",
                     suffixes=[".json"],
-                    fileTypes=["json"],
+                    file_types=["json"],
                 )
             )
 

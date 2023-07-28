@@ -132,7 +132,7 @@ export default function GenericNode({
                     </span>
                   ) : (
                     <div className="max-h-96 overflow-auto">
-                      {validationStatus.params
+                      {typeof validationStatus.params === "string"
                         ? validationStatus.params
                             .split("\n")
                             .map((line, index) => <div key={index}>{line}</div>)

@@ -9,7 +9,7 @@ from docstring_parser import parse  # type: ignore
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants
 from langflow.utils.logger import logger
-from multiprocess import cpu_count
+from multiprocess import cpu_count  # type: ignore
 
 
 def build_template_from_function(
@@ -301,13 +301,15 @@ def get_type(value: Any) -> Union[str, type]:
     return _type if isinstance(_type, str) else _type.__name__
 
 
-def remove_optional_wrapper(_type: str) -> str:
+def remove_optional_wrapper(_type: Union[str, type]) -> str:
     """
     Removes the 'Optional' wrapper from the type string.
 
     Returns:
         The type string with the 'Optional' wrapper removed.
     """
+    if isinstance(_type, type):
+        _type = str(_type)
     if "Optional" in _type:
         _type = _type.replace("Optional[", "")[:-1]
 

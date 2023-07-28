@@ -48,29 +48,3 @@ class PythonFunctionTool(Function, Tool):
 
 class PythonFunction(Function):
     code: str
-
-
-class CustomComponent_old(BaseModel):
-    code: str
-    function: Optional[Callable] = None
-    imports: Optional[str] = None
-
-    # Eval code and store the class
-    def __init__(self, **data):
-        super().__init__(**data)
-
-    # Validate the Class code
-    @validator("code")
-    def validate_func(cls, v):
-        try:
-            validate.eval_function(v)
-        except Exception as e:
-            raise e
-
-        return v
-
-    def get_function(self):
-        """Get the function"""
-        function_name = validate.extract_function_name(self.code)
-
-        return validate.create_function(self.code, function_name)

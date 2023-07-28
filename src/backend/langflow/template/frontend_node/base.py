@@ -53,6 +53,7 @@ class FrontendNode(BaseModel):
     output_types: List[str] = []
     field_formatters: FieldFormatters = Field(default_factory=FieldFormatters)
     beta: bool = False
+    error: Optional[str] = None
 
     # field formatters is an instance attribute but it is not used in the class
     # so we need to create a method to get it
@@ -85,6 +86,7 @@ class FrontendNode(BaseModel):
                 "output_types": self.output_types,
                 "documentation": self.documentation,
                 "beta": self.beta,
+                "error": self.error,
             },
         }
 

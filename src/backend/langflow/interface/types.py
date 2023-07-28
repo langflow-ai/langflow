@@ -1,6 +1,6 @@
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
-from langflow.interface.custom.constants import LANGCHAIN_BASE_TYPES
+from langflow.interface.custom.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.document_loaders.base import documentloader_creator
 from langflow.interface.embeddings.base import embedding_creator
 from langflow.interface.importing.utils import get_function_custom
@@ -98,6 +98,13 @@ def add_new_custom_field(
     display_name = field_config.pop("display_name", field_name)
     field_type = field_config.pop("field_type", field_type)
     field_type = process_type(field_type)
+    field_value = field_config.pop("value", field_value)
+    field_advanced = field_config.pop("advanced", False)
+
+    # If options is a list, then it's a dropdown
+    # If options is None, then it's a list of strings
+    is_list = isinstance(field_config.get("options"), list)
+    field_config["is_list"] = is_list or field_config.get("is_list", False)
 
     if "name" in field_config:
         warnings.warn(
@@ -114,7 +121,7 @@ def add_new_custom_field(
         value=field_value,
         show=True,
         required=required,
-        advanced=False,
+        advanced=field_advanced,
         placeholder=placeholder,
         display_name=display_name,
         **field_config,
@@ -126,8 +133,9 @@ def add_new_custom_field(
 
 
 # TODO: Move to correct place
-def add_code_field(template, raw_code):
+def add_code_field(template, raw_code, field_config):
     # Field with the Python code to allow update
+
     code_field = {
         "code": {
             "dynamic": True,
@@ -138,7 +146,7 @@ def add_code_field(template, raw_code):
             "value": raw_code,
             "password": False,
             "name": "code",
-            "advanced": False,
+            "advanced": field_config.pop("advanced", False),
             "type": "code",
             "list": False,
         }
@@ -183,21 +191,29 @@ def update_display_name_and_description(frontend_node, template_config):
         frontend_node["description"] = template_config["description"]
 
 
-def build_field_config(custom_component):
+def build_field_config(custom_component: CustomComponent):
     """Build the field configuration for a custom component"""
+
     try:
         custom_class = get_function_custom(custom_component.code)
-        return custom_class().build_config()
-
     except Exception as exc:
-        logger.error(f"Error while building field config: {exc}")
+        logger.error(f"Error while getting custom function: {str(exc)}")
+        return {}
+
+    try:
+        return custom_class().build_config()
+    except Exception as exc:
+        logger.error(f"Error while building field config: {str(exc)}")
         return {}
 
 
 def add_extra_fields(frontend_node, field_config, function_args):
     """Add extra fields to the frontend node"""
-    if function_args is None:
+    if function_args is None or function_args == "":
         return
+
+    # sort function_args which is a list of dicts
+    function_args.sort(key=lambda x: x["name"])
 
     for extra_field in function_args:
         if "name" not in extra_field or extra_field["name"] == "self":
@@ -232,19 +248,19 @@ def get_field_properties(extra_field):
 
 def add_base_classes(frontend_node, return_type):
     """Add base classes to the frontend node"""
-    if return_type not in LANGCHAIN_BASE_TYPES or return_type is None:
+    if return_type not in CUSTOM_COMPONENT_SUPPORTED_TYPES or return_type is None:
         raise HTTPException(
             status_code=400,
             detail={
                 "error": (
                     "Invalid return type should be one of: "
-                    f"{list(LANGCHAIN_BASE_TYPES.keys())}"
+                    f"{list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())}"
                 ),
                 "traceback": traceback.format_exc(),
             },
         )
 
-    return_type_instance = LANGCHAIN_BASE_TYPES.get(return_type)
+    return_type_instance = CUSTOM_COMPONENT_SUPPORTED_TYPES.get(return_type)
     base_classes = get_base_classes(return_type_instance)
 
     for base_class in base_classes:
@@ -268,7 +284,9 @@ def build_langchain_template_custom_component(custom_component: CustomComponent)
         frontend_node, field_config, custom_component.get_function_entrypoint_args
     )
 
-    frontend_node = add_code_field(frontend_node, custom_component.code)
+    frontend_node = add_code_field(
+        frontend_node, custom_component.code, field_config.get("code", {})
+    )
 
     add_base_classes(
         frontend_node, custom_component.get_function_entrypoint_return_type
@@ -287,8 +305,8 @@ def load_files_from_path(path: str):
 def build_and_validate_all_files(reader, file_list):
     """Build and validate all files"""
     data = reader.build_component_menu_list(file_list)
-    valid_components = reader.filter_loaded_components(data=data, with_errors=False)
 
+    valid_components = reader.filter_loaded_components(data=data, with_errors=False)
     invalid_components = reader.filter_loaded_components(data=data, with_errors=True)
 
     return valid_components, invalid_components
@@ -341,12 +359,15 @@ def build_invalid_menu(invalid_components):
                     .get(type(CustomComponent()).__name__)
                 )
 
+                component_template["error"] = component.get("error", None)
                 component_template.get("template").get("code")["value"] = component_code
 
                 invalid_menu[menu_name][component_name] = component_template
 
             except Exception as exc:
-                logger.error(f"Error while creating custom component: {exc}")
+                logger.error(
+                    f"Error while creating custom component [{component_name}]: {str(exc)}"
+                )
 
     return invalid_menu
 

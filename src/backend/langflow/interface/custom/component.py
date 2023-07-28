@@ -1,4 +1,5 @@
 import ast
+from typing import Optional
 from pydantic import BaseModel
 from fastapi import HTTPException
 
@@ -20,7 +21,7 @@ class Component(BaseModel):
         "The name of the entrypoint function must be provided."
     )
 
-    code: str
+    code: Optional[str]
     function_entrypoint_name = "build"
     field_config: dict = {}
 
