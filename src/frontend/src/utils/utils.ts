@@ -89,222 +89,31 @@ export function checkUpperWords(str: string) {
 export const isWrappedWithClass = (event: any, className: string | undefined) =>
   event.target.closest(`.${className}`);
 
-export function groupByFamily(data, baseClasses, left, type, flow) {
-  let parentOutput: string;
-  let arrOfParent: string[] = [];
-  let arrOfType: { family: string; type: string; component: string }[] = [];
-  let arrOfLength: { length: number; type: string }[] = [];
-  let lastType = "";
-
-  Object.keys(data).forEach((d) => {
-    Object.keys(data[d]).forEach((n) => {
-      try {
-        if (
-          data[d][n].base_classes.some((r) =>
-            baseClasses.split("\n").includes(r)
-          )
-        ) {
-          arrOfParent.push(d);
-        }
-        if (n === type) {
-          parentOutput = d;
-        }
-
-        if (d !== lastType) {
-          arrOfLength.push({
-            length: Object.keys(data[d]).length,
-            type: d,
-          });
-
-          lastType = d;
-        }
-      } catch (e) {
-        console.log(e);
+export function groupByFamily(data, baseClasses, left) {
+    const baseClassesSet = new Set(baseClasses.split("\n"));
+    let arrOfPossibleInputs = [];
+    let arrOfPossibleOutputs = [];
+  
+    for (const [d, nodes] of Object.entries(data)) {
+      let tempInputs = [], tempOutputs = [];
+  
+      for (const [n, node] of Object.entries(nodes)) {
+        const hasBaseClassInTemplate = Object.values(node.template).some((t: any) => t.type && baseClassesSet.has(t.type));
+        const hasBaseClassInBaseClasses = node.base_classes.some(t => baseClassesSet.has(t));
+  
+        if(hasBaseClassInTemplate) tempInputs.push(n);
+        if(hasBaseClassInBaseClasses) tempOutputs.push(n);
       }
-    });
-  });
-
-  Object.keys(data).map((d) => {
-    Object.keys(data[d]).map((n) => {
-      try {
-        baseClasses.split("\n").forEach((tol) => {
-          data[d][n].base_classes.forEach((data) => {
-            if (tol === data) {
-              arrOfType.push({
-                family: d,
-                type: data,
-                component: n,
-              });
-            }
-          });
-        });
-      } catch (e) {
-        console.log(e);
-      }
-    });
-  });
-
-  if (left === false) {
-    let groupedBy = arrOfType.filter((object, index, self) => {
-      const foundIndex = self.findIndex(
-        (o) => o.family === object.family && o.type === object.type
-      );
-      return foundIndex === index;
-    });
-
-    return groupedBy.reduce((result, item) => {
-      const existingGroup = result.find(
-        (group) => group.family === item.family
-      );
-
-      if (existingGroup) {
-        existingGroup.type += `, ${item.type}`;
-      } else {
-        result.push({
-          family: item.family,
-          type: item.type,
-          component: item.component,
-        });
-      }
-
-      if (parentOutput !== "custom_components") {
-        let resFil = result.filter((group) => group.family === parentOutput);
-        result = resFil;
-      }
-
-      return result;
-    }, []);
-  } else {
-    const groupedArray = [];
-    const groupedData = {};
-
-    arrOfType.forEach((item) => {
-      const { family, type, component } = item;
-      const key = `${family}-${type}`;
-
-      if (!groupedData[key]) {
-        groupedData[key] = { family, type, component: [component] };
-      } else {
-        groupedData[key].component.push(component);
-      }
-    });
-
-    for (const key in groupedData) {
-      groupedArray.push(groupedData[key]);
+  
+      const totalNodes = Object.keys(nodes).length;
+      if(tempInputs.length) arrOfPossibleInputs.push({category: d, nodes: tempInputs, full: tempInputs.length === totalNodes});
+      if(tempOutputs.length) arrOfPossibleOutputs.push({category: d, nodes: tempOutputs, full: tempOutputs.length === totalNodes});
     }
-
-    groupedArray.forEach((object, index, self) => {
-      const findObj = arrOfLength.find((x) => x.type === object.family);
-      if (object.component.length === findObj.length) {
-        self[index]["type"] = "";
-      } else {
-        self[index]["type"] = object.component.join(", ");
-      }
-    });
-    return groupedArray;
+  
+    return left 
+      ? arrOfPossibleOutputs.map(t => ({family: t.category, type: t.full ? "" : t.nodes.join(", ")}))
+      : arrOfPossibleInputs.map(t => ({family: t.category, type: t.full ? "" : t.nodes.join(", ")}));
   }
-}
-
-export function groupByFamilyCustom(data, baseClasses, left, type, flow) {
-  let arrOfParentCustom: string[] = [];
-  let arrOfType: { family: string; type: string; component: string }[] = [];
-
-  if (type === "CustomComponent") {
-    const uniqueValuesSet = new Set();
-    flow.forEach((element) => {
-      element["data"]["node"]["base_classes"].forEach((el) => {
-        if (!uniqueValuesSet.has(el)) {
-          arrOfParentCustom.push(el);
-          uniqueValuesSet.add(el);
-        }
-      });
-    });
-  }
-
-  if (left === false) {
-    arrOfParentCustom.map((n) => {
-      try {
-        arrOfType.push({
-          family: "custom_components",
-          type: n,
-          component: nodeNames["custom_components"],
-        });
-      } catch (e) {
-        console.log(e);
-      }
-    });
-  } else {
-    flow.forEach((element) => {
-      Object.keys(element["data"]["node"]["template"]).map((el) => {
-        if (
-          element["data"]["node"]["template"][el].input_types &&
-          element["data"]["node"]["template"][el].input_types.length > 0
-        ) {
-          element["data"]["node"]["template"][el].input_types.map((n) => {
-            try {
-              arrOfType.push({
-                family: "custom_components",
-                type: n,
-                component: nodeNames["custom_components"],
-              });
-            } catch (e) {
-              console.log(e);
-            }
-          });
-        }
-      });
-    });
-  }
-
-  const groupedResult = {};
-
-  arrOfType.forEach((item) => {
-    const { family, type, component } = item;
-    if (groupedResult.hasOwnProperty(family)) {
-      if (!groupedResult[family].type.includes(type)) {
-        groupedResult[family].type += `, ${type}`;
-      }
-    } else {
-      groupedResult[family] = { family, type, component };
-    }
-  });
-
-  const result = Object.values(groupedResult);
-
-  if (left === false) {
-    let resultFiltered = [];
-    flow.forEach((element) => {
-      Object.keys(element["data"]["node"]["template"]).map((el) => {
-        if (
-          element["data"]["node"]["template"][el].input_types &&
-          element["data"]["node"]["template"][el].input_types.length > 0
-        ) {
-          element["data"]["node"]["template"][el].input_types.map((n) => {
-            resultFiltered.push({
-              family: "custom_components",
-              type: n,
-              component: element["data"]["node"]["display_name"],
-            });
-          });
-        }
-      });
-    });
-
-    if (resultFiltered.length === 0) {
-      Object.keys(groupedResult).forEach((el) => {
-        resultFiltered.push({
-          family: "custom_components",
-          type: groupedResult[el].type,
-          component: nodeNames["custom_components"],
-        });
-      });
-    }
-
-    return resultFiltered;
-  } else {
-    return result;
-  }
-}
 
 export function buildInputs(tabsState, id) {
   return tabsState &&
