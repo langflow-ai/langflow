@@ -12,7 +12,7 @@ To use a custom component, follow these steps:
 
 <Admonition type="info" label="Tip">
 
-For an in depth explanation of custom components, their rules and applications, make sure to read [Custom Component guidelines](../guidelines/custom-component).
+For an in-depth explanation of custom components, their rules, and applications, make sure to read [Custom Component guidelines](../guidelines/custom-component).
 
 </Admonition>
 
@@ -23,11 +23,11 @@ For an in depth explanation of custom components, their rules and applications, 
 
 ## The CustomComponent Class
 
-The CustomComponent class serves as the foundation for creating custom components. By inheriting from this class, users can define their own specialized components with configurable fields, tailored to their specific requirements.
+The CustomComponent class serves as the foundation for creating custom components. By inheriting this class, users can create new, configurable components, tailored to their specific requirements.
 
 **Methods**
 
-- **build**: This is a required method within a Custom Component class. It defines the functionality of the component and specifies how it processes input data to produce output data. This method is called when the component is built (i.e. when you click the *Build* ⚡ button in the canvas).
+- **build**: This method is required within a Custom Component class. It defines the component's functionality and specifies how it processes input data to produce output data. This method is called when the component is built (i.e., when you click the *Build* ⚡ button in the canvas).
 
   The type annotations of the _`build`_ instance method are used to create the fields of the component.
 
@@ -45,16 +45,16 @@ The CustomComponent class serves as the foundation for creating custom component
     | _`langchain.embeddings.base.Embeddings`_                  |
     | _`langchain.schema.BaseRetriever`_                        |
 
-<Admonition type="info">
-  Notice that, contrary to Langchain types, base Python types do not add a [handle](../guidelines/components) to the field by default. To add handles, use the _`input_types`_ key in the _`build_config`_ method.
-</Admonition>
+  <Admonition type="info">
+    Unlike Langchain types, base Python types do not add a [handle](../guidelines/components) to the field by default. To add handles, use the _`input_types`_ key in the _`build_config`_ method.
+  </Admonition>
 
-- **build_config**: Used to define the configuration fields of the component (if applicable). Should always return a dictionary with specific keys representing the field names and their corresponding configurations. This method is called when the code is processed (i.e. when you click _Check and Save_ in the code editor). It must follow the format described below:
+- **build_config**: Used to define the configuration fields of the component (if applicable). It should always return a dictionary with specific keys representing the field names and corresponding configurations. This method is called when the code is processed (i.e., when you click _Check and Save_ in the code editor). It must follow the format described below:
 
   - Top-level keys are field names.
   - Their values are also of type _`dict`_. They specify the behavior of the generated fields.
 
-  Following are the available keys used to customize component fields:
+  Below are the available keys used to configure component fields:
 
   | Key                        | Description                                                                                                                                                                                                                           |
   | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
