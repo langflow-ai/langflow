@@ -114,8 +114,8 @@ module.exports = {
       announcementBar: {
         content:
           '⭐️ If you like ⛓️Langflow, star it on <a target="_blank" rel="noopener noreferrer" href="https://github.com/logspace-ai/langflow">GitHub</a>! ⭐️',
-        backgroundColor: "#B53D38", //Mustard Yellow #D19900 #D4B20B - Salmon #E9967A
-        textColor: "#fff",
+        backgroundColor: "#E8EBF1", //Mustard Yellow #D19900 #D4B20B - Salmon #E9967A
+        textColor: "#1C1E21",
         isCloseable: false,
       },
       footer: {
