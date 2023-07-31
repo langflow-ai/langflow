@@ -8,15 +8,26 @@ import Admonition from "@theme/Admonition";
 
 # FlowRunner Component
 
-The CustomComponent allows us to create new components that can interact with Langflow itself.
+The CustomComponent class allows us to create components that interact with Langflow itself. In this example, we will make a component that runs other flows available in "My Collection".
 
-In this example, we are going to create a component that allows us to run other flows.
+<ZoomableImage
+  alt="Document Processor Component"
+  sources={{
+    light: "img/flow_runner.png",
+  }}
+  style={{
+    width: "30%",
+    margin: "0 auto",
+    display: "flex",
+    justifyContent: "center",
+  }}
+/>
 
-What we will see:
+We will cover how to:
 
-- How to list the flows in the collection using the _`list_flows`_ method.
-- How to load a flow using the _`load_flow`_ method.
-- Configure a field to be a dropdown menu using the _`options`_ parameter.
+- List Collection flows using the _`list_flows`_ method.
+- Load a flow using the _`load_flow`_ method.
+- Configure a dropdown input field using the _`options`_ parameter.
 
 <CH.Scrollycoding rows={20} className={""}>
 
@@ -35,7 +46,7 @@ class MyComponent(CustomComponent):
 
 ```
 
-This is the basic structure of a custom component.
+The typical structure of a Custom Component is composed of _`display_name`_ and _`description`_ attributes, _`build`_ and _`build_config`_ methods.
 
 ---
 
@@ -57,7 +68,7 @@ class FlowRunner(CustomComponent):
 
 ```
 
-So, let's start by adding the _`display_name`_ and a _`description`_.
+Let's start by defining our component's _`display_name`_ and _`description`_.
 
 ---
 
@@ -79,7 +90,7 @@ class FlowRunner(CustomComponent):
 
 ```
 
-Now let's import _`Document`_ from the _`langchain.schema`_ module, which will be our return type for the _`build`_ method.
+Second, we will import _`Document`_ from the [*langchain.schema*](https://docs.langchain.com/docs/components/schema/) module. This will be the return type of the _`build`_ method.
 
 ---
 
@@ -101,13 +112,11 @@ class FlowRunner(CustomComponent):
 
 ```
 
-Let's add the [parameters](focus://11[20:55]) and the [return type](focus://11[60:69]) to the _`build`_ method.
+Now, let's add the [parameters](focus://11[20:55]) and the [return type](focus://11[60:69]) to the _`build`_ method. The parameters added are:
 
-The parameters we added are:
-
-- _`flow_name`_ is the name of the flow to be run.
-- _`document`_ is what is going to be passed to the flow.
-  - We are using the _`Document`_ type, which will add a [handle](../guidelines/components) to the component.
+- _`flow_name`_ is the name of the flow we want to run.
+- _`document`_ is the input document to be passed to that flow.
+  - Since _`Document`_ is a Langchain type, it will add an input [handle](../guidelines/components) to the component ([see more](../components/custom)).
 
 ---
 
@@ -131,9 +140,7 @@ class FlowRunner(CustomComponent):
 
 ```
 
-Now we can start writing the code for the _`build`_ method.
-
-We will start by listing the flows in the collection using the _`list_flows`_ method.
+We can now start writing the _`build`_ method. Let's list available flows in "My Collection" using the _`list_flows`_ method.
 
 ---
 
@@ -159,11 +166,10 @@ class FlowRunner(CustomComponent):
 
 ```
 
-We can then get the flow that matches the selected name.
+And retrieve a flow that matches the selected name (we'll make a dropdown input field for the user to choose among flow names).
 
 <Admonition type="caution">
-  From version 0.4.0 names are unique, but in previous versions, they were not.
-  This might lead to unexpected results if you have flows with the same name.
+  From version 0.4.0, names are unique, which was not the case in previous versions. This might lead to unexpected results if using flows with the same name.
 </Admonition>
 
 ---
@@ -194,50 +200,7 @@ class FlowRunner(CustomComponent):
 
 ```
 
-Now we can load the flow using the _`load_flow`_ method.
-
-The _`tweaks`_ parameter is a dictionary that allows you to customize the flow.
-You can find more information about it in the [features guidelines](../guidelines/features#code).
-
----
-
-```python
-from langflow import CustomComponent
-from langchain.schema import Document
-
-
-class FlowRunner(CustomComponent):
-    display_name = "Flow Runner"
-    description = "Run other flows using a document as input."
-
-    def build_config(self):
-        ...
-
-    def build(self, flow_name: str, document: Document) -> Document:
-        # List the flows
-        flows = self.list_flows()
-        # Get the flow that matches the selected name
-        flow = next(filter(lambda f: f.name == flow_name, flows))
-        # Load the flow
-        tweaks = {}
-        flow = self.load_flow(flow.id, tweaks)
-        # focus
-        # Get the page_content from the document
-        # focus
-        page_content = document.page_content
-```
-
-Now we can get the _`page_content`_ from the document.
-
-This is the content that will be passed to the flow and it depends on many factors.
-
-In this example, we are using a Document because we can use a [Loader](../components/loaders) to load a Document but
-then we'll have to process the page_content depending on what is the input of the flow we are running.
-
-<Admonition type="tip">
-  One other approach would be to create another CustomComponent that builds a
-  dictionary and then we use that as the input for the FlowRunner.
-</Admonition>
+You can load this flow using _`load_flow`_ and set a _`tweaks`_ dictionary to customize it. Find more about tweaks in our [features guidelines](../guidelines/features#code).
 
 ---
 
@@ -268,7 +231,8 @@ class FlowRunner(CustomComponent):
         return Document(page_content=str(result))
 ```
 
-Finally, we can use the _`page_content`_ in the flow and return the result.
+The content of a document can be extracted using the _`page_content`_ property and passed as an argument to the selected flow. In this example, we are using a Document because it can be parsed by a [Loader](../components/loaders), but
+we'd need to process _`page_content`_ depending on the input of the flow we are running.
 
 ---
 
@@ -306,49 +270,49 @@ class FlowRunner(CustomComponent):
         return Document(page_content=str(result))
 ```
 
-Now we can add the field customization to the _`build_config`_ method.
-
-We are using the _`options`_ parameter to make the _`flow_name`_ field a dropdown menu.
+Finally, we can add field customizations through the _`build_config`_ method. Here we added the _`options`_ key to make the _`flow_name`_ field a dropdown menu. Check out the [custom component reference](../components/custom) for a list of available keys.
 
 <Admonition type="caution">
-  Make sure the type of the field is _`str`_ and the values of the _`options`_
-  are strings.
+  Make sure that the field type is _`str`_ and _`options`_ values are strings.
 </Admonition>
 
 ---
 
 </CH.Scrollycoding>
 
-In Langflow, this is how our script looks like:
+Done! This is what our script and custom component look like:
 
-{" "}
 
-<ZoomableImage
-  alt="Document Processor code"
-  sources={{
-    light: "img/flow_runner_code.png",
-  }}
-  style={{
-    maxWidth: "70%",
-    margin: "0 auto",
-    display: "flex",
-    justifyContent: "center",
-  }}
+<div style={{
+        display: "flex",
+        justifyContent: "center",
+    }}>
+
+    <ZoomableImage
+    alt="Document Processor Code"
+    sources={{
+        light: "img/flow_runner_code.png",
+    }}
+    style={{
+        maxWidth: "100%",
+        margin: "0 auto",
+        display: "flex",
+        justifyContent: "center",
+    }}
 />
 
-And here is our brand new custom component:
 
-{" "}
 
-<ZoomableImage
-  alt="Document Processor component"
-  sources={{
-    light: "img/flow_runner.png",
-  }}
-  style={{
-    width: "50%",
-    margin: "0 auto",
-    display: "flex",
-    justifyContent: "center",
-  }}
-/>
+    <ZoomableImage
+    alt="Document Processor Component"
+    sources={{
+        light: "img/flow_runner.png",
+    }}
+    style={{
+        width: "40%",
+        margin: "0 auto",
+        display: "flex",
+        justifyContent: "center",
+    }}
+    />
+</div>
