@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 import json
 from pathlib import Path
 from typing import AsyncGenerator
@@ -116,3 +117,32 @@ def client_fixture(session: Session):
 
     yield TestClient(app)
     app.dependency_overrides.clear()
+
+
+# @contextmanager
+# def session_getter():
+#     try:
+#         session = Session(engine)
+#         yield session
+#     except Exception as e:
+#         print("Session rollback because of exception:", e)
+#         session.rollback()
+#         raise
+#     finally:
+#         session.close()
+
+
+# create a fixture for session_getter above
+@pytest.fixture(name="session_getter")
+def session_getter_fixture():
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    SQLModel.metadata.create_all(engine)
+
+    @contextmanager
+    def blank_session_getter():
+        with Session(engine) as session:
+            yield session
+
+    yield blank_session_getter
