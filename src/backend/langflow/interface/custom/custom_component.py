@@ -153,8 +153,9 @@ class CustomComponent(Component, extra=Extra.allow):
             graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks)
         return build_sorted_vertices_with_caching(graph_data)
 
-    def list_flows(self) -> List[Flow]:
-        with session_getter() as session:
+    def list_flows(self, *, get_session: Optional[Callable] = None) -> List[Flow]:
+        get_session = get_session or session_getter
+        with get_session() as session:
             flows = session.query(Flow).all()
         return flows
 
@@ -164,8 +165,11 @@ class CustomComponent(Component, extra=Extra.allow):
         flow_name: Optional[str] = None,
         flow_id: Optional[str] = None,
         tweaks: Optional[dict] = None,
+        get_session: Optional[Callable] = None,
     ) -> Flow:
-        with session_getter() as session:
+        get_session = get_session or session_getter
+
+        with get_session() as session:
             if flow_id:
                 flow = session.query(Flow).get(flow_id)
             elif flow_name:
