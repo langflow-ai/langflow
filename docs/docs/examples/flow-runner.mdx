@@ -280,12 +280,11 @@ class FlowRunner(CustomComponent):
         return Document(page_content=str(result))
 ```
 
-We are using a _`Document`_ as input because it is a straightforward way to pass text data in Langflow.
+We are using a _`Document`_ as input because it is a straightforward way to pass text data in Langflow (specifically because you can connect it to many [loaders](../components/loaders)).
 Generally, a flow will take a string or a dictionary as input because that's what LangChain components expect.
 In case you are passing a dictionary, you need to build it according to the needs of the flow you are using.
 
-The content of a document can be extracted using the _`page_content`_ property and passed as an argument to the selected flow. In this example, we are using a Document because it can be parsed by a [Loader](../components/loaders), but
-we'd need to process _`page_content`_ depending on the input of the flow we are running.
+The content of a document can be extracted using the _`page_content`_ attribute, which is a string, and passed as an argument to the selected flow.
 
 ---
 
