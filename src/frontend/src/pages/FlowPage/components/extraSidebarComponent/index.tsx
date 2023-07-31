@@ -18,7 +18,7 @@ import { classNames } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 
 export default function ExtraSidebar() {
-  const { data,templates } = useContext(typesContext);
+  const { data, templates } = useContext(typesContext);
   const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt } =
     useContext(TabsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
@@ -59,14 +59,15 @@ export default function ExtraSidebar() {
   const flow = flows.find((f) => f.id === tabId);
   useEffect(() => {
     // show components with error on load
-    let errors= [];
-    Object.keys(templates).forEach(component => {
-      if(templates[component].error){
+    let errors = [];
+    Object.keys(templates).forEach((component) => {
+      if (templates[component].error) {
         errors.push(component);
       }
     });
-    setErrorData({title:" Components with errors: ",list:errors})
-  },[]);
+    if (errors.length > 0)
+      setErrorData({ title: " Components with errors: ", list: errors });
+  }, []);
 
   return (
     <div className="side-bar-arrangement">
@@ -183,7 +184,10 @@ export default function ExtraSidebar() {
                           <div
                             draggable={!data[d][t].error}
                             className={
-                              "side-bar-components-border bg-background" + (data[d][t].error ? " select-none cursor-not-allowed" : "")
+                              "side-bar-components-border bg-background" +
+                              (data[d][t].error
+                                ? " cursor-not-allowed select-none"
+                                : "")
                             }
                             style={{
                               borderLeftColor:
