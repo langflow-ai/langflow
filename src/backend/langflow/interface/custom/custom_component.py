@@ -30,6 +30,8 @@ class CustomComponent(Component, extra=Extra.allow):
         return self.field_config
 
     def _class_template_validation(self, code: str) -> bool:
+        TYPE_HINT_LIST = ["Optional", "Prompt", "PromptTemplate", "LLMChain"]
+
         if not code:
             raise HTTPException(
                 status_code=400,
@@ -40,14 +42,14 @@ class CustomComponent(Component, extra=Extra.allow):
             )
 
         reader = DirectoryReader("", False)
-        if reader.is_type_hint_used_but_not_imported("Optional", code):
-            raise HTTPException(
-                status_code=400,
-                detail={
+
+        for type_hint in TYPE_HINT_LIST:
+            if reader.is_type_hint_used_but_not_imported(type_hint, code):
+                error_detail = {
                     "error": "Type hint Error",
-                    "traceback": "Name type hint 'Optional' is not defined",
-                },
-            )
+                    "traceback": f"Type hint '{type_hint}' is used but not imported in the code.",
+                }
+                raise HTTPException(status_code=400, detail=error_detail)
 
     def is_check_valid(self) -> bool:
         return self._class_template_validation(self.code)
