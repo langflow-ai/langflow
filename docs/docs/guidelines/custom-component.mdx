@@ -357,6 +357,8 @@ Create a folder that follows the same structural conventions as the [config.yaml
 
 Inside `custom_components`, you can create a Python file for each component. Similarly, any custom agents should be housed in an `agents` subdirectory.
 
+If you use a subdirectory name that is not in our config.yaml file, your component will appear in an `Other` category in the sidebar.
+
 Your structure should look something like this:
 
 ```
@@ -365,6 +367,8 @@ Your structure should look something like this:
     ├── document_processor.py
     └── ...
 └── agents
+    └── ...
+└── my_agents <-- Other category
     └── ...
 ```
 
