@@ -147,8 +147,7 @@ export const IMPORT_DIALOG_SUBTITLE =
  * The text that shows when a tooltip is empty
  * @constant
  */
-export const TOOLTIP_EMPTY =
-  "No compatible components found.";
+export const TOOLTIP_EMPTY = "No compatible components found.";
 
 /**
  * The base text for subtitle of code dialog
