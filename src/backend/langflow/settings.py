@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     database_url: Optional[str] = None
     cache: str = "InMemoryCache"
     remove_api_keys: bool = False
-    component_path: List[Path]
+    components_path: List[Path]
 
     @root_validator(pre=True)
     def set_env_variables(cls, values):
@@ -45,18 +45,18 @@ class Settings(BaseSettings):
                 logger.debug("No DATABASE_URL env variable, using sqlite database")
                 values["database_url"] = "sqlite:///./langflow.db"
 
-        if not values.get("component_path"):
-            values["component_path"] = [BASE_COMPONENTS_PATH]
-        elif BASE_COMPONENTS_PATH not in values["component_path"]:
-            values["component_path"].append(BASE_COMPONENTS_PATH)
+        if not values.get("components_path"):
+            values["components_path"] = [BASE_COMPONENTS_PATH]
+        elif BASE_COMPONENTS_PATH not in values["components_path"]:
+            values["components_path"].append(BASE_COMPONENTS_PATH)
 
         if os.getenv("LANGFLOW_COMPONENT_PATH"):
             langflow_component_path = Path(os.getenv("LANGFLOW_COMPONENT_PATH"))
             if (
                 langflow_component_path.exists()
-                and langflow_component_path not in values["component_path"]
+                and langflow_component_path not in values["components_path"]
             ):
-                values["component_path"].append(langflow_component_path)
+                values["components_path"].append(langflow_component_path)
         return values
 
     class Config:
@@ -88,7 +88,7 @@ class Settings(BaseSettings):
         self.retrievers = new_settings.retrievers or {}
         self.output_parsers = new_settings.output_parsers or {}
         self.custom_components = new_settings.custom_components or {}
-        self.component_path = new_settings.component_path or []
+        self.components_path = new_settings.components_path or []
         self.dev = dev
 
     def update_settings(self, **kwargs):

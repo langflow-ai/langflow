@@ -27,7 +27,7 @@ def update_settings(
     dev: bool = False,
     database_url: Optional[str] = None,
     remove_api_keys: bool = False,
-    component_path: Optional[Path] = None,
+    components_path: Optional[Path] = None,
 ):
     """Update the settings from a config file."""
 
@@ -45,9 +45,9 @@ def update_settings(
     if cache:
         logger.debug(f"Setting cache to {cache}")
         settings.update_settings(cache=cache)
-    if component_path:
-        logger.debug(f"Adding component path {component_path}")
-        settings.update_settings(component_path=component_path)
+    if components_path:
+        logger.debug(f"Adding component path {components_path}")
+        settings.update_settings(components_path=components_path)
 
 
 def load_params():
@@ -126,7 +126,7 @@ def serve(
     ),
     timeout: int = typer.Option(300, help="Worker timeout in seconds."),
     port: int = typer.Option(7860, help="Port to listen on.", envvar="LANGFLOW_PORT"),
-    component_path: Optional[Path] = typer.Option(
+    components_path: Optional[Path] = typer.Option(
         Path(__file__).parent,
         help="Path to the directory containing custom components.",
         envvar="LANGFLOW_COMPONENT_PATH",
@@ -188,7 +188,7 @@ def serve(
         database_url=database_url,
         remove_api_keys=remove_api_keys,
         cache=cache,
-        component_path=component_path,
+        components_path=components_path,
     )
     # create path object if path is provided
     static_files_dir: Optional[Path] = Path(path) if path else None
