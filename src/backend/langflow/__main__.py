@@ -129,7 +129,7 @@ def serve(
     components_path: Optional[Path] = typer.Option(
         Path(__file__).parent,
         help="Path to the directory containing custom components.",
-        envvar="LANGFLOW_COMPONENT_PATH",
+        envvar="LANGFLOW_COMPONENTS_PATH",
     ),
     config: str = typer.Option("config.yaml", help="Path to the configuration file."),
     # .env file param
