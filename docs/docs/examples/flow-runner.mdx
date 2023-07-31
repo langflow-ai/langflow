@@ -90,7 +90,7 @@ class FlowRunner(CustomComponent):
 
 ```
 
-Second, we will import _`Document`_ from the [*langchain.schema*](https://docs.langchain.com/docs/components/schema/) module. This will be the return type of the _`build`_ method.
+Second, we will import _`Document`_ from the [_langchain.schema_](https://docs.langchain.com/docs/components/schema/) module. This will be the return type of the _`build`_ method.
 
 ---
 
@@ -120,7 +120,7 @@ Now, let's add the [parameters](focus://11[20:55]) and the [return type](focus:/
 
 ---
 
-```python
+```python focus=13:14
 from langflow import CustomComponent
 from langchain.schema import Document
 
@@ -133,9 +133,7 @@ class FlowRunner(CustomComponent):
         ...
 
     def build(self, flow_name: str, document: Document) -> Document:
-        # focus
         # List the flows
-        # focus
         flows = self.list_flows()
 
 ```
@@ -144,7 +142,7 @@ We can now start writing the _`build`_ method. Let's list available flows in "My
 
 ---
 
-```python
+```python focus=15:18
 from langflow import CustomComponent
 from langchain.schema import Document
 
@@ -159,17 +157,19 @@ class FlowRunner(CustomComponent):
     def build(self, flow_name: str, document: Document) -> Document:
         # List the flows
         flows = self.list_flows()
-        # focus
         # Get the flow that matches the selected name
-        # focus
-        flow = next(filter(lambda f: f.name == flow_name, flows))
+        # You can also get the flow by id
+        # using self.get_flow(flow_id=flow_id)
+        flow = self.get_flow(flow_name=flow_name)
 
 ```
 
 And retrieve a flow that matches the selected name (we'll make a dropdown input field for the user to choose among flow names).
 
 <Admonition type="caution">
-  From version 0.4.0, names are unique, which was not the case in previous versions. This might lead to unexpected results if using flows with the same name.
+  From version 0.4.0, names are unique, which was not the case in previous
+  versions. This might lead to unexpected results if using flows with the same
+  name.
 </Admonition>
 
 ---
@@ -190,7 +190,9 @@ class FlowRunner(CustomComponent):
         # List the flows
         flows = self.list_flows()
         # Get the flow that matches the selected name
-        flow = next(filter(lambda f: f.name == flow_name, flows))
+        # You can also get the flow by id
+        # using self.get_flow(flow_id=flow_id)
+        flow = self.get_flow(flow_name=flow_name)
         # focus
         # Load the flow
         # focus
@@ -220,7 +222,9 @@ class FlowRunner(CustomComponent):
         # List the flows
         flows = self.list_flows()
         # Get the flow that matches the selected name
-        flow = next(filter(lambda f: f.name == flow_name, flows))
+        # You can also get the flow by id
+        # using self.get_flow(flow_id=flow_id)
+        flow = self.get_flow(flow_name=flow_name)
         # Load the flow
         tweaks = {}
         flow = self.load_flow(flow.id, tweaks)
@@ -255,11 +259,13 @@ class FlowRunner(CustomComponent):
         }
 
 
-    def build(self, flow_name: str, document: Optional[Document] = None) -> Document:
+    def build(self, flow_name: str, document: Document) -> Document:
         # List the flows
         flows = self.list_flows()
         # Get the flow that matches the selected name
-        flow = next(filter(lambda f: f.name == flow_name, flows))
+        # You can also get the flow by id
+        # using self.get_flow(flow_id=flow_id)
+        flow = self.get_flow(flow_name=flow_name)
         # Load the flow
         tweaks = {}
         flow = self.load_flow(flow.id, tweaks)
@@ -282,7 +288,6 @@ Finally, we can add field customizations through the _`build_config`_ method. He
 
 Done! This is what our script and custom component look like:
 
-
 <div style={{
         display: "flex",
         justifyContent: "center",
@@ -299,9 +304,8 @@ Done! This is what our script and custom component look like:
         display: "flex",
         justifyContent: "center",
     }}
+
 />
-
-
 
     <ZoomableImage
     alt="Document Processor Component"
@@ -315,4 +319,5 @@ Done! This is what our script and custom component look like:
         justifyContent: "center",
     }}
     />
+
 </div>
