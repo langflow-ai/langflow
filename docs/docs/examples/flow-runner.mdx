@@ -76,6 +76,7 @@ description = "Run other flows using a document as input."
 ```python
 from langflow import CustomComponent
 
+
 class MyComponent(CustomComponent):
     display_name = "Custom Component"
     description = "This is a custom component"
@@ -94,6 +95,7 @@ The typical structure of a Custom Component is composed of _`display_name`_ and 
 
 ```python
 from langflow import CustomComponent
+
 
 # focus
 class FlowRunner(CustomComponent):
@@ -140,6 +142,7 @@ Second, we will import _`Document`_ from the [_langchain.schema_](https://docs.l
 from langflow import CustomComponent
 # focus
 from langchain.schema import Document
+
 
 class FlowRunner(CustomComponent):
     display_name = "Flow Runner"
@@ -326,7 +329,7 @@ Finally, we can add field customizations through the _`build_config`_ method. He
 
 </CH.Scrollycoding>
 
-Done! This is what our script and custom component look like:
+Done! This is what our script and custom component looks like:
 
 <div style={{
         display: "flex",
