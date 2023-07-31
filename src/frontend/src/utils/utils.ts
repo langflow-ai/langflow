@@ -93,32 +93,34 @@ export function groupByFamily(data, baseClasses, left, flow?: NodeType[]) {
   let arrOfPossibleInputs = [];
   let arrOfPossibleOutputs = [];
   let checkedNodes = new Map();
+  const excludeTypes = new Set([
+    "str",
+    "bool",
+    "float",
+    "code",
+    "prompt",
+    "file",
+    "int",
+  ]);
+
+  const checkBaseClass = (t: any) =>
+    t.type &&
+    t.show &&
+    ((!excludeTypes.has(t.type) && baseClassesSet.has(t.type)) ||
+      (t.input_types && t.input_types.some((x) => baseClassesSet.has(x))));
 
   if (flow) {
     for (const node of flow) {
-      console.log(node, baseClassesSet, left);
-      checkedNodes.set(node.data.type, {
-        hasBaseClassInTemplate:
-          checkedNodes.get(node.data.type)?.hasBaseClassInTemplate ||
-          Object.values(node.data.node.template).some(
-            (t: any) =>
-              t.type &&
-              t.show &&
-              ((t.type !== "str" &&
-              t.type !== "bool" &&
-              t.type !== "float" &&
-              t.type !== "code" &&
-              t.type !== "prompt" &&
-              t.type !== "file" &&
-              t.type !== "int" &&
-              baseClassesSet.has(t.type)) ||
-              (t.input_types &&
-                t.input_types.some((x) => baseClassesSet.has(x))))
+      const nodeData = node.data;
+      const foundNode = checkedNodes.get(nodeData.type);
+        checkedNodes.set(nodeData.type, {
+          hasBaseClassInTemplate: checkedNodes.get(nodeData.type)?.hasBaseClassInTemplate || Object.values(nodeData.node.template).some(
+            checkBaseClass
           ),
-        hasBaseClassInBaseClasses:
-          checkedNodes.get(node.data.type)?.hasBaseClassInBaseClasses ||
-          node.data.node.base_classes.some((t) => baseClassesSet.has(t)),
-      });
+          hasBaseClassInBaseClasses: checkedNodes.get(nodeData.type)?.hasBaseClassInBaseClasses || nodeData.node.base_classes.some((t) =>
+            baseClassesSet.has(t)
+          ),
+        });
     }
   }
 
@@ -127,35 +129,21 @@ export function groupByFamily(data, baseClasses, left, flow?: NodeType[]) {
       tempOutputs = [];
 
     for (const [n, node] of Object.entries(nodes)) {
-      let hasBaseClassInTemplate, hasBaseClassInBaseClasses;
-      const foundNode = checkedNodes.get(n);
-
-      if (foundNode) {
-        hasBaseClassInBaseClasses = foundNode.hasBaseClassInBaseClasses;
-        hasBaseClassInTemplate = foundNode.hasBaseClassInTemplate;
-      } else {
-        hasBaseClassInTemplate = Object.values(node.template).some(
-          (t: any) =>
-            t.type &&
-            t.show &&
-            ((t.type !== "str" &&
-              t.type !== "bool" &&
-              t.type !== "float" &&
-              t.type !== "code" &&
-              t.type !== "prompt" &&
-              t.type !== "file" &&
-              t.type !== "int" &&
-              baseClassesSet.has(t.type)) ||
-              (t.input_types &&
-                t.input_types.some((x) => baseClassesSet.has(x))))
-        );
-        hasBaseClassInBaseClasses = node.base_classes.some((t) =>
-          baseClassesSet.has(t)
-        );
+      let foundNode = checkedNodes.get(n);
+      if (!foundNode) {
+        foundNode = {
+          hasBaseClassInTemplate: Object.values(node.template).some(
+            checkBaseClass
+          ),
+          hasBaseClassInBaseClasses: node.base_classes.some((t) =>
+            baseClassesSet.has(t)
+          ),
+        };
+        checkedNodes.set(n, foundNode);
       }
 
-      if (hasBaseClassInTemplate) tempInputs.push(n);
-      if (hasBaseClassInBaseClasses) tempOutputs.push(n);
+      if (foundNode.hasBaseClassInTemplate) tempInputs.push(n);
+      if (foundNode.hasBaseClassInBaseClasses) tempOutputs.push(n);
     }
 
     const totalNodes = Object.keys(nodes).length;
