@@ -2,10 +2,9 @@ import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
 import { IVarHighlightType } from "../types/components";
-import { FlowType } from "../types/flow";
+import { FlowType, NodeType } from "../types/flow";
 import { TabsState } from "../types/tabs";
 import { buildTweaks } from "./reactflowUtils";
-import { nodeNames } from "./styleUtils";
 
 export function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(" ");
@@ -89,31 +88,74 @@ export function checkUpperWords(str: string) {
 export const isWrappedWithClass = (event: any, className: string | undefined) =>
   event.target.closest(`.${className}`);
 
-export function groupByFamily(data, baseClasses, left) {
-    const baseClassesSet = new Set(baseClasses.split("\n"));
-    let arrOfPossibleInputs = [];
-    let arrOfPossibleOutputs = [];
-  
-    for (const [d, nodes] of Object.entries(data)) {
-      let tempInputs = [], tempOutputs = [];
-  
-      for (const [n, node] of Object.entries(nodes)) {
-        const hasBaseClassInTemplate = Object.values(node.template).some((t: any) => t.type && baseClassesSet.has(t.type));
-        const hasBaseClassInBaseClasses = node.base_classes.some(t => baseClassesSet.has(t));
-  
-        if(hasBaseClassInTemplate) tempInputs.push(n);
-        if(hasBaseClassInBaseClasses) tempOutputs.push(n);
-      }
-  
-      const totalNodes = Object.keys(nodes).length;
-      if(tempInputs.length) arrOfPossibleInputs.push({category: d, nodes: tempInputs, full: tempInputs.length === totalNodes});
-      if(tempOutputs.length) arrOfPossibleOutputs.push({category: d, nodes: tempOutputs, full: tempOutputs.length === totalNodes});
-    }
-  
-    return left 
-      ? arrOfPossibleOutputs.map(t => ({family: t.category, type: t.full ? "" : t.nodes.join(", ")}))
-      : arrOfPossibleInputs.map(t => ({family: t.category, type: t.full ? "" : t.nodes.join(", ")}));
+export function groupByFamily(data, baseClasses, left, flow: NodeType[]) {
+  const baseClassesSet = new Set(baseClasses.split("\n"));
+  let arrOfPossibleInputs = [];
+  let arrOfPossibleOutputs = [];
+  let checkedNodes = new Map();
+
+  for (const node of flow) {
+    const hasBaseClassInTemplate = Object.values(node.data.node.template).some(
+      (t: any) => t.type && baseClassesSet.has(t.type)
+    );
+    const hasBaseClassInBaseClasses = node.data.node.base_classes.some((t) =>
+      baseClassesSet.has(t)
+    );
+    checkedNodes.set(node.data.type, {
+      hasBaseClassInTemplate,
+      hasBaseClassInBaseClasses,
+    });
   }
+
+  for (const [d, nodes] of Object.entries(data)) {
+    let tempInputs = [],
+      tempOutputs = [];
+
+    for (const [n, node] of Object.entries(nodes)) {
+      let hasBaseClassInTemplate, hasBaseClassInBaseClasses;
+      const foundNode = checkedNodes.get(n);
+
+      if (foundNode) {
+        hasBaseClassInBaseClasses = foundNode.hasBaseClassInBaseClasses;
+        hasBaseClassInTemplate = foundNode.hasBaseClassInTemplate;
+      } else {
+        hasBaseClassInTemplate = Object.values(node.template).some(
+          (t: any) => t.type && baseClassesSet.has(t.type)
+        );
+        hasBaseClassInBaseClasses = node.base_classes.some((t) =>
+          baseClassesSet.has(t)
+        );
+      }
+
+      if (hasBaseClassInTemplate) tempInputs.push(n);
+      if (hasBaseClassInBaseClasses) tempOutputs.push(n);
+    }
+
+    const totalNodes = Object.keys(nodes).length;
+    if (tempInputs.length)
+      arrOfPossibleInputs.push({
+        category: d,
+        nodes: tempInputs,
+        full: tempInputs.length === totalNodes,
+      });
+    if (tempOutputs.length)
+      arrOfPossibleOutputs.push({
+        category: d,
+        nodes: tempOutputs,
+        full: tempOutputs.length === totalNodes,
+      });
+  }
+
+  return left
+    ? arrOfPossibleOutputs.map((t) => ({
+        family: t.category,
+        type: t.full ? "" : t.nodes.join(", "),
+      }))
+    : arrOfPossibleInputs.map((t) => ({
+        family: t.category,
+        type: t.full ? "" : t.nodes.join(", "),
+      }));
+}
 
 export function buildInputs(tabsState, id) {
   return tabsState &&

@@ -102,7 +102,7 @@ export default function ParameterComponent({
   }, [info]);
 
   function renderTooltips() {
-    let groupedObj = groupByFamily(myData, tooltipTitle, left);
+    let groupedObj = groupByFamily(myData, tooltipTitle, left, flow);
 
     if (groupedObj) {
       refNumberComponents.current = groupedObj[0]?.type?.length;
@@ -133,7 +133,7 @@ export default function ParameterComponent({
               />
             </div>
             <span className="ps-2 text-xs text-foreground">
-              {nodeNames[item.family]}
+              {nodeNames[item.family] ?? "Unknown"}
               <span className="text-xs">
                 {" "}
                 {item.type === "" ? "" : " - "}
