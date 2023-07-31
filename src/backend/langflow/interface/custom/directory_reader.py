@@ -196,7 +196,7 @@ class DirectoryReader:
         elif not self.validate_build(file_content):
             return False, "Missing build function"
         elif self.is_type_hint_used_but_not_imported("Optional", file_content):
-            return False, "Name type hint 'Optional' is not defined"
+            return False, "Type hint 'Optional' is used but not imported in the code."
         else:
             if self.compress_code_field:
                 file_content = str(StringCompressor(file_content).compress_string())
