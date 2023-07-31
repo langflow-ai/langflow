@@ -13,7 +13,7 @@ import IntComponent from "../../../../components/intComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
-import { MAX_LENGTH_TO_SCROLL_TOOLTIP, TOOLTIP_EMPTY } from "../../../../constants/constants";
+import { TOOLTIP_EMPTY } from "../../../../constants/constants";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
@@ -23,10 +23,7 @@ import {
   nodeIconsLucide,
   nodeNames,
 } from "../../../../utils/styleUtils";
-import {
-  classNames,
-  groupByFamily,
-} from "../../../../utils/utils";
+import { classNames, groupByFamily } from "../../../../utils/utils";
 
 export default function ParameterComponent({
   left,
@@ -151,9 +148,7 @@ export default function ParameterComponent({
         );
       });
     } else {
-      refHtml.current = <span>
-        {TOOLTIP_EMPTY}
-      </span>
+      refHtml.current = <span>{TOOLTIP_EMPTY}</span>;
     }
   }
 
@@ -202,9 +197,7 @@ export default function ParameterComponent({
           <></>
         ) : (
           <ShadTooltip
-            styleClasses={
-              "tooltip-fixed-width custom-scroll nowheel"
-            }
+            styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
             delayDuration={0}
             content={refHtml.current}
             side={left ? "left" : "right"}

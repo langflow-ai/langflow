@@ -113,14 +113,14 @@ export function groupByFamily(data, baseClasses, left, flow?: NodeType[]) {
     for (const node of flow) {
       const nodeData = node.data;
       const foundNode = checkedNodes.get(nodeData.type);
-        checkedNodes.set(nodeData.type, {
-          hasBaseClassInTemplate: checkedNodes.get(nodeData.type)?.hasBaseClassInTemplate || Object.values(nodeData.node.template).some(
-            checkBaseClass
-          ),
-          hasBaseClassInBaseClasses: checkedNodes.get(nodeData.type)?.hasBaseClassInBaseClasses || nodeData.node.base_classes.some((t) =>
-            baseClassesSet.has(t)
-          ),
-        });
+      checkedNodes.set(nodeData.type, {
+        hasBaseClassInTemplate:
+          checkedNodes.get(nodeData.type)?.hasBaseClassInTemplate ||
+          Object.values(nodeData.node.template).some(checkBaseClass),
+        hasBaseClassInBaseClasses:
+          checkedNodes.get(nodeData.type)?.hasBaseClassInBaseClasses ||
+          nodeData.node.base_classes.some((t) => baseClassesSet.has(t)),
+      });
     }
   }
 
