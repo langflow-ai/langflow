@@ -88,23 +88,41 @@ export function checkUpperWords(str: string) {
 export const isWrappedWithClass = (event: any, className: string | undefined) =>
   event.target.closest(`.${className}`);
 
-export function groupByFamily(data, baseClasses, left, flow: NodeType[]) {
+export function groupByFamily(data, baseClasses, left, flow?: NodeType[]) {
   const baseClassesSet = new Set(baseClasses.split("\n"));
   let arrOfPossibleInputs = [];
   let arrOfPossibleOutputs = [];
   let checkedNodes = new Map();
 
-  for (const node of flow) {
-    const hasBaseClassInTemplate = Object.values(node.data.node.template).some(
-      (t: any) => t.type && baseClassesSet.has(t.type)
-    );
-    const hasBaseClassInBaseClasses = node.data.node.base_classes.some((t) =>
-      baseClassesSet.has(t)
-    );
-    checkedNodes.set(node.data.type, {
-      hasBaseClassInTemplate,
-      hasBaseClassInBaseClasses,
-    });
+  if (flow) {
+    for (const node of flow) {
+      checkedNodes.set(node.data.type, {
+        hasBaseClassInTemplate:
+          checkedNodes.get(node.data.type)?.hasBaseClassInTemplate ||
+          Object.values(node.data.node.template).some(
+            (t: any) =>
+              t.type &&
+              t.show &&
+              !(
+                (t.type === "str" ||
+                  t.type === "bool" ||
+                  t.type === "float" ||
+                  t.type === "code" ||
+                  t.type === "prompt" ||
+                  t.type === "file" ||
+                  t.type === "int") &&
+                !(
+                  t.input_types &&
+                  t.input_types.some((x) => baseClassesSet.has(x))
+                )
+              ) &&
+              baseClassesSet.has(t.type)
+          ),
+        hasBaseClassInBaseClasses:
+          checkedNodes.get(node.data.type)?.hasBaseClassInBaseClasses ||
+          node.data.node.base_classes.some((t) => baseClassesSet.has(t)),
+      });
+    }
   }
 
   for (const [d, nodes] of Object.entries(data)) {
@@ -120,7 +138,23 @@ export function groupByFamily(data, baseClasses, left, flow: NodeType[]) {
         hasBaseClassInTemplate = foundNode.hasBaseClassInTemplate;
       } else {
         hasBaseClassInTemplate = Object.values(node.template).some(
-          (t: any) => t.type && baseClassesSet.has(t.type)
+          (t: any) =>
+            t.type &&
+            t.show &&
+            !(
+              (t.type === "str" ||
+                t.type === "bool" ||
+                t.type === "float" ||
+                t.type === "code" ||
+                t.type === "prompt" ||
+                t.type === "file" ||
+                t.type === "int") &&
+              !(
+                t.input_types &&
+                t.input_types.some((x) => baseClassesSet.has(x))
+              )
+            ) &&
+            baseClassesSet.has(t.type)
         );
         hasBaseClassInBaseClasses = node.base_classes.some((t) =>
           baseClassesSet.has(t)

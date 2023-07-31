@@ -23,10 +23,8 @@ export default function GenericNode({
   selected: boolean;
 }) {
   const [data, setData] = useState(olddata);
-  const { setErrorData } = useContext(alertContext);
   const { updateFlow, flows, tabId } = useContext(TabsContext);
   const updateNodeInternals = useUpdateNodeInternals();
-  const showError = useRef(true);
   const { types, deleteNode, reactFlowInstance } = useContext(typesContext);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [validationStatus, setValidationStatus] = useState(null);
