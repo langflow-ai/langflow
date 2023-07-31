@@ -2,6 +2,7 @@ from typing import Any, Callable, List, Optional
 from fastapi import HTTPException
 from langflow.interface.custom.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.component import Component
+from langflow.interface.custom.directory_reader import DirectoryReader
 
 from langflow.utils import validate
 
@@ -38,12 +39,18 @@ class CustomComponent(Component, extra=Extra.allow):
                 },
             )
 
-        # TODO: Create the logic to validate what the Custom Component
-        # should have as a prerequisite to be able to execute
-        return True
+        reader = DirectoryReader("", False)
+        if reader.is_type_hint_used_but_not_imported("Optional", code):
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "Type hint Error",
+                    "traceback": "Name type hint 'Optional' is not defined",
+                },
+            )
 
     def is_check_valid(self) -> bool:
-        return self._class_template_validation(self.code) if self.code else False
+        return self._class_template_validation(self.code)
 
     def get_code_tree(self, code: str):
         return super().get_code_tree(code)
