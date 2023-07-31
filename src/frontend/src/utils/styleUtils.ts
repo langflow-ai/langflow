@@ -170,7 +170,7 @@ export const nodeNames: { [char: string]: string } = {
   utilities: "Utilities",
   output_parsers: "Output Parsers",
   custom_components: "Custom",
-  unknown: "Unknown",
+  unknown: "Other",
 };
 
 export const nodeIconsLucide = {
