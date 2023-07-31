@@ -135,6 +135,10 @@ export default function CodeAreaModal({
 
   const [open, setOpen] = useState(false);
 
+  useEffect(() => {
+    setCode(value);
+  }, [value, open]);
+
   return (
     <BaseModal open={open} setOpen={setOpen}>
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
