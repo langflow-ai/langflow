@@ -19,8 +19,10 @@ Let's take a look at the basic rules and features. Then we'll go over an example
 - Create a class that inherits from _`CustomComponent`_ and contains a _`build`_ method.
 - Use arguments with [Type Annotations (or Type Hints)](https://docs.python.org/3/library/typing.html) of the _`build`_ method to create component fields.
 - Use the _`build_config`_ method to customize how these fields look and behave.
+- Set up a folder with your components to load them up in Langflow's sidebar.
 
 Here is an example:
+
 <div style={{
         display: "flex",
         justifyContent: "center",
@@ -66,6 +68,7 @@ Here is an example:
         justifyContent: "center",
     }}
     />
+
 </div>
 
 <Admonition type="tip">
@@ -261,7 +264,7 @@ class DocumentProcessor(CustomComponent):
 
 ### Add the build method
 
-Here, the build method takes two input parameters: _`document`_, representing the input document to be processed, and _`function`_, a string representing the selected text transformation to be applied (either "Uppercase," "Lowercase," or "Titlecase"). The method processes the text content of the input Document based on the selected function. 
+Here, the build method takes two input parameters: _`document`_, representing the input document to be processed, and _`function`_, a string representing the selected text transformation to be applied (either "Uppercase," "Lowercase," or "Titlecase"). The method processes the text content of the input Document based on the selected function.
 
 The return type is _`Document`_.
 
@@ -306,7 +309,6 @@ class DocumentProcessor(CustomComponent):
 
 </CH.Scrollycoding>
 
-
 All done! This is what our script and brand-new custom component look like:
 
 <div style={{
@@ -325,9 +327,8 @@ All done! This is what our script and brand-new custom component look like:
         display: "flex",
         justifyContent: "center",
     }}
+
 />
-
-
 
     <ZoomableImage
     alt="Document Processor Component"
@@ -341,4 +342,51 @@ All done! This is what our script and brand-new custom component look like:
         justifyContent: "center",
     }}
     />
+
 </div>
+
+---
+
+## Loading Custom Components
+
+For advanced customization, Langflow offers the option to create and load custom components outside of the standard interface. This process involves creating the desired components using a text editor and loading them using the Langflow CLI.
+
+### Folder Structure
+
+Create a folder that follows the same structural conventions as the [config.yaml](https://github.com/logspace-ai/langflow/blob/dev/src/backend/langflow/config.yaml) file. Inside this main directory, use a `custom_components` subdirectory for your custom components.
+
+Inside `custom_components`, you can create a Python file for each component. Similarly, any custom agents should be housed in an `agents` subdirectory.
+
+Your structure should look something like this:
+
+```
+.
+└── custom_components
+    ├── document_processor.py
+    └── ...
+└── agents
+    └── ...
+```
+
+### Loading Custom Components
+
+You can specify the path to your custom components using the `--components-path` argument when running the Langflow CLI, as shown below:
+
+```bash
+langflow --components-path /path/to/components
+```
+
+Alternatively, you can set the `LANGFLOW_COMPONENTS_PATH` environment variable:
+
+```bash
+export LANGFLOW_COMPONENTS_PATH=/path/to/components
+langflow
+```
+
+Langflow will attempt to load all of the components found in the specified directory. If a component fails to load due to errors in the component's code, Langflow will print an error message to the console but will continue loading the rest of the components.
+
+### Interacting with Custom Components
+
+Once your custom components have been loaded successfully, they will appear in Langflow's sidebar. From there, you can add them to your Langflow canvas for use. However, please note that components with errors will not be available for addition to the canvas. Always ensure your code is error-free before attempting to load components.
+
+Remember, creating custom components allows you to extend the functionality of Langflow to better suit your unique needs. Happy coding!
