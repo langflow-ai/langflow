@@ -158,14 +158,12 @@ class CustomComponent(Component, extra=Extra.allow):
             flows = session.query(Flow).all()
         return flows
 
-    def get_flow(self, flow_name: str) -> Flow:
+    def get_flow(self, *, flow_name: str = None, flow_id: str = None) -> Flow:
         with session_getter() as session:
-            flow = session.query(Flow).filter(Flow.name == flow_name).first()
-        return flow
-
-    def get_flow_by_id(self, flow_id: str) -> Flow:
-        with session_getter() as session:
-            flow = session.query(Flow).filter(Flow.id == flow_id).first()
+            if flow_id:
+                flow = session.query(Flow).get(flow_id)
+            elif flow_name:
+                flow = session.query(Flow).filter(Flow.name == flow_name).first()
         return flow
 
     def build(self):
