@@ -158,5 +158,15 @@ class CustomComponent(Component, extra=Extra.allow):
             flows = session.query(Flow).all()
         return flows
 
+    def get_flow(self, flow_name: str) -> Flow:
+        with session_getter() as session:
+            flow = session.query(Flow).filter(Flow.name == flow_name).first()
+        return flow
+
+    def get_flow_by_id(self, flow_id: str) -> Flow:
+        with session_getter() as session:
+            flow = session.query(Flow).filter(Flow.id == flow_id).first()
+        return flow
+
     def build(self):
         raise NotImplementedError
