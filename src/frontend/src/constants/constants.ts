@@ -144,6 +144,13 @@ export const IMPORT_DIALOG_SUBTITLE =
   "Upload a JSON file or select from the available community examples.";
 
 /**
+ * The text that shows when a tooltip is empty
+ * @constant
+ */
+export const TOOLTIP_EMPTY =
+  "No compatible components found.";
+
+/**
  * The base text for subtitle of code dialog
  * @constant
  */

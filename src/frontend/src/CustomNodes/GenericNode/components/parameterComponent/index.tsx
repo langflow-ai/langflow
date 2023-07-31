@@ -13,7 +13,7 @@ import IntComponent from "../../../../components/intComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
-import { MAX_LENGTH_TO_SCROLL_TOOLTIP } from "../../../../constants/constants";
+import { MAX_LENGTH_TO_SCROLL_TOOLTIP, TOOLTIP_EMPTY } from "../../../../constants/constants";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
@@ -44,7 +44,6 @@ export default function ParameterComponent({
 }: ParameterComponentType) {
   const ref = useRef(null);
   const refHtml = useRef(null);
-  const refNumberComponents = useRef(0);
   const infoHtml = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
@@ -104,9 +103,7 @@ export default function ParameterComponent({
   function renderTooltips() {
     let groupedObj = groupByFamily(myData, tooltipTitle, left, flow);
 
-    if (groupedObj) {
-      refNumberComponents.current = groupedObj[0]?.type?.length;
-
+    if (groupedObj && groupedObj.length > 0) {
       refHtml.current = groupedObj.map((item, i) => {
         const Icon: any =
           nodeIconsLucide[item.family] ?? nodeIconsLucide["unknown"];
@@ -153,6 +150,10 @@ export default function ParameterComponent({
           </span>
         );
       });
+    } else {
+      refHtml.current = <span>
+        {TOOLTIP_EMPTY}
+      </span>
     }
   }
 
@@ -202,9 +203,7 @@ export default function ParameterComponent({
         ) : (
           <ShadTooltip
             styleClasses={
-              refNumberComponents.current > MAX_LENGTH_TO_SCROLL_TOOLTIP
-                ? "tooltip-fixed-width custom-scroll overflow-y-scroll nowheel"
-                : "tooltip-fixed-width"
+              "tooltip-fixed-width custom-scroll nowheel"
             }
             delayDuration={0}
             content={refHtml.current}
