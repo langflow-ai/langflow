@@ -30,7 +30,11 @@ module.exports = {
           beforeDefaultRemarkPlugins: [
             [
               remarkCodeHike,
-              { theme: "monokai", showCopyButton: true, lineNumbers: true },
+              {
+                theme: "github-light",
+                showCopyButton: true,
+                lineNumbers: true,
+              },
             ],
           ],
           routeBasePath: "/",
