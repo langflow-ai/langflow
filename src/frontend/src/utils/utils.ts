@@ -96,6 +96,7 @@ export function groupByFamily(data, baseClasses, left, flow?: NodeType[]) {
 
   if (flow) {
     for (const node of flow) {
+      console.log(node, baseClassesSet, left);
       checkedNodes.set(node.data.type, {
         hasBaseClassInTemplate:
           checkedNodes.get(node.data.type)?.hasBaseClassInTemplate ||
@@ -103,20 +104,16 @@ export function groupByFamily(data, baseClasses, left, flow?: NodeType[]) {
             (t: any) =>
               t.type &&
               t.show &&
-              !(
-                (t.type === "str" ||
-                  t.type === "bool" ||
-                  t.type === "float" ||
-                  t.type === "code" ||
-                  t.type === "prompt" ||
-                  t.type === "file" ||
-                  t.type === "int") &&
-                !(
-                  t.input_types &&
-                  t.input_types.some((x) => baseClassesSet.has(x))
-                )
-              ) &&
-              baseClassesSet.has(t.type)
+              ((t.type !== "str" &&
+              t.type !== "bool" &&
+              t.type !== "float" &&
+              t.type !== "code" &&
+              t.type !== "prompt" &&
+              t.type !== "file" &&
+              t.type !== "int" &&
+              baseClassesSet.has(t.type)) ||
+              (t.input_types &&
+                t.input_types.some((x) => baseClassesSet.has(x))))
           ),
         hasBaseClassInBaseClasses:
           checkedNodes.get(node.data.type)?.hasBaseClassInBaseClasses ||
@@ -141,20 +138,16 @@ export function groupByFamily(data, baseClasses, left, flow?: NodeType[]) {
           (t: any) =>
             t.type &&
             t.show &&
-            !(
-              (t.type === "str" ||
-                t.type === "bool" ||
-                t.type === "float" ||
-                t.type === "code" ||
-                t.type === "prompt" ||
-                t.type === "file" ||
-                t.type === "int") &&
-              !(
-                t.input_types &&
-                t.input_types.some((x) => baseClassesSet.has(x))
-              )
-            ) &&
-            baseClassesSet.has(t.type)
+            ((t.type !== "str" &&
+              t.type !== "bool" &&
+              t.type !== "float" &&
+              t.type !== "code" &&
+              t.type !== "prompt" &&
+              t.type !== "file" &&
+              t.type !== "int" &&
+              baseClassesSet.has(t.type)) ||
+              (t.input_types &&
+                t.input_types.some((x) => baseClassesSet.has(x))))
         );
         hasBaseClassInBaseClasses = node.base_classes.some((t) =>
           baseClassesSet.has(t)
