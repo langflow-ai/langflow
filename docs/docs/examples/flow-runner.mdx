@@ -57,10 +57,8 @@ description = "Run other flows using a document as input."
         # Get the flow that matches the selected name
         # You can also get the flow by id
         # using self.get_flow(flow_id=flow_id)
-        flow = self.get_flow(flow_name=flow_name)
-        # Load the flow
         tweaks = {}
-        flow = self.load_flow(flow.id, tweaks)
+        flow = self.get_flow(flow_name=flow_name, tweaks=tweaks)
         # Get the page_content from the document
         page_content = document.page_content
         # Use it in the flow
@@ -205,7 +203,8 @@ class FlowRunner(CustomComponent):
         # Get the flow that matches the selected name
         # You can also get the flow by id
         # using self.get_flow(flow_id=flow_id)
-        flow = self.get_flow(flow_name=flow_name)
+        tweaks = {}
+        flow = self.get_flow(flow_name=flow_name, tweaks=tweaks)
 
 ```
 
@@ -237,17 +236,13 @@ class FlowRunner(CustomComponent):
         # Get the flow that matches the selected name
         # You can also get the flow by id
         # using self.get_flow(flow_id=flow_id)
-        flow = self.get_flow(flow_name=flow_name)
-        # focus
-        # Load the flow
-        # focus
         tweaks = {}
-        # focus
-        flow = self.load_flow(flow.id, tweaks)
+        flow = self.get_flow(flow_name=flow_name, tweaks=tweaks)
+
 
 ```
 
-You can load this flow using _`load_flow`_ and set a _`tweaks`_ dictionary to customize it. Find more about tweaks in our [features guidelines](../guidelines/features#code).
+You can load this flow using _`get_flow`_ and set a _`tweaks`_ dictionary to customize it. Find more about tweaks in our [features guidelines](../guidelines/features#code).
 
 ---
 
@@ -269,10 +264,8 @@ class FlowRunner(CustomComponent):
         # Get the flow that matches the selected name
         # You can also get the flow by id
         # using self.get_flow(flow_id=flow_id)
-        flow = self.get_flow(flow_name=flow_name)
-        # Load the flow
         tweaks = {}
-        flow = self.load_flow(flow.id, tweaks)
+        flow = self.get_flow(flow_name=flow_name, tweaks=tweaks)
         # Get the page_content from the document
         page_content = document.page_content
         # Use it in the flow
@@ -313,10 +306,9 @@ class FlowRunner(CustomComponent):
         # Get the flow that matches the selected name
         # You can also get the flow by id
         # using self.get_flow(flow_id=flow_id)
-        flow = self.get_flow(flow_name=flow_name)
         # Load the flow
         tweaks = {}
-        flow = self.load_flow(flow.id, tweaks)
+        flow = self.get_flow(flow_name=flow_name, tweaks=tweaks)
         # Get the page_content from the document
         page_content = document.page_content
         # Use it in the flow

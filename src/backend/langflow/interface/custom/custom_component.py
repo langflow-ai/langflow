@@ -159,14 +159,23 @@ class CustomComponent(Component, extra=Extra.allow):
         return flows
 
     def get_flow(
-        self, *, flow_name: Optional[str] = None, flow_id: Optional[str] = None
+        self,
+        *,
+        flow_name: Optional[str] = None,
+        flow_id: Optional[str] = None,
+        tweaks: Optional[dict] = None,
     ) -> Flow:
         with session_getter() as session:
             if flow_id:
                 flow = session.query(Flow).get(flow_id)
             elif flow_name:
                 flow = session.query(Flow).filter(Flow.name == flow_name).first()
-        return flow
+            else:
+                raise ValueError("Either flow_name or flow_id must be provided")
+
+        if not flow:
+            raise ValueError(f"Flow {flow_name or flow_id} not found")
+        return self.load_flow(flow.id, tweaks)
 
     def build(self):
         raise NotImplementedError
