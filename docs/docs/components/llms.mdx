@@ -1,2 +1,198 @@
+import Admonition from '@theme/Admonition';
+
 # LLMs
-(coming soon)
+
+<Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
+    <p>
+        We appreciate your understanding as we polish our documentation – it may contain some rough edges. Share your feedback or report issues to help us improve! 🛠️📝
+    </p>
+</Admonition>
+
+An LLM stands for Large Language Model. It is a core component of Langflow and provides a standard interface for interacting with different LLMs from various providers such as OpenAI, Cohere, and HuggingFace. LLMs are used widely throughout Langflow, including in chains and agents. They can be used to generate text based on a given prompt (or input).
+
+---
+
+### Anthropic
+
+Wrapper around Anthropic's large language models. Find out more at [Anthropic](https://www.anthropic.com).
+
+- **anthropic_api_key:** Used to authenticate and authorize access to the Anthropic API.
+
+- **anthropic_api_url:** Specifies the URL of the Anthropic API to connect to.
+
+- **temperature:** Tunes the degree of randomness in text generations. Should be a non-negative value.
+
+---
+
+### ChatAnthropic
+
+Wrapper around Anthropic's large language model used for chat-based interactions. Find out more at [Anthropic](https://www.anthropic.com).
+
+- **anthropic_api_key:** Used to authenticate and authorize access to the Anthropic API.
+
+- **anthropic_api_url:** Specifies the URL of the Anthropic API to connect to.
+
+- **temperature:** Tunes the degree of randomness in text generations. Should be a non-negative value.
+
+---
+
+### CTransformers
+
+The `CTransformers` component provides access to the Transformer models implemented in C/C++ using the [GGML](https://github.com/ggerganov/ggml) library.
+
+:::info
+Make sure to have the `ctransformers` python package installed. Learn more about installation, supported models, and usage [here](https://github.com/marella/ctransformers).
+:::
+
+**config:** Configuration for the Transformer models. Check out [config](https://github.com/marella/ctransformers#config). Defaults to:
+
+```
+{
+
+"top_k": 40,
+
+"top_p": 0.95,
+
+"temperature": 0.8,
+
+"repetition_penalty": 1.1,
+
+"last_n_tokens": 64,
+
+"seed": -1,
+
+"max_new_tokens": 256,
+
+"stop": null,
+
+"stream": false,
+
+"reset": true,
+
+"batch_size": 8,
+
+"threads": -1,
+
+"context_length": -1,
+
+"gpu_layers": 0
+
+}
+```
+
+**model:** The path to a model file or directory or the name of a Hugging Face Hub model repo.
+
+**model_file:** The name of the model file in the repo or directory.
+
+**model_type:** Transformer model to be used. Learn more [here](https://github.com/marella/ctransformers).
+
+---
+
+### ChatOpenAI
+
+Wrapper around [OpenAI's](https://openai.com) chat large language models. This component supports some of the LLMs (Large Language Models) available by OpenAI and is used for tasks such as chatbots, Generative Question-Answering (GQA), and summarization.
+
+- **max_tokens:** The maximum number of tokens to generate in the completion. `-1` returns as many tokens as possible, given the prompt and the model's maximal context size – defaults to `256`.
+- **model_kwargs:** Holds any model parameters valid for creating non-specified calls.
+- **model_name:** Defines the OpenAI chat model to be used.
+- **openai_api_base:** Used to specify the base URL for the OpenAI API. It is typically set to the API endpoint provided by the OpenAI service.
+- **openai_api_key:**  Key used to authenticate and access the OpenAI API.
+- **temperature:** Tunes the degree of randomness in text generations. Should be a non-negative value – defaults to `0.7`.
+
+---
+
+### Cohere
+
+Wrapper around [Cohere's](https://cohere.com) large language models.
+
+- **cohere_api_key:** Holds the API key required to authenticate with the Cohere service.
+- **max_tokens:** Maximum number of tokens to predict per generation – defaults to `256`.
+- **temperature:** Tunes the degree of randomness in text generations. Should be a non-negative value – defaults to `0.75`.
+
+---
+
+### HuggingFaceHub
+
+Wrapper around [HuggingFace](https://www.huggingface.co/models) models.
+
+:::info
+The HuggingFace Hub is an online platform that hosts over 120k models, 20k datasets, and 50k demo apps, all of which are open-source and publicly available. Discover more at [HuggingFace](http://www.huggingface.co).
+:::
+
+- **huggingfacehub_api_token:** Token needed to authenticate the API.
+- **model_kwargs:** Keyword arguments to pass to the model.
+- **repo_id:** Model name to use – defaults to `gpt2`.
+- **task:** Task to call the model with. Should be a task that returns `generated_text` or `summary_text`.
+
+---
+
+### LlamaCpp
+
+The `LlamaCpp` component provides access to the `llama.cpp` models.
+
+:::info
+Make sure to have the `llama.cpp` python package installed. Learn more about installation, supported models, and usage [here](https://github.com/ggerganov/llama.cpp).
+:::
+
+- **echo:** Whether to echo the prompt – defaults to `False`.
+- **f16_kv:** Use half-precision for key/value cache – defaults to `True`.
+- **last_n_tokens_size:** The number of tokens to look back at when applying the repeat_penalty. Defaults to `64`.
+- **logits_all:** Return logits for all tokens, not just the last token Defaults to `False`.
+- **logprobs:** The number of logprobs to return. If None, no logprobs are returned.
+- **lora_base:** The path to the Llama LoRA base model.
+- **lora_path:** The path to the Llama LoRA. If None, no LoRa is loaded.
+- **max_tokens:** The maximum number of tokens to generate. Defaults to `256`.
+- **model_path:** The path to the Llama model file.
+- **n_batch:** Number of tokens to process in parallel. Should be a number between 1 and n_ctx. Defaults to `8`.
+- **n_ctx:** Token context window. Defaults to `512`.
+- **n_gpu_layers:** Number of layers to be loaded into GPU memory. Default None.
+- **n_parts:**Number of parts to split the model into. If -1, the number of parts is automatically determined. Defaults to `-1`.
+- **n_threads:** Number of threads to use. If None, the number of threads is automatically determined.
+- **repeat_penalty:** The penalty to apply to repeated tokens. Defaults to `1.1`.
+- **seed:** Seed. If -1, a random seed is used. Defaults to `-1`.
+- **stop:** A list of strings to stop generation when encountered.
+- **streaming:** Whether to stream the results, token by token. Defaults to `True`.
+- **suffix:** A suffix to append to the generated text. If None, no suffix is appended.
+- **tags:** Tags to add to the run trace.
+- **temperature:** The temperature to use for sampling. Defaults to `0.8`.
+- **top_k:** The top-k value to use for sampling. Defaults to `40`.
+- **top_p:** The top-p value to use for sampling. Defaults to `0.95`.
+- **use_mlock:** Force the system to keep the model in RAM. Defaults to `False`.
+- **use_mmap:** Whether to keep the model loaded in RAM. Defaults to `True`.
+- **verbose:** This parameter is used to control the level of detail in the output of the chain. When set to True, it will print out some internal states of the chain while it is being run, which can help debug and understand the chain's behavior. If set to False, it will suppress the verbose output. Defaults to `False`.
+- **vocab_only:** Only load the vocabulary, no weights. Defaults to `False`.
+
+---
+
+### OpenAI
+
+Wrapper around [OpenAI's](https://openai.com) large language models.
+
+- **max_tokens:** The maximum number of tokens to generate in the completion. `-1` returns as many tokens as possible, given the prompt and the model's maximal context size – defaults to `256`.
+- **model_kwargs:** Holds any model parameters valid for creating non-specified calls.
+- **model_name:** Defines the OpenAI model to be used.
+- **openai_api_base:** Used to specify the base URL for the OpenAI API. It is typically set to the API endpoint provided by the OpenAI service.
+- **openai_api_key:**  Key used to authenticate and access the OpenAI API.
+- **temperature:** Tunes the degree of randomness in text generations. Should be a non-negative value – defaults to `0.7`.
+
+---
+
+### VertexAI
+
+Wrapper around [Google Vertex AI](https://cloud.google.com/vertex-ai) large language models.
+
+:::info
+Vertex AI is a cloud computing platform offered by Google Cloud Platform (GCP). It provides access, management, and development of applications and services through global data centers. To use Vertex AI PaLM, you need to have the [google-cloud-aiplatform](https://pypi.org/project/google-cloud-aiplatform/) Python package installed and credentials configured for your environment.
+:::
+
+- **credentials:** The default custom credentials (google.auth.credentials.Credentials) to use.
+- **location:** The default location to use when making API calls – defaults to `us-central1`.
+- **max_output_tokens:** Token limit determines the maximum amount of text output from one prompt – defaults to `128`.
+- **model_name:** The name of the Vertex AI large language model – defaults to `text-bison`.
+- **project:** The default GCP project to use when making Vertex API calls.
+- **request_parallelism:** The amount of parallelism allowed for requests issued to VertexAI models – defaults to `5`.
+- **temperature:** Tunes the degree of randomness in text generations. Should be a non-negative value – defaults to `0`.
+- **top_k:** How the model selects tokens for output, the next token is selected from – defaults to `40`.
+- **top_p:** Tokens are selected from most probable to least until the sum of their – defaults to `0.95`.
+- **tuned_model_name:** The name of a tuned model. If provided, model_name is ignored.
+- **verbose:** This parameter is used to control the level of detail in the output of the chain. When set to True, it will print out some internal states of the chain while it is being run, which can help debug and understand the chain's behavior. If set to False, it will suppress the verbose output – defaults to `False`.

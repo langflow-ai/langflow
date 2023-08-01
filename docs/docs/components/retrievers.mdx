@@ -1,0 +1,24 @@
+import Admonition from '@theme/Admonition';
+
+# Retrievers
+
+<Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
+    <p>
+        We appreciate your understanding as we polish our documentation – it may contain some rough edges. Share your feedback or report issues to help us improve! 🛠️📝
+    </p>
+</Admonition>
+
+A retriever is an interface that returns documents given an unstructured query. It is more general than a vector store and does not need to be able to store documents, only to return or retrieve them.
+
+---
+
+### MultiQueryRetriever
+
+The `MultiQueryRetriever` component automates the process of generating multiple queries, retrieves relevant documents for each query, and combines the results to provide a more extensive and diverse set of potentially relevant documents. This approach enhances the effectiveness of the retrieval process and helps overcome the limitations of traditional distance-based retrieval methods.
+
+**Params**
+
+- **LLM:** Language Model to use in the `MultiQueryRetriever`.
+- **Prompt:** Prompt to represent a schema for an LLM.
+- **Retriever:** The retriever used to fetch documents.
+- **parser_key:** This parameter is used to specify the key or attribute name of the parsed output that will be used for retrieval. It determines how the results from the language model are split into a list of queries. Defaults to `lines`, which means that the output from the language model will be split into a list of lines of text. This allows the retriever to retrieve relevant documents based on each line of text separately.
