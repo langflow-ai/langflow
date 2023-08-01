@@ -219,3 +219,16 @@ export function validateNodes(reactFlowInstance: ReactFlowInstance) {
     .getNodes()
     .flatMap((n: NodeType) => validateNode(n, reactFlowInstance));
 }
+
+export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
+  const existingNames = flows.map((item) => item.name);
+  let newName = flow.name;
+  let count = 1;
+
+  while (existingNames.includes(newName)) {
+    newName = `${flow.name} (${count})`;
+    count++;
+  }
+
+  return newName;
+}
