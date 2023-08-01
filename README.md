@@ -51,8 +51,23 @@
 You can install Langflow from pip:
 
 ```shell
+# This installs the package without dependencies for local models
 pip install langflow
 ```
+
+To use local models (e.g llama-cpp-python) run:
+
+```shell
+pip install langflow[local]
+```
+
+This will install the following dependencies:
+
+- [CTransformers](https://github.com/marella/ctransformers)
+- [llama-cpp-python](https://github.com/abetlen/llama-cpp-python)
+- [sentence-transformers](https://github.com/UKPLab/sentence-transformers)
+
+You can still use models from projects like LocalAI
 
 Next, run:
 
@@ -74,7 +89,7 @@ You can also check it out on [HuggingFace Spaces](https://huggingface.co/spaces/
 
 Langflow provides a command-line interface (CLI) for easy management and configuration.
 
-### Usage
+## Usage
 
 You can run the Langflow using the following command:
 
@@ -127,6 +142,8 @@ Langflow integrates with langchain-serve to provide a one-command deployment to 
 Start by installing `langchain-serve` with
 
 ```bash
+pip install langflow[deploy]
+# or
 pip install -U langchain-serve
 ```
 
