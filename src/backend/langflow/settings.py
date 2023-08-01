@@ -47,16 +47,20 @@ class Settings(BaseSettings):
 
         if not values.get("components_path"):
             values["components_path"] = [BASE_COMPONENTS_PATH]
+            logger.debug("No components_path provided, using default components path")
         elif BASE_COMPONENTS_PATH not in values["components_path"]:
             values["components_path"].append(BASE_COMPONENTS_PATH)
+            logger.debug("Adding default components path to components_path")
 
-        if os.getenv("LANGFLOW_COMPONENT_PATH"):
-            langflow_component_path = Path(os.getenv("LANGFLOW_COMPONENT_PATH"))
+        if os.getenv("LANGFLOW_COMPONENTS_PATH"):
+            logger.debug("Adding LANGFLOW_COMPONENTS_PATH to components_path")
+            langflow_component_path = Path(os.getenv("LANGFLOW_COMPONENTS_PATH"))
             if (
                 langflow_component_path.exists()
                 and langflow_component_path not in values["components_path"]
             ):
                 values["components_path"].append(langflow_component_path)
+                logger.debug(f"Adding {langflow_component_path} to components_path")
         return values
 
     class Config:
