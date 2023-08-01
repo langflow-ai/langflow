@@ -66,12 +66,12 @@ export default function InputFileComponent({
             const { file_path } = data;
             console.log("File name:", file_path);
 
+            // sets the value that goes to the backend
+            onFileChange(file_path);
             // Update the state and callback with the name of the file
             // sets the value to the user
             setMyValue(file.name);
             onChange(file.name);
-            // sets the value that goes to the backend
-            onFileChange(file_path);
             setLoading(false);
           })
           .catch(() => {
