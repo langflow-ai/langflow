@@ -5,6 +5,7 @@ import _ from "lodash";
 import { classNames } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 import { Input } from "../ui/input";
+import { handleKeyDown } from "../../utils/reactflowUtils";
 
 export default function InputListComponent({
   value,
@@ -38,6 +39,12 @@ export default function InputListComponent({
                 let newInputList = _.cloneDeep(value);
                 newInputList[idx] = e.target.value;
                 onChange(newInputList);
+              }}
+              onKeyDown={(e) => {
+                if (e.ctrlKey && e.key === "Backspace") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }
               }}
             />
             {idx === value.length - 1 ? (
