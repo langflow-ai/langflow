@@ -60,6 +60,8 @@ description = "Run other flows using a document as input."
         tweaks = {}
         flow = self.get_flow(flow_name=flow_name, tweaks=tweaks)
         # Get the page_content from the document
+        if document and isinstance(document, list):
+            document = document[0]
         page_content = document.page_content
         # Use it in the flow
         result = flow(page_content)
@@ -267,6 +269,8 @@ class FlowRunner(CustomComponent):
         tweaks = {}
         flow = self.get_flow(flow_name=flow_name, tweaks=tweaks)
         # Get the page_content from the document
+        if document and isinstance(document, list):
+            document = document[0]
         page_content = document.page_content
         # Use it in the flow
         result = flow(page_content)
@@ -299,17 +303,17 @@ class FlowRunner(CustomComponent):
                "document": {"display_name": "Document"}
         }
 
-
     def build(self, flow_name: str, document: Document) -> Document:
         # List the flows
         flows = self.list_flows()
         # Get the flow that matches the selected name
         # You can also get the flow by id
         # using self.get_flow(flow_id=flow_id)
-        # Load the flow
         tweaks = {}
         flow = self.get_flow(flow_name=flow_name, tweaks=tweaks)
         # Get the page_content from the document
+        if document and isinstance(document, list):
+            document = document[0]
         page_content = document.page_content
         # Use it in the flow
         result = flow(page_content)
