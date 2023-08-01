@@ -121,6 +121,20 @@ export default function App() {
     );
   };
 
+  const handleKeyPress = (e: KeyboardEvent) => {
+    if (e.ctrlKey && e.key === "Backspace") {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyPress);
+    return () => {
+      document.removeEventListener('keydown', handleKeyPress);
+    };
+  }, []);
+
   return (
     //need parent component with width and height
     <div className="flex h-full flex-col">

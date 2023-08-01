@@ -232,3 +232,14 @@ export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
 
   return newName;
 }
+<<<<<<< HEAD
+=======
+
+export function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>, inputValue: string | string[] | null, block: string)
+{
+  if (e.ctrlKey && inputValue === block && e.key === "Backspace") {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+};
+>>>>>>> bugfix-backctrl

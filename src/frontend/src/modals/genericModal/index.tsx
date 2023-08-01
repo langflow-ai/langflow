@@ -22,6 +22,7 @@ import {
   varHighlightHTML,
 } from "../../utils/utils";
 import BaseModal from "../baseModal";
+import { handleKeyDown } from "../../utils/reactflowUtils";
 
 export default function GenericModal({
   field_name = "",
@@ -213,6 +214,9 @@ export default function GenericModal({
                   checkVariables(e.target.value);
                 }}
                 placeholder="Type message here."
+                onKeyDown={(e) => {
+                  handleKeyDown(e, inputValue, '');
+                }}
               />
             ) : type === TypeModal.PROMPT && !isEdit ? (
               <TextAreaContentView />
@@ -225,6 +229,9 @@ export default function GenericModal({
                   setInputValue(e.target.value);
                 }}
                 placeholder="Type message here."
+                onKeyDown={(e) => {
+                  handleKeyDown(e, value, '');
+                }}
               />
             ) : (
               <></>
