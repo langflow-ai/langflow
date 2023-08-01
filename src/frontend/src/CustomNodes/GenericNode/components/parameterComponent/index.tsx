@@ -127,7 +127,7 @@ export default function ParameterComponent({
               />
             </div>
             <span className="ps-2 text-xs text-foreground">
-              {nodeNames[item.family] ?? "Unknown"}
+              {nodeNames[item.family] ?? "Other"}
               <span className="text-xs">
                 {" "}
                 {item.type === "" ? "" : " - "}
