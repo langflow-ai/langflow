@@ -29,7 +29,7 @@ class CustomComponent(Component, extra=Extra.allow):
     def build_config(self):
         return self.field_config
 
-    def _class_template_validation(self, code: str) -> bool:
+    def _class_template_validation(self, code: str):
         TYPE_HINT_LIST = ["Optional", "Prompt", "PromptTemplate", "LLMChain"]
 
         if not code:
@@ -52,7 +52,7 @@ class CustomComponent(Component, extra=Extra.allow):
                 raise HTTPException(status_code=400, detail=error_detail)
 
     def is_check_valid(self) -> bool:
-        return self._class_template_validation(self.code)
+        return self._class_template_validation(self.code) if self.code else False
 
     def get_code_tree(self, code: str):
         return super().get_code_tree(code)
