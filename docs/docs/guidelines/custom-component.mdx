@@ -29,30 +29,33 @@ Here is an example:
     }}>
     <CH.Code linuNumbers={false}>
 
-    ```python
-    from langflow import CustomComponent
-    from langchain.schema import Document
+```python
+from langflow import CustomComponent
+from langchain.schema import Document
 
-    class DocumentProcessor(CustomComponent):
-        display_name = "Document Processor"
-        description = "This component processes a document"
+class DocumentProcessor(CustomComponent):
+    display_name = "Document Processor"
+    description = "This component processes a document"
 
-        def build_config(self) -> dict:
-            options = ["Uppercase", "Lowercase", "Titlecase"]
-            return {
-                "function": {"options": options,
-                        "value": options[0]}}
+    def build_config(self) -> dict:
+        options = ["Uppercase", "Lowercase", "Titlecase"]
+        return {
+            "function": {"options": options,
+                    "value": options[0]}}
 
-        def build(self, document: Document, function: str) -> Document:
-            page_content = document.page_content
-            if function == "Uppercase":
-                page_content = page_content.upper()
-            elif function == "Lowercase":
-                page_content = page_content.lower()
-            elif function == "Titlecase":
-                page_content = page_content.title()
-            return Document(page_content=page_content)
-    ```
+    def build(self, document: Document, function: str) -> Document:
+        if isinstance(document, list):
+            document = document[0]
+        page_content = document.page_content
+        if function == "Uppercase":
+            page_content = page_content.upper()
+        elif function == "Lowercase":
+            page_content = page_content.lower()
+        elif function == "Titlecase":
+            page_content = page_content.title()
+        self.repr_value = f"Result of {function} function: {page_content}"
+        return Document(page_content=page_content)
+```
 
     </CH.Code>
 
@@ -252,6 +255,8 @@ class DocumentProcessor(CustomComponent):
         ...
 
     def build(self, document: Document, function: str) -> Document:
+        if isinstance(document, list):
+            document = document[0]
         page_content = document.page_content
         if function == "Uppercase":
             page_content = page_content.upper()
@@ -259,12 +264,15 @@ class DocumentProcessor(CustomComponent):
             page_content = page_content.lower()
         elif function == "Titlecase":
             page_content = page_content.title()
+        self.repr_value = f"Result of {function} function: {page_content}"
         return Document(page_content=page_content)
 ```
 
 ### Add the build method
 
 Here, the build method takes two input parameters: _`document`_, representing the input document to be processed, and _`function`_, a string representing the selected text transformation to be applied (either "Uppercase," "Lowercase," or "Titlecase"). The method processes the text content of the input Document based on the selected function.
+
+The attribute _`repr_value`_ is used to display the result of the component on the canvas. It is optional and can be used to display any string value.
 
 The return type is _`Document`_.
 
@@ -297,6 +305,8 @@ class DocumentProcessor(CustomComponent):
                 }
 
     def build(self, document: Document, function: str) -> Document:
+        if isinstance(document, list):
+            document = document[0]
         page_content = document.page_content
         if function == "Uppercase":
             page_content = page_content.upper()
@@ -304,6 +314,7 @@ class DocumentProcessor(CustomComponent):
             page_content = page_content.lower()
         elif function == "Titlecase":
             page_content = page_content.title()
+        self.repr_value = f"Result of {function} function: {page_content}"
         return Document(page_content=page_content)
 ```
 
