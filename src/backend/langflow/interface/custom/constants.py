@@ -34,8 +34,7 @@ CUSTOM_COMPONENT_SUPPORTED_TYPES = {
 }
 
 
-DEFAULT_CUSTOM_COMPONENT_CODE = """
-from langflow import CustomComponent
+DEFAULT_CUSTOM_COMPONENT_CODE = """from langflow import CustomComponent
 
 from langchain.llms.base import BaseLLM
 from langchain.chains import LLMChain
@@ -45,8 +44,8 @@ from langchain.schema import Document
 import requests
 
 class YourComponent(CustomComponent):
-    display_name: str = "Your Component"
-    description: str = "Your description"
+    display_name: str = "Custom Component"
+    description: str = "Create any custom component you want!"
 
     def build_config(self):
         return { "url": { "multiline": True, "required": True } }
