@@ -101,6 +101,9 @@ def add_new_custom_field(
     field_value = field_config.pop("value", field_value)
     field_advanced = field_config.pop("advanced", False)
 
+    if field_type == "bool" and field_value is None:
+        field_value = False
+
     # If options is a list, then it's a dropdown
     # If options is None, then it's a list of strings
     is_list = isinstance(field_config.get("options"), list)
