@@ -144,6 +144,12 @@ export const IMPORT_DIALOG_SUBTITLE =
   "Upload a JSON file or select from the available community examples.";
 
 /**
+ * The text that shows when a tooltip is empty
+ * @constant
+ */
+export const TOOLTIP_EMPTY = "No compatible components found.";
+
+/**
  * The base text for subtitle of code dialog
  * @constant
  */
@@ -491,3 +497,14 @@ export const NOUNS: string[] = [
  *
  */
 export const USER_PROJECTS_HEADER = "My Collection";
+
+/**
+ * URLs excluded from error retries.
+ * @constant
+ *
+ */
+export const URL_EXCLUDED_FROM_ERROR_RETRIES = [
+  "/api/v1/validate/code",
+  "/api/v1/custom_component",
+  "/api/v1/validate/prompt",
+];

@@ -26,7 +26,7 @@ async def chat(client_id: str, websocket: WebSocket):
             message = "Please, build the flow before sending messages"
             await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=message)
     except WebSocketException as exc:
-        logger.error(exc)
+        logger.error(f"Websocket error: {exc}")
         await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=str(exc))
 
 
@@ -56,7 +56,7 @@ async def init_build(graph_data: dict, flow_id: str):
 
         return InitResponse(flowId=flow_id)
     except Exception as exc:
-        logger.error(exc)
+        logger.error(f"Error initializing build: {exc}")
         return HTTPException(status_code=500, detail=str(exc))
 
 
@@ -74,7 +74,7 @@ async def build_status(flow_id: str):
         )
 
     except Exception as exc:
-        logger.error(exc)
+        logger.error(f"Error checking build status: {exc}")
         return HTTPException(status_code=500, detail=str(exc))
 
 
@@ -177,5 +177,5 @@ async def stream_build(flow_id: str):
     try:
         return StreamingResponse(event_stream(flow_id), media_type="text/event-stream")
     except Exception as exc:
-        logger.error(exc)
+        logger.error(f"Error streaming build: {exc}")
         raise HTTPException(status_code=500, detail=str(exc))

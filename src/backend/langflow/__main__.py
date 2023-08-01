@@ -2,7 +2,8 @@ import os
 import sys
 import time
 import httpx
-from multiprocess import Process, cpu_count  # type: ignore
+from langflow.utils.util import get_number_of_workers
+from multiprocess import Process  # type: ignore
 import platform
 from pathlib import Path
 from typing import Optional
@@ -20,18 +21,13 @@ from dotenv import load_dotenv
 app = typer.Typer()
 
 
-def get_number_of_workers(workers=None):
-    if workers == -1:
-        workers = (cpu_count() * 2) + 1
-    return workers
-
-
 def update_settings(
     config: str,
     cache: str,
     dev: bool = False,
     database_url: Optional[str] = None,
     remove_api_keys: bool = False,
+    components_path: Optional[Path] = None,
 ):
     """Update the settings from a config file."""
 
@@ -39,13 +35,19 @@ def update_settings(
     database_url = database_url or os.getenv("langflow_database_url")
 
     if config:
+        logger.debug(f"Loading settings from {config}")
         settings.update_from_yaml(config, dev=dev)
     if database_url:
         settings.update_settings(database_url=database_url)
     if remove_api_keys:
+        logger.debug(f"Setting remove_api_keys to {remove_api_keys}")
         settings.update_settings(remove_api_keys=remove_api_keys)
     if cache:
+        logger.debug(f"Setting cache to {cache}")
         settings.update_settings(cache=cache)
+    if components_path:
+        logger.debug(f"Adding component path {components_path}")
+        settings.update_settings(components_path=components_path)
 
 
 def load_params():
@@ -120,10 +122,15 @@ def serve(
         "127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"
     ),
     workers: int = typer.Option(
-        1, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"
+        2, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"
     ),
-    timeout: int = typer.Option(60, help="Worker timeout in seconds."),
+    timeout: int = typer.Option(300, help="Worker timeout in seconds."),
     port: int = typer.Option(7860, help="Port to listen on.", envvar="LANGFLOW_PORT"),
+    components_path: Optional[Path] = typer.Option(
+        Path(__file__).parent,
+        help="Path to the directory containing custom components.",
+        envvar="LANGFLOW_COMPONENTS_PATH",
+    ),
     config: str = typer.Option("config.yaml", help="Path to the configuration file."),
     # .env file param
     env_file: Path = typer.Option(
@@ -181,6 +188,7 @@ def serve(
         database_url=database_url,
         remove_api_keys=remove_api_keys,
         cache=cache,
+        components_path=components_path,
     )
     # create path object if path is provided
     static_files_dir: Optional[Path] = Path(path) if path else None
@@ -298,7 +306,7 @@ def run_langflow(host, port, log_level, options, app):
     Run Langflow server on localhost
     """
     try:
-        if platform.system() in ["Darwin", "Windows"]:
+        if platform.system() in ["Windows"]:
             # Run using uvicorn on MacOS and Windows
             # Windows doesn't support gunicorn
             # MacOS requires an env variable to be set to use gunicorn

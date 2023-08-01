@@ -5,9 +5,12 @@ import ContextWrapper from "./contexts";
 import reportWebVitals from "./reportWebVitals";
 
 import { ApiInterceptor } from "./controllers/API/api";
+// @ts-ignore
 import "./style/index.css";
-import "./style/classes.css";
+// @ts-ignore
 import "./style/applies.css";
+// @ts-ignore
+import "./style/classes.css";
 
 const root = ReactDOM.createRoot(
   document.getElementById("root") as HTMLElement

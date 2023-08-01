@@ -261,6 +261,13 @@ const EditNodeModal = forwardRef(
                               ) : myData.node.template[n].type === "code" ? (
                                 <div className="mx-auto">
                                   <CodeAreaComponent
+                                    dynamic={
+                                      data.node.template[n].dynamic ?? false
+                                    }
+                                    setNodeClass={(nodeClass) => {
+                                      data.node = nodeClass;
+                                    }}
+                                    nodeClass={data.node}
                                     disabled={disabled}
                                     editNode={true}
                                     value={myData.node.template[n].value ?? ""}

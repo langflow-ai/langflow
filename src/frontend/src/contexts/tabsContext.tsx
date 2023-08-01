@@ -40,6 +40,8 @@ const TabsContextInitialValue: TabsContextType = {
   downloadFlows: () => {},
   uploadFlows: () => {},
   uploadFlow: () => {},
+  isBuilt: false,
+  setIsBuilt: (state: boolean) => {},
   hardReset: () => {},
   saveFlow: async (flow: FlowType) => {},
   lastCopiedSelection: null,
@@ -587,10 +589,14 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const [isBuilt, setIsBuilt] = useState(false);
+
   return (
     <TabsContext.Provider
       value={{
         saveFlow,
+        isBuilt,
+        setIsBuilt,
         lastCopiedSelection,
         setLastCopiedSelection,
         hardReset,

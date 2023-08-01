@@ -34,7 +34,7 @@ class LangChainTypeCreator(BaseModel, ABC):
                     for name, value_dict in type_settings.items()
                 }
             except AttributeError as exc:
-                logger.error(exc)
+                logger.error(f"Error getting settings for {self.type_name}: {exc}")
 
                 self.name_docs_dict = {}
         return self.name_docs_dict
