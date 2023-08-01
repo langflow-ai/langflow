@@ -255,7 +255,7 @@ export default function ParameterComponent({
           <div className="mt-2 w-full">
             <ToggleShadComponent
               disabled={disabled}
-              enabled={data.node.template[name].value}
+              enabled={data.node.template[name].value ?? false}
               setEnabled={(t) => {
                 handleOnNewValue(t);
               }}
