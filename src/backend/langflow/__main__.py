@@ -127,7 +127,7 @@ def serve(
     timeout: int = typer.Option(300, help="Worker timeout in seconds."),
     port: int = typer.Option(7860, help="Port to listen on.", envvar="LANGFLOW_PORT"),
     components_path: Optional[Path] = typer.Option(
-        Path(__file__).parent,
+        Path(__file__).parent / "components",
         help="Path to the directory containing custom components.",
         envvar="LANGFLOW_COMPONENTS_PATH",
     ),
