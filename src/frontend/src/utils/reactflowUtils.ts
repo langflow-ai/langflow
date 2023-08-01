@@ -232,8 +232,6 @@ export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
 
   return newName;
 }
-<<<<<<< HEAD
-=======
 
 export function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>, inputValue: string | string[] | null, block: string)
 {
@@ -242,4 +240,3 @@ export function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>, inputVal
     e.stopPropagation();
   }
 };
->>>>>>> bugfix-backctrl
