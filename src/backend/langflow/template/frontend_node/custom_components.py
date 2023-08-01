@@ -6,7 +6,7 @@ from langflow.interface.custom.constants import DEFAULT_CUSTOM_COMPONENT_CODE
 
 class CustomComponentFrontendNode(FrontendNode):
     name: str = "CustomComponent"
-    display_name: str = "Your Component"
+    display_name: str = "Custom Component"
     beta: bool = True
     template: Template = Template(
         type_name="CustomComponent",
