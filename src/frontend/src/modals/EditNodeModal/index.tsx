@@ -238,7 +238,7 @@ const EditNodeModal = forwardRef(
                                     }
                                     suffixes={myData.node.template[n].suffixes}
                                     onFileChange={(t: string) => {
-                                      handleOnNewValue(t, n);
+                                      data.node.template[n].file_path = t;
                                     }}
                                   ></InputFileComponent>
                                 </div>

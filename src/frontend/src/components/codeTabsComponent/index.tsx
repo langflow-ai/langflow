@@ -432,8 +432,12 @@ export default function CodeTabsComponent({
                                                         .suffixes
                                                     }
                                                     onFileChange={(
-                                                      k: any
-                                                    ) => {}}
+                                                      value: any
+                                                    ) => {
+                                                      t.data.node.template[
+                                                        n
+                                                      ].file_path = value;
+                                                    }}
                                                   ></InputFileComponent>
                                                 </div>
                                               </ShadTooltip>
