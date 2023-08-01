@@ -9,6 +9,7 @@ from langflow.template.frontend_node import (
     vectorstores,
     documentloaders,
     textsplitters,
+    custom_components,
 )
 
 __all__ = [
@@ -22,4 +23,5 @@ __all__ = [
     "vectorstores",
     "documentloaders",
     "textsplitters",
+    "custom_components",
 ]

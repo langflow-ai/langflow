@@ -6,7 +6,7 @@ from rich.logging import RichHandler
 logger = logging.getLogger("langflow")
 
 
-def configure(log_level: str = "INFO", log_file: Path = None):  # type: ignore
+def configure(log_level: str = "DEBUG", log_file: Path = None):  # type: ignore
     log_format = "%(asctime)s - %(levelname)s - %(message)s"
     log_level_value = getattr(logging, log_level.upper(), logging.INFO)
 

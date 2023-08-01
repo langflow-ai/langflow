@@ -30,14 +30,14 @@
 - [Table of Contents](#table-of-contents)
 - [📦 Installation](#-installation)
   - [Locally](#locally)
-  - [HuggingFace](#huggingface)
+  - [HuggingFace Spaces](#huggingface-spaces)
 - [🖥️ Command Line Interface (CLI)](#️-command-line-interface-cli)
   - [Usage](#usage)
-    - [Environment Variables](#environment-variables)
+  - [Environment Variables](#environment-variables)
 - [Deployment](#deployment)
   - [Deploy Langflow on Google Cloud Platform](#deploy-langflow-on-google-cloud-platform)
   - [Deploy Langflow on Jina AI Cloud](#deploy-langflow-on-jina-ai-cloud)
-      - [API Usage](#api-usage)
+    - [API Usage](#api-usage)
   - [Deploy on Railway](#deploy-on-railway)
   - [Deploy on Render](#deploy-on-render)
 - [🎨 Creating Flows](#-creating-flows)
@@ -46,7 +46,7 @@
 
 # 📦 Installation
 
-## Locally
+### <b>Locally</b>
 
 You can install Langflow from pip:
 
@@ -81,7 +81,7 @@ or
 langflow # or langflow --help
 ```
 
-## HuggingFace
+### HuggingFace Spaces
 
 You can also check it out on [HuggingFace Spaces](https://huggingface.co/spaces/Logspace/Langflow) and run it in your browser! You can even clone it and have your own copy of Langflow to play with.
 
@@ -107,6 +107,7 @@ Each option is detailed below:
 - `--config`: Defines the path to the configuration file. The default is `config.yaml`.
 - `--env-file`: Specifies the path to the .env file containing environment variables. The default is `.env`.
 - `--log-level`: Defines the logging level. Can be set using the `LANGFLOW_LOG_LEVEL` environment variable. The default is `critical`.
+- `--components-path`: Specifies the path to the directory containing custom components. Can be set using the `LANGFLOW_COMPONENTS_PATH` environment variable. The default is `langflow/components`.
 - `--log-file`: Specifies the path to the log file. Can be set using the `LANGFLOW_LOG_FILE` environment variable. The default is `logs/langflow.log`.
 - `--cache`: Selects the type of cache to use. Options are `InMemoryCache` and `SQLiteCache`. Can be set using the `LANGFLOW_LANGCHAIN_CACHE` environment variable. The default is `SQLiteCache`.
 - `--jcloud/--no-jcloud`: Toggles the option to deploy on Jina AI Cloud. The default is `no-jcloud`.
@@ -161,33 +162,33 @@ langflow --jcloud
   <details>
   <summary>Show complete (example) output</summary>
 
-  ```text
-    🚀 Deploying Langflow server on Jina AI Cloud
-    ╭───────────────────────── 🎉 Flow is available! ──────────────────────────╮
-    │                                                                          │
-    │   ID                    langflow-e3dd8820ec                              │
-    │   Gateway (Websocket)   wss://langflow-e3dd8820ec.wolf.jina.ai           │
-    │   Dashboard             https://dashboard.wolf.jina.ai/flow/e3dd8820ec   │
-    │                                                                          │
-    ╰──────────────────────────────────────────────────────────────────────────╯
-    ╭──────────────┬──────────────────────────────────────────────────────────────────────────────╮
-    │ App ID       │                     langflow-e3dd8820ec                                      │
-    ├──────────────┼──────────────────────────────────────────────────────────────────────────────┤
-    │ Phase        │                            Serving                                           │
-    ├──────────────┼──────────────────────────────────────────────────────────────────────────────┤
-    │ Endpoint     │          wss://langflow-e3dd8820ec.wolf.jina.ai                              │
-    ├──────────────┼──────────────────────────────────────────────────────────────────────────────┤
-    │ App logs     │                  dashboards.wolf.jina.ai                                     │
-    ├──────────────┼──────────────────────────────────────────────────────────────────────────────┤
-    │ Swagger UI   │          https://langflow-e3dd8820ec.wolf.jina.ai/docs                       │
-    ├──────────────┼──────────────────────────────────────────────────────────────────────────────┤
-    │ OpenAPI JSON │        https://langflow-e3dd8820ec.wolf.jina.ai/openapi.json                 │
-    ╰──────────────┴──────────────────────────────────────────────────────────────────────────────╯
+```text
+  🚀 Deploying Langflow server on Jina AI Cloud
+  ╭───────────────────────── 🎉 Flow is available! ──────────────────────────╮
+  │                                                                          │
+  │   ID                    langflow-e3dd8820ec                              │
+  │   Gateway (Websocket)   wss://langflow-e3dd8820ec.wolf.jina.ai           │
+  │   Dashboard             https://dashboard.wolf.jina.ai/flow/e3dd8820ec   │
+  │                                                                          │
+  ╰──────────────────────────────────────────────────────────────────────────╯
+  ╭──────────────┬──────────────────────────────────────────────────────────────────────────────╮
+  │ App ID       │                     langflow-e3dd8820ec                                      │
+  ├──────────────┼──────────────────────────────────────────────────────────────────────────────┤
+  │ Phase        │                            Serving                                           │
+  ├──────────────┼──────────────────────────────────────────────────────────────────────────────┤
+  │ Endpoint     │          wss://langflow-e3dd8820ec.wolf.jina.ai                              │
+  ├──────────────┼──────────────────────────────────────────────────────────────────────────────┤
+  │ App logs     │                  dashboards.wolf.jina.ai                                     │
+  ├──────────────┼──────────────────────────────────────────────────────────────────────────────┤
+  │ Swagger UI   │          https://langflow-e3dd8820ec.wolf.jina.ai/docs                       │
+  ├──────────────┼──────────────────────────────────────────────────────────────────────────────┤
+  │ OpenAPI JSON │        https://langflow-e3dd8820ec.wolf.jina.ai/openapi.json                 │
+  ╰──────────────┴──────────────────────────────────────────────────────────────────────────────╯
 
-    🎉 Langflow server successfully deployed on Jina AI Cloud 🎉
-    🔗 Click on the link to open the server (please allow ~1-2 minutes for the server to startup): https://langflow-e3dd8820ec.wolf.jina.ai/
-    📖 Read more about managing the server: https://github.com/jina-ai/langchain-serve
-  ```
+  🎉 Langflow server successfully deployed on Jina AI Cloud 🎉
+  🔗 Click on the link to open the server (please allow ~1-2 minutes for the server to startup): https://langflow-e3dd8820ec.wolf.jina.ai/
+  📖 Read more about managing the server: https://github.com/jina-ai/langchain-serve
+```
 
   </details>
 
@@ -198,7 +199,7 @@ You can use Langflow directly on your browser, or use the API endpoints on Jina 
   <details>
   <summary>Show API usage (with python)</summary>
 
-  ```python
+```python
 import requests
 
 BASE_API_URL = "https://langflow-e3dd8820ec.wolf.jina.ai/api/v1/predict"
@@ -206,38 +207,38 @@ FLOW_ID = "864c4f98-2e59-468b-8e13-79cd8da07468"
 # You can tweak the flow by adding a tweaks dictionary
 # e.g {"OpenAI-XXXXX": {"model_name": "gpt-4"}}
 TWEAKS = {
-  "ChatOpenAI-g4jEr": {},
-  "ConversationChain-UidfJ": {}
+"ChatOpenAI-g4jEr": {},
+"ConversationChain-UidfJ": {}
 }
 
 def run_flow(message: str, flow_id: str, tweaks: dict = None) -> dict:
-    """
-    Run a flow with a given message and optional tweaks.
+  """
+  Run a flow with a given message and optional tweaks.
 
-    :param message: The message to send to the flow
-    :param flow_id: The ID of the flow to run
-    :param tweaks: Optional tweaks to customize the flow
-    :return: The JSON response from the flow
-    """
-    api_url = f"{BASE_API_URL}/{flow_id}"
+  :param message: The message to send to the flow
+  :param flow_id: The ID of the flow to run
+  :param tweaks: Optional tweaks to customize the flow
+  :return: The JSON response from the flow
+  """
+  api_url = f"{BASE_API_URL}/{flow_id}"
 
-    payload = {"message": message}
+  payload = {"message": message}
 
-    if tweaks:
-        payload["tweaks"] = tweaks
+  if tweaks:
+      payload["tweaks"] = tweaks
 
-    response = requests.post(api_url, json=payload)
-    return response.json()
+  response = requests.post(api_url, json=payload)
+  return response.json()
 
 # Setup any tweaks you want to apply to the flow
 print(run_flow("Your message", flow_id=FLOW_ID, tweaks=TWEAKS))
-  ```
+```
 
-  ```json
-  {
-    "result": "Great choice! Bangalore in the 1920s was a vibrant city with a rich cultural and political scene. Here are some suggestions for things to see and do:\n\n1. Visit the Bangalore Palace - built in 1887, this stunning palace is a perfect example of Tudor-style architecture. It was home to the Maharaja of Mysore and is now open to the public.\n\n2. Attend a performance at the Ravindra Kalakshetra - this cultural center was built in the 1920s and is still a popular venue for music and dance performances.\n\n3. Explore the neighborhoods of Basavanagudi and Malleswaram - both of these areas have retained much of their old-world charm and are great places to walk around and soak up the atmosphere.\n\n4. Check out the Bangalore Club - founded in 1868, this exclusive social club was a favorite haunt of the British expat community in the 1920s.\n\n5. Attend a meeting of the Indian National Congress - founded in 1885, the INC was a major force in the Indian independence movement and held many meetings and rallies in Bangalore in the 1920s.\n\nHope you enjoy your trip to 1920s Bangalore!"
-  }
-  ```
+```json
+{
+  "result": "Great choice! Bangalore in the 1920s was a vibrant city with a rich cultural and political scene. Here are some suggestions for things to see and do:\n\n1. Visit the Bangalore Palace - built in 1887, this stunning palace is a perfect example of Tudor-style architecture. It was home to the Maharaja of Mysore and is now open to the public.\n\n2. Attend a performance at the Ravindra Kalakshetra - this cultural center was built in the 1920s and is still a popular venue for music and dance performances.\n\n3. Explore the neighborhoods of Basavanagudi and Malleswaram - both of these areas have retained much of their old-world charm and are great places to walk around and soak up the atmosphere.\n\n4. Check out the Bangalore Club - founded in 1868, this exclusive social club was a favorite haunt of the British expat community in the 1920s.\n\n5. Attend a meeting of the Indian National Congress - founded in 1885, the INC was a major force in the Indian independence movement and held many meetings and rallies in Bangalore in the 1920s.\n\nHope you enjoy your trip to 1920s Bangalore!"
+}
+```
 
   </details>
 

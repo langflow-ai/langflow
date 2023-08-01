@@ -62,8 +62,9 @@ export type CodeAreaComponentType = {
   onChange: (value: string[] | string) => void;
   value: string;
   editNode?: boolean;
-  nodeClass: APIClassType;
-  setNodeClass: (value: APIClassType) => void;
+  nodeClass?: APIClassType;
+  setNodeClass?: (value: APIClassType) => void;
+  dynamic?: boolean;
 };
 
 export type FileComponentType = {
