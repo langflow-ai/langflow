@@ -20,7 +20,11 @@ import {
 import { APIClassType, APITemplateType } from "../types/api";
 import { FlowType, NodeType } from "../types/flow";
 import { TabsContextType, TabsState } from "../types/tabs";
-import { addVersionToDuplicates, updateIds, updateTemplate } from "../utils/reactflowUtils";
+import {
+  addVersionToDuplicates,
+  updateIds,
+  updateTemplate,
+} from "../utils/reactflowUtils";
 import { getRandomDescription, getRandomName } from "../utils/utils";
 import { alertContext } from "./alertContext";
 import { typesContext } from "./typesContext";
