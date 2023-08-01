@@ -176,9 +176,14 @@ class DirectoryReader:
         """
         Check if a type hint is used but not imported in the given code.
         """
-        return self._is_type_hint_used_in_args(
-            type_hint_name, code
-        ) and not self._is_type_hint_imported(type_hint_name, code)
+        try:
+            return self._is_type_hint_used_in_args(
+                type_hint_name, code
+            ) and not self._is_type_hint_imported(type_hint_name, code)
+        except SyntaxError:
+            # Returns True if there's something wrong with the code
+            # TODO : Find a better way to handle this
+            return True
 
     def process_file(self, file_path):
         """
