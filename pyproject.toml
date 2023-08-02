@@ -75,7 +75,7 @@ certifi = "^2023.5.7"
 google-cloud-aiplatform = "^1.26.1"
 psycopg = "^3.1.9"
 psycopg-binary = "^3.1.9"
-fastavro = "1.8.2"
+fastavro = "^1.8.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
