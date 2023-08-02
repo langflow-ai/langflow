@@ -29,7 +29,7 @@ export default function AccordionComponent({
   }
 
   function handleClick(): void {
-    value === "" ? setValue(keyValue) : setValue("");
+    value === "" ? setValue(keyValue!) : setValue("");
   }
 
   return (
@@ -40,7 +40,7 @@ export default function AccordionComponent({
         value={value}
         onValueChange={setValue}
       >
-        <AccordionItem value={keyValue} className="border-b">
+        <AccordionItem value={keyValue!} className="border-b">
           <AccordionTrigger
             onClick={() => {
               handleClick();

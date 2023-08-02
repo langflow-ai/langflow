@@ -45,7 +45,7 @@ export default function HomePage(): JSX.Element {
           <Button
             variant="primary"
             onClick={() => {
-              addFlow(null, true).then((id) => {
+              addFlow(null!, true).then((id) => {
                 navigate("/flow/" + id);
               });
             }}

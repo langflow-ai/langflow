@@ -36,7 +36,7 @@ export default function BuildTrigger({
       if (isBuilding) {
         return;
       }
-      const errors = validateNodes(reactFlowInstance);
+      const errors = validateNodes(reactFlowInstance!);
       if (errors.length > 0) {
         setErrorData({
           title: "Oops! Looks like you missed something",

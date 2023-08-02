@@ -180,7 +180,7 @@ export type InputProps = {
   invalidName: boolean;
   setName: (name: string) => void;
   setDescription: (description: string) => void;
-  updateFlow: (flow: { id: string; name: string }) => void;
+  updateFlow: (flow: { id: string; name: string; }) => void;
   setInvalidName: (invalidName: boolean) => void;
 };
 
@@ -208,7 +208,6 @@ export interface languageMap {
 }
 
 export type groupedObjType = {
-  component: string;
   family: string;
   type: string;
 };
@@ -384,6 +383,7 @@ type tabsArrayType = {
   language: string;
   mode: string;
   name: string;
+  description: string;
 };
 
 type getValueNodeType = {
@@ -426,4 +426,11 @@ export type crashComponentPropsType = {
     stack: string;
   };
   resetErrorBoundary: (args) => void;
+};
+
+export type validationStatusType = {
+  id: string;
+  params: string;
+  progress: number;
+  valid: boolean;
 };

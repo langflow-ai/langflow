@@ -45,11 +45,11 @@ export default function FormModal({
       const inputKeys = formKeysData.input_keys;
       const handleKeys = formKeysData.handle_keys;
 
-      const keyToUse = Object.keys(inputKeys).find(
-        (k) => !handleKeys?.some((j) => j === k) && inputKeys[k] === ""
+      const keyToUse = Object.keys(inputKeys!).find(
+        (k) => !handleKeys?.some((j) => j === k) && inputKeys![k] === ""
       );
 
-      return inputKeys[keyToUse];
+      return inputKeys![keyToUse!];
     } catch (error) {
       console.error(error);
       // return a sensible default or `undefined` if no default is possible
@@ -68,10 +68,10 @@ export default function FormModal({
   const tabsStateFlowId = tabsState[flow.id];
   const tabsStateFlowIdFormKeysData = tabsStateFlowId.formKeysData;
   const [chatKey, setChatKey] = useState(
-    Object.keys(tabsState[flow.id].formKeysData.input_keys).find(
+    Object.keys(tabsState[flow.id].formKeysData.input_keys!).find(
       (k) =>
-        !tabsState[flow.id].formKeysData.handle_keys.some((j) => j === k) &&
-        tabsState[flow.id].formKeysData.input_keys[k] === ""
+        !tabsState[flow.id].formKeysData.handle_keys!.some((j) => j === k) &&
+        tabsState[flow.id].formKeysData.input_keys![k] === ""
     )
   );
 
@@ -211,7 +211,7 @@ export default function FormModal({
       });
     }
     if (data.type === "start") {
-      addChatHistory("", false, chatKey);
+      addChatHistory("", false, chatKey!);
       isStream = true;
     }
     if (data.type === "end") {
@@ -335,16 +335,16 @@ export default function FormModal({
   }, [open]);
 
   function sendMessage(): void {
-    let nodeValidationErrors = validateNodes(reactFlowInstance);
+    let nodeValidationErrors = validateNodes(reactFlowInstance!);
     if (nodeValidationErrors.length === 0) {
       setLockChat(true);
       let inputs = tabsState[id.current].formKeysData.input_keys;
       setChatValue("");
       const message = inputs;
       addChatHistory(
-        message,
+        message!,
         true,
-        chatKey,
+        chatKey!,
         tabsState[flow.id].formKeysData.template
       );
       sendAll({
@@ -357,7 +357,7 @@ export default function FormModal({
       setTabsState((old) => {
         if (!chatKey) return old;
         let newTabsState = _.cloneDeep(old);
-        newTabsState[id.current].formKeysData.input_keys[chatKey] = "";
+        newTabsState[id.current].formKeysData.input_keys![chatKey] = "";
         return newTabsState;
       });
     } else {
@@ -376,9 +376,9 @@ export default function FormModal({
   function handleOnCheckedChange(checked: boolean, i: string) {
     if (checked === true) {
       setChatKey(i);
-      setChatValue(tabsState[flow.id].formKeysData.input_keys[i]);
+      setChatValue(tabsState[flow.id].formKeysData.input_keys![i]);
     } else {
-      setChatKey(null);
+      setChatKey(null!);
       setChatValue("");
     }
   }
@@ -422,7 +422,7 @@ export default function FormModal({
                 </div>
               </div>
 
-              {Object.keys(tabsState[id.current].formKeysData.input_keys).map(
+              {Object.keys(tabsState[id.current].formKeysData.input_keys!).map(
                 (i, k) => (
                   <div className="file-component-accordion-div" key={k}>
                     <AccordionComponent
@@ -465,12 +465,12 @@ export default function FormModal({
                         <Textarea
                           className="custom-scroll"
                           value={
-                            tabsState[id.current].formKeysData.input_keys[i]
+                            tabsState[id.current].formKeysData.input_keys![i]
                           }
                           onChange={(e) => {
                             setTabsState((old) => {
                               let newTabsState = _.cloneDeep(old);
-                              newTabsState[id.current].formKeysData.input_keys[
+                              newTabsState[id.current].formKeysData.input_keys![
                                 i
                               ] = e.target.value;
                               return newTabsState;
@@ -578,7 +578,7 @@ export default function FormModal({
                         setChatValue(value);
                         setTabsState((old) => {
                           let newTabsState = _.cloneDeep(old);
-                          newTabsState[id.current].formKeysData.input_keys[
+                          newTabsState[id.current].formKeysData.input_keys![
                             chatKey
                           ] = value;
                           return newTabsState;

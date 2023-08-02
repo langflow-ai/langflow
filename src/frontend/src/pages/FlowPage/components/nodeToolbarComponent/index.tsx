@@ -13,7 +13,7 @@ export default function NodeToolbarComponent({
   deleteNode,
 }: nodeToolbarPropsType): JSX.Element {
   const [nodeLength, setNodeLength] = useState(
-    Object.keys(data.node.template).filter(
+    Object.keys(data.node!.template).filter(
       (t) =>
         t.charAt(0) !== "_" &&
         data.node?.template[t].show &&

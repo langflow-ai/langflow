@@ -75,7 +75,7 @@ export default function ModalField({
             <TextAreaComponent
               disabled={false}
               value={data.node.template[name].value ?? ""}
-              onChange={(t: string) => {
+              onChange={(t: string | string[]) => {
                 data.node.template[name].value = t;
               }}
             />
@@ -136,7 +136,7 @@ export default function ModalField({
           <InputFileComponent
             disabled={false}
             value={data.node.template[name].value ?? ""}
-            onChange={(t: string) => {
+            onChange={(t: string | string[]) => {
               data.node.template[name].value = t;
             }}
             fileTypes={data.node.template[name].fileTypes}
@@ -152,7 +152,7 @@ export default function ModalField({
             field_name={name}
             disabled={false}
             value={data.node.template[name].value ?? ""}
-            onChange={(t: string) => {
+            onChange={(t: string | string[]) => {
               data.node.template[name].value = t;
             }}
           />
@@ -167,7 +167,7 @@ export default function ModalField({
             nodeClass={data.node}
             disabled={false}
             value={data.node.template[name].value ?? ""}
-            onChange={(t: string) => {
+            onChange={(t: string | string[]) => {
               data.node.template[name].value = t;
             }}
           />

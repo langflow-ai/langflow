@@ -1,9 +1,9 @@
 import React, { forwardRef } from "react";
-import { ReactComponent as PowerPointSVG } from "./PowerPoint.svg";
+import SvgPowerPoint from "./PowerPoint";
 
 export const PowerPointIcon = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<{}>
 >((props, ref) => {
-  return <PowerPointSVG ref={ref} {...props} />;
+  return <SvgPowerPoint ref={ref} {...props} />;
 });

@@ -18,7 +18,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
   updateFlow,
 }: InputProps): JSX.Element => {
   const [isMaxLength, setIsMaxLength] = useState(false);
-  const nameLists = useRef([]);
+  const nameLists = useRef<string[]>([]);
   useEffect(() => {
     readFlowsFromDatabase().then((flows) => {
       flows.forEach((flow) => {
@@ -47,7 +47,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
   );
 
   const handleDescriptionChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
-    flows.find((f) => f.id === tabId).description = event.target.value;
+    flows.find((f) => f.id === tabId)!.description = event.target.value;
     setDesc(flows.find((f) => f.id === tabId)?.description);
     setDescription(event.target.value);
   };

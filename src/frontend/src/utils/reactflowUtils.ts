@@ -38,7 +38,7 @@ export function cleanEdges({
         const id = [
           sourceNode.data.type,
           sourceNode.data.id,
-          ...sourceNode.data.node?.base_classes,
+          ...sourceNode.data.node?.base_classes!,
         ].join("|");
         if (id !== sourceHandle) {
           newEdges = newEdges.filter((e) => e.id !== edge.id);
@@ -69,7 +69,7 @@ export function isValidConnection(
       ) ||
     targetHandle?.split("|")[0] === "str"
   ) {
-    let targetNode = reactFlowInstance?.getNode(target)?.data?.node;
+    let targetNode = reactFlowInstance?.getNode(target!)?.data?.node;
     if (!targetNode) {
       if (
         !reactFlowInstance
@@ -79,11 +79,11 @@ export function isValidConnection(
         return true;
       }
     } else if (
-      (!targetNode.template[targetHandle?.split("|")[1]].list &&
+      (!targetNode.template[targetHandle?.split("|")[1]!].list &&
         !reactFlowInstance
           .getEdges()
           .find((e) => e.targetHandle === targetHandle)) ||
-      targetNode.template[targetHandle?.split("|")[1]].list
+      targetNode.template[targetHandle?.split("|")[1]!].list
     ) {
       return true;
     }
