@@ -29,7 +29,7 @@ We will cover how to:
 - Load a flow using the _`load_flow`_ method.
 - Configure a dropdown input field using the _`options`_ parameter.
 
-<details>
+<details open>
 
 <summary>Example Code</summary>
 
@@ -38,8 +38,8 @@ from langflow import CustomComponent
 from langchain.schema import Document
 
 class FlowRunner(CustomComponent):
-display_name = "Flow Runner"
-description = "Run other flows using a document as input."
+    display_name = "Flow Runner"
+    description = "Run other flows using a document as input."
 
     def build_config(self):
         flows = self.list_flows()
