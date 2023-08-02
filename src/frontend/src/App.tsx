@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import "reactflow/dist/style.css";
 import "./App.css";
@@ -121,17 +121,35 @@ export default function App() {
     );
   };
 
-  const handleKeyPress = (e: KeyboardEvent) => {
-    if (e.ctrlKey && e.key === "Backspace") {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  };
 
+  //Prevent the control+backspace event on the application
+  const onKeyDownRef = useRef(false);
   useEffect(() => {
-    document.addEventListener('keydown', handleKeyPress);
+    const handleKeyDownCapture = (event) => {
+      
+      if(event.key === "Backspace" && event.ctrlKey === true) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      onKeyDownRef.current = true;
+    };
+
+    const handleKeyUpCapture = (event) => {
+      if (onKeyDownRef.current) {
+        if(event.key === "Backspace" && event.ctrlKey === true) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        onKeyDownRef.current = false;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDownCapture, true); 
+    document.addEventListener('keyup', handleKeyUpCapture, true);
+
     return () => {
-      document.removeEventListener('keydown', handleKeyPress);
+      document.removeEventListener('keydown', handleKeyDownCapture, true);
+      document.removeEventListener('keyup', handleKeyUpCapture, true);
     };
   }, []);
 
