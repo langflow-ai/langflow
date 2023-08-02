@@ -1,0 +1,365 @@
+---
+description: Custom Components
+hide_table_of_contents: true
+---
+
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import Admonition from "@theme/Admonition";
+
+# FlowRunner Component
+
+The CustomComponent class allows us to create components that interact with Langflow itself. In this example, we will make a component that runs other flows available in "My Collection".
+
+<ZoomableImage
+  alt="Document Processor Component"
+  sources={{
+    light: "img/flow_runner.png",
+  }}
+  style={{
+    width: "30%",
+    margin: "0 auto",
+    display: "flex",
+    justifyContent: "center",
+  }}
+/>
+
+We will cover how to:
+
+- List Collection flows using the _`list_flows`_ method.
+- Load a flow using the _`load_flow`_ method.
+- Configure a dropdown input field using the _`options`_ parameter.
+
+<details open>
+
+<summary>Example Code</summary>
+
+```python
+from langflow import CustomComponent
+from langchain.schema import Document
+
+class FlowRunner(CustomComponent):
+    display_name = "Flow Runner"
+    description = "Run other flows using a document as input."
+
+    def build_config(self):
+        flows = self.list_flows()
+        flow_names = [f.name for f in flows]
+        return {"flow_name": {"options": flow_names,
+                                "display_name": "Flow Name",
+        },
+               "document": {"display_name": "Document"}
+        }
+
+
+    def build(self, flow_name: str, document: Document) -> Document:
+        # List the flows
+        flows = self.list_flows()
+        # Get the flow that matches the selected name
+        # You can also get the flow by id
+        # using self.get_flow(flow_id=flow_id)
+        tweaks = {}
+        flow = self.get_flow(flow_name=flow_name, tweaks=tweaks)
+        # Get the page_content from the document
+        if document and isinstance(document, list):
+            document = document[0]
+        page_content = document.page_content
+        # Use it in the flow
+        result = flow(page_content)
+        return Document(page_content=str(result))
+
+```
+
+</details>
+
+<CH.Scrollycoding rows={20} className={""}>
+
+```python
+from langflow import CustomComponent
+
+
+class MyComponent(CustomComponent):
+    display_name = "Custom Component"
+    description = "This is a custom component"
+
+    def build_config(self):
+        ...
+
+    def build(self):
+        ...
+
+```
+
+The typical structure of a Custom Component is composed of _`display_name`_ and _`description`_ attributes, _`build`_ and _`build_config`_ methods.
+
+---
+
+```python
+from langflow import CustomComponent
+
+
+# focus
+class FlowRunner(CustomComponent):
+    # focus
+    display_name = "Flow Runner"
+    # focus
+    description = "Run other flows"
+
+    def build_config(self):
+        ...
+
+    def build(self):
+        ...
+
+```
+
+Let's start by defining our component's _`display_name`_ and _`description`_.
+
+---
+
+```python
+from langflow import CustomComponent
+# focus
+from langchain.schema import Document
+
+
+class FlowRunner(CustomComponent):
+    display_name = "Flow Runner"
+    description = "Run other flows using a document as input."
+
+    def build_config(self):
+        ...
+
+    def build(self):
+        ...
+
+```
+
+Second, we will import _`Document`_ from the [_langchain.schema_](https://docs.langchain.com/docs/components/schema/) module. This will be the return type of the _`build`_ method.
+
+---
+
+```python
+from langflow import CustomComponent
+# focus
+from langchain.schema import Document
+
+
+class FlowRunner(CustomComponent):
+    display_name = "Flow Runner"
+    description = "Run other flows using a document as input."
+
+    def build_config(self):
+        ...
+
+    # focus
+    def build(self, flow_name: str, document: Document) -> Document:
+        ...
+
+```
+
+Now, let's add the [parameters](focus://11[20:55]) and the [return type](focus://11[60:69]) to the _`build`_ method. The parameters added are:
+
+- _`flow_name`_ is the name of the flow we want to run.
+- _`document`_ is the input document to be passed to that flow.
+  - Since _`Document`_ is a Langchain type, it will add an input [handle](../guidelines/components) to the component ([see more](../components/custom)).
+
+---
+
+```python focus=13:14
+from langflow import CustomComponent
+from langchain.schema import Document
+
+
+class FlowRunner(CustomComponent):
+    display_name = "Flow Runner"
+    description = "Run other flows using a document as input."
+
+    def build_config(self):
+        ...
+
+    def build(self, flow_name: str, document: Document) -> Document:
+        # List the flows
+        flows = self.list_flows()
+
+```
+
+We can now start writing the _`build`_ method. Let's list available flows in "My Collection" using the _`list_flows`_ method.
+
+---
+
+```python focus=15:18
+from langflow import CustomComponent
+from langchain.schema import Document
+
+
+class FlowRunner(CustomComponent):
+    display_name = "Flow Runner"
+    description = "Run other flows using a document as input."
+
+    def build_config(self):
+        ...
+
+    def build(self, flow_name: str, document: Document) -> Document:
+        # List the flows
+        flows = self.list_flows()
+        # Get the flow that matches the selected name
+        # You can also get the flow by id
+        # using self.get_flow(flow_id=flow_id)
+        tweaks = {}
+        flow = self.get_flow(flow_name=flow_name, tweaks=tweaks)
+
+```
+
+And retrieve a flow that matches the selected name (we'll make a dropdown input field for the user to choose among flow names).
+
+<Admonition type="caution">
+  From version 0.4.0, names are unique, which was not the case in previous
+  versions. This might lead to unexpected results if using flows with the same
+  name.
+</Admonition>
+
+---
+
+```python
+from langflow import CustomComponent
+from langchain.schema import Document
+
+
+class FlowRunner(CustomComponent):
+    display_name = "Flow Runner"
+    description = "Run other flows using a document as input."
+
+    def build_config(self):
+        ...
+
+    def build(self, flow_name: str, document: Document) -> Document:
+        # List the flows
+        flows = self.list_flows()
+        # Get the flow that matches the selected name
+        # You can also get the flow by id
+        # using self.get_flow(flow_id=flow_id)
+        tweaks = {}
+        flow = self.get_flow(flow_name=flow_name, tweaks=tweaks)
+
+
+```
+
+You can load this flow using _`get_flow`_ and set a _`tweaks`_ dictionary to customize it. Find more about tweaks in our [features guidelines](../guidelines/features#code).
+
+---
+
+```python
+from langflow import CustomComponent
+from langchain.schema import Document
+
+
+class FlowRunner(CustomComponent):
+    display_name = "Flow Runner"
+    description = "Run other flows using a document as input."
+
+    def build_config(self):
+        ...
+
+    def build(self, flow_name: str, document: Document) -> Document:
+        # List the flows
+        flows = self.list_flows()
+        # Get the flow that matches the selected name
+        # You can also get the flow by id
+        # using self.get_flow(flow_id=flow_id)
+        tweaks = {}
+        flow = self.get_flow(flow_name=flow_name, tweaks=tweaks)
+        # Get the page_content from the document
+        if document and isinstance(document, list):
+            document = document[0]
+        page_content = document.page_content
+        # Use it in the flow
+        result = flow(page_content)
+        return Document(page_content=str(result))
+```
+
+We are using a _`Document`_ as input because it is a straightforward way to pass text data in Langflow (specifically because you can connect it to many [loaders](../components/loaders)).
+Generally, a flow will take a string or a dictionary as input because that's what LangChain components expect.
+In case you are passing a dictionary, you need to build it according to the needs of the flow you are using.
+
+The content of a document can be extracted using the _`page_content`_ attribute, which is a string, and passed as an argument to the selected flow.
+
+---
+
+```python focus=9:16
+from langflow import CustomComponent
+from langchain.schema import Document
+
+
+class FlowRunner(CustomComponent):
+    display_name = "Flow Runner"
+    description = "Run other flows using a document as input."
+
+    def build_config(self):
+        flows = self.list_flows()
+        flow_names = [f.name for f in flows]
+        return {"flow_name": {"options": flow_names,
+                                "display_name": "Flow Name",
+        },
+               "document": {"display_name": "Document"}
+        }
+
+    def build(self, flow_name: str, document: Document) -> Document:
+        # List the flows
+        flows = self.list_flows()
+        # Get the flow that matches the selected name
+        # You can also get the flow by id
+        # using self.get_flow(flow_id=flow_id)
+        tweaks = {}
+        flow = self.get_flow(flow_name=flow_name, tweaks=tweaks)
+        # Get the page_content from the document
+        if document and isinstance(document, list):
+            document = document[0]
+        page_content = document.page_content
+        # Use it in the flow
+        result = flow(page_content)
+        return Document(page_content=str(result))
+```
+
+Finally, we can add field customizations through the _`build_config`_ method. Here we added the _`options`_ key to make the _`flow_name`_ field a dropdown menu. Check out the [custom component reference](../components/custom) for a list of available keys.
+
+<Admonition type="caution">
+  Make sure that the field type is _`str`_ and _`options`_ values are strings.
+</Admonition>
+
+</CH.Scrollycoding>
+
+Done! This is what our script and custom component looks like:
+
+<div style={{
+        display: "flex",
+        justifyContent: "center",
+    }}>
+
+    <ZoomableImage
+    alt="Document Processor Code"
+    sources={{
+        light: "img/flow_runner_code.png",
+    }}
+    style={{
+        maxWidth: "100%",
+        margin: "0 auto",
+        display: "flex",
+        justifyContent: "center",
+    }}
+
+/>
+
+    <ZoomableImage
+    alt="Document Processor Component"
+    sources={{
+        light: "img/flow_runner.png",
+    }}
+    style={{
+        width: "40%",
+        margin: "0 auto",
+        display: "flex",
+        justifyContent: "center",
+    }}
+    />
+
+</div>

@@ -14,6 +14,7 @@ import {
   Cpu,
   Download,
   DownloadCloud,
+  Edit,
   Eraser,
   ExternalLink,
   File,
@@ -74,6 +75,7 @@ import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
 import { GitBookIcon } from "../icons/GitBook";
 import { GoogleIcon } from "../icons/Google";
+import GradientSparkles from "../icons/GradientSparkles";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
 import { IFixIcon } from "../icons/IFixIt";
 import { MetaIcon } from "../icons/Meta";
@@ -147,6 +149,7 @@ export const nodeColors: { [char: string]: string } = {
   str: "#049524",
   retrievers: "#e6b25a",
   unknown: "#9CA3AF",
+  custom_components: "#ab11ab",
 };
 
 export const nodeNames: { [char: string]: string } = {
@@ -167,7 +170,8 @@ export const nodeNames: { [char: string]: string } = {
   retrievers: "Retrievers",
   utilities: "Utilities",
   output_parsers: "Output Parsers",
-  unknown: "Unknown",
+  custom_components: "Custom",
+  unknown: "Other",
 };
 
 export const nodeIconsLucide: iconsType = {
@@ -225,6 +229,8 @@ export const nodeIconsLucide: iconsType = {
   unknown: HelpCircle,
   WikipediaQueryRun: SvgWikipedia,
   WolframAlphaQueryRun: SvgWolfram,
+  custom_components: GradientSparkles,
+  custom: Edit,
   Trash2,
   X,
   XCircle,

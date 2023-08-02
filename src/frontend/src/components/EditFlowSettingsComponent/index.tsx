@@ -1,11 +1,14 @@
-import React, { ChangeEvent, useState } from "react";
+import React, { ChangeEvent, useEffect, useRef, useState } from "react";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
 import { InputProps } from "../../types/components";
+import { readFlowsFromDatabase } from "../../controllers/API";
 
 export const EditFlowSettings: React.FC<InputProps> = ({
   name,
+  invalidName,
+  setInvalidName,
   description,
   maxLength = 50,
   flows,
@@ -15,6 +18,14 @@ export const EditFlowSettings: React.FC<InputProps> = ({
   updateFlow,
 }: InputProps): JSX.Element => {
   const [isMaxLength, setIsMaxLength] = useState(false);
+  const nameLists = useRef([]);
+  useEffect(() => {
+    readFlowsFromDatabase().then((flows) => {
+      flows.forEach((flow) => {
+        nameLists.current.push(flow.name);
+      });
+    });
+  }, []);
 
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { value } = event.target;
@@ -23,7 +34,11 @@ export const EditFlowSettings: React.FC<InputProps> = ({
     } else {
       setIsMaxLength(false);
     }
-
+    if (!nameLists.current.includes(value)) {
+      setInvalidName(false);
+    } else {
+      setInvalidName(true);
+    }
     setName(value);
   };
 
@@ -44,6 +59,9 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           <span className="font-medium">Name</span>{" "}
           {isMaxLength && (
             <span className="edit-flow-span">Character limit reached</span>
+          )}
+          {invalidName && (
+            <span className="edit-flow-span">Name already in use</span>
           )}
         </div>
         <Input

@@ -47,11 +47,13 @@ interface BaseModalProps {
   ];
   open?: boolean;
   setOpen?: (open: boolean) => void;
+  disable?: boolean;
   size?: "smaller" | "small" | "medium" | "large" | "large-h-full";
 }
 function BaseModal({
   open,
   setOpen,
+  disable = false,
   children,
   size = "large",
 }: BaseModalProps) {
@@ -74,7 +76,7 @@ function BaseModal({
   switch (size) {
     case "smaller":
       minWidth = "min-w-[40vw]";
-      height = "h-[25vh]";
+      height = "h-[27vh]";
       break;
     case "small":
       minWidth = "min-w-[40vw]";
@@ -100,7 +102,10 @@ function BaseModal({
   //UPDATE COLORS AND STYLE CLASSSES
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger className="w-full" hidden={triggerChild ? false : true}>
+      <DialogTrigger
+        className={"w-full " + (disable ? "button-disable" : "")}
+        hidden={triggerChild ? false : true}
+      >
         {triggerChild}
       </DialogTrigger>
       <DialogContent className={minWidth}>
@@ -108,8 +113,9 @@ function BaseModal({
         <div className={`mt-2 flex flex-col ${height} w-full `}>
           {ContentChild}
         </div>
-
-        <div className="flex flex-row-reverse">{ContentFooter}</div>
+        {ContentFooter && (
+          <div className="flex flex-row-reverse">{ContentFooter}</div>
+        )}
       </DialogContent>
     </Dialog>
   );

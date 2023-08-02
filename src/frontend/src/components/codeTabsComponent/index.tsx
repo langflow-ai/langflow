@@ -132,7 +132,7 @@ export default function CodeTabsComponent({
             </TabsTrigger>
           ))}
         </TabsList>
-        {Number(activeTab) < 3 && (
+        {Number(activeTab) < 4 && (
           <div className="float-right mx-1 flex gap-2">
             <button
               className="flex items-center gap-1.5 rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
@@ -161,15 +161,23 @@ export default function CodeTabsComponent({
           className="api-modal-tabs-content"
           key={index} // Remember to add a unique key prop
         >
-          {index < 3 ? (
-            <SyntaxHighlighter
-              className="mt-0 h-full w-full overflow-auto custom-scroll"
-              language={tab.mode}
-              style={oneDark}
-            >
-              {tab.code}
-            </SyntaxHighlighter>
-          ) : index === 3 ? (
+          {index < 4 ? (
+            <>
+              {tab.description && (
+                <div
+                  className="mb-2 w-full text-left text-sm"
+                  dangerouslySetInnerHTML={{ __html: tab.description }}
+                ></div>
+              )}
+              <SyntaxHighlighter
+                className="mt-0 h-full w-full overflow-auto custom-scroll"
+                language={tab.mode}
+                style={oneDark}
+              >
+                {tab.code}
+              </SyntaxHighlighter>
+            </>
+          ) : index === 4 ? (
             <>
               <div className="api-modal-according-display">
                 <div
@@ -411,8 +419,12 @@ export default function CodeTabsComponent({
                                                         .suffixes
                                                     }
                                                     onFileChange={(
-                                                      k: any
-                                                    ) => {}}
+                                                      value: any
+                                                    ) => {
+                                                      t.data.node.template[
+                                                        n
+                                                      ].file_path = value;
+                                                    }}
                                                   ></InputFileComponent>
                                                 </div>
                                               </ShadTooltip>

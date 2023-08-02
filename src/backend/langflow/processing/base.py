@@ -22,7 +22,7 @@ async def get_result_and_steps(langchain_object, inputs: Union[dict, str], **kwa
         try:
             fix_memory_inputs(langchain_object)
         except Exception as exc:
-            logger.error(exc)
+            logger.error(f"Error fixing memory inputs: {exc}")
 
         try:
             async_callbacks = [AsyncStreamingLLMCallbackHandler(**kwargs)]
