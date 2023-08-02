@@ -1,3 +1,4 @@
+from typing import Any
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
 from langflow.interface.custom.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
@@ -89,7 +90,7 @@ def add_new_custom_field(
     template,
     field_name: str,
     field_type: str,
-    field_value: str,
+    field_value: Any,
     field_required: bool,
     field_config: dict,
 ):
