@@ -43,7 +43,7 @@ export default function CodeTabsComponent({
 }: codeTabsPropsType) {
   const [isCopied, setIsCopied] = useState<Boolean>(false);
   const [data, setData] = useState(flow ? flow["data"]["nodes"] : null);
-  const [openAccordion, setOpenAccordion] = useState([]);
+  const [openAccordion, setOpenAccordion] = useState<string[]>([]);
   const { dark } = useContext(darkContext);
 
   useEffect(() => {
@@ -89,8 +89,8 @@ export default function CodeTabsComponent({
   };
 
   function openAccordions() {
-    let accordionsToOpen = [];
-    tweaks?.tweak.current.forEach((el) => {
+    let accordionsToOpen: string[] = [];
+    tweaks?.tweak!.current.forEach((el) => {
       Object.keys(el).forEach((key) => {
         if (Object.keys(el[key]).length > 0) {
           accordionsToOpen.push(key);
@@ -190,7 +190,7 @@ export default function CodeTabsComponent({
                 >
                   {data?.map((t: any, index) => (
                     <div className="px-3" key={index}>
-                      {tweaks?.tweaksList.current.includes(t["data"]["id"]) && (
+                      {tweaks?.tweaksList!.current.includes(t["data"]["id"]) && (
                         <AccordionComponent
                           trigger={t["data"]["id"]}
                           open={openAccordion}
@@ -261,14 +261,14 @@ export default function CodeTabsComponent({
                                                       setData((old) => {
                                                         let newInputList =
                                                           cloneDeep(old);
-                                                        newInputList[
+                                                        newInputList![
                                                           index
                                                         ].data.node.template[
                                                           n
                                                         ].value = k;
                                                         return newInputList;
                                                       });
-                                                      tweaks.buildTweakObject(
+                                                      tweaks.buildTweakObject!(
                                                         t["data"]["id"],
                                                         k,
                                                         t.data.node.template[n]
@@ -278,7 +278,7 @@ export default function CodeTabsComponent({
                                                 ) : t.data.node.template[n]
                                                     .multiline ? (
                                                   <ShadTooltip
-                                                    content={tweaks.buildContent(
+                                                    content={tweaks.buildContent!(
                                                       t.data.node.template[n]
                                                         .value
                                                     )}
@@ -303,14 +303,14 @@ export default function CodeTabsComponent({
                                                           setData((old) => {
                                                             let newInputList =
                                                               cloneDeep(old);
-                                                            newInputList[
+                                                            newInputList![
                                                               index
                                                             ].data.node.template[
                                                               n
                                                             ].value = k;
                                                             return newInputList;
                                                           });
-                                                          tweaks.buildTweakObject(
+                                                          tweaks.buildTweakObject!(
                                                             t["data"]["id"],
                                                             k,
                                                             t.data.node
@@ -342,14 +342,14 @@ export default function CodeTabsComponent({
                                                       setData((old) => {
                                                         let newInputList =
                                                           cloneDeep(old);
-                                                        newInputList[
+                                                        newInputList![
                                                           index
                                                         ].data.node.template[
                                                           n
                                                         ].value = k;
                                                         return newInputList;
                                                       });
-                                                      tweaks.buildTweakObject(
+                                                      tweaks.buildTweakObject!(
                                                         t["data"]["id"],
                                                         k,
                                                         t.data.node.template[n]
@@ -371,14 +371,14 @@ export default function CodeTabsComponent({
                                                     setData((old) => {
                                                       let newInputList =
                                                         cloneDeep(old);
-                                                      newInputList[
+                                                      newInputList![
                                                         index
                                                       ].data.node.template[
                                                         n
                                                       ].value = e;
                                                       return newInputList;
                                                     });
-                                                    tweaks.buildTweakObject(
+                                                    tweaks.buildTweakObject!(
                                                       t["data"]["id"],
                                                       e,
                                                       t.data.node.template[n]
@@ -391,7 +391,7 @@ export default function CodeTabsComponent({
                                             ) : t.data.node.template[n].type ===
                                               "file" ? (
                                               <ShadTooltip
-                                                content={tweaks.buildContent(
+                                                content={tweaks.buildContent!(
                                                   !t.data.node.template[n]
                                                     .value ||
                                                     t.data.node.template[n]
@@ -447,14 +447,14 @@ export default function CodeTabsComponent({
                                                     setData((old) => {
                                                       let newInputList =
                                                         cloneDeep(old);
-                                                      newInputList[
+                                                      newInputList![
                                                         index
                                                       ].data.node.template[
                                                         n
                                                       ].value = k;
                                                       return newInputList;
                                                     });
-                                                    tweaks.buildTweakObject(
+                                                    tweaks.buildTweakObject!(
                                                       t["data"]["id"],
                                                       k,
                                                       t.data.node.template[n]
@@ -478,14 +478,14 @@ export default function CodeTabsComponent({
                                                     setData((old) => {
                                                       let newInputList =
                                                         cloneDeep(old);
-                                                      newInputList[
+                                                      newInputList![
                                                         index
                                                       ].data.node.template[
                                                         n
                                                       ].value = k;
                                                       return newInputList;
                                                     });
-                                                    tweaks.buildTweakObject(
+                                                    tweaks.buildTweakObject!(
                                                       t["data"]["id"],
                                                       k,
                                                       t.data.node.template[n]
@@ -521,14 +521,14 @@ export default function CodeTabsComponent({
                                                     setData((old) => {
                                                       let newInputList =
                                                         cloneDeep(old);
-                                                      newInputList[
+                                                      newInputList![
                                                         index
                                                       ].data.node.template[
                                                         n
                                                       ].value = k;
                                                       return newInputList;
                                                     });
-                                                    tweaks.buildTweakObject(
+                                                    tweaks.buildTweakObject!(
                                                       t["data"]["id"],
                                                       k,
                                                       t.data.node.template[n]
@@ -539,7 +539,7 @@ export default function CodeTabsComponent({
                                             ) : t.data.node.template[n].type ===
                                               "prompt" ? (
                                               <ShadTooltip
-                                                content={tweaks.buildContent(
+                                                content={tweaks.buildContent!(
                                                   !t.data.node.template[n]
                                                     .value ||
                                                     t.data.node.template[n]
@@ -567,14 +567,14 @@ export default function CodeTabsComponent({
                                                       setData((old) => {
                                                         let newInputList =
                                                           cloneDeep(old);
-                                                        newInputList[
+                                                        newInputList![
                                                           index
                                                         ].data.node.template[
                                                           n
                                                         ].value = k;
                                                         return newInputList;
                                                       });
-                                                      tweaks.buildTweakObject(
+                                                      tweaks.buildTweakObject!(
                                                         t["data"]["id"],
                                                         k,
                                                         t.data.node.template[n]
@@ -586,8 +586,8 @@ export default function CodeTabsComponent({
                                             ) : t.data.node.template[n].type ===
                                               "code" ? (
                                               <ShadTooltip
-                                                content={tweaks.buildContent(
-                                                  tweaks.getValue(
+                                                content={tweaks.buildContent!(
+                                                  tweaks.getValue!(
                                                     t.data.node.template[n]
                                                       .value,
                                                     t.data,
@@ -613,14 +613,14 @@ export default function CodeTabsComponent({
                                                       setData((old) => {
                                                         let newInputList =
                                                           cloneDeep(old);
-                                                        newInputList[
+                                                        newInputList![
                                                           index
                                                         ].data.node.template[
                                                           n
                                                         ].value = k;
                                                         return newInputList;
                                                       });
-                                                      tweaks.buildTweakObject(
+                                                      tweaks.buildTweakObject!(
                                                         t["data"]["id"],
                                                         k,
                                                         t.data.node.template[n]
@@ -646,7 +646,7 @@ export default function CodeTabsComponent({
                         </AccordionComponent>
                       )}
 
-                      {tweaks?.tweaksList.current.length === 0 && (
+                      {tweaks?.tweaksList!.current.length === 0 && (
                         <>
                           <div className="pt-3">
                             No tweaks are available for this flow.

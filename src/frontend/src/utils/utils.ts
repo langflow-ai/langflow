@@ -5,6 +5,7 @@ import { IVarHighlightType, groupDataType, groupedObjType, tweakType } from "../
 import { FlowType, NodeType } from "../types/flow";
 import { TabsState } from "../types/tabs";
 import { buildTweaks } from "./reactflowUtils";
+import { APIClassType, APIObjectType } from "../types/api";
 
 export function classNames(...classes: Array<string>): string {
   return classes.filter(Boolean).join(" ");
@@ -88,10 +89,10 @@ export function checkUpperWords(str: string): string {
 export const isWrappedWithClass = (event: any, className: string | undefined) =>
   event.target.closest(`.${className}`);
 
-export function groupByFamily(data: groupDataType, baseClasses: string, left: boolean, flow?: NodeType[]): groupedObjType[] {
+export function groupByFamily(data, baseClasses: string, left: boolean, flow?: NodeType[]): groupedObjType[] {
   const baseClassesSet = new Set(baseClasses.split("\n"));
-  let arrOfPossibleInputs = [];
-  let arrOfPossibleOutputs = [];
+  let arrOfPossibleInputs: Array<{ category: string; nodes: string[]; full: boolean; }>  = [];
+  let arrOfPossibleOutputs: Array<{ category: string; nodes: string[]; full: boolean; }> = [];
   let checkedNodes = new Map();
   const excludeTypes = new Set([
     "str",
@@ -116,26 +117,26 @@ export function groupByFamily(data: groupDataType, baseClasses: string, left: bo
       checkedNodes.set(nodeData.type, {
         hasBaseClassInTemplate:
           foundNode?.hasBaseClassInTemplate ||
-          Object.values(nodeData.node.template).some(checkBaseClass),
+          Object.values(nodeData.node!.template).some(checkBaseClass),
         hasBaseClassInBaseClasses:
           foundNode?.hasBaseClassInBaseClasses ||
-          nodeData.node.base_classes.some((t) => baseClassesSet.has(t)),
+          nodeData.node!.base_classes.some((t) => baseClassesSet.has(t)),
       });
     }
   }
 
   for (const [d, nodes] of Object.entries(data)) {
-    let tempInputs = [],
-      tempOutputs = [];
+    let tempInputs: string[] = [],
+      tempOutputs: string[] = [];
 
     for (const [n, node] of Object.entries(nodes)) {
       let foundNode = checkedNodes.get(n);
       if (!foundNode) {
         foundNode = {
-          hasBaseClassInTemplate: Object.values(node.template).some(
+          hasBaseClassInTemplate: Object.values(node!.template).some(
             checkBaseClass
           ),
-          hasBaseClassInBaseClasses: node.base_classes.some((t) =>
+          hasBaseClassInBaseClasses: node!.base_classes.some((t) =>
             baseClassesSet.has(t)
           ),
         };
@@ -177,7 +178,7 @@ export function buildInputs(tabsState: TabsState, id: string): string {
     tabsState[id] &&
     tabsState[id].formKeysData &&
     tabsState[id].formKeysData.input_keys &&
-    Object.keys(tabsState[id].formKeysData.input_keys).length > 0
+    Object.keys(tabsState[id].formKeysData.input_keys!).length > 0
     ? JSON.stringify(tabsState[id].formKeysData.input_keys)
     : '{"input": "message"}';
 }
@@ -265,7 +266,7 @@ export function getPythonApiCode(
   //   node.data.id
   // }
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(tabsState, flow.id);
+  const inputs = buildInputs(tabsState!, flow.id);
   return `import requests
 from typing import Optional
 
@@ -317,7 +318,7 @@ export function getCurlCode(
 ): string {
   const flowId = flow.id;
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(tabsState, flow.id);
+  const inputs = buildInputs(tabsState!, flow.id);
 
   return `curl -X POST \\
   ${window.location.protocol}//${
@@ -343,7 +344,7 @@ export function getPythonCode(
 ): string {
   const flowName = flow.name;
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(tabsState, flow.id);
+  const inputs = buildInputs(tabsState!, flow.id);
   return `from langflow import load_flow_from_json
 TWEAKS = ${
     tweak && tweak.length > 0
@@ -364,7 +365,7 @@ flow(inputs)`;
 export function getWidgetCode(flow: FlowType, tabsState?: TabsState): string {
   const flowId = flow.id;
   const flowName = flow.name;
-  const inputs = buildInputs(tabsState, flow.id);
+  const inputs = buildInputs(tabsState!, flow.id);
 
   return `<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
 
@@ -375,10 +376,10 @@ chat_input_field: Input key that you want the chat to send the user message with
   window_title="${flowName}"
   flow_id="${flowId}"
   ${
-    tabsState[flow.id] && tabsState[flow.id].formKeysData
+    tabsState![flow.id] && tabsState![flow.id].formKeysData
       ? `chat_inputs='${inputs}'
   chat_input_field="${
-    Object.keys(tabsState[flow.id].formKeysData.input_keys)[0]
+    Object.keys(tabsState![flow.id].formKeysData.input_keys!)[0]
   }"
   `
       : ""

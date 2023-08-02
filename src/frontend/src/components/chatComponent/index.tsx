@@ -48,7 +48,7 @@ export default function Chat({ flow }: ChatType): JSX.Element {
   useEffect(() => {
     const prevNodes = prevNodesRef.current;
     const currentNodes = nodes.map((node: NodeType) =>
-      _.cloneDeep(node.data.node.template)
+      _.cloneDeep(node.data.node?.template)
     );
     if (
       tabsState &&
@@ -63,7 +63,7 @@ export default function Chat({ flow }: ChatType): JSX.Element {
       tabsState[flow.id] &&
       tabsState[flow.id].formKeysData &&
       tabsState[flow.id].formKeysData.input_keys &&
-      Object.keys(tabsState[flow.id].formKeysData.input_keys).length > 0
+      Object.keys(tabsState[flow.id].formKeysData.input_keys!).length > 0
     ) {
       setCanOpen(true);
     } else {

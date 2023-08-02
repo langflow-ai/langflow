@@ -153,11 +153,11 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
 
   function updateDisplay_name(node: NodeType, template: APIClassType) {
-    node.data.node.display_name = template["display_name"] || node.data.type;
+    node.data.node!.display_name = template["display_name"] || node.data.type;
   }
 
   function updateNodeDocumentation(node: NodeType, template: APIClassType) {
-    node.data.node.documentation = template["documentation"];
+    node.data.node!.documentation = template["documentation"];
   }
 
   function processFlowNodes(flow) {
@@ -180,7 +180,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
 
   function updateNodeBaseClasses(node: NodeType, template: APIClassType) {
-    node.data.node.base_classes = template["base_classes"];
+    node.data.node!.base_classes = template["base_classes"];
   }
 
   function updateNodeEdges(
@@ -191,7 +191,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     flow.data.edges.forEach((edge) => {
       if (edge.source === node.id) {
         edge.sourceHandle = edge.sourceHandle
-          .split("|")
+          ?.split("|")
           .slice(0, 2)
           .concat(template["base_classes"])
           .join("|");
@@ -200,13 +200,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
 
   function updateNodeDescription(node: NodeType, template: APIClassType) {
-    node.data.node.description = template["description"];
+    node.data.node!.description = template["description"];
   }
 
   function updateNodeTemplate(node: NodeType, template: APIClassType) {
-    node.data.node.template = updateTemplate(
+    node.data.node!.template = updateTemplate(
       template["template"] as unknown as APITemplateType,
-      node.data.node.template as APITemplateType
+      node.data.node!.template as APITemplateType
     );
   }
 
@@ -241,7 +241,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     link.download = `${
       flowName && flowName != ""
         ? flowName
-        : flows.find((f) => f.id === tabId).name
+        : flows.find((f) => f.id === tabId)!.name
     }.json`;
 
     // simulate a click on the link element to trigger the download
@@ -293,10 +293,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       input.onchange = (e: Event) => {
         // check if the file type is application/json
         if (
-          (e.target as HTMLInputElement).files[0].type === "application/json"
+          (e.target as HTMLInputElement).files![0].type === "application/json"
         ) {
           // get the file from the file input
-          const currentfile = (e.target as HTMLInputElement).files[0];
+          const currentfile = (e.target as HTMLInputElement).files![0];
           // read the file as text
           currentfile.text().then((text) => {
             // parse the text into a JSON object
@@ -318,9 +318,9 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     // add a change event listener to the file input
     input.onchange = (e: Event) => {
       // check if the file type is application/json
-      if ((e.target as HTMLInputElement).files[0].type === "application/json") {
+      if ((e.target as HTMLInputElement).files![0].type === "application/json") {
         // get the file from the file input
-        const file = (e.target as HTMLInputElement).files[0];
+        const file = (e.target as HTMLInputElement).files![0];
         // read the file as text
         const formData = new FormData();
         formData.append("file", file);
@@ -357,8 +357,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     let minimumX = Infinity;
     let minimumY = Infinity;
     let idsMap = {};
-    let nodes = reactFlowInstance.getNodes();
-    let edges = reactFlowInstance.getEdges();
+    let nodes = reactFlowInstance!.getNodes();
+    let edges = reactFlowInstance!.getEdges();
     selectionInstance.nodes.forEach((n) => {
       if (n.position.y < minimumY) {
         minimumY = n.position.y;
@@ -369,8 +369,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     });
 
     const insidePosition = position.paneX
-      ? { x: position.paneX + position.x, y: position.paneY + position.y }
-      : reactFlowInstance.project({ x: position.x, y: position.y });
+      ? { x: position.paneX + position.x, y: position.paneY! + position.y }
+      : reactFlowInstance!.project({ x: position.x, y: position.y });
 
     selectionInstance.nodes.forEach((n: NodeType) => {
       // Generate a unique node ID
@@ -396,7 +396,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         .map((e) => ({ ...e, selected: false }))
         .concat({ ...newNode, selected: false });
     });
-    reactFlowInstance.setNodes(nodes);
+    reactFlowInstance!.setNodes(nodes);
 
     selectionInstance.edges.forEach((e) => {
       let source = idsMap[e.source];
@@ -436,13 +436,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         edges.map((e) => ({ ...e, selected: false }))
       );
     });
-    reactFlowInstance.setEdges(edges);
+    reactFlowInstance!.setEdges(edges);
   }
 
   const addFlow = async (
     flow?: FlowType,
     newProject?: Boolean
-  ): Promise<String> => {
+  ): Promise<String | undefined> => {
     if (newProject) {
       let flowData = extractDataFromFlow(flow);
       if (flowData.description == "") {
@@ -475,7 +475,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       }
     } else {
       paste(
-        { nodes: flow.data.nodes, edges: flow.data.edges },
+        { nodes: flow!.data.nodes, edges: flow!.data.edges },
         { x: 10, y: 10 }
       );
     }

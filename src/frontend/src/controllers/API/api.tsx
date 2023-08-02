@@ -16,7 +16,7 @@ function ApiInterceptor() {
     const interceptor = api.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
-        if (URL_EXCLUDED_FROM_ERROR_RETRIES.includes(error.config?.url)) {
+        if (URL_EXCLUDED_FROM_ERROR_RETRIES.includes(error.config?.url!)) {
           return Promise.reject(error);
         }
         let retryCount = 0;
@@ -25,7 +25,7 @@ function ApiInterceptor() {
           await sleep(5000); // Sleep for 5 seconds
           retryCount++;
           try {
-            const response = await axios.request(error.config);
+            const response = await axios.request(error.config!);
             return response;
           } catch (error) {
             if (retryCount === 3) {

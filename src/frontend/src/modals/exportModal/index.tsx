@@ -31,8 +31,8 @@ const ExportModal = forwardRef(
         </BaseModal.Header>
         <BaseModal.Content>
           <EditFlowSettings
-            name={name}
-            description={description}
+            name={name!}
+            description={description!}
             flows={flows}
             tabId={tabId}
             setName={setName}
@@ -57,14 +57,14 @@ const ExportModal = forwardRef(
             onClick={() => {
               if (checked)
                 downloadFlow(
-                  flows.find((f) => f.id === tabId),
-                  name,
+                  flows.find((f) => f.id === tabId)!,
+                  name!,
                   description
                 );
               else
                 downloadFlow(
-                  removeApiKeys(flows.find((f) => f.id === tabId)),
-                  name,
+                  removeApiKeys(flows.find((f) => f.id === tabId)!),
+                  name!,
                   description
                 );
               setOpen(false);

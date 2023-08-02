@@ -40,13 +40,13 @@ export default function ParameterComponent({
   info = "",
 }: ParameterComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
-  const refHtml = useRef(null);
-  const infoHtml = useRef(null);
+  const refHtml = useRef<HTMLDivElement>(null);
+  const infoHtml = useRef<HTMLDivElement>(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   const { setTabsState, tabId, save, flows } = useContext(TabsContext);
 
-  const flow = flows.find((f) => f.id === tabId).data?.nodes ?? null;
+  const flow = flows.find((f) => f.id === tabId)?.data?.nodes ?? null;
 
   // Update component position
   useEffect(() => {
@@ -68,7 +68,7 @@ export default function ParameterComponent({
 
   const handleOnNewValue = (newValue: string | string[] | boolean): void => {
     let newData = cloneDeep(data);
-    newData.node.template[name].value = newValue;
+    newData.node!.template[name].value = newValue;
     setData(newData);
     // Set state to pending
     setTabsState((prev) => {
@@ -99,6 +99,7 @@ export default function ParameterComponent({
 
   function renderTooltips() {
     let groupedObj = groupByFamily(myData, tooltipTitle, left, flow);
+    console.log(groupedObj)
 
     if (groupedObj && groupedObj.length > 0) {
       refHtml.current = groupedObj.map((item, i) => {
@@ -207,7 +208,7 @@ export default function ParameterComponent({
               position={left ? Position.Left : Position.Right}
               id={id}
               isValidConnection={(connection) =>
-                isValidConnection(connection, reactFlowInstance)
+                isValidConnection(connection, reactFlowInstance!)
               }
               className={classNames(
                 left ? "-ml-0.5 " : "-mr-0.5 ",
@@ -255,7 +256,7 @@ export default function ParameterComponent({
           <div className="mt-2 w-full">
             <ToggleShadComponent
               disabled={disabled}
-              enabled={data.node.template[name].value ?? false}
+              enabled={data.node?.template[name].value ?? false}
               setEnabled={(t) => {
                 handleOnNewValue(t);
               }}
@@ -283,7 +284,7 @@ export default function ParameterComponent({
         ) : left === true && type === "code" ? (
           <div className="mt-2 w-full">
             <CodeAreaComponent
-              dynamic={data.node.template[name].dynamic ?? false}
+              dynamic={data.node?.template[name].dynamic ?? false}
               setNodeClass={(nodeClass) => {
                 data.node = nodeClass;
               }}
@@ -302,7 +303,7 @@ export default function ParameterComponent({
               fileTypes={data.node?.template[name].fileTypes}
               suffixes={data.node?.template[name].suffixes}
               onFileChange={(t: string) => {
-                data.node.template[name].file_path = t;
+                data.node!.template[name].file_path = t;
                 save();
               }}
             ></InputFileComponent>

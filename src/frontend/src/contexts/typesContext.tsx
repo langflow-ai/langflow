@@ -69,7 +69,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
           );
         }
         // Clear the interval if successful.
-        clearInterval(intervalId);
+        clearInterval(intervalId!);
       } catch (error) {
         console.error("An error has occurred while fetching types.");
       }
@@ -80,18 +80,18 @@ export function TypesProvider({ children }: { children: ReactNode }) {
 
     return () => {
       // This will clear the interval when the component unmounts, or when the dependencies of the useEffect hook change.
-      clearInterval(intervalId);
+      clearInterval(intervalId!);
       // Indicate that the component has been unmounted.
       isMounted = false;
     };
   }, []);
 
   function deleteNode(idx: string) {
-    reactFlowInstance.setNodes(
-      reactFlowInstance.getNodes().filter((n: Node) => n.id !== idx)
+    reactFlowInstance!.setNodes(
+      reactFlowInstance!.getNodes().filter((n: Node) => n.id !== idx)
     );
-    reactFlowInstance.setEdges(
-      reactFlowInstance
+    reactFlowInstance!.setEdges(
+      reactFlowInstance!
         .getEdges()
         .filter((ns) => ns.source !== idx && ns.target !== idx)
     );

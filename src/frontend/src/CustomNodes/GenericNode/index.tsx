@@ -13,6 +13,7 @@ import { cleanEdges } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, toTitleCase } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
+import { validationStatusType } from "../../types/components";
 
 export default function GenericNode({
   data: olddata,
@@ -26,7 +27,7 @@ export default function GenericNode({
   const updateNodeInternals = useUpdateNodeInternals();
   const { types, deleteNode, reactFlowInstance } = useContext(typesContext);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
-  const [validationStatus, setValidationStatus] = useState(null);
+  const [validationStatus, setValidationStatus] = useState<validationStatusType | null>(null);
   // State for outline color
   const { sseData, isBuilding } = useSSE();
   useEffect(() => {
@@ -77,7 +78,7 @@ export default function GenericNode({
           "generic-node-div"
         )}
       >
-        {data.node.beta && (
+        {data.node?.beta && (
           <div className="beta-badge-wrapper">
             <div className="beta-badge-content">BETA</div>
           </div>
@@ -114,6 +115,7 @@ export default function GenericNode({
                     </span>
                   ) : (
                     <div className="max-h-96 overflow-auto">
+                      
                       {typeof validationStatus.params === "string"
                         ? validationStatus.params
                             .split("\n")
@@ -160,16 +162,16 @@ export default function GenericNode({
           <div className="generic-node-desc-text">{data.node?.description}</div>
 
           <>
-            {Object.keys(data.node.template)
+            {Object.keys(data.node!.template)
               .filter((t) => t.charAt(0) !== "_")
               .map((t: string, idx) => (
                 <div key={idx}>
-                  {data.node.template[t].show &&
-                  !data.node.template[t].advanced ? (
+                  {data.node!.template[t].show &&
+                  !data.node!.template[t].advanced ? (
                     <ParameterComponent
                       key={
-                        (data.node.template[t].input_types?.join(";") ??
-                          data.node.template[t].type) +
+                        (data.node!.template[t].input_types?.join(";") ??
+                          data.node!.template[t].type) +
                         "|" +
                         t +
                         "|" +
@@ -178,8 +180,8 @@ export default function GenericNode({
                       data={data}
                       setData={setData}
                       color={
-                        nodeColors[types[data.node?.template[t].type]] ??
-                        nodeColors[data.node?.template[t].type] ??
+                        nodeColors[types[data.node?.template[t].type!]] ??
+                        nodeColors[data.node?.template[t].type!] ??
                         nodeColors.unknown
                       }
                       title={
@@ -215,14 +217,14 @@ export default function GenericNode({
               ))}
             <div
               className={classNames(
-                Object.keys(data.node.template).length < 1 ? "hidden" : "",
+                Object.keys(data.node!.template).length < 1 ? "hidden" : "",
                 "flex-max-width justify-center"
               )}
             >
               {" "}
             </div>
             <ParameterComponent
-              key={[data.type, data.id, ...data.node.base_classes].join("|")}
+              key={[data.type, data.id, ...data.node!.base_classes].join("|")}
               data={data}
               setData={setData}
               color={nodeColors[types[data.type]] ?? nodeColors.unknown}
@@ -232,7 +234,7 @@ export default function GenericNode({
                   : data.type
               }
               tooltipTitle={data.node?.base_classes.join("\n")}
-              id={[data.type, data.id, ...data.node.base_classes].join("|")}
+              id={[data.type, data.id, ...data.node!.base_classes].join("|")}
               type={data.node?.base_classes.join("|")}
               left={false}
             />

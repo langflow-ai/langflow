@@ -10,13 +10,13 @@ export const darkContext = createContext<darkContextType>(initialValue);
 
 export function DarkProvider({ children }) {
   const [dark, setDark] = useState(
-    JSON.parse(window.localStorage.getItem("isDark")) ?? false
+    JSON.parse(window.localStorage.getItem("isDark")!) ?? false
   );
   useEffect(() => {
     if (dark) {
-      document.getElementById("body").classList.add("dark");
+      document.getElementById("body")!.classList.add("dark");
     } else {
-      document.getElementById("body").classList.remove("dark");
+      document.getElementById("body")!.classList.remove("dark");
     }
     window.localStorage.setItem("isDark", dark.toString());
   }, [dark]);

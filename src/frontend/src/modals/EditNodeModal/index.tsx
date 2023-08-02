@@ -55,7 +55,7 @@ const EditNodeModal = forwardRef(
     function changeAdvanced(n: string): void {
       setMyData((old) => {
         let newData = cloneDeep(old);
-        newData.node.template[n].advanced = !newData.node.template[n].advanced;
+        newData.node!.template[n].advanced = !newData.node!.template[n].advanced;
         return newData;
       });
     }
@@ -66,7 +66,7 @@ const EditNodeModal = forwardRef(
     ) => {
       setMyData((old) => {
         let newData = cloneDeep(old);
-        newData.node.template[name].value = newValue;
+        newData.node!.template[name].value = newValue;
         return newData;
       });
     };
@@ -78,7 +78,7 @@ const EditNodeModal = forwardRef(
     return (
       <BaseModal size="large-h-full" open={modalOpen} setOpen={setModalOpen}>
         <BaseModal.Trigger>{children}</BaseModal.Trigger>
-        <BaseModal.Header description={myData.node?.description}>
+        <BaseModal.Header description={myData.node?.description!}>
           <span className="pr-2">{myData.type}</span>
           <Badge variant="secondary">ID: {myData.id}</Badge>
         </BaseModal.Header>
@@ -113,7 +113,7 @@ const EditNodeModal = forwardRef(
                       </TableRow>
                     </TableHeader>
                     <TableBody className="p-0">
-                      {Object.keys(myData.node.template)
+                      {Object.keys(myData.node!.template)
                         .filter(
                           (t) =>
                             t.charAt(0) !== "_" &&
@@ -158,7 +158,7 @@ const EditNodeModal = forwardRef(
                                       value={
                                         myData.node.template[n].value ?? ""
                                       }
-                                      onChange={(t: string) => {
+                                      onChange={(t: string | string[]) => {
                                         handleOnNewValue(t, n);
                                       }}
                                     />
@@ -233,7 +233,7 @@ const EditNodeModal = forwardRef(
                                     editNode={true}
                                     disabled={disabled}
                                     value={myData.node.template[n].value ?? ""}
-                                    onChange={(t: string) => {
+                                    onChange={(t: string | string[]) => {
                                       handleOnNewValue(t, n);
                                     }}
                                     fileTypes={
@@ -241,7 +241,7 @@ const EditNodeModal = forwardRef(
                                     }
                                     suffixes={myData.node.template[n].suffixes}
                                     onFileChange={(t: string) => {
-                                      data.node.template[n].file_path = t;
+                                      data.node!.template[n].file_path = t;
                                     }}
                                   ></InputFileComponent>
                                 </div>
@@ -256,7 +256,7 @@ const EditNodeModal = forwardRef(
                                       myData.node = nodeClass;
                                     }}
                                     value={myData.node.template[n].value ?? ""}
-                                    onChange={(t: string) => {
+                                    onChange={(t: string | string[]) => {
                                       handleOnNewValue(t, n);
                                     }}
                                   />
@@ -265,7 +265,7 @@ const EditNodeModal = forwardRef(
                                 <div className="mx-auto">
                                   <CodeAreaComponent
                                     dynamic={
-                                      data.node.template[n].dynamic ?? false
+                                      data.node!.template[n].dynamic ?? false
                                     }
                                     setNodeClass={(nodeClass) => {
                                       data.node = nodeClass;
@@ -274,7 +274,7 @@ const EditNodeModal = forwardRef(
                                     disabled={disabled}
                                     editNode={true}
                                     value={myData.node.template[n].value ?? ""}
-                                    onChange={(t: string) => {
+                                    onChange={(t: string | string[]) => {
                                       handleOnNewValue(t, n);
                                     }}
                                   />

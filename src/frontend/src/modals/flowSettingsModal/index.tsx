@@ -17,17 +17,17 @@ export default function FlowSettingsModal({
   const { flows, tabId, updateFlow, setTabsState, saveFlow } =
     useContext(TabsContext);
   const maxLength = 50;
-  const [name, setName] = useState(flows.find((f) => f.id === tabId).name);
+  const [name, setName] = useState(flows.find((f) => f.id === tabId)!.name);
   const [description, setDescription] = useState(
-    flows.find((f) => f.id === tabId).description
+    flows.find((f) => f.id === tabId)!.description
   );
   const [invalidName, setInvalidName] = useState(false);
 
   function handleClick(): void {
     let savedFlow = flows.find((f) => f.id === tabId);
-    savedFlow.name = name;
-    savedFlow.description = description;
-    saveFlow(savedFlow);
+    savedFlow!.name = name;
+    savedFlow!.description = description;
+    saveFlow(savedFlow!);
     setSuccessData({ title: "Changes saved successfully" });
     setOpen(false);
   }

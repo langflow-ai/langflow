@@ -28,16 +28,16 @@ export default function CodeAreaModal({
   const [code, setCode] = useState(value);
   const { dark } = useContext(darkContext);
   const { reactFlowInstance } = useContext(typesContext);
-  const [height, setHeight] = useState(null);
+  const [height, setHeight] = useState<string | null>(null);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [error, setError] = useState<{
-    detail: { error: string; traceback: string };
-  }>(null);
+    detail: { error: string | undefined; traceback: string | undefined };
+  } | null>(null);
 
   useEffect(() => {
     // if nodeClass.template has more fields other than code and dynamic is true
     // do not run handleClick
-    if (dynamic && Object.keys(nodeClass.template).length > 2) {
+    if (dynamic && Object.keys(nodeClass!.template).length > 2) {
       return;
     }
     processCode();
@@ -84,7 +84,7 @@ export default function CodeAreaModal({
   }
 
   function processDynamicField() {
-    postCustomComponent(code, nodeClass)
+    postCustomComponent(code, nodeClass!)
       .then((apiReturn) => {
         const { data } = apiReturn;
         if (data) {

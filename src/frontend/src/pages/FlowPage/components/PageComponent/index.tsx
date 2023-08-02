@@ -57,7 +57,7 @@ export default function Page({ flow }: { flow: FlowType }): JSX.Element {
 
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
-    useState<OnSelectionChangeParams>(null);
+    useState<OnSelectionChangeParams | null>(null);
 
   useEffect(() => {
     // this effect is used to attach the global event handlers
@@ -281,7 +281,7 @@ export default function Page({ flow }: { flow: FlowType }): JSX.Element {
         setNodes((nds) => nds.concat(newNode));
       } else if (event.dataTransfer.types.some((t) => t === "Files")) {
         takeSnapshot();
-        uploadFlow(false, event.dataTransfer.files.item(0));
+        uploadFlow(false, event.dataTransfer.files.item(0)!);
       }
     },
     // Specify dependencies for useCallback
@@ -314,7 +314,7 @@ export default function Page({ flow }: { flow: FlowType }): JSX.Element {
 
   const onEdgeUpdate = useCallback(
     (oldEdge: Edge, newConnection: Connection) => {
-      if (isValidConnection(newConnection, reactFlowInstance)) {
+      if (isValidConnection(newConnection, reactFlowInstance!)) {
         edgeUpdateSuccessful.current = true;
         setEdges((els) => updateEdge(oldEdge, newConnection, els));
       }
@@ -404,7 +404,7 @@ export default function Page({ flow }: { flow: FlowType }): JSX.Element {
                    [&>button]:border-b-border hover:[&>button]:bg-border"
                   ></Controls>
                 </ReactFlow>
-                <Chat flow={flow} reactFlowInstance={reactFlowInstance} />
+                <Chat flow={flow} reactFlowInstance={reactFlowInstance!} />
               </div>
             ) : (
               <></>

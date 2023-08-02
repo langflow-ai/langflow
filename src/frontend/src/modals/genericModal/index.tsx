@@ -39,7 +39,7 @@ export default function GenericModal({
   const [myModalType] = useState(type);
   const [inputValue, setInputValue] = useState(value);
   const [isEdit, setIsEdit] = useState(true);
-  const [wordsHighlight, setWordsHighlight] = useState([]);
+  const [wordsHighlight, setWordsHighlight] = useState<string[]>([]);
   const { setErrorData, setSuccessData, setNoticeData } =
     useContext(alertContext);
   const ref = useRef();
@@ -48,14 +48,14 @@ export default function GenericModal({
 
   function checkVariables(valueToCheck: string): void {
     const regex = /\{([^{}]+)\}/g;
-    const matches = [];
+    const matches: string[] = [];
     let match;
     while ((match = regex.exec(valueToCheck))) {
       matches.push(`{${match[1]}}`);
     }
 
-    let invalid_chars = [];
-    let fixed_variables = [];
+    let invalid_chars: string[] = [];
+    let fixed_variables: string[] = [];
     let input_variables = matches;
     for (let variable of input_variables) {
       let new_var = variable;
@@ -120,7 +120,7 @@ export default function GenericModal({
   }
 
   function validatePrompt(closeModal: boolean): void {
-    postValidatePrompt(field_name, inputValue, nodeClass)
+    postValidatePrompt(field_name, inputValue, nodeClass!)
       .then((apiReturn) => {
         if (apiReturn.data) {
           let inputVariables = apiReturn.data.input_variables ?? [];
@@ -134,7 +134,7 @@ export default function GenericModal({
             setSuccessData({
               title: "Prompt is ready",
             });
-            setNodeClass(apiReturn.data?.frontend_node);
+            setNodeClass!(apiReturn.data?.frontend_node);
             setModalOpen(closeModal);
             setValue(inputValue);
           }

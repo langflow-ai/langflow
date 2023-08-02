@@ -120,7 +120,7 @@ export default function ExtraSidebar(): JSX.Element {
                 "extra-side-bar-buttons " + (isPending ? "" : "button-disable")
               }
               onClick={(event) => {
-                saveFlow(flow);
+                saveFlow(flow!);
                 setSuccessData({ title: "Changes saved successfully" });
               }}
             >
