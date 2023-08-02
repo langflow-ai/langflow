@@ -1,9 +1,9 @@
-import { FileSearch2 } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
 import { alertContext } from "../../contexts/alertContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { uploadFile } from "../../controllers/API";
 import { FileComponentType } from "../../types/components";
+import IconComponent from "../genericIconComponent";
 
 export default function InputFileComponent({
   value,
@@ -18,6 +18,8 @@ export default function InputFileComponent({
   const [loading, setLoading] = useState(false);
   const { setErrorData } = useContext(alertContext);
   const { tabId } = useContext(TabsContext);
+
+  // Clear component state
   useEffect(() => {
     if (disabled) {
       setMyValue("");
@@ -64,12 +66,12 @@ export default function InputFileComponent({
             const { file_path } = data;
             console.log("File name:", file_path);
 
+            // sets the value that goes to the backend
+            onFileChange(file_path);
             // Update the state and callback with the name of the file
             // sets the value to the user
             setMyValue(file.name);
             onChange(file.name);
-            // sets the value that goes to the backend
-            onFileChange(file_path);
             setLoading(false);
           })
           .catch(() => {
@@ -100,16 +102,16 @@ export default function InputFileComponent({
             editNode
               ? "input-edit-node input-dialog text-muted-foreground"
               : disabled
-              ? "input-disable input-dialog input-primary"
-              : "input-dialog input-primary text-muted-foreground"
+              ? "input-disable input-dialog primary-input"
+              : "input-dialog primary-input text-muted-foreground"
           }
         >
           {myValue !== "" ? myValue : "No file"}
         </span>
         <button onClick={handleButtonClick}>
           {!editNode && !loading && (
-            <FileSearch2
-              strokeWidth={1.5}
+            <IconComponent
+              name="FileSearch2"
               className={
                 "icons-parameters-comp" +
                 (disabled ? " text-ring " : " hover:text-accent-foreground")

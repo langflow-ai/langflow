@@ -14,8 +14,10 @@ export type APIClassType = {
   display_name: string;
   input_types?: Array<string>;
   output_types?: Array<string>;
+  beta?: boolean;
   documentation: string;
-  [key: string]: Array<string> | string | APITemplateType;
+  error?: string;
+  [key: string]: Array<string> | string | APITemplateType | boolean;
 };
 
 export type TemplateVariableType = {

@@ -15,32 +15,22 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-import { IMPORT_DIALOG_SUBTITLE } from "../../constants";
+import { IMPORT_DIALOG_SUBTITLE } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
-import { PopUpContext } from "../../contexts/popUpContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { getExamples } from "../../controllers/API";
 import { FlowType } from "../../types/flow";
-import { classNames } from "../../utils";
+import { classNames } from "../../utils/utils";
 import ButtonBox from "./buttonBox";
 
 export default function ImportModal() {
   const [open, setOpen] = useState(true);
   const { setErrorData } = useContext(alertContext);
-  const { closePopUp } = useContext(PopUpContext);
   const ref = useRef();
   const [showExamples, setShowExamples] = useState(false);
   const [loadingExamples, setLoadingExamples] = useState(false);
   const [examples, setExamples] = useState<FlowType[]>([]);
   const { uploadFlow, addFlow } = useContext(TabsContext);
-  function setModalOpen(x: boolean) {
-    setOpen(x);
-    if (x === false) {
-      setTimeout(() => {
-        closePopUp();
-      }, 300);
-    }
-  }
 
   function handleExamples() {
     setLoadingExamples(true);
@@ -57,8 +47,10 @@ export default function ImportModal() {
       );
   }
 
+  const [modalOpen, setModalOpen] = useState(false);
+
   return (
-    <Dialog open={true} onOpenChange={setModalOpen}>
+    <Dialog open={modalOpen} onOpenChange={setModalOpen}>
       <DialogTrigger></DialogTrigger>
       <DialogContent
         className={classNames(

@@ -1,43 +1,27 @@
-import { useContext, useEffect, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
-import { TabsContext } from "../../contexts/tabsContext";
+import { useEffect } from "react";
 import { FloatComponentType } from "../../types/components";
+import { Input } from "../ui/input";
 
 export default function FloatComponent({
   value,
   onChange,
-  disableCopyPaste = false,
   disabled,
   editNode = false,
 }: FloatComponentType) {
-  const [myValue, setMyValue] = useState(value ?? "");
-  const { setDisableCopyPaste } = useContext(TabsContext);
-  const { closePopUp } = useContext(PopUpContext);
-
   const step = 0.1;
   const min = 0;
   const max = 1;
 
+  // Clear component state
   useEffect(() => {
     if (disabled) {
-      setMyValue("");
       onChange("");
     }
   }, [disabled, onChange]);
 
-  useEffect(() => {
-    setMyValue(value);
-  }, [closePopUp]);
-
   return (
-    <div className={"w-full " + (disabled ? "float-component-pointer" : "")}>
-      <input
-        onFocus={() => {
-          if (disableCopyPaste) setDisableCopyPaste(true);
-        }}
-        onBlur={() => {
-          if (disableCopyPaste) setDisableCopyPaste(false);
-        }}
+    <div className="w-full">
+      <Input
         type="number"
         step={step}
         min={min}
@@ -50,17 +34,13 @@ export default function FloatComponent({
           }
         }}
         max={max}
-        value={myValue}
-        className={
-          editNode
-            ? "input-edit-node"
-            : "input-primary" + (disabled ? " input-disable " : "")
-        }
+        value={value ?? ""}
+        disabled={disabled}
+        className={editNode ? "input-edit-node" : ""}
         placeholder={
           editNode ? "Number 0 to 1" : "Type a number from zero to one"
         }
         onChange={(e) => {
-          setMyValue(e.target.value);
           onChange(e.target.value);
         }}
       />

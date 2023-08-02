@@ -1,9 +1,12 @@
 import os
-from typing import Optional
+from typing import Optional, List
+from pathlib import Path
 
 import yaml
 from pydantic import BaseSettings, root_validator
 from langflow.utils.logger import logger
+
+BASE_COMPONENTS_PATH = Path(__file__).parent / "components"
 
 
 class Settings(BaseSettings):
@@ -22,13 +25,16 @@ class Settings(BaseSettings):
     textsplitters: dict = {}
     utilities: dict = {}
     output_parsers: dict = {}
+    custom_components: dict = {}
+
     dev: bool = False
     database_url: Optional[str] = None
     cache: str = "InMemoryCache"
     remove_api_keys: bool = False
+    components_path: List[Path]
 
     @root_validator(pre=True)
-    def set_database_url(cls, values):
+    def set_env_variables(cls, values):
         if "database_url" not in values:
             logger.debug(
                 "No database_url provided, trying LANGFLOW_DATABASE_URL env variable"
@@ -38,6 +44,23 @@ class Settings(BaseSettings):
             else:
                 logger.debug("No DATABASE_URL env variable, using sqlite database")
                 values["database_url"] = "sqlite:///./langflow.db"
+
+        if not values.get("components_path"):
+            values["components_path"] = [BASE_COMPONENTS_PATH]
+            logger.debug("No components_path provided, using default components path")
+        elif BASE_COMPONENTS_PATH not in values["components_path"]:
+            values["components_path"].append(BASE_COMPONENTS_PATH)
+            logger.debug("Adding default components path to components_path")
+
+        if os.getenv("LANGFLOW_COMPONENTS_PATH"):
+            logger.debug("Adding LANGFLOW_COMPONENTS_PATH to components_path")
+            langflow_component_path = Path(os.getenv("LANGFLOW_COMPONENTS_PATH"))
+            if (
+                langflow_component_path.exists()
+                and langflow_component_path not in values["components_path"]
+            ):
+                values["components_path"].append(langflow_component_path)
+                logger.debug(f"Adding {langflow_component_path} to components_path")
         return values
 
     class Config:
@@ -68,12 +91,20 @@ class Settings(BaseSettings):
         self.documentloaders = new_settings.documentloaders or {}
         self.retrievers = new_settings.retrievers or {}
         self.output_parsers = new_settings.output_parsers or {}
+        self.custom_components = new_settings.custom_components or {}
+        self.components_path = new_settings.components_path or []
         self.dev = dev
 
     def update_settings(self, **kwargs):
         for key, value in kwargs.items():
             if hasattr(self, key):
-                setattr(self, key, value)
+                if isinstance(getattr(self, key), list):
+                    if isinstance(value, list):
+                        getattr(self, key).extend(value)
+                    else:
+                        getattr(self, key).append(value)
+                else:
+                    setattr(self, key, value)
 
 
 def save_settings_to_yaml(settings: Settings, file_path: str):

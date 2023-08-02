@@ -1,9 +1,9 @@
 import React, { forwardRef } from "react";
-import { ReactComponent as HackerNewsSVG } from "./Y_Combinator_logo.svg";
+import SvgYCombinatorLogo from "./YCombinatorLogo";
 
 export const HackerNewsIcon = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<{}>
 >((props, ref) => {
-  return <HackerNewsSVG ref={ref} {...props} />;
+  return <SvgYCombinatorLogo ref={ref} {...props} />;
 });

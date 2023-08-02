@@ -1,9 +1,9 @@
 import React, { forwardRef } from "react";
-import { ReactComponent as EvernoteSVG } from "./evernote-icon.svg";
+import SvgEvernoteIcon from "./EvernoteIcon";
 
 export const EvernoteIcon = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<{}>
 >((props, ref) => {
-  return <EvernoteSVG ref={ref} {...props} />;
+  return <SvgEvernoteIcon ref={ref} {...props} />;
 });

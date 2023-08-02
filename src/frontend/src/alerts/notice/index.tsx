@@ -1,7 +1,7 @@
 import { Transition } from "@headlessui/react";
-import { Info } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import IconComponent from "../../components/genericIconComponent";
 import { NoticeAlertType } from "../../types/alerts";
 
 export default function NoticeAlert({
@@ -40,7 +40,11 @@ export default function NoticeAlert({
       >
         <div className="flex">
           <div className="flex-shrink-0">
-            <Info className="h-5 w-5 text-status-blue " aria-hidden="true" />
+            <IconComponent
+              name="Info"
+              className="h-5 w-5 text-status-blue "
+              aria-hidden="true"
+            />
           </div>
           <div className="ml-3 flex-1 md:flex md:justify-between">
             <p className="text-sm text-info-foreground">{title}</p>
