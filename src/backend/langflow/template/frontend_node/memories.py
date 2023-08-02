@@ -94,6 +94,14 @@ class MemoryFrontendNode(FrontendNode):
             field.show = False
             field.required = False
 
+        if name == "MotorheadMemory":
+            if field.name == "chat_memory":
+                field.show = False
+                field.required = False
+            elif field.name == "client_id":
+                field.show = True
+                field.advanced = False
+
 
 class PostgresChatMessageHistoryFrontendNode(MemoryFrontendNode):
     name: str = "PostgresChatMessageHistory"

@@ -21,6 +21,8 @@ module.exports = {
         "guidelines/collection",
         "guidelines/prompt-customization",
         "guidelines/chat-interface",
+        "guidelines/chat-widget",
+        "guidelines/custom-component",
       ],
     },
     {
@@ -30,11 +32,13 @@ module.exports = {
       items: [
         "components/agents",
         "components/chains",
+        "components/custom",
         "components/embeddings",
         "components/llms",
         "components/loaders",
         "components/memories",
         "components/prompts",
+        "components/retrievers",
         "components/text-splitters",
         "components/toolkits",
         "components/tools",
@@ -63,6 +67,7 @@ module.exports = {
       label: "Examples",
       collapsed: false,
       items: [
+        "examples/flow-runner",
         "examples/conversation-chain",
         "examples/buffer-memory",
         "examples/midjourney-prompt-chain",

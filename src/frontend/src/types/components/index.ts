@@ -65,8 +65,9 @@ export type CodeAreaComponentType = {
   onChange: (value: string[] | string) => void;
   value: string;
   editNode?: boolean;
-  nodeClass: APIClassType;
-  setNodeClass: (value: APIClassType) => void;
+  nodeClass?: APIClassType;
+  setNodeClass?: (value: APIClassType) => void;
+  dynamic?: boolean;
 };
 
 export type FileComponentType = {
@@ -176,9 +177,11 @@ export type InputProps = {
   maxLength?: number;
   flows: Array<{ id: string; name: string; description: string }>;
   tabId: string;
+  invalidName: boolean;
   setName: (name: string) => void;
   setDescription: (description: string) => void;
   updateFlow: (flow: { id: string; name: string }) => void;
+  setInvalidName: (invalidName: boolean) => void;
 };
 
 export type TooltipProps = {
@@ -321,6 +324,7 @@ export type codeAreaModalPropsType = {
   nodeClass: APIClassType | undefined;
   setNodeClass: (Class: APIClassType) => void | undefined;
   children: ReactNode;
+  dynamic?: boolean;
 };
 
 export type chatMessagePropsType = {

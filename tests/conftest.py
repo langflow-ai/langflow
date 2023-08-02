@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 import json
 from pathlib import Path
 from typing import AsyncGenerator
@@ -93,8 +94,8 @@ def json_flow():
         return f.read()
 
 
-@pytest.fixture(name="session")  #
-def session_fixture():  #
+@pytest.fixture(name="session")
+def session_fixture():
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
@@ -103,16 +104,45 @@ def session_fixture():  #
         yield session
 
 
-@pytest.fixture(name="client")  #
-def client_fixture(session: Session):  #
-    def get_session_override():  #
+@pytest.fixture(name="client")
+def client_fixture(session: Session):
+    def get_session_override():
         return session
 
     from langflow.main import create_app
 
     app = create_app()
 
-    app.dependency_overrides[get_session] = get_session_override  #
+    app.dependency_overrides[get_session] = get_session_override
 
     yield TestClient(app)
-    app.dependency_overrides.clear()  #
+    app.dependency_overrides.clear()
+
+
+# @contextmanager
+# def session_getter():
+#     try:
+#         session = Session(engine)
+#         yield session
+#     except Exception as e:
+#         print("Session rollback because of exception:", e)
+#         session.rollback()
+#         raise
+#     finally:
+#         session.close()
+
+
+# create a fixture for session_getter above
+@pytest.fixture(name="session_getter")
+def session_getter_fixture():
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    SQLModel.metadata.create_all(engine)
+
+    @contextmanager
+    def blank_session_getter():
+        with Session(engine) as session:
+            yield session
+
+    yield blank_session_getter

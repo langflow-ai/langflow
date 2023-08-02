@@ -153,6 +153,8 @@ memories:
     documentation: "https://python.langchain.com/docs/modules/memory/how_to/vectorstore_retriever_memory"
   MongoDBChatMessageHistory:
     documentation: "https://python.langchain.com/docs/modules/memory/integrations/mongodb_chat_message_history"
+  MotorheadMemory:
+    documentation: "https://python.langchain.com/docs/integrations/memory/motorhead_memory"
 prompts:
   ChatMessagePromptTemplate:
     documentation: "https://python.langchain.com/docs/modules/model_io/prompts/prompt_templates/msg_prompt_templates"
@@ -290,3 +292,6 @@ output_parsers:
     documentation: "https://python.langchain.com/docs/modules/model_io/output_parsers/structured"
   ResponseSchema:
     documentation: "https://python.langchain.com/docs/modules/model_io/output_parsers/structured"
+custom_components:
+  CustomComponent:
+    documentation: ""
