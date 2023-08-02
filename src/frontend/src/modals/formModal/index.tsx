@@ -112,6 +112,8 @@ export default function FormModal({
       return newChat;
     });
   };
+
+  console.log(tabsState[flow.id])
   //add proper type signature for function
 
   function updateLastMessage({
@@ -489,23 +491,29 @@ export default function FormModal({
                         <Badge variant="gray" size="md">
                           {i}
                         </Badge>
-                        <div className="-mb-1">
-                          <ToggleShadComponent
-                            enabled={chatKey === i}
-                            setEnabled={() => {}}
-                            size="small"
-                            disabled={true}
-                          />
-                        </div>
+                        <div
+                            className="-mb-1"
+                          >
+                            <ToggleShadComponent
+                              enabled={chatKey === i}
+                              setEnabled={() => {}
+                              }
+                              size="small"
+                              disabled={true}
+                            />
+                          </div>
+                        
                       </div>
                     }
                     key={k}
                     keyValue={i}
                   >
                     <div className="file-component-tab-column">
-                      <div className="font-normal text-muted-foreground ">
-                        Source: Memory
-                      </div>
+                      
+                        <div className="font-normal text-muted-foreground ">
+                          Source: Memory
+                        </div>
+                      
                     </div>
                   </AccordionComponent>
                 </div>
