@@ -60,7 +60,12 @@ def convert_kwargs(params):
     kwargs_keys = [key for key in params.keys() if "kwargs" in key or "config" in key]
     for key in kwargs_keys:
         if isinstance(params[key], str):
-            params[key] = json.loads(params[key])
+            try:
+                params[key] = json.loads(params[key])
+            except json.JSONDecodeError:
+                # if the string is not a valid json string, we will
+                # remove the key from the params
+                params.pop(key, None)
     return params
 
 
