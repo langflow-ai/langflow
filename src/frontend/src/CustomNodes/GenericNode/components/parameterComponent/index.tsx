@@ -99,7 +99,6 @@ export default function ParameterComponent({
 
   function renderTooltips() {
     let groupedObj = groupByFamily(myData, tooltipTitle, left, flow);
-    console.log(groupedObj)
 
     if (groupedObj && groupedObj.length > 0) {
       refHtml.current = groupedObj.map((item, i) => {
