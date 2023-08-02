@@ -116,3 +116,20 @@ class StreamData(BaseModel):
 
     def __str__(self) -> str:
         return f"event: {self.event}\ndata: {json.dumps(self.data)}\n\n"
+
+
+class CustomComponentCode(BaseModel):
+    code: str
+
+
+class CustomComponentResponseError(BaseModel):
+    detail: str
+    traceback: str
+
+
+class ComponentListCreate(BaseModel):
+    flows: List[FlowCreate]
+
+
+class ComponentListRead(BaseModel):
+    flows: List[FlowRead]

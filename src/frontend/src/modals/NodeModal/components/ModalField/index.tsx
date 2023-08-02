@@ -9,7 +9,7 @@ import IntComponent from "../../../../components/intComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleComponent from "../../../../components/toggleComponent";
-import { classNames } from "../../../../utils";
+import { classNames } from "../../../../utils/utils";
 
 export default function ModalField({
   data,
@@ -142,7 +142,7 @@ export default function ModalField({
             fileTypes={data.node.template[name].fileTypes}
             suffixes={data.node.template[name].suffixes}
             onFileChange={(t: string) => {
-              data.node.template[name].content = t;
+              data.node.template[name].file_path = t;
             }}
           ></InputFileComponent>
         </div>
@@ -160,6 +160,11 @@ export default function ModalField({
       ) : type === "code" ? (
         <div className="w-1/2">
           <CodeAreaComponent
+            dynamic={data.node.template[name].dynamic ?? false}
+            setNodeClass={(nodeClass) => {
+              data.node = nodeClass;
+            }}
+            nodeClass={data.node}
             disabled={false}
             value={data.node.template[name].value ?? ""}
             onChange={(t: string) => {

@@ -12,9 +12,8 @@ import { NodeType } from "../../types/flow";
 
 export default function Chat({ flow }: ChatType) {
   const [open, setOpen] = useState(false);
-  const [isBuilt, setIsBuilt] = useState(false);
   const [canOpen, setCanOpen] = useState(false);
-  const { tabsState } = useContext(TabsContext);
+  const { tabsState, isBuilt, setIsBuilt } = useContext(TabsContext);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

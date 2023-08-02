@@ -21,11 +21,11 @@ import { APIClassType, APITemplateType } from "../types/api";
 import { FlowType, NodeType } from "../types/flow";
 import { TabsContextType, TabsState } from "../types/tabs";
 import {
-  getRandomDescription,
-  getRandomName,
+  addVersionToDuplicates,
   updateIds,
   updateTemplate,
-} from "../utils";
+} from "../utils/reactflowUtils";
+import { getRandomDescription, getRandomName } from "../utils/utils";
 import { alertContext } from "./alertContext";
 import { typesContext } from "./typesContext";
 
@@ -44,10 +44,10 @@ const TabsContextInitialValue: TabsContextType = {
   downloadFlows: () => {},
   uploadFlows: () => {},
   uploadFlow: () => {},
+  isBuilt: false,
+  setIsBuilt: (state: boolean) => {},
   hardReset: () => {},
   saveFlow: async (flow: FlowType) => {},
-  disableCopyPaste: false,
-  setDisableCopyPaste: (state: boolean) => {},
   lastCopiedSelection: null,
   setLastCopiedSelection: (selection: any) => {},
   tabsState: {},
@@ -105,53 +105,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       );
     }
   }
-
-  // function loadCookie(cookie: string) {
-  //   if (cookie && Object.keys(templates).length > 0) {
-  //     let cookieObject: LangflowState = JSON.parse(cookie);
-  //     try {
-  //       cookieObject.flows.forEach((flow) => {
-  //         if (!flow.data) {
-  //           return;
-  //         }
-  //         flow.data.edges.forEach((edge) => {
-  //           edge.className = "";
-  //           edge.style = { stroke: "#555555" };
-  //         });
-
-  //         flow.data.nodes.forEach((node) => {
-  //           const template = templates[node.data.type];
-  //           if (!template) {
-  //             setErrorData({ title: `Unknown node type: ${node.data.type}` });
-  //             return;
-  //           }
-  //           if (Object.keys(template["template"]).length > 0) {
-  //             node.data.node.base_classes = template["base_classes"];
-  //             flow.data.edges.forEach((edge) => {
-  //               if (edge.source === node.id) {
-  //                 edge.sourceHandle = edge.sourceHandle
-  //                   .split("|")
-  //                   .slice(0, 2)
-  //                   .concat(template["base_classes"])
-  //                   .join("|");
-  //               }
-  //             });
-  //             node.data.node.description = template["description"];
-  //             node.data.node.template = updateTemplate(
-  //               template["template"] as unknown as APITemplateType,
-  //               node.data.node.template as APITemplateType
-  //             );
-  //           }
-  //         });
-  //       });
-  //       setTabIndex(cookieObject.tabIndex);
-  //       setFlows(cookieObject.flows);
-  //       setId(cookieObject.id);
-  //     } catch (e) {
-  //       console.log(e);
-  //     }
-  //   }
-  // }
 
   function refreshFlows() {
     getTabsDataFromDB().then((DbData) => {
@@ -501,6 +454,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       processFlowEdges(newFlow);
       processFlowNodes(newFlow);
 
+      const flowName = addVersionToDuplicates(newFlow, flows);
+
+      newFlow.name = flowName;
+
       try {
         const { id } = await saveFlowToDatabase(newFlow);
         // Change the id to the new id.
@@ -636,16 +593,16 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const [disableCopyPaste, setDisableCopyPaste] = useState(false);
+  const [isBuilt, setIsBuilt] = useState(false);
 
   return (
     <TabsContext.Provider
       value={{
         saveFlow,
+        isBuilt,
+        setIsBuilt,
         lastCopiedSelection,
         setLastCopiedSelection,
-        disableCopyPaste,
-        setDisableCopyPaste,
         hardReset,
         tabId,
         setTabId,

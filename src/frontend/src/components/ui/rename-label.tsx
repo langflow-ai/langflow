@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { cn } from "../../utils";
+import { cn } from "../../utils/utils";
 
 export default function RenameLabel(props) {
   const [internalState, setInternalState] = useState(false);
@@ -57,7 +57,7 @@ export default function RenameLabel(props) {
           ref={inputRef}
           onInput={resizeInput}
           className={cn(
-            "rounded-md bg-transparent px-2 outline-ring hover:outline focus:border-none focus:outline active:outline",
+            "nopan nodrag noundo nocopy rounded-md bg-transparent px-2 outline-ring hover:outline focus:border-none focus:outline active:outline",
             props.className
           )}
           onBlur={() => {

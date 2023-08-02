@@ -11,6 +11,7 @@ export default function AccordionComponent({
   trigger,
   children,
   open = [],
+  keyValue,
 }: AccordionComponentType) {
   const [value, setValue] = useState(
     open.length === 0 ? "" : getOpenAccordion()
@@ -28,13 +29,18 @@ export default function AccordionComponent({
   }
 
   function handleClick() {
-    value == "" ? setValue(trigger) : setValue("");
+    value === "" ? setValue(keyValue) : setValue("");
   }
 
   return (
     <>
-      <Accordion type="single" value={value} onValueChange={setValue}>
-        <AccordionItem value={trigger} className="border-none">
+      <Accordion
+        type="single"
+        className="w-full"
+        value={value}
+        onValueChange={setValue}
+      >
+        <AccordionItem value={keyValue} className="border-b">
           <AccordionTrigger
             onClick={() => {
               handleClick();
@@ -43,7 +49,9 @@ export default function AccordionComponent({
           >
             {trigger}
           </AccordionTrigger>
-          <AccordionContent>{children}</AccordionContent>
+          <AccordionContent className="AccordionContent">
+            {children}
+          </AccordionContent>
         </AccordionItem>
       </Accordion>
     </>

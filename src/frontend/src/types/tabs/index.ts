@@ -18,11 +18,10 @@ export type TabsContextType = {
   ) => void;
   downloadFlows: () => void;
   uploadFlows: () => void;
+  isBuilt: boolean;
+  setIsBuilt: (state: boolean) => void;
   uploadFlow: (newFlow?: boolean, file?: File) => void;
   hardReset: () => void;
-  //disable CopyPaste
-  disableCopyPaste: boolean;
-  setDisableCopyPaste: (value: boolean) => void;
   getNodeId: (nodeType: string) => string;
   tabsState: TabsState;
   setTabsState: Dispatch<SetStateAction<TabsState>>;

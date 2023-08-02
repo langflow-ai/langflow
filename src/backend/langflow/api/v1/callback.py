@@ -91,8 +91,8 @@ class AsyncStreamingLLMCallbackHandler(AsyncCallbackHandler):
             # This is to emulate the stream of tokens
             for resp in resps:
                 await self.websocket.send_json(resp.dict())
-        except Exception as e:
-            logger.error(e)
+        except Exception as exc:
+            logger.error(f"Error sending response: {exc}")
 
     async def on_tool_error(
         self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
