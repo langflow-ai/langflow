@@ -122,37 +122,6 @@ export default function App() {
   };
 
 
-  //Prevent the control+backspace event on the application
-  const onKeyDownRef = useRef(false);
-  useEffect(() => {
-    const handleKeyDownCapture = (event) => {
-      
-      if(event.key === "Backspace" && event.ctrlKey === true) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-      onKeyDownRef.current = true;
-    };
-
-    const handleKeyUpCapture = (event) => {
-      if (onKeyDownRef.current) {
-        if(event.key === "Backspace" && event.ctrlKey === true) {
-          event.preventDefault();
-          event.stopPropagation();
-        }
-        onKeyDownRef.current = false;
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDownCapture, true); 
-    document.addEventListener('keyup', handleKeyUpCapture, true);
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDownCapture, true);
-      document.removeEventListener('keyup', handleKeyUpCapture, true);
-    };
-  }, []);
-
   return (
     //need parent component with width and height
     <div className="flex h-full flex-col">
