@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { Connection, ReactFlowInstance } from "reactflow";
+import { Connection, Edge, ReactFlowInstance } from "reactflow";
 import { APITemplateType } from "../types/api";
 import {
   FlowType,
@@ -142,19 +142,13 @@ export function updateIds(newFlow, getNodeId) {
     // Add the new node to the list of nodes in state
   });
 
-  newFlow.edges.forEach((e) => {
+  newFlow.edges.forEach((e: Edge) => {
     e.source = idsMap[e.source];
     e.target = idsMap[e.target];
-    let sourceHandleSplitted = e.sourceHandle.split("|");
-    e.sourceHandle =
-      sourceHandleSplitted[0] +
-      "|" +
-      e.source +
-      "|" +
-      sourceHandleSplitted.slice(2).join("|");
-    let targetHandleSplitted = e.targetHandle.split("|");
-    e.targetHandle =
-      targetHandleSplitted.slice(0, -1).join("|") + "|" + e.target;
+    const sourceHandleObject: sourceHandleType = JSON.parse(e.sourceHandle);
+    e.sourceHandle = JSON.stringify({ ...sourceHandleObject, id: e.source });
+    const targetHandleObject: targetHandleType = JSON.parse(e.targetHandle);
+    e.targetHandle = JSON.stringify({ ...targetHandleObject, id: e.target });
     e.id =
       "reactflow__edge-" +
       e.source +
