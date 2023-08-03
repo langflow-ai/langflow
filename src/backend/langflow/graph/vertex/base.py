@@ -1,3 +1,4 @@
+import ast
 from langflow.interface.initialize import loading
 from langflow.interface.listing import ALL_TYPES_DICT
 from langflow.utils.constants import DIRECT_TYPES
@@ -114,7 +115,14 @@ class Vertex:
 
                 params[key] = file_path
             elif value.get("type") in DIRECT_TYPES and params.get(key) is None:
-                params[key] = value.get("value")
+                if value.get("type") == "code":
+                    try:
+                        params[key] = ast.literal_eval(value.get("value"))
+                    except Exception as exc:
+                        logger.debug(f"Error parsing code: {exc}")
+                        params[key] = value.get("value")
+                else:
+                    params[key] = value.get("value")
 
             if not value.get("required") and params.get(key) is None:
                 if value.get("default"):
