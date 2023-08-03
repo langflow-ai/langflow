@@ -145,7 +145,7 @@ def add_code_field(template, raw_code, field_config):
             "dynamic": True,
             "required": True,
             "placeholder": "",
-            "show": True,
+            "show": field_config.pop("show", True),
             "multiline": True,
             "value": raw_code,
             "password": False,
@@ -186,13 +186,16 @@ def build_frontend_node(custom_component: CustomComponent):
         return None
 
 
-def update_display_name_and_description(frontend_node, template_config):
+def update_attributes(frontend_node, template_config):
     """Update the display name and description of a frontend node"""
     if "display_name" in template_config:
         frontend_node["display_name"] = template_config["display_name"]
 
     if "description" in template_config:
         frontend_node["description"] = template_config["description"]
+
+    if "beta" in template_config:
+        frontend_node["beta"] = template_config["beta"]
 
 
 def build_field_config(custom_component: CustomComponent):
@@ -281,7 +284,7 @@ def build_langchain_template_custom_component(custom_component: CustomComponent)
 
     template_config = custom_component.build_template_config
 
-    update_display_name_and_description(frontend_node, template_config)
+    update_attributes(frontend_node, template_config)
 
     field_config = build_field_config(custom_component)
     add_extra_fields(
