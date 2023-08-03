@@ -1,4 +1,5 @@
 import { cloneDeep } from "lodash";
+import { Filter } from "lucide-react";
 import React, { useContext, useEffect, useRef, useState } from "react";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
@@ -13,6 +14,7 @@ import IntComponent from "../../../../components/intComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
+import { Button } from "../../../../components/ui/button";
 import { TOOLTIP_EMPTY } from "../../../../constants/constants";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
@@ -42,6 +44,7 @@ export default function ParameterComponent({
   const ref = useRef(null);
   const refHtml = useRef(null);
   const infoHtml = useRef(null);
+  const groupedEdge = useRef(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   const { setTabsState, tabId, save, flows } = useContext(TabsContext);
@@ -64,7 +67,7 @@ export default function ParameterComponent({
   let disabled =
     reactFlowInstance?.getEdges().some((e) => e.targetHandle === id) ?? false;
 
-  const { data: myData } = useContext(typesContext);
+  const { data: myData, setFilterEdge } = useContext(typesContext);
 
   const handleOnNewValue = (newValue: any) => {
     let newData = cloneDeep(data);
@@ -99,6 +102,8 @@ export default function ParameterComponent({
 
   function renderTooltips() {
     let groupedObj = groupByFamily(myData, tooltipTitle, left, flow);
+
+    groupedEdge.current = groupedObj;
 
     if (groupedObj && groupedObj.length > 0) {
       refHtml.current = groupedObj.map((item, i) => {
@@ -169,8 +174,52 @@ export default function ParameterComponent({
             (info !== "" ? " flex items-center" : "")
           }
         >
-          {title}
-          <span className="text-status-red">{required ? " *" : ""}</span>
+          {left &&
+          (type === "str" ||
+            type === "bool" ||
+            type === "float" ||
+            type === "code" ||
+            type === "prompt" ||
+            type === "file" ||
+            type === "int") &&
+          !optionalHandle ? (
+            <> </>
+          ) : (
+            <Button className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted">
+              <div className="flex">
+                {left ? (
+                  <>
+                    <ShadTooltip delayDuration={0} content={"Filter"}>
+                      <Filter
+                        onClick={() => {
+                          setFilterEdge(groupedEdge.current);
+                        }}
+                        className="h-6 w-6 self-center px-1"
+                        strokeWidth={1.5}
+                      />
+                    </ShadTooltip>
+                    {title}
+                  </>
+                ) : (
+                  <>
+                    {title}
+                    <ShadTooltip delayDuration={0} content={"Filter"}>
+                      <Filter
+                        onClick={() => {
+                          setFilterEdge(groupedEdge.current);
+                        }}
+                        className="h-6 w-6 self-center px-1"
+                        strokeWidth={1.5}
+                      />
+                    </ShadTooltip>
+                  </>
+                )}
+              </div>
+
+              <span className="text-status-red">{required ? " *" : ""}</span>
+            </Button>
+          )}
+
           <div className="">
             {info !== "" && (
               <ShadTooltip content={infoHtml.current}>
@@ -216,6 +265,9 @@ export default function ParameterComponent({
               style={{
                 borderColor: color,
                 top: position,
+              }}
+              onMouseUp={() => {
+                setFilterEdge(groupedEdge.current);
               }}
             ></Handle>
           </ShadTooltip>

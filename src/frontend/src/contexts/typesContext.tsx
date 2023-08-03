@@ -16,6 +16,8 @@ const initialValue: typesContextType = {
   setTemplates: () => {},
   data: {},
   setData: () => {},
+  setFilterEdge : (tweak: any) => {},
+  getFilterEdge: []
 };
 
 export const typesContext = createContext<typesContextType>(initialValue);
@@ -25,6 +27,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
   const [templates, setTemplates] = useState({});
   const [data, setData] = useState({});
+  const [getFilterEdge, setFilterEdge] = useState([]);
 
   useEffect(() => {
     let delay = 1000; // Start delay of 1 second
@@ -108,6 +111,8 @@ export function TypesProvider({ children }: { children: ReactNode }) {
         templates,
         data,
         setData,
+        setFilterEdge,
+        getFilterEdge
       }}
     >
       {children}

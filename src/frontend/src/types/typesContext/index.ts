@@ -15,4 +15,6 @@ export type typesContextType = {
   setTemplates: (newState: {}) => void;
   data: typeof data;
   setData: (newState: {}) => void;
+  setFilterEdge: (newState: {}) => void;
+  getFilterEdge: any[];
 };
