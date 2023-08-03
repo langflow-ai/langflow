@@ -113,13 +113,6 @@ export default function NodeModal({ data }: { data: NodeDataType }) {
                                     : toTitleCase(t)
                                 }
                                 required={data.node.template[t].required}
-                                id={
-                                  data.node.template[t].type +
-                                  "|" +
-                                  t +
-                                  "|" +
-                                  data.id
-                                }
                                 name={t}
                                 type={data.node.template[t].type}
                                 index={idx}
