@@ -8,7 +8,7 @@ const data: { [char: string]: string } = {};
 
 export type typesContextType = {
   reactFlowInstance: ReactFlowInstance | null;
-  setReactFlowInstance: () => void;
+  setReactFlowInstance: (newState: ReactFlowInstance) => void;
   deleteNode: (idx: string) => void;
   types: typeof types;
   setTypes: (newState: {}) => void;

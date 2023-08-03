@@ -1,5 +1,11 @@
 import { cloneDeep } from "lodash";
-import React, { ReactNode, useContext, useEffect, useRef, useState } from "react";
+import React, {
+  ReactNode,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
@@ -17,6 +23,7 @@ import { TOOLTIP_EMPTY } from "../../../../constants/constants";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
+import { TabsState } from "../../../../types/tabs";
 import { isValidConnection } from "../../../../utils/reactflowUtils";
 import {
   nodeColors,
@@ -71,7 +78,8 @@ export default function ParameterComponent({
     newData.node!.template[name].value = newValue;
     setData(newData);
     // Set state to pending
-    setTabsState((prev) => {
+    //@ts-ignore
+    setTabsState((prev: TabsState) => {
       return {
         ...prev,
         [tabId]: {

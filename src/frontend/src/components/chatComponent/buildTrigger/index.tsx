@@ -9,6 +9,7 @@ import { FlowType } from "../../../types/flow";
 
 import { TabsContext } from "../../../contexts/tabsContext";
 import { parsedDataType } from "../../../types/components";
+import { TabsState } from "../../../types/tabs";
 import { validateNodes } from "../../../utils/reactflowUtils";
 import RadialProgressComponent from "../../RadialProgress";
 import IconComponent from "../../genericIconComponent";
@@ -90,7 +91,8 @@ export default function BuildTrigger({
         // If the event is a log, log it
         setSuccessData({ title: parsedData.log });
       } else if (parsedData.input_keys) {
-        setTabsState((old) => {
+        //@ts-ignore
+        setTabsState((old: TabsState) => {
           return {
             ...old,
             [flowId]: {

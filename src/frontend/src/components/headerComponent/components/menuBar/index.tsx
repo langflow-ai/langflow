@@ -26,7 +26,7 @@ export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
 
   function handleAddFlow() {
     try {
-      addFlow(null, true).then((id) => {
+      addFlow(undefined, true).then((id) => {
         navigate("/flow/" + id);
       });
       // saveFlowStyleInDataBase();
@@ -46,7 +46,9 @@ export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
           <DropdownMenuTrigger asChild>
             <Button asChild variant="primary" size="sm">
               <div className="header-menu-bar-display">
-                <div className="header-menu-flow-name">{current_flow!.name}</div>
+                <div className="header-menu-flow-name">
+                  {current_flow!.name}
+                </div>
                 <IconComponent name="ChevronDown" className="h-4 w-4" />
               </div>
             </Button>
