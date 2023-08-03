@@ -15,7 +15,6 @@ export default function ModalField({
   data,
   title,
   required,
-  id,
   name,
   type,
   index,
