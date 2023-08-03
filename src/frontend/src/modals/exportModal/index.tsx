@@ -37,7 +37,6 @@ const ExportModal = forwardRef(
             tabId={tabId}
             setName={setName}
             setDescription={setDescription}
-            updateFlow={updateFlow}
           />
           <div className="mt-3 flex items-center space-x-2">
             <Checkbox

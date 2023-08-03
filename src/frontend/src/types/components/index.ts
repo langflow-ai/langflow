@@ -180,7 +180,6 @@ export type InputProps = {
   invalidName: boolean;
   setName: (name: string) => void;
   setDescription: (description: string) => void;
-  updateFlow: (flow: { id: string; name: string; }) => void;
   setInvalidName: (invalidName: boolean) => void;
 };
 

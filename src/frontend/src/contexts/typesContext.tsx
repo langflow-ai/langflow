@@ -8,7 +8,7 @@ import { typesContextType } from "../types/typesContext";
 
 const initialValue: typesContextType = {
   reactFlowInstance: null,
-  setReactFlowInstance: () => {},
+  setReactFlowInstance: (newState: ReactFlowInstance) => {},
   deleteNode: () => {},
   types: {},
   setTypes: () => {},
@@ -22,7 +22,8 @@ export const typesContext = createContext<typesContextType>(initialValue);
 
 export function TypesProvider({ children }: { children: ReactNode }) {
   const [types, setTypes] = useState({});
-  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+  const [reactFlowInstance, setReactFlowInstance] =
+    useState<ReactFlowInstance | null>(null);
   const [templates, setTemplates] = useState({});
   const [data, setData] = useState({});
 

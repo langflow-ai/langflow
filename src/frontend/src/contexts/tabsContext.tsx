@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { addEdge } from "reactflow";
+import { Node, addEdge } from "reactflow";
 import ShortUniqueId from "short-unique-id";
 import {
   deleteFlowFromDatabase,
@@ -18,7 +18,7 @@ import {
   uploadFlowsToDatabase,
 } from "../controllers/API";
 import { APIClassType, APITemplateType } from "../types/api";
-import { FlowType, NodeType } from "../types/flow";
+import { FlowType, NodeDataType, NodeType } from "../types/flow";
 import { TabsContextType, TabsState } from "../types/tabs";
 import {
   addVersionToDuplicates,
@@ -73,7 +73,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   const [flows, setFlows] = useState<Array<FlowType>>([]);
   const [id, setId] = useState(uid());
   const { templates, reactFlowInstance } = useContext(typesContext);
-  const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
+  const [lastCopiedSelection, setLastCopiedSelection] = useState<{
+    nodes: any;
+    edges: any;
+  } | null>(null);
   const [tabsState, setTabsState] = useState<TabsState>({});
   const [getTweak, setTweak] = useState([]);
 
@@ -318,7 +321,9 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     // add a change event listener to the file input
     input.onchange = (e: Event) => {
       // check if the file type is application/json
-      if ((e.target as HTMLInputElement).files![0].type === "application/json") {
+      if (
+        (e.target as HTMLInputElement).files![0].type === "application/json"
+      ) {
         // get the file from the file input
         const file = (e.target as HTMLInputElement).files![0];
         // read the file as text
@@ -357,7 +362,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     let minimumX = Infinity;
     let minimumY = Infinity;
     let idsMap = {};
-    let nodes = reactFlowInstance!.getNodes();
+    let nodes: Node<NodeDataType>[] = reactFlowInstance!.getNodes();
     let edges = reactFlowInstance!.getEdges();
     selectionInstance.nodes.forEach((n) => {
       if (n.position.y < minimumY) {

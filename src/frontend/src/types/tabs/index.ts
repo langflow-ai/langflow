@@ -1,4 +1,3 @@
-import { Dispatch, SetStateAction } from "react";
 import { FlowType, TweaksType } from "../flow";
 
 export type TabsContextType = {
@@ -8,7 +7,10 @@ export type TabsContextType = {
   setTabId: (index: string) => void;
   flows: Array<FlowType>;
   removeFlow: (id: string) => void;
-  addFlow: (flowData?: FlowType | undefined | null, newProject?: boolean) => Promise<String>;
+  addFlow: (
+    flow?: FlowType,
+    newProject?: Boolean
+  ) => Promise<String | undefined>;
   updateFlow: (newFlow: FlowType) => void;
   incrementNodeId: () => string;
   downloadFlow: (
