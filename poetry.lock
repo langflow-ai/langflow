@@ -2891,6 +2891,20 @@ qdrant = ["qdrant-client (>=1.3.1,<2.0.0)"]
 text-helpers = ["chardet (>=5.1.0,<6.0.0)"]
 
 [[package]]
+name = "langchain-experimental"
+version = "0.0.8"
+description = "Building applications with LLMs through composability"
+optional = false
+python-versions = ">=3.8.1,<4.0"
+files = [
+    {file = "langchain_experimental-0.0.8-py3-none-any.whl", hash = "sha256:34cf202ba29fdef178c5d68772cf2fa08dd2a0fad588ca3ef324ae71e596cc21"},
+    {file = "langchain_experimental-0.0.8.tar.gz", hash = "sha256:35d198f8e70a053ccd84273198ff08b4b700ac03ec5f43ba9b7ef797dd42ad14"},
+]
+
+[package.dependencies]
+langchain = ">=0.0.239"
+
+[[package]]
 name = "langchain-serve"
 version = "0.0.58"
 description = "Langchain Serve - serve your langchain apps on Jina AI Cloud."
@@ -7564,4 +7578,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "154238df4e8b249196011f592d63e2fad0e18316960e400037f54453c813d47a"
+content-hash = "57abce2ebcdc3cd7e359c36805822b9398d3bfb500c175b173a6d784d1276df6"
