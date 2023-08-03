@@ -23,6 +23,7 @@ import {
   FileSearch2,
   FileText,
   FileUp,
+  Filter,
   Fingerprint,
   Gift,
   GitFork,
@@ -64,7 +65,6 @@ import {
   X,
   XCircle,
   Zap,
-  Filter
 } from "lucide-react";
 import { Edge, Node } from "reactflow";
 import { AirbyteIcon } from "../icons/Airbyte";
@@ -277,7 +277,7 @@ export const nodeIconsLucide = {
   Upload,
   MessageSquare,
   MoreHorizontal,
-  Filter
+  Filter,
 };
 export function getConnectedNodes(edge: Edge, nodes: Array<Node>): Array<Node> {
   const sourceId = edge.source;

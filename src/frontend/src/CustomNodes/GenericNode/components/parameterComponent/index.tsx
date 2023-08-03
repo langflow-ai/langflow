@@ -1,5 +1,4 @@
 import { cloneDeep } from "lodash";
-import { Filter } from "lucide-react";
 import React, { useContext, useEffect, useRef, useState } from "react";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
@@ -229,7 +228,8 @@ export default function ParameterComponent({
                 setFilterEdge(groupedEdge.current);
               }}
             >
-              <Filter
+              <IconComponent
+                name="Filter"
                 className={
                   "pointer-events-none absolute -mb-0.5 h-3 w-3 fill-background stroke-none transition-all group-hover:h-4 group-hover:w-4 " +
                   (!disabled && !disabledLeft ? "scale-100" : "scale-0")
