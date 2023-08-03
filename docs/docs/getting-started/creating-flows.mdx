@@ -1,0 +1,37 @@
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import ReactPlayer from "react-player";
+
+# 🎨 Creating Flows
+
+## Compose
+
+Creating flows with Langflow is easy. Drag sidebar components onto the canvas and connect them together to create your pipeline. Langflow provides a range of [LangChain components](https://python.langchain.com/docs/modules/) to choose from, including LLMs, prompt serializers, agents, and chains.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/langflow_canvas.png",
+  }}
+/>
+
+## Fork
+
+The easiest way to start with Langflow is by forking a **community example**. Forking an example stores a copy in your project collection, allowing you to edit and save the modified version as a new flow.
+
+<div
+  style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
+>
+  <ReactPlayer playing controls url="/videos/langflow_fork.mp4" />
+</div>
+
+## Build
+
+Building a flow means validating if the components have prerequisites fulfilled and are properly instantiated. When a chat message is sent, the flow will run for the first time, executing the pipeline.
+
+<div
+  style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
+>
+  <ReactPlayer playing controls url="/videos/langflow_build.mp4" />
+</div>

@@ -1,139 +1,319 @@
-import { CodeBracketSquareIcon } from "@heroicons/react/24/outline";
-import { useContext, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
+import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
-import "ace-builds/src-noconflict/ext-language_tools";
+import {
+  ReactNode,
+  forwardRef,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 // import "ace-builds/webpack-resolver";
-import { darkContext } from "../../contexts/darkContext";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "../../components/ui/dialog";
+import CodeTabsComponent from "../../components/codeTabsComponent";
+import IconComponent from "../../components/genericIconComponent";
+import { EXPORT_CODE_DIALOG } from "../../constants/constants";
+import { TabsContext } from "../../contexts/tabsContext";
 import { FlowType } from "../../types/flow/index";
-import { getCurlCode, getPythonApiCode, getPythonCode } from "../../constants";
-import { EXPORT_CODE_DIALOG } from "../../constants";
+import { buildTweaks } from "../../utils/reactflowUtils";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "../../components/ui/tabs";
-import { Check, Clipboard } from "lucide-react";
+  getCurlCode,
+  getPythonApiCode,
+  getPythonCode,
+  getWidgetCode,
+} from "../../utils/utils";
+import BaseModal from "../baseModal";
 
-export default function ApiModal({ flow }: { flow: FlowType }) {
-  const [open, setOpen] = useState(true);
-  const { dark } = useContext(darkContext);
-  const { closePopUp } = useContext(PopUpContext);
-  const [activeTab, setActiveTab] = useState("0");
-  const [isCopied, setIsCopied] = useState<Boolean>(false);
+const ApiModal = forwardRef(
+  (
+    {
+      flow,
+      children,
+      disable,
+    }: {
+      flow: FlowType;
+      children: ReactNode;
+      disable: boolean;
+    },
+    ref
+  ) => {
+    const [open, setOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState("0");
+    const tweak = useRef([]);
+    const tweaksList = useRef([]);
+    const { setTweak, getTweak, tabsState } = useContext(TabsContext);
+    const pythonApiCode = getPythonApiCode(flow, tweak.current, tabsState);
+    const curl_code = getCurlCode(flow, tweak.current, tabsState);
+    const pythonCode = getPythonCode(flow, tweak.current, tabsState);
+    const widgetCode = getWidgetCode(flow, tabsState);
+    const tweaksCode = buildTweaks(flow);
+    const [tabs, setTabs] = useState([
+      {
+        name: "cURL",
+        mode: "bash",
+        image: "https://curl.se/logo/curl-symbol-transparent.png",
+        language: "sh",
+        code: curl_code,
+      },
+      {
+        name: "Python API",
+        mode: "python",
+        image:
+          "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
+        language: "py",
+        code: pythonApiCode,
+      },
+      {
+        name: "Python Code",
+        mode: "python",
+        image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+        language: "py",
+        code: pythonCode,
+      },
+      {
+        name: "Chat Widget HTML",
+        description:
+          "Insert this code anywhere in your &lt;body&gt; tag. To use with react and other libs, check our <a class='link-color' href='https://langflow.org/guidelines/widget'>documentation</a>.",
+        mode: "html",
+        image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+        language: "py",
+        code: widgetCode,
+      },
+    ]);
 
-  const copyToClipboard = () => {
-    if (!navigator.clipboard || !navigator.clipboard.writeText) {
-      return;
+    function startState() {
+      tweak.current = [];
+      setTweak([]);
+      tweaksList.current = [];
     }
 
-    navigator.clipboard.writeText(tabs[activeTab].code).then(() => {
-      setIsCopied(true);
+    useEffect(() => {
+      if (flow["data"]["nodes"].length == 0) {
+        startState();
+      } else {
+        tweak.current = [];
+        const t = buildTweaks(flow);
+        tweak.current.push(t);
+      }
 
-      setTimeout(() => {
-        setIsCopied(false);
-      }, 2000);
-    });
-  };
-  function setModalOpen(x: boolean) {
-    setOpen(x);
-    if (x === false) {
-      closePopUp();
+      filterNodes();
+
+      if (Object.keys(tweaksCode).length > 0) {
+        setActiveTab("0");
+        setTabs([
+          {
+            name: "cURL",
+            mode: "bash",
+            image: "https://curl.se/logo/curl-symbol-transparent.png",
+            language: "sh",
+            code: curl_code,
+          },
+          {
+            name: "Python API",
+            mode: "python",
+            image:
+              "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
+            language: "py",
+            code: pythonApiCode,
+          },
+          {
+            name: "Python Code",
+            mode: "python",
+            language: "py",
+            image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+            code: pythonCode,
+          },
+          {
+            name: "Chat Widget HTML",
+            description:
+              "Insert this code anywhere in your &lt;body&gt; tag. To use with react and other libs, check our <a class='link-color' href='https://langflow.org/guidelines/widget'>documentation</a>.",
+            mode: "html",
+            image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+            language: "py",
+            code: widgetCode,
+          },
+          {
+            name: "Tweaks",
+            mode: "python",
+            image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+            language: "py",
+            code: pythonCode,
+          },
+        ]);
+      } else {
+        setTabs([
+          {
+            name: "cURL",
+            mode: "bash",
+            image: "https://curl.se/logo/curl-symbol-transparent.png",
+            language: "sh",
+            code: curl_code,
+          },
+          {
+            name: "Python API",
+            mode: "python",
+            image:
+              "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
+            language: "py",
+            code: pythonApiCode,
+          },
+          {
+            name: "Python Code",
+            mode: "python",
+            image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+            language: "py",
+            code: pythonCode,
+          },
+          {
+            name: "Chat Widget HTML",
+            description:
+              "Insert this code anywhere in your &lt;body&gt; tag. To use with react and other libs, check our <a class='link-color' href='https://langflow.org/guidelines/widget'>documentation</a>.",
+            mode: "html",
+            image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+            language: "py",
+            code: widgetCode,
+          },
+        ]);
+      }
+    }, [flow["data"]["nodes"], open]);
+
+    function filterNodes() {
+      let arrNodesWithValues = [];
+
+      flow["data"]["nodes"].forEach((t) => {
+        Object.keys(t["data"]["node"]["template"])
+          .filter(
+            (n) =>
+              n.charAt(0) !== "_" &&
+              t.data.node.template[n].show &&
+              (t.data.node.template[n].type === "str" ||
+                t.data.node.template[n].type === "bool" ||
+                t.data.node.template[n].type === "float" ||
+                t.data.node.template[n].type === "code" ||
+                t.data.node.template[n].type === "prompt" ||
+                t.data.node.template[n].type === "file" ||
+                t.data.node.template[n].type === "int")
+          )
+          .map((n, i) => {
+            arrNodesWithValues.push(t["id"]);
+          });
+      });
+
+      tweaksList.current = arrNodesWithValues.filter((value, index, self) => {
+        return self.indexOf(value) === index;
+      });
     }
+    function buildTweakObject(tw, changes, template) {
+      if (template.type === "float") {
+        changes = parseFloat(changes);
+      }
+      if (template.type === "int") {
+        changes = parseInt(changes);
+      }
+      if (template.list === true && Array.isArray(changes)) {
+        changes = changes?.filter((x) => x !== "");
+      }
+
+      const existingTweak = tweak.current.find((element) =>
+        element.hasOwnProperty(tw)
+      );
+
+      if (existingTweak) {
+        existingTweak[tw][template["name"]] = changes;
+
+        if (existingTweak[tw][template["name"]] == template.value) {
+          tweak.current.forEach((element) => {
+            if (element[tw] && Object.keys(element[tw])?.length === 0) {
+              tweak.current = tweak.current.filter((obj) => {
+                const prop = obj[Object.keys(obj)[0]].prop;
+                return prop !== undefined && prop !== null && prop !== "";
+              });
+            }
+          });
+        }
+      } else {
+        const newTweak = {
+          [tw]: {
+            [template["name"]]: changes,
+          },
+        };
+        tweak.current.push(newTweak);
+      }
+
+      const pythonApiCode = getPythonApiCode(flow, tweak.current, tabsState);
+      const curl_code = getCurlCode(flow, tweak.current, tabsState);
+      const pythonCode = getPythonCode(flow, tweak.current, tabsState);
+      const widgetCode = getWidgetCode(flow, tabsState);
+
+      tabs[0].code = curl_code;
+      tabs[1].code = pythonApiCode;
+      tabs[2].code = pythonCode;
+      tabs[3].code = widgetCode;
+
+      setTweak(tweak.current);
+    }
+
+    function buildContent(value) {
+      const htmlContent = (
+        <div className="w-[200px]">
+          <span>{value != null && value != "" ? value : "None"}</span>
+        </div>
+      );
+      return htmlContent;
+    }
+
+    function getValue(value, node, template) {
+      let returnValue = value ?? "";
+
+      if (getTweak.length > 0) {
+        for (const obj of getTweak) {
+          Object.keys(obj).forEach((key) => {
+            const value = obj[key];
+            if (key == node["id"]) {
+              Object.keys(value).forEach((key) => {
+                if (key == template["name"]) {
+                  returnValue = value[key];
+                }
+              });
+            }
+          });
+        }
+      } else {
+        return value ?? "";
+      }
+      return returnValue;
+    }
+
+    return (
+      <BaseModal open={open} setOpen={setOpen} disable={disable}>
+        <BaseModal.Trigger>{children}</BaseModal.Trigger>
+        <BaseModal.Header description={EXPORT_CODE_DIALOG}>
+          <span className="pr-2">Code</span>
+          <IconComponent
+            name="Code2"
+            className="h-6 w-6 pl-1 text-gray-800 dark:text-white"
+            aria-hidden="true"
+          />
+        </BaseModal.Header>
+        <BaseModal.Content>
+          <CodeTabsComponent
+            flow={flow}
+            tabs={tabs}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            tweaks={{
+              tweak,
+              tweaksList,
+              buildContent,
+              buildTweakObject,
+              getValue,
+            }}
+          />
+        </BaseModal.Content>
+      </BaseModal>
+    );
   }
+);
 
-  const pythonApiCode = getPythonApiCode(flow);
-
-  const curl_code = getCurlCode(flow);
-  const pythonCode = getPythonCode(flow);
-
-  const tabs = [
-    {
-      name: "cURL",
-      mode: "bash",
-      image: "https://curl.se/logo/curl-symbol-transparent.png",
-      code: curl_code,
-    },
-    {
-      name: "Python API",
-      mode: "python",
-      image:
-        "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
-      code: pythonApiCode,
-    },
-    {
-      name: "Python Code",
-      mode: "python",
-      image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-      code: pythonCode,
-    },
-  ];
-  return (
-    <Dialog open={true} onOpenChange={setModalOpen}>
-      <DialogTrigger></DialogTrigger>
-      <DialogContent className="lg:max-w-[800px] sm:max-w-[600px] h-[580px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center">
-            <span className="pr-2">Code</span>
-            <CodeBracketSquareIcon
-              className="h-6 w-6 text-gray-800 pl-1 dark:text-white"
-              aria-hidden="true"
-            />
-          </DialogTitle>
-          <DialogDescription>{EXPORT_CODE_DIALOG}</DialogDescription>
-        </DialogHeader>
-
-        <Tabs
-          defaultValue={"0"}
-          className="w-full h-full overflow-hidden text-center bg-muted rounded-md border"
-          onValueChange={(value) => setActiveTab(value)}
-        >
-          <div className="flex items-center justify-between px-2">
-            <TabsList>
-              {tabs.map((tab, index) => (
-                <TabsTrigger value={index.toString()}>{tab.name}</TabsTrigger>
-              ))}
-            </TabsList>
-            <div className="float-right">
-              <button
-                className="flex gap-1.5 items-center rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
-                onClick={copyToClipboard}
-              >
-                {isCopied ? <Check size={18} /> : <Clipboard size={15} />}
-                {isCopied ? "Copied!" : "Copy code"}
-              </button>
-            </div>
-          </div>
-
-          {tabs.map((tab, index) => (
-            <TabsContent
-              value={index.toString()}
-              className="overflow-hidden w-full h-full px-4 pb-4 -mt-1"
-            >
-              <SyntaxHighlighter
-                className="h-[400px] w-full overflow-auto"
-                language={tab.mode}
-                style={oneDark}
-              >
-                {tab.code}
-              </SyntaxHighlighter>
-            </TabsContent>
-          ))}
-        </Tabs>
-      </DialogContent>
-    </Dialog>
-  );
-}
+export default ApiModal;

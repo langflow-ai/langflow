@@ -113,6 +113,7 @@ def test_openai(client: TestClient):
 
     assert template["cache"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -121,9 +122,11 @@ def test_openai(client: TestClient):
         "type": "bool",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["verbose"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -132,9 +135,11 @@ def test_openai(client: TestClient):
         "type": "bool",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["client"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -143,9 +148,11 @@ def test_openai(client: TestClient):
         "type": "Any",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["model_name"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -162,10 +169,12 @@ def test_openai(client: TestClient):
         "type": "str",
         "list": True,
         "advanced": False,
+        "info": "",
     }
     # Add more assertions for other properties here
     assert template["temperature"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -175,9 +184,11 @@ def test_openai(client: TestClient):
         "type": "float",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["max_tokens"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -187,9 +198,11 @@ def test_openai(client: TestClient):
         "type": "int",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["top_p"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -199,9 +212,11 @@ def test_openai(client: TestClient):
         "type": "float",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["frequency_penalty"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -211,9 +226,11 @@ def test_openai(client: TestClient):
         "type": "float",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["presence_penalty"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -223,9 +240,11 @@ def test_openai(client: TestClient):
         "type": "float",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["n"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -235,9 +254,11 @@ def test_openai(client: TestClient):
         "type": "int",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["best_of"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -247,9 +268,11 @@ def test_openai(client: TestClient):
         "type": "int",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["model_kwargs"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -258,9 +281,11 @@ def test_openai(client: TestClient):
         "type": "code",
         "list": False,
         "advanced": True,
+        "info": "",
     }
     assert template["openai_api_key"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -271,9 +296,11 @@ def test_openai(client: TestClient):
         "type": "str",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["batch_size"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -283,9 +310,11 @@ def test_openai(client: TestClient):
         "type": "int",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["request_timeout"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -294,9 +323,11 @@ def test_openai(client: TestClient):
         "type": "float",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["logit_bias"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -305,9 +336,11 @@ def test_openai(client: TestClient):
         "type": "code",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["max_retries"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -317,9 +350,11 @@ def test_openai(client: TestClient):
         "type": "int",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["streaming"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -329,6 +364,7 @@ def test_openai(client: TestClient):
         "type": "bool",
         "list": False,
         "advanced": False,
+        "info": "",
     }
 
 
@@ -343,6 +379,7 @@ def test_chat_open_ai(client: TestClient):
 
     assert template["verbose"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -352,9 +389,11 @@ def test_chat_open_ai(client: TestClient):
         "type": "bool",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["client"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -363,13 +402,15 @@ def test_chat_open_ai(client: TestClient):
         "type": "Any",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["model_name"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
-        "value": "gpt-3.5-turbo",
+        "value": "gpt-3.5-turbo-0613",
         "password": False,
         "options": [
             "gpt-3.5-turbo-0613",
@@ -385,9 +426,11 @@ def test_chat_open_ai(client: TestClient):
         "type": "str",
         "list": True,
         "advanced": False,
+        "info": "",
     }
     assert template["temperature"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -397,9 +440,11 @@ def test_chat_open_ai(client: TestClient):
         "type": "float",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["model_kwargs"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -408,9 +453,11 @@ def test_chat_open_ai(client: TestClient):
         "type": "code",
         "list": False,
         "advanced": True,
+        "info": "",
     }
     assert template["openai_api_key"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -421,9 +468,11 @@ def test_chat_open_ai(client: TestClient):
         "type": "str",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["request_timeout"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -432,9 +481,11 @@ def test_chat_open_ai(client: TestClient):
         "type": "float",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["max_retries"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -444,9 +495,11 @@ def test_chat_open_ai(client: TestClient):
         "type": "int",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["streaming"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -456,9 +509,11 @@ def test_chat_open_ai(client: TestClient):
         "type": "bool",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["n"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -468,10 +523,12 @@ def test_chat_open_ai(client: TestClient):
         "type": "int",
         "list": False,
         "advanced": False,
+        "info": "",
     }
 
     assert template["max_tokens"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -480,6 +537,7 @@ def test_chat_open_ai(client: TestClient):
         "type": "int",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["_type"] == "ChatOpenAI"
     assert (
@@ -487,7 +545,7 @@ def test_chat_open_ai(client: TestClient):
         == "Wrapper around OpenAI Chat large language models."  # noqa E501
     )
     assert set(model["base_classes"]) == {
-        "Serializable",
+        "BaseLLM",
         "BaseChatModel",
         "ChatOpenAI",
         "BaseLanguageModel",

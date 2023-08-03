@@ -16,27 +16,100 @@ def test_zero_shot_agent(client: TestClient):
     }
     template = zero_shot_agent["template"]
 
-    assert template["llm_chain"] == {
+    assert template["tools"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
         "password": False,
-        "name": "llm_chain",
-        "type": "LLMChain",
-        "list": False,
-        "advanced": False,
-    }
-    assert template["allowed_tools"] == {
-        "required": False,
-        "placeholder": "",
-        "show": True,
-        "multiline": False,
-        "password": False,
-        "name": "allowed_tools",
-        "type": "Tool",
+        "name": "tools",
+        "type": "BaseTool",
         "list": True,
         "advanced": False,
+        "info": "",
+    }
+
+    # Additional assertions for other template variables
+    assert template["callback_manager"] == {
+        "required": False,
+        "dynamic": False,
+        "placeholder": "",
+        "show": False,
+        "multiline": False,
+        "password": False,
+        "name": "callback_manager",
+        "type": "BaseCallbackManager",
+        "list": False,
+        "advanced": False,
+        "info": "",
+    }
+    assert template["llm"] == {
+        "required": True,
+        "dynamic": False,
+        "placeholder": "",
+        "show": True,
+        "multiline": False,
+        "password": False,
+        "name": "llm",
+        "type": "BaseLanguageModel",
+        "list": False,
+        "advanced": False,
+        "info": "",
+    }
+    assert template["output_parser"] == {
+        "required": False,
+        "dynamic": False,
+        "placeholder": "",
+        "show": False,
+        "multiline": False,
+        "password": False,
+        "name": "output_parser",
+        "type": "AgentOutputParser",
+        "list": False,
+        "advanced": False,
+        "info": "",
+    }
+    assert template["input_variables"] == {
+        "required": False,
+        "dynamic": False,
+        "placeholder": "",
+        "show": False,
+        "multiline": False,
+        "password": False,
+        "name": "input_variables",
+        "type": "str",
+        "list": True,
+        "advanced": False,
+        "info": "",
+    }
+    assert template["prefix"] == {
+        "required": False,
+        "dynamic": False,
+        "placeholder": "",
+        "show": True,
+        "multiline": True,
+        "value": "Answer the following questions as best you can. You have access to the following tools:",
+        "password": False,
+        "name": "prefix",
+        "type": "str",
+        "list": False,
+        "advanced": False,
+        "info": "",
+    }
+    assert template["suffix"] == {
+        "required": False,
+        "dynamic": False,
+        "placeholder": "",
+        "show": True,
+        "multiline": True,
+        "value": "Begin!\n\nQuestion: {input}\nThought:{agent_scratchpad}",
+        "password": False,
+        "name": "suffix",
+        "type": "str",
+        "list": False,
+        "advanced": False,
+        "info": "",
     }
 
 
@@ -52,6 +125,7 @@ def test_json_agent(client: TestClient):
 
     assert template["toolkit"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -60,9 +134,11 @@ def test_json_agent(client: TestClient):
         "type": "BaseToolkit",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["llm"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -72,6 +148,7 @@ def test_json_agent(client: TestClient):
         "list": False,
         "advanced": False,
         "display_name": "LLM",
+        "info": "",
     }
 
 
@@ -87,6 +164,7 @@ def test_csv_agent(client: TestClient):
 
     assert template["path"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -97,11 +175,13 @@ def test_csv_agent(client: TestClient):
         "name": "path",
         "type": "file",
         "list": False,
-        "content": None,
+        "file_path": None,
         "advanced": False,
+        "info": "",
     }
     assert template["llm"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -111,6 +191,7 @@ def test_csv_agent(client: TestClient):
         "list": False,
         "advanced": False,
         "display_name": "LLM",
+        "info": "",
     }
 
 
@@ -126,6 +207,7 @@ def test_initialize_agent(client: TestClient):
 
     assert template["agent"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -137,14 +219,17 @@ def test_initialize_agent(client: TestClient):
             "self-ask-with-search",
             "conversational-react-description",
             "openai-functions",
+            "openai-multi-functions",
         ],
         "name": "agent",
         "type": "str",
         "list": True,
         "advanced": False,
+        "info": "",
     }
     assert template["memory"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -153,9 +238,11 @@ def test_initialize_agent(client: TestClient):
         "type": "BaseChatMemory",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["tools"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -164,9 +251,11 @@ def test_initialize_agent(client: TestClient):
         "type": "Tool",
         "list": True,
         "advanced": False,
+        "info": "",
     }
     assert template["llm"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -176,4 +265,5 @@ def test_initialize_agent(client: TestClient):
         "list": False,
         "advanced": False,
         "display_name": "LLM",
+        "info": "",
     }

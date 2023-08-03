@@ -1,3 +1,4 @@
+import { cloneDeep } from "lodash";
 import {
   createContext,
   useCallback,
@@ -6,7 +7,7 @@ import {
   useState,
 } from "react";
 import { Edge, Node, useReactFlow } from "reactflow";
-import { cloneDeep } from "lodash";
+import { isWrappedWithClass } from "../utils/utils";
 import { TabsContext } from "./tabsContext";
 
 type undoRedoContextType = {
@@ -18,14 +19,6 @@ type undoRedoContextType = {
 type UseUndoRedoOptions = {
   maxHistorySize: number;
   enableShortcuts: boolean;
-};
-
-type UseUndoRedo = (options?: UseUndoRedoOptions) => {
-  undo: () => void;
-  redo: () => void;
-  takeSnapshot: () => void;
-  canUndo: boolean;
-  canRedo: boolean;
 };
 
 type HistoryItem = {
@@ -156,17 +149,21 @@ export function UndoRedoProvider({ children }) {
     }
 
     const keyDownHandler = (event: KeyboardEvent) => {
-      if (
-        event.key === "z" &&
-        (event.ctrlKey || event.metaKey) &&
-        event.shiftKey
-      ) {
-        redo();
-      } else if (event.key === "y" && (event.ctrlKey || event.metaKey)) {
-        event.preventDefault(); // prevent the default action
-        redo();
-      } else if (event.key === "z" && (event.ctrlKey || event.metaKey)) {
-        undo();
+      if (!isWrappedWithClass(event, "noundo")) {
+        if (
+          event.key === "z" &&
+          (event.ctrlKey || event.metaKey) &&
+          event.shiftKey
+        ) {
+          event.preventDefault();
+          redo();
+        } else if (event.key === "y" && (event.ctrlKey || event.metaKey)) {
+          event.preventDefault(); // prevent the default action
+          redo();
+        } else if (event.key === "z" && (event.ctrlKey || event.metaKey)) {
+          event.preventDefault();
+          undo();
+        }
       }
     };
 

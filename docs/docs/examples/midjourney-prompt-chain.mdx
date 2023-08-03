@@ -1,0 +1,45 @@
+import Admonition from "@theme/Admonition";
+
+# MidJourney Prompt Chain
+
+The `MidJourneyPromptChain` can be used to generate imaginative and detailed MidJourney prompts.
+
+For example, type something like:
+
+```bash
+Dragon
+```
+
+And get a response such as:
+
+```text
+Imagine a mysterious forest, the trees are tall and ancient, their branches reaching up to the sky. Through the darkness, a dragon emerges from the shadows, its scales shimmering in the moonlight. Its wingspan is immense, and its eyes glow with a fierce intensity. It is a majestic and powerful creature, one that commands both respect and fear.
+```
+
+<Admonition type="tip">
+  Notice that the `ConversationSummaryMemory` stores a summary of the
+  conversation over time. Try using it to create better prompts as the
+  conversation goes on.
+</Admonition>
+
+## ⛓️ Langflow Example
+
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/midjourney-prompt-chain.png",
+  }}
+/>
+
+#### <a target="\_blank" href="json_files/MidJourney_Prompt_Chain.json" download>Download Flow</a>
+
+<Admonition type="note" title="LangChain Components 🦜🔗">
+
+- [`OpenAI`](https://python.langchain.com/docs/modules/model_io/models/llms/integrations/openai)
+- [`ConversationSummaryMemory`](https://python.langchain.com/docs/modules/memory/how_to/summary)
+
+</Admonition>

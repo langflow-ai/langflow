@@ -104,16 +104,22 @@ class ChatManager:
 
     async def close_connection(self, client_id: str, code: int, reason: str):
         if websocket := self.active_connections[client_id]:
-            await websocket.close(code=code, reason=reason)
-            self.disconnect(client_id)
+            try:
+                await websocket.close(code=code, reason=reason)
+                self.disconnect(client_id)
+            except RuntimeError as exc:
+                # This is to catch the following error:
+                #  Unexpected ASGI message 'websocket.close', after sending 'websocket.close'
+                if "after sending" in str(exc):
+                    logger.error(f"Error closing connection: {exc}")
 
     async def process_message(
         self, client_id: str, payload: Dict, langchain_object: Any
     ):
         # Process the graph data and chat message
-        chat_message = payload.pop("message", "")
-        chat_message = ChatMessage(message=chat_message)
-        self.chat_history.add_message(client_id, chat_message)
+        chat_inputs = payload.pop("inputs", "")
+        chat_inputs = ChatMessage(message=chat_inputs)
+        self.chat_history.add_message(client_id, chat_inputs)
 
         # graph_data = payload
         start_resp = ChatResponse(message=None, type="start", intermediate_steps="")
@@ -126,7 +132,7 @@ class ChatManager:
 
             result, intermediate_steps = await process_graph(
                 langchain_object=langchain_object,
-                chat_message=chat_message,
+                chat_inputs=chat_inputs,
                 websocket=self.active_connections[client_id],
             )
         except Exception as e:
@@ -144,6 +150,8 @@ class ChatManager:
                 if isinstance(msg, FileResponse):
                     if msg.data_type == "image":
                         # Base64 encode the image
+                        if isinstance(msg.data, str):
+                            continue
                         msg.data = pil_to_base64(msg.data)
                     file_responses.append(msg)
                 if msg.type == "start":
@@ -189,13 +197,13 @@ class ChatManager:
                     langchain_object = self.in_memory_cache.get(client_id)
                     await self.process_message(client_id, payload, langchain_object)
 
-        except Exception as e:
+        except Exception as exc:
             # Handle any exceptions that might occur
-            logger.error(e)
+            logger.error(f"Error handling websocket: {exc}")
             await self.close_connection(
                 client_id=client_id,
                 code=status.WS_1011_INTERNAL_ERROR,
-                reason=str(e)[:120],
+                reason=str(exc)[:120],
             )
         finally:
             try:
@@ -204,6 +212,6 @@ class ChatManager:
                     code=status.WS_1000_NORMAL_CLOSURE,
                     reason="Client disconnected",
                 )
-            except Exception as e:
-                logger.error(e)
+            except Exception as exc:
+                logger.error(f"Error closing connection: {exc}")
             self.disconnect(client_id)

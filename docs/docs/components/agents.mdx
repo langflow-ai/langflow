@@ -1,0 +1,91 @@
+import Admonition from '@theme/Admonition';
+
+# Agents
+
+<Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
+    <p>
+        We appreciate your understanding as we polish our documentation – it may contain some rough edges. Share your feedback or report issues to help us improve! 🛠️📝
+    </p>
+</Admonition>
+
+
+Agents are components that use reasoning to make decisions and take actions, designed to autonomously perform tasks or provide services with some degree of “freedom” (or agency). They combine the power of LLM chaining processes with access to external tools such as APIs to interact with applications and accomplish tasks.
+
+---
+
+### AgentInitializer
+
+The `AgentInitializer` component is a quick way to construct a zero-shot agent from a language model (LLM) and tools.
+
+**Params**
+
+- **LLM:** Language Model to use in the `AgentInitializer`.
+- **Memory:** Used to add memory functionality to an agent. It allows the agent to store and retrieve information from previous conversations.
+- **Tools:** Tools that the agent will have access to.
+- **Agent:** The type of agent to be instantiated. Current supported: `zero-shot-react-description`, `react-docstore`, `self-ask-with-search,conversational-react-description` and `openai-functions`.
+
+---
+
+### CSVAgent
+
+A `CSVAgent` is an agent that is designed to interact with CSV (Comma-Separated Values) files. CSV files are a common format for storing tabular data, where each row represents a record and each column represents a field. The CSV agent can perform various tasks, such as reading and writing CSV files, processing the data, and generating tables. It can extract information from the CSV file, manipulate the data, and perform operations like filtering, sorting, and aggregating.
+
+**Params**
+
+- **LLM:** Language Model to use in the `CSVAgent`.
+- **path:** The file path to the CSV data.
+
+---
+
+### JSONAgent
+
+The `JSONAgent` deals with JSON (JavaScript Object Notation) data. Similar to the CSVAgent, it works with a language model (LLM) and a toolkit designed for JSON manipulation. This agent can iteratively explore a JSON blob to find the information needed to answer the user's question. It can list keys, get values, and navigate through the structure of the JSON object.
+
+**Params**
+
+- **LLM:** Language Model to use in the `JSONAgent`.
+- **Toolkit:** Toolkit that the agent will have access to.
+
+---
+
+### SQLAgent
+
+A `SQLAgent` is an agent that is designed to interact with SQL databases. It is capable of performing various tasks, such as querying the database, retrieving data, and executing SQL statements. The agent can provide information about the structure of the database, including the tables and their schemas. It can also perform operations like inserting, updating, and deleting data in the database. The SQL agent is a helpful tool for managing and working with SQL databases efficiently.
+
+**Params**
+
+- **LLM:** Language Model to use in the `SQLAgent`.
+- **database_uri:** A string representing the connection URI for the SQL database.
+
+---
+
+### VectorStoreAgent
+
+The `VectorStoreAgent` is designed to work with a vector store – a data structure used for storing and querying vector-based representations of data. The `VectorStoreAgent` can query the vector store to find relevant information based on user inputs.
+
+**Params**
+
+- **LLM:** Language Model to use in the `VectorStoreAgent`.
+- **Vector Store Info:** `VectorStoreInfo` to use in the `VectorStoreAgent`.
+
+---
+
+### VectorStoreRouterAgent
+
+The `VectorStoreRouterAgent` is a custom agent that takes a vector store router as input. It is typically used when there’s a need to retrieve information from multiple vector stores. These can be connected through a `VectorStoreRouterToolkit` and sent over to the `VectorStoreRouterAgent`. An agent configured with multiple vector stores can route queries to the appropriate store based on the context.
+
+**Params**
+
+- **LLM:** Language Model to use in the `VectorStoreRouterAgent`.
+- **Vector Store Router Toolkit:** `VectorStoreRouterToolkit` to use in the `VectorStoreRouterAgent`.
+
+---
+
+### ZeroShotAgent
+
+The `ZeroShotAgent` is an agent that uses the ReAct framework to determine which tool to use based solely on the tool's description. It can be configured with any number of tools and requires a description for each tool. The agent is designed to be the most general-purpose action agent. It uses an `LLMChain` to determine which actions to take and in what order.
+
+**Params**
+
+- **Allowed Tools:** Tools that the agent will have access to.
+- **LLM Chain:** LLM Chain to be used by the agent.

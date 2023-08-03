@@ -1,0 +1,33 @@
+import Admonition from "@theme/Admonition";
+
+# Conversation Chain
+
+This example shows how to instantiate a simple `ConversationChain` component using a Language Model (LLM). Once the Node Status turns green 🟢, the chat will be ready to take in user messages. Here, we used `ChatOpenAI` to act as the required LLM input, but you can use any LLM for this purpose.
+
+<Admonition type="info">
+
+Make sure to always get the API key from the provider.
+
+</Admonition>
+
+## ⛓️ Langflow Example
+
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/basic-chat.png",
+  }}
+/>
+
+#### <a target="\_blank" href="json_files/Basic_Chat.json" download>Download Flow</a>
+
+<Admonition type="note" title="LangChain Components 🦜🔗">
+
+- [`ConversationChain`](https://python.langchain.com/docs/modules/chains/)
+- [`ChatOpenAI`](https://python.langchain.com/docs/modules/model_io/models/chat/integrations/openai)
+
+</Admonition>

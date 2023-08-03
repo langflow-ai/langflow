@@ -1,28 +1,34 @@
-import { useState, useContext } from "react";
 import { Transition } from "@headlessui/react";
-import { Zap } from "lucide-react";
-import { validateNodes } from "../../../utils";
-import { FlowType } from "../../../types/flow";
+import { useContext, useState } from "react";
 import Loading from "../../../components/ui/loading";
 import { useSSE } from "../../../contexts/SSEContext";
-import { typesContext } from "../../../contexts/typesContext";
 import { alertContext } from "../../../contexts/alertContext";
+import { typesContext } from "../../../contexts/typesContext";
 import { postBuildInit } from "../../../controllers/API";
+import { FlowType } from "../../../types/flow";
+
+import { TabsContext } from "../../../contexts/tabsContext";
+import { validateNodes } from "../../../utils/reactflowUtils";
+import RadialProgressComponent from "../../RadialProgress";
+import IconComponent from "../../genericIconComponent";
 
 export default function BuildTrigger({
   open,
   flow,
   setIsBuilt,
-  isBuilt,
 }: {
   open: boolean;
   flow: FlowType;
   setIsBuilt: any;
   isBuilt: boolean;
 }) {
-  const { updateSSEData, isBuilding, setIsBuilding } = useSSE();
+  const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
   const { reactFlowInstance } = useContext(typesContext);
-  const { setErrorData } = useContext(alertContext);
+  const { setTabsState } = useContext(TabsContext);
+  const { setErrorData, setSuccessData } = useContext(alertContext);
+  const [isIconTouched, setIsIconTouched] = useState(false);
+  const eventClick = isBuilding ? "pointer-events-none" : "";
+  const [progress, setProgress] = useState(0);
 
   async function handleBuild(flow: FlowType) {
     try {
@@ -58,12 +64,10 @@ export default function BuildTrigger({
       setIsBuilding(false);
     }
   }
-
   async function streamNodeData(flow: FlowType) {
     // Step 1: Make a POST request to send the flow data and receive a unique session ID
     const response = await postBuildInit(flow);
     const { flowId } = response.data;
-
     // Step 2: Use the session ID to establish an SSE connection using EventSource
     let validationResults = [];
     let finished = false;
@@ -81,15 +85,35 @@ export default function BuildTrigger({
         eventSource.close();
 
         return;
+      } else if (parsedData.log) {
+        // If the event is a log, log it
+        setSuccessData({ title: parsedData.log });
+      } else if (parsedData.input_keys) {
+        setTabsState((old) => {
+          return {
+            ...old,
+            [flowId]: {
+              ...old[flowId],
+              formKeysData: parsedData,
+            },
+          };
+        });
+      } else {
+        // Otherwise, process the data
+        const isValid = processStreamResult(parsedData);
+        setProgress(parsedData.progress);
+        validationResults.push(isValid);
       }
-      // Otherwise, process the data
-      const isValid = processStreamResult(parsedData);
-      validationResults.push(isValid);
     };
 
-    eventSource.onerror = (error) => {
+    eventSource.onerror = (error: any) => {
       console.error("EventSource failed:", error);
       eventSource.close();
+      if (error.data) {
+        const parsedData = JSON.parse(error.data);
+        setErrorData({ title: parsedData.error });
+        setIsBuilding(false);
+      }
     };
     // Step 3: Wait for the stream to finish
     while (!finished) {
@@ -123,6 +147,14 @@ export default function BuildTrigger({
     }
   }
 
+  const handleMouseEnter = () => {
+    setIsIconTouched(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsIconTouched(false);
+  };
+
   return (
     <Transition
       show={!open}
@@ -134,21 +166,34 @@ export default function BuildTrigger({
       leaveFrom="translate-y-0"
       leaveTo="translate-y-96"
     >
-      <div className={`fixed right-4` + (isBuilt ? " bottom-20" : " bottom-4")}>
+      <div className="fixed bottom-20 right-4">
         <div
-          className="flex justify-center align-center py-1 px-3 w-12 h-12 rounded-full shadow-md shadow-[#0000002a] hover:shadow-[#00000032]
-           bg-[#E2E7EE] dark:border-gray-600 cursor-pointer"
+          className={`${eventClick} round-button-form`}
           onClick={() => {
             handleBuild(flow);
           }}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
         >
           <button>
-            <div className="flex gap-3 items-center">
-              {isBuilding ? (
+            <div className="round-button-div">
+              {isBuilding && progress < 1 ? (
                 // Render your loading animation here when isBuilding is true
-                <Loading strokeWidth={1.5} style={{ color: "white" }} />
+                <RadialProgressComponent
+                  // ! confirm below works
+                  color={"text-build-trigger"}
+                  value={progress}
+                ></RadialProgressComponent>
+              ) : isBuilding ? (
+                <Loading
+                  strokeWidth={1.5}
+                  className="build-trigger-loading-icon"
+                />
               ) : (
-                <Zap className="sh-6 w-6 fill-orange-400 stroke-1 stroke-orange-400" />
+                <IconComponent
+                  name="Zap"
+                  className="sh-6 w-6 fill-build-trigger stroke-build-trigger stroke-1"
+                />
               )}
             </div>
           </button>

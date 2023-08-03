@@ -6,6 +6,7 @@ from langchain.agents import (
     Tool,
     ZeroShotAgent,
     initialize_agent,
+    AgentType,
 )
 from langchain.agents.agent_toolkits import (
     SQLDatabaseToolkit,
@@ -156,7 +157,7 @@ class VectorStoreAgent(CustomAgentExecutor):
             llm_chain=llm_chain, allowed_tools=tool_names, **kwargs  # type: ignore
         )
         return AgentExecutor.from_agent_and_tools(
-            agent=agent, tools=tools, verbose=True
+            agent=agent, tools=tools, verbose=True, handle_parsing_errors=True
         )
 
     def run(self, *args, **kwargs):
@@ -192,7 +193,7 @@ class SQLAgent(CustomAgentExecutor):
         from langchain.tools.sql_database.tool import (
             InfoSQLDatabaseTool,
             ListSQLDatabaseTool,
-            QueryCheckerTool,
+            QuerySQLCheckerTool,
             QuerySQLDataBaseTool,
         )
 
@@ -207,7 +208,7 @@ class SQLAgent(CustomAgentExecutor):
             QuerySQLDataBaseTool(db=db),  # type: ignore
             InfoSQLDatabaseTool(db=db),  # type: ignore
             ListSQLDatabaseTool(db=db),  # type: ignore
-            QueryCheckerTool(db=db, llm_chain=llmchain, llm=llm),  # type: ignore
+            QuerySQLCheckerTool(db=db, llm_chain=llmchain, llm=llm),  # type: ignore
         ]
 
         prefix = SQL_PREFIX.format(dialect=toolkit.dialect, top_k=10)
@@ -231,6 +232,7 @@ class SQLAgent(CustomAgentExecutor):
             verbose=True,
             max_iterations=15,
             early_stopping_method="force",
+            handle_parsing_errors=True,
         )
 
     def run(self, *args, **kwargs):
@@ -275,7 +277,7 @@ class VectorStoreRouterAgent(CustomAgentExecutor):
             llm_chain=llm_chain, allowed_tools=tool_names, **kwargs  # type: ignore
         )
         return AgentExecutor.from_agent_and_tools(
-            agent=agent, tools=tools, verbose=True
+            agent=agent, tools=tools, verbose=True, handle_parsing_errors=True
         )
 
     def run(self, *args, **kwargs):
@@ -297,6 +299,9 @@ class InitializeAgent(CustomAgentExecutor):
         agent: str,
         memory: Optional[BaseChatMemory] = None,
     ):
+        # Find which value in the AgentType enum corresponds to the string
+        # passed in as agent
+        agent = AgentType(agent)
         return initialize_agent(
             tools=tools,
             llm=llm,
@@ -304,6 +309,7 @@ class InitializeAgent(CustomAgentExecutor):
             agent=agent,  # type: ignore
             memory=memory,
             return_intermediate_steps=True,
+            handle_parsing_errors=True,
         )
 
     def __init__(self, *args, **kwargs):

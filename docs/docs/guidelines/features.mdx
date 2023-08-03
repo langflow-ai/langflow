@@ -1,0 +1,68 @@
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import ReactPlayer from "react-player";
+import Admonition from "@theme/Admonition";
+
+# Features
+
+<div style={{ marginBottom: "20px" }}>
+  When you click for New Project, you will see on the top left corner of the
+  screen, some options such as <strong>Import</strong>, <strong>Export</strong>,{" "}
+  <strong>Code</strong> and <strong>Save</strong>, as displayed in the image
+  below:
+</div>
+
+{" "}
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: useBaseUrl("img/features.png"),
+  }}
+  style={{ width: "100%", maxWidth: "800px", margin: "0 auto" }}
+/>
+
+<div style={{ marginBottom: "20px" }}>
+  Further down, we will explain each of these options.
+</div>
+
+---
+
+### Import and Export
+
+Flows can be exported and imported as JSON files.
+
+<Admonition type="caution">
+Watch out for API keys being stored in local files.
+
+</Admonition>
+
+---
+
+### Code
+
+The Code button shows snippets to use your flow as a Python object or an API.
+
+**Python Code**
+
+Through the Langflow package, you can load a flow from a JSON file and use it as a LangChain object.
+
+```py
+from langflow import load_flow_from_json
+
+flow = load_flow_from_json("path/to/flow.json")
+# Now you can use it like any chain
+flow("Hey, have you heard of Langflow?")
+```
+
+**API**
+
+Once you save a flow, the API endpoint is created with your latest changes. Click the "code" button to use that flow as an API. You can post-adjust component parameters using the global variable TWEAKS.
+
+The example below shows a Python script making a POST request to a local API endpoint, which gets a prediction based on the message input.
+
+<div
+  style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
+>
+  <ReactPlayer playing controls url="/videos/langflow_api.mp4" />
+</div>

@@ -163,9 +163,77 @@ def create_function(code, function_name):
     return wrapped_function
 
 
+def create_class(code, class_name):
+    if not hasattr(ast, "TypeIgnore"):
+
+        class TypeIgnore(ast.AST):
+            _fields = ()
+
+        ast.TypeIgnore = TypeIgnore
+
+    module = ast.parse(code)
+    exec_globals = globals().copy()
+
+    for node in module.body:
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                try:
+                    exec_globals[alias.asname or alias.name] = importlib.import_module(
+                        alias.name
+                    )
+                except ModuleNotFoundError as e:
+                    raise ModuleNotFoundError(
+                        f"Module {alias.name} not found. Please install it and try again."
+                    ) from e
+        elif isinstance(node, ast.ImportFrom):
+            try:
+                imported_module = importlib.import_module(node.module)
+                for alias in node.names:
+                    exec_globals[alias.name] = getattr(imported_module, alias.name)
+            except ModuleNotFoundError as e:
+                raise ModuleNotFoundError(
+                    f"Module {node.module} not found. Please install it and try again."
+                ) from e
+
+    class_code = next(
+        node
+        for node in module.body
+        if isinstance(node, ast.ClassDef) and node.name == class_name
+    )
+    class_code.parent = None
+    code_obj = compile(
+        ast.Module(body=[class_code], type_ignores=[]), "<string>", "exec"
+    )
+    # This suppresses import errors
+    # with contextlib.suppress(Exception):
+    exec(code_obj, exec_globals, locals())
+    exec_globals[class_name] = locals()[class_name]
+
+    # Return a function that imports necessary modules and creates an instance of the target class
+    def build_my_class(*args, **kwargs):
+        for module_name, module in exec_globals.items():
+            if isinstance(module, type(importlib)):
+                globals()[module_name] = module
+
+        instance = exec_globals[class_name](*args, **kwargs)
+        return instance
+
+    build_my_class.__globals__.update(exec_globals)
+
+    return build_my_class
+
+
 def extract_function_name(code):
     module = ast.parse(code)
     for node in module.body:
         if isinstance(node, ast.FunctionDef):
             return node.name
     raise ValueError("No function definition found in the code string")
+
+
+def extract_class_name(code):
+    module = ast.parse(code)
+    for node in module.body:
+        if isinstance(node, ast.ClassDef):
+            return node.name
+    raise ValueError("No class definition found in the code string")

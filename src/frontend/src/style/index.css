@@ -1,0 +1,128 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* TODO: Confirm that all colors here are found in tailwind config */
+
+@layer base {
+  :root {
+    --background: 0 0% 100%; /* hsl(0 0% 100%) */
+    --foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
+    --muted: 210 40% 98%; /* hsl(210 40% 98%) */
+    --muted-foreground: 215.4 16.3% 46.9%; /* hsl(215 16% 46%) */
+    --popover: 0 0% 100%; /* hsl(0 0% 100%) */
+    --popover-foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
+    --card: 0 0% 100%; /* hsl(0 0% 100%) */
+    --card-foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
+    --border: 214.3 21.8% 91.4%; /* hsl(214 32% 91%) */
+    --input: 214.3 21.8% 91.4%; /* hsl(214 32% 91%) */
+    --primary: 222.2 27% 11.2%; /* hsl(222 27% 18%) */
+    --primary-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
+    --secondary: 210 40% 96.1%; /* hsl(210 40% 96%) */
+    --secondary-foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
+    --accent: 210 30% 96.1%; /* hsl(210 30% 96%) */
+    --accent-foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
+    --destructive: 0 100% 50%; /* hsl(0 100% 50%) */
+    --destructive-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
+    --radius: 0.5rem;
+    --ring: 215 20.2% 65.1%; /* hsl(215 20% 65%) */
+    --round-btn-shadow: #00000063;
+
+    --error-background: #fef2f2;
+    --error-foreground: #991b1b;
+
+    --success-background: #f0fdf4;
+    --success-foreground: #14532d;
+
+    --info-background: #f0f4fd;
+    --info-foreground: #141653;
+
+    --high-indigo: #4338ca;
+    --medium-indigo: #6366f1;
+    --low-indigo: #e0e7ff;
+
+    --beta-background: rgb(219 234 254);
+    --beta-foreground: rgb(37 99 235);
+
+    --chat-bot-icon: #afe6ef;
+    --chat-user-icon: #aface9;
+
+    /* Colors that are shared in dark and light mode */
+    --blur-shared: #151923de;
+    --build-trigger: #dc735b;
+    --chat-trigger: #5c8be1;
+    --chat-trigger-disabled: #b4c3da;
+    --status-red: #ef4444;
+    --status-yellow: #eab308;
+    --chat-send: #059669;
+    --status-green: #4ade80;
+    --status-blue: #2563eb;
+    --connection: #555;
+  }
+
+  .dark {
+    --background: 224 35% 7.5%; /* hsl(224 40% 10%) */
+    --foreground: 213 31% 80%; /* hsl(213 31% 91%) */
+
+    --muted: 223 27% 11%; /* hsl(223 27% 11%) */
+    --muted-foreground: 215.4 16.3% 56.9%; /* hsl(215 16% 56%) */
+
+    --popover: 224 71% 4%; /* hsl(224 71% 4%) */
+    --popover-foreground: 215 20.2% 65.1%; /* hsl(215 20% 65%) */
+
+    --card: 224 25% 15.5%; /* hsl(224 71% 4%) */
+    --card-foreground: 213 31% 80%; /* hsl(213 31% 91%) */
+
+    --border: 216 24% 17%; /* hsl(216 34% 17%) */
+    --input: 216 24% 17%; /* hsl(216 34% 17%) */
+
+    --primary: 210 20% 80%; /* hsl(210 20% 80%) */
+    --primary-foreground: 222.2 27.4% 1.2%; /* hsl(222 47% 1%) */
+
+    --secondary: 222.2 37.4% 7.2%; /* hsl(222 47% 11%) */
+    --secondary-foreground: 210 40% 80%; /* hsl(210 40% 80%) */
+
+    --accent: 216 24% 20%; /* hsl(216 34% 17%) */
+    --accent-foreground: 210 30% 98%; /* hsl(210 40% 98%) */
+
+    --destructive: 0 63% 31%; /* hsl(0 63% 31%) */
+    --destructive-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
+
+    --ring: 216 24% 30%; /* hsl(216 24% 30%) */
+
+    --radius: 0.5rem;
+
+    --round-btn-shadow: #00000063;
+
+    --success-background: #022c22;
+    --success-foreground: #ecfdf5;
+
+    --error-foreground: #fef2f2;
+    --error-background: #450a0a;
+
+    --info-foreground: #eff6ff;
+    --info-background: #172554;
+
+    --high-indigo: #4338ca;
+    --medium-indigo: #6366f1;
+    --low-indigo: #e0e7ff;
+
+    /* Colors that are shared in dark and light mode */
+    --blur-shared: #151923d2;
+    --build-trigger: #dc735b;
+    --chat-trigger: #5c8be1;
+    --chat-trigger-disabled: #2d3b54;
+    --status-red: #ef4444;
+    --status-yellow: #eab308;
+    --chat-send: #059669;
+    --status-green: #4ade80;
+    --status-blue: #2563eb;
+    --connection: #555;
+
+    --beta-background: rgb(37 99 235);
+    --beta-foreground: rgb(219 234 254);
+
+    --chat-bot-icon: #235d70;
+    --chat-user-icon: #4f3d6e;
+  }
+}

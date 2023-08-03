@@ -1,0 +1,52 @@
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import ReactPlayer from "react-player";
+
+# Chat Interface
+
+Langflow’s chat interface provides a user-friendly experience and functionality to interact with the model and customize the prompt. The sidebar brings options that allow users to view and edit pre-defined prompt variables. This feature facilitates quick experimentation by enabling the modification of variable values right in the chat.
+
+{" "}
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: useBaseUrl("img/chat_interface.png"),
+  }}
+  style={{ width: "100%", maxWidth: "800px", margin: "0 auto" }}
+/>
+
+Notice that editing variables in the chat interface take place temporarily and won’t change their original value in the components once the chat is closed.
+
+{" "}
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: useBaseUrl("img/chat_interface2.png"),
+  }}
+  style={{ width: "100%", maxWidth: "800px", margin: "0 auto" }}
+/>
+
+To view the complete prompt in its original, structured format, click the "Display Prompt" option. This feature lets you see the prompt exactly as it entered the model.
+
+{" "}
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: useBaseUrl("img/chat_interface3.png"),
+  }}
+  style={{ width: "100%", maxWidth: "800px", margin: "0 auto" }}
+/>
+
+In the chat interface, you can redefine which variable should be interpreted as the chat input. This gives you control over these inputs and allows dynamic and creative interactions.
+
+{" "}
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: useBaseUrl("img/chat_interface4.png"),
+  }}
+  style={{ width: "100%", maxWidth: "800px", margin: "0 auto" }}
+/>

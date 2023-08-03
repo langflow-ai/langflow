@@ -9,7 +9,9 @@ from langchain.base_language import BaseLanguageModel
 from langchain.chains.base import Chain
 from langchain.chat_models.base import BaseChatModel
 from langchain.tools import BaseTool
+from langflow.interface.custom.custom_component import CustomComponent
 from langflow.utils import validate
+from langflow.interface.wrappers.base import wrapper_creator
 
 
 def import_module(module_path: str) -> Any:
@@ -44,6 +46,9 @@ def import_by_type(_type: str, name: str) -> Any:
         "documentloaders": import_documentloader,
         "textsplitters": import_textsplitter,
         "utilities": import_utility,
+        "output_parsers": import_output_parser,
+        "retrievers": import_retriever,
+        "custom_components": import_custom_component,
     }
     if _type == "llms":
         key = "chat" if "chat" in name.lower() else "llm"
@@ -54,9 +59,26 @@ def import_by_type(_type: str, name: str) -> Any:
     return loaded_func(name)
 
 
+def import_custom_component(custom_component: str) -> CustomComponent:
+    """Import custom component from custom component name"""
+    return import_class(
+        f"langflow.interface.custom.custom_component.{custom_component}"
+    )
+
+
+def import_output_parser(output_parser: str) -> Any:
+    """Import output parser from output parser name"""
+    return import_module(f"from langchain.output_parsers import {output_parser}")
+
+
 def import_chat_llm(llm: str) -> BaseChatModel:
     """Import chat llm from llm name"""
     return import_class(f"langchain.chat_models.{llm}")
+
+
+def import_retriever(retriever: str) -> Any:
+    """Import retriever from retriever name"""
+    return import_module(f"from langchain.retrievers import {retriever}")
 
 
 def import_memory(memory: str) -> Any:
@@ -84,7 +106,11 @@ def import_prompt(prompt: str) -> Type[PromptTemplate]:
 
 def import_wrapper(wrapper: str) -> Any:
     """Import wrapper from wrapper name"""
-    return import_module(f"from langchain.requests import {wrapper}")
+    if (
+        isinstance(wrapper_creator.type_dict, dict)
+        and wrapper in wrapper_creator.type_dict
+    ):
+        return wrapper_creator.type_dict.get(wrapper)
 
 
 def import_toolkit(toolkit: str) -> Any:
@@ -155,3 +181,8 @@ def get_function(code):
     function_name = validate.extract_function_name(code)
 
     return validate.create_function(code, function_name)
+
+
+def get_function_custom(code):
+    class_name = validate.extract_class_name(code)
+    return validate.create_class(code, class_name)

@@ -5,6 +5,8 @@ all: help
 init:
 	@echo 'Installing pre-commit hooks'
 	git config core.hooksPath .githooks
+	@echo 'Making pre-commit hook executable'
+	chmod +x .githooks/pre-commit
 	@echo 'Installing backend dependencies'
 	make install_backend
 	@echo 'Installing frontend dependencies'
@@ -44,12 +46,17 @@ install_backend:
 
 backend:
 	make install_backend
-	poetry run uvicorn langflow.main:app --port 7860 --reload --log-level debug
+	poetry run uvicorn --factory src.backend.langflow.main:create_app --port 7860 --reload --log-level debug
 
 build_and_run:
 	echo 'Removing dist folder'
 	rm -rf dist
 	make build && poetry run pip install dist/*.tar.gz && poetry run langflow
+
+build_and_install:
+	echo 'Removing dist folder'
+	rm -rf dist
+	make build && poetry run pip install dist/*.tar.gz
 
 build_frontend:
 	cd src/frontend && CI='' npm run build

@@ -1,0 +1,28 @@
+import Admonition from "@theme/Admonition";
+
+# Buffer Memory
+
+For certain applications, retaining past interactions is crucial. For that, chains and agents may accept a memory component as one of their input parameters. The `ConversationBufferMemory` component is one of them. It stores messages and extracts them into variables.
+
+## ⛓️ Langflow Example
+
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/buffer-memory.png",
+  }}
+/>
+
+#### <a target="\_blank" href="json_files/Buffer_Memory.json" download>Download Flow</a>
+
+<Admonition type="note" title="LangChain Components 🦜🔗">
+
+- [`ConversationBufferMemory`](https://python.langchain.com/docs/modules/memory/how_to/buffer)
+- [`ConversationChain`](https://python.langchain.com/docs/modules/chains/)
+- [`ChatOpenAI`](https://python.langchain.com/docs/modules/model_io/models/chat/integrations/openai)
+
+</Admonition>
