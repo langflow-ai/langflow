@@ -330,12 +330,14 @@ def build_valid_menu(valid_components):
             try:
                 component_name = component["name"]
                 component_code = component["code"]
+                component_output_types = component["output_types"]
 
                 component_extractor = CustomComponent(code=component_code)
                 component_extractor.is_check_valid()
                 component_template = build_langchain_template_custom_component(
                     component_extractor
                 )
+                component_template["output_types"] = component_output_types
 
                 valid_menu[menu_name][component_name] = component_template
 
