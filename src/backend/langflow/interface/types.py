@@ -1,3 +1,5 @@
+import ast
+import contextlib
 from typing import Any
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
@@ -250,6 +252,8 @@ def get_field_properties(extra_field):
     if not field_required:
         field_type = extract_type_from_optional(field_type)
 
+    with contextlib.suppress(Exception):
+        field_value = ast.literal_eval(field_value)
     return field_name, field_type, field_value, field_required
 
 
