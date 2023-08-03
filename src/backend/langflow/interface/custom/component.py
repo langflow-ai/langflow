@@ -63,8 +63,8 @@ class Component(BaseModel):
                 elif "description" in item_name:
                     template_config["description"] = ast.literal_eval(item_value)
 
-                elif "field_config" in item_name:
-                    template_config["field_config"] = ast.literal_eval(item_value)
+                elif "beta" in item_name:
+                    template_config["beta"] = ast.literal_eval(item_value)
 
         return template_config
 
