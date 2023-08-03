@@ -227,12 +227,13 @@ class DirectoryReader:
             component_name = filename.split(".")[0]
             # This is the name of the file which will be displayed in the UI
             # We need to change it from snake_case to CamelCase
-            camel_case_name = " ".join(
+            component_name_camelcase = " ".join(
                 word.title() for word in component_name.split("_")
             )
 
             component_info = {
-                "name": camel_case_name,
+                "name": "CustomComponent",
+                "output_types": [component_name_camelcase],
                 "file": filename,
                 "code": result_content if validation_result else "",
                 "error": "" if validation_result else result_content,
