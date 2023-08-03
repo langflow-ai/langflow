@@ -8,7 +8,7 @@ from langflow.template.frontend_node.chains import ChainFrontendNode
 from langflow.utils.logger import logger
 from langflow.utils.util import build_template_from_class, build_template_from_method
 from langchain import chains
-from langchain_experimental.sql import SQLDatabaseChain
+from langchain_experimental.sql import SQLDatabaseChain  # type: ignore
 
 # Assuming necessary imports for Field, Template, and FrontendNode classes
 
