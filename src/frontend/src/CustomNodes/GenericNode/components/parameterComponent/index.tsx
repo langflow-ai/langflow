@@ -216,7 +216,7 @@ export default function ParameterComponent({
                 )}
               </div>
 
-              <span className="text-status-red">{required ? " *" : ""}</span>
+              <span className={required ? "text-status-red px-1" : ""}>{required ? " *" : ""}</span>
             </Button>
           )}
 
