@@ -100,7 +100,9 @@ class Vertex:
                     params[param_key] = edge.source
 
         for key, value in template_dict.items():
-            if key == "_type" or not value.get("show"):
+            # Skip _type and any value that has show == False and is not code
+            # If we don't want to show code but we want to use it
+            if key == "_type" or (not value.get("show") and key != "code"):
                 continue
             # If the type is not transformable to a python base class
             # then we need to get the edge that connects to this node
