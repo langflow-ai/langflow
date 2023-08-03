@@ -63,7 +63,7 @@ export default function FormModal({
   const ws = useRef<WebSocket | null>(null);
   const [lockChat, setLockChat] = useState(false);
   const isOpen = useRef(open);
-  const messagesRef = useRef(null);
+  const messagesRef = useRef<HTMLDivElement | null>(null);
   const id = useRef(flow.id);
   const tabsStateFlowId = tabsState[flow.id];
   const tabsStateFlowIdFormKeysData = tabsStateFlowId.formKeysData;
@@ -326,7 +326,7 @@ export default function FormModal({
     if (ref.current) ref.current.scrollIntoView({ behavior: "smooth" });
   }, [chatHistory]);
 
-  const ref = useRef(null);
+  const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (open && ref.current) {
@@ -348,8 +348,8 @@ export default function FormModal({
         tabsState[flow.id].formKeysData.template
       );
       sendAll({
-        ...reactFlowInstance?.toObject(),
-        inputs: inputs,
+        ...reactFlowInstance?.toObject()!,
+        inputs: inputs!,
         chatHistory,
         name: flow.name,
         description: flow.description,
@@ -579,7 +579,7 @@ export default function FormModal({
                         setTabsState((old) => {
                           let newTabsState = _.cloneDeep(old);
                           newTabsState[id.current].formKeysData.input_keys![
-                            chatKey
+                            chatKey!
                           ] = value;
                           return newTabsState;
                         });

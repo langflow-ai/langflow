@@ -44,10 +44,10 @@ export default function Chat({ flow }: ChatType): JSX.Element {
   }, [flow]);
 
   const prevNodesRef = useRef<any[] | undefined>();
-  const nodes = useNodes();
+  const nodes: NodeType[] = useNodes();
   useEffect(() => {
     const prevNodes = prevNodesRef.current;
-    const currentNodes = nodes.map((node: NodeType) =>
+    const currentNodes = nodes.map((node: NodeType) => 
       _.cloneDeep(node.data.node?.template)
     );
     if (

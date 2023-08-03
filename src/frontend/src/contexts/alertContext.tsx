@@ -44,7 +44,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
   });
   const [successOpen, setSuccessOpen] = useState(false);
   const [notificationCenter, setNotificationCenter] = useState(false);
-  const [notificationList, setNotificationList] = useState([]);
+  const [notificationList, setNotificationList] = useState<AlertItemType[]>([]);
   const pushNotificationList = (notification: AlertItemType) => {
     setNotificationList((old) => {
       let newNotificationList = _.cloneDeep(old);

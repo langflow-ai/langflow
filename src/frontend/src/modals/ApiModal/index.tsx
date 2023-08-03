@@ -24,6 +24,7 @@ import {
   getWidgetCode,
 } from "../../utils/utils";
 import BaseModal from "../baseModal";
+import { tweakType } from "../../types/components";
 
 const ApiModal = forwardRef(
   (
@@ -40,7 +41,7 @@ const ApiModal = forwardRef(
   ) => {
     const [open, setOpen] = useState(false);
     const [activeTab, setActiveTab] = useState("0");
-    const tweak = useRef([]);
+    const tweak = useRef<tweakType[]>([]);
     const tweaksList = useRef([]);
     const { setTweak, getTweak, tabsState } = useContext(TabsContext);
     const pythonApiCode = getPythonApiCode(flow, tweak.current, tabsState);

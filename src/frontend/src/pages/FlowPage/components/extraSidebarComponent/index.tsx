@@ -59,7 +59,7 @@ export default function ExtraSidebar(): JSX.Element {
   const flow = flows.find((f) => f.id === tabId);
   useEffect(() => {
     // show components with error on load
-    let errors = [];
+    let errors: string[] = [];
     Object.keys(templates).forEach((component) => {
       if (templates[component].error) {
         errors.push(component);

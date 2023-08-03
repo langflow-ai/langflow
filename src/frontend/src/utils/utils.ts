@@ -129,7 +129,7 @@ export function groupByFamily(data, baseClasses: string, left: boolean, flow?: N
     let tempInputs: string[] = [],
       tempOutputs: string[] = [];
 
-    for (const [n, node] of Object.entries(nodes)) {
+    for (const [n, node] of Object.entries(nodes!)) {
       let foundNode = checkedNodes.get(n);
       if (!foundNode) {
         foundNode = {
@@ -147,7 +147,7 @@ export function groupByFamily(data, baseClasses: string, left: boolean, flow?: N
       if (foundNode.hasBaseClassInBaseClasses) tempOutputs.push(n);
     }
 
-    const totalNodes = Object.keys(nodes).length;
+    const totalNodes = Object.keys(nodes!).length;
     if (tempInputs.length)
       arrOfPossibleInputs.push({
         category: d,

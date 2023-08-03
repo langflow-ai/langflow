@@ -14,6 +14,7 @@ export type NodeType = {
   position: XYPosition | undefined;
   data: NodeDataType;
 };
+
 export type NodeDataType = {
   type: string;
   node?: APIClassType;

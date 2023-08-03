@@ -145,7 +145,7 @@ export type ShadTooltipProps = {
   style?: string;
 };
 export type ShadToolTipType = {
-  content?: ReactNode;
+  content?: ReactNode | null;
   side?: "top" | "right" | "bottom" | "left";
   asChild?: boolean;
   children?: ReactElement;
@@ -383,7 +383,7 @@ type tabsArrayType = {
   language: string;
   mode: string;
   name: string;
-  description: string;
+  description?: string;
 };
 
 type getValueNodeType = {

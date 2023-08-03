@@ -1,5 +1,5 @@
 import { createContext, ReactNode, useEffect, useState } from "react";
-import { Node } from "reactflow";
+import { Node, ReactFlowInstance } from "reactflow";
 import { getAll } from "../controllers/API";
 import { APIKindType } from "../types/api";
 import { typesContextType } from "../types/typesContext";
@@ -22,13 +22,13 @@ export const typesContext = createContext<typesContextType>(initialValue);
 
 export function TypesProvider({ children }: { children: ReactNode }) {
   const [types, setTypes] = useState({});
-  const [reactFlowInstance, setReactFlowInstance] = useState(null);
+  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   const [templates, setTemplates] = useState({});
   const [data, setData] = useState({});
 
   useEffect(() => {
     let delay = 1000; // Start delay of 1 second
-    let intervalId = null;
+    let intervalId;
     let retryCount = 0; // Count of retry attempts
     const maxRetryCount = 5; // Max retry attempts
 

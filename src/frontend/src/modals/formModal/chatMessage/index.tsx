@@ -189,7 +189,7 @@ export default function ChatMessage({
                   ? template?.split("\n")?.map((line, index) => {
                       const regex = /{([^}]+)}/g;
                       let match;
-                      let parts = [];
+                      let parts: Array<JSX.Element | string> = [];
                       let lastIndex = 0;
                       while ((match = regex.exec(line)) !== null) {
                         // Push text up to the match

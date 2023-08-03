@@ -14,7 +14,7 @@ export default function FlowSettingsModal({
 }: FlowSettingsPropsType): JSX.Element {
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const ref = useRef();
-  const { flows, tabId, updateFlow, setTabsState, saveFlow } =
+  const { flows, tabId, updateFlow, saveFlow } =
     useContext(TabsContext);
   const maxLength = 50;
   const [name, setName] = useState(flows.find((f) => f.id === tabId)!.name);
