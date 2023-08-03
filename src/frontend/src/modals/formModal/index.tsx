@@ -112,7 +112,6 @@ export default function FormModal({
       return newChat;
     });
   };
-
   //add proper type signature for function
 
   function updateLastMessage({
@@ -371,10 +370,6 @@ export default function FormModal({
     if (lockChat) setLockChat(false);
   }
 
-  function setModalOpen(x: boolean) {
-    setOpen(x);
-  }
-
   function handleOnCheckedChange(checked: boolean, i: string) {
     if (checked === true) {
       setChatKey(i);
@@ -494,22 +489,12 @@ export default function FormModal({
                         <Badge variant="gray" size="md">
                           {i}
                         </Badge>
-
-                        <div
-                          className="-mb-1"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                          }}
-                        >
+                        <div className="-mb-1">
                           <ToggleShadComponent
                             enabled={chatKey === i}
-                            setEnabled={(value) =>
-                              handleOnCheckedChange(value, i)
-                            }
+                            setEnabled={() => {}}
                             size="small"
-                            disabled={tabsState[
-                              id.current
-                            ].formKeysData.handle_keys.some((t) => t === i)}
+                            disabled={true}
                           />
                         </div>
                       </div>
@@ -518,28 +503,9 @@ export default function FormModal({
                     keyValue={i}
                   >
                     <div className="file-component-tab-column">
-                      {tabsState[id.current].formKeysData.handle_keys.some(
-                        (t) => t === i
-                      ) && (
-                        <div className="font-normal text-muted-foreground ">
-                          Source: Component
-                        </div>
-                      )}
-                      <Textarea
-                        className="custom-scroll"
-                        value={tabsState[id.current].formKeysData.input_keys[i]}
-                        onChange={(e) => {
-                          setTabsState((old) => {
-                            let newTabsState = _.cloneDeep(old);
-                            newTabsState[id.current].formKeysData.input_keys[
-                              i
-                            ] = e.target.value;
-                            return newTabsState;
-                          });
-                        }}
-                        disabled={chatKey === i}
-                        placeholder="Enter text..."
-                      ></Textarea>
+                      <div className="font-normal text-muted-foreground ">
+                        Source: Memory
+                      </div>
                     </div>
                   </AccordionComponent>
                 </div>
