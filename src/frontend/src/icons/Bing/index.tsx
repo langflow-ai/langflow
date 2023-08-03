@@ -1,8 +1,8 @@
 import React, { forwardRef } from "react";
-import { ReactComponent as BingSVG } from "./bing.svg";
+import SvgBing from "./Bing";
 
 export const BingIcon = forwardRef<SVGSVGElement, React.PropsWithChildren<{}>>(
   (props, ref) => {
-    return <BingSVG ref={ref} {...props} />;
+    return <SvgBing ref={ref} {...props} />;
   }
 );

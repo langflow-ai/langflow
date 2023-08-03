@@ -1,6 +1,5 @@
-import { ChatMessageType } from "./../chat/index";
-import { APIClassType } from "../api/index";
 import { ReactFlowJsonObject, XYPosition } from "reactflow";
+import { APIClassType } from "../api/index";
 
 export type FlowType = {
   name: string;
@@ -28,3 +27,11 @@ export type FlowStyleType = {
   color: string;
   flow_id: string;
 };
+
+export type TweaksType = Array<
+  {
+    [key: string]: {
+      output_key?: string;
+    };
+  } & FlowStyleType
+>;

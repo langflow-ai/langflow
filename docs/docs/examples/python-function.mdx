@@ -1,0 +1,55 @@
+import Admonition from "@theme/Admonition";
+
+# Python Function
+
+Langflow allows you to create a customized tool using the `PythonFunction` connected to a `Tool` component. In this example, Regex is used in Python to validate a pattern.
+
+```python
+import re
+
+def is_brazilian_zipcode(zipcode: str) -> bool:
+    pattern = r"\d{5}-?\d{3}"
+
+    # Check if the zip code matches the pattern
+    if re.match(pattern, zipcode):
+        return True
+
+    return False
+```
+
+<Admonition type="tip">
+  When a tool is called, it is often desirable to have its output returned
+  directly to the user. You can do this by setting the **return_direct** flag
+  for a tool to be True.
+</Admonition>
+
+The `AgentInitializer` component is a quick way to construct an agent from the model and tools.
+
+<Admonition type="info">
+  The `PythonFunction` is a custom component that uses the LangChain 🦜🔗 tool
+  decorator. Learn more about it
+  [here](https://python.langchain.com/docs/modules/agents/tools/how_to/custom_tools).
+</Admonition>
+
+## ⛓️ Langflow Example
+
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/python-function.png",
+  }}
+/>
+
+#### <a target="\_blank" href="json_files/Python_Function.json" download>Download Flow</a>
+
+<Admonition type="note" title="LangChain Components 🦜🔗">
+
+- [`PythonFunctionTool`](https://python.langchain.com/docs/modules/agents/tools/how_to/custom_tools)
+- [`ChatOpenAI`](https://python.langchain.com/docs/modules/model_io/models/chat/integrations/openai)
+- [`AgentInitializer`](https://python.langchain.com/docs/modules/agents/)
+
+</Admonition>

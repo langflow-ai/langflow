@@ -1,0 +1,108 @@
+import Admonition from '@theme/Admonition';
+
+# Memories
+
+<Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
+    <p>
+        We appreciate your understanding as we polish our documentation – it may contain some rough edges. Share your feedback or report issues to help us improve! 🛠️📝
+    </p>
+</Admonition>
+
+Memory is a concept in chat-based applications that allows the system to remember previous interactions. It helps in maintaining the context of the conversation and enables the system to understand new messages in relation to past messages.
+
+---
+
+### ConversationBufferMemory
+
+The `ConversationBufferMemory` component is a type of memory system that plainly stores the last few inputs and outputs of a conversation.
+
+**Params**
+
+ - **input_key:** Used to specify the key under which the user input will be stored in the conversation memory. It allows you to provide the user's input to the chain for processing and generating a response.
+- **memory_key:** Specifies the prompt variable name where the memory will store and retrieve the chat messages. It allows for the preservation of the conversation history throughout the interaction with the language model – defaults to `chat_history`.
+- **output_key:** Used to specify the key under which the generated response will be stored in the conversation memory. It allows you to retrieve the response using the specified key.
+- **return_messages:** Determines whether the history should be returned as a string or as a list of messages. If `return_messages` is set to True, the history will be returned as a list of messages. If `return_messages` is set to False or not specified, the history will be returned as a string. The default is `False`.
+
+---
+
+### ConversationBufferWindowMemory
+
+`ConversationBufferWindowMemory` is a variation of the `ConversationBufferMemory` that maintains a list of the recent interactions in a conversation. It only keeps the last K interactions in memory, which can be useful for maintaining a sliding window of the most recent interactions without letting the buffer get too large. 
+
+**Params**
+
+- **input_key:** Used to specify the keys in the memory object where the input messages should be stored. It allows for the retrieval and manipulation of input messages.
+- **memory_key:** Specifies the prompt variable name where the memory will store and retrieve the chat messages. It allows for the preservation of the conversation history throughout the interaction with the language model. Defaults to `chat_history`.
+- **k:** Used to specify the number of interactions or messages that should be stored in the conversation buffer. It determines the size of the sliding window that keeps track of the most recent interactions.
+- **output_key:** Used to specify the key under which the generated response will be stored in the conversation memory. It allows you to retrieve the response using the specified key.
+- **return_messages:** Determines whether the history should be returned as a string or as a list of messages. If `return_messages` is set to True, the history will be returned as a list of messages. If `return_messages` is set to False or not specified, the history will be returned as a string. The default is `False`.
+
+---
+
+### ConversationEntityMemory
+
+The `ConversationEntityMemory` component incorporates intricate memory structures, specifically a key-value store, for entities referenced in a conversation. This facilitates the storage and retrieval of information related to entities that have been mentioned throughout the conversation.
+
+**Params**
+
+- **Entity Store:** Structure that stores information about specific entities mentioned in a conversation.
+- **LLM:** Language Model to use in the `ConversationEntityMemory`.
+- **chat_history_key:** Specify a unique identifier for the chat history data associated with a particular entity. This allows for organizing and accessing the chat history data for each entity within the conversation entity memory. Defaults to `history`
+- **input_key:** Used to specify the keys in the memory object where the input messages should be stored. It allows for the retrieval and manipulation of input messages.
+- **k:** Refers to the number of entities that can be stored in the memory. It determines the maximum number of entities that can be stored and retrieved from the memory object. Defaults to `10`
+- **output_key:** Used to specify the key under which the generated response will be stored in the conversation memory. It allows you to retrieve the response using the specified key.
+- **return_messages:** Determines whether the history should be returned as a string or as a list of messages. If `return_messages` is set to True, the history will be returned as a list of messages. If `return_messages` is set to False or not specified, the history will be returned as a string. The default is `False`.
+
+---
+
+### ConversationKGMemory
+
+`ConversationKGMemory` is a type of memory that uses a knowledge graph to recreate memory. It allows the extraction of entities and knowledge triplets from a new message, using previous messages as context.
+
+**Params**
+
+- **LLM:** Language Model to use in the `ConversationKGMemory`.
+- **input_key:** Used to specify the keys in the memory object where the input messages should be stored. It allows for the retrieval and manipulation of input messages.
+- **k:** Represents the number of previous conversation turns that will be stored in the memory. By setting "k" to 2, it means that the memory will retain the previous 2 conversation turns, allowing the model to access and utilize the information from those turns during the conversation. Defaults to `10`
+- **memory_key:** Specifies the prompt variable name where the memory will store and retrieve the chat messages. It allows for the preservation of the conversation history throughout the interaction with the language model. Defaults to `chat_history`.
+- **output_key:** Used to specify the key under which the generated response will be stored in the conversation memory. It allows you to retrieve the response using the specified key.
+- **return_messages:** Determines whether the history should be returned as a string or as a list of messages. If `return_messages` is set to True, the history will be returned as a list of messages. If `return_messages` is set to False or not specified, the history will be returned as a string. The default is `False`.
+
+---
+
+### ConversationSummaryMemory
+
+The `ConversationSummaryMemory` is a memory component that creates a summary of the conversation over time. It condenses information from the conversation and stores the current summary in memory. It is particularly useful for longer conversations where keeping the entire message history in the prompt would take up too many tokens. 
+
+**Params**
+
+- **LLM:** Language Model to use in the `ConversationSummaryMemory`.
+- **input_key:** Used to specify the keys in the memory object where the input messages should be stored. It allows for the retrieval and manipulation of input messages.
+- **memory_key:** Specifies the prompt variable name where the memory will store and retrieve the chat messages. It allows for the preservation of the conversation history throughout the interaction with the language model. Defaults to `chat_history`.
+- **output_key:** Used to specify the key under which the generated response will be stored in the conversation memory. It allows you to retrieve the response using the specified key.
+- **return_messages:** Determines whether the history should be returned as a string or as a list of messages. If `return_messages` is set to True, the history will be returned as a list of messages. If `return_messages` is set to False or not specified, the history will be returned as a string. The default is `False`.
+
+---
+
+### PostgresChatMessageHistory
+
+The `PostgresChatMessageHistory` is a memory component that allows for the storage and retrieval of chat message history using a PostgreSQL database. The connection to the PostgreSQL database is established using a connection string, which includes the necessary authentication and database information.
+
+**Params**
+
+- **connection_string:** Refers to a string that contains the necessary information to establish a connection to a PostgreSQL database. The `connection_string` typically includes details such as the username, password, host, port, and database name required to connect to the PostgreSQL database. Defaults to `postgresql://postgres:mypassword@localhost/chat_history`
+- **session_id:** It is a unique identifier that is used to associate chat message history with a specific session or conversation.
+- **table_name:** Refers to the name of the table in the PostgreSQL database where the chat message history will be stored. Defaults to `message_store`
+
+---
+
+### VectorRetrieverMemory
+
+The `VectorRetrieverMemory` is a memory component that allows for the retrieval of vectors based on a given query. It is used to perform vector-based searches and retrievals.
+
+**Params**
+
+- **Retriever:** The retriever used to fetch documents.
+- **input_key:** Used to specify the keys in the memory object where the input messages should be stored. It allows for the retrieval and manipulation of input messages.
+- **memory_key:** Specifies the prompt variable name where the memory will store and retrieve the chat messages. It allows for the preservation of the conversation history throughout the interaction with the language model – defaults to `chat_history`.
+- **return_messages:** Determines whether the history should be returned as a string or as a list of messages. If `return_messages` is set to True, the history will be returned as a list of messages. If `return_messages` is set to False or not specified, the history will be returned as a string – defaults to `False`.

@@ -11,6 +11,7 @@ from langflow.graph.vertex.types import (
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
 from langflow.utils.logger import logger
+from langchain.chains.base import Chain
 
 
 class Graph:
@@ -59,7 +60,7 @@ class Graph:
         # the toolkit node
         self._build_node_params()
         # remove invalid nodes
-        self._remove_invalid_nodes()
+        self._validate_nodes()
 
     def _build_node_params(self) -> None:
         """Identifies and handles the LLM node within the graph."""
@@ -74,14 +75,15 @@ class Graph:
                 if isinstance(node, ToolkitVertex):
                     node.params["llm"] = llm_node
 
-    def _remove_invalid_nodes(self) -> None:
-        """Removes invalid nodes from the graph."""
-        self.nodes = [
-            node
-            for node in self.nodes
-            if self._validate_node(node)
-            or (len(self.nodes) == 1 and len(self.edges) == 0)
-        ]
+    def _validate_nodes(self) -> None:
+        """Check that all nodes have edges"""
+        if len(self.nodes) == 1:
+            return
+        for node in self.nodes:
+            if not self._validate_node(node):
+                raise ValueError(
+                    f"{node.vertex_type} is not connected to any other components"
+                )
 
     def _validate_node(self, node: Vertex) -> bool:
         """Validates a node."""
@@ -99,7 +101,7 @@ class Graph:
         ]
         return connected_nodes
 
-    def build(self) -> List[Vertex]:
+    def build(self) -> Chain:
         """Builds the graph."""
         # Get root node
         root_node = payload.get_root_node(self)
@@ -145,7 +147,7 @@ class Graph:
     def generator_build(self) -> Generator:
         """Builds each vertex in the graph and yields it."""
         sorted_vertices = self.topological_sort()
-        logger.info("Sorted vertices: %s", sorted_vertices)
+        logger.debug("Sorted vertices: %s", sorted_vertices)
         yield from sorted_vertices
 
     def get_node_neighbors(self, node: Vertex) -> Dict[Vertex, int]:
@@ -178,7 +180,7 @@ class Graph:
                 raise ValueError(f"Source node {edge['source']} not found")
             if target is None:
                 raise ValueError(f"Target node {edge['target']} not found")
-            edges.append(Edge(source, target))
+            edges.append(Edge(source, target, edge))
         return edges
 
     def _get_vertex_class(self, node_type: str, node_lc_type: str) -> Type[Vertex]:
@@ -213,3 +215,10 @@ class Graph:
         if node_type in node_types:
             children.append(node)
         return children
+
+    def __repr__(self):
+        node_ids = [node.id for node in self.nodes]
+        edges_repr = "\n".join(
+            [f"{edge.source.id} --> {edge.target.id}" for edge in self.edges]
+        )
+        return f"Graph:\nNodes: {node_ids}\nConnections:\n{edges_repr}"

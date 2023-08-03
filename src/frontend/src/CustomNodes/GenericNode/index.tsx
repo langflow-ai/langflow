@@ -1,41 +1,54 @@
-import { classNames, nodeColors, nodeIcons, toTitleCase } from "../../utils";
-import ParameterComponent from "./components/parameterComponent";
-import { typesContext } from "../../contexts/typesContext";
-import { useContext, useState, useEffect, useRef } from "react";
-import { NodeDataType } from "../../types/flow";
-import { alertContext } from "../../contexts/alertContext";
-import { PopUpContext } from "../../contexts/popUpContext";
-import NodeModal from "../../modals/NodeModal";
-import Tooltip from "../../components/TooltipComponent";
-import { NodeToolbar } from "reactflow";
-import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
-
+import { cloneDeep } from "lodash";
+import { useContext, useEffect, useState } from "react";
+import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
+import Tooltip from "../../components/TooltipComponent";
+import IconComponent from "../../components/genericIconComponent";
 import { useSSE } from "../../contexts/SSEContext";
+import { TabsContext } from "../../contexts/tabsContext";
+import { typesContext } from "../../contexts/typesContext";
+import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
+import { NodeDataType } from "../../types/flow";
+import { cleanEdges } from "../../utils/reactflowUtils";
+import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
+import { classNames, toTitleCase } from "../../utils/utils";
+import ParameterComponent from "./components/parameterComponent";
 
 export default function GenericNode({
-  data,
+  data: olddata,
   selected,
 }: {
   data: NodeDataType;
   selected: boolean;
 }) {
-  const { setErrorData } = useContext(alertContext);
-  const showError = useRef(true);
-  const { types, deleteNode } = useContext(typesContext);
-
-  const { closePopUp, openPopUp } = useContext(PopUpContext);
-
-  const Icon = nodeIcons[data.type] || nodeIcons[types[data.type]];
+  const [data, setData] = useState(olddata);
+  const { updateFlow, flows, tabId } = useContext(TabsContext);
+  const updateNodeInternals = useUpdateNodeInternals();
+  const { types, deleteNode, reactFlowInstance } = useContext(typesContext);
+  const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [validationStatus, setValidationStatus] = useState(null);
   // State for outline color
   const { sseData, isBuilding } = useSSE();
-
-  // useEffect(() => {
-  //   if (reactFlowInstance) {
-  //     setParams(Object.values(reactFlowInstance.toObject()));
-  //   }
-  // }, [save]);
+  useEffect(() => {
+    olddata.node = data.node;
+    let myFlow = flows.find((flow) => flow.id === tabId);
+    if (reactFlowInstance && myFlow) {
+      let flow = cloneDeep(myFlow);
+      flow.data = reactFlowInstance.toObject();
+      cleanEdges({
+        flow: {
+          edges: flow.data.edges,
+          nodes: flow.data.nodes,
+        },
+        updateEdge: (edge) => {
+          flow.data.edges = edge;
+          reactFlowInstance.setEdges(edge);
+          updateNodeInternals(data.id);
+        },
+      });
+      updateFlow(flow);
+    }
+  }, [data]);
 
   // New useEffect to watch for changes in sseData and update validation status
   useEffect(() => {
@@ -48,99 +61,91 @@ export default function GenericNode({
     }
   }, [sseData, data.id]);
 
-  if (!Icon) {
-    if (showError.current) {
-      setErrorData({
-        title: data.type
-          ? `The ${data.type} node could not be rendered, please review your json file`
-          : "There was a node that can't be rendered, please review your json file",
-      });
-      showError.current = false;
-    }
-    deleteNode(data.id);
-    return;
-  }
-
-  useEffect(() => {}, [closePopUp, data.node.template]);
-
   return (
     <>
       <NodeToolbar>
         <NodeToolbarComponent
           data={data}
-          openPopUp={openPopUp}
+          setData={setData}
           deleteNode={deleteNode}
         ></NodeToolbarComponent>
       </NodeToolbar>
 
       <div
         className={classNames(
-          selected ? "border border-ring" : "border dark:border-gray-700",
-          "prompt-node relative flex w-96 flex-col justify-center rounded-lg bg-white dark:bg-gray-900"
+          selected ? "border border-ring" : "border",
+          "generic-node-div"
         )}
       >
-        <div className="flex w-full items-center justify-between gap-8 rounded-t-lg border-b bg-muted p-4 dark:border-b-gray-700 dark:bg-gray-800 dark:text-white ">
-          <div className="flex w-full items-center gap-2 truncate text-lg">
-            <Icon
-              className="h-10 w-10 rounded p-1"
-              style={{
-                color: nodeColors[types[data.type]] ?? nodeColors.unknown,
-              }}
+        {data.node.beta && (
+          <div className="beta-badge-wrapper">
+            <div className="beta-badge-content">BETA</div>
+          </div>
+        )}
+        <div className="generic-node-div-title">
+          <div className="generic-node-title-arrangement">
+            <IconComponent
+              name={name}
+              className="generic-node-icon"
+              iconColor={`${nodeColors[types[data.type]]}`}
             />
-            <div className="ml-2 truncate">
-              <ShadTooltip delayDuration={1500} content={data.type}>
-                <div className="ml-2 truncate text-gray-800">{data.type}</div>
+            <div className="generic-node-tooltip-div">
+              <ShadTooltip content={data.node.display_name}>
+                <div className="generic-node-tooltip-div text-primary">
+                  {data.node.display_name}
+                </div>
               </ShadTooltip>
             </div>
           </div>
-          <div className="flex gap-3">
-            <button
-              className="relative"
-              onClick={(event) => {
-                event.preventDefault();
-                openPopUp(<NodeModal data={data} />);
-              }}
-            ></button>
-          </div>
-          <div className="flex gap-3">
+          <div className="round-button-div">
             <div>
               <Tooltip
                 title={
-                  !validationStatus ? (
-                    "Validating..."
+                  isBuilding ? (
+                    <span>Building...</span>
+                  ) : !validationStatus ? (
+                    <span className="flex">
+                      Build{" "}
+                      <IconComponent
+                        name="Zap"
+                        className="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1"
+                      />{" "}
+                      flow to validate status.
+                    </span>
                   ) : (
                     <div className="max-h-96 overflow-auto">
-                      {validationStatus.params ||
-                        ""
-                          .split("\n")
-                          .map((line, index) => <div key={index}>{line}</div>)}
+                      {typeof validationStatus.params === "string"
+                        ? validationStatus.params
+                            .split("\n")
+                            .map((line, index) => <div key={index}>{line}</div>)
+                        : ""}
                     </div>
                   )
                 }
               >
-                <div className="w-5 h-5 relative top-[3px]">
+                <div className="generic-node-status-position">
                   <div
                     className={classNames(
                       validationStatus && validationStatus.valid
-                        ? "w-4 h-4 rounded-full bg-green-500 opacity-100"
-                        : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
+                        ? "green-status"
+                        : "status-build-animation",
+                      "status-div"
                     )}
                   ></div>
                   <div
                     className={classNames(
                       validationStatus && !validationStatus.valid
-                        ? "w-4 h-4 rounded-full  bg-red-500 opacity-100"
-                        : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
+                        ? "red-status"
+                        : "status-build-animation",
+                      "status-div"
                     )}
                   ></div>
                   <div
                     className={classNames(
                       !validationStatus || isBuilding
-                        ? "w-4 h-4 rounded-full  bg-yellow-500 opacity-100"
-                        : "w-4 h-4 rounded-full bg-gray-500 opacity-0 hidden animate-spin",
-                      "absolute w-4 hover:text-gray-500 hover:dark:text-gray-300 transition-all ease-in-out duration-200"
+                        ? "yellow-status"
+                        : "status-build-animation",
+                      "status-div"
                     )}
                   ></div>
                 </div>
@@ -149,41 +154,30 @@ export default function GenericNode({
           </div>
         </div>
 
-        <div className="h-full w-full py-5 text-gray-800">
-          <div className="w-full px-5 pb-3 text-sm text-muted-foreground">
-            {data.node.description}
-          </div>
+        <div className="generic-node-desc">
+          <div className="generic-node-desc-text">{data.node.description}</div>
 
           <>
             {Object.keys(data.node.template)
               .filter((t) => t.charAt(0) !== "_")
               .map((t: string, idx) => (
                 <div key={idx}>
-                  {/* {idx === 0 ? (
-                                <div
-                                    className={classNames(
-                                        "px-5 py-2 mt-2 dark:text-white text-center",
-                                        Object.keys(data.node.template).filter(
-                                            (key) =>
-                                                !key.startsWith("_") &&
-                                                data.node.template[key].show &&
-                                                !data.node.template[key].advanced
-                                        ).length === 0
-                                            ? "hidden"
-                                            : ""
-                                    )}
-                                >
-                                    Inputs
-                                </div>
-                            ) : (
-                                <></>
-                            )} */}
                   {data.node.template[t].show &&
                   !data.node.template[t].advanced ? (
                     <ParameterComponent
+                      key={
+                        (data.node.template[t].input_types?.join(";") ??
+                          data.node.template[t].type) +
+                        "|" +
+                        t +
+                        "|" +
+                        data.id
+                      }
                       data={data}
+                      setData={setData}
                       color={
                         nodeColors[types[data.node.template[t].type]] ??
+                        nodeColors[data.node.template[t].type] ??
                         nodeColors.unknown
                       }
                       title={
@@ -193,12 +187,24 @@ export default function GenericNode({
                           ? toTitleCase(data.node.template[t].name)
                           : toTitleCase(t)
                       }
+                      info={data.node.template[t].info}
                       name={t}
-                      tooltipTitle={data.node.template[t].type}
+                      tooltipTitle={
+                        data.node.template[t].input_types?.join("\n") ??
+                        data.node.template[t].type
+                      }
                       required={data.node.template[t].required}
-                      id={data.node.template[t].type + "|" + t + "|" + data.id}
+                      id={
+                        (data.node.template[t].input_types?.join(";") ??
+                          data.node.template[t].type) +
+                        "|" +
+                        t +
+                        "|" +
+                        data.id
+                      }
                       left={true}
                       type={data.node.template[t].type}
+                      optionalHandle={data.node.template[t].input_types}
                     />
                   ) : (
                     <></>
@@ -208,19 +214,22 @@ export default function GenericNode({
             <div
               className={classNames(
                 Object.keys(data.node.template).length < 1 ? "hidden" : "",
-                "flex w-full justify-center"
+                "flex-max-width justify-center"
               )}
             >
               {" "}
             </div>
-            {/* <div className="px-5 py-2 mt-2 dark:text-white text-center">
-                  Output
-              </div> */}
             <ParameterComponent
+              key={[data.type, data.id, ...data.node.base_classes].join("|")}
               data={data}
+              setData={setData}
               color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-              title={data.type}
-              tooltipTitle={`${data.node.base_classes.join("\n")}`}
+              title={
+                data.node.output_types && data.node.output_types.length > 0
+                  ? data.node.output_types.join("|")
+                  : data.type
+              }
+              tooltipTitle={data.node.base_classes.join("\n")}
               id={[data.type, data.id, ...data.node.base_classes].join("|")}
               type={data.node.base_classes.join("|")}
               left={false}

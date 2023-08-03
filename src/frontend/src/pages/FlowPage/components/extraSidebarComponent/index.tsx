@@ -1,30 +1,25 @@
-import { Bars2Icon } from "@heroicons/react/24/outline";
-import DisclosureComponent from "../DisclosureComponent";
-import {
-  classNames,
-  nodeColors,
-  nodeIcons,
-  nodeNames,
-} from "../../../../utils";
-import { useContext, useState } from "react";
-import { typesContext } from "../../../../contexts/typesContext";
-import { APIClassType, APIObjectType } from "../../../../types/api";
-import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import { useContext, useEffect, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
-import { Code2, FileDown, FileUp, Save } from "lucide-react";
-import { PopUpContext } from "../../../../contexts/popUpContext";
-import ExportModal from "../../../../modals/exportModal";
-import ApiModal from "../../../../modals/ApiModal";
-import { TabsContext } from "../../../../contexts/tabsContext";
-import { alertContext } from "../../../../contexts/alertContext";
-import { updateFlowInDatabase } from "../../../../controllers/API";
-import { INPUT_STYLE } from "../../../../constants";
+import IconComponent from "../../../../components/genericIconComponent";
+import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
+import { alertContext } from "../../../../contexts/alertContext";
+import { TabsContext } from "../../../../contexts/tabsContext";
+import { typesContext } from "../../../../contexts/typesContext";
+import ApiModal from "../../../../modals/ApiModal";
+import ExportModal from "../../../../modals/exportModal";
+import { APIClassType, APIObjectType } from "../../../../types/api";
+import {
+  nodeColors,
+  nodeIconsLucide,
+  nodeNames,
+} from "../../../../utils/styleUtils";
+import { classNames } from "../../../../utils/utils";
+import DisclosureComponent from "../DisclosureComponent";
 
 export default function ExtraSidebar() {
-  const { data } = useContext(typesContext);
-  const { openPopUp } = useContext(PopUpContext);
-  const { flows, tabId, uploadFlow, tabsState, saveFlow } =
+  const { data, templates } = useContext(typesContext);
+  const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt } =
     useContext(TabsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
@@ -42,9 +37,10 @@ export default function ExtraSidebar() {
     crt.classList.add("cursor-grabbing");
     document.body.appendChild(crt);
     event.dataTransfer.setDragImage(crt, 0, 0);
-    event.dataTransfer.setData("json", JSON.stringify(data));
+    event.dataTransfer.setData("nodedata", JSON.stringify(data));
   }
 
+  // Handle showing components after use search input
   function handleSearchInput(e: string) {
     setFilterData((_) => {
       let ret = {};
@@ -60,86 +56,109 @@ export default function ExtraSidebar() {
       return ret;
     });
   }
+  const flow = flows.find((f) => f.id === tabId);
+  useEffect(() => {
+    // show components with error on load
+    let errors = [];
+    Object.keys(templates).forEach((component) => {
+      if (templates[component].error) {
+        errors.push(component);
+      }
+    });
+    if (errors.length > 0)
+      setErrorData({ title: " Components with errors: ", list: errors });
+  }, []);
 
   return (
-    <div className="w-52 flex flex-col overflow-hidden scrollbar-hide h-full border-r">
-      <div className="mt-2 mb-2 w-full flex gap-2 justify-between px-2 items-center">
-        <ShadTooltip delayDuration={1000} content="Import" side="top">
-          <button
-            className="hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center rounded-md bg-white px-2 py-2 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-            onClick={() => {
-              // openPopUp(<ImportModal />);
-              uploadFlow();
-            }}
-          >
-            <FileUp className="w-5 h-5 dark:text-gray-300"></FileUp>
-          </button>
-        </ShadTooltip>
-
-        <ShadTooltip delayDuration={1000} content="Export" side="top">
-          <button
-            className={classNames(
-              "hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
+    <div className="side-bar-arrangement">
+      <div className="side-bar-buttons-arrangement">
+        <div className="side-bar-button">
+          <ShadTooltip content="Import" side="top">
+            <button
+              className="extra-side-bar-buttons"
+              onClick={() => {
+                uploadFlow();
+              }}
+            >
+              <IconComponent name="FileUp" className="side-bar-button-size " />
+            </button>
+          </ShadTooltip>
+        </div>
+        <div className="side-bar-button">
+          <ExportModal>
+            <ShadTooltip content="Export" side="top">
+              <div className={classNames("extra-side-bar-buttons")}>
+                <IconComponent
+                  name="FileDown"
+                  className="side-bar-button-size"
+                />
+              </div>
+            </ShadTooltip>
+          </ExportModal>
+        </div>
+        <ShadTooltip content={"Code"} side="top">
+          <div className="side-bar-button">
+            {flow && flow.data && (
+              <ApiModal flow={flow} disable={!isBuilt}>
+                <div className={classNames("extra-side-bar-buttons")}>
+                  <IconComponent
+                    name="Code2"
+                    className={
+                      "side-bar-button-size" +
+                      (isBuilt ? " " : " extra-side-bar-save-disable")
+                    }
+                  />
+                </div>
+              </ApiModal>
             )}
-            onClick={(event) => {
-              openPopUp(<ExportModal />);
-            }}
-          >
-            <FileDown className="w-5 h-5  dark:text-gray-300"></FileDown>
-          </button>
+          </div>
         </ShadTooltip>
-        <ShadTooltip delayDuration={1000} content="Code" side="top">
-          <button
-            className={classNames(
-              "hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center shadow-sm transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
-            )}
-            onClick={(event) => {
-              openPopUp(<ApiModal flow={flows.find((f) => f.id === tabId)} />);
-            }}
-          >
-            <Code2 className="w-5 h-5  dark:text-gray-300"></Code2>
-          </button>
-        </ShadTooltip>
-
-        <ShadTooltip delayDuration={1000} content="Save" side="top">
-          <button
-            className="hover:dark:hover:bg-[#242f47] text-gray-700 w-full justify-center transition-all shadow-sm duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300  relative inline-flex items-center bg-white px-2 py-2  ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-md"
-            onClick={(event) => {
-              saveFlow(flows.find((f) => f.id === tabId));
-              setSuccessData({ title: "Changes saved successfully" });
-            }}
-            disabled={!isPending}
-          >
-            <Save
+        <div className="side-bar-button">
+          <ShadTooltip content="Save" side="top">
+            <button
               className={
-                "w-5 h-5" + (isPending ? " " : " text-muted-foreground")
+                "extra-side-bar-buttons " + (isPending ? "" : "button-disable")
               }
-            ></Save>
-          </button>
-        </ShadTooltip>
+              onClick={(event) => {
+                saveFlow(flow);
+                setSuccessData({ title: "Changes saved successfully" });
+              }}
+            >
+              <IconComponent
+                name="Save"
+                className={
+                  "side-bar-button-size" +
+                  (isPending ? " " : " extra-side-bar-save-disable")
+                }
+              />
+            </button>
+          </ShadTooltip>
+        </div>
       </div>
       <Separator />
-      <div className="relative mt-2 flex items-center mb-2 mx-2">
-        <input
+      <div className="side-bar-search-div-placement">
+        <Input
           type="text"
           name="search"
           id="search"
           placeholder="Search"
-          className={
-            INPUT_STYLE +
-            "w-full border-1 dark:border-slate-600 dark:border-0.5 dark:ring-0 focus-visible:dark:ring-0 focus-visible:dark:ring-offset-1 rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-          }
+          className="nopan nodrag noundo nocopy input-search"
           onChange={(e) => {
             handleSearchInput(e.target.value);
+            // Set search input state
             setSearch(e.target.value);
           }}
         />
-        <div className="absolute inset-y-0 right-0 flex py-1.5 pr-3 items-center">
-          <MagnifyingGlassIcon className="h-5 w-5 dark:text-white"></MagnifyingGlassIcon>
+        <div className="search-icon">
+          <IconComponent
+            name="Search"
+            className={"h-5 w-5 stroke-[1.5] text-primary"}
+            aria-hidden="true"
+          />
         </div>
       </div>
 
-      <div className="w-full overflow-auto scrollbar-hide">
+      <div className="side-bar-components-div-arrangement">
         {Object.keys(dataFilter)
           .sort()
           .map((d: keyof APIObjectType, i) =>
@@ -149,22 +168,27 @@ export default function ExtraSidebar() {
                 key={i}
                 button={{
                   title: nodeNames[d] ?? nodeNames.unknown,
-                  Icon: nodeIcons[d] ?? nodeIcons.unknown,
+                  Icon: nodeIconsLucide[d] ?? nodeIconsLucide.unknown,
                 }}
               >
-                <div className="p-2 flex flex-col gap-2">
+                <div className="side-bar-components-gap">
                   {Object.keys(dataFilter[d])
                     .sort()
                     .map((t: string, k) => (
                       <ShadTooltip
-                        content={t}
-                        delayDuration={1500}
+                        content={data[d][t].display_name}
                         side="right"
+                        key={k}
                       >
                         <div key={k} data-tooltip-id={t}>
                           <div
-                            draggable
-                            className={" cursor-grab border-l-8 rounded-l-md"}
+                            draggable={!data[d][t].error}
+                            className={
+                              "side-bar-components-border bg-background" +
+                              (data[d][t].error
+                                ? " cursor-not-allowed select-none"
+                                : "")
+                            }
                             style={{
                               borderLeftColor:
                                 nodeColors[d] ?? nodeColors.unknown,
@@ -183,11 +207,14 @@ export default function ExtraSidebar() {
                               );
                             }}
                           >
-                            <div className="flex w-full justify-between text-sm px-3 py-1 bg-white dark:bg-gray-800 items-center border-dashed border-gray-400 dark:border-gray-600 border-l-0 rounded-md rounded-l-none border">
-                              <span className="text-black dark:text-white w-full pr-1 truncate text-xs">
-                                {t}
+                            <div className="side-bar-components-div-form">
+                              <span className="side-bar-components-text">
+                                {data[d][t].display_name}
                               </span>
-                              <Bars2Icon className="w-4 h-6  text-gray-400 dark:text-gray-600" />
+                              <IconComponent
+                                name="Menu"
+                                className="side-bar-components-icon "
+                              />
                             </div>
                           </div>
                         </div>

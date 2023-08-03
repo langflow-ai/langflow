@@ -55,7 +55,7 @@ TOOL_INPUTS = {
         show=True,
         value="",
         suffixes=[".json", ".yaml", ".yml"],
-        fileTypes=["json", "yaml", "yml"],
+        file_types=["json", "yaml", "yml"],
     ),
 }
 
@@ -90,7 +90,7 @@ class ToolCreator(LangChainTypeCreator):
     def get_signature(self, name: str) -> Optional[Dict]:
         """Get the signature of a tool."""
 
-        base_classes = ["Tool"]
+        base_classes = ["Tool", "BaseTool"]
         fields = []
         params = []
         tool_params = {}

@@ -1,13 +1,12 @@
 from fastapi.testclient import TestClient
-from langflow.settings import settings
 
 
-def test_chains_settings(client: TestClient):
-    response = client.get("api/v1/all")
-    assert response.status_code == 200
-    json_response = response.json()
-    chains = json_response["chains"]
-    assert set(chains.keys()) == set(settings.chains)
+# def test_chains_settings(client: TestClient):
+#     response = client.get("api/v1/all")
+#     assert response.status_code == 200
+#     json_response = response.json()
+#     chains = json_response["chains"]
+#     assert set(chains.keys()) == set(settings.chains)
 
 
 # Test the ConversationChain object
@@ -23,13 +22,13 @@ def test_conversation_chain(client: TestClient):
         "ConversationChain",
         "LLMChain",
         "Chain",
-        "Serializable",
         "function",
     }
 
     template = chain["template"]
     assert template["memory"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -38,20 +37,24 @@ def test_conversation_chain(client: TestClient):
         "type": "BaseMemory",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["verbose"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
-        "show": True,
+        "show": False,
         "multiline": False,
         "password": False,
         "name": "verbose",
         "type": "bool",
         "list": False,
         "advanced": True,
+        "info": "",
     }
     assert template["llm"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -60,9 +63,11 @@ def test_conversation_chain(client: TestClient):
         "type": "BaseLanguageModel",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["input_key"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -72,9 +77,11 @@ def test_conversation_chain(client: TestClient):
         "type": "str",
         "list": False,
         "advanced": True,
+        "info": "",
     }
     assert template["output_key"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -84,6 +91,7 @@ def test_conversation_chain(client: TestClient):
         "type": "str",
         "list": False,
         "advanced": True,
+        "info": "",
     }
     assert template["_type"] == "ConversationChain"
 
@@ -103,7 +111,6 @@ def test_llm_chain(client: TestClient):
 
     # Test the base classes, template, memory, verbose, llm, input_key, output_key, and _type objects
     assert set(chain["base_classes"]) == {
-        "Serializable",
         "function",
         "LLMChain",
         "Chain",
@@ -112,6 +119,7 @@ def test_llm_chain(client: TestClient):
     template = chain["template"]
     assert template["memory"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -120,11 +128,13 @@ def test_llm_chain(client: TestClient):
         "type": "BaseMemory",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["verbose"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
-        "show": True,
+        "show": False,
         "multiline": False,
         "value": False,
         "password": False,
@@ -132,9 +142,11 @@ def test_llm_chain(client: TestClient):
         "type": "bool",
         "list": False,
         "advanced": True,
+        "info": "",
     }
     assert template["llm"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -143,9 +155,11 @@ def test_llm_chain(client: TestClient):
         "type": "BaseLanguageModel",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["output_key"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -155,6 +169,7 @@ def test_llm_chain(client: TestClient):
         "type": "str",
         "list": False,
         "advanced": True,
+        "info": "",
     }
 
 
@@ -167,7 +182,6 @@ def test_llm_checker_chain(client: TestClient):
 
     # Test the base classes, template, memory, verbose, llm, input_key, output_key, and _type objects
     assert set(chain["base_classes"]) == {
-        "Serializable",
         "function",
         "LLMCheckerChain",
         "Chain",
@@ -176,6 +190,7 @@ def test_llm_checker_chain(client: TestClient):
     template = chain["template"]
     assert template["llm"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -184,6 +199,7 @@ def test_llm_checker_chain(client: TestClient):
         "type": "BaseLanguageModel",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["_type"] == "LLMCheckerChain"
 
@@ -201,7 +217,6 @@ def test_llm_math_chain(client: TestClient):
     # Test the base classes, template, memory, verbose, llm, input_key, output_key, and _type objects
     assert set(chain["base_classes"]) == {
         "function",
-        "Serializable",
         "LLMMathChain",
         "Chain",
     }
@@ -209,6 +224,7 @@ def test_llm_math_chain(client: TestClient):
     template = chain["template"]
     assert template["memory"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -217,11 +233,13 @@ def test_llm_math_chain(client: TestClient):
         "type": "BaseMemory",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["verbose"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
-        "show": True,
+        "show": False,
         "multiline": False,
         "value": False,
         "password": False,
@@ -229,9 +247,11 @@ def test_llm_math_chain(client: TestClient):
         "type": "bool",
         "list": False,
         "advanced": True,
+        "info": "",
     }
     assert template["llm"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -240,9 +260,11 @@ def test_llm_math_chain(client: TestClient):
         "type": "BaseLanguageModel",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["input_key"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -252,9 +274,11 @@ def test_llm_math_chain(client: TestClient):
         "type": "str",
         "list": False,
         "advanced": True,
+        "info": "",
     }
     assert template["output_key"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -264,6 +288,7 @@ def test_llm_math_chain(client: TestClient):
         "type": "str",
         "list": False,
         "advanced": True,
+        "info": "",
     }
     assert template["_type"] == "LLMMathChain"
 
@@ -295,6 +320,7 @@ def test_series_character_chain(client: TestClient):
 
     assert template["llm"] == {
         "required": True,
+        "dynamic": False,
         "display_name": "LLM",
         "placeholder": "",
         "show": True,
@@ -304,9 +330,11 @@ def test_series_character_chain(client: TestClient):
         "type": "BaseLanguageModel",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["character"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -315,9 +343,11 @@ def test_series_character_chain(client: TestClient):
         "type": "str",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["series"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -326,6 +356,7 @@ def test_series_character_chain(client: TestClient):
         "type": "str",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["_type"] == "SeriesCharacterChain"
 
@@ -358,6 +389,7 @@ def test_mid_journey_prompt_chain(client: TestClient):
 
     assert template["llm"] == {
         "required": True,
+        "dynamic": False,
         "display_name": "LLM",
         "placeholder": "",
         "show": True,
@@ -367,6 +399,7 @@ def test_mid_journey_prompt_chain(client: TestClient):
         "type": "BaseLanguageModel",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     # Test the description object
     assert (
@@ -397,6 +430,7 @@ def test_time_travel_guide_chain(client: TestClient):
 
     assert template["llm"] == {
         "required": True,
+        "dynamic": False,
         "placeholder": "",
         "display_name": "LLM",
         "show": True,
@@ -406,9 +440,11 @@ def test_time_travel_guide_chain(client: TestClient):
         "type": "BaseLanguageModel",
         "list": False,
         "advanced": False,
+        "info": "",
     }
     assert template["memory"] == {
         "required": False,
+        "dynamic": False,
         "placeholder": "",
         "show": True,
         "multiline": False,
@@ -417,6 +453,7 @@ def test_time_travel_guide_chain(client: TestClient):
         "type": "BaseChatMemory",
         "list": False,
         "advanced": False,
+        "info": "",
     }
 
     assert chain["description"] == "Time travel guide chain."

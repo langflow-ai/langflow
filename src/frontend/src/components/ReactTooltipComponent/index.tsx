@@ -3,7 +3,7 @@ import type { FC } from "react";
 import React from "react";
 import { Tooltip as ReactTooltip } from "react-tooltip";
 import "react-tooltip/dist/react-tooltip.css";
-import { classNames } from "../../utils";
+import { classNames } from "../../utils/utils";
 
 type TooltipProps = {
   selector: string;
@@ -37,7 +37,7 @@ const TooltipReact: FC<TooltipProps> = ({
         id={selector}
         content={content}
         className={classNames(
-          "!bg-white !text-xs !font-normal !text-gray-700 !shadow-md !opacity-100 z-[9999]",
+          "z-[9999] !bg-white !text-xs !font-normal !text-foreground !opacity-100 !shadow-md",
           className
         )}
         place={position}

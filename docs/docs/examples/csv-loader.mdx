@@ -1,0 +1,50 @@
+import Admonition from "@theme/Admonition";
+
+# CSV Loader
+
+The `VectoStoreAgent` component retrieves information from one or more vector stores. This example shows a `VectoStoreAgent` connected to a CSV file through the `Chroma` vector store. Process description:
+
+- The `CSVLoader` loads a CSV file into a list of documents.
+- The extracted data is then processed by the `CharacterTextSplitter`, which splits the text into small, meaningful chunks (usually sentences).
+- These chunks feed the `Chroma` vector store, which converts them into vectors and stores them for fast indexing.
+- Finally, the agent accesses the information of the vector store through the `VectorStoreInfo` tool.
+
+<Admonition type="info">
+  The vector store is used for efficient semantic search, while
+  `VectorStoreInfo` carries information about it, such as its name and
+  description. Embeddings are a way to represent words, phrases, or any entities
+  in a vector space. Learn more about them
+  [here](https://platform.openai.com/docs/guides/embeddings/what-are-embeddings).
+</Admonition>
+
+<Admonition type="tip">
+  Once you build this flow, ask questions about the data in the chat interface
+  (e.g., number of rows or columns).
+</Admonition>
+
+## ⛓️ Langflow Example
+
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/csv-loader.png",
+  }}
+/>
+
+#### <a target="\_blank" href="json_files/CSV_Loader.json" download>Download Flow</a>
+
+<Admonition type="note" title="LangChain Components 🦜🔗">
+
+- [`CSVLoader`](https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/csv)
+- [`CharacterTextSplitter`](https://python.langchain.com/docs/modules/data_connection/document_transformers/text_splitters/character_text_splitter)
+- [`OpenAIEmbedding`](https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/openai)
+- [`Chroma`](https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/chroma)
+- [`VectorStoreInfo`](https://python.langchain.com/docs/modules/data_connection/vectorstores/)
+- [`OpenAI`](https://python.langchain.com/docs/modules/model_io/models/llms/integrations/openai)
+- [`VectorStoreAgent`](https://python.langchain.com/docs/modules/agents/toolkits/vectorstore)
+
+</Admonition>

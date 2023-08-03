@@ -1,0 +1,51 @@
+import Admonition from "@theme/Admonition";
+
+# Serp API Tool
+
+The [Serp API](https://serpapi.com/) (Search Engine Results Page) allows developers to scrape results from search engines such as Google, Bing and Yahoo, and can be used as in Langflow through the `Search` component.
+
+<Admonition type="info">
+  To use the Serp API, you first need to sign up [Serp
+  API](https://serpapi.com/) for an API key on the provider's website.
+</Admonition>
+
+Here, the `ZeroShotPrompt` component specifies a prompt template for the `ZeroShotAgent`. Set a _Prefix_ and _Suffix_ with rules for the agent to obey. In the example, we used default templates.
+
+The `LLMChain` is a simple chain that takes in a prompt template, formats it with the user input, and returns the response from an LLM.
+
+<Admonition type="tip">
+  In this example, we used [`ChatOpenAI`](https://platform.openai.com/) as the
+  LLM, but feel free to experiment with other Language Models!
+</Admonition>
+
+The `ZeroShotAgent` takes the `LLMChain` and the `Search` tool as inputs, using the tool to find information when necessary.
+
+<Admonition type="info">
+  Learn more about the Serp API
+  [here](https://python.langchain.com/docs/modules/agents/tools/integrations/serpapi).
+</Admonition>
+
+## ⛓️ Langflow Example
+
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/serp-api-tool.png",
+  }}
+/>
+
+#### <a target="\_blank" href="json_files/SerpAPI_Tool.json" download>Download Flow</a>
+
+<Admonition type="note" title="LangChain Components 🦜🔗">
+
+- [`ZeroShotPrompt`](https://python.langchain.com/docs/modules/model_io/prompts/prompt_templates/)
+- [`OpenAI`](https://python.langchain.com/docs/modules/model_io/models/llms/integrations/openai)
+- [`LLMChain`](https://python.langchain.com/docs/modules/chains/foundational/llm_chain)
+- [`Search`](https://python.langchain.com/docs/modules/agents/tools/integrations/serpapi)
+- [`ZeroShotAgent`](https://python.langchain.com/docs/modules/agents/how_to/custom_mrkl_agent)
+
+</Admonition>

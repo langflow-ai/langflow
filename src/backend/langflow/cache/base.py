@@ -62,9 +62,6 @@ class BaseCache(abc.ABC):
 
         Args:
             key: The key of the item to retrieve.
-
-        Returns:
-            The value associated with the key, or None if the key is not found.
         """
 
     @abc.abstractmethod

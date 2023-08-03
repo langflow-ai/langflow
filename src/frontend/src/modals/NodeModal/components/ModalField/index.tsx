@@ -1,16 +1,15 @@
-import { useContext, useState } from "react";
-import { TabsContext } from "../../../../contexts/tabsContext";
-import InputListComponent from "../../../../components/inputListComponent";
-import Dropdown from "../../../../components/dropdownComponent";
-import TextAreaComponent from "../../../../components/textAreaComponent";
-import InputComponent from "../../../../components/inputComponent";
-import ToggleComponent from "../../../../components/toggleComponent";
-import FloatComponent from "../../../../components/floatComponent";
-import IntComponent from "../../../../components/intComponent";
-import InputFileComponent from "../../../../components/inputFileComponent";
-import PromptAreaComponent from "../../../../components/promptComponent";
+import { useState } from "react";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
-import { classNames } from "../../../../utils";
+import Dropdown from "../../../../components/dropdownComponent";
+import FloatComponent from "../../../../components/floatComponent";
+import InputComponent from "../../../../components/inputComponent";
+import InputFileComponent from "../../../../components/inputFileComponent";
+import InputListComponent from "../../../../components/inputListComponent";
+import IntComponent from "../../../../components/intComponent";
+import PromptAreaComponent from "../../../../components/promptComponent";
+import TextAreaComponent from "../../../../components/textAreaComponent";
+import ToggleComponent from "../../../../components/toggleComponent";
+import { classNames } from "../../../../utils/utils";
 
 export default function ModalField({
   data,
@@ -36,7 +35,7 @@ export default function ModalField({
   return (
     <div
       className={classNames(
-        "flex flex-row w-full items-center justify-between",
+        "flex w-full flex-row items-center justify-between",
         display ? "" : "hidden",
         Object.keys(data.node.template).filter(
           (t) =>
@@ -52,8 +51,8 @@ export default function ModalField({
     >
       {display && (
         <div>
-          <span className="mx-2 dark:text-gray-300">{title}</span>
-          <span className="text-red-600">{required ? " *" : ""}</span>
+          <span className="mx-2">{title}</span>
+          <span className="text-status-red">{required ? " *" : ""}</span>
         </div>
       )}
 
@@ -101,6 +100,7 @@ export default function ModalField({
               data.node.template[name].value = t;
               setEnabled(t);
             }}
+            size="small"
           />
         </div>
       ) : type === "float" ? (
@@ -142,13 +142,14 @@ export default function ModalField({
             fileTypes={data.node.template[name].fileTypes}
             suffixes={data.node.template[name].suffixes}
             onFileChange={(t: string) => {
-              data.node.template[name].content = t;
+              data.node.template[name].file_path = t;
             }}
           ></InputFileComponent>
         </div>
       ) : type === "prompt" ? (
         <div className="w-1/2">
           <PromptAreaComponent
+            field_name={name}
             disabled={false}
             value={data.node.template[name].value ?? ""}
             onChange={(t: string) => {
@@ -159,6 +160,11 @@ export default function ModalField({
       ) : type === "code" ? (
         <div className="w-1/2">
           <CodeAreaComponent
+            dynamic={data.node.template[name].dynamic ?? false}
+            setNodeClass={(nodeClass) => {
+              data.node = nodeClass;
+            }}
+            nodeClass={data.node}
             disabled={false}
             value={data.node.template[name].value ?? ""}
             onChange={(t: string) => {

@@ -4,26 +4,27 @@ import os
 from io import BytesIO
 import re
 
+
 import yaml
 from langchain.base_language import BaseLanguageModel
 from PIL.Image import Image
+from langflow.utils.logger import logger
+from langflow.chat.config import ChatConfig
 
 
 def load_file_into_dict(file_path: str) -> dict:
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found: {file_path}")
 
-    file_extension = os.path.splitext(file_path)[1].lower()
-
-    if file_extension == ".json":
-        with open(file_path, "r") as json_file:
-            data = json.load(json_file)
-    elif file_extension in [".yaml", ".yml"]:
-        with open(file_path, "r") as yaml_file:
-            data = yaml.safe_load(yaml_file)
-    else:
-        raise ValueError("Unsupported file type. Please provide a JSON or YAML file.")
-
+    # Files names are UUID, so we can't find the extension
+    with open(file_path, "r") as file:
+        try:
+            data = json.load(file)
+        except json.JSONDecodeError:
+            file.seek(0)
+            data = yaml.safe_load(file)
+        except ValueError as exc:
+            raise ValueError("Invalid file type. Expected .json or .yaml.") from exc
     return data
 
 
@@ -48,9 +49,9 @@ def try_setting_streaming_options(langchain_object, websocket):
 
     if isinstance(llm, BaseLanguageModel):
         if hasattr(llm, "streaming") and isinstance(llm.streaming, bool):
-            llm.streaming = True
+            llm.streaming = ChatConfig.streaming
         elif hasattr(llm, "stream") and isinstance(llm.stream, bool):
-            llm.stream = True
+            llm.stream = ChatConfig.streaming
 
     return langchain_object
 
@@ -58,3 +59,29 @@ def try_setting_streaming_options(langchain_object, websocket):
 def extract_input_variables_from_prompt(prompt: str) -> list[str]:
     """Extract input variables from prompt."""
     return re.findall(r"{(.*?)}", prompt)
+
+
+def setup_llm_caching():
+    """Setup LLM caching."""
+
+    from langflow.settings import settings
+
+    try:
+        set_langchain_cache(settings)
+    except ImportError:
+        logger.warning(f"Could not import {settings.cache}. ")
+    except Exception as exc:
+        logger.warning(f"Could not setup LLM caching. Error: {exc}")
+
+
+# TODO Rename this here and in `setup_llm_caching`
+def set_langchain_cache(settings):
+    import langchain
+    from langflow.interface.importing.utils import import_class
+
+    cache_type = os.getenv("LANGFLOW_LANGCHAIN_CACHE")
+    cache_class = import_class(f"langchain.cache.{cache_type or settings.cache}")
+
+    logger.debug(f"Setting up LLM caching with {cache_class.__name__}")
+    langchain.llm_cache = cache_class()
+    logger.info(f"LLM caching setup with {cache_class.__name__}")

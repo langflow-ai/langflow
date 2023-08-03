@@ -1,16 +1,15 @@
 # This file is used by lc-serve to load the mounted app and serve it.
 
-from pathlib import Path
+import os
 
-from fastapi.staticfiles import StaticFiles
+# Use the JCLOUD_WORKSPACE for db URL if it's provided by JCloud.
+if "JCLOUD_WORKSPACE" in os.environ:
+    os.environ[
+        "LANGFLOW_DATABASE_URL"
+    ] = f"sqlite:///{os.environ['JCLOUD_WORKSPACE']}/langflow.db"
 
-from langflow.main import create_app
+from langflow.main import setup_app
+from langflow.utils.logger import configure
 
-app = create_app()
-path = Path(__file__).parent
-static_files_dir = path / "frontend"
-app.mount(
-    "/",
-    StaticFiles(directory=static_files_dir, html=True),
-    name="static",
-)
+configure(log_level="DEBUG")
+app = setup_app()

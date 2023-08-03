@@ -1,0 +1,27 @@
+import Admonition from "@theme/Admonition";
+
+# Prompts
+
+<Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
+  <p>
+    We appreciate your understanding as we polish our documentation – it may
+    contain some rough edges. Share your feedback or report issues to help us
+    improve! 🛠️📝
+  </p>
+</Admonition>
+
+A prompt refers to the input given to a language model. It is constructed from multiple components and can be parametrized using prompt templates. A prompt template is a reproducible way to generate prompts and allow for easy customization through input variables.
+
+---
+
+### PromptTemplate
+
+The `PromptTemplate` component allows users to create prompts and define variables that provide control over instructing the model. The template can take in a set of variables from the end user and generates the prompt once the conversation is initiated.
+
+<Admonition type="info">
+  Once a variable is defined in the prompt template, it becomes a component
+  input of its own. Check out [Prompt
+  Customization](../guidelines/prompt-customization.mdx) to learn more.
+</Admonition>
+
+- **template:** Template used to format an individual request.

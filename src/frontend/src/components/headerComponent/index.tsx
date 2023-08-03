@@ -1,45 +1,51 @@
-import { BellIcon, Home, Users2 } from "lucide-react";
-import { useContext } from "react";
-import { FaGithub } from "react-icons/fa";
-import { Button } from "../ui/button";
-import { TabsContext } from "../../contexts/tabsContext";
+import { useContext, useEffect, useState } from "react";
+import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
+import { Link, useLocation } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
+import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
-import { PopUpContext } from "../../contexts/popUpContext";
-import { typesContext } from "../../contexts/typesContext";
+import { TabsContext } from "../../contexts/tabsContext";
+import { getRepoStars } from "../../controllers/API";
+import IconComponent from "../genericIconComponent";
+import { Button } from "../ui/button";
+import { Separator } from "../ui/separator";
 import MenuBar from "./components/menuBar";
-import { Link, useLocation, useParams } from "react-router-dom";
-import { USER_PROJECTS_HEADER } from "../../constants";
 
 export default function Header() {
-  const { flows, addFlow, tabId } = useContext(TabsContext);
-  const { openPopUp } = useContext(PopUpContext);
-  const { templates } = useContext(typesContext);
-  const { id } = useParams();
-  const AlertWidth = 384;
+  const { flows, tabId } = useContext(TabsContext);
   const { dark, setDark } = useContext(darkContext);
-  const { notificationCenter, setNotificationCenter, setErrorData } =
-    useContext(alertContext);
+  const { notificationCenter } = useContext(alertContext);
   const location = useLocation();
+
+  const [stars, setStars] = useState(null);
+
+  // Get and set numbers of stars on header
+  useEffect(() => {
+    async function fetchStars() {
+      const starsCount = await getRepoStars("logspace-ai", "langflow");
+      setStars(starsCount);
+    }
+    fetchStars();
+  }, []);
   return (
-    <div className="w-full h-12 flex justify-between items-center border-b bg-muted">
-      <div className="flex gap-2 justify-start items-center w-96">
+    <div className="header-arrangement">
+      <div className="header-start-display">
         <Link to="/">
-          <span className="text-2xl ml-4">⛓️</span>
+          <span className="ml-4 text-2xl">⛓️</span>
         </Link>
         {flows.findIndex((f) => tabId === f.id) !== -1 && tabId !== "" && (
           <MenuBar flows={flows} tabId={tabId} />
         )}
       </div>
-      <div className="flex gap-2 items-center">
+      <div className="round-button-div">
         <Link to="/">
           <Button
             className="gap-2"
             variant={location.pathname === "/" ? "primary" : "secondary"}
             size="sm"
           >
-            <Home className="w-4 h-4" />
+            <IconComponent name="Home" className="h-4 w-4" />
             <div className="flex-1">{USER_PROJECTS_HEADER}</div>
           </Button>
         </Link>
@@ -51,71 +57,65 @@ export default function Header() {
             }
             size="sm"
           >
-            <Users2 className="w-4 h-4" />
+            <IconComponent name="Users2" className="h-4 w-4" />
             <div className="flex-1">Community Examples</div>
           </Button>
         </Link>
       </div>
-      <div className="flex justify-end px-2 w-96">
-        <div className="ml-auto mr-2 flex gap-5">
-          <Button
-            asChild
-            variant="outline"
-            className="text-gray-600 dark:text-gray-300 "
+      <div className="header-end-division">
+        <div className="header-end-display">
+          <a
+            href="https://github.com/logspace-ai/langflow"
+            target="_blank"
+            rel="noreferrer"
+            className="header-github-link"
           >
-            <a
-              href="https://github.com/logspace-ai/langflow"
-              target="_blank"
-              rel="noreferrer"
-              className="flex"
-            >
-              <FaGithub className="h-5 w-5 mr-2" />
-              Join The Community
-            </a>
-          </Button>
-          {/* <button
-            className="text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
+            <FaGithub className="mr-2 h-5 w-5" />
+            Star
+            <div className="header-github-display">{stars}</div>
+          </a>
+          <a
+            href="https://twitter.com/logspace_ai"
+            target="_blank"
+            rel="noreferrer"
+            className="text-muted-foreground"
+          >
+            <FaTwitter className="side-bar-button-size" />
+          </a>
+          <a
+            href="https://discord.gg/EqksyE2EX9"
+            target="_blank"
+            rel="noreferrer"
+            className="text-muted-foreground"
+          >
+            <FaDiscord className="side-bar-button-size" />
+          </a>
+
+          <Separator orientation="vertical" />
+          <button
+            className="extra-side-bar-save-disable"
             onClick={() => {
               setDark(!dark);
             }}
           >
             {dark ? (
-              <SunIcon className="h-5 w-5" />
+              <IconComponent name="SunIcon" className="side-bar-button-size" />
             ) : (
-              <MoonIcon className="h-5 w-5" />
+              <IconComponent name="MoonIcon" className="side-bar-button-size" />
             )}
-          </button> */}
-          <button
-            className="text-gray-600 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200 relative"
-            onClick={(event: React.MouseEvent<HTMLElement>) => {
-              setNotificationCenter(false);
-              const { top, left } = (
-                event.target as Element
-              ).getBoundingClientRect();
-              openPopUp(
-                <>
-                  <div
-                    className="z-10 absolute"
-                    style={{ top: top + 34, left: left - AlertWidth }}
-                  >
-                    <AlertDropdown />
-                  </div>
-                  <div className="h-screen w-screen fixed top-0 left-0"></div>
-                </>
-              );
-            }}
-          >
-            {notificationCenter && (
-              <div className="absolute w-1.5 h-1.5 rounded-full bg-destructive right-[3px]"></div>
-            )}
-            <BellIcon className="h-5 w-5" aria-hidden="true" />
           </button>
-          {/* <button>
-            <img
-              src="https://github.com/shadcn.png"
-              className="rounded-full w-8"
-            />
-          </button> */}
+          <AlertDropdown>
+            <div className="extra-side-bar-save-disable relative">
+              {notificationCenter && (
+                <div className="header-notifications"></div>
+              )}
+              <IconComponent
+                name="Bell"
+                className="side-bar-button-size"
+                aria-hidden="true"
+              />
+            </div>
+          </AlertDropdown>
         </div>
       </div>
     </div>

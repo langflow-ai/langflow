@@ -1,11 +1,11 @@
 import * as React from "react";
-import { cn } from "../../utils";
+import { cn } from "../../utils/utils";
 
 const Table = React.forwardRef<
   HTMLTableElement,
   React.HTMLAttributes<HTMLTableElement>
 >(({ className, ...props }, ref) => (
-  <div className="w-full overflow-auto">
+  <div className="">
     <table
       ref={ref}
       className={cn("w-full caption-bottom text-sm", className)}
@@ -103,11 +103,11 @@ TableCaption.displayName = "TableCaption";
 
 export {
   Table,
-  TableHeader,
   TableBody,
+  TableCaption,
+  TableCell,
   TableFooter,
   TableHead,
+  TableHeader,
   TableRow,
-  TableCell,
-  TableCaption,
 };
