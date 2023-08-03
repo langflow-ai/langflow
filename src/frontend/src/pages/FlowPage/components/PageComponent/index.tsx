@@ -49,8 +49,13 @@ export default function Page({ flow }: { flow: FlowType }) {
     setTabsState,
     tabId,
   } = useContext(TabsContext);
-  const { types, reactFlowInstance, setReactFlowInstance, templates } =
-    useContext(typesContext);
+  const {
+    types,
+    reactFlowInstance,
+    setFilterEdge,
+    setReactFlowInstance,
+    templates,
+  } = useContext(typesContext);
   const reactFlowWrapper = useRef(null);
 
   const { takeSnapshot } = useContext(undoRedoContext);
@@ -355,6 +360,10 @@ export default function Page({ flow }: { flow: FlowType }) {
     setLastSelection(flow);
   }, []);
 
+  const onPaneClick = useCallback((flow) => {
+    setFilterEdge([]);
+  }, []);
+
   return (
     <div className="flex h-full overflow-hidden">
       <ExtraSidebar />
@@ -392,6 +401,7 @@ export default function Page({ flow }: { flow: FlowType }) {
                   onSelectionStart={onSelectionStart}
                   onEdgesDelete={onEdgesDelete}
                   connectionLineComponent={ConnectionLineComponent}
+                  onPaneClick={onPaneClick}
                   onDragOver={onDragOver}
                   onDrop={onDrop}
                   onNodesDelete={onDelete}

@@ -14,7 +14,6 @@ import IntComponent from "../../../../components/intComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
-import { Button } from "../../../../components/ui/button";
 import { TOOLTIP_EMPTY } from "../../../../constants/constants";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
@@ -66,6 +65,8 @@ export default function ParameterComponent({
   const { reactFlowInstance } = useContext(typesContext);
   let disabled =
     reactFlowInstance?.getEdges().some((e) => e.targetHandle === id) ?? false;
+  let disabledLeft =
+    reactFlowInstance?.getEdges().some((e) => e.sourceHandle === id) ?? false;
 
   const { data: myData, setFilterEdge } = useContext(typesContext);
 
@@ -174,51 +175,9 @@ export default function ParameterComponent({
             (info !== "" ? " flex items-center" : "")
           }
         >
-          {left &&
-          (type === "str" ||
-            type === "bool" ||
-            type === "float" ||
-            type === "code" ||
-            type === "prompt" ||
-            type === "file" ||
-            type === "int") &&
-          !optionalHandle ? (
-            <> </>
-          ) : (
-            <Button className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted">
-              <div className="flex">
-                {left ? (
-                  <>
-                    <ShadTooltip delayDuration={0} content={"Filter"}>
-                      <Filter
-                        onClick={() => {
-                          setFilterEdge(groupedEdge.current);
-                        }}
-                        className="h-6 w-6 self-center px-1"
-                        strokeWidth={1.5}
-                      />
-                    </ShadTooltip>
-                    {title}
-                  </>
-                ) : (
-                  <>
-                    {title}
-                    <ShadTooltip delayDuration={0} content={"Filter"}>
-                      <Filter
-                        onClick={() => {
-                          setFilterEdge(groupedEdge.current);
-                        }}
-                        className="h-6 w-6 self-center px-1"
-                        strokeWidth={1.5}
-                      />
-                    </ShadTooltip>
-                  </>
-                )}
-              </div>
-
-              <span className={required ? "text-status-red px-1" : ""}>{required ? " *" : ""}</span>
-            </Button>
-          )}
+          <div className="truncate bg-muted text-sm font-normal hover:bg-muted">
+            {title}
+          </div>
 
           <div className="">
             {info !== "" && (
@@ -259,17 +218,30 @@ export default function ParameterComponent({
                 isValidConnection(connection, reactFlowInstance)
               }
               className={classNames(
-                left ? "-ml-0.5 " : "-mr-0.5 ",
-                "h-3 w-3 rounded-full border-2 bg-background"
+                left ? "-ml-1.5 " : "-mr-1.5 ",
+                "group flex h-5 w-5 items-center justify-center rounded-full border-border"
               )}
               style={{
-                borderColor: color,
+                backgroundColor: color,
                 top: position,
               }}
               onMouseUp={() => {
                 setFilterEdge(groupedEdge.current);
               }}
-            ></Handle>
+            >
+              <Filter
+                className={
+                  "pointer-events-none absolute -mb-0.5 h-3 w-3 fill-background stroke-none transition-all group-hover:h-4 group-hover:w-4 " +
+                  (!disabled && !disabledLeft ? "scale-100" : "scale-0")
+                }
+              />
+              <div
+                className={
+                  "pointer-events-none absolute h-3 w-3 rounded-full bg-background transition-all " +
+                  (!disabled && !disabledLeft ? "scale-0" : "scale-100")
+                }
+              ></div>
+            </Handle>
           </ShadTooltip>
         )}
 
