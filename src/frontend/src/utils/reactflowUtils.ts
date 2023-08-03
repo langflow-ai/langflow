@@ -30,25 +30,25 @@ export function cleanEdges({
       const sourceHandle = edge.sourceHandle; //right
       const targetHandle = edge.targetHandle; //left
       if (targetHandle) {
-        const field = targetHandle.split("|")[1];
-        const id =
-          (targetNode.data.node.template[field]?.input_types?.join(";") ??
-            targetNode.data.node.template[field]?.type) +
-          "|" +
-          field +
-          "|" +
-          targetNode.data.id;
-        if (id !== targetHandle) {
+        const targetHandleObject: targetHandleType = JSON.parse(targetHandle);
+        const field = targetHandleObject.fieldName;
+        const id: targetHandleType = {
+          type: targetNode.data.node.template[field]?.type,
+          fieldName: field,
+          id: targetNode.data.id,
+          inputTypes: targetNode.data.node.template[field]?.input_types,
+        };
+        if (JSON.stringify(id) !== targetHandle) {
           newEdges = newEdges.filter((e) => e.id !== edge.id);
         }
       }
       if (sourceHandle) {
-        const id = [
-          sourceNode.data.type,
-          sourceNode.data.id,
-          ...sourceNode.data.node.base_classes,
-        ].join("|");
-        if (id !== sourceHandle) {
+        const id: sourceHandleType = {
+          id: sourceNode.data.id,
+          baseClasses: sourceNode.data.node.base_classes,
+          dataType: sourceNode.data.type,
+        };
+        if (JSON.stringify(id) !== sourceHandle) {
           newEdges = newEdges.filter((e) => e.id !== edge.id);
         }
       }
