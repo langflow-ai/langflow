@@ -1,5 +1,5 @@
 import { cloneDeep } from "lodash";
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, { ReactNode, useContext, useEffect, useRef, useState } from "react";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
@@ -40,8 +40,8 @@ export default function ParameterComponent({
   info = "",
 }: ParameterComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
-  const refHtml = useRef<HTMLDivElement>(null);
-  const infoHtml = useRef<HTMLDivElement>(null);
+  const refHtml = useRef<HTMLDivElement & ReactNode>(null);
+  const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   const { setTabsState, tabId, save, flows } = useContext(TabsContext);
@@ -86,6 +86,7 @@ export default function ParameterComponent({
 
   useEffect(() => {
     if (name === "openai_api_base") console.log(info);
+    // @ts-ignore
     infoHtml.current = (
       <div className="h-full w-full break-words">
         {info.split("\n").map((line, i) => (
@@ -98,9 +99,10 @@ export default function ParameterComponent({
   }, [info]);
 
   function renderTooltips() {
-    let groupedObj = groupByFamily(myData, tooltipTitle, left, flow);
+    let groupedObj = groupByFamily(myData, tooltipTitle!, left, flow!);
 
     if (groupedObj && groupedObj.length > 0) {
+      //@ts-ignore
       refHtml.current = groupedObj.map((item, i) => {
         const Icon: any =
           nodeIconsLucide[item.family] ?? nodeIconsLucide["unknown"];
@@ -148,6 +150,7 @@ export default function ParameterComponent({
         );
       });
     } else {
+      //@ts-ignore
       refHtml.current = <span>{TOOLTIP_EMPTY}</span>;
     }
   }

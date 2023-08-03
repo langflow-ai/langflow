@@ -42,7 +42,7 @@ export default function GenericModal({
   const [wordsHighlight, setWordsHighlight] = useState<string[]>([]);
   const { setErrorData, setSuccessData, setNoticeData } =
     useContext(alertContext);
-  const ref = useRef();
+  const ref = useRef<HTMLDivElement>();
   const divRef = useRef(null);
   const divRefPrompt = useRef(null);
 

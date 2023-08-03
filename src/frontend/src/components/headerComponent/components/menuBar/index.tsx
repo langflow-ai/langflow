@@ -26,12 +26,12 @@ export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
 
   function handleAddFlow() {
     try {
-      addFlow(null!, true).then((id) => {
+      addFlow(null, true).then((id) => {
         navigate("/flow/" + id);
       });
       // saveFlowStyleInDataBase();
     } catch (err) {
-      setErrorData(err);
+      setErrorData(err as { title: string; list?: Array<string> });
     }
   }
   let current_flow = flows.find((flow) => flow.id === tabId);
