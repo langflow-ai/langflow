@@ -11,9 +11,6 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, Body
 
 from langflow.interface.custom.custom_component import CustomComponent
 
-from langflow.interface.custom.directory_reader import (
-    CustomComponentPathValueError,
-)
 
 from langflow.api.v1.schemas import (
     ProcessResponse,
@@ -39,7 +36,6 @@ router = APIRouter(tags=["Base"])
 @router.get("/all")
 def get_all():
     native_components = build_langchain_types_dict()
-
     # custom_components is a list of dicts
     # need to merge all the keys into one dict
     custom_components_from_file = {}
@@ -53,32 +49,6 @@ def get_all():
                 custom_components_from_file, custom_component_dict
             )
     return merge_nested_dicts(native_components, custom_components_from_file)
-
-
-@router.get("/load_custom_component_from_path")
-def get_load_custom_component_from_path(path: str):
-    try:
-        data = build_langchain_custom_component_list_from_path(path)
-    except CustomComponentPathValueError as err:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": type(err).__name__, "traceback": str(err)},
-        ) from err
-
-    return data
-
-
-@router.get("/load_custom_component_from_path_TEST")
-def get_load_custom_component_from_path_test(path: str):
-    from langflow.interface.custom.directory_reader import (
-        DirectoryReader,
-    )
-
-    reader = DirectoryReader(path, False)
-    file_list = reader.get_files()
-    data = reader.build_component_menu_list(file_list)
-
-    return reader.filter_loaded_components(data, True)
 
 
 # For backwards compatibility we will keep the old endpoint
