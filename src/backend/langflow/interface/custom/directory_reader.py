@@ -224,9 +224,15 @@ class DirectoryReader:
                 "path": os.path.dirname(file_path),
                 "components": [],
             }
+            component_name = filename.split(".")[0]
+            # This is the name of the file which will be displayed in the UI
+            # We need to change it from snake_case to CamelCase
+            camel_case_name = " ".join(
+                word.title() for word in component_name.split("_")
+            )
 
             component_info = {
-                "name": filename.split(".")[0],
+                "name": camel_case_name,
                 "file": filename,
                 "code": result_content if validation_result else "",
                 "error": "" if validation_result else result_content,
