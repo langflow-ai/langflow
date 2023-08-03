@@ -193,8 +193,9 @@ export function validateNode(
             .getEdges()
             .some(
               (e) =>
-                e.targetHandle.split("|")[1] === t &&
-                e.targetHandle.split("|")[2] === n.id
+                (JSON.parse(e.targetHandle) as targetHandleType).fieldName ===
+                  t &&
+                (JSON.parse(e.targetHandle) as targetHandleType).id === n.id
             )
           ? [
               `${type} is missing ${
