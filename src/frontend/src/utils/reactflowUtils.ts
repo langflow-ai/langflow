@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { Connection, ReactFlowInstance } from "reactflow";
+import { Connection, Edge, ReactFlowInstance } from "reactflow";
 import { APITemplateType } from "../types/api";
 import { FlowType, NodeType } from "../types/flow";
 import { cleanEdgesType } from "../types/utils/reactflowUtils";
@@ -240,3 +240,12 @@ export function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>, inputVal
     e.stopPropagation();
   }
 };
+
+export function getConnectedNodes(
+  edge: Edge,
+  nodes: Array<NodeType>
+): Array<NodeType> {
+  const sourceId = edge.source;
+  const targetId = edge.target;
+  return nodes.filter((node) => node.id === targetId || node.id === sourceId);
+}
