@@ -57,25 +57,21 @@ export function cleanEdges({
   updateEdge(newEdges);
 }
 
+// add comments to this function
 export function isValidConnection(
   { source, target, sourceHandle, targetHandle }: Connection,
   reactFlowInstance: ReactFlowInstance
 ) {
+  const targetHandleObject: targetHandleType = JSON.parse(targetHandle);
+  const sourceHandleObject: sourceHandleType = JSON.parse(sourceHandle);
   if (
-    targetHandle
-      .split("|")[0]
-      .split(";")
-      .some((n) => n === sourceHandle.split("|")[0]) ||
-    sourceHandle
-      .split("|")
-      .slice(2)
-      .some((t) =>
-        targetHandle
-          .split("|")[0]
-          .split(";")
-          .some((n) => n === t)
-      ) ||
-    targetHandle.split("|")[0] === "str"
+    targetHandleObject.inputTypes?.some(
+      (n) => n === sourceHandleObject.dataType
+    ) ||
+    sourceHandleObject.baseClasses.some((t) =>
+      targetHandleObject.inputTypes?.some((n) => n === t)
+    ) ||
+    targetHandleObject.type === "str"
   ) {
     let targetNode = reactFlowInstance?.getNode(target)?.data?.node;
     if (!targetNode) {
@@ -87,11 +83,11 @@ export function isValidConnection(
         return true;
       }
     } else if (
-      (!targetNode.template[targetHandle.split("|")[1]].list &&
+      (!targetNode.template[targetHandleObject.fieldName].list &&
         !reactFlowInstance
           .getEdges()
           .find((e) => e.targetHandle === targetHandle)) ||
-      targetNode.template[targetHandle.split("|")[1]].list
+      targetNode.template[targetHandleObject.fieldName].list
     ) {
       return true;
     }
