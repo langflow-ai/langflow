@@ -1028,6 +1028,7 @@ packaging = "*"
 name = "dill"
 version = "0.3.7"
 description = "serialize all of Python"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -3455,6 +3456,7 @@ files = [
 name = "multiprocess"
 version = "0.70.15"
 description = "better multiprocessing and multithreading in Python"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
