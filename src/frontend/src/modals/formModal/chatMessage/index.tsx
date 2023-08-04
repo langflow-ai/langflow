@@ -88,7 +88,7 @@ export default function ChatMessage({
                         <ReactMarkdown
                           remarkPlugins={[remarkGfm, remarkMath]}
                           rehypePlugins={[rehypeMathjax]}
-                          className="markdown prose inline-block break-words text-primary dark:prose-invert
+                          className="markdown prose inline-block text-primary word-break-break-word dark:prose-invert
                       sm:w-[30vw] sm:max-w-[30vw] lg:w-[40vw] lg:max-w-[40vw]"
                           components={{
                             pre({ node, ...props }) {
@@ -187,7 +187,7 @@ export default function ChatMessage({
                   }
                 />
               </button>
-              <span className="prose inline-block break-words text-primary dark:prose-invert">
+              <span className="prose inline-block text-primary word-break-break-word dark:prose-invert">
                 {promptOpen
                   ? template?.split("\n")?.map((line, index) => {
                       const regex = /{([^}]+)}/g;
