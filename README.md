@@ -33,7 +33,7 @@
   - [HuggingFace Spaces](#huggingface-spaces)
 - [🖥️ Command Line Interface (CLI)](#️-command-line-interface-cli)
   - [Usage](#usage)
-  - [Environment Variables](#environment-variables)
+    - [Environment Variables](#environment-variables)
 - [Deployment](#deployment)
   - [Deploy Langflow on Google Cloud Platform](#deploy-langflow-on-google-cloud-platform)
   - [Deploy Langflow on Jina AI Cloud](#deploy-langflow-on-jina-ai-cloud)
@@ -112,7 +112,6 @@ Each option is detailed below:
 - `--cache`: Selects the type of cache to use. Options are `InMemoryCache` and `SQLiteCache`. Can be set using the `LANGFLOW_LANGCHAIN_CACHE` environment variable. The default is `SQLiteCache`.
 - `--jcloud/--no-jcloud`: Toggles the option to deploy on Jina AI Cloud. The default is `no-jcloud`.
 - `--dev/--no-dev`: Toggles the development mode. The default is `no-dev`.
-- `--database-url`: Sets the database URL to connect to. If not provided, a local SQLite database will be used. Can be set using the `LANGFLOW_DATABASE_URL` environment variable.
 - `--path`: Specifies the path to the frontend directory containing build files. This option is for development purposes only. Can be set using the `LANGFLOW_FRONTEND_PATH` environment variable.
 - `--open-browser/--no-open-browser`: Toggles the option to open the browser after starting the server. Can be set using the `LANGFLOW_OPEN_BROWSER` environment variable. The default is `open-browser`.
 - `--remove-api-keys/--no-remove-api-keys`: Toggles the option to remove API keys from the projects saved in the database. Can be set using the `LANGFLOW_REMOVE_API_KEYS` environment variable. The default is `no-remove-api-keys`.
