@@ -1,4 +1,3 @@
-import os
 import sys
 import time
 import httpx
@@ -25,49 +24,25 @@ def update_settings(
     config: str,
     cache: str,
     dev: bool = False,
-    database_url: Optional[str] = None,
     remove_api_keys: bool = False,
     components_path: Optional[Path] = None,
 ):
     """Update the settings from a config file."""
 
     # Check for database_url in the environment variables
-    database_url = database_url or os.getenv("langflow_database_url")
 
     if config:
         logger.debug(f"Loading settings from {config}")
         settings.update_from_yaml(config, dev=dev)
-    if database_url:
-        settings.update_settings(database_url=database_url)
     if remove_api_keys:
         logger.debug(f"Setting remove_api_keys to {remove_api_keys}")
-        settings.update_settings(remove_api_keys=remove_api_keys)
+        settings.update_settings(REMOVE_API_KEYS=remove_api_keys)
     if cache:
         logger.debug(f"Setting cache to {cache}")
-        settings.update_settings(cache=cache)
+        settings.update_settings(CACHE=cache)
     if components_path:
         logger.debug(f"Adding component path {components_path}")
-        settings.update_settings(components_path=components_path)
-
-
-def load_params():
-    """
-    Load the parameters from the environment variables.
-    """
-    global_vars = globals()
-
-    for key, value in global_vars.items():
-        env_key = f"LANGFLOW_{key.upper()}"
-        if env_key in os.environ:
-            if isinstance(value, bool):
-                # Handle booleans
-                global_vars[key] = os.getenv(env_key, str(value)).lower() == "true"
-            elif isinstance(value, int):
-                # Handle integers
-                global_vars[key] = int(os.getenv(env_key, str(value)))
-            elif isinstance(value, str) or value is None:
-                # Handle strings and None values
-                global_vars[key] = os.getenv(env_key, str(value))
+        settings.update_settings(COMPONENTS_PATH=components_path)
 
 
 def serve_on_jcloud():
@@ -134,7 +109,7 @@ def serve(
     config: str = typer.Option("config.yaml", help="Path to the configuration file."),
     # .env file param
     env_file: Path = typer.Option(
-        ".env", help="Path to the .env file containing environment variables."
+        None, help="Path to the .env file containing environment variables."
     ),
     log_level: str = typer.Option(
         "critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"
@@ -149,11 +124,13 @@ def serve(
     ),
     jcloud: bool = typer.Option(False, help="Deploy on Jina AI Cloud"),
     dev: bool = typer.Option(False, help="Run in development mode (may contain bugs)"),
-    database_url: str = typer.Option(
-        None,
-        help="Database URL to connect to. If not provided, a local SQLite database will be used.",
-        envvar="LANGFLOW_DATABASE_URL",
-    ),
+    # This variable does not work but is set by the .env file
+    # and works with Pydantic
+    # database_url: str = typer.Option(
+    #     None,
+    #     help="Database URL to connect to. If not provided, a local SQLite database will be used.",
+    #     envvar="LANGFLOW_DATABASE_URL",
+    # ),
     path: str = typer.Option(
         None,
         help="Path to the frontend directory containing build files. This is for development purposes only.",
@@ -176,7 +153,6 @@ def serve(
     # override env variables with .env file
     if env_file:
         load_dotenv(env_file, override=True)
-        load_params()
 
     if jcloud:
         return serve_on_jcloud()
@@ -185,7 +161,6 @@ def serve(
     update_settings(
         config,
         dev=dev,
-        database_url=database_url,
         remove_api_keys=remove_api_keys,
         cache=cache,
         components_path=components_path,
