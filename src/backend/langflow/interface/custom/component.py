@@ -67,6 +67,3 @@ class Component(BaseModel):
                     template_config["beta"] = ast.literal_eval(item_value)
 
         return template_config
-
-    def build(self):
-        raise NotImplementedError
