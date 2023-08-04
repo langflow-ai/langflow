@@ -9,7 +9,7 @@ import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { NodeDataType } from "../../types/flow";
-import { cleanEdges } from "../../utils/reactflowUtils";
+import { cleanEdges, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, toTitleCase } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
@@ -165,7 +165,7 @@ export default function GenericNode({
                   {data.node.template[t].show &&
                   !data.node.template[t].advanced ? (
                     <ParameterComponent
-                      key={JSON.stringify({
+                      key={scapedJSONStringfy({
                         inputTypes: data.node.template[t].input_types,
                         type: data.node.template[t].type,
                         id: data.id,
@@ -216,7 +216,7 @@ export default function GenericNode({
               {" "}
             </div>
             <ParameterComponent
-              key={JSON.stringify({
+              key={scapedJSONStringfy({
                 baseClasses: data.node.base_classes,
                 id: data.id,
                 dataType: data.type,

@@ -27,6 +27,8 @@ import {
 import { TabsContextType, TabsState } from "../types/tabs";
 import {
   addVersionToDuplicates,
+  scapeJSONParse,
+  scapedJSONStringfy,
   updateEdgesHandleIds,
   updateIds,
   updateTemplate,
@@ -198,13 +200,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   ) {
     flow.data.edges.forEach((edge) => {
       if (edge.source === node.id) {
-        let sourceHandleObject: sourceHandleType = JSON.parse(
+        let sourceHandleObject: sourceHandleType = scapeJSONParse(
           edge.sourceHandle
         );
         sourceHandleObject.baseClasses = sourceHandleObject.baseClasses.concat(
           template["base_classes"]
         );
-        edge.sourceHandle = JSON.stringify(sourceHandleObject);
+        edge.sourceHandle = scapedJSONStringfy(sourceHandleObject);
       }
     });
   }
@@ -411,13 +413,17 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     selectionInstance.edges.forEach((e: Edge) => {
       let source = idsMap[e.source];
       let target = idsMap[e.target];
-      const sourceHandleObject: sourceHandleType = JSON.parse(e.sourceHandle);
-      let sourceHandle = JSON.stringify({
+      const sourceHandleObject: sourceHandleType = scapeJSONParse(
+        e.sourceHandle
+      );
+      let sourceHandle = scapedJSONStringfy({
         ...sourceHandleObject,
         id: e.source,
       });
-      const targetHandleObject: targetHandleType = JSON.parse(e.targetHandle);
-      let targetHandle = JSON.stringify({
+      const targetHandleObject: targetHandleType = scapeJSONParse(
+        e.targetHandle
+      );
+      let targetHandle = scapedJSONStringfy({
         ...targetHandleObject,
         id: e.target,
       });
@@ -506,7 +512,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
   const updateEdges = (edges: Edge[]) => {
     edges.forEach((edge) => {
-      const targetHandleObject: targetHandleType = JSON.parse(
+      const targetHandleObject: targetHandleType = scapeJSONParse(
         edge.targetHandle
       );
       edge.className =
@@ -527,13 +533,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       if (Object.keys(template["template"]).length > 0) {
         node.data.node.base_classes = template["base_classes"];
         edges.forEach((edge) => {
-          let sourceHandleObject: sourceHandleType = JSON.parse(
+          let sourceHandleObject: sourceHandleType = scapeJSONParse(
             edge.sourceHandle
           );
           if (edge.source === node.id) {
             let newSourceHandle = sourceHandleObject;
             newSourceHandle.baseClasses.concat(template["base_classes"]);
-            edge.sourceHandle = JSON.stringify(newSourceHandle);
+            edge.sourceHandle = scapedJSONStringfy(newSourceHandle);
           }
         });
         node.data.node.description = template["description"];

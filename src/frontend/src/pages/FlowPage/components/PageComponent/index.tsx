@@ -26,7 +26,10 @@ import { typesContext } from "../../../../contexts/typesContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import { APIClassType } from "../../../../types/api";
 import { FlowType, NodeType, targetHandleType } from "../../../../types/flow";
-import { isValidConnection } from "../../../../utils/reactflowUtils";
+import {
+  isValidConnection,
+  scapeJSONParse,
+} from "../../../../utils/reactflowUtils";
 import { isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import ExtraSidebar from "../extraSidebarComponent";
@@ -185,12 +188,12 @@ export default function Page({ flow }: { flow: FlowType }) {
             ...params,
             style: { stroke: "#555" },
             className:
-              ((JSON.parse(params.targetHandle) as targetHandleType).type ===
-              "Text"
+              ((scapeJSONParse(params.targetHandle) as targetHandleType)
+                .type === "Text"
                 ? "stroke-foreground "
                 : "stroke-foreground ") + " stroke-connection",
             animated:
-              (JSON.parse(params.targetHandle) as targetHandleType).type ===
+              (scapeJSONParse(params.targetHandle) as targetHandleType).type ===
               "Text",
           },
           eds

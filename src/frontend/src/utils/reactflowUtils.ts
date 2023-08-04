@@ -30,7 +30,8 @@ export function cleanEdges({
       const sourceHandle = edge.sourceHandle; //right
       const targetHandle = edge.targetHandle; //left
       if (targetHandle) {
-        const targetHandleObject: targetHandleType = JSON.parse(targetHandle);
+        const targetHandleObject: targetHandleType =
+          scapeJSONParse(targetHandle);
         const field = targetHandleObject.fieldName;
         const id: targetHandleType = {
           type: targetNode.data.node.template[field]?.type,
@@ -38,7 +39,7 @@ export function cleanEdges({
           id: targetNode.data.id,
           inputTypes: targetNode.data.node.template[field]?.input_types,
         };
-        if (JSON.stringify(id) !== targetHandle) {
+        if (scapedJSONStringfy(id) !== targetHandle) {
           newEdges = newEdges.filter((e) => e.id !== edge.id);
         }
       }
@@ -48,7 +49,7 @@ export function cleanEdges({
           baseClasses: sourceNode.data.node.base_classes,
           dataType: sourceNode.data.type,
         };
-        if (JSON.stringify(id) !== sourceHandle) {
+        if (scapedJSONStringfy(id) !== sourceHandle) {
           newEdges = newEdges.filter((e) => e.id !== edge.id);
         }
       }
@@ -62,14 +63,17 @@ export function isValidConnection(
   { source, target, sourceHandle, targetHandle }: Connection,
   reactFlowInstance: ReactFlowInstance
 ) {
-  const targetHandleObject: targetHandleType = JSON.parse(targetHandle);
-  const sourceHandleObject: sourceHandleType = JSON.parse(sourceHandle);
+  const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle);
+  const sourceHandleObject: sourceHandleType = scapeJSONParse(sourceHandle);
+  console.log(sourceHandleObject, targetHandleObject);
   if (
     targetHandleObject.inputTypes?.some(
       (n) => n === sourceHandleObject.dataType
     ) ||
-    sourceHandleObject.baseClasses.some((t) =>
-      targetHandleObject.inputTypes?.some((n) => n === t)
+    sourceHandleObject.baseClasses.some(
+      (t) =>
+        targetHandleObject.inputTypes?.some((n) => n === t) ||
+        t === targetHandleObject.type
     ) ||
     targetHandleObject.type === "str"
   ) {
@@ -145,10 +149,16 @@ export function updateIds(newFlow, getNodeId) {
   newFlow.edges.forEach((e: Edge) => {
     e.source = idsMap[e.source];
     e.target = idsMap[e.target];
-    const sourceHandleObject: sourceHandleType = JSON.parse(e.sourceHandle);
-    e.sourceHandle = JSON.stringify({ ...sourceHandleObject, id: e.source });
-    const targetHandleObject: targetHandleType = JSON.parse(e.targetHandle);
-    e.targetHandle = JSON.stringify({ ...targetHandleObject, id: e.target });
+    const sourceHandleObject: sourceHandleType = scapeJSONParse(e.sourceHandle);
+    e.sourceHandle = scapedJSONStringfy({
+      ...sourceHandleObject,
+      id: e.source,
+    });
+    const targetHandleObject: targetHandleType = scapeJSONParse(e.targetHandle);
+    e.targetHandle = scapedJSONStringfy({
+      ...targetHandleObject,
+      id: e.target,
+    });
     e.id =
       "reactflow__edge-" +
       e.source +
@@ -193,9 +203,9 @@ export function validateNode(
             .getEdges()
             .some(
               (e) =>
-                (JSON.parse(e.targetHandle) as targetHandleType).fieldName ===
-                  t &&
-                (JSON.parse(e.targetHandle) as targetHandleType).id === n.id
+                (scapeJSONParse(e.targetHandle) as targetHandleType)
+                  .fieldName === t &&
+                (scapeJSONParse(e.targetHandle) as targetHandleType).id === n.id
             )
           ? [
               `${type} is missing ${
@@ -264,8 +274,8 @@ export function updateEdgesHandleIds({
         baseClasses: sourceNode.data.node.base_classes,
       };
     }
-    edge.sourceHandle = JSON.stringify(newSource);
-    edge.targetHandle = JSON.stringify(newTarget);
+    edge.sourceHandle = scapedJSONStringfy(newSource);
+    edge.targetHandle = scapedJSONStringfy(newTarget);
   });
   return newEdges;
 }
@@ -277,4 +287,11 @@ export function getConnectedNodes(
   const sourceId = edge.source;
   const targetId = edge.target;
   return nodes.filter((node) => node.id === targetId || node.id === sourceId);
+}
+
+export function scapedJSONStringfy(json: object): string {
+  return JSON.stringify(json).replace(/"/g, '\\"');
+}
+export function scapeJSONParse(json: string): any {
+  return JSON.parse(json.replace(/\\"/g, '"'));
 }

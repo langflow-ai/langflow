@@ -17,7 +17,10 @@ import { TOOLTIP_EMPTY } from "../../../../constants/constants";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
-import { isValidConnection } from "../../../../utils/reactflowUtils";
+import {
+  isValidConnection,
+  scapedJSONStringfy,
+} from "../../../../utils/reactflowUtils";
 import {
   nodeColors,
   nodeIconsLucide,
@@ -64,7 +67,7 @@ export default function ParameterComponent({
   let disabled =
     reactFlowInstance
       ?.getEdges()
-      .some((e) => e.targetHandle === JSON.stringify(id)) ?? false;
+      .some((e) => e.targetHandle === scapedJSONStringfy(id)) ?? false;
 
   const { data: myData } = useContext(typesContext);
 
@@ -207,7 +210,7 @@ export default function ParameterComponent({
             <Handle
               type={left ? "target" : "source"}
               position={left ? Position.Left : Position.Right}
-              id={JSON.stringify(id)}
+              id={scapedJSONStringfy(id)}
               isValidConnection={(connection) =>
                 isValidConnection(connection, reactFlowInstance)
               }
