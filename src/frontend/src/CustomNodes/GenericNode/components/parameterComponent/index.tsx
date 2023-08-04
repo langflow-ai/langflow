@@ -87,7 +87,7 @@ export default function ParameterComponent({
   useEffect(() => {
     if (name === "openai_api_base") console.log(info);
     infoHtml.current = (
-      <div className="h-full w-full break-words">
+      <div className="h-full w-full word-break-break-word">
         {info.split("\n").map((line, i) => (
           <p key={i} className="block">
             {line}

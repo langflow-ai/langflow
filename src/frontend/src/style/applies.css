@@ -301,13 +301,13 @@
   }
 
   .error-build-message {
-    @apply mt-6 w-96 cursor-pointer rounded-md bg-error-background  p-4 shadow-xl;
+    @apply mt-6 w-96 cursor-pointer rounded-md bg-error-background p-4 shadow-xl;
   }
   .error-build-message-circle {
     @apply alert-icon text-status-red;
   }
   .error-build-text {
-    @apply text-error-foreground;
+    @apply text-error-foreground word-break-break-word;
   }
   .error-build-foreground {
     @apply error-build-text alert-font-size;
@@ -326,7 +326,7 @@
     @apply alert-icon text-status-green;
   }
   .success-alert-message {
-    @apply alert-font-size text-success-foreground;
+    @apply word-break-break-word alert-font-size text-success-foreground;
   }
 
   .card-component-title-display {
@@ -336,7 +336,7 @@
     @apply flex h-7 w-7 items-center justify-center rounded-full text-2xl;
   }
   .card-component-title-size {
-    @apply inline-block w-full flex-1 break-words truncate-doubleline;
+    @apply inline-block w-full flex-1 word-break-break-word truncate-doubleline;
   }
   .card-component-delete-button {
     @apply flex self-start;
@@ -852,11 +852,11 @@
     @apply bg-white text-primary;
   }
   .code-highlight {
-    @apply block max-h-[64vh] w-full overflow-y-hidden break-all border-0 px-3 py-2 text-sm outline-0;
+    @apply block max-h-[64vh] w-full overflow-y-hidden word-break-break-word border-0 px-3 py-2 text-sm outline-0;
   }
 
   .code-nohighlight {
-    @apply block max-h-[70vh] w-full overflow-y-hidden break-all border-0 px-3 py-2 text-sm outline-0;
+    @apply block max-h-[70vh] w-full overflow-y-hidden word-break-break-word border-0 px-3 py-2 text-sm outline-0;
   }
   .form-modal-lockchat {
     @apply form-input block w-full rounded-md border-border p-4 pr-16 custom-scroll focus:border-ring focus:ring-ring sm:text-sm;
