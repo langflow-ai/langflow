@@ -33,6 +33,7 @@ from langflow.utils import validate
 from langchain.chains.base import Chain
 from langchain.vectorstores.base import VectorStore
 from langchain.document_loaders.base import BaseLoader
+from langflow.utils.logger import logger
 
 
 def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
@@ -44,7 +45,7 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
             if hasattr(custom_node, "initialize"):
                 return custom_node.initialize(**params)
             return custom_node(**params)
-
+    logger.debug(f"Instantiating {node_type} of type {base_type}")
     class_object = import_by_type(_type=base_type, name=node_type)
     return instantiate_based_on_type(class_object, base_type, node_type, params)
 
