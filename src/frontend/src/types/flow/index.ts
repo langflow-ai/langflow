@@ -4,7 +4,7 @@ import { APIClassType } from "../api/index";
 export type FlowType = {
   name: string;
   id: string;
-  data: ReactFlowJsonObject;
+  data: ReactFlowJsonObject | null;
   description: string;
   style?: FlowStyleType;
 };

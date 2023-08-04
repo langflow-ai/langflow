@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Node, addEdge } from "reactflow";
+import { Edge, Node, ReactFlowJsonObject, addEdge } from "reactflow";
 import ShortUniqueId from "short-unique-id";
 import {
   deleteFlowFromDatabase,
@@ -18,8 +18,8 @@ import {
   uploadFlowsToDatabase,
 } from "../controllers/API";
 import { APIClassType, APITemplateType } from "../types/api";
-import { FlowType, NodeDataType, NodeType } from "../types/flow";
-import { TabsContextType, TabsState } from "../types/tabs";
+import { FlowType, NodeDataType, NodeType, TweaksType } from "../types/flow";
+import { TabsContextType, TabsState, errorsVarType } from "../types/tabs";
 import {
   addVersionToDuplicates,
   updateIds,
@@ -78,7 +78,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     edges: any;
   } | null>(null);
   const [tabsState, setTabsState] = useState<TabsState>({});
-  const [getTweak, setTweak] = useState([]);
+  const [getTweak, setTweak] = useState<TweaksType[]>([]);
 
   const newNodeId = useRef(uid());
   function incrementNodeId() {
@@ -133,8 +133,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     //get tabs from db
     return readFlowsFromDatabase();
   }
-  function processDBData(DbData) {
-    DbData.forEach((flow) => {
+  function processDBData(DbData: FlowType[]) {
+    DbData.forEach((flow: FlowType) => {
       try {
         if (!flow.data) {
           return;
@@ -147,7 +147,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  function processFlowEdges(flow) {
+  function processFlowEdges(flow: FlowType) {
     if (!flow.data || !flow.data.edges) return;
     flow.data.edges.forEach((edge) => {
       edge.className = "";
@@ -163,7 +163,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     node.data.node!.documentation = template["documentation"];
   }
 
-  function processFlowNodes(flow) {
+  function processFlowNodes(flow: FlowType) {
     if (!flow.data || !flow.data.nodes) return;
     flow.data.nodes.forEach((node: NodeType) => {
       const template = templates[node.data.type];
@@ -191,7 +191,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     node: NodeType,
     template: APIClassType
   ) {
-    flow.data.edges.forEach((edge) => {
+    flow.data!.edges.forEach((edge) => {
       if (edge.source === node.id) {
         edge.sourceHandle = edge.sourceHandle
           ?.split("|")
@@ -213,7 +213,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     );
   }
 
-  function updateStateWithDbData(tabsData) {
+  function updateStateWithDbData(tabsData: FlowType[]) {
     setFlows(tabsData);
   }
 
@@ -356,7 +356,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
    */
 
   function paste(
-    selectionInstance,
+    selectionInstance: {nodes: Node[], edges: Edge[]},
     position: { x: number; y: number; paneX?: number; paneY?: number }
   ) {
     let minimumX = Infinity;
@@ -364,7 +364,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     let idsMap = {};
     let nodes: Node<NodeDataType>[] = reactFlowInstance!.getNodes();
     let edges = reactFlowInstance!.getEdges();
-    selectionInstance.nodes.forEach((n) => {
+    selectionInstance.nodes.forEach((n: Node) => {
       if (n.position.y < minimumY) {
         minimumY = n.position.y;
       }
@@ -406,14 +406,14 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     selectionInstance.edges.forEach((e) => {
       let source = idsMap[e.source];
       let target = idsMap[e.target];
-      let sourceHandleSplitted = e.sourceHandle.split("|");
+      let sourceHandleSplitted = e.sourceHandle!.split("|");
       let sourceHandle =
         sourceHandleSplitted[0] +
         "|" +
         source +
         "|" +
         sourceHandleSplitted.slice(2).join("|");
-      let targetHandleSplitted = e.targetHandle.split("|");
+      let targetHandleSplitted = e.targetHandle!.split("|");
       let targetHandle =
         targetHandleSplitted.slice(0, -1).join("|") + "|" + target;
       let id =
@@ -449,13 +449,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     newProject?: Boolean
   ): Promise<String | undefined> => {
     if (newProject) {
-      let flowData = extractDataFromFlow(flow);
+      let flowData = extractDataFromFlow(flow!);
       if (flowData.description == "") {
         flowData.description = getRandomDescription();
       }
 
       // Create a new flow with a default name if no flow is provided.
-      const newFlow = createNewFlow(flowData, flow);
+      const newFlow = createNewFlow(flowData, flow!);
       processFlowEdges(newFlow);
       processFlowNodes(newFlow);
 
@@ -480,13 +480,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       }
     } else {
       paste(
-        { nodes: flow!.data.nodes, edges: flow!.data.edges },
+        { nodes: flow!.data!.nodes, edges: flow!.data!.edges },
         { x: 10, y: 10 }
       );
     }
   };
 
-  const extractDataFromFlow = (flow) => {
+  const extractDataFromFlow = (flow: FlowType) => {
     let data = flow?.data ? flow.data : null;
     const description = flow?.description ? flow.description : "";
 
@@ -499,17 +499,17 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     return { data, description };
   };
 
-  const updateEdges = (edges) => {
+  const updateEdges = (edges: Edge[]) => {
     edges.forEach((edge) => {
       edge.className =
-        (edge.targetHandle.split("|")[0] === "Text"
+        (edge.targetHandle!.split("|")[0] === "Text"
           ? "stroke-gray-800 "
           : "stroke-gray-900 ") + " stroke-connection";
-      edge.animated = edge.targetHandle.split("|")[0] === "Text";
+      edge.animated = edge.targetHandle!.split("|")[0] === "Text";
     });
   };
 
-  const updateNodes = (nodes, edges) => {
+  const updateNodes = (nodes: Node[], edges: Edge[]) => {
     nodes.forEach((node) => {
       const template = templates[node.data.type];
       if (!template) {
@@ -520,7 +520,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         node.data.node.base_classes = template["base_classes"];
         edges.forEach((edge) => {
           if (edge.source === node.id) {
-            edge.sourceHandle = edge.sourceHandle
+            edge.sourceHandle = edge.sourceHandle!
               .split("|")
               .slice(0, 2)
               .concat(template["base_classes"])
@@ -536,14 +536,14 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const createNewFlow = (flowData, flow) => ({
+  const createNewFlow = (flowData: { data: ReactFlowJsonObject | null; description: string; }, flow: FlowType) => ({
     description: flowData.description,
     name: flow?.name ?? getRandomName(),
     data: flowData.data,
     id: "",
   });
 
-  const addFlowToLocalState = (newFlow) => {
+  const addFlowToLocalState = (newFlow: FlowType) => {
     setFlows((prevState) => {
       return [...prevState, newFlow];
     });
@@ -594,7 +594,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         });
       }
     } catch (err) {
-      setErrorData(err);
+      setErrorData(err as errorsVarType);
     }
   }
 

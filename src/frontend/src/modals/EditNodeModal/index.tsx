@@ -27,6 +27,7 @@ import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
 import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";
+import { TabsState } from "../../types/tabs";
 
 const EditNodeModal = forwardRef(
   (
@@ -310,7 +311,8 @@ const EditNodeModal = forwardRef(
             className="mt-3"
             onClick={() => {
               setData(cloneDeep(myData)); //saves data with actual state of modal
-              setTabsState((prev) => {
+              //@ts-ignore
+              setTabsState((prev: TabsState) => {
                 return {
                   ...prev,
                   [tabId]: {

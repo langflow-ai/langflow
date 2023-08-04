@@ -42,7 +42,7 @@ export default function GenericModal({
   const [wordsHighlight, setWordsHighlight] = useState<string[]>([]);
   const { setErrorData, setSuccessData, setNoticeData } =
     useContext(alertContext);
-  const ref = useRef<HTMLDivElement>();
+  const ref = useRef<HTMLTextAreaElement | undefined>();
   const divRef = useRef(null);
   const divRefPrompt = useRef(null);
 
@@ -208,7 +208,7 @@ export default function GenericModal({
               <TextAreaContentView />
             ) : type !== TypeModal.PROMPT ? (
               <Textarea
-                ref={ref}
+                ref={ref!}
                 className="form-input h-full w-full rounded-lg focus-visible:ring-1"
                 value={inputValue}
                 onChange={(e) => {

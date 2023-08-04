@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { Connection, ReactFlowInstance } from "reactflow";
+import { Connection, ReactFlowInstance, ReactFlowJsonObject } from "reactflow";
 import { APITemplateType } from "../types/api";
 import { FlowType, NodeType } from "../types/flow";
 import { cleanEdgesType } from "../types/utils/reactflowUtils";
@@ -93,7 +93,7 @@ export function isValidConnection(
 
 export function removeApiKeys(flow: FlowType): FlowType {
   let cleanFLow = _.cloneDeep(flow);
-  cleanFLow.data.nodes.forEach((node) => {
+  cleanFLow.data!.nodes.forEach((node) => {
     for (const key in node.data.node.template) {
       if (node.data.node.template[key].password) {
         node.data.node.template[key].value = "";
@@ -126,7 +126,7 @@ export function updateTemplate(
   return clonedObject;
 }
 
-export function updateIds(newFlow, getNodeId) {
+export function updateIds(newFlow: ReactFlowJsonObject, getNodeId: (type: string) => string) {
   let idsMap = {};
 
   newFlow.nodes.forEach((n: NodeType) => {
@@ -141,14 +141,14 @@ export function updateIds(newFlow, getNodeId) {
   newFlow.edges.forEach((e) => {
     e.source = idsMap[e.source];
     e.target = idsMap[e.target];
-    let sourceHandleSplitted = e.sourceHandle.split("|");
+    let sourceHandleSplitted = e.sourceHandle!.split("|");
     e.sourceHandle =
       sourceHandleSplitted[0] +
       "|" +
       e.source +
       "|" +
       sourceHandleSplitted.slice(2).join("|");
-    let targetHandleSplitted = e.targetHandle.split("|");
+    let targetHandleSplitted = e.targetHandle!.split("|");
     e.targetHandle =
       targetHandleSplitted.slice(0, -1).join("|") + "|" + e.target;
     e.id =
@@ -161,8 +161,8 @@ export function updateIds(newFlow, getNodeId) {
   });
 }
 
-export function buildTweaks(flow) {
-  return flow.data.nodes.reduce((acc, node) => {
+export function buildTweaks(flow: FlowType) {
+  return flow.data!.nodes.reduce((acc, node) => {
     acc[node.data.id] = {};
     return acc;
   }, {});

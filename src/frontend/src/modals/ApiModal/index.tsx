@@ -3,6 +3,7 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 import {
+  MutableRefObject,
   ReactNode,
   forwardRef,
   useContext,
@@ -15,7 +16,7 @@ import CodeTabsComponent from "../../components/codeTabsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { EXPORT_CODE_DIALOG } from "../../constants/constants";
 import { TabsContext } from "../../contexts/tabsContext";
-import { FlowType } from "../../types/flow/index";
+import { FlowType, NodeType } from "../../types/flow/index";
 import { buildTweaks } from "../../utils/reactflowUtils";
 import {
   getCurlCode,
@@ -25,6 +26,7 @@ import {
 } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import { tweakType } from "../../types/components";
+import { APITemplateType } from "../../types/api";
 
 const ApiModal = forwardRef(
   (
@@ -42,7 +44,7 @@ const ApiModal = forwardRef(
     const [open, setOpen] = useState(false);
     const [activeTab, setActiveTab] = useState("0");
     const tweak = useRef<tweakType[]>([]);
-    const tweaksList = useRef([]);
+    const tweaksList = useRef<string[]>([]);
     const { setTweak, getTweak, tabsState } = useContext(TabsContext);
     const pythonApiCode = getPythonApiCode(flow, tweak.current, tabsState);
     const curl_code = getCurlCode(flow, tweak.current, tabsState);
@@ -180,7 +182,7 @@ const ApiModal = forwardRef(
     }, [flow["data"]["nodes"], open]);
 
     function filterNodes() {
-      let arrNodesWithValues = [];
+      let arrNodesWithValues: string[] = [];
 
       flow["data"]["nodes"].forEach((t) => {
         Object.keys(t["data"]["node"]["template"])
@@ -205,7 +207,7 @@ const ApiModal = forwardRef(
         return self.indexOf(value) === index;
       });
     }
-    function buildTweakObject(tw, changes, template) {
+    function buildTweakObject(tw: string, changes: string | string[], template: APITemplateType) {
       if (template.type === "float") {
         changes = parseFloat(changes);
       }
@@ -255,7 +257,7 @@ const ApiModal = forwardRef(
       setTweak(tweak.current);
     }
 
-    function buildContent(value) {
+    function buildContent(value: string) {
       const htmlContent = (
         <div className="w-[200px]">
           <span>{value != null && value != "" ? value : "None"}</span>
@@ -264,7 +266,7 @@ const ApiModal = forwardRef(
       return htmlContent;
     }
 
-    function getValue(value, node, template) {
+    function getValue(value: string, node: NodeType, template: APITemplateType) {
       let returnValue = value ?? "";
 
       if (getTweak.length > 0) {

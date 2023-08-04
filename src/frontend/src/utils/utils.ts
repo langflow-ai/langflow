@@ -89,7 +89,7 @@ export function checkUpperWords(str: string): string {
 export const isWrappedWithClass = (event: any, className: string | undefined) =>
   event.target.closest(`.${className}`);
 
-export function groupByFamily(data, baseClasses: string, left: boolean, flow?: NodeType[]): groupedObjType[] {
+export function groupByFamily(data: APIObjectType, baseClasses: string, left: boolean, flow?: NodeType[]): groupedObjType[] {
   const baseClassesSet = new Set(baseClasses.split("\n"));
   let arrOfPossibleInputs: Array<{ category: string; nodes: string[]; full: boolean; }>  = [];
   let arrOfPossibleOutputs: Array<{ category: string; nodes: string[]; full: boolean; }> = [];
@@ -104,7 +104,7 @@ export function groupByFamily(data, baseClasses: string, left: boolean, flow?: N
     "int",
   ]);
 
-  const checkBaseClass = (t: any) =>
+  const checkBaseClass = (t) =>
     t.type &&
     t.show &&
     ((!excludeTypes.has(t.type) && baseClassesSet.has(t.type)) ||
@@ -234,7 +234,7 @@ export function varHighlightHTML({ name }: IVarHighlightType): string {
   return html;
 }
 
-export function buildTweakObject(tweak: tweakType[]): string {
+export function buildTweakObject(tweak: tweakType[]) {
   tweak.forEach((el) => {
     Object.keys(el).forEach((key) => {
       for (let kp in el[key]) {
@@ -244,7 +244,6 @@ export function buildTweakObject(tweak: tweakType[]): string {
       }
     });
   });
-
   const tweakString = JSON.stringify(tweak.at(-1), null, 2);
   return tweakString;
 }

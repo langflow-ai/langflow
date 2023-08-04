@@ -4,6 +4,7 @@ import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
 import { InputProps } from "../../types/components";
 import { readFlowsFromDatabase } from "../../controllers/API";
+import { FlowType } from "../../types/flow";
 
 export const EditFlowSettings: React.FC<InputProps> = ({
   name,
@@ -15,13 +16,12 @@ export const EditFlowSettings: React.FC<InputProps> = ({
   tabId,
   setName,
   setDescription,
-  updateFlow,
 }: InputProps): JSX.Element => {
   const [isMaxLength, setIsMaxLength] = useState(false);
   const nameLists = useRef<string[]>([]);
   useEffect(() => {
     readFlowsFromDatabase().then((flows) => {
-      flows.forEach((flow) => {
+      flows.forEach((flow: FlowType) => {
         nameLists.current.push(flow.name);
       });
     });
@@ -35,9 +35,9 @@ export const EditFlowSettings: React.FC<InputProps> = ({
       setIsMaxLength(false);
     }
     if (!nameLists.current.includes(value)) {
-      setInvalidName(false);
+      setInvalidName!(false);
     } else {
-      setInvalidName(true);
+      setInvalidName!(true);
     }
     setName(value);
   };

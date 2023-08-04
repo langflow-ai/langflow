@@ -8,7 +8,7 @@ const api: AxiosInstance = axios.create({
   baseURL: "",
 });
 
-function ApiInterceptor() {
+function ApiInterceptor(): null {
   const retryCounts = useRef([]);
   const { setErrorData } = useContext(alertContext);
 
@@ -55,7 +55,7 @@ function ApiInterceptor() {
 }
 
 // Function to sleep for a given duration in milliseconds
-function sleep(ms) {
+function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 

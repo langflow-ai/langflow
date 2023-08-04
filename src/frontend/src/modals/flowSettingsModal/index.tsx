@@ -47,7 +47,6 @@ export default function FlowSettingsModal({
           tabId={tabId}
           setName={setName}
           setDescription={setDescription}
-          updateFlow={updateFlow}
         />
       </BaseModal.Content>
 
