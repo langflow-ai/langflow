@@ -281,28 +281,30 @@ def add_base_classes(frontend_node, return_type):
 
 def build_langchain_template_custom_component(custom_component: CustomComponent):
     """Build a custom component template for the langchain"""
+    logger.debug("Building custom component template")
     frontend_node = build_frontend_node(custom_component)
 
     if frontend_node is None:
         return None
-
+    logger.debug("Built base frontend node")
     template_config = custom_component.build_template_config
 
     update_attributes(frontend_node, template_config)
-
+    logger.debug("Updated attributes")
     field_config = build_field_config(custom_component)
+    logger.debug("Built field config")
     add_extra_fields(
         frontend_node, field_config, custom_component.get_function_entrypoint_args
     )
-
+    logger.debug("Added extra fields")
     frontend_node = add_code_field(
         frontend_node, custom_component.code, field_config.get("code", {})
     )
-
+    logger.debug("Added code field")
     add_base_classes(
         frontend_node, custom_component.get_function_entrypoint_return_type
     )
-
+    logger.debug("Added base classes")
     return frontend_node
 
 
@@ -313,7 +315,7 @@ def load_files_from_path(path: str):
     return reader.get_files()
 
 
-def build_and_validate_all_files(reader, file_list):
+def build_and_validate_all_files(reader: DirectoryReader, file_list):
     """Build and validate all files"""
     data = reader.build_component_menu_list(file_list)
 
@@ -326,6 +328,7 @@ def build_and_validate_all_files(reader, file_list):
 def build_valid_menu(valid_components):
     """Build the valid menu"""
     valid_menu = {}
+    logger.debug("------------------- VALID COMPONENTS -------------------")
     for menu_item in valid_components["menu"]:
         menu_name = menu_item["name"]
         valid_menu[menu_name] = {}
@@ -339,12 +342,14 @@ def build_valid_menu(valid_components):
 
                 component_extractor = CustomComponent(code=component_code)
                 component_extractor.is_check_valid()
+
                 component_template = build_langchain_template_custom_component(
                     component_extractor
                 )
                 component_template["output_types"] = component_output_types
 
-                valid_menu[menu_name][component_name] = component_template
+                valid_menu[menu_name][component.get("file")] = component_template
+                logger.debug(f"Added {component_name} to valid menu to {menu_name}")
 
             except Exception as exc:
                 logger.error(f"Error loading Component: {component['output_types']}")
@@ -357,6 +362,8 @@ def build_valid_menu(valid_components):
 
 def build_invalid_menu(invalid_components):
     """Build the invalid menu"""
+    if invalid_components.get("menu"):
+        logger.debug("------------------- INVALID COMPONENTS -------------------")
     invalid_menu = {}
     for menu_item in invalid_components["menu"]:
         menu_name = menu_item["name"]
@@ -377,12 +384,16 @@ def build_invalid_menu(invalid_components):
                 )
 
                 component_template["error"] = component.get("error", None)
+                logger.debug(component)
+                logger.debug(f"Component Path: {component.get('path', None)}")
+                logger.debug(f"Component Error: {component.get('error', None)}")
                 component_template.get("template").get("code")["value"] = component_code
 
                 invalid_menu[menu_name][component_name] = component_template
+                logger.debug(f"Added {component_name} to invalid menu to {menu_name}")
 
             except Exception as exc:
-                logger.error(
+                logger.exception(
                     f"Error while creating custom component [{component_name}]: {str(exc)}"
                 )
 
