@@ -25,7 +25,9 @@ class PromptRunner(CustomComponent):
         prompt: PromptTemplate,
     ) -> Document:
         chain = prompt | llm
-        result = chain.invoke()
-        result = result[chain.output_key]
+        # The input is an empty dict because the prompt is already filled
+        result = chain.invoke({})
+        if hasattr(result, "content"):
+            result = result.content
         self.repr_value = result
         return Document(page_content=str(result))
