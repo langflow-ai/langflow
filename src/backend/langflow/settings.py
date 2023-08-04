@@ -3,69 +3,76 @@ from typing import Optional, List
 from pathlib import Path
 
 import yaml
-from pydantic import BaseSettings, root_validator
+from pydantic import BaseSettings, root_validator, validator
 from langflow.utils.logger import logger
 
 BASE_COMPONENTS_PATH = Path(__file__).parent / "components"
 
 
 class Settings(BaseSettings):
-    chains: dict = {}
-    agents: dict = {}
-    prompts: dict = {}
-    llms: dict = {}
-    tools: dict = {}
-    memories: dict = {}
-    embeddings: dict = {}
-    vectorstores: dict = {}
-    documentloaders: dict = {}
-    wrappers: dict = {}
-    retrievers: dict = {}
-    toolkits: dict = {}
-    textsplitters: dict = {}
-    utilities: dict = {}
-    output_parsers: dict = {}
-    custom_components: dict = {}
+    CHAINS: dict = {}
+    AGENTS: dict = {}
+    PROMPTS: dict = {}
+    LLMS: dict = {}
+    TOOLS: dict = {}
+    MEMORIES: dict = {}
+    EMBEDDINGS: dict = {}
+    VECTORSTORES: dict = {}
+    DOCUMENTLOADERS: dict = {}
+    WRAPPERS: dict = {}
+    RETRIEVERS: dict = {}
+    TOOLKITS: dict = {}
+    TEXTSPLITTERS: dict = {}
+    UTILITIES: dict = {}
+    OUTPUT_PARSERS: dict = {}
+    CUSTOM_COMPONENTS: dict = {}
 
-    dev: bool = False
-    database_url: Optional[str] = None
-    cache: str = "InMemoryCache"
-    remove_api_keys: bool = False
-    components_path: List[Path]
+    DEV: bool = False
+    DATABASE_URL: Optional[str] = None
+    CACHE: str = "InMemoryCache"
+    REMOVE_API_KEYS: bool = False
+    COMPONENTS_PATH: List[Path] = []
 
-    @root_validator(pre=True)
-    def set_env_variables(cls, values):
-        if "database_url" not in values:
+    @validator("DATABASE_URL", pre=True)
+    def set_database_url(cls, value):
+        if not value:
             logger.debug(
                 "No database_url provided, trying LANGFLOW_DATABASE_URL env variable"
             )
             if langflow_database_url := os.getenv("LANGFLOW_DATABASE_URL"):
-                values["database_url"] = langflow_database_url
+                value = langflow_database_url
+                logger.debug("Using LANGFLOW_DATABASE_URL env variable.")
             else:
                 logger.debug("No DATABASE_URL env variable, using sqlite database")
-                values["database_url"] = "sqlite:///./langflow.db"
+                value = "sqlite:///./langflow.db"
 
-        if not values.get("components_path"):
-            values["components_path"] = [BASE_COMPONENTS_PATH]
-            logger.debug("No components_path provided, using default components path")
-        elif BASE_COMPONENTS_PATH not in values["components_path"]:
-            values["components_path"].append(BASE_COMPONENTS_PATH)
-            logger.debug("Adding default components path to components_path")
+        return value
 
+    @validator("COMPONENTS_PATH", pre=True)
+    def set_components_path(cls, value):
         if os.getenv("LANGFLOW_COMPONENTS_PATH"):
             logger.debug("Adding LANGFLOW_COMPONENTS_PATH to components_path")
             langflow_component_path = Path(os.getenv("LANGFLOW_COMPONENTS_PATH"))
             if (
                 langflow_component_path.exists()
-                and langflow_component_path not in values["components_path"]
+                and langflow_component_path not in value
             ):
-                values["components_path"].append(langflow_component_path)
+                value.append(langflow_component_path)
                 logger.debug(f"Adding {langflow_component_path} to components_path")
-        return values
+
+        if not value:
+            value = [BASE_COMPONENTS_PATH]
+            logger.debug("No components_path provided, using default components path")
+        elif BASE_COMPONENTS_PATH not in value:
+            value.append(BASE_COMPONENTS_PATH)
+            logger.debug("Adding default components path to components_path")
+
+        return value
 
     class Config:
         validate_assignment = True
         extra = "ignore"
+        env_prefix = "LANGFLOW_"
 
     @root_validator(allow_reuse=True)
     def validate_lists(cls, values):
@@ -76,35 +83,43 @@ class Settings(BaseSettings):
 
     def update_from_yaml(self, file_path: str, dev: bool = False):
         new_settings = load_settings_from_yaml(file_path)
-        self.chains = new_settings.chains or {}
-        self.agents = new_settings.agents or {}
-        self.prompts = new_settings.prompts or {}
-        self.llms = new_settings.llms or {}
-        self.tools = new_settings.tools or {}
-        self.memories = new_settings.memories or {}
-        self.wrappers = new_settings.wrappers or {}
-        self.toolkits = new_settings.toolkits or {}
-        self.textsplitters = new_settings.textsplitters or {}
-        self.utilities = new_settings.utilities or {}
-        self.embeddings = new_settings.embeddings or {}
-        self.vectorstores = new_settings.vectorstores or {}
-        self.documentloaders = new_settings.documentloaders or {}
-        self.retrievers = new_settings.retrievers or {}
-        self.output_parsers = new_settings.output_parsers or {}
-        self.custom_components = new_settings.custom_components or {}
-        self.components_path = new_settings.components_path or []
-        self.dev = dev
+        self.CHAINS = new_settings.CHAINS or {}
+        self.AGENTS = new_settings.AGENTS or {}
+        self.PROMPTS = new_settings.PROMPTS or {}
+        self.LLMS = new_settings.LLMS or {}
+        self.TOOLS = new_settings.TOOLS or {}
+        self.MEMORIES = new_settings.MEMORIES or {}
+        self.WRAPPERS = new_settings.WRAPPERS or {}
+        self.TOOLKITS = new_settings.TOOLKITS or {}
+        self.TEXTSPLITTERS = new_settings.TEXTSPLITTERS or {}
+        self.UTILITIES = new_settings.UTILITIES or {}
+        self.EMBEDDINGS = new_settings.EMBEDDINGS or {}
+        self.VECTORSTORES = new_settings.VECTORSTORES or {}
+        self.DOCUMENTLOADERS = new_settings.DOCUMENTLOADERS or {}
+        self.RETRIEVERS = new_settings.RETRIEVERS or {}
+        self.OUTPUT_PARSERS = new_settings.OUTPUT_PARSERS or {}
+        self.CUSTOM_COMPONENTS = new_settings.CUSTOM_COMPONENTS or {}
+        self.COMPONENTS_PATH = new_settings.COMPONENTS_PATH or []
+        self.DEV = dev
 
     def update_settings(self, **kwargs):
+        logger.debug("Updating settings")
         for key, value in kwargs.items():
-            if hasattr(self, key):
-                if isinstance(getattr(self, key), list):
-                    if isinstance(value, list):
-                        getattr(self, key).extend(value)
-                    else:
-                        getattr(self, key).append(value)
+            # value may contain sensitive information, so we don't want to log it
+            if not hasattr(self, key):
+                logger.debug(f"Key {key} not found in settings")
+                continue
+            logger.debug(f"Updating {key}")
+            if isinstance(getattr(self, key), list):
+                if isinstance(value, list):
+                    getattr(self, key).extend(value)
+                    logger.debug(f"Extended {key}")
                 else:
-                    setattr(self, key, value)
+                    getattr(self, key).append(value)
+                    logger.debug(f"Appended {key}")
+            else:
+                setattr(self, key, value)
+                logger.debug(f"Updated {key}")
 
 
 def save_settings_to_yaml(settings: Settings, file_path: str):
@@ -123,6 +138,12 @@ def load_settings_from_yaml(file_path: str) -> Settings:
 
     with open(file_path, "r") as f:
         settings_dict = yaml.safe_load(f)
+        settings_dict = {k.upper(): v for k, v in settings_dict.items()}
+
+        for key in settings_dict:
+            if key not in Settings.__fields__.keys():
+                raise KeyError(f"Key {key} not found in settings")
+            logger.debug(f"Loading {len(settings_dict[key])} {key} from {file_path}")
 
     return Settings(**settings_dict)
 

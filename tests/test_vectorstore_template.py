@@ -9,4 +9,4 @@ def test_vectorstores_settings(client: TestClient):
     assert response.status_code == 200
     json_response = response.json()
     vectorstores = json_response["vectorstores"]
-    assert set(vectorstores.keys()) == set(settings.vectorstores)
+    assert set(vectorstores.keys()) == set(settings.VECTORSTORES)

@@ -7,7 +7,7 @@ def test_prompts_settings(client: TestClient):
     assert response.status_code == 200
     json_response = response.json()
     prompts = json_response["prompts"]
-    assert set(prompts.keys()) == set(settings.prompts)
+    assert set(prompts.keys()) == set(settings.PROMPTS)
 
 
 def test_prompt_template(client: TestClient):

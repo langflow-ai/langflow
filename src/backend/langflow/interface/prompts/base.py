@@ -34,7 +34,7 @@ class PromptCreator(LangChainTypeCreator):
             self.type_dict = {
                 name: prompt
                 for name, prompt in self.type_dict.items()
-                if name in settings.prompts or settings.dev
+                if name in settings.PROMPTS or settings.DEV
             }
         return self.type_dict
 
