@@ -62,7 +62,7 @@ class Settings(BaseSettings):
 
         if not value:
             value = [BASE_COMPONENTS_PATH]
-            logger.debug("No components_path provided, using default components path")
+            logger.debug("Setting default components path to components_path")
         elif BASE_COMPONENTS_PATH not in value:
             value.append(BASE_COMPONENTS_PATH)
             logger.debug("Adding default components path to components_path")
