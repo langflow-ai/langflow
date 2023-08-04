@@ -235,7 +235,12 @@ export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
 
 export function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>, inputValue: string | string[] | null, block: string)
 {
-  if (e.ctrlKey && inputValue === block && e.key === "Backspace") {
+  if (typeof inputValue === "string" && e.ctrlKey && e.key === "Backspace" && (inputValue === block || inputValue?.charAt(inputValue?.length - 1) === ' ')) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  if (e.ctrlKey && e.key === "Backspace" && inputValue === block) {
     e.preventDefault();
     e.stopPropagation();
   }
