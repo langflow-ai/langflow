@@ -44,6 +44,16 @@ def handle_format_kwargs(prompt, params: Dict):
     return format_kwargs
 
 
+def handle_partial_variables(prompt, format_kwargs: Dict):
+    partial_variables = format_kwargs.copy()
+    partial_variables = {
+        key: value for key, value in partial_variables.items() if value
+    }
+    # Remove handle_keys otherwise LangChain raises an error
+    partial_variables.pop("handle_keys", None)
+    return prompt.partial(**partial_variables)
+
+
 def handle_variable(params: Dict, input_variable: str, format_kwargs: Dict):
     variable = params[input_variable]
     if isinstance(variable, str):
