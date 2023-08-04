@@ -12,5 +12,4 @@ export type cleanEdgesType = {
 export type updateEdgesHandleIdsType = {
   nodes: NodeType[];
   edges: Edge[];
-  setEdges: (edges: Edge[]) => void;
 };

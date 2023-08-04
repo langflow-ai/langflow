@@ -235,8 +235,7 @@ export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
 export function updateEdgesHandleIds({
   edges,
   nodes,
-  setEdges,
-}: updateEdgesHandleIdsType) {
+}: updateEdgesHandleIdsType): Edge[] {
   let newEdges = _.cloneDeep(edges);
   newEdges.forEach((edge) => {
     const sourceNodeId = edge.source;
@@ -268,7 +267,7 @@ export function updateEdgesHandleIds({
     edge.sourceHandle = JSON.stringify(newSource);
     edge.targetHandle = JSON.stringify(newTarget);
   });
-  setEdges(newEdges);
+  return newEdges;
 }
 
 export function getConnectedNodes(
