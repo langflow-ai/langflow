@@ -6,7 +6,11 @@ from langchain.agents.agent import AgentExecutor
 from langchain.agents.agent_toolkits.base import BaseToolkit
 from langchain.agents.tools import BaseTool
 from langflow.interface.initialize.llm import initialize_vertexai
-from langflow.interface.initialize.utils import handle_format_kwargs, handle_node_type
+from langflow.interface.initialize.utils import (
+    handle_format_kwargs,
+    handle_node_type,
+    handle_partial_variables,
+)
 
 from langflow.interface.initialize.vector_store import vecstore_initializer
 
@@ -217,6 +221,9 @@ def instantiate_agent(node_type, class_object: Type[agent_module.Agent], params:
 def instantiate_prompt(node_type, class_object, params: Dict):
     params, prompt = handle_node_type(node_type, class_object, params)
     format_kwargs = handle_format_kwargs(prompt, params)
+    # Now we'll use partial_format to format the prompt
+    if format_kwargs:
+        prompt = handle_partial_variables(prompt, format_kwargs)
     return prompt, format_kwargs
 
 
