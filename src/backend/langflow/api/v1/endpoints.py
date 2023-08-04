@@ -35,19 +35,24 @@ router = APIRouter(tags=["Base"])
 
 @router.get("/all")
 def get_all():
+    logger.debug("Building langchain types dict")
     native_components = build_langchain_types_dict()
     # custom_components is a list of dicts
     # need to merge all the keys into one dict
     custom_components_from_file = {}
     if settings.COMPONENTS_PATH:
+        logger.info(f"Building custom components from {settings.COMPONENTS_PATH}")
         custom_component_dicts = [
             build_langchain_custom_component_list_from_path(str(path))
             for path in settings.COMPONENTS_PATH
         ]
+        logger.info(f"Loading {len(custom_component_dicts)} custom components")
+
         for custom_component_dict in custom_component_dicts:
             custom_components_from_file = merge_nested_dicts(
                 custom_components_from_file, custom_component_dict
             )
+            logger.info(f"Loaded {custom_component_dict}")
     return merge_nested_dicts(native_components, custom_components_from_file)
 
 
