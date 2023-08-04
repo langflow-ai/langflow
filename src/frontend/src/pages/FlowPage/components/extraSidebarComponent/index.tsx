@@ -14,7 +14,7 @@ import {
   nodeIconsLucide,
   nodeNames,
 } from "../../../../utils/styleUtils";
-import { classNames } from "../../../../utils/utils";
+import { classNames, deepMerge } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 import { cloneDeep } from "lodash";
 
@@ -53,12 +53,18 @@ export default function ExtraSidebar() {
     if(getFilterEdge?.length > 0){
       setFilterData((_) => {
         let dataClone = cloneDeep(data);
-        let ret = {};
+
+        let retType = {};
+        let retDisplayName = {};
+
         Object.keys(dataClone).forEach((d: keyof APIObjectType, i) => {
-          ret[d] = {};
+          retType[d] = {};
+          retDisplayName[d] = {};
+
           if(getFilterEdge.some(x => x.family === d)){
             
-            ret[d] = dataClone[d];
+            retType[d] = dataClone[d];
+            retDisplayName[d] = dataClone[d];
 
             const filtered = getFilterEdge.filter(x => x.family === d).pop().type.split(',');
             
@@ -67,17 +73,26 @@ export default function ExtraSidebar() {
             }
 
             if(filtered.some(x => x !== '')){
-              let keys = Object.keys(dataClone[d]).filter((nd => filtered.includes(nd)));
+              let keys = Object.keys(dataClone[d]).filter((nd => filtered.includes(data[d][nd].template._type)));
               Object.keys(dataClone[d]).forEach((element) => {
                 if(!keys.includes(element)){
-                  delete ret[d][element];
+                  delete retType[d][element];
+                }
+              })
+            }
+
+            if(filtered.some(x => x !== '')){
+              let keys = Object.keys(dataClone[d]).filter((nd => filtered.includes(data[d][nd].display_name)));
+              Object.keys(dataClone[d]).forEach((element) => {
+                if(!keys.includes(element)){
+                  delete retType[d][element];
                 }
               })
             }
           }
         });
         setSearch('search');
-        return ret;
+        return deepMerge(retType, retDisplayName);
       });
     }
   }, [getFilterEdge])  
@@ -89,19 +104,41 @@ export default function ExtraSidebar() {
       return;
     }
     setFilterData((_) => {
-      let ret = {};
+      
+      let retType = {};
+      let retDisplayName = {};
+
       Object.keys(data).forEach((d: keyof APIObjectType, i) => {
-        ret[d] = {};
-        let keys = Object.keys(data[d]).filter((nd) =>
-          nd.toLowerCase().includes(e.toLowerCase())
+        retType[d] = {};
+
+        Object.keys(data[d]).forEach((t: string, k) => {
+          let keys = Object.keys(data[d]).filter((nd) =>
+          data[d][nd].template._type.toLowerCase().includes(e.toLowerCase())
         );
         keys.forEach((element) => {
-          ret[d][element] = data[d][element];
+          retType[d][element] = data[d][element];
         });
+        })
       });
-      return ret;
+
+      Object.keys(data).forEach((d: keyof APIObjectType, i) => {
+        retDisplayName[d] = {};
+
+        Object.keys(data[d]).forEach((t: string, k) => {
+          let keys = Object.keys(data[d]).filter((nd) =>
+          data[d][nd].display_name.toLowerCase().includes(e.toLowerCase())
+        );
+        keys.forEach((element) => {
+          retDisplayName[d][element] = data[d][element];
+        });
+        })
+      });
+
+      return deepMerge(retType, retDisplayName);
     });
   }
+
+  
   const flow = flows.find((f) => f.id === tabId);
   useEffect(() => {
     // show components with error on load

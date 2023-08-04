@@ -385,3 +385,20 @@ chat_input_field: Input key that you want the chat to send the user message with
   }host_url="http://localhost:7860" 
 ></langflow-chat>`;
 }
+
+export function deepMerge(target: any, source: any): any {
+  for (const key in source) {
+    if (source.hasOwnProperty(key)) {
+      if (source[key] instanceof Object) {
+        if (!target.hasOwnProperty(key)) {
+          target[key] = source[key];
+        } else {
+          deepMerge(target[key], source[key]);
+        }
+      } else if (!target.hasOwnProperty(key)) {
+        target[key] = source[key];
+      }
+    }
+  }
+  return target;
+}
