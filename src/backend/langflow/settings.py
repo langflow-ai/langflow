@@ -1,3 +1,5 @@
+import contextlib
+import json
 import os
 from typing import Optional, List
 from pathlib import Path
@@ -58,10 +60,17 @@ class Settings(BaseSettings):
                 and langflow_component_path not in value
             ):
                 if isinstance(langflow_component_path, list):
-                    value.extend(langflow_component_path)
-                else:
+                    for path in langflow_component_path:
+                        if path not in value:
+                            value.append(path)
+                    logger.debug(
+                        f"Extending {langflow_component_path} to components_path"
+                    )
+                elif langflow_component_path not in value:
                     value.append(langflow_component_path)
-                logger.debug(f"Adding {langflow_component_path} to components_path")
+                    logger.debug(
+                        f"Appending {langflow_component_path} to components_path"
+                    )
 
         if not value:
             value = [BASE_COMPONENTS_PATH]
@@ -70,6 +79,7 @@ class Settings(BaseSettings):
             value.append(BASE_COMPONENTS_PATH)
             logger.debug("Adding default components path to components_path")
 
+        logger.debug(f"Components path: {value}")
         return value
 
     class Config:
@@ -114,15 +124,22 @@ class Settings(BaseSettings):
                 continue
             logger.debug(f"Updating {key}")
             if isinstance(getattr(self, key), list):
+                # value might be a '[something]' string
+                with contextlib.suppress(json.decoder.JSONDecodeError):
+                    value = json.loads(str(value))
                 if isinstance(value, list):
-                    getattr(self, key).extend(value)
+                    for item in value:
+                        if item not in getattr(self, key):
+                            getattr(self, key).append(item)
                     logger.debug(f"Extended {key}")
                 else:
                     getattr(self, key).append(value)
                     logger.debug(f"Appended {key}")
+
             else:
                 setattr(self, key, value)
                 logger.debug(f"Updated {key}")
+            logger.debug(f"{key}: {getattr(self, key)}")
 
 
 def save_settings_to_yaml(settings: Settings, file_path: str):
