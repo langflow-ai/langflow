@@ -156,6 +156,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   function processFlowEdges(flow: FlowType) {
     if (!flow.data || !flow.data.edges) return;
     if (checkOldEdgesHandles(flow.data.edges)) {
+      console.log("old edges");
       const newEdges = updateEdgesHandleIds(flow.data);
       flow.data.edges = newEdges;
     }
@@ -470,8 +471,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
       // Create a new flow with a default name if no flow is provided.
       const newFlow = createNewFlow(flowData, flow);
-      processFlowEdges(newFlow);
-      processFlowNodes(newFlow);
 
       const flowName = addVersionToDuplicates(newFlow, flows);
 
@@ -505,6 +504,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     const description = flow?.description ? flow.description : "";
 
     if (data) {
+      processFlowEdges(flow);
+      processFlowNodes(flow);
       updateEdges(data.edges);
       updateNodes(data.nodes, data.edges);
       updateIds(data, getNodeId); // Assuming updateIds is defined elsewhere
