@@ -132,21 +132,25 @@ export default function CodeTabsComponent({
       }}
     >
       <div className="api-modal-tablist-div">
-        <TabsList>
-          {tabs.map((tab, index) => (
-            <TabsTrigger
-              className={
-                isMessage ? "data-[state=active]:bg-primary-foreground" : ""
-              }
-              key={index}
-              value={index.toString()}
-            >
-              {tab.name}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        {tabs.length > 0 && tabs[0].name !== "" ? (
+          <TabsList>
+            {tabs.map((tab, index) => (
+              <TabsTrigger
+                className={
+                  isMessage ? "data-[state=active]:bg-primary-foreground" : ""
+                }
+                key={index}
+                value={index.toString()}
+              >
+                {tab.name}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        ) : (
+          <div></div>
+        )}
         {Number(activeTab) < 4 && (
-          <div className="float-right mx-1 flex gap-2">
+          <div className="float-right mx-1 mb-1 mt-2 flex gap-2">
             <button
               className="flex items-center gap-1.5 rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
               onClick={copyToClipboard}
