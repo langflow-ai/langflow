@@ -170,6 +170,29 @@ def initialize_pinecone(class_object: Type[Pinecone], params: dict):
 
 def initialize_chroma(class_object: Type[Chroma], params: dict):
     """Initialize a ChromaDB object from the params"""
+    # chroma_server_host: str | None = None,
+    #     chroma_server_http_port: str | None = None,
+    #     chroma_server_ssl_enabled: bool | None = False,
+    #     chroma_server_grpc_port: str | None = None,
+    #     chroma_server_cors_allow_origins: List[str] = [],
+    # If any of the above params are in params, specially host and port,
+    # we need to build the Chroma settings
+    if (  # type: ignore
+        "chroma_server_host" in params
+        or "chroma_server_http_port" in params
+        or "chroma_server_ssl_enabled" in params
+        or "chroma_server_grpc_port" in params
+        or "chroma_server_cors_allow_origins" in params
+    ):
+        import chromadb
+
+        settings_params = {
+            key: params[key]
+            for key, value_ in params.items()
+            if key.startswith("chroma_server_") and value_
+        }
+        chroma_settings = chromadb.config.Settings(**settings_params)
+        params["client_settings"] = chroma_settings
     persist = params.pop("persist", False)
     if not docs_in_params(params):
         params.pop("documents", None)
