@@ -43,7 +43,7 @@ class ChainCreator(LangChainTypeCreator):
             self.type_dict = {
                 name: chain
                 for name, chain in self.type_dict.items()
-                if name in settings.chains or settings.dev
+                if name in settings.CHAINS or settings.DEV
             }
         return self.type_dict
 

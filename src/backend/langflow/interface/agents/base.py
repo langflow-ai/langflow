@@ -59,7 +59,7 @@ class AgentCreator(LangChainTypeCreator):
                 if hasattr(agent, "function_name")
                 else agent.__name__
             )
-            if agent_name in settings.agents or settings.dev:
+            if agent_name in settings.AGENTS or settings.DEV:
                 names.append(agent_name)
         return names
 

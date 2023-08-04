@@ -51,7 +51,7 @@ class RetrieverCreator(LangChainTypeCreator):
         return [
             retriever
             for retriever in self.type_to_loader_dict.keys()
-            if retriever in settings.retrievers or settings.dev
+            if retriever in settings.RETRIEVERS or settings.DEV
         ]
 
 
