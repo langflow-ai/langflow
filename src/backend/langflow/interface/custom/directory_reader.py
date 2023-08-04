@@ -1,6 +1,7 @@
 import os
 import ast
 import zlib
+from langflow.utils.logger import logger
 
 
 class CustomComponentPathValueError(ValueError):
@@ -74,8 +75,11 @@ class DirectoryReader:
             }
             for menu in data["menu"]
         ]
-        filtred = [menu for menu in items if menu["components"]]
-        return {"menu": filtred}
+        filtered = [menu for menu in items if menu["components"]]
+        logger.debug(
+            f'Filtered components {"with errors" if with_errors else ""}: {filtered}'
+        )
+        return {"menu": filtered}
 
     def validate_code(self, file_content):
         """
@@ -116,7 +120,7 @@ class DirectoryReader:
             file_list.extend(
                 os.path.join(root, filename)
                 for filename in files
-                if filename.endswith(".py")
+                if filename.endswith(".py") and not filename.startswith("__")
             )
         return file_list
 
@@ -213,11 +217,16 @@ class DirectoryReader:
         from the .py files in the directory.
         """
         response = {"menu": []}
+        logger.debug(
+            "-------------------- Building component menu list --------------------"
+        )
 
         for file_path in file_paths:
             menu_name = os.path.basename(os.path.dirname(file_path))
+            logger.debug(f"Menu name: {menu_name}")
             filename = os.path.basename(file_path)
             validation_result, result_content = self.process_file(file_path)
+            logger.debug(f"Validation result: {validation_result}")
 
             menu_result = self.find_menu(response, menu_name) or {
                 "name": menu_name,
@@ -227,9 +236,14 @@ class DirectoryReader:
             component_name = filename.split(".")[0]
             # This is the name of the file which will be displayed in the UI
             # We need to change it from snake_case to CamelCase
-            component_name_camelcase = " ".join(
-                word.title() for word in component_name.split("_")
-            )
+
+            # first check if it's already CamelCase
+            if "_" in component_name:
+                component_name_camelcase = " ".join(
+                    word.title() for word in component_name.split("_")
+                )
+            else:
+                component_name_camelcase = component_name
 
             component_info = {
                 "name": "CustomComponent",
@@ -240,7 +254,10 @@ class DirectoryReader:
             }
             menu_result["components"].append(component_info)
 
+            logger.debug(f"Component info: {component_info}")
             if menu_result not in response["menu"]:
                 response["menu"].append(menu_result)
-
+        logger.debug(
+            "-------------------- Component menu list built --------------------"
+        )
         return response
