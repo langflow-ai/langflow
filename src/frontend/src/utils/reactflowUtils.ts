@@ -295,3 +295,14 @@ export function scapedJSONStringfy(json: object): string {
 export function scapeJSONParse(json: string): any {
   return JSON.parse(json.replace(/\\"/g, '"'));
 }
+
+// this function receives an array of edges and return true if any of the handles are not a json string
+export function checkEdgesHandles(edges: Edge[]): boolean {
+  return edges.some(
+    (edge) =>
+      !edge.sourceHandle ||
+      !edge.targetHandle ||
+      !edge.sourceHandle.includes("{") ||
+      !edge.targetHandle.includes("{")
+  );
+}
