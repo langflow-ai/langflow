@@ -33,7 +33,7 @@ class OutputParserCreator(LangChainTypeCreator):
             self.type_dict = {
                 name: output_parser
                 for name, output_parser in self.type_dict.items()
-                if name in settings.output_parsers or settings.dev
+                if name in settings.OUTPUT_PARSERS or settings.DEV
             }
         return self.type_dict
 
