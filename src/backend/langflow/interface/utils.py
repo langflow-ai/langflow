@@ -69,7 +69,7 @@ def setup_llm_caching():
     try:
         set_langchain_cache(settings)
     except ImportError:
-        logger.warning(f"Could not import {settings.cache}. ")
+        logger.warning(f"Could not import {settings.CACHE}. ")
     except Exception as exc:
         logger.warning(f"Could not setup LLM caching. Error: {exc}")
 

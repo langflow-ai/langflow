@@ -46,7 +46,7 @@ class VectorstoreCreator(LangChainTypeCreator):
         return [
             vectorstore
             for vectorstore in self.type_to_loader_dict.keys()
-            if vectorstore in settings.vectorstores or settings.dev
+            if vectorstore in settings.VECTORSTORES or settings.DEV
         ]
 
 

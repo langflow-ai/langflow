@@ -39,10 +39,10 @@ def get_all():
     # custom_components is a list of dicts
     # need to merge all the keys into one dict
     custom_components_from_file = {}
-    if settings.components_path:
+    if settings.COMPONENTS_PATH:
         custom_component_dicts = [
             build_langchain_custom_component_list_from_path(str(path))
-            for path in settings.components_path
+            for path in settings.COMPONENTS_PATH
         ]
         for custom_component_dict in custom_component_dicts:
             custom_components_from_file = merge_nested_dicts(
