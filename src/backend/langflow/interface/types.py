@@ -347,7 +347,7 @@ def build_valid_menu(valid_components):
                 valid_menu[menu_name][component_name] = component_template
 
             except Exception as exc:
-                logger.error(f"Error loading Component: {component}")
+                logger.error(f"Error loading Component: {component['output_types']}")
                 logger.exception(
                     f"Error while building custom component {component_output_types}: {exc}"
                 )
