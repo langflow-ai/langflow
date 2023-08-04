@@ -28,7 +28,7 @@ class LangChainTypeCreator(BaseModel, ABC):
         """A dict with the name of the component as key and the documentation link as value."""
         if self.name_docs_dict is None:
             try:
-                type_settings = getattr(settings, self.type_name)
+                type_settings = getattr(settings, self.type_name.upper())
                 self.name_docs_dict = {
                     name: value_dict["documentation"]
                     for name, value_dict in type_settings.items()

@@ -33,7 +33,7 @@ class DocumentLoaderCreator(LangChainTypeCreator):
         return [
             documentloader.__name__
             for documentloader in self.type_to_loader_dict.values()
-            if documentloader.__name__ in settings.documentloaders or settings.dev
+            if documentloader.__name__ in settings.DOCUMENTLOADERS or settings.DEV
         ]
 
 
