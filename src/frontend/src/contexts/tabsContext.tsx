@@ -27,6 +27,7 @@ import {
 import { TabsContextType, TabsState } from "../types/tabs";
 import {
   addVersionToDuplicates,
+  updateEdgesHandleIds,
   updateIds,
   updateTemplate,
 } from "../utils/reactflowUtils";
@@ -149,8 +150,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  function processFlowEdges(flow) {
+  function processFlowEdges(flow: FlowType) {
     if (!flow.data || !flow.data.edges) return;
+    const newEdges = updateEdgesHandleIds(flow.data);
+    flow.data.edges = newEdges;
     flow.data.edges.forEach((edge) => {
       edge.className = "";
       edge.style = { stroke: "#555" };
