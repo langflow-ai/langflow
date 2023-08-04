@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { addEdge } from "reactflow";
+import { Edge, addEdge } from "reactflow";
 import ShortUniqueId from "short-unique-id";
 import {
   deleteFlowFromDatabase,
@@ -18,7 +18,12 @@ import {
   uploadFlowsToDatabase,
 } from "../controllers/API";
 import { APIClassType, APITemplateType } from "../types/api";
-import { FlowType, NodeType } from "../types/flow";
+import {
+  FlowType,
+  NodeType,
+  sourceHandleType,
+  targetHandleType,
+} from "../types/flow";
 import { TabsContextType, TabsState } from "../types/tabs";
 import {
   addVersionToDuplicates,
@@ -398,19 +403,19 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     });
     reactFlowInstance.setNodes(nodes);
 
-    selectionInstance.edges.forEach((e) => {
+    selectionInstance.edges.forEach((e: Edge) => {
       let source = idsMap[e.source];
       let target = idsMap[e.target];
-      let sourceHandleSplitted = e.sourceHandle.split("|");
-      let sourceHandle =
-        sourceHandleSplitted[0] +
-        "|" +
-        source +
-        "|" +
-        sourceHandleSplitted.slice(2).join("|");
-      let targetHandleSplitted = e.targetHandle.split("|");
-      let targetHandle =
-        targetHandleSplitted.slice(0, -1).join("|") + "|" + target;
+      const sourceHandleObject: sourceHandleType = JSON.parse(e.sourceHandle);
+      let sourceHandle = JSON.stringify({
+        ...sourceHandleObject,
+        id: e.source,
+      });
+      const targetHandleObject: targetHandleType = JSON.parse(e.targetHandle);
+      let targetHandle = JSON.stringify({
+        ...targetHandleObject,
+        id: e.target,
+      });
       let id =
         "reactflow__edge-" +
         source +
@@ -427,10 +432,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           id,
           style: { stroke: "#555" },
           className:
-            targetHandle.split("|")[0] === "Text"
+            targetHandleObject.type === "Text"
               ? "stroke-gray-800 "
               : "stroke-gray-900 ",
-          animated: targetHandle.split("|")[0] === "Text",
+          animated: targetHandleObject.type === "Text",
           selected: false,
         },
         edges.map((e) => ({ ...e, selected: false }))
@@ -494,13 +499,16 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     return { data, description };
   };
 
-  const updateEdges = (edges) => {
+  const updateEdges = (edges: Edge[]) => {
     edges.forEach((edge) => {
+      const targetHandleObject: targetHandleType = JSON.parse(
+        edge.targetHandle
+      );
       edge.className =
-        (edge.targetHandle.split("|")[0] === "Text"
+        (targetHandleObject.type === "Text"
           ? "stroke-gray-800 "
           : "stroke-gray-900 ") + " stroke-connection";
-      edge.animated = edge.targetHandle.split("|")[0] === "Text";
+      edge.animated = targetHandleObject.type === "Text";
     });
   };
 
@@ -514,12 +522,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       if (Object.keys(template["template"]).length > 0) {
         node.data.node.base_classes = template["base_classes"];
         edges.forEach((edge) => {
+          let sourceHandleObject: sourceHandleType = JSON.parse(
+            edge.sourceHandle
+          );
           if (edge.source === node.id) {
-            edge.sourceHandle = edge.sourceHandle
-              .split("|")
-              .slice(0, 2)
-              .concat(template["base_classes"])
-              .join("|");
+            let newSourceHandle = sourceHandleObject;
+            newSourceHandle.baseClasses.concat(template["base_classes"]);
+            edge.sourceHandle = JSON.stringify(newSourceHandle);
           }
         });
         node.data.node.description = template["description"];
