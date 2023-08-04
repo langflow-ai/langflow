@@ -29,7 +29,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let delay = 1000; // Start delay of 1 second
-    let intervalId;
+    let intervalId: NodeJS.Timer;
     let retryCount = 0; // Count of retry attempts
     const maxRetryCount = 5; // Max retry attempts
 
@@ -78,7 +78,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
 
     // Start the initial interval.
     intervalId = setInterval(getTypes, delay);
-
+    console.log(intervalId)
     return () => {
       // This will clear the interval when the component unmounts, or when the dependencies of the useEffect hook change.
       clearInterval(intervalId!);

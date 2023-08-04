@@ -25,6 +25,7 @@ import { Textarea } from "../../components/ui/textarea";
 import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
 import { TabsContext } from "../../contexts/tabsContext";
 import { validateNodes } from "../../utils/reactflowUtils";
+import { TabsState, errorsVarType } from "../../types/tabs";
 
 export default function FormModal({
   flow,
@@ -354,7 +355,8 @@ export default function FormModal({
         name: flow.name,
         description: flow.description,
       });
-      setTabsState((old) => {
+      //@ts-ignore
+      setTabsState((old: TabsState) => {
         if (!chatKey) return old;
         let newTabsState = _.cloneDeep(old);
         newTabsState[id.current].formKeysData.input_keys![chatKey] = "";
@@ -468,7 +470,8 @@ export default function FormModal({
                             tabsState[id.current].formKeysData.input_keys![i]
                           }
                           onChange={(e) => {
-                            setTabsState((old) => {
+                            //@ts-ignore
+                            setTabsState((old: TabsState) => {
                               let newTabsState = _.cloneDeep(old);
                               newTabsState[id.current].formKeysData.input_keys![
                                 i
@@ -576,7 +579,8 @@ export default function FormModal({
                       sendMessage={sendMessage}
                       setChatValue={(value) => {
                         setChatValue(value);
-                        setTabsState((old) => {
+                        //@ts-ignore
+                        setTabsState((old: TabsState) => {
                           let newTabsState = _.cloneDeep(old);
                           newTabsState[id.current].formKeysData.input_keys![
                             chatKey!

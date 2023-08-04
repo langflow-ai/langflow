@@ -42,13 +42,13 @@ export default function CodeTabsComponent({
   tweaks,
 }: codeTabsPropsType) {
   const [isCopied, setIsCopied] = useState<Boolean>(false);
-  const [data, setData] = useState(flow ? flow["data"]["nodes"] : null);
+  const [data, setData] = useState(flow ? flow["data"]!["nodes"] : null);
   const [openAccordion, setOpenAccordion] = useState<string[]>([]);
   const { dark } = useContext(darkContext);
 
   useEffect(() => {
-    if (flow && flow["data"]["nodes"]) {
-      setData(flow["data"]["nodes"]);
+    if (flow && flow["data"]!["nodes"]) {
+      setData(flow["data"]!["nodes"]);
     }
   }, [flow]);
 

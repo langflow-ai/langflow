@@ -177,10 +177,10 @@ export type InputProps = {
   maxLength?: number;
   flows: Array<{ id: string; name: string; description: string }>;
   tabId: string;
-  invalidName: boolean;
+  invalidName?: boolean;
   setName: (name: string) => void;
   setDescription: (description: string) => void;
-  setInvalidName: (invalidName: boolean) => void;
+  setInvalidName?: (invalidName: boolean) => void;
 };
 
 export type TooltipProps = {
@@ -211,8 +211,24 @@ export type groupedObjType = {
   type: string;
 };
 
+type test = {
+  [char: string]: string;
+}
+
+
+
 export type tweakType = {
-  [key: string]: object;
+  [key: string]: {
+    [char: string]: string;
+  };
+};
+
+export type apiModalTweakType = {
+  current: Array<{
+    [key: string]: {
+      [char: string]: string | number;
+    }
+  }>;
 };
 
 export type nodeToolbarType = {
@@ -240,7 +256,7 @@ export type chatTriggerPropType = {
 };
 
 export type headerFlowsType = {
-  data: ReactFlowJsonObject;
+  data: ReactFlowJsonObject | null;
   description: string;
   id: string;
   name: string;
@@ -408,14 +424,14 @@ export type codeTabsPropsType = {
     buildContent?: (value: string) => ReactNode;
     getValue?: (
       value: string,
-      node: getValueNodeType,
-      template: codeTabsFuncTempType
+      node: NodeType,
+      template: APITemplateType
     ) => string;
     buildTweakObject?: (
       tw: string,
-      changes: string | string[] | boolean,
-      template: codeTabsFuncTempType
-    ) => string;
+      changes: string | string[] | boolean | number,
+      template: APITemplateType
+    ) => string | void;
   };
 };
 

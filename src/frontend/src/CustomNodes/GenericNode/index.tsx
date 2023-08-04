@@ -42,7 +42,7 @@ export default function GenericNode({
           nodes: flow.data.nodes,
         },
         updateEdge: (edge) => {
-          flow.data.edges = edge;
+          flow.data!.edges = edge;
           reactFlowInstance.setEdges(edge);
           updateNodeInternals(data.id);
         },
