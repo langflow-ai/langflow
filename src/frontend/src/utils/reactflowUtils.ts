@@ -297,7 +297,7 @@ export function scapeJSONParse(json: string): any {
 }
 
 // this function receives an array of edges and return true if any of the handles are not a json string
-export function checkEdgesHandles(edges: Edge[]): boolean {
+export function checkOldEdgesHandles(edges: Edge[]): boolean {
   return edges.some(
     (edge) =>
       !edge.sourceHandle ||
