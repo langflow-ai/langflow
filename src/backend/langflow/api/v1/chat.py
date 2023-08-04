@@ -124,10 +124,10 @@ async def stream_build(flow_id: str):
                     yield str(StreamData(event="log", data=log_dict))
                     vertex.build()
                     params = vertex._built_object_repr()
+                    vertex.vertex_type
                     valid = True
-                    logger.debug(
-                        f"Building node {str(params)[:50]}{'...' if len(str(params)) > 50 else ''}"
-                    )
+                    logger.debug(f"Building node {str(vertex.vertex_type)}")
+                    logger.debug(f"Output: {params}")
                     if vertex.artifacts:
                         # The artifacts will be prompt variables
                         # passed to build_input_keys_response
