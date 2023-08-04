@@ -347,8 +347,23 @@ def build_valid_menu(valid_components):
                     component_extractor
                 )
                 component_template["output_types"] = component_output_types
+                if len(component_output_types) == 1:
+                    component_name = component_output_types[0]
+                else:
+                    file_name = component.get("file").split(".")[0]
+                    if "_" in file_name:
+                        # turn .py file into camelcase
+                        component_name = "".join(
+                            [
+                                word.capitalize()
+                                for word in file_name.split("_")
+                            ]
+                        )
+                    else:
+                        component_name = file_name
 
-                valid_menu[menu_name][component.get("file")] = component_template
+
+                valid_menu[menu_name][] = component_template
                 logger.debug(f"Added {component_name} to valid menu to {menu_name}")
 
             except Exception as exc:
