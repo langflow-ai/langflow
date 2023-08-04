@@ -354,16 +354,12 @@ def build_valid_menu(valid_components):
                     if "_" in file_name:
                         # turn .py file into camelcase
                         component_name = "".join(
-                            [
-                                word.capitalize()
-                                for word in file_name.split("_")
-                            ]
+                            [word.capitalize() for word in file_name.split("_")]
                         )
                     else:
                         component_name = file_name
 
-
-                valid_menu[menu_name][] = component_template
+                valid_menu[menu_name][component_name] = component_template
                 logger.debug(f"Added {component_name} to valid menu to {menu_name}")
 
             except Exception as exc:
