@@ -270,3 +270,12 @@ export function updateEdgesHandleIds({
   });
   setEdges(newEdges);
 }
+
+export function getConnectedNodes(
+  edge: Edge,
+  nodes: Array<NodeType>
+): Array<NodeType> {
+  const sourceId = edge.source;
+  const targetId = edge.target;
+  return nodes.filter((node) => node.id === targetId || node.id === sourceId);
+}
