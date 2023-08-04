@@ -1,3 +1,4 @@
+import { cloneDeep } from "lodash";
 import { useContext, useEffect, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
@@ -16,10 +17,10 @@ import {
 } from "../../../../utils/styleUtils";
 import { classNames, deepMerge } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
-import { cloneDeep } from "lodash";
 
 export default function ExtraSidebar() {
-  const { data, templates, getFilterEdge, setFilterEdge } = useContext(typesContext);
+  const { data, templates, filterEdge, setFilterEdge } =
+    useContext(typesContext);
   const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt } =
     useContext(TabsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
@@ -41,16 +42,16 @@ export default function ExtraSidebar() {
     event.dataTransfer.setData("nodedata", JSON.stringify(data));
   }
 
-  function handleBlur(){
-    if(getFilterEdge.length > 0){
+  function handleBlur() {
+    if (filterEdge.length > 0) {
       setFilterData(data);
       setFilterEdge([]);
-      setSearch('');
+      setSearch("");
     }
   }
 
   useEffect(() => {
-    if(getFilterEdge?.length > 0){
+    if(filterEdge?.length > 0){
       setFilterData((_) => {
         let dataClone = cloneDeep(data);
 
@@ -61,12 +62,12 @@ export default function ExtraSidebar() {
           retType[d] = {};
           retDisplayName[d] = {};
 
-          if(getFilterEdge.some(x => x.family === d)){
+          if(filterEdge.some(x => x.family === d)){
             
             retType[d] = dataClone[d];
             retDisplayName[d] = dataClone[d];
 
-            const filtered = getFilterEdge.filter(x => x.family === d).pop().type.split(',');
+            const filtered = filterEdge.filter(x => x.family === d).pop().type.split(',');
             
             for (let i = 0; i < filtered.length; i++) {
               filtered[i] = filtered[i].trimStart();
@@ -95,7 +96,7 @@ export default function ExtraSidebar() {
         return deepMerge(retType, retDisplayName);
       });
     }
-  }, [getFilterEdge])  
+  }, [filterEdge])  
 
   // Handle showing components after use search input
   function handleSearchInput(e: string) {

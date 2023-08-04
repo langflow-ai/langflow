@@ -16,5 +16,5 @@ export type typesContextType = {
   data: typeof data;
   setData: (newState: {}) => void;
   setFilterEdge: (newState: {}) => void;
-  getFilterEdge: any[];
+  filterEdge: any[];
 };
