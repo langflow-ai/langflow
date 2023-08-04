@@ -1,5 +1,5 @@
 import ast
-from typing import Optional
+from typing import Any, Optional
 from pydantic import BaseModel
 from fastapi import HTTPException
 
@@ -67,3 +67,6 @@ class Component(BaseModel):
                     template_config["beta"] = ast.literal_eval(item_value)
 
         return template_config
+
+    def build(self, *args: Any, **kwargs: Any) -> Any:
+        raise NotImplementedError
