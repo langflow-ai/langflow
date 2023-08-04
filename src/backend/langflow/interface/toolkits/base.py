@@ -35,7 +35,7 @@ class ToolkitCreator(LangChainTypeCreator):
                 )
                 # if toolkit_name is not lower case it is a class
                 for toolkit_name in agent_toolkits.__all__
-                if not toolkit_name.islower() and toolkit_name in settings.toolkits
+                if not toolkit_name.islower() and toolkit_name in settings.TOOLKITS
             }
 
         return self.type_dict

@@ -33,7 +33,7 @@ class TextSplitterCreator(LangChainTypeCreator):
         return [
             textsplitter.__name__
             for textsplitter in self.type_to_loader_dict.values()
-            if textsplitter.__name__ in settings.textsplitters or settings.dev
+            if textsplitter.__name__ in settings.TEXTSPLITTERS or settings.DEV
         ]
 
 

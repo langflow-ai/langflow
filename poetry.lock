@@ -146,13 +146,13 @@ files = [
 
 [[package]]
 name = "anthropic"
-version = "0.3.7"
+version = "0.3.8"
 description = "Client library for the anthropic API"
 optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "anthropic-0.3.7-py3-none-any.whl", hash = "sha256:ca57635d7f13d609aa8a5b93a834e067760d96b9657bdf81e0c7444ddf41fc64"},
-    {file = "anthropic-0.3.7.tar.gz", hash = "sha256:0453f80ba8224364c8b0dae0b5088becd67277de57708d7b887ebb6c2ceb3c49"},
+    {file = "anthropic-0.3.8-py3-none-any.whl", hash = "sha256:97ffe1bacc4214dc89b19f496cf2769746971e86f7c835a05aa21b76f260d279"},
+    {file = "anthropic-0.3.8.tar.gz", hash = "sha256:6651099807456c3b95b3879f5ad7d00f7e7e4f7649a2394d18032ab8be54ef16"},
 ]
 
 [package.dependencies]
@@ -739,18 +739,19 @@ sqlalchemy = ["sqlalchemy (>1.3.21,<2.0)"]
 
 [[package]]
 name = "cohere"
-version = "4.17.0"
+version = "4.19.2"
 description = ""
 optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "cohere-4.17.0-py3-none-any.whl", hash = "sha256:44e0bdb0a2d9467506d27b285f542177b98f92647f27e17ea921a01006fe2f33"},
-    {file = "cohere-4.17.0.tar.gz", hash = "sha256:9f479543b50490b4cb6385468d7571ad891a09cde7bd6b028171596bac6ce6ff"},
+    {file = "cohere-4.19.2-py3-none-any.whl", hash = "sha256:0b6a4fe04380a481a8e975ebcc9bb6433febe4d3eb583b6d6e04342a5e998345"},
+    {file = "cohere-4.19.2.tar.gz", hash = "sha256:a0b0fa698b3d3983fb328bb90d68fcf08faaa2268f3772ebc6bfea6ba55acf27"},
 ]
 
 [package.dependencies]
 aiohttp = ">=3.0,<4.0"
 backoff = ">=2.0,<3.0"
+fastavro = {version = "1.8.2", markers = "python_version >= \"3.8\""}
 importlib_metadata = ">=6.0,<7.0"
 requests = ">=2.25.0,<3.0.0"
 urllib3 = ">=1.26,<3"
@@ -924,13 +925,13 @@ test-randomorder = ["pytest-randomly"]
 
 [[package]]
 name = "ctransformers"
-version = "0.2.17"
+version = "0.2.18"
 description = "Python bindings for the Transformer models implemented in C/C++ using GGML library."
 optional = true
 python-versions = "*"
 files = [
-    {file = "ctransformers-0.2.17-py3-none-any.whl", hash = "sha256:903c16b38f5b2750ee34b90107c3a72351d7a9a201a6987a6560bd50874e9698"},
-    {file = "ctransformers-0.2.17.tar.gz", hash = "sha256:0c9de34cc8295ba6cb940e413130e6658fac54a99cecfa6098ac04638fd9301e"},
+    {file = "ctransformers-0.2.18-py3-none-any.whl", hash = "sha256:6d693e269d797f2485c86c9e8a322acb1464e782bf22547ec57e09d4ccbb4523"},
+    {file = "ctransformers-0.2.18.tar.gz", hash = "sha256:fc09c399baf16d99dd44aa6671d49aa4060d8904324c2527aa58e8831476c370"},
 ]
 
 [package.dependencies]
@@ -938,6 +939,7 @@ huggingface-hub = "*"
 py-cpuinfo = ">=9.0.0,<10.0.0"
 
 [package.extras]
+gptq = ["exllama (==0.1.0)"]
 tests = ["pytest"]
 
 [[package]]
@@ -1641,13 +1643,13 @@ six = "*"
 
 [[package]]
 name = "google-cloud-aiplatform"
-version = "1.28.1"
+version = "1.29.0"
 description = "Vertex AI API client library"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "google-cloud-aiplatform-1.28.1.tar.gz", hash = "sha256:b6468db7dc50295c988edf6505f0bf4d4bb2321de28873b2a4a87fd384be6308"},
-    {file = "google_cloud_aiplatform-1.28.1-py2.py3-none-any.whl", hash = "sha256:5587b8d4599047117b0c787635a00e8e3893b75944993e2faf784176442e9de4"},
+    {file = "google-cloud-aiplatform-1.29.0.tar.gz", hash = "sha256:fceabb924d2d26057e3c8c5c2e251929389aa6d553361377bc402781150c0db3"},
+    {file = "google_cloud_aiplatform-1.29.0-py2.py3-none-any.whl", hash = "sha256:cf81c1d93c61ccf3df60a65e3a5a1e465e044059d36b6fc1202b940c46c4c1e1"},
 ]
 
 [package.dependencies]
@@ -1728,13 +1730,13 @@ grpc = ["grpcio (>=1.38.0,<2.0dev)"]
 
 [[package]]
 name = "google-cloud-resource-manager"
-version = "1.10.2"
+version = "1.10.3"
 description = "Google Cloud Resource Manager API client library"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "google-cloud-resource-manager-1.10.2.tar.gz", hash = "sha256:9a7bdd0347ad553376cc66ad317c5223d1ae04bdcf74edcbfcd12605cff7b510"},
-    {file = "google_cloud_resource_manager-1.10.2-py2.py3-none-any.whl", hash = "sha256:9e074c28326bd1632f1a270c20cfea1ffe98f49cf821033e65bdac55661ffbd5"},
+    {file = "google-cloud-resource-manager-1.10.3.tar.gz", hash = "sha256:f80efcea36f10c5a81889afe93910926e3978b4b1ceeb82f563a2fc863072d14"},
+    {file = "google_cloud_resource_manager-1.10.3-py2.py3-none-any.whl", hash = "sha256:1381a4b0f522248ebe0ebd1289d8822b99c54f4e1fe03924a6e723b2ed93dd7f"},
 ]
 
 [package.dependencies]
@@ -2561,12 +2563,12 @@ testing = ["pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)",
 
 [[package]]
 name = "jcloud"
-version = "0.2.14"
+version = "0.2.16"
 description = "Simplify deploying and managing Jina projects on Jina Cloud"
 optional = false
 python-versions = "*"
 files = [
-    {file = "jcloud-0.2.14.tar.gz", hash = "sha256:60798a41be370cacf380bb024f04086df8b0e65f20e51b4fbe1dd11e04d95be7"},
+    {file = "jcloud-0.2.16.tar.gz", hash = "sha256:abf39a70fc5852574a05e03dac5e5cc364df87ae1f8476cbd441178f14adb578"},
 ]
 
 [package.dependencies]
@@ -2891,6 +2893,20 @@ qdrant = ["qdrant-client (>=1.3.1,<2.0.0)"]
 text-helpers = ["chardet (>=5.1.0,<6.0.0)"]
 
 [[package]]
+name = "langchain-experimental"
+version = "0.0.8"
+description = "Building applications with LLMs through composability"
+optional = false
+python-versions = ">=3.8.1,<4.0"
+files = [
+    {file = "langchain_experimental-0.0.8-py3-none-any.whl", hash = "sha256:34cf202ba29fdef178c5d68772cf2fa08dd2a0fad588ca3ef324ae71e596cc21"},
+    {file = "langchain_experimental-0.0.8.tar.gz", hash = "sha256:35d198f8e70a053ccd84273198ff08b4b700ac03ec5f43ba9b7ef797dd42ad14"},
+]
+
+[package.dependencies]
+langchain = ">=0.0.239"
+
+[[package]]
 name = "langchain-serve"
 version = "0.0.58"
 description = "Langchain Serve - serve your langchain apps on Jina AI Cloud."
@@ -2917,13 +2933,13 @@ test = ["psutil", "pytest", "pytest-asyncio"]
 
 [[package]]
 name = "langsmith"
-version = "0.0.16"
+version = "0.0.18"
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
 optional = false
 python-versions = ">=3.8.1,<4.0"
 files = [
-    {file = "langsmith-0.0.16-py3-none-any.whl", hash = "sha256:a9a5b30dc1c0ee0c9f8bbd2076856f1db3856a9521464f130be1db519c7077e5"},
-    {file = "langsmith-0.0.16.tar.gz", hash = "sha256:0729df30dd5b1c9d0c83614b5d348c7358ac182d7e3003dafbfcbedb88cbc8b8"},
+    {file = "langsmith-0.0.18-py3-none-any.whl", hash = "sha256:58f3eb029495e3696c3c94c95adfb2dd15043d82928ef932a7829fe020ad5522"},
+    {file = "langsmith-0.0.18.tar.gz", hash = "sha256:d8d97542f99352c5470bff74a4fbc9bd322dea850217a8ab71badcefa041566b"},
 ]
 
 [package.dependencies]
@@ -3311,13 +3327,13 @@ files = [
 
 [[package]]
 name = "more-itertools"
-version = "10.0.0"
+version = "10.1.0"
 description = "More routines for operating on iterables, beyond itertools"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "more-itertools-10.0.0.tar.gz", hash = "sha256:cd65437d7c4b615ab81c0640c0480bc29a550ea032891977681efd28344d51e1"},
-    {file = "more_itertools-10.0.0-py3-none-any.whl", hash = "sha256:928d514ffd22b5b0a8fce326d57f423a55d2ff783b093bab217eda71e732330f"},
+    {file = "more-itertools-10.1.0.tar.gz", hash = "sha256:626c369fa0eb37bac0291bce8259b332fd59ac792fa5497b59837309cd5b114a"},
+    {file = "more_itertools-10.1.0-py3-none-any.whl", hash = "sha256:64e0735fcfdc6f3464ea133afe8ea4483b1c5fe3a3d69852e6503b43a0b222e6"},
 ]
 
 [[package]]
@@ -5477,13 +5493,13 @@ cffi = {version = "*", markers = "implementation_name == \"pypy\""}
 
 [[package]]
 name = "qdrant-client"
-version = "1.3.2"
+version = "1.4.0"
 description = "Client library for the Qdrant vector search engine"
 optional = false
 python-versions = ">=3.7,<3.12"
 files = [
-    {file = "qdrant_client-1.3.2-py3-none-any.whl", hash = "sha256:66a076016fb9d33bec8170e96516d7e4a0ee5c611824cc9be18590ffeb3cf9aa"},
-    {file = "qdrant_client-1.3.2.tar.gz", hash = "sha256:6638c9eac027f2c0fdb1f63c3bd7b403fe8c3f73cb1f21fd15fd60f71012d537"},
+    {file = "qdrant_client-1.4.0-py3-none-any.whl", hash = "sha256:2f9e563955b5163da98016f2ed38d9aea5058576c7c5844e9aa205d28155f56d"},
+    {file = "qdrant_client-1.4.0.tar.gz", hash = "sha256:2e54f5a80eb1e7e67f4603b76365af4817af15fb3d0c0f44de4fd93afbbe5537"},
 ]
 
 [package.dependencies]
@@ -6380,13 +6396,13 @@ doc = ["reno", "sphinx", "tornado (>=4.5)"]
 
 [[package]]
 name = "textual"
-version = "0.31.0"
+version = "0.32.0"
 description = "Modern Text User Interface framework"
 optional = true
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "textual-0.31.0-py3-none-any.whl", hash = "sha256:1243bccadb28e1ff46bdfe676ee25a6ce52756842bc9dca4d824e0bc4d7d9a42"},
-    {file = "textual-0.31.0.tar.gz", hash = "sha256:e2b43f1c26b21731ee83f558f8d6cb4f7163e3a713854c36cd7785139a0e4e51"},
+    {file = "textual-0.32.0-py3-none-any.whl", hash = "sha256:81fc68406c8806bc864e2f035874a868b4ff0cf466289dce5f7b31869949383b"},
+    {file = "textual-0.32.0.tar.gz", hash = "sha256:f7b6683bc18faee6fd3c47cfbad43fbf8273c5fecc12230d52ce5ee089021327"},
 ]
 
 [package.dependencies]
@@ -7564,4 +7580,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "154238df4e8b249196011f592d63e2fad0e18316960e400037f54453c813d47a"
+content-hash = "57abce2ebcdc3cd7e359c36805822b9398d3bfb500c175b173a6d784d1276df6"

@@ -69,18 +69,17 @@ def setup_llm_caching():
     try:
         set_langchain_cache(settings)
     except ImportError:
-        logger.warning(f"Could not import {settings.cache}. ")
+        logger.warning(f"Could not import {settings.CACHE}. ")
     except Exception as exc:
         logger.warning(f"Could not setup LLM caching. Error: {exc}")
 
 
-# TODO Rename this here and in `setup_llm_caching`
 def set_langchain_cache(settings):
     import langchain
     from langflow.interface.importing.utils import import_class
 
     cache_type = os.getenv("LANGFLOW_LANGCHAIN_CACHE")
-    cache_class = import_class(f"langchain.cache.{cache_type or settings.cache}")
+    cache_class = import_class(f"langchain.cache.{cache_type or settings.CACHE}")
 
     logger.debug(f"Setting up LLM caching with {cache_class.__name__}")
     langchain.llm_cache = cache_class()
