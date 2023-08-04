@@ -6,7 +6,7 @@ import yaml
 from pydantic import BaseSettings, root_validator, validator
 from langflow.utils.logger import logger
 
-BASE_COMPONENTS_PATH = Path(__file__).parent / "components"
+BASE_COMPONENTS_PATH = str(Path(__file__).parent / "components")
 
 
 class Settings(BaseSettings):
@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     DATABASE_URL: Optional[str] = None
     CACHE: str = "InMemoryCache"
     REMOVE_API_KEYS: bool = False
-    COMPONENTS_PATH: List[Path] = []
+    COMPONENTS_PATH: List[str] = []
 
     @validator("DATABASE_URL", pre=True)
     def set_database_url(cls, value):
@@ -52,12 +52,15 @@ class Settings(BaseSettings):
     def set_components_path(cls, value):
         if os.getenv("LANGFLOW_COMPONENTS_PATH"):
             logger.debug("Adding LANGFLOW_COMPONENTS_PATH to components_path")
-            langflow_component_path = Path(os.getenv("LANGFLOW_COMPONENTS_PATH"))
+            langflow_component_path = os.getenv("LANGFLOW_COMPONENTS_PATH")
             if (
-                langflow_component_path.exists()
+                Path(langflow_component_path).exists()
                 and langflow_component_path not in value
             ):
-                value.append(langflow_component_path)
+                if isinstance(langflow_component_path, list):
+                    value.extend(langflow_component_path)
+                else:
+                    value.append(langflow_component_path)
                 logger.debug(f"Adding {langflow_component_path} to components_path")
 
         if not value:
