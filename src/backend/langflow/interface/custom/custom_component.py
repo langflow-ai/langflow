@@ -189,3 +189,6 @@ class CustomComponent(Component, extra=Extra.allow):
         if not flow:
             raise ValueError(f"Flow {flow_name or flow_id} not found")
         return self.load_flow(flow.id, tweaks)
+
+    def build(self, *args: Any, **kwargs: Any) -> Any:
+        raise NotImplementedError

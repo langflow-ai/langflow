@@ -331,6 +331,7 @@ def build_valid_menu(valid_components):
         valid_menu[menu_name] = {}
 
         for component in menu_item["components"]:
+            logger.debug(f"Building component: {component}")
             try:
                 component_name = component["name"]
                 component_code = component["code"]
@@ -346,7 +347,10 @@ def build_valid_menu(valid_components):
                 valid_menu[menu_name][component_name] = component_template
 
             except Exception as exc:
-                logger.error(f"Error while building custom component: {exc}")
+                logger.error(f"Error loading Component: {component}")
+                logger.exception(
+                    f"Error while building custom component {component_output_types}: {exc}"
+                )
 
     return valid_menu
 
