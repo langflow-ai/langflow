@@ -195,11 +195,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   ) {
     flow.data.edges.forEach((edge) => {
       if (edge.source === node.id) {
-        edge.sourceHandle = edge.sourceHandle
-          .split("|")
-          .slice(0, 2)
-          .concat(template["base_classes"])
-          .join("|");
+        let sourceHandleObject: sourceHandleType = JSON.parse(
+          edge.sourceHandle
+        );
+        sourceHandleObject.baseClasses = sourceHandleObject.baseClasses.concat(
+          template["base_classes"]
+        );
+        edge.sourceHandle = JSON.stringify(sourceHandleObject);
       }
     });
   }
