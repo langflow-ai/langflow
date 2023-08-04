@@ -24,6 +24,8 @@ class CustomComponent(Component, extra=Extra.allow):
         super().__init__(**data)
 
     def custom_repr(self):
+        if isinstance(self.repr_value, str):
+            return self.repr_value
         return str(self.repr_value)
 
     def build_config(self):
