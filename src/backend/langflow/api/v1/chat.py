@@ -124,7 +124,6 @@ async def stream_build(flow_id: str):
                     yield str(StreamData(event="log", data=log_dict))
                     vertex.build()
                     params = vertex._built_object_repr()
-                    vertex.vertex_type
                     valid = True
                     logger.debug(f"Building node {str(vertex.vertex_type)}")
                     logger.debug(f"Output: {params}")
