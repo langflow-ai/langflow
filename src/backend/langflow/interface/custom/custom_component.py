@@ -9,6 +9,7 @@ from langflow.utils import validate
 from langflow.database.base import session_getter
 from langflow.database.models.flow import Flow
 from pydantic import Extra
+import yaml
 
 
 class CustomComponent(Component, extra=Extra.allow):
@@ -24,6 +25,8 @@ class CustomComponent(Component, extra=Extra.allow):
         super().__init__(**data)
 
     def custom_repr(self):
+        if isinstance(self.repr_value, dict):
+            return yaml.dump(self.repr_value)
         if isinstance(self.repr_value, str):
             return self.repr_value
         return str(self.repr_value)
