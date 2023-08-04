@@ -25,7 +25,7 @@ import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import { APIClassType } from "../../../../types/api";
-import { FlowType, NodeType } from "../../../../types/flow";
+import { FlowType, NodeType, targetHandleType } from "../../../../types/flow";
 import { isValidConnection } from "../../../../utils/reactflowUtils";
 import { isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
@@ -185,10 +185,13 @@ export default function Page({ flow }: { flow: FlowType }) {
             ...params,
             style: { stroke: "#555" },
             className:
-              (params.targetHandle.split("|")[0] === "Text"
+              ((JSON.parse(params.targetHandle) as targetHandleType).type ===
+              "Text"
                 ? "stroke-foreground "
                 : "stroke-foreground ") + " stroke-connection",
-            animated: params.targetHandle.split("|")[0] === "Text",
+            animated:
+              (JSON.parse(params.targetHandle) as targetHandleType).type ===
+              "Text",
           },
           eds
         )

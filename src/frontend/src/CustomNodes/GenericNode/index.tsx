@@ -165,14 +165,12 @@ export default function GenericNode({
                   {data.node.template[t].show &&
                   !data.node.template[t].advanced ? (
                     <ParameterComponent
-                      key={
-                        (data.node.template[t].input_types?.join(";") ??
-                          data.node.template[t].type) +
-                        "|" +
-                        t +
-                        "|" +
-                        data.id
-                      }
+                      key={JSON.stringify({
+                        inputTypes: data.node.template[t].input_types,
+                        type: data.node.template[t].type,
+                        id: data.id,
+                        fieldName: t,
+                      })}
                       data={data}
                       setData={setData}
                       color={
@@ -218,7 +216,11 @@ export default function GenericNode({
               {" "}
             </div>
             <ParameterComponent
-              key={[data.type, data.id, ...data.node.base_classes].join("|")}
+              key={JSON.stringify({
+                baseClasses: data.node.base_classes,
+                id: data.id,
+                dataType: data.type,
+              })}
               data={data}
               setData={setData}
               color={nodeColors[types[data.type]] ?? nodeColors.unknown}
