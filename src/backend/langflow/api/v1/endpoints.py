@@ -46,13 +46,18 @@ def get_all():
             build_langchain_custom_component_list_from_path(str(path))
             for path in settings.COMPONENTS_PATH
         ]
-        logger.info(f"Loading {len(custom_component_dicts)} custom components")
-
+        logger.info(f"Loading {len(custom_component_dicts)} category(ies)")
         for custom_component_dict in custom_component_dicts:
+            # custom_component_dict is a dict of dicts
+            category = list(custom_component_dict.keys())[0]
+            logger.info(
+                f"Loading {len(custom_component_dict[category])} component(s) from category {category}"
+            )
+            logger.debug(custom_component_dict)
             custom_components_from_file = merge_nested_dicts(
                 custom_components_from_file, custom_component_dict
             )
-            logger.info(f"Loaded {custom_component_dict}")
+
     return merge_nested_dicts(native_components, custom_components_from_file)
 
 
