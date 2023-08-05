@@ -18,7 +18,7 @@ from langflow.api.v1.schemas import (
     CustomComponentCode,
 )
 
-from langflow.api.utils import merge_nested_dicts
+from langflow.api.utils import merge_nested_dicts_with_renaming
 
 from langflow.interface.types import (
     build_langchain_types_dict,
@@ -54,11 +54,13 @@ def get_all():
                 f"Loading {len(custom_component_dict[category])} component(s) from category {category}"
             )
             logger.debug(custom_component_dict)
-            custom_components_from_file = merge_nested_dicts(
+            custom_components_from_file = merge_nested_dicts_with_renaming(
                 custom_components_from_file, custom_component_dict
             )
 
-    return merge_nested_dicts(native_components, custom_components_from_file)
+    return merge_nested_dicts_with_renaming(
+        native_components, custom_components_from_file
+    )
 
 
 # For backwards compatibility we will keep the old endpoint

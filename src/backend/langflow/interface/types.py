@@ -30,7 +30,6 @@ from langflow.interface.retrievers.base import retriever_creator
 from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.utils.logger import logger
 from langflow.utils.util import get_base_classes
-from langflow.api.utils import merge_nested_dicts
 
 import re
 import warnings
