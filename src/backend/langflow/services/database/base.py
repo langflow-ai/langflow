@@ -1,66 +1,10 @@
 from contextlib import contextmanager
-import os
 from pathlib import Path
 from langflow.services.base import Service
 from sqlmodel import SQLModel, Session, create_engine
 from langflow.utils.logger import logger
 from alembic.config import Config
 from alembic import command
-
-
-class Engine:
-    _instance = None
-
-    @classmethod
-    def get(cls):
-        logger.debug("Getting database engine")
-        if cls._instance is None:
-            cls.create()
-        return cls._instance
-
-    @classmethod
-    def create(cls):
-        logger.debug("Creating database engine")
-        from langflow.settings import settings
-
-        if langflow_database_url := os.getenv("LANGFLOW_DATABASE_URL"):
-            settings.DATABASE_URL = langflow_database_url
-            logger.debug("Using LANGFLOW_DATABASE_URL")
-
-        if settings.DATABASE_URL and settings.DATABASE_URL.startswith("sqlite"):
-            connect_args = {"check_same_thread": False}
-        else:
-            connect_args = {}
-        if not settings.DATABASE_URL:
-            raise RuntimeError("No database_url provided")
-        cls._instance = create_engine(settings.DATABASE_URL, connect_args=connect_args)
-
-    @classmethod
-    def update(cls):
-        logger.debug("Updating database engine")
-        cls._instance = None
-        cls.create()
-
-
-def create_db_and_tables():
-    logger.debug("Creating database and tables")
-    try:
-        SQLModel.metadata.create_all(Engine.get())
-    except Exception as exc:
-        logger.error(f"Error creating database and tables: {exc}")
-        raise RuntimeError("Error creating database and tables") from exc
-    # Now check if the table Flow exists, if not, something went wrong
-    # and we need to create the tables again.
-    from sqlalchemy import inspect
-
-    inspector = inspect(Engine.get())
-    if "flow" not in inspector.get_table_names():
-        logger.error("Something went wrong creating the database and tables.")
-        logger.error("Please check your database settings.")
-
-        raise RuntimeError("Something went wrong creating the database and tables.")
-    else:
-        logger.debug("Database and tables created successfully")
 
 
 class DatabaseManager(Service):
@@ -134,11 +78,6 @@ def session_getter(db_manager: DatabaseManager):
         raise
     finally:
         session.close()
-
-
-def get_session():
-    with Session(Engine.get()) as session:
-        yield session
 
 
 def initialize_database():

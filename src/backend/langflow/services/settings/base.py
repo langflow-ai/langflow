@@ -166,7 +166,3 @@ def load_settings_from_yaml(file_path: str) -> Settings:
             logger.debug(f"Loading {len(settings_dict[key])} {key} from {file_path}")
 
     return Settings(**settings_dict)
-
-
-langflow_dir = Path(__file__).parent.parent.parent
-settings = load_settings_from_yaml(str(langflow_dir / "config.yaml"))
