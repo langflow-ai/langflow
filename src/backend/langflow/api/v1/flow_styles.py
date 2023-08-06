@@ -1,11 +1,11 @@
 from uuid import UUID
-from langflow.database.models.flow_style import (
+from langflow.services.database.models.flow_style import (
     FlowStyle,
     FlowStyleCreate,
     FlowStyleRead,
     FlowStyleUpdate,
 )
-from langflow.database.base import get_session
+from langflow.services.database.base import get_session
 from sqlmodel import Session, select
 from fastapi import APIRouter, Depends, HTTPException
 

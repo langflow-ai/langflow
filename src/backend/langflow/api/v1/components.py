@@ -1,8 +1,8 @@
 from datetime import timezone
 from typing import List
 from uuid import UUID
-from langflow.database.models.component import Component, ComponentModel
-from langflow.database.base import get_session
+from langflow.services.database.models.component import Component, ComponentModel
+from langflow.services.database.base import get_session
 from sqlmodel import Session, select
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError

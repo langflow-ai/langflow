@@ -9,7 +9,7 @@ import yaml
 from langchain.base_language import BaseLanguageModel
 from PIL.Image import Image
 from langflow.utils.logger import logger
-from langflow.chat.config import ChatConfig
+from langflow.services.chat.config import ChatConfig
 
 
 def load_file_into_dict(file_path: str) -> dict:
