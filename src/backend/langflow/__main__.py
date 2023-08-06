@@ -1,6 +1,7 @@
 import sys
 import time
 import httpx
+from langflow.services.utils import get_settings_manager
 from langflow.utils.util import get_number_of_workers
 from multiprocess import Process  # type: ignore
 import platform
@@ -12,7 +13,6 @@ from rich import box
 from rich import print as rprint
 import typer
 from langflow.main import setup_app
-from langflow.settings import settings
 from langflow.utils.logger import configure, logger
 import webbrowser
 from dotenv import load_dotenv
@@ -30,19 +30,19 @@ def update_settings(
     """Update the settings from a config file."""
 
     # Check for database_url in the environment variables
-
+    settings_manager = get_settings_manager()
     if config:
         logger.debug(f"Loading settings from {config}")
-        settings.update_from_yaml(config, dev=dev)
+        settings_manager.settings.update_from_yaml(config, dev=dev)
     if remove_api_keys:
         logger.debug(f"Setting remove_api_keys to {remove_api_keys}")
-        settings.update_settings(REMOVE_API_KEYS=remove_api_keys)
+        settings_manager.settings.update_settings(REMOVE_API_KEYS=remove_api_keys)
     if cache:
         logger.debug(f"Setting cache to {cache}")
-        settings.update_settings(CACHE=cache)
+        settings_manager.settings.update_settings(CACHE=cache)
     if components_path:
         logger.debug(f"Adding component path {components_path}")
-        settings.update_settings(COMPONENTS_PATH=components_path)
+        settings_manager.settings.update_settings(COMPONENTS_PATH=components_path)
 
 
 def serve_on_jcloud():
