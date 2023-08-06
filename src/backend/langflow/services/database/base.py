@@ -70,7 +70,7 @@ class DatabaseManager(Service):
 @contextmanager
 def session_getter(db_manager: DatabaseManager):
     try:
-        session = Session(DatabaseManager.engine)
+        session = Session(db_manager.engine)
         yield session
     except Exception as e:
         print("Session rollback because of exception:", e)
