@@ -1,6 +1,7 @@
 import ast
 import contextlib
 from typing import Any
+from langflow.api.utils import merge_nested_dicts_with_renaming
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
 from langflow.interface.custom.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
@@ -422,4 +423,4 @@ def build_langchain_custom_component_list_from_path(path: str):
     valid_menu = build_valid_menu(valid_components)
     invalid_menu = build_invalid_menu(invalid_components)
 
-    return merge_nested_dicts(valid_menu, invalid_menu)
+    return merge_nested_dicts_with_renaming(valid_menu, invalid_menu)
