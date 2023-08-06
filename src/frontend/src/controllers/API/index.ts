@@ -179,7 +179,7 @@ export async function downloadFlowsFromDatabase() {
   }
 }
 
-export async function uploadFlowsToDatabase(flows: FlowType[]) {
+export async function uploadFlowsToDatabase(flows: FormData) {
   try {
     const response = await api.post(`/api/v1/flows/upload/`, flows);
 

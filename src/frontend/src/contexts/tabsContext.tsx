@@ -28,6 +28,7 @@ import {
 import { getRandomDescription, getRandomName } from "../utils/utils";
 import { alertContext } from "./alertContext";
 import { typesContext } from "./typesContext";
+import { tweakType } from "../types/components";
 
 const uid = new ShortUniqueId({ length: 5 });
 
@@ -78,7 +79,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     edges: any;
   } | null>(null);
   const [tabsState, setTabsState] = useState<TabsState>({});
-  const [getTweak, setTweak] = useState<TweaksType[]>([]);
+  const [getTweak, setTweak] = useState<tweakType>([]);
 
   const newNodeId = useRef(uid());
   function incrementNodeId() {

@@ -317,7 +317,7 @@ export default function FormModal({
       setErrorData({
         title: "There was an error sending the message",
         list: [error.message],
-      });
+      } as errorsVarType);
       setChatValue(data.inputs);
       connectWS();
     }
