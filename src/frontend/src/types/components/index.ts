@@ -1,6 +1,6 @@
 import { ReactElement, ReactNode } from "react";
 import { ReactFlowJsonObject } from "reactflow";
-import { APIClassType, APITemplateType } from "../api";
+import { APIClassType, APITemplateType, TemplateVariableType } from "../api";
 import { ChatMessageType } from "../chat";
 import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
 import { typesContextType } from "../typesContext";
@@ -217,11 +217,11 @@ type test = {
 
 
 
-export type tweakType = {
+export type tweakType = Array<{
   [key: string]: {
     [char: string]: string;
-  };
-};
+  } & FlowStyleType;
+}>;
 
 export type apiModalTweakType = {
   current: Array<{
@@ -419,7 +419,7 @@ export type codeTabsPropsType = {
   setActiveTab: (value: string) => void;
   isMessage?: boolean;
   tweaks?: {
-    tweak?: { current: Array<tweakType> };
+    tweak?: { current: tweakType };
     tweaksList?: { current: Array<string> };
     buildContent?: (value: string) => ReactNode;
     getValue?: (
@@ -428,9 +428,9 @@ export type codeTabsPropsType = {
       template: APITemplateType
     ) => string;
     buildTweakObject?: (
-      tw: string,
-      changes: string | string[] | boolean | number,
-      template: APITemplateType
+      tw: string | string[],
+      changes: string | string[] | boolean,
+      template: TemplateVariableType
     ) => string | void;
   };
 };

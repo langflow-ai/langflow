@@ -16,7 +16,7 @@ import CodeTabsComponent from "../../components/codeTabsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { EXPORT_CODE_DIALOG } from "../../constants/constants";
 import { TabsContext } from "../../contexts/tabsContext";
-import { FlowType, NodeType } from "../../types/flow/index";
+import { FlowType, NodeType, TweaksType } from "../../types/flow/index";
 import { buildTweaks } from "../../utils/reactflowUtils";
 import {
   getCurlCode,
@@ -26,7 +26,7 @@ import {
 } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import { tweakType } from "../../types/components";
-import { APITemplateType } from "../../types/api";
+import { APITemplateType, TemplateVariableType } from "../../types/api";
 
 const ApiModal = forwardRef(
   (
@@ -43,7 +43,7 @@ const ApiModal = forwardRef(
   ) => {
     const [open, setOpen] = useState(false);
     const [activeTab, setActiveTab] = useState("0");
-    const tweak = useRef<tweakType[]>([]);
+    const tweak = useRef<tweakType>([]);
     const tweaksList = useRef<string[]>([]);
     const { setTweak, getTweak, tabsState } = useContext(TabsContext);
     const pythonApiCode = getPythonApiCode(flow, tweak.current, tabsState);
@@ -92,7 +92,7 @@ const ApiModal = forwardRef(
     }
 
     useEffect(() => {
-      if (flow["data"]["nodes"].length == 0) {
+      if (flow["data"]!["nodes"].length == 0) {
         startState();
       } else {
         tweak.current = [];
@@ -179,12 +179,12 @@ const ApiModal = forwardRef(
           },
         ]);
       }
-    }, [flow["data"]["nodes"], open]);
+    }, [flow["data"]!["nodes"], open]);
 
     function filterNodes() {
       let arrNodesWithValues: string[] = [];
 
-      flow["data"]["nodes"].forEach((t) => {
+      flow["data"]!["nodes"].forEach((t) => {
         Object.keys(t["data"]["node"]["template"])
           .filter(
             (n) =>
@@ -207,7 +207,7 @@ const ApiModal = forwardRef(
         return self.indexOf(value) === index;
       });
     }
-    function buildTweakObject(tw: string, changes: string | string[], template: APITemplateType) {
+    function buildTweakObject(tw: string | string[], changes: string | string[] | boolean, template: TemplateVariableType) {
       if (template.type === "float") {
         changes = parseFloat(changes);
       }

@@ -121,7 +121,7 @@ export default function BuildTrigger({
     // Step 3: Wait for the stream to finish
     while (!finished) {
       await new Promise((resolve) => setTimeout(resolve, 100));
-      finished = validationResults.length === flow.data.nodes.length;
+      finished = validationResults.length === flow.data!.nodes.length;
     }
     // Step 4: Return true if all nodes are valid, false otherwise
     return validationResults.every((result) => result);

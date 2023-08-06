@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from "react";
+import { Ref, RefObject, useContext, useEffect, useRef, useState } from "react";
 import SanitizedHTMLWrapper from "../../components/SanitizedHTMLWrapper";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -42,7 +42,7 @@ export default function GenericModal({
   const [wordsHighlight, setWordsHighlight] = useState<string[]>([]);
   const { setErrorData, setSuccessData, setNoticeData } =
     useContext(alertContext);
-  const ref = useRef<HTMLTextAreaElement | undefined>();
+  const ref = useRef<RefObject<HTMLTextAreaElement>>();
   const divRef = useRef(null);
   const divRefPrompt = useRef(null);
 
@@ -208,7 +208,7 @@ export default function GenericModal({
               <TextAreaContentView />
             ) : type !== TypeModal.PROMPT ? (
               <Textarea
-                ref={ref!}
+                ref={ref}
                 className="form-input h-full w-full rounded-lg focus-visible:ring-1"
                 value={inputValue}
                 onChange={(e) => {

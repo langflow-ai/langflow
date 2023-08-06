@@ -5,7 +5,7 @@ import { IVarHighlightType, groupDataType, groupedObjType, tweakType } from "../
 import { FlowType, NodeType } from "../types/flow";
 import { TabsState } from "../types/tabs";
 import { buildTweaks } from "./reactflowUtils";
-import { APIClassType, APIObjectType } from "../types/api";
+import { APIClassType, APIDataType, APIObjectType } from "../types/api";
 
 export function classNames(...classes: Array<string>): string {
   return classes.filter(Boolean).join(" ");
@@ -89,7 +89,7 @@ export function checkUpperWords(str: string): string {
 export const isWrappedWithClass = (event: any, className: string | undefined) =>
   event.target.closest(`.${className}`);
 
-export function groupByFamily(data: APIObjectType, baseClasses: string, left: boolean, flow?: NodeType[]): groupedObjType[] {
+export function groupByFamily(data: APIDataType, baseClasses: string, left: boolean, flow?: NodeType[]): groupedObjType[] {
   const baseClassesSet = new Set(baseClasses.split("\n"));
   let arrOfPossibleInputs: Array<{ category: string; nodes: string[]; full: boolean; }>  = [];
   let arrOfPossibleOutputs: Array<{ category: string; nodes: string[]; full: boolean; }> = [];
@@ -234,7 +234,7 @@ export function varHighlightHTML({ name }: IVarHighlightType): string {
   return html;
 }
 
-export function buildTweakObject(tweak: tweakType[]) {
+export function buildTweakObject(tweak: tweakType) {
   tweak.forEach((el) => {
     Object.keys(el).forEach((key) => {
       for (let kp in el[key]) {

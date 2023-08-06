@@ -2,6 +2,7 @@ import axios, { AxiosError, AxiosInstance } from "axios";
 import { useContext, useEffect, useRef } from "react";
 import { URL_EXCLUDED_FROM_ERROR_RETRIES } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
+import { errorsVarType } from "../../types/tabs";
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
@@ -37,7 +38,7 @@ function ApiInterceptor(): null {
                   "Check if the backend is up",
                   "Endpoint: " + error.config?.url,
                 ],
-              });
+              } as errorsVarType);
               return Promise.reject(error);
             }
           }

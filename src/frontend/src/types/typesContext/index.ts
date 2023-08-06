@@ -1,6 +1,6 @@
 import { Edge, Node, ReactFlowInstance } from "reactflow";
 import { AlertItemType } from "../alerts";
-import { APIClassType, APIObjectType } from "../api";
+import { APIClassType, APIDataType, APIObjectType } from "../api";
 
 const types: { [char: string]: string } = {};
 const template: { [char: string]: APIClassType } = {};
@@ -14,7 +14,7 @@ export type typesContextType = {
   setTypes: (newState: {}) => void;
   templates: typeof template;
   setTemplates: (newState: {}) => void;
-  data: APIObjectType;
+  data: APIDataType;
   setData: (newState: {}) => void;
 };
 
