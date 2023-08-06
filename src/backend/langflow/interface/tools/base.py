@@ -74,7 +74,7 @@ class ToolCreator(LangChainTypeCreator):
 
                 tool_name = tool_params.get("name") or tool
 
-                if tool_name in settings.tools or settings.dev:
+                if tool_name in settings.TOOLS or settings.DEV:
                     if tool_name == "JsonSpec":
                         tool_params["path"] = tool_params.pop("dict_")  # type: ignore
                     all_tools[tool_name] = {

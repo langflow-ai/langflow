@@ -180,8 +180,8 @@ export default function CodeAreaModal({
               <h1 className="text-lg text-destructive">
                 {error?.detail?.error}
               </h1>
-              <div className="ml-2 w-full break-all text-sm text-status-red">
-                <pre className="w-full whitespace-pre-wrap break-all">
+              <div className="ml-2 w-full text-sm text-status-red word-break-break-word">
+                <pre className="w-full word-break-break-word">
                   {error?.detail?.traceback}
                 </pre>
               </div>

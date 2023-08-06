@@ -7,7 +7,7 @@ def test_llms_settings(client: TestClient):
     assert response.status_code == 200
     json_response = response.json()
     llms = json_response["llms"]
-    assert set(llms.keys()) == set(settings.llms)
+    assert set(llms.keys()) == set(settings.LLMS)
 
 
 # def test_hugging_face_hub(client: TestClient):

@@ -61,9 +61,7 @@ def import_by_type(_type: str, name: str) -> Any:
 
 def import_custom_component(custom_component: str) -> CustomComponent:
     """Import custom component from custom component name"""
-    return import_class(
-        f"langflow.interface.custom.custom_component.{custom_component}"
-    )
+    return import_class("langflow.interface.custom.custom_component.CustomComponent")
 
 
 def import_output_parser(output_parser: str) -> Any:

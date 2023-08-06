@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from langflow.api import router
-from langflow.database.base import create_db_and_tables
+from langflow.database.base import create_db_and_tables, Engine
 from langflow.interface.utils import setup_llm_caching
 from langflow.utils.logger import configure
 
@@ -34,6 +34,7 @@ def create_app():
     )
 
     app.include_router(router)
+    app.on_event("startup")(Engine.update)
     app.on_event("startup")(create_db_and_tables)
     app.on_event("startup")(setup_llm_caching)
     return app
