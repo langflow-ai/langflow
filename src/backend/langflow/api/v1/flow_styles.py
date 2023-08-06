@@ -5,7 +5,7 @@ from langflow.services.database.models.flow_style import (
     FlowStyleRead,
     FlowStyleUpdate,
 )
-from langflow.services.database.base import get_session
+from langflow.services.utils import get_session
 from sqlmodel import Session, select
 from fastapi import APIRouter, Depends, HTTPException
 
