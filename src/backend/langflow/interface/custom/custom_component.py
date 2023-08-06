@@ -6,8 +6,8 @@ from langflow.interface.custom.directory_reader import DirectoryReader
 
 from langflow.utils import validate
 
-from langflow.database.base import session_getter
-from langflow.database.models.flow import Flow
+from langflow.services.database.base import session_getter
+from langflow.services.database.models.flow import Flow
 from pydantic import Extra
 import yaml
 
