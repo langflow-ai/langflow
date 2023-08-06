@@ -8,9 +8,9 @@ from fastapi.testclient import TestClient
 from fastapi.encoders import jsonable_encoder
 
 from langflow.api.v1.schemas import FlowListCreate
-from langflow.database.models.flow import Flow, FlowCreate, FlowUpdate
+from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
 
-from langflow.database.models.flow_style import (
+from langflow.services.database.models.flow_style import (
     FlowStyleCreate,
     FlowStyleRead,
     FlowStyleUpdate,
