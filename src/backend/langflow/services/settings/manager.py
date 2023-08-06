@@ -13,7 +13,7 @@ class SettingsManager(Service):
         self.settings = settings
 
     @classmethod
-    def load_settings_from_yaml(cls, file_path: str) -> Settings:
+    def load_settings_from_yaml(cls, file_path: str) -> "SettingsManager":
         # Check if a string is a valid path or a file name
         if "/" not in file_path:
             # Get current path
