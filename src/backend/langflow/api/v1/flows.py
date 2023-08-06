@@ -3,14 +3,14 @@ from uuid import UUID
 from langflow.settings import settings
 from langflow.api.utils import remove_api_keys
 from langflow.api.v1.schemas import FlowListCreate, FlowListRead
-from langflow.database.models.flow import (
+from langflow.services.database.models.flow import (
     Flow,
     FlowCreate,
     FlowRead,
     FlowReadWithStyle,
     FlowUpdate,
 )
-from langflow.database.base import get_session
+from langflow.services.database.base import get_session
 from sqlmodel import Session, select
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.encoders import jsonable_encoder
