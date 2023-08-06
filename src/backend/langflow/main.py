@@ -6,14 +6,14 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from langflow.api import router
-from langflow.database.base import DatabaseManager
 from langflow.interface.utils import setup_llm_caching
+from langflow.services.database.base import initialize_database
+from langflow.services.manager import initialize_services
 from langflow.utils.logger import configure
 
 
 def create_app():
     """Create the FastAPI app and include the router."""
-    from langflow.settings import settings
 
     configure()
 
@@ -34,11 +34,10 @@ def create_app():
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    database_manager = DatabaseManager(settings.DATABASE_URL)
     app.include_router(router)
-    # app.on_event("startup")(Engine.update)
-    app.on_event("startup")(database_manager.run_migrations)
-    app.on_event("startup")(database_manager.create_db_and_tables)
+
+    app.on_event("startup")(initialize_services)
+    app.on_event("startup")(initialize_database)
     app.on_event("startup")(setup_llm_caching)
     return app
 
