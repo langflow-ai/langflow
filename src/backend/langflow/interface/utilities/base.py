@@ -35,7 +35,7 @@ class UtilityCreator(LangChainTypeCreator):
             self.type_dict = {
                 name: utility
                 for name, utility in self.type_dict.items()
-                if name in settings.utilities or settings.dev
+                if name in settings.UTILITIES or settings.DEV
             }
 
         return self.type_dict
