@@ -228,75 +228,75 @@ export default function CodeTabsComponent({
                               <TableBody className="p-0">
                                 {Object.keys(node["data"]["node"]["template"])
                                   .filter(
-                                    (n) =>
-                                      n.charAt(0) !== "_" &&
-                                      node.data.node.template[n].show &&
-                                      (node.data.node.template[n].type === "str" ||
-                                        node.data.node.template[n].type ===
+                                    (templateName) =>
+                                      templateName.charAt(0) !== "_" &&
+                                      node.data.node.template[templateName].show &&
+                                      (node.data.node.template[templateName].type === "str" ||
+                                        node.data.node.template[templateName].type ===
                                           "bool" ||
-                                        node.data.node.template[n].type ===
+                                        node.data.node.template[templateName].type ===
                                           "float" ||
-                                        node.data.node.template[n].type ===
+                                        node.data.node.template[templateName].type ===
                                           "code" ||
-                                        node.data.node.template[n].type ===
+                                        node.data.node.template[templateName].type ===
                                           "prompt" ||
-                                        node.data.node.template[n].type ===
+                                        node.data.node.template[templateName].type ===
                                           "file" ||
-                                        node.data.node.template[n].type === "int")
+                                        node.data.node.template[templateName].type === "int")
                                   )
-                                  .map((n, i) => {
+                                  .map((templateName, index) => {
                                     return (
                                       <TableRow
-                                        key={i}
+                                        key={index}
                                         className="h-10 dark:border-b-muted"
                                       >
                                         <TableCell className="p-0 text-center text-sm text-foreground">
-                                          {n}
+                                          {templateName}
                                         </TableCell>
                                         <TableCell className="p-0 text-xs text-foreground">
                                           <div className="m-auto w-[250px]">
-                                            {node.data.node.template[n].type ===
+                                            {node.data.node.template[templateName].type ===
                                               "str" &&
-                                            !node.data.node.template[n].options ? (
+                                            !node.data.node.template[templateName].options ? (
                                               <div className="mx-auto">
-                                                {node.data.node.template[n]
+                                                {node.data.node.template[templateName]
                                                   .list ? (
                                                   <InputListComponent
                                                     editNode={true}
                                                     disabled={false}
                                                     value={
-                                                      !node.data.node.template[n]
+                                                      !node.data.node.template[templateName]
                                                         .value ||
-                                                      node.data.node.template[n]
+                                                      node.data.node.template[templateName]
                                                         .value === ""
                                                         ? [""]
                                                         : node.data.node.template[
-                                                            n
+                                                            templateName
                                                           ].value
                                                     }
-                                                    onChange={(k) => {
+                                                    onChange={(target) => {
                                                       setData((old) => {
                                                         let newInputList =
                                                           cloneDeep(old);
                                                         newInputList[
                                                           index
                                                         ].data.node.template[
-                                                          n
-                                                        ].value = k;
+                                                          templateName
+                                                        ].value = target;
                                                         return newInputList;
                                                       });
                                                       tweaks.buildTweakObject(
                                                         node["data"]["id"],
-                                                        k,
-                                                        node.data.node.template[n]
+                                                        target,
+                                                        node.data.node.template[templateName]
                                                       );
                                                     }}
                                                   />
-                                                ) : node.data.node.template[n]
+                                                ) : node.data.node.template[templateName]
                                                     .multiline ? (
                                                   <ShadTooltip
                                                     content={tweaks.buildContent(
-                                                      node.data.node.template[n]
+                                                      node.data.node.template[templateName]
                                                         .value
                                                     )}
                                                   >
@@ -306,32 +306,32 @@ export default function CodeTabsComponent({
                                                         editNode={true}
                                                         value={
                                                           !node.data.node.template[
-                                                            n
+                                                            templateName
                                                           ].value ||
                                                           node.data.node.template[
-                                                            n
+                                                            templateName
                                                           ].value === ""
                                                             ? ""
                                                             : node.data.node
-                                                                .template[n]
+                                                                .template[templateName]
                                                                 .value
                                                         }
-                                                        onChange={(k) => {
+                                                        onChange={(target) => {
                                                           setData((old) => {
                                                             let newInputList =
                                                               cloneDeep(old);
                                                             newInputList[
                                                               index
                                                             ].data.node.template[
-                                                              n
-                                                            ].value = k;
+                                                              templateName
+                                                            ].value = target;
                                                             return newInputList;
                                                           });
                                                           tweaks.buildTweakObject(
                                                             node["data"]["id"],
-                                                            k,
+                                                            target,
                                                             node.data.node
-                                                              .template[n]
+                                                              .template[templateName]
                                                           );
                                                         }}
                                                       />
@@ -342,46 +342,46 @@ export default function CodeTabsComponent({
                                                     editNode={true}
                                                     disabled={false}
                                                     password={
-                                                      node.data.node.template[n]
+                                                      node.data.node.template[templateName]
                                                         .password ?? false
                                                     }
                                                     value={
-                                                      !node.data.node.template[n]
+                                                      !node.data.node.template[templateName]
                                                         .value ||
-                                                      node.data.node.template[n]
+                                                      node.data.node.template[templateName]
                                                         .value === ""
                                                         ? ""
                                                         : node.data.node.template[
-                                                            n
+                                                            templateName
                                                           ].value
                                                     }
-                                                    onChange={(k) => {
+                                                    onChange={(target) => {
                                                       setData((old) => {
                                                         let newInputList =
                                                           cloneDeep(old);
                                                         newInputList[
                                                           index
                                                         ].data.node.template[
-                                                          n
-                                                        ].value = k;
+                                                          templateName
+                                                        ].value = target;
                                                         return newInputList;
                                                       });
                                                       tweaks.buildTweakObject(
                                                         node["data"]["id"],
-                                                        k,
-                                                        node.data.node.template[n]
+                                                        target,
+                                                        node.data.node.template[templateName]
                                                       );
                                                     }}
                                                   />
                                                 )}
                                               </div>
-                                            ) : node.data.node.template[n].type ===
+                                            ) : node.data.node.template[templateName].type ===
                                               "bool" ? (
                                               <div className="ml-auto">
                                                 {" "}
                                                 <ToggleShadComponent
                                                   enabled={
-                                                    node.data.node.template[n]
+                                                    node.data.node.template[templateName]
                                                       .value
                                                   }
                                                   setEnabled={(e) => {
@@ -391,30 +391,30 @@ export default function CodeTabsComponent({
                                                       newInputList[
                                                         index
                                                       ].data.node.template[
-                                                        n
+                                                        templateName
                                                       ].value = e;
                                                       return newInputList;
                                                     });
                                                     tweaks.buildTweakObject(
                                                       node["data"]["id"],
                                                       e,
-                                                      node.data.node.template[n]
+                                                      node.data.node.template[templateName]
                                                     );
                                                   }}
                                                   size="small"
                                                   disabled={false}
                                                 />
                                               </div>
-                                            ) : node.data.node.template[n].type ===
+                                            ) : node.data.node.template[templateName].type ===
                                               "file" ? (
                                               <ShadTooltip
                                                 content={tweaks.buildContent(
-                                                  !node.data.node.template[n]
+                                                  !node.data.node.template[templateName]
                                                     .value ||
-                                                    node.data.node.template[n]
+                                                    node.data.node.template[templateName]
                                                       .value === ""
                                                     ? ""
-                                                    : node.data.node.template[n]
+                                                    : node.data.node.template[templateName]
                                                         .value
                                                 )}
                                               >
@@ -423,146 +423,146 @@ export default function CodeTabsComponent({
                                                     editNode={true}
                                                     disabled={false}
                                                     value={
-                                                      node.data.node.template[n]
+                                                      node.data.node.template[templateName]
                                                         .value ?? ""
                                                     }
-                                                    onChange={(k: any) => {}}
+                                                    onChange={(target: any) => {}}
                                                     fileTypes={
-                                                      node.data.node.template[n]
+                                                      node.data.node.template[templateName]
                                                         .fileTypes
                                                     }
                                                     suffixes={
-                                                      node.data.node.template[n]
+                                                      node.data.node.template[templateName]
                                                         .suffixes
                                                     }
                                                     onFileChange={(
                                                       value: any
                                                     ) => {
                                                       node.data.node.template[
-                                                        n
+                                                        templateName
                                                       ].file_path = value;
                                                     }}
                                                   ></InputFileComponent>
                                                 </div>
                                               </ShadTooltip>
-                                            ) : node.data.node.template[n].type ===
+                                            ) : node.data.node.template[templateName].type ===
                                               "float" ? (
                                               <div className="mx-auto">
                                                 <FloatComponent
                                                   disabled={false}
                                                   editNode={true}
                                                   value={
-                                                    !node.data.node.template[n]
+                                                    !node.data.node.template[templateName]
                                                       .value ||
-                                                    node.data.node.template[n]
+                                                    node.data.node.template[templateName]
                                                       .value === ""
                                                       ? ""
-                                                      : node.data.node.template[n]
+                                                      : node.data.node.template[templateName]
                                                           .value
                                                   }
-                                                  onChange={(k) => {
+                                                  onChange={(target) => {
                                                     setData((old) => {
                                                       let newInputList =
                                                         cloneDeep(old);
                                                       newInputList[
                                                         index
                                                       ].data.node.template[
-                                                        n
-                                                      ].value = k;
+                                                        templateName
+                                                      ].value = target;
                                                       return newInputList;
                                                     });
                                                     tweaks.buildTweakObject(
                                                       node["data"]["id"],
-                                                      k,
-                                                      node.data.node.template[n]
+                                                      target,
+                                                      node.data.node.template[templateName]
                                                     );
                                                   }}
                                                 />
                                               </div>
-                                            ) : node.data.node.template[n].type ===
+                                            ) : node.data.node.template[templateName].type ===
                                                 "str" &&
-                                              node.data.node.template[n]
+                                              node.data.node.template[templateName]
                                                 .options ? (
                                               <div className="mx-auto">
                                                 <Dropdown
                                                   editNode={true}
                                                   apiModal={true}
                                                   options={
-                                                    node.data.node.template[n]
+                                                    node.data.node.template[templateName]
                                                       .options
                                                   }
-                                                  onSelect={(k) => {
+                                                  onSelect={(target) => {
                                                     setData((old) => {
                                                       let newInputList =
                                                         cloneDeep(old);
                                                       newInputList[
                                                         index
                                                       ].data.node.template[
-                                                        n
-                                                      ].value = k;
+                                                        templateName
+                                                      ].value = target;
                                                       return newInputList;
                                                     });
                                                     tweaks.buildTweakObject(
                                                       node["data"]["id"],
-                                                      k,
-                                                      node.data.node.template[n]
+                                                      target,
+                                                      node.data.node.template[templateName]
                                                     );
                                                   }}
                                                   value={
-                                                    !node.data.node.template[n]
+                                                    !node.data.node.template[templateName]
                                                       .value ||
-                                                    node.data.node.template[n]
+                                                    node.data.node.template[templateName]
                                                       .value === ""
                                                       ? ""
-                                                      : node.data.node.template[n]
+                                                      : node.data.node.template[templateName]
                                                           .value
                                                   }
                                                 ></Dropdown>
                                               </div>
-                                            ) : node.data.node.template[n].type ===
+                                            ) : node.data.node.template[templateName].type ===
                                               "int" ? (
                                               <div className="mx-auto">
                                                 <IntComponent
                                                   disabled={false}
                                                   editNode={true}
                                                   value={
-                                                    !node.data.node.template[n]
+                                                    !node.data.node.template[templateName]
                                                       .value ||
-                                                    node.data.node.template[n]
+                                                    node.data.node.template[templateName]
                                                       .value === ""
                                                       ? ""
-                                                      : node.data.node.template[n]
+                                                      : node.data.node.template[templateName]
                                                           .value
                                                   }
-                                                  onChange={(k) => {
+                                                  onChange={(target) => {
                                                     setData((old) => {
                                                       let newInputList =
                                                         cloneDeep(old);
                                                       newInputList[
                                                         index
                                                       ].data.node.template[
-                                                        n
-                                                      ].value = k;
+                                                        templateName
+                                                      ].value = target;
                                                       return newInputList;
                                                     });
                                                     tweaks.buildTweakObject(
                                                       node["data"]["id"],
-                                                      k,
-                                                      node.data.node.template[n]
+                                                      target,
+                                                      node.data.node.template[templateName]
                                                     );
                                                   }}
                                                 />
                                               </div>
-                                            ) : node.data.node.template[n].type ===
+                                            ) : node.data.node.template[templateName].type ===
                                               "prompt" ? (
                                               <ShadTooltip
                                                 content={tweaks.buildContent(
-                                                  !node.data.node.template[n]
+                                                  !node.data.node.template[templateName]
                                                     .value ||
-                                                    node.data.node.template[n]
+                                                    node.data.node.template[templateName]
                                                       .value === ""
                                                     ? ""
-                                                    : node.data.node.template[n]
+                                                    : node.data.node.template[templateName]
                                                         .value
                                                 )}
                                               >
@@ -571,44 +571,44 @@ export default function CodeTabsComponent({
                                                     editNode={true}
                                                     disabled={false}
                                                     value={
-                                                      !node.data.node.template[n]
+                                                      !node.data.node.template[templateName]
                                                         .value ||
-                                                      node.data.node.template[n]
+                                                      node.data.node.template[templateName]
                                                         .value === ""
                                                         ? ""
                                                         : node.data.node.template[
-                                                            n
+                                                            templateName
                                                           ].value
                                                     }
-                                                    onChange={(k) => {
+                                                    onChange={(target) => {
                                                       setData((old) => {
                                                         let newInputList =
                                                           cloneDeep(old);
                                                         newInputList[
                                                           index
                                                         ].data.node.template[
-                                                          n
-                                                        ].value = k;
+                                                          templateName
+                                                        ].value = target;
                                                         return newInputList;
                                                       });
                                                       tweaks.buildTweakObject(
                                                         node["data"]["id"],
-                                                        k,
-                                                        node.data.node.template[n]
+                                                        target,
+                                                        node.data.node.template[templateName]
                                                       );
                                                     }}
                                                   />
                                                 </div>
                                               </ShadTooltip>
-                                            ) : node.data.node.template[n].type ===
+                                            ) : node.data.node.template[templateName].type ===
                                               "code" ? (
                                               <ShadTooltip
                                                 content={tweaks.buildContent(
                                                   tweaks.getValue(
-                                                    node.data.node.template[n]
+                                                    node.data.node.template[templateName]
                                                       .value,
                                                     node.data,
-                                                    node.data.node.template[n]
+                                                    node.data.node.template[templateName]
                                                   )
                                                 )}
                                               >
@@ -617,36 +617,36 @@ export default function CodeTabsComponent({
                                                     disabled={false}
                                                     editNode={true}
                                                     value={
-                                                      !node.data.node.template[n]
+                                                      !node.data.node.template[templateName]
                                                         .value ||
-                                                      node.data.node.template[n]
+                                                      node.data.node.template[templateName]
                                                         .value === ""
                                                         ? ""
                                                         : node.data.node.template[
-                                                            n
+                                                            templateName
                                                           ].value
                                                     }
-                                                    onChange={(k) => {
+                                                    onChange={(target) => {
                                                       setData((old) => {
                                                         let newInputList =
                                                           cloneDeep(old);
                                                         newInputList[
                                                           index
                                                         ].data.node.template[
-                                                          n
-                                                        ].value = k;
+                                                          templateName
+                                                        ].value = target;
                                                         return newInputList;
                                                       });
                                                       tweaks.buildTweakObject(
                                                         node["data"]["id"],
-                                                        k,
-                                                        node.data.node.template[n]
+                                                        target,
+                                                        node.data.node.template[templateName]
                                                       );
                                                     }}
                                                   />
                                                 </div>
                                               </ShadTooltip>
-                                            ) : node.data.node.template[n].type ===
+                                            ) : node.data.node.template[templateName].type ===
                                               "Any" ? (
                                               "-"
                                             ) : (
