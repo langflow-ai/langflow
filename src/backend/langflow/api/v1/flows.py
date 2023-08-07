@@ -6,7 +6,6 @@ from langflow.services.database.models.flow import (
     Flow,
     FlowCreate,
     FlowRead,
-    FlowReadWithStyle,
     FlowUpdate,
 )
 from langflow.services.utils import get_session
@@ -32,7 +31,7 @@ def create_flow(*, session: Session = Depends(get_session), flow: FlowCreate):
     return db_flow
 
 
-@router.get("/", response_model=list[FlowReadWithStyle], status_code=200)
+@router.get("/", response_model=list[FlowRead], status_code=200)
 def read_flows(*, session: Session = Depends(get_session)):
     """Read all flows."""
     try:
@@ -42,7 +41,7 @@ def read_flows(*, session: Session = Depends(get_session)):
     return [jsonable_encoder(flow) for flow in flows]
 
 
-@router.get("/{flow_id}", response_model=FlowReadWithStyle, status_code=200)
+@router.get("/{flow_id}", response_model=FlowRead, status_code=200)
 def read_flow(*, session: Session = Depends(get_session), flow_id: UUID):
     """Read a flow."""
     if flow := session.get(Flow, flow_id):
