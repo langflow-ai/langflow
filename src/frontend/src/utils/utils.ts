@@ -111,7 +111,6 @@ export function groupByFamily(data, baseClasses, left, flow?: NodeType[]) {
 
   if (flow) {
     for (const node of flow) {
-      console.log(node)
       const nodeData = node.data;
       const foundNode = checkedNodes.get(nodeData.type);
       checkedNodes.set(nodeData.type, {
@@ -120,7 +119,7 @@ export function groupByFamily(data, baseClasses, left, flow?: NodeType[]) {
           Object.values(nodeData.node.template).some(checkBaseClass),
         hasBaseClassInBaseClasses:
           foundNode?.hasBaseClassInBaseClasses ||
-          nodeData.node.base_classes.some((t) => baseClassesSet.has(t)),
+          nodeData.node.base_classes.some((baseClass) => baseClassesSet.has(baseClass)),
       });
     }
   }
@@ -136,8 +135,8 @@ export function groupByFamily(data, baseClasses, left, flow?: NodeType[]) {
           hasBaseClassInTemplate: Object.values(node.template).some(
             checkBaseClass
           ),
-          hasBaseClassInBaseClasses: node.base_classes.some((t) =>
-            baseClassesSet.has(t)
+          hasBaseClassInBaseClasses: node.base_classes.some((baseClass) =>
+            baseClassesSet.has(baseClass)
           ),
         };
         checkedNodes.set(n, foundNode);
@@ -163,13 +162,13 @@ export function groupByFamily(data, baseClasses, left, flow?: NodeType[]) {
   }
 
   return left
-    ? arrOfPossibleOutputs.map((t) => ({
-        family: t.category,
-        type: t.full ? "" : t.nodes.join(", "),
+    ? arrOfPossibleOutputs.map((output) => ({
+        family: output.category,
+        type: output.full ? "" : output.nodes.join(", "),
       }))
-    : arrOfPossibleInputs.map((t) => ({
-        family: t.category,
-        type: t.full ? "" : t.nodes.join(", "),
+    : arrOfPossibleInputs.map((input) => ({
+        family: input.category,
+        type: input.full ? "" : input.nodes.join(", "),
       }));
 }
 
