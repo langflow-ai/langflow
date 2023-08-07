@@ -13,7 +13,7 @@ from sqlmodel.pool import StaticPool
 from typer.testing import CliRunner
 
 if TYPE_CHECKING:
-    from langflow.services.database.base import DatabaseManager
+    from langflow.services.database.manager import DatabaseManager
 
 
 def pytest_configure():
