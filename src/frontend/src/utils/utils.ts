@@ -267,6 +267,7 @@ export function getChatInputField(flow: FlowType, tabsState?: TabsState) {
     )[0];
   }
   return chat_input_field;
+}
 
 /**
  * Function to get the python code for the API
