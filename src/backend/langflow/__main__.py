@@ -106,7 +106,9 @@ def serve(
         help="Path to the directory containing custom components.",
         envvar="LANGFLOW_COMPONENTS_PATH",
     ),
-    config: str = typer.Option("config.yaml", help="Path to the configuration file."),
+    config: str = typer.Option(
+        Path(__file__).parent / "config.yaml", help="Path to the configuration file."
+    ),
     # .env file param
     env_file: Path = typer.Option(
         None, help="Path to the .env file containing environment variables."
@@ -146,6 +148,11 @@ def serve(
         help="Remove API keys from the projects saved in the database.",
         envvar="LANGFLOW_REMOVE_API_KEYS",
     ),
+    backend_only: bool = typer.Option(
+        False,
+        help="Run only the backend server without the frontend.",
+        envvar="LANGFLOW_BACKEND_ONLY",
+    ),
 ):
     """
     Run the Langflow server.
@@ -167,7 +174,7 @@ def serve(
     )
     # create path object if path is provided
     static_files_dir: Optional[Path] = Path(path) if path else None
-    app = setup_app(static_files_dir=static_files_dir)
+    app = setup_app(static_files_dir=static_files_dir, backend_only=backend_only)
     # check if port is being used
     if is_port_in_use(port, host):
         port = get_free_port(port)
@@ -178,6 +185,10 @@ def serve(
         "worker_class": "uvicorn.workers.UvicornWorker",
         "timeout": timeout,
     }
+
+    # Define an env variable to know if we are just testing the server
+    if "pytest" in sys.modules:
+        return
 
     if platform.system() in ["Windows"]:
         # Run using uvicorn on MacOS and Windows
