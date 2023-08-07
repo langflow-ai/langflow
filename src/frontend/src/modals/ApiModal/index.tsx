@@ -25,7 +25,7 @@ import {
   getWidgetCode,
 } from "../../utils/utils";
 import BaseModal from "../baseModal";
-import { tweakType } from "../../types/components";
+import { tweakType, uniqueTweakType } from "../../types/components";
 import { APITemplateType, TemplateVariableType } from "../../types/api";
 
 const ApiModal = forwardRef(
@@ -207,11 +207,11 @@ const ApiModal = forwardRef(
         return self.indexOf(value) === index;
       });
     }
-    function buildTweakObject(tw: string | string[], changes: string | string[] | boolean, template: TemplateVariableType) {
-      if (template.type === "float") {
+    function buildTweakObject(tw: string, changes: string | string[] | boolean | number, template: TemplateVariableType) {
+      if (typeof changes === "string" && template.type === "float") {
         changes = parseFloat(changes);
       }
-      if (template.type === "int") {
+      if (typeof changes === "string" && template.type === "int") {
         changes = parseInt(changes);
       }
       if (template.list === true && Array.isArray(changes)) {
@@ -223,7 +223,7 @@ const ApiModal = forwardRef(
       );
 
       if (existingTweak) {
-        existingTweak[tw][template["name"]] = changes;
+        existingTweak[tw][template["name"]] = changes as string;
 
         if (existingTweak[tw][template["name"]] == template.value) {
           tweak.current.forEach((element) => {
@@ -240,7 +240,7 @@ const ApiModal = forwardRef(
           [tw]: {
             [template["name"]]: changes,
           },
-        };
+        } as uniqueTweakType;
         tweak.current.push(newTweak);
       }
 
@@ -266,7 +266,7 @@ const ApiModal = forwardRef(
       return htmlContent;
     }
 
-    function getValue(value: string, node: NodeType, template: APITemplateType) {
+    function getValue(value: string, node: NodeType, template: TemplateVariableType) {
       let returnValue = value ?? "";
 
       if (getTweak.length > 0) {
