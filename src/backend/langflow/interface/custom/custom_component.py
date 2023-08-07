@@ -7,7 +7,7 @@ from langflow.services.utils import get_db_manager
 
 from langflow.utils import validate
 
-from langflow.services.database.base import session_getter
+from langflow.services.database.utils import session_getter
 from langflow.services.database.models.flow import Flow
 from pydantic import Extra
 import yaml

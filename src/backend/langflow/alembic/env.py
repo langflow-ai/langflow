@@ -5,7 +5,7 @@ from sqlalchemy import pool
 
 from alembic import context
 
-from langflow.services.database.base import SQLModel
+from langflow.services.database.manager import SQLModel
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from langflow.api import router
 from langflow.interface.utils import setup_llm_caching
-from langflow.services.database.base import initialize_database
+from langflow.services.database.utils import initialize_database
 from langflow.services.manager import initialize_services
 from langflow.utils.logger import configure
 
