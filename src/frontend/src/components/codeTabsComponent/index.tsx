@@ -205,13 +205,13 @@ export default function CodeTabsComponent({
                       : "overflow-hidden"
                   )}
                 >
-                  {data.map((t: any, index) => (
+                  {data.map((node: any, index) => (
                     <div className="px-3" key={index}>
-                      {tweaks.tweaksList.current.includes(t["data"]["id"]) && (
+                      {tweaks.tweaksList.current.includes(node["data"]["id"]) && (
                         <AccordionComponent
-                          trigger={t["data"]["id"]}
+                          trigger={node["data"]["id"]}
                           open={openAccordion}
-                          keyValue={t["data"]["id"]}
+                          keyValue={node["data"]["id"]}
                         >
                           <div className="api-modal-table-arrangement">
                             <Table className="table-fixed bg-muted outline-1">
@@ -226,23 +226,23 @@ export default function CodeTabsComponent({
                                 </TableRow>
                               </TableHeader>
                               <TableBody className="p-0">
-                                {Object.keys(t["data"]["node"]["template"])
+                                {Object.keys(node["data"]["node"]["template"])
                                   .filter(
                                     (n) =>
                                       n.charAt(0) !== "_" &&
-                                      t.data.node.template[n].show &&
-                                      (t.data.node.template[n].type === "str" ||
-                                        t.data.node.template[n].type ===
+                                      node.data.node.template[n].show &&
+                                      (node.data.node.template[n].type === "str" ||
+                                        node.data.node.template[n].type ===
                                           "bool" ||
-                                        t.data.node.template[n].type ===
+                                        node.data.node.template[n].type ===
                                           "float" ||
-                                        t.data.node.template[n].type ===
+                                        node.data.node.template[n].type ===
                                           "code" ||
-                                        t.data.node.template[n].type ===
+                                        node.data.node.template[n].type ===
                                           "prompt" ||
-                                        t.data.node.template[n].type ===
+                                        node.data.node.template[n].type ===
                                           "file" ||
-                                        t.data.node.template[n].type === "int")
+                                        node.data.node.template[n].type === "int")
                                   )
                                   .map((n, i) => {
                                     return (
@@ -255,22 +255,22 @@ export default function CodeTabsComponent({
                                         </TableCell>
                                         <TableCell className="p-0 text-xs text-foreground">
                                           <div className="m-auto w-[250px]">
-                                            {t.data.node.template[n].type ===
+                                            {node.data.node.template[n].type ===
                                               "str" &&
-                                            !t.data.node.template[n].options ? (
+                                            !node.data.node.template[n].options ? (
                                               <div className="mx-auto">
-                                                {t.data.node.template[n]
+                                                {node.data.node.template[n]
                                                   .list ? (
                                                   <InputListComponent
                                                     editNode={true}
                                                     disabled={false}
                                                     value={
-                                                      !t.data.node.template[n]
+                                                      !node.data.node.template[n]
                                                         .value ||
-                                                      t.data.node.template[n]
+                                                      node.data.node.template[n]
                                                         .value === ""
                                                         ? [""]
-                                                        : t.data.node.template[
+                                                        : node.data.node.template[
                                                             n
                                                           ].value
                                                     }
@@ -286,17 +286,17 @@ export default function CodeTabsComponent({
                                                         return newInputList;
                                                       });
                                                       tweaks.buildTweakObject(
-                                                        t["data"]["id"],
+                                                        node["data"]["id"],
                                                         k,
-                                                        t.data.node.template[n]
+                                                        node.data.node.template[n]
                                                       );
                                                     }}
                                                   />
-                                                ) : t.data.node.template[n]
+                                                ) : node.data.node.template[n]
                                                     .multiline ? (
                                                   <ShadTooltip
                                                     content={tweaks.buildContent(
-                                                      t.data.node.template[n]
+                                                      node.data.node.template[n]
                                                         .value
                                                     )}
                                                   >
@@ -305,14 +305,14 @@ export default function CodeTabsComponent({
                                                         disabled={false}
                                                         editNode={true}
                                                         value={
-                                                          !t.data.node.template[
+                                                          !node.data.node.template[
                                                             n
                                                           ].value ||
-                                                          t.data.node.template[
+                                                          node.data.node.template[
                                                             n
                                                           ].value === ""
                                                             ? ""
-                                                            : t.data.node
+                                                            : node.data.node
                                                                 .template[n]
                                                                 .value
                                                         }
@@ -328,9 +328,9 @@ export default function CodeTabsComponent({
                                                             return newInputList;
                                                           });
                                                           tweaks.buildTweakObject(
-                                                            t["data"]["id"],
+                                                            node["data"]["id"],
                                                             k,
-                                                            t.data.node
+                                                            node.data.node
                                                               .template[n]
                                                           );
                                                         }}
@@ -342,16 +342,16 @@ export default function CodeTabsComponent({
                                                     editNode={true}
                                                     disabled={false}
                                                     password={
-                                                      t.data.node.template[n]
+                                                      node.data.node.template[n]
                                                         .password ?? false
                                                     }
                                                     value={
-                                                      !t.data.node.template[n]
+                                                      !node.data.node.template[n]
                                                         .value ||
-                                                      t.data.node.template[n]
+                                                      node.data.node.template[n]
                                                         .value === ""
                                                         ? ""
-                                                        : t.data.node.template[
+                                                        : node.data.node.template[
                                                             n
                                                           ].value
                                                     }
@@ -367,21 +367,21 @@ export default function CodeTabsComponent({
                                                         return newInputList;
                                                       });
                                                       tweaks.buildTweakObject(
-                                                        t["data"]["id"],
+                                                        node["data"]["id"],
                                                         k,
-                                                        t.data.node.template[n]
+                                                        node.data.node.template[n]
                                                       );
                                                     }}
                                                   />
                                                 )}
                                               </div>
-                                            ) : t.data.node.template[n].type ===
+                                            ) : node.data.node.template[n].type ===
                                               "bool" ? (
                                               <div className="ml-auto">
                                                 {" "}
                                                 <ToggleShadComponent
                                                   enabled={
-                                                    t.data.node.template[n]
+                                                    node.data.node.template[n]
                                                       .value
                                                   }
                                                   setEnabled={(e) => {
@@ -396,25 +396,25 @@ export default function CodeTabsComponent({
                                                       return newInputList;
                                                     });
                                                     tweaks.buildTweakObject(
-                                                      t["data"]["id"],
+                                                      node["data"]["id"],
                                                       e,
-                                                      t.data.node.template[n]
+                                                      node.data.node.template[n]
                                                     );
                                                   }}
                                                   size="small"
                                                   disabled={false}
                                                 />
                                               </div>
-                                            ) : t.data.node.template[n].type ===
+                                            ) : node.data.node.template[n].type ===
                                               "file" ? (
                                               <ShadTooltip
                                                 content={tweaks.buildContent(
-                                                  !t.data.node.template[n]
+                                                  !node.data.node.template[n]
                                                     .value ||
-                                                    t.data.node.template[n]
+                                                    node.data.node.template[n]
                                                       .value === ""
                                                     ? ""
-                                                    : t.data.node.template[n]
+                                                    : node.data.node.template[n]
                                                         .value
                                                 )}
                                               >
@@ -423,41 +423,41 @@ export default function CodeTabsComponent({
                                                     editNode={true}
                                                     disabled={false}
                                                     value={
-                                                      t.data.node.template[n]
+                                                      node.data.node.template[n]
                                                         .value ?? ""
                                                     }
                                                     onChange={(k: any) => {}}
                                                     fileTypes={
-                                                      t.data.node.template[n]
+                                                      node.data.node.template[n]
                                                         .fileTypes
                                                     }
                                                     suffixes={
-                                                      t.data.node.template[n]
+                                                      node.data.node.template[n]
                                                         .suffixes
                                                     }
                                                     onFileChange={(
                                                       value: any
                                                     ) => {
-                                                      t.data.node.template[
+                                                      node.data.node.template[
                                                         n
                                                       ].file_path = value;
                                                     }}
                                                   ></InputFileComponent>
                                                 </div>
                                               </ShadTooltip>
-                                            ) : t.data.node.template[n].type ===
+                                            ) : node.data.node.template[n].type ===
                                               "float" ? (
                                               <div className="mx-auto">
                                                 <FloatComponent
                                                   disabled={false}
                                                   editNode={true}
                                                   value={
-                                                    !t.data.node.template[n]
+                                                    !node.data.node.template[n]
                                                       .value ||
-                                                    t.data.node.template[n]
+                                                    node.data.node.template[n]
                                                       .value === ""
                                                       ? ""
-                                                      : t.data.node.template[n]
+                                                      : node.data.node.template[n]
                                                           .value
                                                   }
                                                   onChange={(k) => {
@@ -472,23 +472,23 @@ export default function CodeTabsComponent({
                                                       return newInputList;
                                                     });
                                                     tweaks.buildTweakObject(
-                                                      t["data"]["id"],
+                                                      node["data"]["id"],
                                                       k,
-                                                      t.data.node.template[n]
+                                                      node.data.node.template[n]
                                                     );
                                                   }}
                                                 />
                                               </div>
-                                            ) : t.data.node.template[n].type ===
+                                            ) : node.data.node.template[n].type ===
                                                 "str" &&
-                                              t.data.node.template[n]
+                                              node.data.node.template[n]
                                                 .options ? (
                                               <div className="mx-auto">
                                                 <Dropdown
                                                   editNode={true}
                                                   apiModal={true}
                                                   options={
-                                                    t.data.node.template[n]
+                                                    node.data.node.template[n]
                                                       .options
                                                   }
                                                   onSelect={(k) => {
@@ -503,35 +503,35 @@ export default function CodeTabsComponent({
                                                       return newInputList;
                                                     });
                                                     tweaks.buildTweakObject(
-                                                      t["data"]["id"],
+                                                      node["data"]["id"],
                                                       k,
-                                                      t.data.node.template[n]
+                                                      node.data.node.template[n]
                                                     );
                                                   }}
                                                   value={
-                                                    !t.data.node.template[n]
+                                                    !node.data.node.template[n]
                                                       .value ||
-                                                    t.data.node.template[n]
+                                                    node.data.node.template[n]
                                                       .value === ""
                                                       ? ""
-                                                      : t.data.node.template[n]
+                                                      : node.data.node.template[n]
                                                           .value
                                                   }
                                                 ></Dropdown>
                                               </div>
-                                            ) : t.data.node.template[n].type ===
+                                            ) : node.data.node.template[n].type ===
                                               "int" ? (
                                               <div className="mx-auto">
                                                 <IntComponent
                                                   disabled={false}
                                                   editNode={true}
                                                   value={
-                                                    !t.data.node.template[n]
+                                                    !node.data.node.template[n]
                                                       .value ||
-                                                    t.data.node.template[n]
+                                                    node.data.node.template[n]
                                                       .value === ""
                                                       ? ""
-                                                      : t.data.node.template[n]
+                                                      : node.data.node.template[n]
                                                           .value
                                                   }
                                                   onChange={(k) => {
@@ -546,23 +546,23 @@ export default function CodeTabsComponent({
                                                       return newInputList;
                                                     });
                                                     tweaks.buildTweakObject(
-                                                      t["data"]["id"],
+                                                      node["data"]["id"],
                                                       k,
-                                                      t.data.node.template[n]
+                                                      node.data.node.template[n]
                                                     );
                                                   }}
                                                 />
                                               </div>
-                                            ) : t.data.node.template[n].type ===
+                                            ) : node.data.node.template[n].type ===
                                               "prompt" ? (
                                               <ShadTooltip
                                                 content={tweaks.buildContent(
-                                                  !t.data.node.template[n]
+                                                  !node.data.node.template[n]
                                                     .value ||
-                                                    t.data.node.template[n]
+                                                    node.data.node.template[n]
                                                       .value === ""
                                                     ? ""
-                                                    : t.data.node.template[n]
+                                                    : node.data.node.template[n]
                                                         .value
                                                 )}
                                               >
@@ -571,12 +571,12 @@ export default function CodeTabsComponent({
                                                     editNode={true}
                                                     disabled={false}
                                                     value={
-                                                      !t.data.node.template[n]
+                                                      !node.data.node.template[n]
                                                         .value ||
-                                                      t.data.node.template[n]
+                                                      node.data.node.template[n]
                                                         .value === ""
                                                         ? ""
-                                                        : t.data.node.template[
+                                                        : node.data.node.template[
                                                             n
                                                           ].value
                                                     }
@@ -592,23 +592,23 @@ export default function CodeTabsComponent({
                                                         return newInputList;
                                                       });
                                                       tweaks.buildTweakObject(
-                                                        t["data"]["id"],
+                                                        node["data"]["id"],
                                                         k,
-                                                        t.data.node.template[n]
+                                                        node.data.node.template[n]
                                                       );
                                                     }}
                                                   />
                                                 </div>
                                               </ShadTooltip>
-                                            ) : t.data.node.template[n].type ===
+                                            ) : node.data.node.template[n].type ===
                                               "code" ? (
                                               <ShadTooltip
                                                 content={tweaks.buildContent(
                                                   tweaks.getValue(
-                                                    t.data.node.template[n]
+                                                    node.data.node.template[n]
                                                       .value,
-                                                    t.data,
-                                                    t.data.node.template[n]
+                                                    node.data,
+                                                    node.data.node.template[n]
                                                   )
                                                 )}
                                               >
@@ -617,12 +617,12 @@ export default function CodeTabsComponent({
                                                     disabled={false}
                                                     editNode={true}
                                                     value={
-                                                      !t.data.node.template[n]
+                                                      !node.data.node.template[n]
                                                         .value ||
-                                                      t.data.node.template[n]
+                                                      node.data.node.template[n]
                                                         .value === ""
                                                         ? ""
-                                                        : t.data.node.template[
+                                                        : node.data.node.template[
                                                             n
                                                           ].value
                                                     }
@@ -638,15 +638,15 @@ export default function CodeTabsComponent({
                                                         return newInputList;
                                                       });
                                                       tweaks.buildTweakObject(
-                                                        t["data"]["id"],
+                                                        node["data"]["id"],
                                                         k,
-                                                        t.data.node.template[n]
+                                                        node.data.node.template[n]
                                                       );
                                                     }}
                                                   />
                                                 </div>
                                               </ShadTooltip>
-                                            ) : t.data.node.template[n].type ===
+                                            ) : node.data.node.template[n].type ===
                                               "Any" ? (
                                               "-"
                                             ) : (
