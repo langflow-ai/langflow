@@ -78,7 +78,6 @@ export function TypesProvider({ children }: { children: ReactNode }) {
 
     // Start the initial interval.
     intervalId = setInterval(getTypes, delay);
-    console.log(intervalId)
     return () => {
       // This will clear the interval when the component unmounts, or when the dependencies of the useEffect hook change.
       clearInterval(intervalId!);
