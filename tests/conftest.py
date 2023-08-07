@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from sqlmodel import SQLModel, Session, create_engine
 from sqlmodel.pool import StaticPool
+from typer.testing import CliRunner
 
 if TYPE_CHECKING:
     from langflow.services.database.base import DatabaseManager
@@ -149,3 +150,8 @@ def session_getter_fixture(client):
             yield session
 
     yield blank_session_getter
+
+
+@pytest.fixture
+def runner():
+    return CliRunner()
