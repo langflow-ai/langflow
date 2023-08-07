@@ -70,16 +70,19 @@ def get_static_files_dir():
     return frontend_path / "frontend"
 
 
-def setup_app(static_files_dir: Optional[Path] = None) -> FastAPI:
+def setup_app(
+    static_files_dir: Optional[Path] = None, backend_only: bool = False
+) -> FastAPI:
     """Setup the FastAPI app."""
     # get the directory of the current file
     if not static_files_dir:
         static_files_dir = get_static_files_dir()
 
-    if not static_files_dir or not static_files_dir.exists():
+    if not backend_only and (not static_files_dir or not static_files_dir.exists()):
         raise RuntimeError(f"Static files directory {static_files_dir} does not exist.")
     app = create_app()
-    setup_static_files(app, static_files_dir)
+    if not backend_only:
+        setup_static_files(app, static_files_dir)
     return app
 
 
