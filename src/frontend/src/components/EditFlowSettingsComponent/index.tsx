@@ -55,12 +55,12 @@ export const EditFlowSettings: React.FC<InputProps> = ({
   };
 
   const [desc, setDesc] = useState(
-    flows.find((f) => f.id === tabId).description
+    flows.find((flow) => flow.id === tabId).description
   );
 
   const handleDescriptionChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
-    flows.find((f) => f.id === tabId).description = event.target.value;
-    setDesc(flows.find((f) => f.id === tabId).description);
+    flows.find((flow) => flow.id === tabId).description = event.target.value;
+    setDesc(flows.find((flow) => flow.id === tabId).description);
     setDescription(event.target.value);
   };
 

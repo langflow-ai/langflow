@@ -31,8 +31,8 @@ export default function InputComponent({
           password && !editNode ? "pr-10" : ""
         )}
         placeholder={password && editNode ? "Key" : "Type something..."}
-        onChange={(e) => {
-          onChange(e.target.value);
+        onChange={(event) => {
+          onChange(event.target.value);
         }}
       />
       {password && (

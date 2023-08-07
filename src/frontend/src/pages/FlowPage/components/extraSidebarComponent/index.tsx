@@ -56,7 +56,7 @@ export default function ExtraSidebar() {
       return ret;
     });
   }
-  const flow = flows.find((f) => f.id === tabId);
+  const flow = flows.find((flow) => flow.id === tabId);
   useEffect(() => {
     // show components with error on load
     let errors = [];
@@ -143,10 +143,10 @@ export default function ExtraSidebar() {
           id="search"
           placeholder="Search"
           className="nopan nodrag noundo nocopy input-search"
-          onChange={(e) => {
-            handleSearchInput(e.target.value);
+          onChange={(event) => {
+            handleSearchInput(event.target.value);
             // Set search input state
-            setSearch(e.target.value);
+            setSearch(event.target.value);
           }}
         />
         <div className="search-icon">
@@ -161,42 +161,42 @@ export default function ExtraSidebar() {
       <div className="side-bar-components-div-arrangement">
         {Object.keys(dataFilter)
           .sort()
-          .map((d: keyof APIObjectType, i) =>
-            Object.keys(dataFilter[d]).length > 0 ? (
+          .map((SBSectionName: keyof APIObjectType, index) =>
+            Object.keys(dataFilter[SBSectionName]).length > 0 ? (
               <DisclosureComponent
                 openDisc={search.length == 0 ? false : true}
-                key={i}
+                key={index}
                 button={{
-                  title: nodeNames[d] ?? nodeNames.unknown,
-                  Icon: nodeIconsLucide[d] ?? nodeIconsLucide.unknown,
+                  title: nodeNames[SBSectionName] ?? nodeNames.unknown,
+                  Icon: nodeIconsLucide[SBSectionName] ?? nodeIconsLucide.unknown,
                 }}
               >
                 <div className="side-bar-components-gap">
-                  {Object.keys(dataFilter[d])
+                  {Object.keys(dataFilter[SBSectionName])
                     .sort()
-                    .map((t: string, k) => (
+                    .map((SBItemName: string, index) => (
                       <ShadTooltip
-                        content={data[d][t].display_name}
+                        content={data[SBSectionName][SBItemName].display_name}
                         side="right"
-                        key={k}
+                        key={index}
                       >
-                        <div key={k} data-tooltip-id={t}>
+                        <div key={index} data-tooltip-id={SBItemName}>
                           <div
-                            draggable={!data[d][t].error}
+                            draggable={!data[SBSectionName][SBItemName].error}
                             className={
                               "side-bar-components-border bg-background" +
-                              (data[d][t].error
+                              (data[SBSectionName][SBItemName].error
                                 ? " cursor-not-allowed select-none"
                                 : "")
                             }
                             style={{
                               borderLeftColor:
-                                nodeColors[d] ?? nodeColors.unknown,
+                                nodeColors[SBSectionName] ?? nodeColors.unknown,
                             }}
                             onDragStart={(event) =>
                               onDragStart(event, {
-                                type: t,
-                                node: data[d][t],
+                                type: SBItemName,
+                                node: data[SBSectionName][SBItemName],
                               })
                             }
                             onDragEnd={() => {
@@ -209,7 +209,7 @@ export default function ExtraSidebar() {
                           >
                             <div className="side-bar-components-div-form">
                               <span className="side-bar-components-text">
-                                {data[d][t].display_name}
+                                {data[SBSectionName][SBItemName].display_name}
                               </span>
                               <IconComponent
                                 name="Menu"
@@ -223,7 +223,7 @@ export default function ExtraSidebar() {
                 </div>
               </DisclosureComponent>
             ) : (
-              <div key={i}></div>
+              <div key={index}></div>
             )
           )}
       </div>
