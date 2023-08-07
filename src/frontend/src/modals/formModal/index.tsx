@@ -26,6 +26,7 @@ import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
 import { TabsContext } from "../../contexts/tabsContext";
 import { validateNodes } from "../../utils/reactflowUtils";
 import { TabsState, errorsVarType } from "../../types/tabs";
+import { AxiosError } from "axios";
 
 export default function FormModal({
   flow,
@@ -316,8 +317,8 @@ export default function FormModal({
     } catch (error) {
       setErrorData({
         title: "There was an error sending the message",
-        list: [error.message],
-      } as errorsVarType);
+        list: [(error as { message: string }).message],
+      });
       setChatValue(data.inputs);
       connectWS();
     }
