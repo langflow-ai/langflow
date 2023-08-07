@@ -1,5 +1,5 @@
 from typing import TYPE_CHECKING
-from langflow.services.database.base import DatabaseManager
+from langflow.services.database.manager import DatabaseManager
 from langflow.services.factory import ServiceFactory
 
 if TYPE_CHECKING:
