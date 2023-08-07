@@ -36,9 +36,9 @@ function ApiInterceptor(): null {
                   "Refresh the page",
                   "Use a new flow tab",
                   "Check if the backend is up",
-                  "Endpoint: " + error.config?.url,
+                  "Endpoint: " + (error as AxiosError).config?.url,
                 ],
-              } as errorsVarType);
+              });
               return Promise.reject(error);
             }
           }
