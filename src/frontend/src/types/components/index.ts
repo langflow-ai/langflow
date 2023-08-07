@@ -223,6 +223,12 @@ export type tweakType = Array<{
   } & FlowStyleType;
 }>;
 
+export type uniqueTweakType = {
+  [key: string]: {
+    [char: string]: string;
+  } & FlowStyleType;
+}
+
 export type apiModalTweakType = {
   current: Array<{
     [key: string]: {
@@ -425,11 +431,11 @@ export type codeTabsPropsType = {
     getValue?: (
       value: string,
       node: NodeType,
-      template: APITemplateType
+      template: TemplateVariableType
     ) => string;
     buildTweakObject?: (
-      tw: string | string[],
-      changes: string | string[] | boolean,
+      tw: string,
+      changes: string | string[] | boolean | number,
       template: TemplateVariableType
     ) => string | void;
   };
