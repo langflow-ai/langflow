@@ -159,52 +159,52 @@ export default function GenericNode({
 
           <>
             {Object.keys(data.node.template)
-              .filter((t) => t.charAt(0) !== "_")
-              .map((t: string, idx) => (
+              .filter((templateName) => templateName.charAt(0) !== "_")
+              .map((templateName: string, idx) => (
                 <div key={idx}>
-                  {data.node.template[t].show &&
-                  !data.node.template[t].advanced ? (
+                  {data.node.template[templateName].show &&
+                  !data.node.template[templateName].advanced ? (
                     <ParameterComponent
                       key={
-                        (data.node.template[t].input_types?.join(";") ??
-                          data.node.template[t].type) +
+                        (data.node.template[templateName].input_types?.join(";") ??
+                          data.node.template[templateName].type) +
                         "|" +
-                        t +
+                        templateName +
                         "|" +
                         data.id
                       }
                       data={data}
                       setData={setData}
                       color={
-                        nodeColors[types[data.node.template[t].type]] ??
-                        nodeColors[data.node.template[t].type] ??
+                        nodeColors[types[data.node.template[templateName].type]] ??
+                        nodeColors[data.node.template[templateName].type] ??
                         nodeColors.unknown
                       }
                       title={
-                        data.node.template[t].display_name
-                          ? data.node.template[t].display_name
-                          : data.node.template[t].name
-                          ? toTitleCase(data.node.template[t].name)
-                          : toTitleCase(t)
+                        data.node.template[templateName].display_name
+                          ? data.node.template[templateName].display_name
+                          : data.node.template[templateName].name
+                          ? toTitleCase(data.node.template[templateName].name)
+                          : toTitleCase(templateName)
                       }
-                      info={data.node.template[t].info}
-                      name={t}
+                      info={data.node.template[templateName].info}
+                      name={templateName}
                       tooltipTitle={
-                        data.node.template[t].input_types?.join("\n") ??
-                        data.node.template[t].type
+                        data.node.template[templateName].input_types?.join("\n") ??
+                        data.node.template[templateName].type
                       }
-                      required={data.node.template[t].required}
+                      required={data.node.template[templateName].required}
                       id={
-                        (data.node.template[t].input_types?.join(";") ??
-                          data.node.template[t].type) +
+                        (data.node.template[templateName].input_types?.join(";") ??
+                          data.node.template[templateName].type) +
                         "|" +
-                        t +
+                        templateName +
                         "|" +
                         data.id
                       }
                       left={true}
-                      type={data.node.template[t].type}
-                      optionalHandle={data.node.template[t].input_types}
+                      type={data.node.template[templateName].type}
+                      optionalHandle={data.node.template[templateName].input_types}
                     />
                   ) : (
                     <></>

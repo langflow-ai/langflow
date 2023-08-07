@@ -316,11 +316,11 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     const input = document.createElement("input");
     input.type = "file";
     // add a change event listener to the file input
-    input.onchange = (e: Event) => {
+    input.onchange = (event: Event) => {
       // check if the file type is application/json
-      if ((e.target as HTMLInputElement).files[0].type === "application/json") {
+      if ((event.target as HTMLInputElement).files[0].type === "application/json") {
         // get the file from the file input
-        const file = (e.target as HTMLInputElement).files[0];
+        const file = (event.target as HTMLInputElement).files[0];
         // read the file as text
         const formData = new FormData();
         formData.append("file", file);
@@ -359,12 +359,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     let idsMap = {};
     let nodes = reactFlowInstance.getNodes();
     let edges = reactFlowInstance.getEdges();
-    selectionInstance.nodes.forEach((n) => {
-      if (n.position.y < minimumY) {
-        minimumY = n.position.y;
+    selectionInstance.nodes.forEach((node) => {
+      if (node.position.y < minimumY) {
+        minimumY = node.position.y;
       }
-      if (n.position.x < minimumX) {
-        minimumX = n.position.x;
+      if (node.position.x < minimumX) {
+        minimumX = node.position.x;
       }
     });
 
@@ -372,43 +372,43 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       ? { x: position.paneX + position.x, y: position.paneY + position.y }
       : reactFlowInstance.project({ x: position.x, y: position.y });
 
-    selectionInstance.nodes.forEach((n: NodeType) => {
+    selectionInstance.nodes.forEach((node: NodeType) => {
       // Generate a unique node ID
-      let newId = getNodeId(n.data.type);
-      idsMap[n.id] = newId;
+      let newId = getNodeId(node.data.type);
+      idsMap[node.id] = newId;
 
       // Create a new node object
       const newNode: NodeType = {
         id: newId,
         type: "genericNode",
         position: {
-          x: insidePosition.x + n.position.x - minimumX,
-          y: insidePosition.y + n.position.y - minimumY,
+          x: insidePosition.x + node.position.x - minimumX,
+          y: insidePosition.y + node.position.y - minimumY,
         },
         data: {
-          ..._.cloneDeep(n.data),
+          ..._.cloneDeep(node.data),
           id: newId,
         },
       };
 
       // Add the new node to the list of nodes in state
       nodes = nodes
-        .map((e) => ({ ...e, selected: false }))
+        .map((node) => ({ ...node, selected: false }))
         .concat({ ...newNode, selected: false });
     });
     reactFlowInstance.setNodes(nodes);
 
-    selectionInstance.edges.forEach((e) => {
-      let source = idsMap[e.source];
-      let target = idsMap[e.target];
-      let sourceHandleSplitted = e.sourceHandle.split("|");
+    selectionInstance.edges.forEach((edge) => {
+      let source = idsMap[edge.source];
+      let target = idsMap[edge.target];
+      let sourceHandleSplitted = edge.sourceHandle.split("|");
       let sourceHandle =
         sourceHandleSplitted[0] +
         "|" +
         source +
         "|" +
         sourceHandleSplitted.slice(2).join("|");
-      let targetHandleSplitted = e.targetHandle.split("|");
+      let targetHandleSplitted = edge.targetHandle.split("|");
       let targetHandle =
         targetHandleSplitted.slice(0, -1).join("|") + "|" + target;
       let id =
@@ -433,7 +433,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           animated: targetHandle.split("|")[0] === "Text",
           selected: false,
         },
-        edges.map((e) => ({ ...e, selected: false }))
+        edges.map((edge) => ({ ...edge, selected: false }))
       );
     });
     reactFlowInstance.setEdges(edges);

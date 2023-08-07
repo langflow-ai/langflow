@@ -9,17 +9,17 @@ import { classNames } from "../../../../utils/utils";
 export default function NodeToolbarComponent({ data, setData, deleteNode }) {
   const [nodeLength, setNodeLength] = useState(
     Object.keys(data.node.template).filter(
-      (t) =>
-        t.charAt(0) !== "_" &&
-        data.node.template[t].show &&
-        (data.node.template[t].type === "str" ||
-          data.node.template[t].type === "bool" ||
-          data.node.template[t].type === "float" ||
-          data.node.template[t].type === "code" ||
-          data.node.template[t].type === "prompt" ||
-          data.node.template[t].type === "file" ||
-          data.node.template[t].type === "Any" ||
-          data.node.template[t].type === "int")
+      (templateName) =>
+        templateName.charAt(0) !== "_" &&
+        data.node.template[templateName].show &&
+        (data.node.template[templateName].type === "str" ||
+          data.node.template[templateName].type === "bool" ||
+          data.node.template[templateName].type === "float" ||
+          data.node.template[templateName].type === "code" ||
+          data.node.template[templateName].type === "prompt" ||
+          data.node.template[templateName].type === "file" ||
+          data.node.template[templateName].type === "Any" ||
+          data.node.template[templateName].type === "int")
     ).length
   );
 

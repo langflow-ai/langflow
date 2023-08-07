@@ -103,14 +103,15 @@ export function groupByFamily(data, baseClasses, left, flow?: NodeType[]) {
     "int",
   ]);
 
-  const checkBaseClass = (t: any) =>
-    t.type &&
-    t.show &&
-    ((!excludeTypes.has(t.type) && baseClassesSet.has(t.type)) ||
-      (t.input_types && t.input_types.some((x) => baseClassesSet.has(x))));
+  const checkBaseClass = (template: any) =>
+    template.type &&
+    template.show &&
+    ((!excludeTypes.has(template.type) && baseClassesSet.has(template.type)) ||
+      (template.input_types && template.input_types.some((inputType) => baseClassesSet.has(inputType))));
 
   if (flow) {
     for (const node of flow) {
+      console.log(node)
       const nodeData = node.data;
       const foundNode = checkedNodes.get(nodeData.type);
       checkedNodes.set(nodeData.type, {

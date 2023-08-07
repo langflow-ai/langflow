@@ -208,9 +208,9 @@ export default function GenericModal({
                   setIsEdit(false);
                 }}
                 autoFocus
-                onChange={(e) => {
-                  setInputValue(e.target.value);
-                  checkVariables(e.target.value);
+                onChange={(event) => {
+                  setInputValue(event.target.value);
+                  checkVariables(event.target.value);
                 }}
                 placeholder="Type message here."
               />
@@ -221,8 +221,8 @@ export default function GenericModal({
                 ref={ref}
                 className="form-input h-full w-full rounded-lg focus-visible:ring-1"
                 value={inputValue}
-                onChange={(e) => {
-                  setInputValue(e.target.value);
+                onChange={(event) => {
+                  setInputValue(event.target.value);
                 }}
                 placeholder="Type message here."
               />

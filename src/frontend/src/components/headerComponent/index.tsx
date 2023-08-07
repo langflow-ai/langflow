@@ -34,7 +34,7 @@ export default function Header() {
         <Link to="/">
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
-        {flows.findIndex((f) => tabId === f.id) !== -1 && tabId !== "" && (
+        {flows.findIndex((flow) => tabId === flow.id) !== -1 && tabId !== "" && (
           <MenuBar flows={flows} tabId={tabId} />
         )}
       </div>
