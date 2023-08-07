@@ -58,7 +58,12 @@ export default function Chat({ flow }: ChatType) {
     ) {
       setIsBuilt(false);
     }
-    if (tabsState && tabsState[flow.id] && tabsState[flow.id].formKeysData) {
+    if (
+      tabsState &&
+      tabsState[flow.id] &&
+      tabsState[flow.id].formKeysData &&
+      tabsState[flow.id].formKeysData.input_keys !== null
+    ) {
       setCanOpen(true);
     } else {
       setCanOpen(false);
