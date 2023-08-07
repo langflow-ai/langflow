@@ -4,7 +4,7 @@ from sqlmodel import SQLModel, Session, create_engine
 from langflow.utils.logger import logger
 from alembic.config import Config
 from alembic import command
-from .models import Flow  # noqa: F401
+from langflow.services.database import models  # noqa
 
 
 class DatabaseManager(Service):
