@@ -107,7 +107,10 @@ export function groupByFamily(data, baseClasses, left, flow?: NodeType[]) {
     template.type &&
     template.show &&
     ((!excludeTypes.has(template.type) && baseClassesSet.has(template.type)) ||
-      (template.input_types && template.input_types.some((inputType) => baseClassesSet.has(inputType))));
+      (template.input_types &&
+        template.input_types.some((inputType) =>
+          baseClassesSet.has(inputType)
+        )));
 
   if (flow) {
     for (const node of flow) {
@@ -119,7 +122,9 @@ export function groupByFamily(data, baseClasses, left, flow?: NodeType[]) {
           Object.values(nodeData.node.template).some(checkBaseClass),
         hasBaseClassInBaseClasses:
           foundNode?.hasBaseClassInBaseClasses ||
-          nodeData.node.base_classes.some((baseClass) => baseClassesSet.has(baseClass)),
+          nodeData.node.base_classes.some((baseClass) =>
+            baseClassesSet.has(baseClass)
+          ),
       });
     }
   }
@@ -249,6 +254,27 @@ export function buildTweakObject(tweak) {
 }
 
 /**
+ * Function to get Chat Input Field
+ * @param {FlowType} flow - The current flow.
+ * @param {TabsState} tabsState - The current tabs state.
+ * @returns {string} - The chat input field
+ */
+export function getChatInputField(flow: FlowType, tabsState?: TabsState) {
+  let chat_input_field = "text";
+
+  if (
+    tabsState[flow.id] &&
+    tabsState[flow.id].formKeysData &&
+    tabsState[flow.id].formKeysData.input_keys
+  ) {
+    chat_input_field = Object.keys(
+      tabsState[flow.id].formKeysData.input_keys
+    )[0];
+  }
+  return chat_input_field;
+}
+
+/**
  * Function to get the python code for the API
  * @param {string} flowId - The id of the flow
  * @returns {string} - The python code
@@ -365,6 +391,7 @@ export function getWidgetCode(flow: FlowType, tabsState?: TabsState): string {
   const flowId = flow.id;
   const flowName = flow.name;
   const inputs = buildInputs(tabsState, flow.id);
+  let chat_input_field = getChatInputField(flow, tabsState);
 
   return `<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
 
@@ -377,11 +404,9 @@ chat_input_field: Input key that you want the chat to send the user message with
   ${
     tabsState[flow.id] && tabsState[flow.id].formKeysData
       ? `chat_inputs='${inputs}'
-  chat_input_field="${
-    Object.keys(tabsState[flow.id].formKeysData.input_keys)[0]
-  }"
+  chat_input_field="${chat_input_field}"
   `
       : ""
-  }host_url="http://localhost:7860" 
+  }host_url="http://localhost:7860"
 ></langflow-chat>`;
 }

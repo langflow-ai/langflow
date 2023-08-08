@@ -1,6 +1,7 @@
 import sys
 import time
 import httpx
+from langflow.services.utils import get_settings_manager
 from langflow.utils.util import get_number_of_workers
 from multiprocess import Process  # type: ignore
 import platform
@@ -12,7 +13,6 @@ from rich import box
 from rich import print as rprint
 import typer
 from langflow.main import setup_app
-from langflow.settings import settings
 from langflow.utils.logger import configure, logger
 import webbrowser
 from dotenv import load_dotenv
@@ -30,19 +30,19 @@ def update_settings(
     """Update the settings from a config file."""
 
     # Check for database_url in the environment variables
-
+    settings_manager = get_settings_manager()
     if config:
         logger.debug(f"Loading settings from {config}")
-        settings.update_from_yaml(config, dev=dev)
+        settings_manager.settings.update_from_yaml(config, dev=dev)
     if remove_api_keys:
         logger.debug(f"Setting remove_api_keys to {remove_api_keys}")
-        settings.update_settings(REMOVE_API_KEYS=remove_api_keys)
+        settings_manager.settings.update_settings(REMOVE_API_KEYS=remove_api_keys)
     if cache:
         logger.debug(f"Setting cache to {cache}")
-        settings.update_settings(CACHE=cache)
+        settings_manager.settings.update_settings(CACHE=cache)
     if components_path:
         logger.debug(f"Adding component path {components_path}")
-        settings.update_settings(COMPONENTS_PATH=components_path)
+        settings_manager.settings.update_settings(COMPONENTS_PATH=components_path)
 
 
 def serve_on_jcloud():
@@ -106,7 +106,9 @@ def serve(
         help="Path to the directory containing custom components.",
         envvar="LANGFLOW_COMPONENTS_PATH",
     ),
-    config: str = typer.Option("config.yaml", help="Path to the configuration file."),
+    config: str = typer.Option(
+        Path(__file__).parent / "config.yaml", help="Path to the configuration file."
+    ),
     # .env file param
     env_file: Path = typer.Option(
         None, help="Path to the .env file containing environment variables."
@@ -146,6 +148,11 @@ def serve(
         help="Remove API keys from the projects saved in the database.",
         envvar="LANGFLOW_REMOVE_API_KEYS",
     ),
+    backend_only: bool = typer.Option(
+        False,
+        help="Run only the backend server without the frontend.",
+        envvar="LANGFLOW_BACKEND_ONLY",
+    ),
 ):
     """
     Run the Langflow server.
@@ -167,7 +174,7 @@ def serve(
     )
     # create path object if path is provided
     static_files_dir: Optional[Path] = Path(path) if path else None
-    app = setup_app(static_files_dir=static_files_dir)
+    app = setup_app(static_files_dir=static_files_dir, backend_only=backend_only)
     # check if port is being used
     if is_port_in_use(port, host):
         port = get_free_port(port)
@@ -178,6 +185,10 @@ def serve(
         "worker_class": "uvicorn.workers.UvicornWorker",
         "timeout": timeout,
     }
+
+    # Define an env variable to know if we are just testing the server
+    if "pytest" in sys.modules:
+        return
 
     if platform.system() in ["Windows"]:
         # Run using uvicorn on MacOS and Windows
