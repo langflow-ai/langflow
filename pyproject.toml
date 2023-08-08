@@ -80,6 +80,7 @@ langchain-experimental = "^0.0.8"
 alembic = "^1.11.2"
 passlib = "^1.7.4"
 bcrypt = "^4.0.1"
+python-jose = "^3.3.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
