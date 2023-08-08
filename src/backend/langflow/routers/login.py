@@ -11,15 +11,15 @@ from langflow.auth.auth import (
 
 from sqlalchemy.orm import Session
 from langflow.services.utils import get_session
+from langflow.database.models.user import User
 
 
 router = APIRouter()
 
 
-def create_user_token(user: str) -> dict:
+def create_user_token(user: User) -> dict:
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        # type: ignore
         data={"sub": user.username},
         expires_delta=access_token_expires,
     )
@@ -32,7 +32,7 @@ async def login_to_get_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_session)
 ):
     if user := authenticate_user(db, form_data.username, form_data.password):
-        return create_user_token(user)  # type: ignore
+        return create_user_token(user)
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

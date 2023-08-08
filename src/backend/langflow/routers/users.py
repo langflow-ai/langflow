@@ -18,12 +18,12 @@ def get_password_hash(password):
 
 
 @router.get("/user", response_model=UserListModel)
-async def read_current_user(current_user: User = Depends(get_current_active_user)):
+def read_current_user(current_user: User = Depends(get_current_active_user)):
     return current_user
 
 
 @router.get("/users", response_model=List[UserListModel])
-async def read_all_users(
+def read_all_users(
     skip: int = 0,
     limit: int = 10,
     _: Session = Depends(get_current_active_user),
@@ -36,7 +36,7 @@ async def read_all_users(
 
 
 @router.post("/user", response_model=User)
-async def add_user(
+def add_user(
     user: UserAddModel,
     _: Session = Depends(get_current_active_user),
     db: Session = Depends(get_session),
@@ -60,7 +60,7 @@ async def add_user(
 
 # TODO: Remove - Just for testing purposes
 @router.post("/super_user", response_model=User)
-async def add_super_user_to_testing_purposes(db: Session = Depends(get_session)):
+def add_super_user_to_testing_purposes(db: Session = Depends(get_session)):
     new_user = User(username="superuser", password="12345", is_superuser=True)
 
     try:
