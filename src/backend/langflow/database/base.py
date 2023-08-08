@@ -3,6 +3,7 @@ import os
 
 from sqlmodel import SQLModel, Session, create_engine
 from langflow.utils.logger import logger
+import sqlalchemy as sa
 
 
 class Engine:
@@ -43,6 +44,13 @@ def create_db_and_tables():
     logger.debug("Creating database and tables")
     try:
         SQLModel.metadata.create_all(Engine.get())
+    except sa.exc.OperationalError as exc:
+        # Check if the error is because the table already exists
+        if "already exists" in str(exc):
+            logger.debug("Database and tables already exist")
+        else:
+            logger.error(f"Error creating database and tables: {exc}")
+            raise RuntimeError("Error creating database and tables") from exc
     except Exception as exc:
         logger.error(f"Error creating database and tables: {exc}")
         raise RuntimeError("Error creating database and tables") from exc
