@@ -318,7 +318,9 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     // add a change event listener to the file input
     input.onchange = (event: Event) => {
       // check if the file type is application/json
-      if ((event.target as HTMLInputElement).files[0].type === "application/json") {
+      if (
+        (event.target as HTMLInputElement).files[0].type === "application/json"
+      ) {
         // get the file from the file input
         const file = (event.target as HTMLInputElement).files[0];
         // read the file as text

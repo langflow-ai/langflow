@@ -50,8 +50,12 @@ export function UndoRedoProvider({ children }) {
 
   useEffect(() => {
     // whenever the flows variable changes, we need to add one array to the past and future states
-    setPast((old) => flows.map((flow, index) => (old[index] ? old[index] : [])));
-    setFuture((old) => flows.map((flow, index) => (old[index] ? old[index] : [])));
+    setPast((old) =>
+      flows.map((flow, index) => (old[index] ? old[index] : []))
+    );
+    setFuture((old) =>
+      flows.map((flow, index) => (old[index] ? old[index] : []))
+    );
     setTabIndex(flows.findIndex((flow) => flow.id === tabId));
   }, [flows, tabId]);
 

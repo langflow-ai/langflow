@@ -303,7 +303,10 @@ export default function Page({ flow }: { flow: FlowType }) {
       takeSnapshot();
       setEdges(
         edges.filter(
-          (edge) => !mynodes.some((node) => edge.source === node.id || edge.target === node.id)
+          (edge) =>
+            !mynodes.some(
+              (node) => edge.source === node.id || edge.target === node.id
+            )
         )
       );
     },
