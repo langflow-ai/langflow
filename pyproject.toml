@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "0.4.3"
+version = "0.4.4"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
@@ -63,7 +63,8 @@ python-multipart = "^0.0.6"
 sqlmodel = "^0.0.8"
 faiss-cpu = "^1.7.4"
 anthropic = "^0.3.0"
-orjson = "^3.9.1"
+
+orjson = "3.9.3"
 multiprocess = "^0.70.14"
 cachetools = "^5.3.1"
 types-cachetools = "^5.3.0.5"
