@@ -78,6 +78,8 @@ psycopg-binary = "^3.1.9"
 fastavro = "^1.8.0"
 langchain-experimental = "^0.0.8"
 alembic = "^1.11.2"
+passlib = "^1.7.4"
+bcrypt = "^4.0.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
