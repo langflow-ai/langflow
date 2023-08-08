@@ -46,6 +46,9 @@ export default function App() {
     }>
   >([]);
 
+  const isLoginPage = location.pathname.includes('login');
+  const isAdminPage = location.pathname.includes('admin');
+
   // Use effect hook to update alertsList when a new alert is added
   useEffect(() => {
     // If there is an error alert open with data, add it to the alertsList
@@ -120,6 +123,7 @@ export default function App() {
       prevAlertsList.filter((alert) => alert.id !== id)
     );
   };
+  
 
   return (
     //need parent component with width and height
@@ -133,7 +137,10 @@ export default function App() {
         }}
         FallbackComponent={CrashErrorComponent}
       >
-        <Header />
+        {
+          !isLoginPage
+          &&
+          <Header />}
         <Router />
       </ErrorBoundary>
       <div></div>

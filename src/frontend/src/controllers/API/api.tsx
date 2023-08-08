@@ -16,32 +16,32 @@ function ApiInterceptor() {
     const interceptor = api.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
-        if (URL_EXCLUDED_FROM_ERROR_RETRIES.includes(error.config?.url)) {
-          return Promise.reject(error);
-        }
-        let retryCount = 0;
+        // if (URL_EXCLUDED_FROM_ERROR_RETRIES.includes(error.config?.url)) {
+        //   return Promise.reject(error);
+        // }
+        // let retryCount = 0;
 
-        while (retryCount < 4) {
-          await sleep(5000); // Sleep for 5 seconds
-          retryCount++;
-          try {
-            const response = await axios.request(error.config);
-            return response;
-          } catch (error) {
-            if (retryCount === 3) {
-              setErrorData({
-                title: "There was an error on web connection, please: ",
-                list: [
-                  "Refresh the page",
-                  "Use a new flow tab",
-                  "Check if the backend is up",
-                  "Endpoint: " + error.config?.url,
-                ],
-              });
-              return Promise.reject(error);
-            }
-          }
-        }
+        // while (retryCount < 4) {
+        //   await sleep(5000); // Sleep for 5 seconds
+        //   retryCount++;
+        //   try {
+        //     const response = await axios.request(error.config);
+        //     return response;
+        //   } catch (error) {
+        //     if (retryCount === 3) {
+        //       setErrorData({
+        //         title: "There was an error on web connection, please: ",
+        //         list: [
+        //           "Refresh the page",
+        //           "Use a new flow tab",
+        //           "Check if the backend is up",
+        //           "Endpoint: " + error.config?.url,
+        //         ],
+        //       });
+        //       return Promise.reject(error);
+        //     }
+        //   }
+        // }
       }
     );
 
