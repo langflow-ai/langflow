@@ -3,13 +3,13 @@ from fastapi.responses import StreamingResponse
 from langflow.api.utils import build_input_keys_response
 from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, StreamData
 
-from langflow.chat.manager import ChatManager
+from langflow.services import service_manager, ServiceType
 from langflow.graph.graph.base import Graph
 from langflow.utils.logger import logger
 from cachetools import LRUCache
 
 router = APIRouter(tags=["Chat"])
-chat_manager = ChatManager()
+
 flow_data_store: LRUCache = LRUCache(maxsize=10)
 
 
@@ -17,6 +17,7 @@ flow_data_store: LRUCache = LRUCache(maxsize=10)
 async def chat(client_id: str, websocket: WebSocket):
     """Websocket endpoint for chat."""
     try:
+        chat_manager = service_manager.get(ServiceType.CHAT_MANAGER)
         if client_id in chat_manager.in_memory_cache:
             await chat_manager.handle_websocket(client_id, websocket)
         else:
@@ -45,6 +46,7 @@ async def init_build(graph_data: dict, flow_id: str):
             return InitResponse(flowId=flow_id)
 
         # Delete from cache if already exists
+        chat_manager = service_manager.get(ServiceType.CHAT_MANAGER)
         if flow_id in chat_manager.in_memory_cache:
             with chat_manager.in_memory_cache._lock:
                 chat_manager.in_memory_cache.delete(flow_id)
@@ -160,7 +162,7 @@ async def stream_build(flow_id: str):
                     "handle_keys": [],
                 }
             yield str(StreamData(event="message", data=input_keys_response))
-
+            chat_manager = service_manager.get(ServiceType.CHAT_MANAGER)
             chat_manager.set_cache(flow_id, langchain_object)
             # We need to reset the chat history
             chat_manager.chat_history.empty_history(flow_id)
