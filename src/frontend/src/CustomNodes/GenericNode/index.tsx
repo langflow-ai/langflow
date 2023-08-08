@@ -159,18 +159,18 @@ export default function GenericNode({
 
           <>
             {Object.keys(data.node.template)
-              .filter((templateName) => templateName.charAt(0) !== "_")
-              .map((templateName: string, idx) => (
+              .filter((templateField) => templateField.charAt(0) !== "_")
+              .map((templateField: string, idx) => (
                 <div key={idx}>
-                  {data.node.template[templateName].show &&
-                  !data.node.template[templateName].advanced ? (
+                  {data.node.template[templateField].show &&
+                  !data.node.template[templateField].advanced ? (
                     <ParameterComponent
                       key={
-                        (data.node.template[templateName].input_types?.join(
+                        (data.node.template[templateField].input_types?.join(
                           ";"
-                        ) ?? data.node.template[templateName].type) +
+                        ) ?? data.node.template[templateField].type) +
                         "|" +
-                        templateName +
+                        templateField +
                         "|" +
                         data.id
                       }
@@ -178,39 +178,39 @@ export default function GenericNode({
                       setData={setData}
                       color={
                         nodeColors[
-                          types[data.node.template[templateName].type]
+                          types[data.node.template[templateField].type]
                         ] ??
-                        nodeColors[data.node.template[templateName].type] ??
+                        nodeColors[data.node.template[templateField].type] ??
                         nodeColors.unknown
                       }
                       title={
-                        data.node.template[templateName].display_name
-                          ? data.node.template[templateName].display_name
-                          : data.node.template[templateName].name
-                          ? toTitleCase(data.node.template[templateName].name)
-                          : toTitleCase(templateName)
+                        data.node.template[templateField].display_name
+                          ? data.node.template[templateField].display_name
+                          : data.node.template[templateField].name
+                          ? toTitleCase(data.node.template[templateField].name)
+                          : toTitleCase(templateField)
                       }
-                      info={data.node.template[templateName].info}
-                      name={templateName}
+                      info={data.node.template[templateField].info}
+                      name={templateField}
                       tooltipTitle={
-                        data.node.template[templateName].input_types?.join(
+                        data.node.template[templateField].input_types?.join(
                           "\n"
-                        ) ?? data.node.template[templateName].type
+                        ) ?? data.node.template[templateField].type
                       }
-                      required={data.node.template[templateName].required}
+                      required={data.node.template[templateField].required}
                       id={
-                        (data.node.template[templateName].input_types?.join(
+                        (data.node.template[templateField].input_types?.join(
                           ";"
-                        ) ?? data.node.template[templateName].type) +
+                        ) ?? data.node.template[templateField].type) +
                         "|" +
-                        templateName +
+                        templateField +
                         "|" +
                         data.id
                       }
                       left={true}
-                      type={data.node.template[templateName].type}
+                      type={data.node.template[templateField].type}
                       optionalHandle={
-                        data.node.template[templateName].input_types
+                        data.node.template[templateField].input_types
                       }
                     />
                   ) : (

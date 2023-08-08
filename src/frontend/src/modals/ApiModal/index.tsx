@@ -184,16 +184,16 @@ const ApiModal = forwardRef(
       flow["data"]["nodes"].forEach((node) => {
         Object.keys(node["data"]["node"]["template"])
           .filter(
-            (templateName) =>
-              templateName.charAt(0) !== "_" &&
-              node.data.node.template[templateName].show &&
-              (node.data.node.template[templateName].type === "str" ||
-                node.data.node.template[templateName].type === "bool" ||
-                node.data.node.template[templateName].type === "float" ||
-                node.data.node.template[templateName].type === "code" ||
-                node.data.node.template[templateName].type === "prompt" ||
-                node.data.node.template[templateName].type === "file" ||
-                node.data.node.template[templateName].type === "int")
+            (templateField) =>
+              templateField.charAt(0) !== "_" &&
+              node.data.node.template[templateField].show &&
+              (node.data.node.template[templateField].type === "str" ||
+                node.data.node.template[templateField].type === "bool" ||
+                node.data.node.template[templateField].type === "float" ||
+                node.data.node.template[templateField].type === "code" ||
+                node.data.node.template[templateField].type === "prompt" ||
+                node.data.node.template[templateField].type === "file" ||
+                node.data.node.template[templateField].type === "int")
           )
           .map((n, i) => {
             arrNodesWithValues.push(node["id"]);
