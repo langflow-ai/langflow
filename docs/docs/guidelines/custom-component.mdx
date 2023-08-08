@@ -385,17 +385,17 @@ Your structure should look something like this:
 
 ### Loading Custom Components
 
-You can specify the path to your custom components using the _`--components-path`_ argument when running the Langflow CLI, as shown below:
-
-```bash
-langflow --components-path /path/to/components
-```
-
-Alternatively, you can set the `LANGFLOW_COMPONENTS_PATH` environment variable:
+The recommended way to load custom components is to set the _`LANGFLOW_COMPONENTS_PATH`_ environment variable to the path of your custom components directory. Then, run the Langflow CLI as usual.
 
 ```bash
 export LANGFLOW_COMPONENTS_PATH=/path/to/components
 langflow
+```
+
+Alternatively, you can specify the path to your custom components using the _`--components-path`_ argument when running the Langflow CLI, as shown below:
+
+```bash
+langflow --components-path /path/to/components
 ```
 
 Langflow will attempt to load all of the components found in the specified directory. If a component fails to load due to errors in the component's code, Langflow will print an error message to the console but will continue loading the rest of the components.

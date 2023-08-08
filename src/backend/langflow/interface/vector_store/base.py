@@ -4,7 +4,8 @@ from langchain import vectorstores
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class
-from langflow.settings import settings
+from langflow.services.utils import get_settings_manager
+
 from langflow.template.frontend_node.vectorstores import VectorStoreFrontendNode
 from langflow.utils.logger import logger
 from langflow.utils.util import build_template_from_method
@@ -43,10 +44,12 @@ class VectorstoreCreator(LangChainTypeCreator):
             return None
 
     def to_list(self) -> List[str]:
+        settings_manager = get_settings_manager()
         return [
             vectorstore
             for vectorstore in self.type_to_loader_dict.keys()
-            if vectorstore in settings.vectorstores or settings.dev
+            if vectorstore in settings_manager.settings.VECTORSTORES
+            or settings_manager.settings.DEV
         ]
 
 

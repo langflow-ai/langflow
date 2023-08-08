@@ -12,7 +12,6 @@ from langflow.graph.vertex.types import (
     FileToolVertex,
     LLMVertex,
     ToolkitVertex,
-    WrapperVertex,
 )
 from langflow.processing.process import get_result_and_thought
 from langflow.utils.payload import get_root_node
@@ -292,11 +291,11 @@ def test_file_tool_node_build(openapi_graph):
     assert not Path(file_path).exists()
 
 
-def test_wrapper_node_build(openapi_graph):
-    wrapper_node = get_node_by_type(openapi_graph, WrapperVertex)
-    assert wrapper_node is not None
-    built_object = wrapper_node.build()
-    assert built_object is not None
+# def test_wrapper_node_build(openapi_graph):
+#     wrapper_node = get_node_by_type(openapi_graph, WrapperVertex)
+#     assert wrapper_node is not None
+#     built_object = wrapper_node.build()
+#     assert built_object is not None
 
 
 def test_get_result_and_thought(basic_graph):

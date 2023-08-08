@@ -1,13 +1,14 @@
 from fastapi.testclient import TestClient
-from langflow.settings import settings
+from langflow.services.utils import get_settings_manager
 
 
 def test_prompts_settings(client: TestClient):
+    settings_manager = get_settings_manager()
     response = client.get("api/v1/all")
     assert response.status_code == 200
     json_response = response.json()
     prompts = json_response["prompts"]
-    assert set(prompts.keys()) == set(settings.prompts)
+    assert set(prompts.keys()) == set(settings_manager.settings.PROMPTS)
 
 
 def test_prompt_template(client: TestClient):

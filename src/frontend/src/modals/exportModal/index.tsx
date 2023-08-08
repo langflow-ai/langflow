@@ -13,6 +13,7 @@ const ExportModal = forwardRef((props: { children: ReactNode }, ref) => {
     useContext(TabsContext);
   const [checked, setChecked] = useState(false);
   const [name, setName] = useState(flows.find((f) => f.id === tabId).name);
+  const [invalidName, setInvalidName] = useState(false);
   const [description, setDescription] = useState(
     flows.find((f) => f.id === tabId).description
   );
@@ -30,6 +31,8 @@ const ExportModal = forwardRef((props: { children: ReactNode }, ref) => {
       </BaseModal.Header>
       <BaseModal.Content>
         <EditFlowSettings
+          invalidName={invalidName}
+          setInvalidName={setInvalidName}
           name={name}
           description={description}
           flows={flows}

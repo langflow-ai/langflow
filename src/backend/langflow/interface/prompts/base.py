@@ -5,7 +5,8 @@ from langchain import prompts
 from langflow.custom.customs import get_custom_nodes
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class
-from langflow.settings import settings
+from langflow.services.utils import get_settings_manager
+
 from langflow.template.frontend_node.prompts import PromptFrontendNode
 from langflow.utils.logger import logger
 from langflow.utils.util import build_template_from_class
@@ -20,6 +21,7 @@ class PromptCreator(LangChainTypeCreator):
 
     @property
     def type_to_loader_dict(self) -> Dict:
+        settings_manager = get_settings_manager()
         if self.type_dict is None:
             self.type_dict = {
                 prompt_name: import_class(f"langchain.prompts.{prompt_name}")
@@ -34,7 +36,8 @@ class PromptCreator(LangChainTypeCreator):
             self.type_dict = {
                 name: prompt
                 for name, prompt in self.type_dict.items()
-                if name in settings.prompts or settings.dev
+                if name in settings_manager.settings.PROMPTS
+                or settings_manager.settings.DEV
             }
         return self.type_dict
 

@@ -1,5 +1,7 @@
 from importlib import metadata
-from langflow.cache import cache_manager
+
+# Deactivate cache manager for now
+# from langflow.services.cache import cache_manager
 from langflow.processing.process import load_flow_from_json
 from langflow.interface.custom.custom_component import CustomComponent
 

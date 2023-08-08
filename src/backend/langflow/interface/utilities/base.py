@@ -5,7 +5,8 @@ from langchain import SQLDatabase, utilities
 from langflow.custom.customs import get_custom_nodes
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class
-from langflow.settings import settings
+from langflow.services.utils import get_settings_manager
+
 from langflow.template.frontend_node.utilities import UtilitiesFrontendNode
 from langflow.utils.logger import logger
 from langflow.utils.util import build_template_from_class
@@ -26,6 +27,7 @@ class UtilityCreator(LangChainTypeCreator):
         from the langchain.chains module and filtering them according to the settings.utilities list.
         """
         if self.type_dict is None:
+            settings_manager = get_settings_manager()
             self.type_dict = {
                 utility_name: import_class(f"langchain.utilities.{utility_name}")
                 for utility_name in utilities.__all__
@@ -35,7 +37,8 @@ class UtilityCreator(LangChainTypeCreator):
             self.type_dict = {
                 name: utility
                 for name, utility in self.type_dict.items()
-                if name in settings.utilities or settings.dev
+                if name in settings_manager.settings.UTILITIES
+                or settings_manager.settings.DEV
             }
 
         return self.type_dict

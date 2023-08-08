@@ -10,7 +10,8 @@ from langflow.auth.auth import (
 )
 
 from sqlalchemy.orm import Session
-from langflow.database.base import get_session
+from langflow.services.utils import get_session
+
 
 router = APIRouter()
 
@@ -18,7 +19,8 @@ router = APIRouter()
 def create_user_token(user: str) -> dict:
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires  # type: ignore
+        # type: ignore
+        data={"sub": user.username}, expires_delta=access_token_expires
     )
 
     return {"access_token": access_token, "token_type": "bearer"}

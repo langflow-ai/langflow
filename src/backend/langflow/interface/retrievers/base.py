@@ -4,7 +4,8 @@ from langchain import retrievers
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class
-from langflow.settings import settings
+from langflow.services.utils import get_settings_manager
+
 from langflow.template.frontend_node.retrievers import RetrieverFrontendNode
 from langflow.utils.logger import logger
 from langflow.utils.util import build_template_from_method, build_template_from_class
@@ -48,10 +49,12 @@ class RetrieverCreator(LangChainTypeCreator):
             return None
 
     def to_list(self) -> List[str]:
+        settings_manager = get_settings_manager()
         return [
             retriever
             for retriever in self.type_to_loader_dict.keys()
-            if retriever in settings.retrievers or settings.dev
+            if retriever in settings_manager.settings.RETRIEVERS
+            or settings_manager.settings.DEV
         ]
 
 

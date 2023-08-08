@@ -96,7 +96,7 @@ export default function ButtonBox({
         <div className="mb-auto mt-auto w-full">
           <h3
             className={classNames(
-              "w-full break-words font-semibold text-background truncate-multiline",
+              "w-full font-semibold text-background truncate-multiline word-break-break-word",
               titleFontSize,
               marginTop
             )}
