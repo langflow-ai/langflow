@@ -21,9 +21,9 @@ async def process_graph(
 
     # Generate result and thought
     try:
-        if not chat_inputs.message:
+        if chat_inputs.message is None:
             logger.debug("No message provided")
-            raise ValueError("No message provided")
+            chat_inputs.message = {}
 
         logger.debug("Generating result and thought")
         result, intermediate_steps = await get_result_and_steps(
