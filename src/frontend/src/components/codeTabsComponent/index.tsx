@@ -230,60 +230,60 @@ export default function CodeTabsComponent({
                               <TableBody className="p-0">
                                 {Object.keys(node["data"]["node"]["template"])
                                   .filter(
-                                    (templateName) =>
-                                      templateName.charAt(0) !== "_" &&
-                                      node.data.node.template[templateName]
+                                    (templateField) =>
+                                      templateField.charAt(0) !== "_" &&
+                                      node.data.node.template[templateField]
                                         .show &&
-                                      (node.data.node.template[templateName]
+                                      (node.data.node.template[templateField]
                                         .type === "str" ||
-                                        node.data.node.template[templateName]
+                                        node.data.node.template[templateField]
                                           .type === "bool" ||
-                                        node.data.node.template[templateName]
+                                        node.data.node.template[templateField]
                                           .type === "float" ||
-                                        node.data.node.template[templateName]
+                                        node.data.node.template[templateField]
                                           .type === "code" ||
-                                        node.data.node.template[templateName]
+                                        node.data.node.template[templateField]
                                           .type === "prompt" ||
-                                        node.data.node.template[templateName]
+                                        node.data.node.template[templateField]
                                           .type === "file" ||
-                                        node.data.node.template[templateName]
+                                        node.data.node.template[templateField]
                                           .type === "int")
                                   )
-                                  .map((templateName, index) => {
+                                  .map((templateField, index) => {
                                     return (
                                       <TableRow
                                         key={index}
                                         className="h-10 dark:border-b-muted"
                                       >
                                         <TableCell className="p-0 text-center text-sm text-foreground">
-                                          {templateName}
+                                          {templateField}
                                         </TableCell>
                                         <TableCell className="p-0 text-xs text-foreground">
                                           <div className="m-auto w-[250px]">
                                             {node.data.node.template[
-                                              templateName
+                                              templateField
                                             ].type === "str" &&
                                             !node.data.node.template[
-                                              templateName
+                                              templateField
                                             ].options ? (
                                               <div className="mx-auto">
                                                 {node.data.node.template[
-                                                  templateName
+                                                  templateField
                                                 ].list ? (
                                                   <InputListComponent
                                                     editNode={true}
                                                     disabled={false}
                                                     value={
                                                       !node.data.node.template[
-                                                        templateName
+                                                        templateField
                                                       ].value ||
                                                       node.data.node.template[
-                                                        templateName
+                                                        templateField
                                                       ].value === ""
                                                         ? [""]
                                                         : node.data.node
                                                             .template[
-                                                            templateName
+                                                            templateField
                                                           ].value
                                                     }
                                                     onChange={(target) => {
@@ -293,7 +293,7 @@ export default function CodeTabsComponent({
                                                         newInputList[
                                                           index
                                                         ].data.node.template[
-                                                          templateName
+                                                          templateField
                                                         ].value = target;
                                                         return newInputList;
                                                       });
@@ -301,18 +301,18 @@ export default function CodeTabsComponent({
                                                         node["data"]["id"],
                                                         target,
                                                         node.data.node.template[
-                                                          templateName
+                                                          templateField
                                                         ]
                                                       );
                                                     }}
                                                   />
                                                 ) : node.data.node.template[
-                                                    templateName
+                                                    templateField
                                                   ].multiline ? (
                                                   <ShadTooltip
                                                     content={tweaks.buildContent(
                                                       node.data.node.template[
-                                                        templateName
+                                                        templateField
                                                       ].value
                                                     )}
                                                   >
@@ -323,16 +323,16 @@ export default function CodeTabsComponent({
                                                         value={
                                                           !node.data.node
                                                             .template[
-                                                            templateName
+                                                            templateField
                                                           ].value ||
                                                           node.data.node
                                                             .template[
-                                                            templateName
+                                                            templateField
                                                           ].value === ""
                                                             ? ""
                                                             : node.data.node
                                                                 .template[
-                                                                templateName
+                                                                templateField
                                                               ].value
                                                         }
                                                         onChange={(target) => {
@@ -342,7 +342,7 @@ export default function CodeTabsComponent({
                                                             newInputList[
                                                               index
                                                             ].data.node.template[
-                                                              templateName
+                                                              templateField
                                                             ].value = target;
                                                             return newInputList;
                                                           });
@@ -351,7 +351,7 @@ export default function CodeTabsComponent({
                                                             target,
                                                             node.data.node
                                                               .template[
-                                                              templateName
+                                                              templateField
                                                             ]
                                                           );
                                                         }}
@@ -364,20 +364,20 @@ export default function CodeTabsComponent({
                                                     disabled={false}
                                                     password={
                                                       node.data.node.template[
-                                                        templateName
+                                                        templateField
                                                       ].password ?? false
                                                     }
                                                     value={
                                                       !node.data.node.template[
-                                                        templateName
+                                                        templateField
                                                       ].value ||
                                                       node.data.node.template[
-                                                        templateName
+                                                        templateField
                                                       ].value === ""
                                                         ? ""
                                                         : node.data.node
                                                             .template[
-                                                            templateName
+                                                            templateField
                                                           ].value
                                                     }
                                                     onChange={(target) => {
@@ -387,7 +387,7 @@ export default function CodeTabsComponent({
                                                         newInputList[
                                                           index
                                                         ].data.node.template[
-                                                          templateName
+                                                          templateField
                                                         ].value = target;
                                                         return newInputList;
                                                       });
@@ -395,7 +395,7 @@ export default function CodeTabsComponent({
                                                         node["data"]["id"],
                                                         target,
                                                         node.data.node.template[
-                                                          templateName
+                                                          templateField
                                                         ]
                                                       );
                                                     }}
@@ -403,14 +403,14 @@ export default function CodeTabsComponent({
                                                 )}
                                               </div>
                                             ) : node.data.node.template[
-                                                templateName
+                                                templateField
                                               ].type === "bool" ? (
                                               <div className="ml-auto">
                                                 {" "}
                                                 <ToggleShadComponent
                                                   enabled={
                                                     node.data.node.template[
-                                                      templateName
+                                                      templateField
                                                     ].value
                                                   }
                                                   setEnabled={(e) => {
@@ -420,7 +420,7 @@ export default function CodeTabsComponent({
                                                       newInputList[
                                                         index
                                                       ].data.node.template[
-                                                        templateName
+                                                        templateField
                                                       ].value = e;
                                                       return newInputList;
                                                     });
@@ -428,7 +428,7 @@ export default function CodeTabsComponent({
                                                       node["data"]["id"],
                                                       e,
                                                       node.data.node.template[
-                                                        templateName
+                                                        templateField
                                                       ]
                                                     );
                                                   }}
@@ -437,19 +437,19 @@ export default function CodeTabsComponent({
                                                 />
                                               </div>
                                             ) : node.data.node.template[
-                                                templateName
+                                                templateField
                                               ].type === "file" ? (
                                               <ShadTooltip
                                                 content={tweaks.buildContent(
                                                   !node.data.node.template[
-                                                    templateName
+                                                    templateField
                                                   ].value ||
                                                     node.data.node.template[
-                                                      templateName
+                                                      templateField
                                                     ].value === ""
                                                     ? ""
                                                     : node.data.node.template[
-                                                        templateName
+                                                        templateField
                                                       ].value
                                                 )}
                                               >
@@ -459,7 +459,7 @@ export default function CodeTabsComponent({
                                                     disabled={false}
                                                     value={
                                                       node.data.node.template[
-                                                        templateName
+                                                        templateField
                                                       ].value ?? ""
                                                     }
                                                     onChange={(
@@ -467,26 +467,26 @@ export default function CodeTabsComponent({
                                                     ) => {}}
                                                     fileTypes={
                                                       node.data.node.template[
-                                                        templateName
+                                                        templateField
                                                       ].fileTypes
                                                     }
                                                     suffixes={
                                                       node.data.node.template[
-                                                        templateName
+                                                        templateField
                                                       ].suffixes
                                                     }
                                                     onFileChange={(
                                                       value: any
                                                     ) => {
                                                       node.data.node.template[
-                                                        templateName
+                                                        templateField
                                                       ].file_path = value;
                                                     }}
                                                   ></InputFileComponent>
                                                 </div>
                                               </ShadTooltip>
                                             ) : node.data.node.template[
-                                                templateName
+                                                templateField
                                               ].type === "float" ? (
                                               <div className="mx-auto">
                                                 <FloatComponent
@@ -494,14 +494,14 @@ export default function CodeTabsComponent({
                                                   editNode={true}
                                                   value={
                                                     !node.data.node.template[
-                                                      templateName
+                                                      templateField
                                                     ].value ||
                                                     node.data.node.template[
-                                                      templateName
+                                                      templateField
                                                     ].value === ""
                                                       ? ""
                                                       : node.data.node.template[
-                                                          templateName
+                                                          templateField
                                                         ].value
                                                   }
                                                   onChange={(target) => {
@@ -511,7 +511,7 @@ export default function CodeTabsComponent({
                                                       newInputList[
                                                         index
                                                       ].data.node.template[
-                                                        templateName
+                                                        templateField
                                                       ].value = target;
                                                       return newInputList;
                                                     });
@@ -519,17 +519,17 @@ export default function CodeTabsComponent({
                                                       node["data"]["id"],
                                                       target,
                                                       node.data.node.template[
-                                                        templateName
+                                                        templateField
                                                       ]
                                                     );
                                                   }}
                                                 />
                                               </div>
                                             ) : node.data.node.template[
-                                                templateName
+                                                templateField
                                               ].type === "str" &&
                                               node.data.node.template[
-                                                templateName
+                                                templateField
                                               ].options ? (
                                               <div className="mx-auto">
                                                 <Dropdown
@@ -537,7 +537,7 @@ export default function CodeTabsComponent({
                                                   apiModal={true}
                                                   options={
                                                     node.data.node.template[
-                                                      templateName
+                                                      templateField
                                                     ].options
                                                   }
                                                   onSelect={(target) => {
@@ -547,7 +547,7 @@ export default function CodeTabsComponent({
                                                       newInputList[
                                                         index
                                                       ].data.node.template[
-                                                        templateName
+                                                        templateField
                                                       ].value = target;
                                                       return newInputList;
                                                     });
@@ -555,26 +555,26 @@ export default function CodeTabsComponent({
                                                       node["data"]["id"],
                                                       target,
                                                       node.data.node.template[
-                                                        templateName
+                                                        templateField
                                                       ]
                                                     );
                                                   }}
                                                   value={
                                                     !node.data.node.template[
-                                                      templateName
+                                                      templateField
                                                     ].value ||
                                                     node.data.node.template[
-                                                      templateName
+                                                      templateField
                                                     ].value === ""
                                                       ? ""
                                                       : node.data.node.template[
-                                                          templateName
+                                                          templateField
                                                         ].value
                                                   }
                                                 ></Dropdown>
                                               </div>
                                             ) : node.data.node.template[
-                                                templateName
+                                                templateField
                                               ].type === "int" ? (
                                               <div className="mx-auto">
                                                 <IntComponent
@@ -582,14 +582,14 @@ export default function CodeTabsComponent({
                                                   editNode={true}
                                                   value={
                                                     !node.data.node.template[
-                                                      templateName
+                                                      templateField
                                                     ].value ||
                                                     node.data.node.template[
-                                                      templateName
+                                                      templateField
                                                     ].value === ""
                                                       ? ""
                                                       : node.data.node.template[
-                                                          templateName
+                                                          templateField
                                                         ].value
                                                   }
                                                   onChange={(target) => {
@@ -599,7 +599,7 @@ export default function CodeTabsComponent({
                                                       newInputList[
                                                         index
                                                       ].data.node.template[
-                                                        templateName
+                                                        templateField
                                                       ].value = target;
                                                       return newInputList;
                                                     });
@@ -607,26 +607,26 @@ export default function CodeTabsComponent({
                                                       node["data"]["id"],
                                                       target,
                                                       node.data.node.template[
-                                                        templateName
+                                                        templateField
                                                       ]
                                                     );
                                                   }}
                                                 />
                                               </div>
                                             ) : node.data.node.template[
-                                                templateName
+                                                templateField
                                               ].type === "prompt" ? (
                                               <ShadTooltip
                                                 content={tweaks.buildContent(
                                                   !node.data.node.template[
-                                                    templateName
+                                                    templateField
                                                   ].value ||
                                                     node.data.node.template[
-                                                      templateName
+                                                      templateField
                                                     ].value === ""
                                                     ? ""
                                                     : node.data.node.template[
-                                                        templateName
+                                                        templateField
                                                       ].value
                                                 )}
                                               >
@@ -636,15 +636,15 @@ export default function CodeTabsComponent({
                                                     disabled={false}
                                                     value={
                                                       !node.data.node.template[
-                                                        templateName
+                                                        templateField
                                                       ].value ||
                                                       node.data.node.template[
-                                                        templateName
+                                                        templateField
                                                       ].value === ""
                                                         ? ""
                                                         : node.data.node
                                                             .template[
-                                                            templateName
+                                                            templateField
                                                           ].value
                                                     }
                                                     onChange={(target) => {
@@ -654,7 +654,7 @@ export default function CodeTabsComponent({
                                                         newInputList[
                                                           index
                                                         ].data.node.template[
-                                                          templateName
+                                                          templateField
                                                         ].value = target;
                                                         return newInputList;
                                                       });
@@ -662,7 +662,7 @@ export default function CodeTabsComponent({
                                                         node["data"]["id"],
                                                         target,
                                                         node.data.node.template[
-                                                          templateName
+                                                          templateField
                                                         ]
                                                       );
                                                     }}
@@ -670,17 +670,17 @@ export default function CodeTabsComponent({
                                                 </div>
                                               </ShadTooltip>
                                             ) : node.data.node.template[
-                                                templateName
+                                                templateField
                                               ].type === "code" ? (
                                               <ShadTooltip
                                                 content={tweaks.buildContent(
                                                   tweaks.getValue(
                                                     node.data.node.template[
-                                                      templateName
+                                                      templateField
                                                     ].value,
                                                     node.data,
                                                     node.data.node.template[
-                                                      templateName
+                                                      templateField
                                                     ]
                                                   )
                                                 )}
@@ -691,15 +691,15 @@ export default function CodeTabsComponent({
                                                     editNode={true}
                                                     value={
                                                       !node.data.node.template[
-                                                        templateName
+                                                        templateField
                                                       ].value ||
                                                       node.data.node.template[
-                                                        templateName
+                                                        templateField
                                                       ].value === ""
                                                         ? ""
                                                         : node.data.node
                                                             .template[
-                                                            templateName
+                                                            templateField
                                                           ].value
                                                     }
                                                     onChange={(target) => {
@@ -709,7 +709,7 @@ export default function CodeTabsComponent({
                                                         newInputList[
                                                           index
                                                         ].data.node.template[
-                                                          templateName
+                                                          templateField
                                                         ].value = target;
                                                         return newInputList;
                                                       });
@@ -717,7 +717,7 @@ export default function CodeTabsComponent({
                                                         node["data"]["id"],
                                                         target,
                                                         node.data.node.template[
-                                                          templateName
+                                                          templateField
                                                         ]
                                                       );
                                                     }}
@@ -725,7 +725,7 @@ export default function CodeTabsComponent({
                                                 </div>
                                               </ShadTooltip>
                                             ) : node.data.node.template[
-                                                templateName
+                                                templateField
                                               ].type === "Any" ? (
                                               "-"
                                             ) : (

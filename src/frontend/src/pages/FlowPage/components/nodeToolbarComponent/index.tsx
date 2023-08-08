@@ -9,17 +9,17 @@ import { classNames } from "../../../../utils/utils";
 export default function NodeToolbarComponent({ data, setData, deleteNode }) {
   const [nodeLength, setNodeLength] = useState(
     Object.keys(data.node.template).filter(
-      (templateName) =>
-        templateName.charAt(0) !== "_" &&
-        data.node.template[templateName].show &&
-        (data.node.template[templateName].type === "str" ||
-          data.node.template[templateName].type === "bool" ||
-          data.node.template[templateName].type === "float" ||
-          data.node.template[templateName].type === "code" ||
-          data.node.template[templateName].type === "prompt" ||
-          data.node.template[templateName].type === "file" ||
-          data.node.template[templateName].type === "Any" ||
-          data.node.template[templateName].type === "int")
+      (templateField) =>
+        templateField.charAt(0) !== "_" &&
+        data.node.template[templateField].show &&
+        (data.node.template[templateField].type === "str" ||
+          data.node.template[templateField].type === "bool" ||
+          data.node.template[templateField].type === "float" ||
+          data.node.template[templateField].type === "code" ||
+          data.node.template[templateField].type === "prompt" ||
+          data.node.template[templateField].type === "file" ||
+          data.node.template[templateField].type === "Any" ||
+          data.node.template[templateField].type === "int")
     ).length
   );
 
