@@ -19,7 +19,7 @@ readme = "README.md"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
 packages = [{ include = "langflow", from = "src/backend" }]
 include = ["src/backend/langflow/*", "src/backend/langflow/**/*"]
-
+documentation = "https://docs.langflow.org"
 
 [tool.poetry.scripts]
 langflow = "langflow.__main__:main"
@@ -63,7 +63,7 @@ python-multipart = "^0.0.6"
 sqlmodel = "^0.0.8"
 faiss-cpu = "^1.7.4"
 anthropic = "^0.3.0"
-orjson = "^3.9.1"
+orjson = "3.9.3"
 multiprocess = "^0.70.14"
 cachetools = "^5.3.1"
 types-cachetools = "^5.3.0.5"
@@ -77,6 +77,7 @@ psycopg = "^3.1.9"
 psycopg-binary = "^3.1.9"
 fastavro = "^1.8.0"
 langchain-experimental = "^0.0.8"
+alembic = "^1.11.2"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"

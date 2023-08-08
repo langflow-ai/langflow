@@ -7,6 +7,11 @@ to contributions, whether it be in the form of a new feature, improved infra, or
 To contribute to this project, please follow a ["fork and pull request"](https://docs.github.com/en/get-started/quickstart/contributing-to-projects) workflow.
 Please do not try to push directly to this repo unless you are a maintainer.
 
+The branch structure is as follows:
+
+- `main`: The stable version of Langflow
+- `dev`: The development version of Langflow. This branch is used to test new features before they are merged into `main` and, as such, may be unstable.
+
 ## 🗺️Contributing Guidelines
 
 ## 🚩GitHub Issues
