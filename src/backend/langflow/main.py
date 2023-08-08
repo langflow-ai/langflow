@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from langflow.api import router
-from langflow.routers import login, users, items, health
+from langflow.routers import login, users, health
 from langflow.database.base import create_db_and_tables
 from langflow.interface.utils import setup_llm_caching
 from langflow.utils.logger import configure
@@ -30,7 +30,6 @@ def create_app():
 
     app.include_router(login.router)
     app.include_router(users.router)
-    app.include_router(items.router)
     app.include_router(health.router)
     app.include_router(router)
 
@@ -74,8 +73,7 @@ def setup_app(static_files_dir: Optional[Path] = None) -> FastAPI:
         static_files_dir = get_static_files_dir()
 
     if not static_files_dir or not static_files_dir.exists():
-        raise RuntimeError(
-            f"Static files directory {static_files_dir} does not exist.")
+        raise RuntimeError(f"Static files directory {static_files_dir} does not exist.")
     app = create_app()
     setup_static_files(app, static_files_dir)
     return app
