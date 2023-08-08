@@ -47,6 +47,7 @@ class ProcessResponse(BaseModel):
     """Process response schema."""
 
     result: dict
+    session_id: str = None
 
 
 class ChatMessage(BaseModel):
