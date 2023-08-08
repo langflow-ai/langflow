@@ -171,3 +171,11 @@ export type IconComponentProps = {
 export interface languageMap {
   [key: string]: string | undefined;
 }
+
+export type PaginatorComponentType = {
+  pageSize: number;
+  pageIndex: number;
+  rowsCount?: number[];
+  totalRowsCount: number;
+  paginate: (pageIndex: number, pageSize: number) => void;
+};
