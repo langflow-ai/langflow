@@ -88,7 +88,7 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
     elif base_type == "toolkits":
         return instantiate_toolkit(node_type, class_object, params)
     elif base_type == "embeddings":
-        return instantiate_embedding(class_object, params)
+        return instantiate_embedding(node_type, class_object, params)
     elif base_type == "vectorstores":
         return instantiate_vectorstore(class_object, params)
     elif base_type == "documentloaders":
@@ -258,9 +258,13 @@ def instantiate_toolkit(node_type, class_object: Type[BaseToolkit], params: Dict
     return loaded_toolkit
 
 
-def instantiate_embedding(class_object, params: Dict):
+def instantiate_embedding(node_type, class_object, params: Dict):
     params.pop("model", None)
     params.pop("headers", None)
+
+    if "VertexAI" in node_type:
+        return initialize_vertexai(class_object=class_object, params=params)
+
     try:
         return class_object(**params)
     except ValidationError:
