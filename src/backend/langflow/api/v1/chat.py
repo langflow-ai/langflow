@@ -157,7 +157,7 @@ async def stream_build(flow_id: str):
                 )
             else:
                 input_keys_response = {
-                    "input_keys": {},
+                    "input_keys": None,
                     "memory_keys": [],
                     "handle_keys": [],
                 }

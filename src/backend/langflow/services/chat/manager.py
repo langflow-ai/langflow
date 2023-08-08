@@ -121,7 +121,7 @@ class ChatManager(Service):
         self, client_id: str, payload: Dict, langchain_object: Any
     ):
         # Process the graph data and chat message
-        chat_inputs = payload.pop("inputs", "")
+        chat_inputs = payload.pop("inputs", {})
         chat_inputs = ChatMessage(message=chat_inputs)
         self.chat_history.add_message(client_id, chat_inputs)
 
