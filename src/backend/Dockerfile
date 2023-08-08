@@ -12,4 +12,3 @@ RUN rm *.whl
 EXPOSE 80
 
 CMD [ "uvicorn", "--host", "0.0.0.0", "--port", "7860", "--factory", "langflow.main:create_app" ]
-
