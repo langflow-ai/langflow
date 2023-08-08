@@ -69,7 +69,8 @@ export default function ParameterComponent({
 
   const { reactFlowInstance } = useContext(typesContext);
   let disabled =
-    reactFlowInstance?.getEdges().some((edge) => edge.targetHandle === id) ?? false;
+    reactFlowInstance?.getEdges().some((edge) => edge.targetHandle === id) ??
+    false;
 
   const { data: myData } = useContext(typesContext);
 

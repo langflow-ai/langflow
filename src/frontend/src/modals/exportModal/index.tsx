@@ -12,7 +12,9 @@ const ExportModal = forwardRef((props: { children: ReactNode }, ref) => {
   const { flows, tabId, updateFlow, downloadFlow, saveFlow } =
     useContext(TabsContext);
   const [checked, setChecked] = useState(false);
-  const [name, setName] = useState(flows.find((flow) => flow.id === tabId).name);
+  const [name, setName] = useState(
+    flows.find((flow) => flow.id === tabId).name
+  );
   const [invalidName, setInvalidName] = useState(false);
   const [description, setDescription] = useState(
     flows.find((flow) => flow.id === tabId).description

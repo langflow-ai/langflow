@@ -70,9 +70,9 @@ export default function FormModal({
   const [chatKey, setChatKey] = useState(() => {
     if (tabsState[flow.id]?.formKeysData?.input_keys) {
       return Object.keys(tabsState[flow.id].formKeysData.input_keys).find(
-        (k) =>
-          !tabsState[flow.id].formKeysData.handle_keys.some((j) => j === k) &&
-          tabsState[flow.id].formKeysData.input_keys[k] === ""
+        (key) =>
+          !tabsState[flow.id].formKeysData.handle_keys.some((j) => j === key) &&
+          tabsState[flow.id].formKeysData.input_keys[key] === ""
       );
     }
     // TODO: return a sensible default
@@ -425,13 +425,13 @@ export default function FormModal({
               {tabsState[id.current]?.formKeysData?.input_keys
                 ? Object.keys(
                     tabsState[id.current].formKeysData.input_keys
-                  ).map((i, k) => (
-                    <div className="file-component-accordion-div" key={k}>
+                  ).map((key, index) => (
+                    <div className="file-component-accordion-div" key={index}>
                       <AccordionComponent
                         trigger={
                           <div className="file-component-badge-div">
                             <Badge variant="gray" size="md">
-                              {i}
+                              {key}
                             </Badge>
 
                             <div
@@ -441,24 +441,26 @@ export default function FormModal({
                               }}
                             >
                               <ToggleShadComponent
-                                enabled={chatKey === i}
+                                enabled={chatKey === key}
                                 setEnabled={(value) =>
-                                  handleOnCheckedChange(value, i)
+                                  handleOnCheckedChange(value, key)
                                 }
                                 size="small"
                                 disabled={tabsState[
                                   id.current
-                                ].formKeysData.handle_keys.some((t) => t === i)}
+                                ].formKeysData.handle_keys.some(
+                                  (t) => t === key
+                                )}
                               />
                             </div>
                           </div>
                         }
-                        key={k}
-                        keyValue={i}
+                        key={index}
+                        keyValue={key}
                       >
                         <div className="file-component-tab-column">
                           {tabsState[id.current].formKeysData.handle_keys.some(
-                            (t) => t === i
+                            (t) => t === key
                           ) && (
                             <div className="font-normal text-muted-foreground ">
                               Source: Component
@@ -467,18 +469,18 @@ export default function FormModal({
                           <Textarea
                             className="custom-scroll"
                             value={
-                              tabsState[id.current].formKeysData.input_keys[i]
+                              tabsState[id.current].formKeysData.input_keys[key]
                             }
                             onChange={(e) => {
                               setTabsState((old) => {
                                 let newTabsState = _.cloneDeep(old);
                                 newTabsState[
                                   id.current
-                                ].formKeysData.input_keys[i] = e.target.value;
+                                ].formKeysData.input_keys[key] = e.target.value;
                                 return newTabsState;
                               });
                             }}
-                            disabled={chatKey === i}
+                            disabled={chatKey === key}
                             placeholder="Enter text..."
                           ></Textarea>
                         </div>
@@ -486,35 +488,37 @@ export default function FormModal({
                     </div>
                   ))
                 : null}
-              {tabsState[id.current].formKeysData.memory_keys.map((i, k) => (
-                <div className="file-component-accordion-div" key={k}>
-                  <AccordionComponent
-                    trigger={
-                      <div className="file-component-badge-div">
-                        <Badge variant="gray" size="md">
-                          {key}
-                        </Badge>
-                        <div className="-mb-1">
-                          <ToggleShadComponent
-                            enabled={chatKey === key}
-                            setEnabled={() => {}}
-                            size="small"
-                            disabled={true}
-                          />
+              {tabsState[id.current].formKeysData.memory_keys.map(
+                (key, index) => (
+                  <div className="file-component-accordion-div" key={index}>
+                    <AccordionComponent
+                      trigger={
+                        <div className="file-component-badge-div">
+                          <Badge variant="gray" size="md">
+                            {key}
+                          </Badge>
+                          <div className="-mb-1">
+                            <ToggleShadComponent
+                              enabled={chatKey === key}
+                              setEnabled={() => {}}
+                              size="small"
+                              disabled={true}
+                            />
+                          </div>
+                        </div>
+                      }
+                      key={index}
+                      keyValue={key}
+                    >
+                      <div className="file-component-tab-column">
+                        <div className="font-normal text-muted-foreground ">
+                          Source: Memory
                         </div>
                       </div>
-                    }
-                    key={index}
-                    keyValue={key}
-                  >
-                    <div className="file-component-tab-column">
-                      <div className="font-normal text-muted-foreground ">
-                        Source: Memory
-                      </div>
-                    </div>
-                  </AccordionComponent>
-                </div>
-              ))}
+                    </AccordionComponent>
+                  </div>
+                )
+              )}
             </div>
             <div className="eraser-column-arrangement">
               <div className="eraser-size">

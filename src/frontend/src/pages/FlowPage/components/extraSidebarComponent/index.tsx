@@ -168,7 +168,8 @@ export default function ExtraSidebar() {
                 key={index}
                 button={{
                   title: nodeNames[SBSectionName] ?? nodeNames.unknown,
-                  Icon: nodeIconsLucide[SBSectionName] ?? nodeIconsLucide.unknown,
+                  Icon:
+                    nodeIconsLucide[SBSectionName] ?? nodeIconsLucide.unknown,
                 }}
               >
                 <div className="side-bar-components-gap">

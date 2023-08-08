@@ -166,8 +166,9 @@ export default function GenericNode({
                   !data.node.template[templateName].advanced ? (
                     <ParameterComponent
                       key={
-                        (data.node.template[templateName].input_types?.join(";") ??
-                          data.node.template[templateName].type) +
+                        (data.node.template[templateName].input_types?.join(
+                          ";"
+                        ) ?? data.node.template[templateName].type) +
                         "|" +
                         templateName +
                         "|" +
@@ -176,7 +177,9 @@ export default function GenericNode({
                       data={data}
                       setData={setData}
                       color={
-                        nodeColors[types[data.node.template[templateName].type]] ??
+                        nodeColors[
+                          types[data.node.template[templateName].type]
+                        ] ??
                         nodeColors[data.node.template[templateName].type] ??
                         nodeColors.unknown
                       }
@@ -190,13 +193,15 @@ export default function GenericNode({
                       info={data.node.template[templateName].info}
                       name={templateName}
                       tooltipTitle={
-                        data.node.template[templateName].input_types?.join("\n") ??
-                        data.node.template[templateName].type
+                        data.node.template[templateName].input_types?.join(
+                          "\n"
+                        ) ?? data.node.template[templateName].type
                       }
                       required={data.node.template[templateName].required}
                       id={
-                        (data.node.template[templateName].input_types?.join(";") ??
-                          data.node.template[templateName].type) +
+                        (data.node.template[templateName].input_types?.join(
+                          ";"
+                        ) ?? data.node.template[templateName].type) +
                         "|" +
                         templateName +
                         "|" +
@@ -204,7 +209,9 @@ export default function GenericNode({
                       }
                       left={true}
                       type={data.node.template[templateName].type}
-                      optionalHandle={data.node.template[templateName].input_types}
+                      optionalHandle={
+                        data.node.template[templateName].input_types
+                      }
                     />
                   ) : (
                     <></>

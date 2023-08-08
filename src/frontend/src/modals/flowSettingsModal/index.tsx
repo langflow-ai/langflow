@@ -19,7 +19,9 @@ export default function FlowSettingsModal({
   const { flows, tabId, updateFlow, setTabsState, saveFlow } =
     useContext(TabsContext);
   const maxLength = 50;
-  const [name, setName] = useState(flows.find((flow) => flow.id === tabId).name);
+  const [name, setName] = useState(
+    flows.find((flow) => flow.id === tabId).name
+  );
   const [description, setDescription] = useState(
     flows.find((flow) => flow.id === tabId).description
   );
