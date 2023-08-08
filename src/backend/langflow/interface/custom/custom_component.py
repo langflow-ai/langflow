@@ -3,12 +3,14 @@ from fastapi import HTTPException
 from langflow.interface.custom.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.component import Component
 from langflow.interface.custom.directory_reader import DirectoryReader
+from langflow.services.utils import get_db_manager
 
 from langflow.utils import validate
 
-from langflow.database.base import session_getter
-from langflow.database.models.flow import Flow
+from langflow.services.database.utils import session_getter
+from langflow.services.database.models.flow import Flow
 from pydantic import Extra
+import yaml
 
 
 class CustomComponent(Component, extra=Extra.allow):
@@ -24,6 +26,10 @@ class CustomComponent(Component, extra=Extra.allow):
         super().__init__(**data)
 
     def custom_repr(self):
+        if isinstance(self.repr_value, dict):
+            return yaml.dump(self.repr_value)
+        if isinstance(self.repr_value, str):
+            return self.repr_value
         return str(self.repr_value)
 
     def build_config(self):
@@ -154,7 +160,8 @@ class CustomComponent(Component, extra=Extra.allow):
         from langflow.processing.process import build_sorted_vertices_with_caching
         from langflow.processing.process import process_tweaks
 
-        with session_getter() as session:
+        db_manager = get_db_manager()
+        with session_getter(db_manager) as session:
             graph_data = flow.data if (flow := session.get(Flow, flow_id)) else None
         if not graph_data:
             raise ValueError(f"Flow {flow_id} not found")
@@ -164,7 +171,8 @@ class CustomComponent(Component, extra=Extra.allow):
 
     def list_flows(self, *, get_session: Optional[Callable] = None) -> List[Flow]:
         get_session = get_session or session_getter
-        with get_session() as session:
+        db_manager = get_db_manager()
+        with get_session(db_manager) as session:
             flows = session.query(Flow).all()
         return flows
 
@@ -177,8 +185,8 @@ class CustomComponent(Component, extra=Extra.allow):
         get_session: Optional[Callable] = None,
     ) -> Flow:
         get_session = get_session or session_getter
-
-        with get_session() as session:
+        db_manager = get_db_manager()
+        with get_session(db_manager) as session:
             if flow_id:
                 flow = session.query(Flow).get(flow_id)
             elif flow_name:
@@ -190,5 +198,5 @@ class CustomComponent(Component, extra=Extra.allow):
             raise ValueError(f"Flow {flow_name or flow_id} not found")
         return self.load_flow(flow.id, tweaks)
 
-    def build(self):
+    def build(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError

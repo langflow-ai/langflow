@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 from typing import Any, Awaitable, Callable, List, Optional
+from langflow.services.base import Service
 
 import pandas as pd
 from PIL import Image
@@ -49,8 +50,10 @@ class AsyncSubject:
             await observer()
 
 
-class CacheManager(Subject):
+class CacheManager(Subject, Service):
     """Manages cache for different clients and notifies observers on changes."""
+
+    name = "cache_manager"
 
     def __init__(self):
         super().__init__()

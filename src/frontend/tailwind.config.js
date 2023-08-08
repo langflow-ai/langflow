@@ -155,7 +155,9 @@ module.exports = {
           overflow: "hidden",
           "text-overflow": "ellipsis",
         },
-
+        ".word-break-break-word": {
+          wordBreak: "break-word",
+        },
         ".arrow-hide": {
           "&::-webkit-inner-spin-button": {
             "-webkit-appearance": "none",

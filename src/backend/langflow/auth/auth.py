@@ -1,13 +1,14 @@
 from typing import Annotated
-from fastapi import Depends, HTTPException, status
-from passlib.context import CryptContext
 from jose import JWTError, jwt
-from datetime import datetime, timedelta, timezone
+from sqlalchemy.orm import Session
+from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends, HTTPException, status
+from datetime import datetime, timedelta, timezone
+
 from langflow.database.models.token import TokenData
 from langflow.database.models.user import get_user, User
-from sqlalchemy.orm import Session
-from langflow.database.base import get_session
+from langflow.services.utils import get_session
 
 
 # TODO: Move to env - Test propose!!!!!

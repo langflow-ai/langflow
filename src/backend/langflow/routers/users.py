@@ -3,7 +3,7 @@ from sqlmodel import Session, select
 from sqlalchemy.exc import IntegrityError
 from fastapi import APIRouter, Depends, HTTPException
 
-from langflow.database.base import get_session
+from langflow.services.utils import get_session
 from langflow.auth.auth import get_current_active_user
 from langflow.database.models.user import UserAddModel, UserListModel, User
 

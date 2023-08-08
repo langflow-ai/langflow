@@ -1,6 +1,6 @@
 from fastapi import WebSocketDisconnect
 
-# from langflow.chat.manager import ChatManager
+# from langflow.services.chat.manager import ChatManager
 
 import pytest
 
