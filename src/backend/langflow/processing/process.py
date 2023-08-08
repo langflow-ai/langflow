@@ -117,6 +117,7 @@ def process_graph_cached(
         logger.debug("Cleared cache")
 
     langchain_object, artifacts = get_build_result(data_graph, session_id)
+    session_id = build_sorted_vertices_with_caching.hash
 
     logger.debug("Loaded LangChain object")
     if inputs is None:
@@ -151,7 +152,7 @@ def process_graph_cached(
         raise ValueError(
             f"Unknown langchain_object type: {type(langchain_object).__name__}"
         )
-    return result
+    return result, session_id
 
 
 def load_flow_from_json(

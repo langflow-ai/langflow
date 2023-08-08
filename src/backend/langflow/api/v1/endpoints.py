@@ -91,10 +91,10 @@ async def process_flow(
                 graph_data = process_tweaks(graph_data, tweaks)
             except Exception as exc:
                 logger.error(f"Error processing tweaks: {exc}")
-        response = process_graph_cached(graph_data, inputs, clear_cache, session_id)
-        return ProcessResponse(
-            result=response,
+        response, session_id = process_graph_cached(
+            graph_data, inputs, clear_cache, session_id
         )
+        return ProcessResponse(result=response, session_id=session_id)
     except Exception as e:
         # Log stack trace
         logger.exception(e)
