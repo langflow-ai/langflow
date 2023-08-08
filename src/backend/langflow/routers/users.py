@@ -9,7 +9,7 @@ from langflow.database.models.user import UserAddModel, UserListModel, User
 
 from passlib.context import CryptContext
 
-router = APIRouter(prefix="/users", tags=["Users"])
+router = APIRouter(tags=["Login"])
 
 
 def get_password_hash(password):
