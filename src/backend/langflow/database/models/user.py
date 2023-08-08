@@ -1,10 +1,7 @@
 from datetime import datetime
 from sqlalchemy.orm import Session
 
-from langflow.services.database.models.base import (
-    SQLModelSerializable,
-    SQLModel
-)
+from langflow.services.database.models.base import SQLModelSerializable, SQLModel
 from sqlmodel import Field
 from uuid import UUID, uuid4
 
