@@ -30,6 +30,7 @@ def create_cache_folder(func):
 
 def memoize_dict(maxsize=128):
     cache = OrderedDict()
+    hash_to_key = {}  # Mapping from hash to cache key
 
     def decorator(func):
         @functools.wraps(func)
@@ -39,16 +40,29 @@ def memoize_dict(maxsize=128):
             if key not in cache:
                 result = func(*args, **kwargs)
                 cache[key] = result
+                hash_to_key[hashed] = key  # Store the mapping
                 if len(cache) > maxsize:
-                    cache.popitem(last=False)
+                    oldest_key = next(iter(cache))
+                    oldest_hash = oldest_key[1]
+                    del cache[oldest_key]
+                    del hash_to_key[oldest_hash]
             else:
                 result = cache[key]
+
+            wrapper.session_id = hashed  # Store hash in the wrapper
             return result
 
         def clear_cache():
             cache.clear()
+            hash_to_key.clear()
+
+        def get_result_by_session_id(session_id):
+            key = hash_to_key.get(session_id)
+            return cache.get(key) if key is not None else None
 
         wrapper.clear_cache = clear_cache  # type: ignore
+        wrapper.get_result_by_session_id = get_result_by_session_id  # type: ignore
+        wrapper.hash = None
         wrapper.cache = cache  # type: ignore
         return wrapper
 

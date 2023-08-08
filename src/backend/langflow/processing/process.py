@@ -85,8 +85,27 @@ def get_input_str_if_only_one_input(inputs: dict) -> Optional[str]:
     return list(inputs.values())[0] if len(inputs) == 1 else None
 
 
+def get_build_result(data_graph, session_id):
+    # If session_id is provided, load the langchain_object from the session
+    # using build_sorted_vertices_with_caching.get_result_by_session_id
+    # if it returns something different than None, return it
+    # otherwise, build the graph and return the result
+    if session_id:
+        logger.debug(f"Loading LangChain object from session {session_id}")
+        result = build_sorted_vertices_with_caching.get_result_by_session_id(session_id)
+        if result is not None:
+            logger.debug("Loaded LangChain object")
+            return result
+
+    logger.debug("Building langchain object")
+    return build_sorted_vertices_with_caching(data_graph)
+
+
 def process_graph_cached(
-    data_graph: Dict[str, Any], inputs: Optional[dict] = None, clear_cache=False
+    data_graph: Dict[str, Any],
+    inputs: Optional[dict] = None,
+    clear_cache=False,
+    session_id=None,
 ):
     """
     Process graph by extracting input variables and replacing ZeroShotPrompt
@@ -96,7 +115,9 @@ def process_graph_cached(
     if clear_cache:
         build_sorted_vertices_with_caching.clear_cache()
         logger.debug("Cleared cache")
-    langchain_object, artifacts = build_sorted_vertices_with_caching(data_graph)
+
+    langchain_object, artifacts = get_build_result(data_graph, session_id)
+
     logger.debug("Loaded LangChain object")
     if inputs is None:
         inputs = {}
