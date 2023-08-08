@@ -1,4 +1,4 @@
-from langflow.cache.utils import memoize_dict
+from langflow.services.cache.utils import memoize_dict
 from langflow.graph import Graph
 from langflow.utils.logger import logger
 

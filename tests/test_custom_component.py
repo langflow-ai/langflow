@@ -5,7 +5,7 @@ from uuid import uuid4
 
 
 from fastapi import HTTPException
-from langflow.database.models.flow import Flow, FlowCreate
+from langflow.services.database.models.flow import Flow, FlowCreate
 from langflow.interface.custom.base import CustomComponent
 from langflow.interface.custom.component import (
     Component,

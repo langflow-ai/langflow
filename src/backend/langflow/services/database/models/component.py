@@ -1,4 +1,4 @@
-from langflow.database.models.base import SQLModelSerializable, SQLModel
+from langflow.services.database.models.base import SQLModelSerializable, SQLModel
 from sqlmodel import Field
 from typing import Optional
 from datetime import datetime
