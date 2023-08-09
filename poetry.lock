@@ -3316,6 +3316,20 @@ files = [
 ]
 
 [[package]]
+name = "metaphor-python"
+version = "0.1.11"
+description = "A Python package for the Metaphor API."
+optional = false
+python-versions = "*"
+files = [
+    {file = "metaphor-python-0.1.11.tar.gz", hash = "sha256:80fd993c44cc9d453d99eb65b95147d305f542fdd6fda699e3852e3100beb6ec"},
+    {file = "metaphor_python-0.1.11-py3-none-any.whl", hash = "sha256:0d759ecdf73492a4bafd404d0444935c172bcc4a89334f4f6780863ba488b238"},
+]
+
+[package.dependencies]
+requests = "*"
+
+[[package]]
 name = "monotonic"
 version = "1.6"
 description = "An implementation of time.monotonic() for Python 2 & < 3.3"
@@ -7579,4 +7593,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "cfce7822aedd150c0bda5f0dbf4ada3a3d80d0a7d968c081a5dfd9a61d5088ad"
+content-hash = "53bb67a463c4ad0d3dd30c89e30750fc31be5530ee54539d4df34fd82ecf7bc1"
