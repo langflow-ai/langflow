@@ -510,7 +510,6 @@ export const URL_EXCLUDED_FROM_ERROR_RETRIES = [
 ];
 
 export const CONTROL_INPUT_STATE = {
-  email: '',
   password: '',
   cnfPassword: '',
   username: '',

@@ -12,19 +12,13 @@ import InputComponent from "../../components/inputComponent";
 
 export default function SignUp(): JSX.Element {
   const [inputState, setInputState] = useState<inputStateType>(CONTROL_INPUT_STATE);
-  let errClasses = {
-	email: false,
-	password: false,
-	cnfPassword: false,
-	username: false,
-  };
 
   const {
 	setErrorData,
 	errorOpen,
   } = useContext(alertContext);
 
-  const { email, password, cnfPassword, username } = inputState;
+  const { password, cnfPassword, username } = inputState;
 
   function handleInput({ target: { name, value } }: inputHandlerEventType): void {
 	setInputState((prev) => ({ ...prev, [name]: value }));
@@ -42,7 +36,6 @@ export default function SignUp(): JSX.Element {
   	.forEach((key) => {
     	if (inputState[key] === '') {
       	err.push(key);
-      	errClasses[key] = true;
     	}
   	});
   	setErrorData({
@@ -71,14 +64,14 @@ export default function SignUp(): JSX.Element {
         	</Button>
       	</div>
       	<span className="text-sm text-muted-foreground">or</span>
-      	<Input
-        	className={errClasses.email ? "border-destructive" : "" + " bg-background"}
-        	placeholder="Email address"
-        	name="email"
-        	value={email}
-        	onChange={handleInput}
-        	type="text"
-      	/>
+        <Input
+        className="bg-background"
+        placeholder="Username"
+        name="username"
+        value={username}
+        onChange={handleInput}
+        type="text"
+        />
       	<InputComponent
         	value={password}
         	onChange={(value) => handleInput({ target: { name: 'password', value } })}
@@ -90,14 +83,6 @@ export default function SignUp(): JSX.Element {
         	onChange={(value) => handleInput({ target: { name: 'cnfPassword', value } })}
         	password={true}
         	placeholder="Confirm your password"
-      	/>
-      	<Input
-        	className="bg-background"
-        	placeholder="Username"
-        	name="username"
-        	value={username}
-        	onChange={handleInput}
-        	type="text"
       	/>
       	<Button
         	variant="default"
