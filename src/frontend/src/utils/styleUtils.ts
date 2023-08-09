@@ -57,6 +57,8 @@ import {
   Trash2,
   Undo,
   Upload,
+  UserMinus2,
+  UserPlus2,
   Users2,
   Variable,
   Wand2,
@@ -275,4 +277,6 @@ export const nodeIconsLucide = {
   Upload,
   MessageSquare,
   MoreHorizontal,
+  UserMinus2,
+  UserPlus2
 };

@@ -20,7 +20,7 @@ export default function PaginatorComponent({
   pageIndex = 1,
   rowsCount = [10, 20, 30],
   totalRowsCount = 0,
-  paginate,
+  paginate
 }: PaginatorComponentType) {
   const [size, setPageSize] = useState(pageSize);
   const [index, setPageIndex] = useState(pageIndex);

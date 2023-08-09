@@ -112,7 +112,9 @@ function BaseModal({
         {triggerChild}
       </DialogTrigger>
       <DialogContent className={minWidth}>
-        {headerChild}
+        <div className="word-break-break-word truncate-doubleline">
+          {headerChild}
+        </div>
         <div className={`mt-2 flex flex-col ${height} w-full `}>
           {ContentChild}
         </div>
