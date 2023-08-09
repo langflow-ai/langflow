@@ -1,7 +1,7 @@
 from typing import List, Union
 from langflow import CustomComponent
 
-from metaphor_python import Metaphor
+from metaphor_python import Metaphor  # type: ignore
 from langchain.tools import Tool
 from langchain.agents import tool
 from langchain.agents.agent_toolkits.base import BaseToolkit
@@ -48,4 +48,4 @@ class MetaphorToolkit(CustomComponent):
             """
             return client.find_similar(url, num_results=5)
 
-        return [search, get_contents, find_similar]
+        return [search, get_contents, find_similar]  # type: ignore

@@ -34,9 +34,9 @@ class VectaraComponent(CustomComponent):
         documents: Optional[Document] = None,
     ) -> Union[VectorStore, BaseRetriever]:
         # If documents, then we need to create a Vectara instance using .from_documents
-        if documents:
+        if documents is not None and embedding is not None:
             return Vectara.from_documents(
-                documents=documents,
+                documents=documents,  # type: ignore
                 vectara_customer_id=vectara_customer_id,
                 vectara_corpus_id=vectara_corpus_id,
                 vectara_api_key=vectara_api_key,

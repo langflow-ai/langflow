@@ -92,9 +92,9 @@ class CustomComponent(Component, extra=Extra.allow):
         return build_method["args"]
 
     @property
-    def get_function_entrypoint_return_type(self) -> str:
+    def get_function_entrypoint_return_type(self) -> List[str]:
         if not self.code:
-            return ""
+            return []
         tree = self.get_code_tree(self.code)
 
         component_classes = [
@@ -103,7 +103,7 @@ class CustomComponent(Component, extra=Extra.allow):
             if self.code_class_base_inheritance in cls["bases"]
         ]
         if not component_classes:
-            return ""
+            return []
 
         # Assume the first Component class is the one we're interested in
         component_class = component_classes[0]
@@ -114,7 +114,7 @@ class CustomComponent(Component, extra=Extra.allow):
         ]
 
         if not build_methods:
-            return ""
+            return []
 
         build_method = build_methods[0]
         return_type = build_method["return_type"]
