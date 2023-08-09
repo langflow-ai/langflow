@@ -199,6 +199,9 @@ def update_attributes(frontend_node, template_config):
     if "beta" in template_config:
         frontend_node["beta"] = template_config["beta"]
 
+    if "documentation" in template_config:
+        frontend_node["documentation"] = template_config["documentation"]
+
 
 def build_field_config(custom_component: CustomComponent):
     """Build the field configuration for a custom component"""
