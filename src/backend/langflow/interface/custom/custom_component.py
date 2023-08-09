@@ -118,6 +118,8 @@ class CustomComponent(Component, extra=Extra.allow):
 
         build_method = build_methods[0]
         return_type = build_method["return_type"]
+        if not return_type:
+            return []
         # If the return type is not a Union, then we just return it as a list
         if "Union" not in return_type:
             return [return_type] if return_type in self.return_type_valid_list else []
