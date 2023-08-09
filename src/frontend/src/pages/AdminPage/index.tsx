@@ -312,7 +312,7 @@ export default function AdminPage() {
                 </div>
                 <div
                   className="overflow-scroll overflow-x-hidden rounded-md border-2 bg-muted 
-            custom-scroll min-[320px]:h-[20rem] md:h-[25rem] xl:h-[26rem] 2xl:h-[30rem]"
+            custom-scroll min-[320px]:h-[15rem] md:h-[20rem] xl:h-[25rem] 2xl:h-[30rem]"
                 >
                   <Table className="table-fixed bg-muted outline-1 ">
                     <TableHeader>
