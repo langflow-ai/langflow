@@ -88,12 +88,12 @@ export function TypesProvider({ children }: { children: ReactNode }) {
 
   function deleteNode(idx: string) {
     reactFlowInstance.setNodes(
-      reactFlowInstance.getNodes().filter((n: Node) => n.id !== idx)
+      reactFlowInstance.getNodes().filter((node: Node) => node.id !== idx)
     );
     reactFlowInstance.setEdges(
       reactFlowInstance
         .getEdges()
-        .filter((ns) => ns.source !== idx && ns.target !== idx)
+        .filter((edge) => edge.source !== idx && edge.target !== idx)
     );
   }
   return (
