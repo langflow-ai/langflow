@@ -118,15 +118,15 @@ class CustomComponent(Component, extra=Extra.allow):
 
         build_method = build_methods[0]
         return_type = build_method["return_type"]
-        # It could be a type or a Union[type1, type2]
-        if "Union" in return_type:
-            return_type = (
-                return_type.replace("Union", "").replace("[", "").replace("]", "")
-            )
-            return_type = return_type.split(",")
-            return_type = [item.strip() for item in return_type]
-            return [item for item in return_type if item in self.return_type_valid_list]
-        return build_method["return_type"]
+        # If the return type is not a Union, then we just return it as a list
+        if "Union" not in return_type:
+            return [return_type] if return_type in self.return_type_valid_list else []
+
+        # If the return type is a Union, then we need to parse it
+        return_type = return_type.replace("Union", "").replace("[", "").replace("]", "")
+        return_type = return_type.split(",")
+        return_type = [item.strip() for item in return_type]
+        return [item for item in return_type if item in self.return_type_valid_list]
 
     @property
     def get_main_class_name(self):
