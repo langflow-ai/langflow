@@ -1,9 +1,3 @@
-import {
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-} from "lucide-react";
 import { useState } from "react";
 import {
   Select,
@@ -13,6 +7,7 @@ import {
   SelectValue,
 } from "../../components/ui/select";
 import { PaginatorComponentType } from "../../types/components";
+import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
 
 export default function PaginatorComponent({
@@ -20,7 +15,7 @@ export default function PaginatorComponent({
   pageIndex = 1,
   rowsCount = [10, 20, 30],
   totalRowsCount = 0,
-  paginate
+  paginate,
 }: PaginatorComponentType) {
   const [size, setPageSize] = useState(pageSize);
   const [index, setPageIndex] = useState(pageIndex);
@@ -68,7 +63,7 @@ export default function PaginatorComponent({
               }}
             >
               <span className="sr-only">Go to first page</span>
-              <ChevronsLeft className="h-4 w-4" strokeWidth={1.5} />
+              <IconComponent name="ChevronsLeft" className="h-4 w-4" />
             </Button>
             <Button
               onClick={() => {
@@ -86,7 +81,7 @@ export default function PaginatorComponent({
               className="h-8 w-8 p-0"
             >
               <span className="sr-only">Go to previous page</span>
-              <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
+              <IconComponent name="ChevronLeft" className="h-4 w-4" />
             </Button>
             <Button
               onClick={() => {
@@ -102,7 +97,7 @@ export default function PaginatorComponent({
               className="h-8 w-8 p-0"
             >
               <span className="sr-only">Go to next page</span>
-              <ChevronRight className="h-4 w-4" strokeWidth={1.5} />
+              <IconComponent name="ChevronRight" className="h-4 w-4" />
             </Button>
             <Button
               variant="outline"
@@ -113,7 +108,7 @@ export default function PaginatorComponent({
               }}
             >
               <span className="sr-only">Go to last page</span>
-              <ChevronsRight className="h-4 w-4" strokeWidth={1.5} />
+              <IconComponent name="ChevronsRight" className="h-4 w-4" />
             </Button>
           </div>
         </div>
