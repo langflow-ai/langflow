@@ -23,6 +23,9 @@ class MetaphorToolkit(CustomComponent):
     def build(
         self,
         metaphor_api_key: str,
+        use_autoprompt: bool = True,
+        search_num_results: int = 5,
+        similar_num_results: int = 5,
     ) -> Union[Tool, BaseToolkit]:
         # If documents, then we need to create a Vectara instance using .from_documents
         client = Metaphor(api_key=metaphor_api_key)
@@ -30,7 +33,9 @@ class MetaphorToolkit(CustomComponent):
         @tool
         def search(query: str):
             """Call search engine with a query."""
-            return client.search(query, use_autoprompt=True, num_results=5)
+            return client.search(
+                query, use_autoprompt=use_autoprompt, num_results=search_num_results
+            )
 
         @tool
         def get_contents(ids: List[str]):
@@ -46,6 +51,6 @@ class MetaphorToolkit(CustomComponent):
 
             The url passed in should be a URL returned from `search`
             """
-            return client.find_similar(url, num_results=5)
+            return client.find_similar(url, num_results=similar_num_results)
 
         return [search, get_contents, find_similar]  # type: ignore
