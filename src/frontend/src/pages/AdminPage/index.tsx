@@ -249,9 +249,10 @@ export default function AdminPage() {
 
   return (
     <>
-      <div className="grid grid-cols-6 gap-4">
-        <div className="col-span-4 col-start-2">
-          <div className="m-auto h-full flex-1 flex-col space-y-8 p-8 md:flex">
+    <div className="main-page-panel">
+      <div className="h-full m-auto flex flex-row justify-center">
+        <div className="basis-5/6">
+        <div className="m-auto h-full flex-col space-y-8 p-8 flex ">
             <div className="flex items-center justify-between space-y-2">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight">
@@ -312,7 +313,7 @@ export default function AdminPage() {
                 </div>
                 <div
                   className="overflow-scroll overflow-x-hidden rounded-md border-2 bg-muted 
-            custom-scroll min-[320px]:h-[15rem] md:h-[20rem] xl:h-[25rem] 2xl:h-[30rem]"
+            custom-scroll"
                 >
                   <Table className="table-fixed bg-muted outline-1 ">
                     <TableHeader>
@@ -391,7 +392,11 @@ export default function AdminPage() {
             )}
           </div>
         </div>
+
       </div>
+
+      </div>
+
     </>
   );
 }
