@@ -25,8 +25,8 @@ export default function TextAreaComponent({
         disabled={disabled}
         className={editNode ? "input-edit-node" : ""}
         placeholder={"Type something..."}
-        onChange={(e) => {
-          onChange(e.target.value);
+        onChange={(event) => {
+          onChange(event.target.value);
         }}
       />
       <div>
@@ -35,8 +35,8 @@ export default function TextAreaComponent({
           buttonText="Finishing Editing"
           modalTitle="Edit Text"
           value={value}
-          setValue={(t: string) => {
-            onChange(t);
+          setValue={(value: string) => {
+            onChange(value);
           }}
         >
           {!editNode && (

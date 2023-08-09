@@ -181,22 +181,22 @@ const ApiModal = forwardRef(
     function filterNodes() {
       let arrNodesWithValues = [];
 
-      flow["data"]["nodes"].forEach((t) => {
-        Object.keys(t["data"]["node"]["template"])
+      flow["data"]["nodes"].forEach((node) => {
+        Object.keys(node["data"]["node"]["template"])
           .filter(
-            (n) =>
-              n.charAt(0) !== "_" &&
-              t.data.node.template[n].show &&
-              (t.data.node.template[n].type === "str" ||
-                t.data.node.template[n].type === "bool" ||
-                t.data.node.template[n].type === "float" ||
-                t.data.node.template[n].type === "code" ||
-                t.data.node.template[n].type === "prompt" ||
-                t.data.node.template[n].type === "file" ||
-                t.data.node.template[n].type === "int")
+            (templateField) =>
+              templateField.charAt(0) !== "_" &&
+              node.data.node.template[templateField].show &&
+              (node.data.node.template[templateField].type === "str" ||
+                node.data.node.template[templateField].type === "bool" ||
+                node.data.node.template[templateField].type === "float" ||
+                node.data.node.template[templateField].type === "code" ||
+                node.data.node.template[templateField].type === "prompt" ||
+                node.data.node.template[templateField].type === "file" ||
+                node.data.node.template[templateField].type === "int")
           )
           .map((n, i) => {
-            arrNodesWithValues.push(t["id"]);
+            arrNodesWithValues.push(node["id"]);
           });
       });
 
