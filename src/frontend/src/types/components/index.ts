@@ -174,7 +174,6 @@ export interface languageMap {
 }
 
 export type inputStateType = {
-  email: string;
   password: string;
   cnfPassword: string;
   username: string;
