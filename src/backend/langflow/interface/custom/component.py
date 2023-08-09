@@ -66,6 +66,9 @@ class Component(BaseModel):
                 elif "beta" in item_name:
                     template_config["beta"] = ast.literal_eval(item_value)
 
+                elif "documentation" in item_name:
+                    template_config["documentation"] = ast.literal_eval(item_value)
+
         return template_config
 
     def build(self, *args: Any, **kwargs: Any) -> Any:

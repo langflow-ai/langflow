@@ -2,13 +2,13 @@
 
 [[package]]
 name = "aiofiles"
-version = "23.2.0"
+version = "23.2.1"
 description = "File support for asyncio."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "aiofiles-23.2.0-py3-none-any.whl", hash = "sha256:d7adbeef4bada163e70bd3163866680332f622b4437d9d8246bd74b6d791d83a"},
-    {file = "aiofiles-23.2.0.tar.gz", hash = "sha256:7a321e787cb3839e7d70f56121bf9197a1980609a0fe06a6f96c573406ce4fca"},
+    {file = "aiofiles-23.2.1-py3-none-any.whl", hash = "sha256:19297512c647d4b27a2cf7c34caa7e405c0d60b5560618a29a9fe027b18b0107"},
+    {file = "aiofiles-23.2.1.tar.gz", hash = "sha256:84ec2218d8419404abcb9f0c02df3f34c6e0a68ed41072acfb1cef5cbc29051a"},
 ]
 
 [[package]]
@@ -1065,13 +1065,13 @@ files = [
 
 [[package]]
 name = "dnspython"
-version = "2.4.1"
+version = "2.4.2"
 description = "DNS toolkit"
 optional = false
 python-versions = ">=3.8,<4.0"
 files = [
-    {file = "dnspython-2.4.1-py3-none-any.whl", hash = "sha256:5b7488477388b8c0b70a8ce93b227c5603bc7b77f1565afe8e729c36c51447d7"},
-    {file = "dnspython-2.4.1.tar.gz", hash = "sha256:c33971c79af5be968bb897e95c2448e11a645ee84d93b265ce0b7aabe5dfdca8"},
+    {file = "dnspython-2.4.2-py3-none-any.whl", hash = "sha256:57c6fbaaeaaf39c891292012060beb141791735dbb4004798328fc2c467402d8"},
+    {file = "dnspython-2.4.2.tar.gz", hash = "sha256:8dcfae8c7460a2f84b4072e26f1c9f4101ca20c071649cb7c34e8b6a93d58984"},
 ]
 
 [package.extras]
@@ -3314,6 +3314,20 @@ files = [
     {file = "mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8"},
     {file = "mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba"},
 ]
+
+[[package]]
+name = "metaphor-python"
+version = "0.1.11"
+description = "A Python package for the Metaphor API."
+optional = false
+python-versions = "*"
+files = [
+    {file = "metaphor-python-0.1.11.tar.gz", hash = "sha256:80fd993c44cc9d453d99eb65b95147d305f542fdd6fda699e3852e3100beb6ec"},
+    {file = "metaphor_python-0.1.11-py3-none-any.whl", hash = "sha256:0d759ecdf73492a4bafd404d0444935c172bcc4a89334f4f6780863ba488b238"},
+]
+
+[package.dependencies]
+requests = "*"
 
 [[package]]
 name = "monotonic"
@@ -7579,4 +7593,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "cfce7822aedd150c0bda5f0dbf4ada3a3d80d0a7d968c081a5dfd9a61d5088ad"
+content-hash = "53bb67a463c4ad0d3dd30c89e30750fc31be5530ee54539d4df34fd82ecf7bc1"
