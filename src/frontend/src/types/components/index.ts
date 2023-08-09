@@ -10,6 +10,7 @@ export type InputComponentType = {
   editNode?: boolean;
   onChangePass?: (value: boolean | boolean) => void;
   showPass?: boolean;
+  placeholder?: string;
 };
 export type ToggleComponentType = {
   enabled: boolean;
@@ -81,13 +82,13 @@ export type DisclosureComponentType = {
   children: ReactNode;
   openDisc: boolean;
   button: {
-    title: string;
-    Icon: any;
-    buttons?: {
-      Icon: ReactElement;
-      title: string;
-      onClick: (event?: React.MouseEvent) => void;
-    }[];
+	title: string;
+	Icon: any;
+	buttons?: {
+  	Icon: ReactElement;
+  	title: string;
+  	onClick: (event?: React.MouseEvent) => void;
+	}[];
   };
 };
 export type FloatComponentType = {
@@ -101,18 +102,18 @@ export type TooltipComponentType = {
   children: ReactElement;
   title: string | ReactElement;
   placement?:
-    | "bottom-end"
-    | "bottom-start"
-    | "bottom"
-    | "left-end"
-    | "left-start"
-    | "left"
-    | "right-end"
-    | "right-start"
-    | "right"
-    | "top-end"
-    | "top-start"
-    | "top";
+	| "bottom-end"
+	| "bottom-start"
+	| "bottom"
+	| "left-end"
+	| "left-start"
+	| "left"
+	| "right-end"
+	| "right-start"
+	| "right"
+	| "top-end"
+	| "top-start"
+	| "top";
 };
 
 export type ProgressBarType = {
@@ -171,3 +172,17 @@ export type IconComponentProps = {
 export interface languageMap {
   [key: string]: string | undefined;
 }
+
+export type inputStateType = {
+  email: string;
+  password: string;
+  cnfPassword: string;
+  username: string;
+};
+
+export type inputHandlerEventType = {
+  target: {
+	value: string;
+	name: string;
+  };
+};

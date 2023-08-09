@@ -4,6 +4,7 @@ import FlowPage from "./pages/FlowPage";
 import HomePage from "./pages/MainPage";
 import DeleteAccountPage from "./pages/deleteAccountPage";
 import LoginPage from "./pages/loginPage";
+import SignUp from "./pages/signUpPage";
 
 const Router = () => {
   return (
@@ -15,6 +16,7 @@ const Router = () => {
       </Route>
       <Route path="*" element={<HomePage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignUp/>} />
       <Route path="/account">
         <Route path="delete" element={<DeleteAccountPage />}></Route>
       </Route>
