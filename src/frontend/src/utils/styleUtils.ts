@@ -66,6 +66,9 @@ import {
   X,
   XCircle,
   Zap,
+  Pencil,
+  ChevronsRight,
+  ChevronsLeft
 } from "lucide-react";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
@@ -278,5 +281,8 @@ export const nodeIconsLucide = {
   MessageSquare,
   MoreHorizontal,
   UserMinus2,
-  UserPlus2
+  UserPlus2,
+  Pencil,
+  ChevronsRight,
+  ChevronsLeft
 };
