@@ -40,7 +40,7 @@ export default function Header() {
               className="header-waitlist-link-box"
             >
               <span className="pr-1 text-2xl">⛓️</span>
-              <span>Join the waitlist</span>
+              <span>Join The Waitlist</span>
             </a>
           </div>
         ) : (
