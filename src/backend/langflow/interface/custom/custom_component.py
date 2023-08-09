@@ -117,7 +117,15 @@ class CustomComponent(Component, extra=Extra.allow):
             return ""
 
         build_method = build_methods[0]
-
+        return_type = build_method["return_type"]
+        # It could be a type or a Union[type1, type2]
+        if "Union" in return_type:
+            return_type = (
+                return_type.replace("Union", "").replace("[", "").replace("]", "")
+            )
+            return_type = return_type.split(",")
+            return_type = [item.strip() for item in return_type]
+            return [item for item in return_type if item in self.return_type_valid_list]
         return build_method["return_type"]
 
     @property
