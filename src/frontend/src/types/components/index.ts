@@ -186,3 +186,36 @@ export type inputHandlerEventType = {
 	name: string;
   };
 };
+export type PaginatorComponentType = {
+  pageSize: number;
+  pageIndex: number;
+  rowsCount?: number[];
+  totalRowsCount: number;
+  paginate: (pageIndex: number, pageSize: number) => void;
+};
+
+export type ConfirmationModalType = {
+  title: string;
+  titleHeader: string;
+  modalContent: string;
+  modalContentTitle: string;
+  cancelText: string;
+  confirmationText: string;
+  children: ReactElement;
+  icon: string;
+  data: any;
+  index: number;
+  onConfirm: (index, data) => void;
+}
+
+export type UserManagementType = {
+  title: string;
+  titleHeader: string;
+  cancelText: string;
+  confirmationText: string;
+  children: ReactElement;
+  icon: string;
+  data?: any;
+  index?: number;
+  onConfirm: (index, data) => void;
+}

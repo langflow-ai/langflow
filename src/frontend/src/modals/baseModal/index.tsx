@@ -47,7 +47,7 @@ interface BaseModalProps {
   open?: boolean;
   setOpen?: (open: boolean) => void;
   disable?: boolean;
-  size?: "x-small" | "smaller" | "small" | "medium" | "large" | "large-h-full";
+  size?: "x-small" | "smaller" | "small" | "medium" | "large" | "large-h-full" | "small-h-full" | "medium-h-full";
 }
 function BaseModal({
   open,
@@ -85,10 +85,16 @@ function BaseModal({
       minWidth = "min-w-[40vw]";
       height = "h-[40vh]";
       break;
+      case "small-h-full":
+        minWidth = "min-w-[40vw]";
+        break;
     case "medium":
       minWidth = "min-w-[60vw]";
       height = "h-[60vh]";
       break;
+    case "medium-h-full":
+        minWidth = "min-w-[60vw]";
+        break;
     case "large":
       minWidth = "min-w-[80vw]";
       height = "h-[80vh]";
@@ -112,7 +118,9 @@ function BaseModal({
         {triggerChild}
       </DialogTrigger>
       <DialogContent className={minWidth}>
-        {headerChild}
+        <div className="word-break-break-word truncate-doubleline">
+          {headerChild}
+        </div>
         <div className={`mt-2 flex flex-col ${height} w-full `}>
           {ContentChild}
         </div>
