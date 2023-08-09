@@ -7,5 +7,5 @@ export default function IconComponent({
   iconColor,
 }: IconComponentProps): JSX.Element {
   const TargetIcon = nodeIconsLucide[name] ?? nodeIconsLucide["unknown"];
-  return <TargetIcon className={className} style={{ color: iconColor }} />;
+  return <TargetIcon strokeWidth={1.5} className={className} style={{ color: iconColor }} />;
 }
