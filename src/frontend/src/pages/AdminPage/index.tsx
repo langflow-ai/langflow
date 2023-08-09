@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { Trash2, X } from "lucide-react";
+import { Pencil, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import PaginatorComponent from "../../components/PaginatorComponent";
 import { Button } from "../../components/ui/button";
@@ -12,6 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
+import ConfirmationModal from "../../modals/ConfirmationModal";
+import UserManagementModal from "../../modals/UserManagementModal";
 
 export default function AdminPage() {
   const [inputValue, setInputValue] = useState("");
@@ -150,15 +152,12 @@ export default function AdminPage() {
 
   const [editUser, setEditUser] = useState(-1);
   const [editedUser, setEditedUser] = useState("");
+  const [modalEditOpen, setModalEditOpen] = useState(false);
+  const [modalDeleteOpen, setModalDeleteOpen] = useState(false);
 
   useEffect(() => {
     resetFilter();
   }, []);
-
-  const handleEditClick = (index, userEdit) => {
-    setEditUser(index);
-    setEditedUser(userEdit);
-  };
 
   const handleInputChange = (event, index) => {
     const user = _.cloneDeepWith(userList.current);
@@ -170,10 +169,6 @@ export default function AdminPage() {
     setFilterUserList(userFilter);
 
     setEditedUser(event.target.value);
-  };
-
-  const handleSaveClick = (index) => {
-    setEditUser(-1);
   };
 
   function handleChangePagination(pageIndex: number, pageSize: number) {
@@ -228,6 +223,8 @@ export default function AdminPage() {
     resetFilter();
   }
 
+  function handleEditUser(index) {}
+
   return (
     <>
       <div className="grid grid-cols-6 gap-4">
@@ -266,6 +263,7 @@ export default function AdminPage() {
                       <Button
                         onClick={() => {
                           resetFilter();
+                          setInputValue("");
                         }}
                         variant="ghost"
                         className="h-8 px-2 lg:px-3"
@@ -275,6 +273,22 @@ export default function AdminPage() {
                       </Button>
                     )}
                   </div>
+                  <div>
+                  <UserManagementModal
+                    title="New User"
+                    titleHeader={"Add a new user"}
+                    cancelText="Cancel"
+                    confirmationText="Save"
+                    icon={"UserPlus2"}
+                    index={index}
+                    onConfirm={(index, user) => {
+                      handleDeleteUser(index);
+                    }}
+                  >
+                    <Button>New User</Button>
+                  </UserManagementModal>
+                  </div>
+
                 </div>
                 <div
                   className="overflow-scroll overflow-x-hidden rounded-md border-2 bg-muted 
@@ -285,7 +299,6 @@ export default function AdminPage() {
                       <TableRow>
                         <TableHead className="h-10">User</TableHead>
                         <TableHead className="h-10">E-mail</TableHead>
-                        <TableHead className="h-10">Password</TableHead>
                         <TableHead className="h-10">Register Date</TableHead>
                         <TableHead className="h-10 w-[100px]  text-right"></TableHead>
                       </TableRow>
@@ -299,39 +312,51 @@ export default function AdminPage() {
                           <TableCell className="truncate py-2">
                             {user.email}
                           </TableCell>
-                          <TableCell className="truncate py-2">
-                            {editUser === index ? (
-                              <Input
-                                className="h-6 truncate"
-                                onBlur={() => {
-                                  setEditUser(-1);
-                                }}
-                                value={editedUser}
-                                onChange={(e) => handleInputChange(e, index)}
-                                autoFocus
-                              />
-                            ) : (
-                              <div
-                                className="h-6 truncate"
-                                onClick={() =>
-                                  handleEditClick(index, user.password)
-                                }
-                              >
-                                {user.password}
-                              </div>
-                            )}
-                          </TableCell>
                           <TableCell className="py-2">
                             {user.register_date.toString()}
                           </TableCell>
                           <TableCell className="flex w-[100px] py-2 text-right">
-                            <Trash2
-                              className="h-4 w-4 cursor-pointer"
-                              strokeWidth={1.5}
-                              onClick={() => {
-                                handleDeleteUser(index);
-                              }}
-                            />
+                            <div className="flex">
+                              <ConfirmationModal
+                                title="Delete"
+                                titleHeader="Delete User"
+                                modalContentTitle="Attention!"
+                                modalContent="Are you sure you want to delete this user? This action cannot be undone."
+                                cancelText="Cancel"
+                                confirmationText="Delete"
+                                icon={"UserMinus2"}
+                                data={user}
+                                index={index}
+                                onConfirm={(index, user) => {
+                                  handleDeleteUser(index);
+                                }}
+                              >
+                                <Trash2
+                                  className="mr-2 h-4 w-4 cursor-pointer"
+                                  strokeWidth={1.5}
+                                />
+                              </ConfirmationModal>
+                              <UserManagementModal
+                                title="Edit"
+                                titleHeader={`${user.user}`}
+                                cancelText="Cancel"
+                                confirmationText="Edit"
+                                icon={"UserPlus2"}
+                                data={user}
+                                index={index}
+                                onConfirm={(index, user) => {
+                                  handleDeleteUser(index);
+                                }}
+                              >
+                                <Pencil
+                                  className="h-4 w-4 cursor-pointer"
+                                  onClick={() => {
+                                    handleEditUser(index);
+                                  }}
+                                  strokeWidth={1.5}
+                                />
+                              </UserManagementModal>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
