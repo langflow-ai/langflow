@@ -31,9 +31,24 @@ export default function Header() {
   return (
     <div className="header-arrangement">
       <div className="header-start-display">
-        <Link to="/">
-          <span className="ml-4 text-2xl">⛓️</span>
-        </Link>
+        {tabId === "" || !tabId ? (
+          <div className="ml-2">
+            <a
+              href="https://www.langflow.org/"
+              target="_blank"
+              rel="noreferrer"
+              className="header-waitlist-link-box"
+            >
+              <span className="pr-1 text-2xl">⛓️</span>
+              <span>join the waitlist</span>
+            </a>
+          </div>
+        ) : (
+          <Link to="/">
+            <span className="ml-4 text-2xl">⛓️</span>
+          </Link>
+        )}
+
         {flows.findIndex((f) => tabId === f.id) !== -1 && tabId !== "" && (
           <MenuBar flows={flows} tabId={tabId} />
         )}
@@ -64,7 +79,7 @@ export default function Header() {
       </div>
       <div className="header-end-division">
         <div className="header-end-display">
-          <a
+          {/* <a
             href="https://www.langflow.org/"
             target="_blank"
             rel="noreferrer"
@@ -72,7 +87,7 @@ export default function Header() {
           >
             <span className="">⛓️</span>
             join the waitlist
-          </a>
+          </a> */}
           <a
             href="https://github.com/logspace-ai/langflow"
             target="_blank"
