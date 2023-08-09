@@ -79,15 +79,6 @@ export default function Header() {
       </div>
       <div className="header-end-division">
         <div className="header-end-display">
-          {/* <a
-            href="https://www.langflow.org/"
-            target="_blank"
-            rel="noreferrer"
-            className="header-waitlist-link-box"
-          >
-            <span className="">⛓️</span>
-            join the waitlist
-          </a> */}
           <a
             href="https://github.com/logspace-ai/langflow"
             target="_blank"
