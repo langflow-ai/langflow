@@ -92,9 +92,9 @@ class CustomComponent(Component, extra=Extra.allow):
         return build_method["args"]
 
     @property
-    def get_function_entrypoint_return_type(self) -> str:
+    def get_function_entrypoint_return_type(self) -> List[str]:
         if not self.code:
-            return ""
+            return []
         tree = self.get_code_tree(self.code)
 
         component_classes = [
@@ -103,7 +103,7 @@ class CustomComponent(Component, extra=Extra.allow):
             if self.code_class_base_inheritance in cls["bases"]
         ]
         if not component_classes:
-            return ""
+            return []
 
         # Assume the first Component class is the one we're interested in
         component_class = component_classes[0]
@@ -114,11 +114,21 @@ class CustomComponent(Component, extra=Extra.allow):
         ]
 
         if not build_methods:
-            return ""
+            return []
 
         build_method = build_methods[0]
+        return_type = build_method["return_type"]
+        if not return_type:
+            return []
+        # If the return type is not a Union, then we just return it as a list
+        if "Union" not in return_type:
+            return [return_type] if return_type in self.return_type_valid_list else []
 
-        return build_method["return_type"]
+        # If the return type is a Union, then we need to parse it
+        return_type = return_type.replace("Union", "").replace("[", "").replace("]", "")
+        return_type = return_type.split(",")
+        return_type = [item.strip() for item in return_type]
+        return [item for item in return_type if item in self.return_type_valid_list]
 
     @property
     def get_main_class_name(self):
