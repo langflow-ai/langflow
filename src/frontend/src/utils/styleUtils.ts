@@ -57,6 +57,8 @@ import {
   Trash2,
   Undo,
   Upload,
+  UserMinus2,
+  UserPlus2,
   Users2,
   Variable,
   Wand2,
@@ -64,6 +66,9 @@ import {
   X,
   XCircle,
   Zap,
+  Pencil,
+  ChevronsRight,
+  ChevronsLeft
 } from "lucide-react";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
@@ -275,4 +280,9 @@ export const nodeIconsLucide = {
   Upload,
   MessageSquare,
   MoreHorizontal,
+  UserMinus2,
+  UserPlus2,
+  Pencil,
+  ChevronsRight,
+  ChevronsLeft
 };
