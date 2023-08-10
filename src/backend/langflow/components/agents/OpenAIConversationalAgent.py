@@ -43,7 +43,7 @@ class ConversationalAgent(CustomComponent):
         system_message: Optional[SystemMessagePromptTemplate] = None,
         max_token_limit: int = 2000,
     ) -> AgentExecutor:
-        llm = ChatOpenAI(model_name=model_name)
+        llm = ChatOpenAI(model=model_name)
         if not memory:
             memory_key = "chat_history"
             memory = ConversationTokenBufferMemory(
