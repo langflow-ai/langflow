@@ -1,10 +1,12 @@
 from collections import defaultdict
 from fastapi import WebSocket, status
 from langflow.api.v1.schemas import ChatMessage, ChatResponse, FileResponse
-from langflow.cache import cache_manager
-from langflow.cache.manager import Subject
-from langflow.chat.utils import process_graph
+from langflow.services.base import Service
+from langflow.services import service_manager
+from langflow.services.cache.manager import Subject
+from langflow.services.chat.utils import process_graph
 from langflow.interface.utils import pil_to_base64
+from langflow.services.schema import ServiceType
 from langflow.utils.logger import logger
 
 
@@ -12,7 +14,7 @@ import asyncio
 import json
 from typing import Any, Dict, List
 
-from langflow.cache.flow import InMemoryCache
+from langflow.services.cache.flow import InMemoryCache
 
 
 class ChatHistory(Subject):
@@ -42,11 +44,13 @@ class ChatHistory(Subject):
         self.history[client_id] = []
 
 
-class ChatManager:
+class ChatManager(Service):
+    name = "chat_manager"
+
     def __init__(self):
         self.active_connections: Dict[str, WebSocket] = {}
         self.chat_history = ChatHistory()
-        self.cache_manager = cache_manager
+        self.cache_manager = service_manager.get(ServiceType.CACHE_MANAGER)
         self.cache_manager.attach(self.update)
         self.in_memory_cache = InMemoryCache()
 
@@ -117,7 +121,7 @@ class ChatManager:
         self, client_id: str, payload: Dict, langchain_object: Any
     ):
         # Process the graph data and chat message
-        chat_inputs = payload.pop("inputs", "")
+        chat_inputs = payload.pop("inputs", {})
         chat_inputs = ChatMessage(message=chat_inputs)
         self.chat_history.add_message(client_id, chat_inputs)
 

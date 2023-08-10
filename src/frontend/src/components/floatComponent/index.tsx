@@ -25,12 +25,12 @@ export default function FloatComponent({
         type="number"
         step={step}
         min={min}
-        onInput={(e: React.ChangeEvent<HTMLInputElement>) => {
-          if (e.target.value < min.toString()) {
-            e.target.value = min.toString();
+        onInput={(event: React.ChangeEvent<HTMLInputElement>) => {
+          if (event.target.value < min.toString()) {
+            event.target.value = min.toString();
           }
-          if (e.target.value > max.toString()) {
-            e.target.value = max.toString();
+          if (event.target.value > max.toString()) {
+            event.target.value = max.toString();
           }
         }}
         max={max}
@@ -40,8 +40,8 @@ export default function FloatComponent({
         placeholder={
           editNode ? "Number 0 to 1" : "Type a number from zero to one"
         }
-        onChange={(e) => {
-          onChange(e.target.value);
+        onChange={(event) => {
+          onChange(event.target.value);
         }}
       />
     </div>
