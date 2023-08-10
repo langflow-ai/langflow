@@ -110,7 +110,7 @@ export default function NodeToolbarComponent({ data, setData, deleteNode }) {
           </ShadTooltip>
 
           <Select onValueChange={handleSelectChange} value={selectedValue}>
-            <ShadTooltip content="More" side="top">
+            <ShadTooltip content="More" side="top" >
               <SelectTrigger>
                 <div>
                   <div
@@ -136,7 +136,7 @@ export default function NodeToolbarComponent({ data, setData, deleteNode }) {
                     name="Settings2"
                     className="relative top-0.5 mr-2 h-4 w-4"
                   />{" "}
-                  Advanced{" "}
+                  Edit{" "}
                 </div>{" "}
               </SelectItem>
             </SelectContent>
