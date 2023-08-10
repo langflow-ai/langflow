@@ -54,17 +54,19 @@ class ConversationalAgent(CustomComponent):
                 max_token_limit=max_token_limit,
             )
         else:
-            memory_key = memory.memory_key
+            memory_key = memory.memory_key  # type: ignore
 
         _system_message = system_message or _get_default_system_message()
         prompt = OpenAIFunctionsAgent.create_prompt(
-            system_message=_system_message,
+            system_message=_system_message,  # type: ignore
             extra_prompt_messages=[MessagesPlaceholder(variable_name=memory_key)],
         )
-        agent = OpenAIFunctionsAgent(llm=llm, tools=tools, prompt=prompt)
+        agent = OpenAIFunctionsAgent(
+            llm=llm, tools=tools, prompt=prompt  # type: ignore
+        )
         return AgentExecutor(
             agent=agent,
-            tools=tools,
+            tools=tools,  # type: ignore
             memory=memory,
             verbose=True,
             return_intermediate_steps=True,
