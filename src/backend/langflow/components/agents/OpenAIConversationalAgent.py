@@ -26,7 +26,10 @@ class ConversationalAgent(CustomComponent):
             "gpt-4-32k-0613",
         ]
         return {
-            "tools": {"is_list": True},
+            "tools": {"is_list": True, "display_name": "Tools"},
+            "memory": {"display_name": "Memory"},
+            "system_message": {"display_name": "System Message"},
+            "max_token_limit": {"display_name": "Max Token Limit"},
             "model_name": {
                 "display_name": "Model Name",
                 "options": openai_function_models,
