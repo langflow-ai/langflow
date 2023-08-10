@@ -180,6 +180,8 @@
   .flow-page-positioning {
     @apply h-full w-full overflow-hidden;
   }
+
+  
   .logspace-page-icon {
     @apply absolute bottom-2 left-7 flex h-6 cursor-pointer flex-col items-center justify-start overflow-hidden rounded-lg bg-foreground px-2 text-center font-sans text-xs tracking-wide text-secondary transition-all duration-500 ease-in-out;
   }
@@ -1018,5 +1020,16 @@
 
   .chat-message-highlight {
     @apply rounded-md bg-indigo-100 px-0.5 dark:bg-indigo-900;
+  }
+
+  .button-container {
+    @apply flex flex-row space-x-2.5; /* This sets a 10px gap between the items */
+  }
+  .dropdown-content {
+    @apply absolute z-10 bg-white border rounded shadow-md;
+  }
+  
+  .dropdown-content a {
+    @apply text-gray-600 hover:bg-gray-100 p-2 rounded-md;
   }
 }

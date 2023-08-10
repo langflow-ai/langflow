@@ -8,7 +8,7 @@ export type TabsContextType = {
   setTabId: (index: string) => void;
   flows: Array<FlowType>;
   removeFlow: (id: string) => void;
-  addFlow: (flowData?: FlowType, newProject?: boolean) => Promise<String>;
+  addFlow: (flowData?: FlowType, newProject?: boolean, formMode?: boolean) => Promise<String>;
   updateFlow: (newFlow: FlowType) => void;
   incrementNodeId: () => string;
   downloadFlow: (

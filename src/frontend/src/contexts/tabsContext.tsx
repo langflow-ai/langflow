@@ -441,7 +441,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
   const addFlow = async (
     flow?: FlowType,
-    newProject?: Boolean
+    newProject?: Boolean,
+    formMode?: boolean
   ): Promise<String> => {
     if (newProject) {
       let flowData = extractDataFromFlow(flow);
@@ -457,6 +458,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       const flowName = addVersionToDuplicates(newFlow, flows);
 
       newFlow.name = flowName;
+      
+      newFlow.formMode = formMode ? formMode : false;
 
       try {
         const { id } = await saveFlowToDatabase(newFlow);
@@ -536,6 +539,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     name: flow?.name ?? getRandomName(),
     data: flowData.data,
     id: "",
+    formMode: false,
   });
 
   const addFlowToLocalState = (newFlow) => {

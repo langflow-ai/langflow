@@ -102,6 +102,7 @@ export async function saveFlowToDatabase(newFlow: {
   id: string;
   data: ReactFlowJsonObject;
   description: string;
+  formMode: boolean;
   style?: FlowStyleType;
 }): Promise<FlowType> {
   try {
@@ -109,6 +110,7 @@ export async function saveFlowToDatabase(newFlow: {
       name: newFlow.name,
       data: newFlow.data,
       description: newFlow.description,
+      formMode: newFlow.formMode
     });
 
     if (response.status !== 201) {

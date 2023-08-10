@@ -14,6 +14,7 @@ class FlowBase(SQLModelSerializable):
     name: str = Field(index=True)
     description: Optional[str] = Field(index=True)
     data: Optional[Dict] = Field(default=None)
+    form_mode: bool
 
     @validator("data")
     def validate_json(v):
@@ -43,7 +44,10 @@ class Flow(FlowBase, table=True):
 
 
 class FlowCreate(FlowBase):
-    pass
+    form_mode: bool = Field(default=False, alias="formMode")
+
+    class Config:
+        allow_population_by_alias = True
 
 
 class FlowRead(FlowBase):

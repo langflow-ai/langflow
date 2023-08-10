@@ -37,17 +37,37 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
+  onMouseOver?: () => void;
+  dropdownContent?: React.ReactNode;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, onMouseOver, dropdownContent, ...props }, ref) => {
+    const [isDropdownVisible, setDropdownVisible] = React.useState(false);
+
+    const handleMouseOver = () => {
+      if (onMouseOver) {
+        onMouseOver();
+      }
+      if (dropdownContent) {
+        setDropdownVisible(true);
+      }
+    };
+
+    const handleMouseLeave = () => {
+      setDropdownVisible(false);
+    };
+    
     const Comp = asChild ? Slot : "button";
     return (
-      <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
-        ref={ref}
-        {...props}
-      />
+      <div onMouseOver={handleMouseOver} onMouseLeave={handleMouseLeave}>
+        <Comp
+          className={cn(buttonVariants({ variant, size, className }))}
+          ref={ref}
+          {...props}
+        />
+        {isDropdownVisible && <div>{dropdownContent}</div>}
+      </div>
     );
   }
 );

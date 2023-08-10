@@ -49,6 +49,30 @@ export default function HomePage() {
                 navigate("/flow/" + id);
               });
             }}
+            onMouseOver={() => {
+              console.log("Mouse over the button");
+            }}
+            dropdownContent={
+              <div className="dropdown-content">
+                
+              <Button
+                variant="primary"
+                onClick={() => {
+                  addFlow(null, true).then((id) => {
+                    navigate("/flow/" + id);
+                  });
+                }}>Diagram Editor</Button>
+                
+              <Button
+                variant="primary"
+                onClick={() => {
+                  addFlow(null, true, true).then((id) => {
+                    navigate("/form/" + id);
+                  });
+                }}>Form</Button>
+
+              </div>
+            }
           >
             <IconComponent name="Plus" className="main-page-nav-button" />
             New Project
@@ -65,6 +89,23 @@ export default function HomePage() {
             flow={flow}
             id={flow.id}
             button={
+              <div className="button-container">
+                
+              {(
+                <Link to={"/form/" + flow.id}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="whitespace-nowrap "
+                  >
+                    <IconComponent
+                      name="ExternalLink"
+                      className="main-page-nav-button"
+                    />
+                    Edit Form
+                  </Button>
+                </Link>
+              )}
               <Link to={"/flow/" + flow.id}>
                 <Button
                   variant="outline"
@@ -78,6 +119,7 @@ export default function HomePage() {
                   Edit Flow
                 </Button>
               </Link>
+              </div>
             }
             onDelete={() => {
               removeFlow(flow.id);
