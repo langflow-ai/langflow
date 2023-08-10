@@ -253,13 +253,13 @@ test = ["astroid", "pytest"]
 
 [[package]]
 name = "async-timeout"
-version = "4.0.2"
+version = "4.0.3"
 description = "Timeout context manager for asyncio programs"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.7"
 files = [
-    {file = "async-timeout-4.0.2.tar.gz", hash = "sha256:2163e1640ddb52b7a8c80d0a67a08587e5d245cc9c553a74a847056bc2976b15"},
-    {file = "async_timeout-4.0.2-py3-none-any.whl", hash = "sha256:8ca1e4fcf50d07413d66d1a5e416e42cfdf5851c981d679a09851a6853383b3c"},
+    {file = "async-timeout-4.0.3.tar.gz", hash = "sha256:4640d96be84d82d02ed59ea2b7105a0f7b33abe8703703cd0ab0bf87c427522f"},
+    {file = "async_timeout-4.0.3-py3-none-any.whl", hash = "sha256:7405140ff1230c310e51dc27b3145b9092d659ce68ff733fb0cefe3ee42be028"},
 ]
 
 [[package]]
@@ -739,13 +739,13 @@ sqlalchemy = ["sqlalchemy (>1.3.21,<2.0)"]
 
 [[package]]
 name = "cohere"
-version = "4.19.2"
+version = "4.19.3"
 description = ""
 optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "cohere-4.19.2-py3-none-any.whl", hash = "sha256:0b6a4fe04380a481a8e975ebcc9bb6433febe4d3eb583b6d6e04342a5e998345"},
-    {file = "cohere-4.19.2.tar.gz", hash = "sha256:a0b0fa698b3d3983fb328bb90d68fcf08faaa2268f3772ebc6bfea6ba55acf27"},
+    {file = "cohere-4.19.3-py3-none-any.whl", hash = "sha256:6c98f1e58b93b6316c824385c1d2032ed352280e9efa5695ba98306258abf84f"},
+    {file = "cohere-4.19.3.tar.gz", hash = "sha256:c3aaa716c4da7d7a8ed68705fcdc92f1b1a2260b737cee6bd27af5c347f31496"},
 ]
 
 [package.dependencies]
@@ -1644,13 +1644,13 @@ six = "*"
 
 [[package]]
 name = "google-cloud-aiplatform"
-version = "1.29.0"
+version = "1.30.0"
 description = "Vertex AI API client library"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "google-cloud-aiplatform-1.29.0.tar.gz", hash = "sha256:fceabb924d2d26057e3c8c5c2e251929389aa6d553361377bc402781150c0db3"},
-    {file = "google_cloud_aiplatform-1.29.0-py2.py3-none-any.whl", hash = "sha256:cf81c1d93c61ccf3df60a65e3a5a1e465e044059d36b6fc1202b940c46c4c1e1"},
+    {file = "google-cloud-aiplatform-1.30.0.tar.gz", hash = "sha256:26c16069553d177c3277a4371279871c38e31eab1134906cf83ea905e4203ec4"},
+    {file = "google_cloud_aiplatform-1.30.0-py2.py3-none-any.whl", hash = "sha256:8a5d47378babb491cf4737e4f1951289b33b9254bed1e3d8c07be4896cae83ce"},
 ]
 
 [package.dependencies]
