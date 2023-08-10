@@ -8,6 +8,7 @@ from langchain.text_splitter import TextSplitter
 from langchain.tools import Tool
 from langchain.vectorstores.base import VectorStore
 from langchain.schema import BaseOutputParser
+from langchain.schema.memory import BaseMemory
 
 
 LANGCHAIN_BASE_TYPES = {
@@ -22,6 +23,7 @@ LANGCHAIN_BASE_TYPES = {
     "Embeddings": Embeddings,
     "BaseRetriever": BaseRetriever,
     "BaseOutputParser": BaseOutputParser,
+    "BaseMemory": BaseMemory,
 }
 
 # Langchain base types plus Python base types
