@@ -1,12 +1,15 @@
 import * as Form from "@radix-ui/react-form";
 import { FormEvent, useState } from "react";
+import { Link } from "react-router-dom";
+import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { CONTROL_INPUT_STATE } from "../../constants/constants";
-import { inputHandlerEventType, signUpInputStateType } from "../../types/components";
-import { Link } from "react-router-dom";
-import IconComponent from "../../components/genericIconComponent";
+import {
+  inputHandlerEventType,
+  signUpInputStateType,
+} from "../../types/components";
 
 export default function SignUp(): JSX.Element {
   const [inputState, setInputState] =
@@ -22,7 +25,7 @@ export default function SignUp(): JSX.Element {
   return (
     <Form.Root
       onSubmit={(event: FormEvent<HTMLFormElement>) => {
-          if (password === "") {
+        if (password === "") {
           event.preventDefault();
           return;
         }
@@ -30,7 +33,7 @@ export default function SignUp(): JSX.Element {
         const data = Object.fromEntries(new FormData(event.currentTarget));
         event.preventDefault();
       }}
-      className="w-full h-full"
+      className="h-full w-full"
     >
       <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
         <div className="flex w-72 flex-col items-center justify-center gap-2">
@@ -40,26 +43,17 @@ export default function SignUp(): JSX.Element {
           </span>
           <div className="flex w-full items-center justify-center gap-2">
             <Button variant="primary" className="w-full py-6">
-              <IconComponent
-                name="FaApple"
-                className="h-6 w-6"
-              />
+              <IconComponent name="FaApple" className="h-6 w-6" />
             </Button>
             <Button variant="primary" className="w-full py-6">
-              <IconComponent
-                name="FaGithub"
-                className="h-6 w-6"
-              />
+              <IconComponent name="FaGithub" className="h-6 w-6" />
             </Button>
             <Button variant="primary" className="w-full py-6">
-              <IconComponent
-                name="GoogleSearchRun"
-                className="h-6 w-6"
-              />
+              <IconComponent name="GoogleSearchRun" className="h-6 w-6" />
             </Button>
           </div>
           <span className="text-sm text-muted-foreground">or</span>
-          <div className="w-full mb-3">
+          <div className="mb-3 w-full">
             <Form.Field name="username">
               <Form.Label className="data-[invalid]:label-invalid">
                 Username <span className="font-medium text-destructive">*</span>
@@ -82,7 +76,7 @@ export default function SignUp(): JSX.Element {
               </Form.Message>
             </Form.Field>
           </div>
-          <div className="w-full mb-3">
+          <div className="mb-3 w-full">
             <Form.Field name="password" serverInvalid={password != cnfPassword}>
               <Form.Label className="data-[invalid]:label-invalid">
                 Password <span className="font-medium text-destructive">*</span>
