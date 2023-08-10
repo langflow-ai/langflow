@@ -8,10 +8,11 @@ from langchain.text_splitter import TextSplitter
 from langchain.tools import Tool
 from langchain.vectorstores.base import VectorStore
 from langchain.schema import BaseOutputParser
-
+from langchain.agents.agent import AgentExecutor
 
 LANGCHAIN_BASE_TYPES = {
     "Chain": Chain,
+    "AgentExecutor": AgentExecutor,
     "Tool": Tool,
     "BaseLLM": BaseLLM,
     "PromptTemplate": PromptTemplate,
