@@ -223,4 +223,4 @@ export type UserManagementType = {
 export type loginInputStateType = {
   username: string;
   password: string;
-}
+};

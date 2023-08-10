@@ -70,6 +70,7 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
+import { FaApple, FaGithub } from "react-icons/fa";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
 import { BingIcon } from "../icons/Bing";
@@ -96,7 +97,6 @@ import SvgWikipedia from "../icons/Wikipedia/Wikipedia";
 import SvgWolfram from "../icons/Wolfram/Wolfram";
 import { HackerNewsIcon } from "../icons/hackerNews";
 import { SupabaseIcon } from "../icons/supabase";
-import { FaApple, FaGithub } from "react-icons/fa";
 
 export const gradients = [
   "bg-gradient-to-br from-gray-800 via-rose-700 to-violet-900",
