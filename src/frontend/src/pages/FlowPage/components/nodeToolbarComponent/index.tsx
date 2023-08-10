@@ -2,9 +2,15 @@ import { useContext, useState } from "react";
 import { useReactFlow } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "../../../../components/ui/select-trigger";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import EditNodeModal from "../../../../modals/EditNodeModal";
-import { classNames } from "../../../../utils/utils";
+import { classNames, getRandomKeyByssmm } from "../../../../utils/utils";
 
 export default function NodeToolbarComponent({ data, setData, deleteNode }) {
   const [nodeLength, setNodeLength] = useState(
@@ -25,6 +31,17 @@ export default function NodeToolbarComponent({ data, setData, deleteNode }) {
 
   const { paste } = useContext(TabsContext);
   const reactFlowInstance = useReactFlow();
+  const [showModalAdvanced, setShowModalAdvanced] = useState(false);
+  const [selectedValue, setSelectedValue] = useState("");
+
+  const handleSelectChange = (event) => {
+    setSelectedValue(event);
+    event.includes("advanced")
+      ? setShowModalAdvanced(true)
+      : setShowModalAdvanced(false);
+    console.log(showModalAdvanced);
+  };
+
   return (
     <>
       <div className="w-26 h-10">
@@ -92,6 +109,54 @@ export default function NodeToolbarComponent({ data, setData, deleteNode }) {
             </a>
           </ShadTooltip>
 
+          <Select onValueChange={handleSelectChange} value={selectedValue}>
+            <ShadTooltip content="More" side="top">
+              <SelectTrigger>
+                <div>
+                  <div
+                    className={classNames(
+                      "relative -ml-px inline-flex h-8 w-[31px] items-center rounded-r-md bg-background text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
+                        (nodeLength == 0
+                          ? " text-muted-foreground"
+                          : " text-foreground")
+                    )}
+                  >
+                    <IconComponent
+                      name="MoreHorizontal"
+                      className="relative left-2 h-4 w-4"
+                    />
+                  </div>
+                </div>
+              </SelectTrigger>
+            </ShadTooltip>
+            <SelectContent>
+              <SelectItem value={getRandomKeyByssmm() + "advanced"}>
+                <div className="flex">
+                  <IconComponent
+                    name="Settings2"
+                    className="relative top-0.5 mr-2 h-4 w-4"
+                  />{" "}
+                  Advanced{" "}
+                </div>{" "}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+
+          {showModalAdvanced && (
+            <EditNodeModal
+              data={data}
+              setData={setData}
+              nodeLength={nodeLength}
+              open={showModalAdvanced}
+              onClose={(modal) => {
+                setShowModalAdvanced(modal);
+              }}
+            >
+              <></>
+            </EditNodeModal>
+          )}
+
+          {/* 
           <ShadTooltip content="Edit" side="top">
             <div>
               <EditNodeModal
@@ -111,7 +176,7 @@ export default function NodeToolbarComponent({ data, setData, deleteNode }) {
                 </div>
               </EditNodeModal>
             </div>
-          </ShadTooltip>
+          </ShadTooltip> */}
         </span>
       </div>
     </>

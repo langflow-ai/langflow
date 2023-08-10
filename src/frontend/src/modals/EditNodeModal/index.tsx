@@ -35,19 +35,23 @@ const EditNodeModal = forwardRef(
       setData,
       nodeLength,
       children,
+      open,
+      onClose
     }: {
       data: NodeDataType;
       setData: (data: NodeDataType) => void;
       nodeLength: number;
       children: ReactNode;
+      open?: boolean;
+      onClose?: (close: boolean) => void;
     },
     ref
   ) => {
-    const [modalOpen, setModalOpen] = useState(false);
+
+    const [modalOpen, setModalOpen] = useState(open ?? false);
     const [myData, setMyData] = useState(data);
     const { setTabsState, tabId } = useContext(TabsContext);
     const { reactFlowInstance } = useContext(typesContext);
-
     let disabled =
       reactFlowInstance?.getEdges().some((e) => e.targetHandle === data.id) ??
       false;
@@ -70,6 +74,7 @@ const EditNodeModal = forwardRef(
 
     useEffect(() => {
       setMyData(data); // reset data to what it is on node when opening modal
+      onClose(modalOpen);
     }, [modalOpen]);
 
     return (
