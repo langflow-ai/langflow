@@ -5,6 +5,8 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   ChevronsUpDown,
   Circle,
   Clipboard,
@@ -44,6 +46,7 @@ import {
   MoonIcon,
   MoreHorizontal,
   Paperclip,
+  Pencil,
   Plus,
   Redo,
   Rocket,
@@ -66,9 +69,6 @@ import {
   X,
   XCircle,
   Zap,
-  Pencil,
-  ChevronsRight,
-  ChevronsLeft
 } from "lucide-react";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
@@ -96,6 +96,7 @@ import SvgWikipedia from "../icons/Wikipedia/Wikipedia";
 import SvgWolfram from "../icons/Wolfram/Wolfram";
 import { HackerNewsIcon } from "../icons/hackerNews";
 import { SupabaseIcon } from "../icons/supabase";
+import { FaApple, FaGithub } from "react-icons/fa";
 
 export const gradients = [
   "bg-gradient-to-br from-gray-800 via-rose-700 to-violet-900",
@@ -284,5 +285,7 @@ export const nodeIconsLucide = {
   UserPlus2,
   Pencil,
   ChevronsRight,
-  ChevronsLeft
+  ChevronsLeft,
+  FaGithub,
+  FaApple,
 };
