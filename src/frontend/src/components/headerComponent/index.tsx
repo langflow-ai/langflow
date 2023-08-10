@@ -35,7 +35,7 @@ export default function Header() {
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
         <Button variant="outline" className="">
-          	Sign out
+          Sign out
         </Button>
         {flows.findIndex((f) => tabId === f.id) !== -1 && tabId !== "" && (
           <MenuBar flows={flows} tabId={tabId} />

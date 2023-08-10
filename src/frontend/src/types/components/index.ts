@@ -11,6 +11,7 @@ export type InputComponentType = {
   onChangePass?: (value: boolean | boolean) => void;
   showPass?: boolean;
   placeholder?: string;
+  className?: string;
 };
 export type ToggleComponentType = {
   enabled: boolean;
@@ -82,13 +83,13 @@ export type DisclosureComponentType = {
   children: ReactNode;
   openDisc: boolean;
   button: {
-	title: string;
-	Icon: any;
-	buttons?: {
-  	Icon: ReactElement;
-  	title: string;
-  	onClick: (event?: React.MouseEvent) => void;
-	}[];
+    title: string;
+    Icon: any;
+    buttons?: {
+      Icon: ReactElement;
+      title: string;
+      onClick: (event?: React.MouseEvent) => void;
+    }[];
   };
 };
 export type FloatComponentType = {
@@ -102,18 +103,18 @@ export type TooltipComponentType = {
   children: ReactElement;
   title: string | ReactElement;
   placement?:
-	| "bottom-end"
-	| "bottom-start"
-	| "bottom"
-	| "left-end"
-	| "left-start"
-	| "left"
-	| "right-end"
-	| "right-start"
-	| "right"
-	| "top-end"
-	| "top-start"
-	| "top";
+    | "bottom-end"
+    | "bottom-start"
+    | "bottom"
+    | "left-end"
+    | "left-start"
+    | "left"
+    | "right-end"
+    | "right-start"
+    | "right"
+    | "top-end"
+    | "top-start"
+    | "top";
 };
 
 export type ProgressBarType = {
@@ -165,7 +166,7 @@ export interface IVarHighlightType {
 
 export type IconComponentProps = {
   name: string;
-  className: string;
+  className?: string;
   iconColor?: string;
 };
 
@@ -181,8 +182,8 @@ export type inputStateType = {
 
 export type inputHandlerEventType = {
   target: {
-	value: string;
-	name: string;
+    value: string;
+    name: string;
   };
 };
 export type PaginatorComponentType = {
@@ -205,7 +206,7 @@ export type ConfirmationModalType = {
   data: any;
   index: number;
   onConfirm: (index, data) => void;
-}
+};
 
 export type UserManagementType = {
   title: string;
@@ -217,4 +218,4 @@ export type UserManagementType = {
   data?: any;
   index?: number;
   onConfirm: (index, data) => void;
-}
+};

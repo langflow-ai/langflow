@@ -1,6 +1,5 @@
 import axios, { AxiosError, AxiosInstance } from "axios";
 import { useContext, useEffect, useRef } from "react";
-import { URL_EXCLUDED_FROM_ERROR_RETRIES } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 
 // Create a new Axios instance
@@ -20,7 +19,6 @@ function ApiInterceptor() {
         //   return Promise.reject(error);
         // }
         // let retryCount = 0;
-
         // while (retryCount < 4) {
         //   await sleep(5000); // Sleep for 5 seconds
         //   retryCount++;
