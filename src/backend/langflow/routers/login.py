@@ -7,6 +7,7 @@ from langflow.auth.auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     authenticate_user,
     create_access_token,
+    create_refresh_token,
 )
 
 from sqlalchemy.orm import Session
@@ -24,10 +25,16 @@ def create_user_token(user: User) -> dict:
         expires_delta=access_token_expires,
     )
 
-    return {"access_token": access_token, "token_type": "bearer"}
+    refresh_token = create_refresh_token(data={"sub": user.username})
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+    }
 
 
-@router.post("/token", response_model=Token)
+@router.post("/login", response_model=Token)
 async def login_to_get_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_session)
 ):
