@@ -7,7 +7,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-} from "../../../../components/ui/select-trigger";
+} from "../../../../components/ui/select-custom";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import { classNames, getRandomKeyByssmm } from "../../../../utils/utils";
