@@ -5,6 +5,7 @@ from langflow.api.v1.callback import (
 )
 from langflow.processing.process import fix_memory_inputs, format_actions
 from langflow.utils.logger import logger
+from langchain.agents.agent import AgentExecutor
 
 
 async def get_result_and_steps(langchain_object, inputs: Union[dict, str], **kwargs):
@@ -20,7 +21,8 @@ async def get_result_and_steps(langchain_object, inputs: Union[dict, str], **kwa
             # to display intermediate steps
             langchain_object.return_intermediate_steps = True
         try:
-            fix_memory_inputs(langchain_object)
+            if not isinstance(langchain_object, AgentExecutor):
+                fix_memory_inputs(langchain_object)
         except Exception as exc:
             logger.error(f"Error fixing memory inputs: {exc}")
 
