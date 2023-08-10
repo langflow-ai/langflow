@@ -129,6 +129,8 @@ class Settings(BaseSettings):
                     value = json.loads(str(value))
                 if isinstance(value, list):
                     for item in value:
+                        if isinstance(item, Path):
+                            item = str(item)
                         if item not in getattr(self, key):
                             getattr(self, key).append(item)
                     logger.debug(f"Extended {key}")

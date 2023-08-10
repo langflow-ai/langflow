@@ -42,10 +42,18 @@ def get_all():
     custom_components_from_file = {}
     if settings.COMPONENTS_PATH:
         logger.info(f"Building custom components from {settings.COMPONENTS_PATH}")
-        custom_component_dicts = [
-            build_langchain_custom_component_list_from_path(str(path))
-            for path in settings.COMPONENTS_PATH
-        ]
+
+        custom_component_dicts = []
+        processed_paths = []
+        for path in settings.COMPONENTS_PATH:
+            if path in processed_paths:
+                continue
+            custom_component_dict = build_langchain_custom_component_list_from_path(
+                str(path)
+            )
+            custom_component_dicts.append(custom_component_dict)
+            processed_paths.append(str(path))
+
         logger.info(f"Loading {len(custom_component_dicts)} category(ies)")
         for custom_component_dict in custom_component_dicts:
             # custom_component_dict is a dict of dicts
