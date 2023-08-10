@@ -174,7 +174,7 @@ export interface languageMap {
   [key: string]: string | undefined;
 }
 
-export type inputStateType = {
+export type signUpInputStateType = {
   password: string;
   cnfPassword: string;
   username: string;
@@ -219,3 +219,8 @@ export type UserManagementType = {
   index?: number;
   onConfirm: (index, data) => void;
 };
+
+export type loginInputStateType = {
+  username: string;
+  password: string;
+}

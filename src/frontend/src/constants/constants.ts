@@ -514,3 +514,8 @@ export const CONTROL_INPUT_STATE = {
   cnfPassword: "",
   username: "",
 };
+
+export const CONTROL_LOGIN_STATE = {
+  username: "",
+  password: "",
+};
