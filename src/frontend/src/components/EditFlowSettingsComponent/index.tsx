@@ -10,22 +10,22 @@ type InputProps = {
   maxLength?: number;
   flows: Array<{ id: string; name: string; description: string }>;
   tabId: string;
-  invalidName: boolean;
-  setInvalidName: (invalidName: boolean) => void;
+  invalidName?: boolean;
+  setInvalidName?: (invalidName: boolean) => void;
   setName: (name: string) => void;
   setDescription: (description: string) => void;
   updateFlow: (flow: { id: string; name: string }) => void;
 };
 
 export const EditFlowSettings: React.FC<InputProps> = ({
-  name,
+  name: myName,
   invalidName,
   setInvalidName,
   description,
   maxLength = 50,
   flows,
   tabId,
-  setName,
+  setName: setMyName,
   setDescription,
   updateFlow,
 }) => {
@@ -46,17 +46,25 @@ export const EditFlowSettings: React.FC<InputProps> = ({
     } else {
       setIsMaxLength(false);
     }
-    if (!nameLists.current.includes(value)) {
-      setInvalidName(false);
-    } else {
-      setInvalidName(true);
+    if (invalidName !== undefined) {
+      if (!nameLists.current.includes(value)) {
+        setInvalidName(false);
+      } else {
+        setInvalidName(true);
+      }
     }
     setName(value);
+    setMyName(value);
   };
 
-  const [desc, setDesc] = useState(
-    flows.find((f) => f.id === tabId).description
-  );
+  const [name, setName] = useState(myName);
+
+  const [desc, setDesc] = useState(description);
+
+  useEffect(() => {
+    setName(name);
+    setDesc(description);
+  }, [name, description]);
 
   const handleDescriptionChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     flows.find((f) => f.id === tabId).description = event.target.value;
