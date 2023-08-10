@@ -9,7 +9,7 @@ from langchain.tools import Tool
 from langchain.vectorstores.base import VectorStore
 from langchain.schema import BaseOutputParser
 from langchain.schema.memory import BaseMemory
-
+from langchain.memory.chat_memory import BaseChatMemory
 
 LANGCHAIN_BASE_TYPES = {
     "Chain": Chain,
@@ -24,6 +24,7 @@ LANGCHAIN_BASE_TYPES = {
     "BaseRetriever": BaseRetriever,
     "BaseOutputParser": BaseOutputParser,
     "BaseMemory": BaseMemory,
+    "BaseChatMemory": BaseChatMemory,
 }
 
 # Langchain base types plus Python base types
