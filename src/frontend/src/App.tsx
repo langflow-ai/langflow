@@ -48,6 +48,7 @@ export default function App() {
 
   const isLoginPage = location.pathname.includes("login");
   const isAdminPage = location.pathname.includes("admin");
+  const isSignUpPage = location.pathname.includes("signup");
 
   // Use effect hook to update alertsList when a new alert is added
   useEffect(() => {
@@ -136,7 +137,7 @@ export default function App() {
         }}
         FallbackComponent={CrashErrorComponent}
       >
-        {!isLoginPage && <Header />}
+        {!isLoginPage && !isSignUpPage && <Header />}
         <Router />
       </ErrorBoundary>
       <div></div>
