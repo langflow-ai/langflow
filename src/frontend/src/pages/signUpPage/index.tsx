@@ -1,18 +1,16 @@
 import * as Form from "@radix-ui/react-form";
-import { useState } from "react";
-import { FaApple, FaGithub } from "react-icons/fa";
+import { FormEvent, useState } from "react";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { CONTROL_INPUT_STATE } from "../../constants/constants";
-import { GoogleIcon } from "../../icons/Google";
-import { inputHandlerEventType, inputStateType } from "../../types/components";
+import { inputHandlerEventType, signUpInputStateType } from "../../types/components";
 import { Link } from "react-router-dom";
 import IconComponent from "../../components/genericIconComponent";
 
 export default function SignUp(): JSX.Element {
   const [inputState, setInputState] =
-    useState<inputStateType>(CONTROL_INPUT_STATE);
+    useState<signUpInputStateType>(CONTROL_INPUT_STATE);
 
   const { password, cnfPassword, username } = inputState;
 
@@ -23,8 +21,8 @@ export default function SignUp(): JSX.Element {
   }
   return (
     <Form.Root
-      onSubmit={(event) => {
-        if (password !== cnfPassword) {
+      onSubmit={(event: FormEvent<HTMLFormElement>) => {
+          if (password === "") {
           event.preventDefault();
           return;
         }
