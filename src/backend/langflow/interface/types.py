@@ -1,6 +1,6 @@
 import ast
 import contextlib
-from typing import Any
+from typing import Any, List
 from langflow.api.utils import merge_nested_dicts_with_renaming
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
@@ -199,6 +199,9 @@ def update_attributes(frontend_node, template_config):
     if "beta" in template_config:
         frontend_node["beta"] = template_config["beta"]
 
+    if "documentation" in template_config:
+        frontend_node["documentation"] = template_config["documentation"]
+
 
 def build_field_config(custom_component: CustomComponent):
     """Build the field configuration for a custom component"""
@@ -257,26 +260,27 @@ def get_field_properties(extra_field):
     return field_name, field_type, field_value, field_required
 
 
-def add_base_classes(frontend_node, return_type):
+def add_base_classes(frontend_node, return_types: List[str]):
     """Add base classes to the frontend node"""
-    if return_type not in CUSTOM_COMPONENT_SUPPORTED_TYPES or return_type is None:
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": (
-                    "Invalid return type should be one of: "
-                    f"{list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())}"
-                ),
-                "traceback": traceback.format_exc(),
-            },
-        )
+    for return_type in return_types:
+        if return_type not in CUSTOM_COMPONENT_SUPPORTED_TYPES or return_type is None:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": (
+                        "Invalid return type should be one of: "
+                        f"{list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())}"
+                    ),
+                    "traceback": traceback.format_exc(),
+                },
+            )
 
-    return_type_instance = CUSTOM_COMPONENT_SUPPORTED_TYPES.get(return_type)
-    base_classes = get_base_classes(return_type_instance)
+        return_type_instance = CUSTOM_COMPONENT_SUPPORTED_TYPES.get(return_type)
+        base_classes = get_base_classes(return_type_instance)
 
-    for base_class in base_classes:
-        if base_class not in CLASSES_TO_REMOVE:
-            frontend_node.get("base_classes").append(base_class)
+        for base_class in base_classes:
+            if base_class not in CLASSES_TO_REMOVE:
+                frontend_node.get("base_classes").append(base_class)
 
 
 def build_langchain_template_custom_component(custom_component: CustomComponent):
