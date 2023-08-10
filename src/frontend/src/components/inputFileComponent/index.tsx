@@ -49,11 +49,11 @@ export default function InputFileComponent({
     input.style.display = "none"; // Hidden from view
     input.multiple = false; // Allow only one file selection
 
-    input.onchange = (e: Event) => {
+    input.onchange = (event: Event) => {
       setLoading(true);
 
       // Get the selected file
-      const file = (e.target as HTMLInputElement).files?.[0];
+      const file = (event.target as HTMLInputElement).files?.[0];
 
       // Check if the file type is correct
       if (file && checkFileType(file.name)) {

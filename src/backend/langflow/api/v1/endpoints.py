@@ -1,12 +1,11 @@
 from http import HTTPStatus
 from typing import Annotated, Optional
 
-from langflow.cache.utils import save_uploaded_file
-from langflow.database.models.flow import Flow
+from langflow.services.cache.utils import save_uploaded_file
+from langflow.services.database.models.flow import Flow
 from langflow.processing.process import process_graph_cached, process_tweaks
+from langflow.services.utils import get_settings_manager
 from langflow.utils.logger import logger
-from langflow.settings import settings
-
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, Body
 
 from langflow.interface.custom.custom_component import CustomComponent
@@ -18,7 +17,7 @@ from langflow.api.v1.schemas import (
     CustomComponentCode,
 )
 
-from langflow.api.utils import merge_nested_dicts
+from langflow.api.utils import merge_nested_dicts_with_renaming
 
 from langflow.interface.types import (
     build_langchain_types_dict,
@@ -26,7 +25,7 @@ from langflow.interface.types import (
     build_langchain_custom_component_list_from_path,
 )
 
-from langflow.database.base import get_session
+from langflow.services.utils import get_session
 from sqlmodel import Session
 
 # build router
@@ -40,20 +39,32 @@ def get_all():
     # custom_components is a list of dicts
     # need to merge all the keys into one dict
     custom_components_from_file = {}
-    if settings.COMPONENTS_PATH:
-        logger.info(f"Building custom components from {settings.COMPONENTS_PATH}")
+    settings_manager = get_settings_manager()
+    if settings_manager.settings.COMPONENTS_PATH:
+        logger.info(
+            f"Building custom components from {settings_manager.settings.COMPONENTS_PATH}"
+        )
         custom_component_dicts = [
             build_langchain_custom_component_list_from_path(str(path))
-            for path in settings.COMPONENTS_PATH
+            for path in settings_manager.settings.COMPONENTS_PATH
         ]
-        logger.info(f"Loading {len(custom_component_dicts)} custom components")
-
+        logger.info(f"Loading {len(custom_component_dicts)} category(ies)")
         for custom_component_dict in custom_component_dicts:
-            custom_components_from_file = merge_nested_dicts(
+            # custom_component_dict is a dict of dicts
+            if not custom_component_dict:
+                continue
+            category = list(custom_component_dict.keys())[0]
+            logger.info(
+                f"Loading {len(custom_component_dict[category])} component(s) from category {category}"
+            )
+            logger.debug(custom_component_dict)
+            custom_components_from_file = merge_nested_dicts_with_renaming(
                 custom_components_from_file, custom_component_dict
             )
-            logger.info(f"Loaded {custom_component_dict}")
-    return merge_nested_dicts(native_components, custom_components_from_file)
+
+    return merge_nested_dicts_with_renaming(
+        native_components, custom_components_from_file
+    )
 
 
 # For backwards compatibility we will keep the old endpoint

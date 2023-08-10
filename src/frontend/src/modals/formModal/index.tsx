@@ -46,7 +46,7 @@ export default function FormModal({
       const handleKeys = formKeysData.handle_keys;
 
       const keyToUse = Object.keys(inputKeys).find(
-        (k) => !handleKeys.some((j) => j === k) && inputKeys[k] === ""
+        (key) => !handleKeys.some((j) => j === key) && inputKeys[key] === ""
       );
 
       return inputKeys[keyToUse];
@@ -67,14 +67,17 @@ export default function FormModal({
   const id = useRef(flow.id);
   const tabsStateFlowId = tabsState[flow.id];
   const tabsStateFlowIdFormKeysData = tabsStateFlowId.formKeysData;
-  const [chatKey, setChatKey] = useState(
-    Object.keys(tabsState[flow.id].formKeysData.input_keys).find(
-      (k) =>
-        !tabsState[flow.id].formKeysData.handle_keys.some((j) => j === k) &&
-        tabsState[flow.id].formKeysData.input_keys[k] === ""
-    )
-  );
-
+  const [chatKey, setChatKey] = useState(() => {
+    if (tabsState[flow.id]?.formKeysData?.input_keys) {
+      return Object.keys(tabsState[flow.id].formKeysData.input_keys).find(
+        (key) =>
+          !tabsState[flow.id].formKeysData.handle_keys.some((j) => j === key) &&
+          tabsState[flow.id].formKeysData.input_keys[key] === ""
+      );
+    }
+    // TODO: return a sensible default
+    return "";
+  });
   useEffect(() => {
     if (messagesRef.current) {
       messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
@@ -419,97 +422,103 @@ export default function FormModal({
                 </div>
               </div>
 
-              {Object.keys(tabsState[id.current].formKeysData.input_keys).map(
-                (i, k) => (
-                  <div className="file-component-accordion-div" key={k}>
+              {tabsState[id.current]?.formKeysData?.input_keys
+                ? Object.keys(
+                    tabsState[id.current].formKeysData.input_keys
+                  ).map((key, index) => (
+                    <div className="file-component-accordion-div" key={index}>
+                      <AccordionComponent
+                        trigger={
+                          <div className="file-component-badge-div">
+                            <Badge variant="gray" size="md">
+                              {key}
+                            </Badge>
+
+                            <div
+                              className="-mb-1"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                              }}
+                            >
+                              <ToggleShadComponent
+                                enabled={chatKey === key}
+                                setEnabled={(value) =>
+                                  handleOnCheckedChange(value, key)
+                                }
+                                size="small"
+                                disabled={tabsState[
+                                  id.current
+                                ].formKeysData.handle_keys.some(
+                                  (t) => t === key
+                                )}
+                              />
+                            </div>
+                          </div>
+                        }
+                        key={index}
+                        keyValue={key}
+                      >
+                        <div className="file-component-tab-column">
+                          {tabsState[id.current].formKeysData.handle_keys.some(
+                            (t) => t === key
+                          ) && (
+                            <div className="font-normal text-muted-foreground ">
+                              Source: Component
+                            </div>
+                          )}
+                          <Textarea
+                            className="custom-scroll"
+                            value={
+                              tabsState[id.current].formKeysData.input_keys[key]
+                            }
+                            onChange={(e) => {
+                              setTabsState((old) => {
+                                let newTabsState = _.cloneDeep(old);
+                                newTabsState[
+                                  id.current
+                                ].formKeysData.input_keys[key] = e.target.value;
+                                return newTabsState;
+                              });
+                            }}
+                            disabled={chatKey === key}
+                            placeholder="Enter text..."
+                          ></Textarea>
+                        </div>
+                      </AccordionComponent>
+                    </div>
+                  ))
+                : null}
+              {tabsState[id.current].formKeysData.memory_keys.map(
+                (key, index) => (
+                  <div className="file-component-accordion-div" key={index}>
                     <AccordionComponent
                       trigger={
                         <div className="file-component-badge-div">
                           <Badge variant="gray" size="md">
-                            {i}
+                            {key}
                           </Badge>
-
-                          <div
-                            className="-mb-1"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                            }}
-                          >
+                          <div className="-mb-1">
                             <ToggleShadComponent
-                              enabled={chatKey === i}
-                              setEnabled={(value) =>
-                                handleOnCheckedChange(value, i)
-                              }
+                              enabled={chatKey === key}
+                              setEnabled={() => {}}
                               size="small"
-                              disabled={tabsState[
-                                id.current
-                              ].formKeysData.handle_keys.some((t) => t === i)}
+                              disabled={true}
                             />
                           </div>
                         </div>
                       }
-                      key={k}
-                      keyValue={i}
+                      key={index}
+                      keyValue={key}
                     >
                       <div className="file-component-tab-column">
-                        {tabsState[id.current].formKeysData.handle_keys.some(
-                          (t) => t === i
-                        ) && (
-                          <div className="font-normal text-muted-foreground ">
-                            Source: Component
-                          </div>
-                        )}
-                        <Textarea
-                          className="custom-scroll"
-                          value={
-                            tabsState[id.current].formKeysData.input_keys[i]
-                          }
-                          onChange={(e) => {
-                            setTabsState((old) => {
-                              let newTabsState = _.cloneDeep(old);
-                              newTabsState[id.current].formKeysData.input_keys[
-                                i
-                              ] = e.target.value;
-                              return newTabsState;
-                            });
-                          }}
-                          disabled={chatKey === i}
-                          placeholder="Enter text..."
-                        ></Textarea>
+                        <div className="font-normal text-muted-foreground ">
+                          Source: Memory
+                        </div>
                       </div>
                     </AccordionComponent>
                   </div>
                 )
               )}
-              {tabsState[id.current].formKeysData.memory_keys.map((i, k) => (
-                <div className="file-component-accordion-div" key={k}>
-                  <AccordionComponent
-                    trigger={
-                      <div className="file-component-badge-div">
-                        <Badge variant="gray" size="md">
-                          {i}
-                        </Badge>
-                        <div className="-mb-1">
-                          <ToggleShadComponent
-                            enabled={chatKey === i}
-                            setEnabled={() => {}}
-                            size="small"
-                            disabled={true}
-                          />
-                        </div>
-                      </div>
-                    }
-                    key={k}
-                    keyValue={i}
-                  >
-                    <div className="file-component-tab-column">
-                      <div className="font-normal text-muted-foreground ">
-                        Source: Memory
-                      </div>
-                    </div>
-                  </AccordionComponent>
-                </div>
-              ))}
             </div>
             <div className="eraser-column-arrangement">
               <div className="eraser-size">
@@ -529,14 +538,14 @@ export default function FormModal({
                 </div>
                 <div ref={messagesRef} className="chat-message-div">
                   {chatHistory.length > 0 ? (
-                    chatHistory.map((c, i) => (
+                    chatHistory.map((chat, index) => (
                       <ChatMessage
                         lockChat={lockChat}
-                        chat={c}
+                        chat={chat}
                         lastMessage={
-                          chatHistory.length - 1 === i ? true : false
+                          chatHistory.length - 1 === index ? true : false
                         }
-                        key={i}
+                        key={index}
                       />
                     ))
                   ) : (
