@@ -116,9 +116,12 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
 
 
 def instantiate_custom_component(node_type, class_object, params):
-    class_object = get_function_custom(params.pop("code"))
+    # we need to make a copy of the params because we will be
+    # modifying it
+    params_copy = params.copy()
+    class_object = get_function_custom(params_copy.pop("code"))
     custom_component = class_object()
-    built_object = custom_component.build(**params)
+    built_object = custom_component.build(**params_copy)
     return built_object, {"repr": custom_component.custom_repr()}
 
 
