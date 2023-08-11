@@ -1,6 +1,10 @@
 import axios, { AxiosError, AxiosInstance } from "axios";
 import { useContext, useEffect, useRef } from "react";
 import { alertContext } from "../../contexts/alertContext";
+import { AuthContext } from "../../contexts/authContext";
+import { URL_EXCLUDED_FROM_ERROR_RETRIES } from "../../constants/constants";
+import { renewAccessToken } from ".";
+import { useNavigate } from "react-router-dom";
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
@@ -10,44 +14,80 @@ const api: AxiosInstance = axios.create({
 function ApiInterceptor() {
   const retryCounts = useRef([]);
   const { setErrorData } = useContext(alertContext);
+  const { accessToken, refreshAccessToken, login, logout } = useContext(AuthContext);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const interceptor = api.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
-        // if (URL_EXCLUDED_FROM_ERROR_RETRIES.includes(error.config?.url)) {
-        //   return Promise.reject(error);
-        // }
-        // let retryCount = 0;
-        // while (retryCount < 4) {
-        //   await sleep(5000); // Sleep for 5 seconds
-        //   retryCount++;
-        //   try {
-        //     const response = await axios.request(error.config);
-        //     return response;
-        //   } catch (error) {
-        //     if (retryCount === 3) {
-        //       setErrorData({
-        //         title: "There was an error on web connection, please: ",
-        //         list: [
-        //           "Refresh the page",
-        //           "Use a new flow tab",
-        //           "Check if the backend is up",
-        //           "Endpoint: " + error.config?.url,
-        //         ],
-        //       });
-        //       return Promise.reject(error);
-        //     }
-        //   }
-        // }
+        if (URL_EXCLUDED_FROM_ERROR_RETRIES.includes(error.config?.url)) {
+          return Promise.reject(error);
+        }
+
+        if(error.response?.status === 401){
+          const refreshToken = localStorage.getItem("refresh_token");
+          if (refreshToken) {
+              const res = await renewAccessToken(refreshToken);
+              login(res.access_token, res.refresh_token)
+              try {
+                const response = await axios.request(error.config);
+                return response;
+              } catch (error) {
+                if(error.response?.status === 401){
+                  logout();
+                  navigate("/login");
+                }
+              }
+            }
+          }
+
+          else{
+            let retryCount = 0;
+            while (retryCount < 4) {
+              await sleep(5000); // Sleep for 5 seconds
+              retryCount++;
+              try {
+                const response = await axios.request(error.config);
+                return response;
+              } catch (error) {
+                if (retryCount === 3) {
+                  setErrorData({
+                    title: "There was an error on web connection, please: ",
+                    list: [
+                      "Refresh the page",
+                      "Use a new flow tab",
+                      "Check if the backend is up",
+                      "Endpoint: " + error.config?.url,
+                    ],
+                  });
+                  return Promise.reject(error);
+                }
+              }
+            }
+          }
+      }
+    );
+
+    // Request interceptor to add access token to every request
+    const requestInterceptor = api.interceptors.request.use(
+      (config) => {
+        if (accessToken) {
+          config.headers["Authorization"] = `Bearer ${accessToken}`;
+        }
+        return config;
+      },
+      (error) => {
+        return Promise.reject(error);
       }
     );
 
     return () => {
-      // Clean up the interceptor when the component unmounts
+      // Clean up the interceptors when the component unmounts
       api.interceptors.response.eject(interceptor);
+      api.interceptors.request.eject(requestInterceptor);
     };
-  }, [retryCounts]);
+  }, [accessToken, setErrorData]);
 
   return null;
 }

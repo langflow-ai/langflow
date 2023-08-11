@@ -1,6 +1,6 @@
 import * as Form from "@radix-ui/react-form";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useContext, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
@@ -10,18 +10,43 @@ import {
   inputHandlerEventType,
   loginInputStateType,
 } from "../../types/components";
+import { onLogin } from "../../controllers/API";
+import { LoginType } from "../../types/api";
+import { AuthContext } from "../../contexts/authContext";
 
 export default function LoginPage(): JSX.Element {
   const [inputState, setInputState] =
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
 
   const { password, username } = inputState;
+  const { login } = useContext(AuthContext);
+  const navigate = useNavigate();
 
   function handleInput({
     target: { name, value },
   }: inputHandlerEventType): void {
     setInputState((prev) => ({ ...prev, [name]: value }));
   }
+
+  function signIn(){
+
+    const user: LoginType = {
+      username: username,
+      password: password
+    };
+
+    try{
+      onLogin(
+        user
+      ).then((user) => {
+        login(user.access_token, user.refresh_token);
+        navigate("/");
+      });
+    }
+    catch(error){
+    }
+  }
+
   return (
     <Form.Root
       onSubmit={(event) => {
@@ -107,7 +132,9 @@ export default function LoginPage(): JSX.Element {
           </div>
           <div className="w-full">
             <Form.Submit asChild>
-              <Button className="mr-3 mt-6 w-full">Sign in</Button>
+              <Button
+              onClick={()=>signIn()}
+              className="mr-3 mt-6 w-full">Sign in</Button>
             </Form.Submit>
           </div>
           <div className="w-full">

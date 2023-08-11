@@ -1,9 +1,12 @@
 import { createContext, useEffect, useState } from "react";
 import { AuthContextType, userData } from "../types/contexts/auth";
+import { LoginType } from "../types/api";
+import { api } from "../controllers/API/api";
 
 const initialValue: AuthContextType = {
   isAuthenticated: false,
   accessToken: null,
+  refreshToken: null,
   login: () => {},
   logout: () => {},
   refreshAccessToken: () => Promise.resolve(),
@@ -11,10 +14,12 @@ const initialValue: AuthContextType = {
   setUserData: () => {},
 };
 
-const AuthContext = createContext<AuthContextType>(initialValue);
+export const AuthContext = createContext<AuthContextType>(initialValue);
 
 export function AuthProvider({ children }): React.ReactElement {
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [userData, setUserData] = useState<userData>(null);
 
   useEffect(() => {
@@ -27,18 +32,23 @@ export function AuthProvider({ children }): React.ReactElement {
   function login(newAccessToken: string, refreshToken: string) {
     localStorage.setItem("access_token", newAccessToken);
     setAccessToken(newAccessToken);
-    // Store refreshToken if needed
+
+    localStorage.setItem("refresh_token", refreshToken);
+    setRefreshToken(refreshToken);
+
+    setIsAuthenticated(true);
   }
 
   function logout() {
     localStorage.removeItem("access_token");
-    // Clear refreshToken if used
+    localStorage.removeItem("refresh_token");
     setAccessToken(null);
+    setRefreshToken(null);
+    setIsAuthenticated(false);
   }
 
   async function refreshAccessToken(refreshToken: string) {
     try {
-      // Call your API to refresh the access token using the refresh token
       const response = await fetch("/api/refresh-token", {
         method: "POST",
         headers: {
@@ -57,6 +67,7 @@ export function AuthProvider({ children }): React.ReactElement {
       logout();
     }
   }
+ 
 
   return (
     // !! to convert string to boolean
@@ -64,6 +75,7 @@ export function AuthProvider({ children }): React.ReactElement {
       value={{
         isAuthenticated: !!accessToken,
         accessToken,
+        refreshToken,
         login,
         logout,
         refreshAccessToken,

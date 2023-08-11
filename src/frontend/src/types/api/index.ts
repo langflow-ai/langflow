@@ -62,3 +62,18 @@ export type UploadFileTypeAPI = {
   file_path: string;
   flowId: string;
 };
+
+export type LoginType = {
+  grant_type?: string;
+  username: string;
+  password: string;
+  scrope?: string;
+  client_id?: string;
+  client_secret?: string;
+};
+
+export type LoginAuthType = {
+  access_token: string;
+  refresh_token: string;
+  token_type?: string;
+};

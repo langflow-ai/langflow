@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
 import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
@@ -11,12 +11,15 @@ import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import MenuBar from "./components/menuBar";
+import { AuthContext } from "../../contexts/authContext";
 
 export default function Header() {
   const { flows, tabId } = useContext(TabsContext);
   const { dark, setDark } = useContext(darkContext);
   const { notificationCenter } = useContext(alertContext);
   const location = useLocation();
+  const { logout } = useContext(AuthContext);
+  const navigate = useNavigate();
 
   const [stars, setStars] = useState(null);
 
@@ -34,7 +37,13 @@ export default function Header() {
         <Link to="/">
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
-        <Button variant="outline" className="">
+        <Button 
+        onClick={() => {
+          logout();
+          navigate("/login");
+          
+        }}
+        variant="outline" className="">
           Sign out
         </Button>
         {flows.findIndex((f) => tabId === f.id) !== -1 && tabId !== "" && (
