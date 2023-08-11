@@ -20,7 +20,14 @@ const Router = () => {
           </ProtectedRoute>
         }
       />
-      <Route path="/community" element={<CommunityPage />} />
+      <Route
+        path="/community"
+        element={
+          <ProtectedRoute>
+            <CommunityPage />
+          </ProtectedRoute>
+        }
+      />
       <Route path="/flow/:id/">
         <Route
           path=""

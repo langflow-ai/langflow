@@ -12,7 +12,6 @@ const api: AxiosInstance = axios.create({
 });
 
 function ApiInterceptor() {
-  const retryCounts = useRef([]);
   const { setErrorData } = useContext(alertContext);
   const { accessToken, refreshAccessToken, login, logout } = useContext(AuthContext);
   const navigate = useNavigate();
