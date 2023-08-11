@@ -39,7 +39,7 @@ export default function SignUp(): JSX.Element {
         <div className="flex w-72 flex-col items-center justify-center gap-2">
           <span className="mb-4 text-5xl">⛓️</span>
           <span className="mb-6 text-2xl font-semibold text-primary">
-            Sign up to LangFlow
+            Sign up to Langflow
           </span>
           <div className="flex w-full items-center justify-center gap-2">
             <Button variant="primary" className="w-full py-6">
@@ -114,15 +114,17 @@ export default function SignUp(): JSX.Element {
                 <span className="font-medium text-destructive">*</span>
               </Form.Label>
 
-              <Form.Control asChild>
-                <InputComponent
-                  onChange={(value) => {
-                    handleInput({ target: { name: "cnfPassword", value } });
-                  }}
-                  value={cnfPassword}
-                  password={true}
-                />
-              </Form.Control>
+              <InputComponent
+                onChange={(value) => {
+                  handleInput({ target: { name: "cnfPassword", value } });
+                }}
+                value={cnfPassword}
+                isForm
+                password={true}
+                required
+                placeholder="Confirm your password"
+                className="w-full"
+              />
 
               <Form.Message className="field-invalid" match="valueMissing">
                 Please confirm your password
