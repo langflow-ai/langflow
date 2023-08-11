@@ -13,6 +13,8 @@ import {
 import { onLogin } from "../../controllers/API";
 import { LoginType } from "../../types/api";
 import { AuthContext } from "../../contexts/authContext";
+import { alertContext } from "../../contexts/alertContext";
+import { error } from "console";
 
 export default function LoginPage(): JSX.Element {
   const [inputState, setInputState] =
@@ -21,6 +23,7 @@ export default function LoginPage(): JSX.Element {
   const { password, username } = inputState;
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
+  const { setErrorData } = useContext(alertContext);
 
   function handleInput({
     target: { name, value },
@@ -35,16 +38,18 @@ export default function LoginPage(): JSX.Element {
       password: password
     };
 
-    try{
       onLogin(
         user
       ).then((user) => {
         login(user.access_token, user.refresh_token);
         navigate("/");
+      }).catch(error => {
+        setErrorData({
+          title: "Error signing in",
+          list: [error['response']['data']['detail']],
+        })
       });
-    }
-    catch(error){
-    }
+
   }
 
   return (

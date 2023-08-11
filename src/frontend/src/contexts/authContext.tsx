@@ -47,7 +47,6 @@ export function AuthProvider({ children }): React.ReactElement {
   }
 
   function login(newAccessToken: string, refreshToken: string) {
-
     //if we want to use cookie
     cookies.set('access_token', newAccessToken, { path: '/' });
     cookies.set('refresh_token', refreshToken, { path: '/' });

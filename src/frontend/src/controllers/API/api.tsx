@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosInstance } from "axios";
-import { useContext, useEffect, useRef } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
 import { URL_EXCLUDED_FROM_ERROR_RETRIES } from "../../constants/constants";
@@ -29,11 +29,15 @@ function ApiInterceptor() {
           const refreshToken = localStorage.getItem("refresh_token");
           if (refreshToken) {
               const res = await renewAccessToken(refreshToken);
-              login(res.access_token, res.refresh_token)
+              login(res.data.access_token, res.data.refresh_token);
               try {
-                const response = await axios.request(error.config);
-                return response;
-              } catch (error) {
+                  const accessToken = localStorage.getItem("access_token");
+                  delete error.config.headers["Authorization"];
+                  error.config.headers["Authorization"] = `Bearer ${accessToken}`;
+                  const response = await axios.request(error.config);
+                  return response;
+                }
+               catch (error) {
                 if(error.response?.status === 401){
                   logout();
                   navigate("/login");
