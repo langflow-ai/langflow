@@ -41,18 +41,6 @@ export default function LoginPage(): JSX.Element {
           <span className="mb-6 text-2xl font-semibold text-primary">
             Sign in to Langflow
           </span>
-          <div className="flex w-full items-center justify-center gap-2">
-            <Button variant="primary" className="w-full py-6">
-              <IconComponent name="FaApple" className="h-6 w-6" />
-            </Button>
-            <Button variant="primary" className="w-full py-6">
-              <IconComponent name="FaGithub" className="h-6 w-6" />
-            </Button>
-            <Button variant="primary" className="w-full py-6">
-              <IconComponent name="GoogleSearchRun" className="h-6 w-6" />
-            </Button>
-          </div>
-          <span className="text-sm text-muted-foreground">or</span>
           <div className="mb-3 w-full">
             <Form.Field name="username">
               <Form.Label className="data-[invalid]:label-invalid">
