@@ -14,12 +14,13 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
   //element to wrap all context
   return (
     <>
+                <AuthProvider>
+
       <TooltipProvider>
         <ReactFlowProvider>
           <DarkProvider>
             <TypesProvider>
               <LocationProvider>
-                <AuthProvider>
                 <AlertProvider>
                   <SSEProvider>
                     <TabsProvider>
@@ -27,12 +28,13 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
                     </TabsProvider>
                   </SSEProvider>
                 </AlertProvider>
-                </AuthProvider>
               </LocationProvider>
             </TypesProvider>
           </DarkProvider>
         </ReactFlowProvider>
       </TooltipProvider>
+      </AuthProvider>
+
     </>
   );
 }

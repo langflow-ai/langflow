@@ -2,6 +2,7 @@ import { createContext, useEffect, useState } from "react";
 import { AuthContextType, userData } from "../types/contexts/auth";
 import { LoginType } from "../types/api";
 import { api } from "../controllers/API/api";
+import Cookies from 'universal-cookie';
 
 const initialValue: AuthContextType = {
   isAuthenticated: false,
@@ -12,6 +13,7 @@ const initialValue: AuthContextType = {
   refreshAccessToken: () => Promise.resolve(),
   userData: null,
   setUserData: () => {},
+  getAuthentication: () => false,
 };
 
 export const AuthContext = createContext<AuthContextType>(initialValue);
@@ -21,6 +23,7 @@ export function AuthProvider({ children }): React.ReactElement {
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [userData, setUserData] = useState<userData>(null);
+  const cookies = new Cookies();
 
   useEffect(() => {
     const storedAccessToken = localStorage.getItem("access_token");
@@ -29,7 +32,26 @@ export function AuthProvider({ children }): React.ReactElement {
     }
   }, []);
 
+
+  function getAuthentication(){
+    const storedRefreshToken = cookies.get('refresh_token');
+    const storedAccess = cookies.get('refresh_token');
+    if (storedAccess && storedRefreshToken) {
+      setAccessToken(storedAccess);
+      setRefreshToken(storedRefreshToken);
+      return true;
+    }
+    else{
+      return false;
+    }
+  }
+
   function login(newAccessToken: string, refreshToken: string) {
+
+    //if we want to use cookie
+    cookies.set('access_token', newAccessToken, { path: '/' });
+    cookies.set('refresh_token', refreshToken, { path: '/' });
+
     localStorage.setItem("access_token", newAccessToken);
     setAccessToken(newAccessToken);
 
@@ -40,11 +62,16 @@ export function AuthProvider({ children }): React.ReactElement {
   }
 
   function logout() {
+    //if we want to use cookie
+    cookies.remove('access_token');
+    cookies.remove('refresh_token');
+
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
     setAccessToken(null);
     setRefreshToken(null);
     setIsAuthenticated(false);
+
   }
 
   async function refreshAccessToken(refreshToken: string) {
@@ -81,6 +108,7 @@ export function AuthProvider({ children }): React.ReactElement {
         refreshAccessToken,
         setUserData,
         userData,
+        getAuthentication
       }}
     >
       {children}
