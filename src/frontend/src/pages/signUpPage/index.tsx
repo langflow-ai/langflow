@@ -81,18 +81,17 @@ export default function SignUp(): JSX.Element {
               <Form.Label className="data-[invalid]:label-invalid">
                 Password <span className="font-medium text-destructive">*</span>
               </Form.Label>
-
-              <Form.Control asChild>
-                <InputComponent
-                  onChange={(value) => {
-                    handleInput({ target: { name: "password", value } });
-                  }}
-                  value={password}
-                  password={true}
-                  placeholder="Password"
-                  className="w-full"
-                />
-              </Form.Control>
+              <InputComponent
+                onChange={(value) => {
+                  handleInput({ target: { name: "password", value } });
+                }}
+                value={password}
+                isForm
+                password={true}
+                required
+                placeholder="Password"
+                className="w-full"
+              />
 
               <Form.Message className="field-invalid" match="valueMissing">
                 Please enter a password
