@@ -32,6 +32,17 @@ class UserListModel(SQLModel):
     updated_at: datetime = Field()
 
 
-def get_user(db: Session, username: str) -> User:
+class UserPatchModel(SQLModel):
+    username: str = Field()
+    is_disabled: bool = Field()
+    is_superuser: bool = Field()
+
+
+def get_user_by_username(db: Session, username: str) -> User:
     db_user = db.query(User).filter(User.username == username).first()
+    return User.from_orm(db_user) if db_user else None  # type: ignore
+
+
+def get_user_by_id(db: Session, id: UUID) -> User:
+    db_user = db.query(User).filter(User.id == id).first()
     return User.from_orm(db_user) if db_user else None  # type: ignore
