@@ -1,7 +1,7 @@
 import { AxiosResponse } from "axios";
 import { ReactFlowJsonObject } from "reactflow";
 import { api } from "../../controllers/API/api";
-import { APIObjectType, sendAllProps } from "../../types/api/index";
+import { APIObjectType, LoginAuthType, LoginType, sendAllProps } from "../../types/api/index";
 import { FlowStyleType, FlowType } from "../../types/flow";
 import {
   APIClassType,
@@ -346,3 +346,43 @@ export async function postCustomComponent(
 ): Promise<AxiosResponse<APIClassType>> {
   return await api.post(`/api/v1/custom_component`, { code });
 }
+
+export async function onLogin(
+  user: LoginType
+) {
+  try {
+    const response = await api.post(
+      "http://localhost:7860/login",
+      new URLSearchParams({
+        username: user.username,
+        password: user.password,
+      }).toString(),
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    );
+
+    if (response.status === 200) {
+      const data = response.data;
+      return data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
+export async function renewAccessToken(
+  token: string
+): Promise<LoginAuthType> {
+  try {
+    return await api.post(`http://localhost:7860/refresh?token=${token}`);
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
+

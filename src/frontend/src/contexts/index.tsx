@@ -8,6 +8,7 @@ import { LocationProvider } from "./locationContext";
 import { TabsProvider } from "./tabsContext";
 import { TypesProvider } from "./typesContext";
 import { UndoRedoProvider } from "./undoRedoContext";
+import { AuthProvider } from "./authContext";
 
 export default function ContextWrapper({ children }: { children: ReactNode }) {
   //element to wrap all context
@@ -18,6 +19,7 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
           <DarkProvider>
             <TypesProvider>
               <LocationProvider>
+                <AuthProvider>
                 <AlertProvider>
                   <SSEProvider>
                     <TabsProvider>
@@ -25,6 +27,7 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
                     </TabsProvider>
                   </SSEProvider>
                 </AlertProvider>
+                </AuthProvider>
               </LocationProvider>
             </TypesProvider>
           </DarkProvider>
