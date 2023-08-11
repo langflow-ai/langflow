@@ -369,14 +369,13 @@ export async function onLogin(
       return data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
 
 export async function renewAccessToken(
   token: string
-): Promise<LoginAuthType> {
+){
   try {
     return await api.post(`http://localhost:7860/refresh?token=${token}`);
   } catch (error) {
