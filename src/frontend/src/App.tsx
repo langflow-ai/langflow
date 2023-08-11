@@ -10,6 +10,7 @@ import NoticeAlert from "./alerts/notice";
 import SuccessAlert from "./alerts/success";
 import CrashErrorComponent from "./components/CrashErrorComponent";
 import Header from "./components/headerComponent";
+import LoadingComponent from "./components/loadingComponent";
 import { alertContext } from "./contexts/alertContext";
 import { locationContext } from "./contexts/locationContext";
 import { TabsContext } from "./contexts/tabsContext";
@@ -25,6 +26,7 @@ export default function App() {
     setIsStackedOpen(true);
   }, [location.pathname, setCurrent, setIsStackedOpen, setShowSideBar]);
   const { hardReset } = useContext(TabsContext);
+
   const {
     errorData,
     errorOpen,
@@ -35,6 +37,7 @@ export default function App() {
     successData,
     successOpen,
     setSuccessOpen,
+    loading,
   } = useContext(alertContext);
 
   // Initialize state variable for the list of alerts
@@ -133,8 +136,16 @@ export default function App() {
         }}
         FallbackComponent={CrashErrorComponent}
       >
-        <Header />
-        <Router />
+        {loading ? (
+          <div className="flex h-screen items-center justify-center">
+            <LoadingComponent remSize={50} />
+          </div>
+        ) : (
+          <>
+            <Header />
+            <Router />
+          </>
+        )}
       </ErrorBoundary>
       <div></div>
       <div className="app-div" style={{ zIndex: 999 }}>
