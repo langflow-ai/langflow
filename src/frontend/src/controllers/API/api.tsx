@@ -13,7 +13,7 @@ const api: AxiosInstance = axios.create({
 
 function ApiInterceptor() {
   const { setErrorData } = useContext(alertContext);
-  const { accessToken, refreshAccessToken, login, logout } = useContext(AuthContext);
+  const { accessToken, login, logout } = useContext(AuthContext);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -75,9 +75,18 @@ function ApiInterceptor() {
     // Request interceptor to add access token to every request
     const requestInterceptor = api.interceptors.request.use(
       (config) => {
+        
         if (accessToken) {
           config.headers["Authorization"] = `Bearer ${accessToken}`;
         }
+        
+        if(
+          config?.url?.includes("https://raw.githubusercontent.com/logspace-ai/langflow_examples/main/examples") ||
+          config?.url?.includes("https://api.github.com/repos/logspace-ai/langflow_examples/contents/examples"))
+          {
+          delete config.headers["Authorization"];
+        }
+
         return config;
       },
       (error) => {

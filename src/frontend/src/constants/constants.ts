@@ -509,6 +509,7 @@ export const URL_EXCLUDED_FROM_ERROR_RETRIES = [
   "/api/v1/validate/prompt",
   "http://localhost:7860/login"
 ];
+
 export const CONTROL_INPUT_STATE = {
   password: "",
   cnfPassword: "",
