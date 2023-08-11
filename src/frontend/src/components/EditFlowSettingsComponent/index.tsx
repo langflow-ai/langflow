@@ -18,14 +18,14 @@ type InputProps = {
 };
 
 export const EditFlowSettings: React.FC<InputProps> = ({
-  name: myName,
+  name,
   invalidName,
   setInvalidName,
   description,
   maxLength = 50,
   flows,
   tabId,
-  setName: setMyName,
+  setName,
   setDescription,
   updateFlow,
 }) => {
@@ -54,21 +54,21 @@ export const EditFlowSettings: React.FC<InputProps> = ({
       }
     }
     setName(value);
-    setMyName(value);
+    setCurrentName(value);
   };
 
-  const [name, setName] = useState(myName);
+  const [currentName, setCurrentName] = useState(name);
 
-  const [desc, setDesc] = useState(description);
+  const [currentDescription, setCurrentDescription] = useState(description);
 
   useEffect(() => {
-    setName(name);
-    setDesc(description);
+    setCurrentName(name);
+    setCurrentDescription(description);
   }, [name, description]);
 
   const handleDescriptionChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     flows.find((f) => f.id === tabId).description = event.target.value;
-    setDesc(flows.find((f) => f.id === tabId).description);
+    setCurrentDescription(flows.find((f) => f.id === tabId).description);
     setDescription(event.target.value);
   };
 
@@ -89,7 +89,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           onChange={handleNameChange}
           type="text"
           name="name"
-          value={name ?? ""}
+          value={currentName ?? ""}
           placeholder="File name"
           id="name"
           maxLength={maxLength}
@@ -104,7 +104,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           name="description"
           id="description"
           onChange={handleDescriptionChange}
-          value={desc}
+          value={currentDescription}
           placeholder="Flow description"
           className="mt-2 max-h-[100px] font-normal"
           rows={3}
