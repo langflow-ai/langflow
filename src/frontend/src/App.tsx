@@ -137,7 +137,7 @@ export default function App() {
         FallbackComponent={CrashErrorComponent}
       >
         {loading ? (
-          <div className="flex h-screen items-center justify-center">
+          <div className="loading-page-panel">
             <LoadingComponent remSize={50} />
           </div>
         ) : (
