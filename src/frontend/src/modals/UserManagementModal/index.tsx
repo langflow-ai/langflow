@@ -1,6 +1,6 @@
 import * as Form from "@radix-ui/react-form";
 import { Eye, EyeOff } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { CONTROL_NEW_USER } from "../../constants/constants";
@@ -11,6 +11,7 @@ import {
 } from "../../types/components";
 import { nodeIconsLucide } from "../../utils/styleUtils";
 import BaseModal from "../baseModal";
+import { AuthContext } from "../../contexts/authContext";
 
 export default function UserManagementModal({
   title,
@@ -34,6 +35,11 @@ export default function UserManagementModal({
   const [isDisabled, setIsDisabled] = useState(data?.is_disabled ?? false);
   const [isSuperUser, setIsSuperUser] = useState(data?.is_superuser ?? false);
   const [inputState, setInputState] = useState<UserInputType>(CONTROL_NEW_USER);
+  const { userData} = useContext(AuthContext);
+
+
+      console.log(userData);
+      
 
   function handleInput({
     target: { name, value },
@@ -236,28 +242,30 @@ export default function UserManagementModal({
                   </Form.Control>
                 </div>
               </Form.Field>
-
+                      {userData?.is_superuser && (
               <Form.Field name="is_superuser">
-                <div>
-                  <Form.Label className="data-[invalid]:label-invalid mr-3">
-                    Superuser
-                  </Form.Label>
-                  <Form.Control asChild>
-                    <Checkbox
-                      checked={isSuperUser}
-                      value={isSuperUser}
-                      id="is_superuser"
-                      className="relative top-0.5"
-                      onCheckedChange={(value) => {
-                        handleInput({
-                          target: { name: "is_superuser", value },
-                        });
-                        setIsSuperUser(value);
-                      }}
-                    />
-                  </Form.Control>
-                </div>
-              </Form.Field>
+              <div>
+                <Form.Label className="data-[invalid]:label-invalid mr-3">
+                  Superuser
+                </Form.Label>
+                <Form.Control asChild>
+                  <Checkbox
+                    checked={isSuperUser}
+                    value={isSuperUser}
+                    id="is_superuser"
+                    className="relative top-0.5"
+                    onCheckedChange={(value) => {
+                      handleInput({
+                        target: { name: "is_superuser", value },
+                      });
+                      setIsSuperUser(value);
+                    }}
+                  />
+                </Form.Control>
+              </div>
+            </Form.Field>
+                      )}
+
             </div>
           </div>
 

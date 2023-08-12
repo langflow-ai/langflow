@@ -5,7 +5,7 @@ import { Input } from "../../../components/ui/input";
 import { CONTROL_LOGIN_STATE } from "../../../constants/constants";
 import { alertContext } from "../../../contexts/alertContext";
 import { AuthContext } from "../../../contexts/authContext";
-import { onLogin } from "../../../controllers/API";
+import { getLoggedUser, onLogin } from "../../../controllers/API";
 import { LoginType } from "../../../types/api";
 import {
   inputHandlerEventType,
@@ -17,7 +17,7 @@ export default function LoginAdminPage() {
 
   const [inputState, setInputState] =
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
-  const { login } = useContext(AuthContext);
+  const { login, getAuthentication, setUserData } = useContext(AuthContext);
 
   const { password, username } = inputState;
   const { setErrorData } = useContext(alertContext);
@@ -36,6 +36,7 @@ export default function LoginAdminPage() {
     onLogin(user)
       .then((user) => {
         login(user.access_token, user.refresh_token);
+        getUser();
         navigate("/admin/");
       })
       .catch((error) => {
@@ -45,6 +46,16 @@ export default function LoginAdminPage() {
         });
       });
   }
+
+  function getUser(){
+    if(getAuthentication){
+      setTimeout(() => {
+        getLoggedUser().then((user) => {
+          setUserData(user);
+        }).catch((error) => {});
+      }, 1000);
+  }
+}
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
