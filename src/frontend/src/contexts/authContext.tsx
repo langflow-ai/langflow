@@ -44,13 +44,8 @@ export function AuthProvider({ children }): React.ReactElement {
     //if we want to use cookie
     cookies.set('access_token', newAccessToken, { path: '/' });
     cookies.set('refresh_token', refreshToken, { path: '/' });
-
-    localStorage.setItem("access_token", newAccessToken);
     setAccessToken(newAccessToken);
-
-    localStorage.setItem("refresh_token", refreshToken);
     setRefreshToken(refreshToken);
-
     setIsAuthenticated(true);
   }
 
