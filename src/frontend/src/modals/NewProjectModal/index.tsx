@@ -28,7 +28,6 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({
   const [view, setView] = useState<ViewType>(propView || "options");  // Initialize the view to "options"
 
   useEffect(() => {
-    console.log("open: " + open)
     if (open && view === "templates") {
       setLoading(true);
       readTemplatesFromDatabase()
@@ -56,8 +55,7 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({
 
       // If the modal was opened with a flow passed in, update that flow
       if (flow) {
-        flow.data = json.data;
-        saveFlow(flow)
+        saveFlow({...flow, data: json.data})
         window.location.reload();
       }
       else {
