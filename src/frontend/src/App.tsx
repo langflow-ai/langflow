@@ -127,6 +127,19 @@ export default function App() {
     );
   };
 
+  const { setUserData, getAuthentication, isAuthenticated } = useContext(AuthContext);
+  
+  useEffect(() => {
+      setTimeout(() => {
+        if(getAuthentication && !isLoginPage){
+          getLoggedUser().then((user) => {
+            setUserData(user);
+          }).catch((error) => {});
+        }
+        }, 1000);
+  },[]);
+
+
   return (
     //need parent component with width and height
     <div className="flex h-full flex-col">

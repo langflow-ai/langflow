@@ -18,12 +18,14 @@ import {
 import {
   addUser,
   deleteUser,
+  getLoggedUser,
   getUsersPage,
   updateUser,
 } from "../../controllers/API";
 import ConfirmationModal from "../../modals/ConfirmationModal";
 import UserManagementModal from "../../modals/UserManagementModal";
 import { alertContext } from "../../contexts/alertContext";
+import { AuthContext } from "../../contexts/authContext";
 
 export default function AdminPage() {
   const [inputValue, setInputValue] = useState("");
@@ -33,6 +35,7 @@ export default function AdminPage() {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [totalRowsCount, setTotalRowsCount] = useState(0);
   const { setErrorData, setSuccessData } = useContext(alertContext);
+  const { setUserData, getAuthentication, isAuthenticated } = useContext(AuthContext);
 
   const userList = useRef([]);
 
