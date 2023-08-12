@@ -176,7 +176,6 @@ export async function readFlowsFromDatabase() {
  */
 export async function readTemplatesFromDatabase() {
   const response = await api.get(`/api/v1/templates`);
-  console.log(response.data)
   return response.data
 }
 

@@ -461,7 +461,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       if (formMode) {
         newFlow.formMode = formMode;
       }
-      console.log("newFlow: " + JSON.stringify(newFlow))
       try {
         const { id } = await saveFlowToDatabase(newFlow);
         // Change the id to the new id.
@@ -478,7 +477,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         throw error; // Re-throw the error so the caller can handle it if needed
       }
     } else {
-      console.log(flow.data)
       paste(
         { nodes: flow.data.nodes, edges: flow.data.edges },
         { x: 10, y: 10 }

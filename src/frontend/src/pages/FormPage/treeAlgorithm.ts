@@ -38,8 +38,6 @@ export class Tree {
     }
 
     displayNodeHierarchy(node: DNode, level: number = 0) {
-        console.log(' '.repeat(level * 4) + node.type + ' - ' + node.id);
-
         const parentNodes = this.getParentNodes(node);
         parentNodes.forEach(parentNode => this.displayNodeHierarchy(parentNode, level + 1));
     }

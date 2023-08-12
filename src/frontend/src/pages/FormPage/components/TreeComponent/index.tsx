@@ -17,7 +17,6 @@ class TreeDisplay extends React.Component<Props> {
         for (let node of this.tree.nodes) {
             const isTargeted = this.tree.edges.some(edge => edge.source === node.id);
             if (!isTargeted) {
-                console.log("start node id: " + node.id)
                 return node.id;
             }
         }
