@@ -69,7 +69,7 @@
   "scripts": {
     "dev:docker": "vite --host 0.0.0.0",
     "start": "vite",
-    "build": "vite build",
+    "build": "vite build NODE_ENV=development",
     "serve": "vite preview",
     "format": "npx prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\""
   },

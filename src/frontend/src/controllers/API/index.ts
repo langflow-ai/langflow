@@ -17,6 +17,8 @@ import {
   UploadFileTypeAPI,
   errorsTypeAPI,
 } from "./../../types/api/index";
+import { BASE_URL_API } from "../../constants/constants";
+
 
 /**
  * Fetches all objects from the API endpoint.
@@ -356,7 +358,7 @@ export async function postCustomComponent(
 export async function onLogin(user: LoginType) {
   try {
     const response = await api.post(
-      "http://localhost:7860/login",
+      `${BASE_URL_API}login`,
       new URLSearchParams({
         username: user.username,
         password: user.password,
@@ -379,7 +381,7 @@ export async function onLogin(user: LoginType) {
 
 export async function renewAccessToken(token: string) {
   try {
-    return await api.post(`http://localhost:7860/refresh?token=${token}`);
+    return await api.post(`${BASE_URL_API}refresh?token=${token}`);
   } catch (error) {
     console.log("Error:", error);
     throw error;
@@ -388,7 +390,7 @@ export async function renewAccessToken(token: string) {
 
 export async function getUsers(): Promise<Users> {
   try {
-    return await api.get(`http://localhost:7860/user`);
+    return await api.get(`${BASE_URL_API}user`);
   } catch (error) {
     console.log("Error:", error);
     throw error;
@@ -397,7 +399,7 @@ export async function getUsers(): Promise<Users> {
 
 export async function addUser(user: UserInputType): Promise<Users> {
   try {
-    const res = await api.post(`http://localhost:7860/user`, user);
+    const res = await api.post(`${BASE_URL_API}user`, user);
     if (res.status === 200) {
       return res.data;
     }
@@ -413,7 +415,7 @@ export async function getUsersPage(
 ): Promise<[Users]> {
   try {
     const res = await api.get(
-      `http://localhost:7860/users?skip=${skip}&limit=${limit}`
+      `${BASE_URL_API}users?skip=${skip}&limit=${limit}`
     );
     if (res.status === 200) {
       return res.data;
@@ -426,7 +428,7 @@ export async function getUsersPage(
 
 export async function deleteUser(user_id: string) {
   try {
-    const res = await api.delete(`http://localhost:7860/user/${user_id}`);
+    const res = await api.delete(`${BASE_URL_API}user/${user_id}`);
     if (res.status === 200) {
       return res.data;
     }
@@ -438,7 +440,7 @@ export async function deleteUser(user_id: string) {
 
 export async function updateUser(user_id: string, user: Users) {
   try {
-    const res = await api.patch(`http://localhost:7860/user/${user_id}`, user);
+    const res = await api.patch(`${BASE_URL_API}user/${user_id}`, user);
     if (res.status === 200) {
       return res.data;
     }
