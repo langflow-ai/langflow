@@ -1,4 +1,4 @@
-import _ from "lodash";
+import _, { set } from "lodash";
 import { X } from "lucide-react";
 import { useEffect, useRef, useState,useContext } from "react";
 import PaginatorComponent from "../../components/PaginatorComponent";

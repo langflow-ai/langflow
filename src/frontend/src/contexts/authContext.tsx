@@ -1,8 +1,7 @@
 import { createContext, useEffect, useState } from "react";
-import { AuthContextType, userData } from "../types/contexts/auth";
-import { LoginType } from "../types/api";
-import { api } from "../controllers/API/api";
-import Cookies from 'universal-cookie';
+import Cookies from "universal-cookie";
+import { Users } from "../types/api";
+import { AuthContextType } from "../types/contexts/auth";
 
 const initialValue: AuthContextType = {
   isAuthenticated: false,
@@ -14,7 +13,7 @@ const initialValue: AuthContextType = {
   userData: null,
   setUserData: () => {},
   getAuthentication: () => false,
-  authenticationErrorCount: 0
+  authenticationErrorCount: 0,
 };
 
 export const AuthContext = createContext<AuthContextType>(initialValue);
@@ -23,7 +22,7 @@ export function AuthProvider({ children }): React.ReactElement {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [userData, setUserData] = useState<userData>(null);
+  const [userData, setUserData] = useState<Users>(null);
   const cookies = new Cookies();
 
   useEffect(() => {
@@ -33,25 +32,25 @@ export function AuthProvider({ children }): React.ReactElement {
     }
   }, []);
 
-
-  function getAuthentication(){
-    const storedRefreshToken = cookies.get('refresh_token');
-    const storedAccess = cookies.get('access_token');
+  function getAuthentication() {
+    const storedRefreshToken = cookies.get("refresh_token");
+    const storedAccess = cookies.get("access_token");
     const auth = storedAccess && storedRefreshToken ? true : false;
     return auth;
   }
 
   function login(newAccessToken: string, refreshToken: string) {
-    cookies.set('access_token', newAccessToken, { path: '/' });
-    cookies.set('refresh_token', refreshToken, { path: '/' });
+    cookies.set("access_token", newAccessToken, { path: "/" });
+    cookies.set("refresh_token", refreshToken, { path: "/" });
     setAccessToken(newAccessToken);
     setRefreshToken(refreshToken);
     setIsAuthenticated(true);
   }
 
   function logout() {
-    cookies.remove('access_token', { path: '/' });
-    cookies.remove('refresh_token', { path: '/' });
+    cookies.remove("access_token", { path: "/" });
+    cookies.remove("refresh_token", { path: "/" });
+    setUserData(null);
     setAccessToken(null);
     setRefreshToken(null);
     setIsAuthenticated(false);
@@ -77,7 +76,6 @@ export function AuthProvider({ children }): React.ReactElement {
       logout();
     }
   }
- 
 
   return (
     // !! to convert string to boolean
@@ -92,7 +90,7 @@ export function AuthProvider({ children }): React.ReactElement {
         setUserData,
         userData,
         getAuthentication,
-        authenticationErrorCount: 0
+        authenticationErrorCount: 0,
       }}
     >
       {children}

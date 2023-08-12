@@ -388,9 +388,14 @@ export async function renewAccessToken(token: string) {
   }
 }
 
-export async function getAllUsers(): Promise<Users> {
+export async function getLoggedUser(): Promise<Users> {
   try {
-    return await api.get(`${BASE_URL_API}user`);
+
+    const res = await api.get(`${BASE_URL_API}user`);
+
+    if (res.status === 200) {
+      return res.data;
+    }
   } catch (error) {
     console.log("Error:", error);
     throw error;

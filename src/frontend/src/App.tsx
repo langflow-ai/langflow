@@ -14,6 +14,8 @@ import { alertContext } from "./contexts/alertContext";
 import { locationContext } from "./contexts/locationContext";
 import { TabsContext } from "./contexts/tabsContext";
 import Router from "./routes";
+import { AuthContext } from "./contexts/authContext";
+import { getLoggedUser } from "./controllers/API";
 
 export default function App() {
   let { setCurrent, setShowSideBar, setIsStackedOpen } =
