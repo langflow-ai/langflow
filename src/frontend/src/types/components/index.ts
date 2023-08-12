@@ -182,7 +182,7 @@ export type signUpInputStateType = {
 
 export type inputHandlerEventType = {
   target: {
-    value: string;
+    value: string | boolean;
     name: string;
   };
 };
@@ -223,4 +223,11 @@ export type UserManagementType = {
 export type loginInputStateType = {
   username: string;
   password: string;
+};
+
+export type UserInputType = {
+  username: string;
+  password: string;
+  is_disabled:boolean;
+  is_superuser: boolean;
 };

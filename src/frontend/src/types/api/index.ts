@@ -77,3 +77,12 @@ export type LoginAuthType = {
   refresh_token: string;
   token_type?: string;
 };
+
+export type Users = {
+  id: string;
+  username: string;
+  is_disabled: boolean;
+  is_superuser: boolean;
+  create_at: Date;
+  updated_at: Date;
+};

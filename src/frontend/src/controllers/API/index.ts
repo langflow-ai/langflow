@@ -1,7 +1,13 @@
 import { AxiosResponse } from "axios";
 import { ReactFlowJsonObject } from "reactflow";
 import { api } from "../../controllers/API/api";
-import { APIObjectType, LoginAuthType, LoginType, sendAllProps } from "../../types/api/index";
+import {
+  APIObjectType,
+  LoginType,
+  Users,
+  sendAllProps,
+} from "../../types/api/index";
+import { UserInputType } from "../../types/components";
 import { FlowStyleType, FlowType } from "../../types/flow";
 import {
   APIClassType,
@@ -347,9 +353,7 @@ export async function postCustomComponent(
   return await api.post(`/api/v1/custom_component`, { code });
 }
 
-export async function onLogin(
-  user: LoginType
-) {
+export async function onLogin(user: LoginType) {
   try {
     const response = await api.post(
       "http://localhost:7860/login",
@@ -373,9 +377,7 @@ export async function onLogin(
   }
 }
 
-export async function renewAccessToken(
-  token: string
-){
+export async function renewAccessToken(token: string) {
   try {
     return await api.post(`http://localhost:7860/refresh?token=${token}`);
   } catch (error) {
@@ -384,4 +386,64 @@ export async function renewAccessToken(
   }
 }
 
+export async function getUsers(): Promise<Users> {
+  try {
+    return await api.get(`http://localhost:7860/user`);
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
 
+export async function addUser(user: UserInputType): Promise<Users> {
+  try {
+    const res = await api.post(`http://localhost:7860/user`, user);
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
+export async function getUsersPage(
+  skip: number,
+  limit: number
+): Promise<[Users]> {
+  try {
+    const res = await api.get(
+      `http://localhost:7860/users?skip=${skip}&limit=${limit}`
+    );
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
+export async function deleteUser(user_id: string) {
+  try {
+    const res = await api.delete(`http://localhost:7860/user/${user_id}`);
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
+export async function updateUser(user_id: string, user: Users) {
+  try {
+    const res = await api.patch(`http://localhost:7860/user/${user_id}`, user);
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}

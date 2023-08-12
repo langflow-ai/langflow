@@ -520,6 +520,14 @@ export const CONTROL_LOGIN_STATE = {
   username: "",
   password: "",
 };
+
+export const CONTROL_NEW_USER = {
+  username: "",
+  password: "",
+  is_disabled: false,
+  is_superuser: false,
+};
+
 export const tabsCode = [];
 
 export function tabsArray(codes: string[], method: number) {

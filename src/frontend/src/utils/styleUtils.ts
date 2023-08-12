@@ -19,6 +19,8 @@ import {
   Edit,
   Eraser,
   ExternalLink,
+  Eye,
+  EyeOff,
   File,
   FileDown,
   FileSearch,
@@ -288,4 +290,6 @@ export const nodeIconsLucide = {
   ChevronsLeft,
   FaGithub,
   FaApple,
+  EyeOff,
+  Eye,
 };
