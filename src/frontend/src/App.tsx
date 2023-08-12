@@ -127,8 +127,8 @@ export default function App() {
     );
   };
 
-  const { setUserData, getAuthentication, isAuthenticated } = useContext(AuthContext);
-  
+  //this function is to get the user logged in when the page is refreshed
+  const { setUserData, getAuthentication } = useContext(AuthContext);
   useEffect(() => {
       setTimeout(() => {
         if(getAuthentication && !isLoginPage){
