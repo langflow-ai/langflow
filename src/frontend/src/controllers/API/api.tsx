@@ -18,6 +18,9 @@ function ApiInterceptor() {
   const navigate = useNavigate();
   const cookies = new Cookies();
 
+  console.log(accessToken);
+  
+
   useEffect(() => {
     const interceptor = api.interceptors.response.use(
       (response) => response,

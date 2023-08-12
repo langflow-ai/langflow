@@ -26,7 +26,7 @@ export function AuthProvider({ children }): React.ReactElement {
   const cookies = new Cookies();
 
   useEffect(() => {
-    const storedAccessToken = localStorage.getItem("access_token");
+    const storedAccessToken = cookies.get("access_token");
     if (storedAccessToken) {
       setAccessToken(storedAccessToken);
     }
