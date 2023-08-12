@@ -1032,4 +1032,15 @@
   .dropdown-content a {
     @apply text-gray-600 hover:bg-gray-100 p-2 rounded-md;
   }
+  .template-cards-container {
+    @apply flex flex-wrap gap-4 h-full overflow-y-scroll;
+  }
+  
+  .template-card {
+    @apply border border-gray-100 rounded-md shadow-sm bg-white transition-colors duration-150 fade-in-5 cursor-pointer p-2;
+  }
+  
+  .template-card:hover {
+    @apply bg-gray-50;
+  }
 }

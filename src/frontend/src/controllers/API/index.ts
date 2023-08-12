@@ -168,6 +168,18 @@ export async function readFlowsFromDatabase() {
   }
 }
 
+/**
+ * Reads all templates from the database.
+ *
+ * @returns {Promise<any>} The templates data.
+ * @throws Will throw an error if reading fails.
+ */
+export async function readTemplatesFromDatabase() {
+  const response = await api.get(`/api/v1/templates`);
+  console.log(response.data)
+  return response.data
+}
+
 export async function downloadFlowsFromDatabase() {
   try {
     const response = await api.get("/api/v1/flows/download/");

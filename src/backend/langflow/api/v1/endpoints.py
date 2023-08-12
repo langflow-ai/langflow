@@ -41,7 +41,9 @@ def get_all():
     # need to merge all the keys into one dict
     custom_components_from_file = {}
     if settings.COMPONENTS_PATH:
-        logger.info(f"Building custom components from {settings.COMPONENTS_PATH}")
+        logger.info(
+            f"Building custom components from {settings.COMPONENTS_PATH}"
+        )
         custom_component_dicts = [
             build_langchain_custom_component_list_from_path(str(path))
             for path in settings.COMPONENTS_PATH
@@ -128,3 +130,39 @@ async def custom_component(
     extractor.is_check_valid()
 
     return build_langchain_template_custom_component(extractor)
+
+
+@router.get("/templates", status_code=HTTPStatus.OK)
+async def get_templates():
+    return [
+        {
+            "id": 1,
+            "name": "Basic Chat",
+            "description": "Basic chat with Prompt and History",
+            "url": "https://raw.githubusercontent.com/logspace-ai/langflow_examples/main/examples/Basic%20Chat%20with%20Prompt%20and%20History.json",
+        },
+        {
+            "id": 2,
+            "name": "CSV Loader",
+            "description": "Agent with CSV capabilities",
+            "url": "https://raw.githubusercontent.com/logspace-ai/langflow_examples/main/examples/CSV%20Loader.json",
+        },
+        {
+            "id": 3,
+            "name": "Calculator",
+            "description": "Calculator Agent",
+            "url": "https://raw.githubusercontent.com/logspace-ai/langflow_examples/main/examples/Calculator.json",
+        },
+        {
+            "id": 4,
+            "name": "Github Issues Parser",
+            "description": "Helps parse your Github issues",
+            "url": "https://raw.githubusercontent.com/logspace-ai/langflow_examples/main/examples/Github%20Issue%20Parser.json",
+        },
+        {
+            "id": 5,
+            "name": "Midjourney",
+            "description": "Midjourney prompt chain",
+            "url": "https://raw.githubusercontent.com/logspace-ai/langflow_examples/main/examples/MidJourney%20Prompt%20Chain.json",
+        },
+    ]

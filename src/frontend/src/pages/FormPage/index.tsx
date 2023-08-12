@@ -7,10 +7,11 @@ import Page from "./components/PageComponent";
 export default function FormPage() {
   const { flows, tabId, setTabId } = useContext(TabsContext);
   const { id } = useParams();
-
   // Set flow tab id
   useEffect(() => {
+    console.log(id)
     setTabId(id);
+    console.log(flows)
   }, [id]);
 
   // Initialize state variable for the version

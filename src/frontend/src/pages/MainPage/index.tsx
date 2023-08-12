@@ -1,13 +1,18 @@
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { CardComponent } from "../../components/cardComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { TabsContext } from "../../contexts/tabsContext";
+import NewProjectModal from "../../modals/NewProjectModal";
+import ShadTooltip from "../../components/ShadTooltipComponent";
+import { classNames } from "../../utils/utils";
+
 export default function HomePage() {
   const { flows, setTabId, downloadFlows, uploadFlows, addFlow, removeFlow } =
     useContext(TabsContext);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Set a null id
   useEffect(() => {
@@ -42,43 +47,18 @@ export default function HomePage() {
             <IconComponent name="Upload" className="main-page-nav-button" />
             Upload Collection
           </Button>
-          <Button
-            variant="primary"
-            onClick={() => {
-              addFlow(null, true).then((id) => {
-                navigate("/flow/" + id);
-              });
-            }}
-            onMouseOver={() => {
-              console.log("Mouse over the button");
-            }}
-            dropdownContent={
-              <div className="dropdown-content">
-                
-              <Button
-                variant="primary"
-                onClick={() => {
-                  addFlow(null, true).then((id) => {
-                    navigate("/flow/" + id);
-                  });
-                }}>Diagram Editor</Button>
-                
-              <Button
-                variant="primary"
-                onClick={() => {
-                  addFlow(null, true, true).then((id) => {
-                    navigate("/form/" + id);
-                  });
-                }}>Form</Button>
-
-              </div>
-            }
-          >
-            <IconComponent name="Plus" className="main-page-nav-button" />
-            New Project
-          </Button>
+          <NewProjectModal >
+            <ShadTooltip content="New Project" side="top">
+                <div className={classNames("extra-side-bar-buttons")}>
+                    <IconComponent name="Plus" className="side-bar-button-size" /> New Project
+                </div>
+            </ShadTooltip>
+        </NewProjectModal>
         </div>
       </div>
+
+        
+
       <span className="main-page-description-text">
         Manage your personal projects. Download or upload your collection.
       </span>
