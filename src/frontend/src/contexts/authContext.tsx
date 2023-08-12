@@ -36,14 +36,8 @@ export function AuthProvider({ children }): React.ReactElement {
   function getAuthentication(){
     const storedRefreshToken = cookies.get('refresh_token');
     const storedAccess = cookies.get('refresh_token');
-    if (storedAccess && storedRefreshToken) {
-      setAccessToken(storedAccess);
-      setRefreshToken(storedRefreshToken);
-      return true;
-    }
-    else{
-      return false;
-    }
+    const auth = storedAccess && storedRefreshToken ? true : false;
+    return auth;
   }
 
   function login(newAccessToken: string, refreshToken: string) {

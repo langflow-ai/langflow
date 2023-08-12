@@ -1,5 +1,6 @@
 import { Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "./components/authGuard";
+import { ProtectedLoginRoute } from "./components/authLoginGuard";
 import AdminPage from "./pages/AdminPage";
 import LoginAdminPage from "./pages/AdminPage/LoginPage";
 import CommunityPage from "./pages/CommunityPage";
@@ -47,9 +48,30 @@ const Router = () => {
         }
       />
 
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/signup" element={<SignUp />} />
-      <Route path="/login/admin" element={<LoginAdminPage />} />
+      <Route
+        path="/login"
+        element={
+          <ProtectedLoginRoute>
+            <LoginPage />
+          </ProtectedLoginRoute>
+        }
+      />
+      <Route
+        path="/signup"
+        element={
+          <ProtectedLoginRoute>
+            <SignUp />
+          </ProtectedLoginRoute>
+        }
+      />
+      <Route
+        path="/login/admin"
+        element={
+          <ProtectedLoginRoute>
+            <LoginAdminPage />
+          </ProtectedLoginRoute>
+        }
+      />
 
       <Route
         path="/admin"

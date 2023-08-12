@@ -1,7 +1,14 @@
 import * as Form from "@radix-ui/react-form";
+import { Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "../../components/ui/button";
-import { UserManagementType } from "../../types/components";
+import { Checkbox } from "../../components/ui/checkbox";
+import { CONTROL_NEW_USER } from "../../constants/constants";
+import {
+  UserInputType,
+  UserManagementType,
+  inputHandlerEventType,
+} from "../../types/components";
 import { nodeIconsLucide } from "../../utils/styleUtils";
 import BaseModal from "../baseModal";
 
@@ -17,18 +24,30 @@ export default function UserManagementModal({
   onConfirm,
 }: UserManagementType) {
   const Icon: any = nodeIconsLucide[icon];
+  const [pwdVisible, setPwdVisible] = useState(false);
+  const [confirmPwdVisible, setConfirmPwdVisible] = useState(false);
 
   const [open, setOpen] = useState(false);
 
   const [password, setPassword] = useState(data?.password ?? "");
-  const [username, setUserName] = useState(data?.user ?? "");
+  const [username, setUserName] = useState(data?.username ?? "");
   const [confirmPassword, setConfirmPassword] = useState(data?.password ?? "");
+  const [isDisabled, setIsDisabled] = useState(data?.is_disabled ?? false);
+  const [isSuperUser, setIsSuperUser] = useState(data?.is_superuser ?? false);
+
+  const [inputState, setInputState] = useState<UserInputType>(CONTROL_NEW_USER);
+
+  function handleInput({
+    target: { name, value },
+  }: inputHandlerEventType): void {
+    setInputState((prev) => ({ ...prev, [name]: value }));
+  }
 
   useEffect(() => {
     if (!data) {
       resetForm();
     }
-  }, [data, open]);
+  }, [open]);
 
   function resetForm() {
     setPassword("");
@@ -54,10 +73,8 @@ export default function UserManagementModal({
               event.preventDefault();
               return;
             }
-
-            const data = Object.fromEntries(new FormData(event.currentTarget));
             resetForm();
-            onConfirm(index ?? -1, data);
+            onConfirm(1, inputState);
             setOpen(false);
             event.preventDefault();
           }}
@@ -78,8 +95,9 @@ export default function UserManagementModal({
               </div>
               <Form.Control asChild>
                 <input
-                  onChange={(input) => {
-                    setUserName(input.target.value);
+                  onChange={({ target: { value } }) => {
+                    handleInput({ target: { name: "username", value } });
+                    setUserName(value);
                   }}
                   value={username}
                   className="primary-input"
@@ -104,21 +122,38 @@ export default function UserManagementModal({
                       justifyContent: "space-between",
                     }}
                   >
-                    <Form.Label className="data-[invalid]:label-invalid">
+                    <Form.Label className="data-[invalid]:label-invalid flex">
                       Password{" "}
-                      <span className="font-medium text-destructive">*</span>
+                      <span className="ml-1 mr-1 font-medium text-destructive">
+                        *
+                      </span>
+                      {pwdVisible && (
+                        <Eye
+                        onClick={() => setPwdVisible(!pwdVisible)}
+                        className="h-5 cursor-pointer" strokeWidth={1.5} />
+                      )}
+
+                        {!pwdVisible && (
+                        <EyeOff
+                        onClick={() => setPwdVisible(!pwdVisible)}
+                        className="h-5 cursor-pointer" strokeWidth={1.5} />
+                      )}
+
                     </Form.Label>
                   </div>
                   <Form.Control asChild>
                     <input
-                      onChange={(input) => {
-                        setPassword(input.target.value);
+                      onChange={({ target: { value } }) => {
+                        handleInput({ target: { name: "password", value } });
+                        setPassword(value);
                       }}
                       value={password}
                       className="primary-input"
                       required
+                      type={pwdVisible ? "text" : "password"}
                     />
                   </Form.Control>
+
                   <Form.Message className="field-invalid" match="valueMissing">
                     Please enter a password
                   </Form.Message>
@@ -143,9 +178,22 @@ export default function UserManagementModal({
                       justifyContent: "space-between",
                     }}
                   >
-                    <Form.Label className="data-[invalid]:label-invalid">
+                    <Form.Label className="data-[invalid]:label-invalid flex">
                       Confirm password{" "}
-                      <span className="font-medium text-destructive">*</span>
+                      <span className="ml-1 mr-1 font-medium text-destructive">
+                        *
+                      </span>
+                      {confirmPwdVisible && (
+                        <Eye
+                        onClick={() => setConfirmPwdVisible(!confirmPwdVisible)}
+                        className="h-5 cursor-pointer" strokeWidth={1.5} />
+                      )}
+
+                        {!confirmPwdVisible && (
+                        <EyeOff
+                        onClick={() => setConfirmPwdVisible(!confirmPwdVisible)}
+                        className="h-5 cursor-pointer" strokeWidth={1.5} />
+                      )}
                     </Form.Label>
                   </div>
                   <Form.Control asChild>
@@ -156,6 +204,7 @@ export default function UserManagementModal({
                       value={confirmPassword}
                       className="primary-input"
                       required
+                      type={confirmPwdVisible ? "text" : "password"}
                     />
                   </Form.Control>
                   <Form.Message className="field-invalid" match="valueMissing">
@@ -164,57 +213,49 @@ export default function UserManagementModal({
                 </Form.Field>
               </div>
             </div>
+            <div className="flex gap-8">
+              <Form.Field name="is_disabled">
+                <div>
+                  <Form.Label className="data-[invalid]:label-invalid mr-3">
+                    Disabled
+                  </Form.Label>
+                  <Form.Control asChild>
+                    <Checkbox
+                      value={isDisabled}
+                      checked={isDisabled}
+                      id="is_disabled"
+                      className="relative top-0.5"
+                      onCheckedChange={(value) => {
+                        handleInput({ target: { name: "is_disabled", value } });
+                        setIsDisabled(value);
+                      }}
+                    />
+                  </Form.Control>
+                </div>
+              </Form.Field>
 
-            {/* 
-            <Form.Field name="email">
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "baseline",
-                  justifyContent: "space-between",
-                }}
-              >
-                <Form.Label className="data-[invalid]:label-invalid">
-                  Email <span className="font-medium text-destructive">*</span>
-                </Form.Label>
-                <Form.Message className="field-invalid" match="valueMissing">
-                  Please enter your email
-                </Form.Message>
-                <Form.Message className="field-invalid" match="typeMismatch">
-                  Please provide a valid email
-                </Form.Message>
-              </div>
-              <Form.Control asChild>
-                <input className="primary-input" type="email" required />
-              </Form.Control>
-            </Form.Field> */}
-
-            {/* 
-            <Form.Field name="birth">
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "baseline",
-                  justifyContent: "space-between",
-                }}
-              >
-                <Form.Label className="data-[invalid]:label-invalid">
-                  Date of birth{" "}
-                  <span className="font-medium text-destructive">*</span>
-                </Form.Label>
-                <Form.Message className="field-invalid" match="valueMissing">
-                  Please enter your date of birth
-                </Form.Message>
-              </div>
-              <Form.Control asChild>
-                <input
-                  type="date"
-                  className="primary-input"
-                  required
-                  max={new Date().toISOString().split("T")[0]}
-                />
-              </Form.Control>
-            </Form.Field> */}
+              <Form.Field name="is_superuser">
+                <div>
+                  <Form.Label className="data-[invalid]:label-invalid mr-3">
+                    Superuser
+                  </Form.Label>
+                  <Form.Control asChild>
+                    <Checkbox
+                      checked={isSuperUser}
+                      value={isSuperUser}
+                      id="is_superuser"
+                      className="relative top-0.5"
+                      onCheckedChange={(value) => {
+                        handleInput({
+                          target: { name: "is_superuser", value },
+                        });
+                        setIsSuperUser(value);
+                      }}
+                    />
+                  </Form.Control>
+                </div>
+              </Form.Field>
+            </div>
           </div>
 
           <div className="float-right">

@@ -6,15 +6,14 @@ import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { CONTROL_LOGIN_STATE } from "../../constants/constants";
+import { alertContext } from "../../contexts/alertContext";
+import { AuthContext } from "../../contexts/authContext";
+import { onLogin } from "../../controllers/API";
+import { LoginType } from "../../types/api";
 import {
   inputHandlerEventType,
   loginInputStateType,
 } from "../../types/components";
-import { onLogin } from "../../controllers/API";
-import { LoginType } from "../../types/api";
-import { AuthContext } from "../../contexts/authContext";
-import { alertContext } from "../../contexts/alertContext";
-import { error } from "console";
 
 export default function LoginPage(): JSX.Element {
   const [inputState, setInputState] =
@@ -31,25 +30,22 @@ export default function LoginPage(): JSX.Element {
     setInputState((prev) => ({ ...prev, [name]: value }));
   }
 
-  function signIn(){
-
+  function signIn() {
     const user: LoginType = {
       username: username,
-      password: password
+      password: password,
     };
-
-      onLogin(
-        user
-      ).then((user) => {
+    onLogin(user)
+      .then((user) => {
         login(user.access_token, user.refresh_token);
         navigate("/");
-      }).catch(error => {
+      })
+      .catch((error) => {
         setErrorData({
           title: "Error signing in",
-          list: [error['response']['data']['detail']],
-        })
+          list: [error["response"]["data"]["detail"]],
+        });
       });
-
   }
 
   return (
@@ -137,9 +133,9 @@ export default function LoginPage(): JSX.Element {
           </div>
           <div className="w-full">
             <Form.Submit asChild>
-              <Button
-              onClick={()=>signIn()}
-              className="mr-3 mt-6 w-full">Sign in</Button>
+              <Button onClick={() => signIn()} className="mr-3 mt-6 w-full">
+                Sign in
+              </Button>
             </Form.Submit>
           </div>
           <div className="w-full">
