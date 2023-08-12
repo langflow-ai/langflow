@@ -41,7 +41,6 @@ export function AuthProvider({ children }): React.ReactElement {
   }
 
   function login(newAccessToken: string, refreshToken: string) {
-    //if we want to use cookie
     cookies.set('access_token', newAccessToken, { path: '/' });
     cookies.set('refresh_token', refreshToken, { path: '/' });
     setAccessToken(newAccessToken);
@@ -50,12 +49,8 @@ export function AuthProvider({ children }): React.ReactElement {
   }
 
   function logout() {
-    //if we want to use cookie
     cookies.remove('access_token');
     cookies.remove('refresh_token');
-
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
     setAccessToken(null);
     setRefreshToken(null);
     setIsAuthenticated(false);
