@@ -388,7 +388,7 @@ export async function renewAccessToken(token: string) {
   }
 }
 
-export async function getUsers(): Promise<Users> {
+export async function getAllUsers(): Promise<Users> {
   try {
     return await api.get(`${BASE_URL_API}user`);
   } catch (error) {

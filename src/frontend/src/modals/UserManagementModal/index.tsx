@@ -23,18 +23,16 @@ export default function UserManagementModal({
   index,
   onConfirm,
 }: UserManagementType) {
+
   const Icon: any = nodeIconsLucide[icon];
   const [pwdVisible, setPwdVisible] = useState(false);
   const [confirmPwdVisible, setConfirmPwdVisible] = useState(false);
-
   const [open, setOpen] = useState(false);
-
   const [password, setPassword] = useState(data?.password ?? "");
   const [username, setUserName] = useState(data?.username ?? "");
   const [confirmPassword, setConfirmPassword] = useState(data?.password ?? "");
   const [isDisabled, setIsDisabled] = useState(data?.is_disabled ?? false);
   const [isSuperUser, setIsSuperUser] = useState(data?.is_superuser ?? false);
-
   const [inputState, setInputState] = useState<UserInputType>(CONTROL_NEW_USER);
 
   function handleInput({
@@ -46,6 +44,11 @@ export default function UserManagementModal({
   useEffect(() => {
     if (!data) {
       resetForm();
+    }
+    else{
+      handleInput({ target: { name: "username", value: username } });
+      handleInput({ target: { name: "is_disabled", value: isDisabled } });
+      handleInput({ target: { name: "is_superuser", value: isSuperUser } });
     }
   }, [open]);
 
@@ -149,7 +152,7 @@ export default function UserManagementModal({
                       }}
                       value={password}
                       className="primary-input"
-                      required
+                      required={data ? false : true}
                       type={pwdVisible ? "text" : "password"}
                     />
                   </Form.Control>
@@ -203,7 +206,7 @@ export default function UserManagementModal({
                       }}
                       value={confirmPassword}
                       className="primary-input"
-                      required
+                      required={data ? false : true}
                       type={confirmPwdVisible ? "text" : "password"}
                     />
                   </Form.Control>

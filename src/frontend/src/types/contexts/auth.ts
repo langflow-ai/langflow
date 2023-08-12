@@ -8,6 +8,7 @@ export type AuthContextType = {
   userData: userData | null;
   setUserData: (userData: userData | null) => void;
   getAuthentication: () => boolean;
+  authenticationErrorCount: number;
 };
 
 export type userData = {

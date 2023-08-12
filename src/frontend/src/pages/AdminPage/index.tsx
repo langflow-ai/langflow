@@ -31,6 +31,7 @@ export default function AdminPage() {
   const [size, setPageSize] = useState(10);
   const [index, setPageIndex] = useState(0);
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const [totalRowsCount, setTotalRowsCount] = useState(0);
   const { setErrorData, setSuccessData } = useContext(alertContext);
 
   const userList = useRef([]);

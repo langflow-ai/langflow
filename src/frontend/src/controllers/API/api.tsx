@@ -5,6 +5,7 @@ import { renewAccessToken } from ".";
 import { URL_EXCLUDED_FROM_ERROR_RETRIES } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
+import { Cookies } from "react-cookie";
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
@@ -13,23 +14,29 @@ const api: AxiosInstance = axios.create({
 
 function ApiInterceptor() {
   const { setErrorData } = useContext(alertContext);
-  const { accessToken, login, logout } = useContext(AuthContext);
+  let { accessToken, login, logout, authenticationErrorCount } = useContext(AuthContext);
   const navigate = useNavigate();
+  const cookies = new Cookies();
 
   useEffect(() => {
     const interceptor = api.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
-        if (URL_EXCLUDED_FROM_ERROR_RETRIES.includes(error.config?.url)) {
-          return Promise.reject(error);
-        }
         if (error.response?.status === 401) {
-          const refreshToken = localStorage.getItem("refresh_token");
+          const refreshToken = cookies.get('refresh_token');
+
           if (refreshToken) {
+            authenticationErrorCount = authenticationErrorCount + 1;
+            if(authenticationErrorCount > 3){
+              authenticationErrorCount = 0;
+              logout();
+              navigate("/login");
+            }
+
             const res = await renewAccessToken(refreshToken);
             login(res.data.access_token, res.data.refresh_token);
             try {
-              const accessToken = localStorage.getItem("access_token");
+              const accessToken = cookies.get('access_token');
               delete error.config.headers["Authorization"];
               error.config.headers["Authorization"] = `Bearer ${accessToken}`;
               const response = await axios.request(error.config);
@@ -41,30 +48,40 @@ function ApiInterceptor() {
               }
             }
           }
-        } else {
-          let retryCount = 0;
-          while (retryCount < 4) {
-            await sleep(5000); // Sleep for 5 seconds
-            retryCount++;
-            try {
-              const response = await axios.request(error.config);
-              return response;
-            } catch (error) {
-              if (retryCount === 3) {
-                setErrorData({
-                  title: "There was an error on web connection, please: ",
-                  list: [
-                    "Refresh the page",
-                    "Use a new flow tab",
-                    "Check if the backend is up",
-                    "Endpoint: " + error.config?.url,
-                  ],
-                });
-                return Promise.reject(error);
-              }
-            }
+          else{
+            logout();
+            navigate("/login");
           }
+        } 
+        else{
+          // if (URL_EXCLUDED_FROM_ERROR_RETRIES.includes(error.config?.url)) {
+            return Promise.reject(error);
+          // }
         }
+        // else {
+        //   let retryCount = 0;
+        //   while (retryCount < 4) {
+        //     await sleep(5000); // Sleep for 5 seconds
+        //     retryCount++;
+        //     try {
+        //       const response = await axios.request(error.config);
+        //       return response;
+        //     } catch (error) {
+        //       if (retryCount === 3) {
+        //         setErrorData({
+        //           title: "There was an error on web connection, please: ",
+        //           list: [
+        //             "Refresh the page",
+        //             "Use a new flow tab",
+        //             "Check if the backend is up",
+        //             "Endpoint: " + error.config?.url,
+        //           ],
+        //         });
+        //         return Promise.reject(error);
+        //       }
+        //     }
+        //   }
+        // }
       }
     );
 
