@@ -39,20 +39,8 @@ export default function SignUp(): JSX.Element {
         <div className="flex w-72 flex-col items-center justify-center gap-2">
           <span className="mb-4 text-5xl">⛓️</span>
           <span className="mb-6 text-2xl font-semibold text-primary">
-            Sign up to LangFlow
+            Sign up to Langflow
           </span>
-          <div className="flex w-full items-center justify-center gap-2">
-            <Button variant="primary" className="w-full py-6">
-              <IconComponent name="FaApple" className="h-6 w-6" />
-            </Button>
-            <Button variant="primary" className="w-full py-6">
-              <IconComponent name="FaGithub" className="h-6 w-6" />
-            </Button>
-            <Button variant="primary" className="w-full py-6">
-              <IconComponent name="GoogleSearchRun" className="h-6 w-6" />
-            </Button>
-          </div>
-          <span className="text-sm text-muted-foreground">or</span>
           <div className="mb-3 w-full">
             <Form.Field name="username">
               <Form.Label className="data-[invalid]:label-invalid">
@@ -81,18 +69,17 @@ export default function SignUp(): JSX.Element {
               <Form.Label className="data-[invalid]:label-invalid">
                 Password <span className="font-medium text-destructive">*</span>
               </Form.Label>
-
-              <Form.Control asChild>
-                <InputComponent
-                  onChange={(value) => {
-                    handleInput({ target: { name: "password", value } });
-                  }}
-                  value={password}
-                  password={true}
-                  placeholder="Password"
-                  className="w-full"
-                />
-              </Form.Control>
+              <InputComponent
+                onChange={(value) => {
+                  handleInput({ target: { name: "password", value } });
+                }}
+                value={password}
+                isForm
+                password={true}
+                required
+                placeholder="Password"
+                className="w-full"
+              />
 
               <Form.Message className="field-invalid" match="valueMissing">
                 Please enter a password
@@ -115,15 +102,17 @@ export default function SignUp(): JSX.Element {
                 <span className="font-medium text-destructive">*</span>
               </Form.Label>
 
-              <Form.Control asChild>
-                <InputComponent
-                  onChange={(value) => {
-                    handleInput({ target: { name: "cnfPassword", value } });
-                  }}
-                  value={cnfPassword}
-                  password={true}
-                />
-              </Form.Control>
+              <InputComponent
+                onChange={(value) => {
+                  handleInput({ target: { name: "cnfPassword", value } });
+                }}
+                value={cnfPassword}
+                isForm
+                password={true}
+                required
+                placeholder="Confirm your password"
+                className="w-full"
+              />
 
               <Form.Message className="field-invalid" match="valueMissing">
                 Please confirm your password
