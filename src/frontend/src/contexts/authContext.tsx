@@ -14,6 +14,7 @@ const initialValue: AuthContextType = {
   userData: null,
   setUserData: () => {},
   getAuthentication: () => false,
+  authenticationErrorCount: 0
 };
 
 export const AuthContext = createContext<AuthContextType>(initialValue);
@@ -35,7 +36,7 @@ export function AuthProvider({ children }): React.ReactElement {
 
   function getAuthentication(){
     const storedRefreshToken = cookies.get('refresh_token');
-    const storedAccess = cookies.get('refresh_token');
+    const storedAccess = cookies.get('access_token');
     const auth = storedAccess && storedRefreshToken ? true : false;
     return auth;
   }
@@ -49,12 +50,11 @@ export function AuthProvider({ children }): React.ReactElement {
   }
 
   function logout() {
-    cookies.remove('access_token');
-    cookies.remove('refresh_token');
+    cookies.remove('access_token', { path: '/' });
+    cookies.remove('refresh_token', { path: '/' });
     setAccessToken(null);
     setRefreshToken(null);
     setIsAuthenticated(false);
-
   }
 
   async function refreshAccessToken(refreshToken: string) {
@@ -91,7 +91,8 @@ export function AuthProvider({ children }): React.ReactElement {
         refreshAccessToken,
         setUserData,
         userData,
-        getAuthentication
+        getAuthentication,
+        authenticationErrorCount: 0
       }}
     >
       {children}
