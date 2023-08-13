@@ -1,0 +1,60 @@
+version: "3"
+
+services:
+  backend:
+    build:
+      context: ./
+      dockerfile: base.Dockerfile
+    ports:
+      - "7860:7860"
+    volumes:
+      - ./:/app
+    command: bash -c "uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload"
+
+  queue:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+
+  celeryworker:
+    depends_on:
+      - queue
+    env_file:
+      - .env
+    # environment:
+    # - SERVER_NAME=${DOMAIN?Variable not set}
+    # - SERVER_HOST=https://${DOMAIN?Variable not set}
+    # # Allow explicit env var override for tests
+    # - SMTP_HOST=${SMTP_HOST?Variable not set}
+    build:
+      context: ./
+      dockerfile: base.Dockerfile
+    command: celery -A langflow.worker.celery_app worker --loglevel=DEBUG
+
+  flower:
+    networks:
+      - default
+    build:
+      context: ./
+      dockerfile: base.Dockerfile
+    env_file:
+      - .env
+    command: celery -A langflow.worker.celery_app flower --port=5555 --broker=redis://queue:6379/0
+    ports:
+      - "5555:5555"
+
+  frontend:
+    build:
+      context: ./src/frontend
+      dockerfile: ./dev.Dockerfile
+      args:
+        - BACKEND_URL=http://backend:7860
+    environment:
+      - VITE_PROXY_TARGET=http://backend:7860
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./src/frontend/public:/home/node/app/public
+      - ./src/frontend/src:/home/node/app/src
+      - ./src/frontend/package.json:/home/node/app/package.json
+    restart: on-failure
