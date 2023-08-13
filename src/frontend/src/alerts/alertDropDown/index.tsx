@@ -22,9 +22,9 @@ export default function AlertDropdown({ children }: AlertDropdownType) {
   return (
     <Popover
       open={open}
-      onOpenChange={(k) => {
-        setOpen(k);
-        if (k) setNotificationCenter(false);
+      onOpenChange={(target) => {
+        setOpen(target);
+        if (target) setNotificationCenter(false);
       }}
     >
       <PopoverTrigger>{children}</PopoverTrigger>

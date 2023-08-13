@@ -9,7 +9,8 @@ import yaml
 from langchain.base_language import BaseLanguageModel
 from PIL.Image import Image
 from langflow.utils.logger import logger
-from langflow.chat.config import ChatConfig
+from langflow.services.chat.config import ChatConfig
+from langflow.services.utils import get_settings_manager
 
 
 def load_file_into_dict(file_path: str) -> dict:
@@ -63,13 +64,11 @@ def extract_input_variables_from_prompt(prompt: str) -> list[str]:
 
 def setup_llm_caching():
     """Setup LLM caching."""
-
-    from langflow.settings import settings
-
+    settings_manager = get_settings_manager()
     try:
-        set_langchain_cache(settings)
+        set_langchain_cache(settings_manager.settings)
     except ImportError:
-        logger.warning(f"Could not import {settings.CACHE}. ")
+        logger.warning(f"Could not import {settings_manager.settings.CACHE}. ")
     except Exception as exc:
         logger.warning(f"Could not setup LLM caching. Error: {exc}")
 

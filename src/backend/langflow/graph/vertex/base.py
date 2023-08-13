@@ -1,6 +1,6 @@
 import ast
 from langflow.interface.initialize import loading
-from langflow.interface.listing import ALL_TYPES_DICT
+from langflow.interface.listing import lazy_load_dict
 from langflow.utils.constants import DIRECT_TYPES
 from langflow.utils.logger import logger
 from langflow.utils.util import sync_to_async
@@ -62,7 +62,7 @@ class Vertex:
         )
 
         if self.base_type is None:
-            for base_type, value in ALL_TYPES_DICT.items():
+            for base_type, value in lazy_load_dict.ALL_TYPES_DICT.items():
                 if self.vertex_type in value:
                     self.base_type = base_type
                     break

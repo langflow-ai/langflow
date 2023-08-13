@@ -6,13 +6,15 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from langflow.api import router
-from langflow.database.base import create_db_and_tables, Engine
 from langflow.interface.utils import setup_llm_caching
+from langflow.services.database.utils import initialize_database
+from langflow.services.manager import initialize_services
 from langflow.utils.logger import configure
 
 
 def create_app():
     """Create the FastAPI app and include the router."""
+
     configure()
 
     app = FastAPI()
@@ -32,10 +34,10 @@ def create_app():
         allow_methods=["*"],
         allow_headers=["*"],
     )
-
     app.include_router(router)
-    app.on_event("startup")(Engine.update)
-    app.on_event("startup")(create_db_and_tables)
+
+    app.on_event("startup")(initialize_services)
+    app.on_event("startup")(initialize_database)
     app.on_event("startup")(setup_llm_caching)
     return app
 
@@ -68,16 +70,19 @@ def get_static_files_dir():
     return frontend_path / "frontend"
 
 
-def setup_app(static_files_dir: Optional[Path] = None) -> FastAPI:
+def setup_app(
+    static_files_dir: Optional[Path] = None, backend_only: bool = False
+) -> FastAPI:
     """Setup the FastAPI app."""
     # get the directory of the current file
     if not static_files_dir:
         static_files_dir = get_static_files_dir()
 
-    if not static_files_dir or not static_files_dir.exists():
+    if not backend_only and (not static_files_dir or not static_files_dir.exists()):
         raise RuntimeError(f"Static files directory {static_files_dir} does not exist.")
     app = create_app()
-    setup_static_files(app, static_files_dir)
+    if not backend_only and static_files_dir is not None:
+        setup_static_files(app, static_files_dir)
     return app
 
 

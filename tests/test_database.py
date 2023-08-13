@@ -5,16 +5,9 @@ from uuid import UUID, uuid4
 from sqlalchemy.orm import Session
 
 from fastapi.testclient import TestClient
-from fastapi.encoders import jsonable_encoder
 
 from langflow.api.v1.schemas import FlowListCreate
-from langflow.database.models.flow import Flow, FlowCreate, FlowUpdate
-
-from langflow.database.models.flow_style import (
-    FlowStyleCreate,
-    FlowStyleRead,
-    FlowStyleUpdate,
-)
+from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
 
 
 @pytest.fixture(scope="module")
@@ -56,32 +49,11 @@ def test_read_flows(client: TestClient, json_flow: str):
     assert response.json()["name"] == flow.name
     assert response.json()["data"] == flow.data
 
-    flow_style = FlowStyleCreate(color="red", emoji="👍", flow_id=response.json()["id"])
-    response = client.post(
-        "api/v1/flow_styles/", json=jsonable_encoder(flow_style.dict())
-    )
-    assert response.status_code == 200
-    assert response.json()["color"] == flow_style.color
-    assert response.json()["emoji"] == flow_style.emoji
-    assert response.json()["flow_id"] == str(flow_style.flow_id)
-
     flow = FlowCreate(name="Test Flow", description="description", data=data)
     response = client.post("api/v1/flows/", json=flow.dict())
     assert response.status_code == 201
     assert response.json()["name"] == flow.name
     assert response.json()["data"] == flow.data
-
-    # Now we need to create FlowStyle objects for each Flow
-    flow_style = FlowStyleCreate(
-        color="green", emoji="👍", flow_id=response.json()["id"]
-    )
-    response = client.post(
-        "api/v1/flow_styles/", json=jsonable_encoder(flow_style.dict())
-    )
-    assert response.status_code == 200
-    assert response.json()["color"] == flow_style.color
-    assert response.json()["emoji"] == flow_style.emoji
-    assert response.json()["flow_id"] == str(flow_style.flow_id)
 
     response = client.get("api/v1/flows/")
     assert response.status_code == 200
@@ -97,21 +69,10 @@ def test_read_flow(client: TestClient, json_flow: str):
     # turn it into a UUID
     flow_id = UUID(flow_id)
 
-    flow_style = FlowStyleCreate(color="green", emoji="👍", flow_id=flow_id)
-    response = client.post(
-        "api/v1/flow_styles/", json=jsonable_encoder(flow_style.dict())
-    )
-    assert response.status_code == 200
-    response_json = response.json()
-    assert response_json["color"] == flow_style.color
-    assert response_json["emoji"] == flow_style.emoji
-    assert response_json["flow_id"] == str(flow_style.flow_id)
-
     response = client.get(f"api/v1/flows/{flow_id}")
     assert response.status_code == 200
     assert response.json()["name"] == flow.name
     assert response.json()["data"] == flow.data
-    assert response.json()["style"]["color"] == flow_style.color
 
 
 def test_update_flow(client: TestClient, json_flow: str):
@@ -275,66 +236,3 @@ def test_read_empty_flows(client: TestClient):
     response = client.get("api/v1/flows/")
     assert response.status_code == 200
     assert len(response.json()) == 0
-
-
-def test_create_flow_style(client: TestClient):
-    flow_style = FlowStyleCreate(color="red", emoji="🔴")
-    response = client.post("api/v1/flow_styles/", json=flow_style.dict())
-    assert response.status_code == 200
-    created_flow_style = FlowStyleRead(**response.json())
-    assert created_flow_style.color == flow_style.color
-    assert created_flow_style.emoji == flow_style.emoji
-
-
-def test_read_flow_styles(client: TestClient):
-    response = client.get("api/v1/flow_styles/")
-    assert response.status_code == 200
-    flow_styles = [FlowStyleRead(**flow_style) for flow_style in response.json()]
-    assert not flow_styles
-    # Create test data
-    flow_style = FlowStyleCreate(color="red", emoji="🔴")
-    response = client.post("api/v1/flow_styles/", json=flow_style.dict())
-    assert response.status_code == 200
-    # Check response data
-    response = client.get("api/v1/flow_styles/")
-    assert response.status_code == 200
-    flow_styles = [FlowStyleRead(**flow_style) for flow_style in response.json()]
-    assert len(flow_styles) == 1
-    assert flow_styles[0].color == flow_style.color
-    assert flow_styles[0].emoji == flow_style.emoji
-
-
-def test_read_flow_style(client: TestClient):
-    flow_style = FlowStyleCreate(color="red", emoji="🔴")
-    response = client.post("api/v1/flow_styles/", json=flow_style.dict())
-    created_flow_style = FlowStyleRead(**response.json())
-    response = client.get(f"api/v1/flow_styles/{created_flow_style.id}")
-    assert response.status_code == 200
-    read_flow_style = FlowStyleRead(**response.json())
-    assert read_flow_style == created_flow_style
-
-
-def test_update_flow_style(client: TestClient):
-    flow_style = FlowStyleCreate(color="red", emoji="🔴")
-    response = client.post("api/v1/flow_styles/", json=flow_style.dict())
-    created_flow_style = FlowStyleRead(**response.json())
-    to_update_flow_style = FlowStyleUpdate(color="blue")
-    response = client.patch(
-        f"api/v1/flow_styles/{created_flow_style.id}", json=to_update_flow_style.dict()
-    )
-    assert response.status_code == 200
-    updated_flow_style = FlowStyleRead(**response.json())
-    assert updated_flow_style.color == "blue"
-    assert updated_flow_style.emoji == flow_style.emoji
-
-
-def test_delete_flow_style(client: TestClient):
-    flow_style = FlowStyleCreate(color="red", emoji="🔴")
-    response = client.post("api/v1/flow_styles/", json=flow_style.dict())
-    created_flow_style = FlowStyleRead(**response.json())
-    response = client.delete(f"api/v1/flow_styles/{created_flow_style.id}")
-    assert response.status_code == 200
-    assert response.json() == {"message": "FlowStyle deleted successfully"}
-
-    response = client.get(f"api/v1/flow_styles/{created_flow_style.id}")
-    assert response.status_code == 404
