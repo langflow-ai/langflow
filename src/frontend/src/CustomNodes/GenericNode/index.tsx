@@ -159,52 +159,59 @@ export default function GenericNode({
 
           <>
             {Object.keys(data.node.template)
-              .filter((t) => t.charAt(0) !== "_")
-              .map((t: string, idx) => (
+              .filter((templateField) => templateField.charAt(0) !== "_")
+              .map((templateField: string, idx) => (
                 <div key={idx}>
-                  {data.node.template[t].show &&
-                  !data.node.template[t].advanced ? (
+                  {data.node.template[templateField].show &&
+                  !data.node.template[templateField].advanced ? (
                     <ParameterComponent
                       key={
-                        (data.node.template[t].input_types?.join(";") ??
-                          data.node.template[t].type) +
+                        (data.node.template[templateField].input_types?.join(
+                          ";"
+                        ) ?? data.node.template[templateField].type) +
                         "|" +
-                        t +
+                        templateField +
                         "|" +
                         data.id
                       }
                       data={data}
                       setData={setData}
                       color={
-                        nodeColors[types[data.node.template[t].type]] ??
-                        nodeColors[data.node.template[t].type] ??
+                        nodeColors[
+                          types[data.node.template[templateField].type]
+                        ] ??
+                        nodeColors[data.node.template[templateField].type] ??
                         nodeColors.unknown
                       }
                       title={
-                        data.node.template[t].display_name
-                          ? data.node.template[t].display_name
-                          : data.node.template[t].name
-                          ? toTitleCase(data.node.template[t].name)
-                          : toTitleCase(t)
+                        data.node.template[templateField].display_name
+                          ? data.node.template[templateField].display_name
+                          : data.node.template[templateField].name
+                          ? toTitleCase(data.node.template[templateField].name)
+                          : toTitleCase(templateField)
                       }
-                      info={data.node.template[t].info}
-                      name={t}
+                      info={data.node.template[templateField].info}
+                      name={templateField}
                       tooltipTitle={
-                        data.node.template[t].input_types?.join("\n") ??
-                        data.node.template[t].type
+                        data.node.template[templateField].input_types?.join(
+                          "\n"
+                        ) ?? data.node.template[templateField].type
                       }
-                      required={data.node.template[t].required}
+                      required={data.node.template[templateField].required}
                       id={
-                        (data.node.template[t].input_types?.join(";") ??
-                          data.node.template[t].type) +
+                        (data.node.template[templateField].input_types?.join(
+                          ";"
+                        ) ?? data.node.template[templateField].type) +
                         "|" +
-                        t +
+                        templateField +
                         "|" +
                         data.id
                       }
                       left={true}
-                      type={data.node.template[t].type}
-                      optionalHandle={data.node.template[t].input_types}
+                      type={data.node.template[templateField].type}
+                      optionalHandle={
+                        data.node.template[templateField].input_types
+                      }
                     />
                   ) : (
                     <></>

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "0.4.2"
+version = "0.4.7"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
@@ -19,7 +19,7 @@ readme = "README.md"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
 packages = [{ include = "langflow", from = "src/backend" }]
 include = ["src/backend/langflow/*", "src/backend/langflow/**/*"]
-
+documentation = "https://docs.langflow.org"
 
 [tool.poetry.scripts]
 langflow = "langflow.__main__:main"
@@ -80,6 +80,8 @@ langchain-experimental = "^0.0.8"
 celery = "^5.3.1"
 redis = "^4.6.0"
 flower = "^2.0.1"
+alembic = "^1.11.2"
+metaphor-python = "^0.1.11"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"

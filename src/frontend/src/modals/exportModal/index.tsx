@@ -12,9 +12,12 @@ const ExportModal = forwardRef((props: { children: ReactNode }, ref) => {
   const { flows, tabId, updateFlow, downloadFlow, saveFlow } =
     useContext(TabsContext);
   const [checked, setChecked] = useState(false);
-  const [name, setName] = useState(flows.find((f) => f.id === tabId).name);
+  const [name, setName] = useState(
+    flows.find((flow) => flow.id === tabId).name
+  );
+  const [invalidName, setInvalidName] = useState(false);
   const [description, setDescription] = useState(
-    flows.find((f) => f.id === tabId).description
+    flows.find((flow) => flow.id === tabId).description
   );
   const [open, setOpen] = useState(false);
   return (
@@ -30,6 +33,8 @@ const ExportModal = forwardRef((props: { children: ReactNode }, ref) => {
       </BaseModal.Header>
       <BaseModal.Content>
         <EditFlowSettings
+          invalidName={invalidName}
+          setInvalidName={setInvalidName}
           name={name}
           description={description}
           flows={flows}
@@ -56,13 +61,13 @@ const ExportModal = forwardRef((props: { children: ReactNode }, ref) => {
           onClick={() => {
             if (checked)
               downloadFlow(
-                flows.find((f) => f.id === tabId),
+                flows.find((flow) => flow.id === tabId),
                 name,
                 description
               );
             else
               downloadFlow(
-                removeApiKeys(flows.find((f) => f.id === tabId)),
+                removeApiKeys(flows.find((flow) => flow.id === tabId)),
                 name,
                 description
               );
