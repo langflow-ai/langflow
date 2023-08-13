@@ -3,10 +3,10 @@ from typing import Annotated, Optional
 
 from langflow.cache.utils import save_uploaded_file
 from langflow.database.models.flow import Flow
-from langflow.processing.process import process_graph_cached, process_tweaks
+from langflow.processing.process import process_tweaks
 from langflow.utils.logger import logger
 from langflow.settings import settings
-
+from langflow.worker import process_graph_cached as process_graph_cached_worker
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, Body
 
 from langflow.interface.custom.custom_component import CustomComponent
@@ -90,7 +90,12 @@ async def process_flow(
                 graph_data = process_tweaks(graph_data, tweaks)
             except Exception as exc:
                 logger.error(f"Error processing tweaks: {exc}")
-        response = process_graph_cached(graph_data, inputs, clear_cache)
+        # ! This was added just for testing purposes
+        response = process_graph_cached_worker.delay(
+            graph_data=graph_data,
+            inputs=inputs,
+            clear_cache=clear_cache,
+        ).get()
         return ProcessResponse(
             result=response,
         )
