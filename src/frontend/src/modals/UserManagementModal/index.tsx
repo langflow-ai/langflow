@@ -12,6 +12,7 @@ import {
 } from "../../types/components";
 import { nodeIconsLucide } from "../../utils/styleUtils";
 import BaseModal from "../baseModal";
+import InputComponent from "../../components/inputComponent";
 
 export default function UserManagementModal({
   title,
@@ -107,6 +108,7 @@ export default function UserManagementModal({
                   value={username}
                   className="primary-input"
                   required
+                  placeholder="Username"
                 />
               </Form.Control>
               <Form.Message match="valueMissing" className="field-invalid">
