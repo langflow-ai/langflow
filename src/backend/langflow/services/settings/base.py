@@ -35,6 +35,15 @@ class Settings(BaseSettings):
     REMOVE_API_KEYS: bool = False
     COMPONENTS_PATH: List[str] = []
 
+    # cache settings
+    # if CACHE_TYPE is set to "redis", the following settings are used
+    CACHE_TYPE: str = "redis"
+
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
+    REDIS_CACHE_EXPIRE: int = 3600
+
     @validator("DATABASE_URL", pre=True)
     def set_database_url(cls, value):
         if not value:
