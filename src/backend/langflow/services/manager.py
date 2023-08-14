@@ -85,3 +85,8 @@ def initialize_services():
     service_manager.register_factory(database_factory.DatabaseManagerFactory())
     service_manager.register_factory(cache_factory.CacheManagerFactory())
     service_manager.register_factory(chat_factory.ChatManagerFactory())
+
+    # Test cache connection
+    service_manager.get(ServiceType.CACHE_MANAGER)
+    # Test database connection
+    service_manager.get(ServiceType.DATABASE_MANAGER)
