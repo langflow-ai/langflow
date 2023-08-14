@@ -4,6 +4,7 @@ import { Button } from "../../components/ui/button";
 import { UserManagementType } from "../../types/components";
 import { nodeIconsLucide } from "../../utils/styleUtils";
 import BaseModal from "../baseModal";
+import InputComponent from "../../components/inputComponent";
 
 export default function UserManagementModal({
   title,
@@ -84,6 +85,7 @@ export default function UserManagementModal({
                   value={username}
                   className="primary-input"
                   required
+                  placeholder="Username"
                 />
               </Form.Control>
               <Form.Message match="valueMissing" className="field-invalid">
@@ -109,16 +111,17 @@ export default function UserManagementModal({
                       <span className="font-medium text-destructive">*</span>
                     </Form.Label>
                   </div>
-                  <Form.Control asChild>
-                    <input
-                      onChange={(input) => {
-                        setPassword(input.target.value);
-                      }}
-                      value={password}
-                      className="primary-input"
-                      required
-                    />
-                  </Form.Control>
+                  <InputComponent
+                    onChange={(input) => {
+                      setPassword(input);
+                    }}
+                    value={password}
+                    password={true}
+                    isForm
+                    className="primary-input"
+                    required
+                    placeholder="Password"
+                  />
                   <Form.Message className="field-invalid" match="valueMissing">
                     Please enter a password
                   </Form.Message>
@@ -148,16 +151,17 @@ export default function UserManagementModal({
                       <span className="font-medium text-destructive">*</span>
                     </Form.Label>
                   </div>
-                  <Form.Control asChild>
-                    <input
-                      onChange={(input) => {
-                        setConfirmPassword(input.target.value);
-                      }}
-                      value={confirmPassword}
-                      className="primary-input"
-                      required
-                    />
-                  </Form.Control>
+                  <InputComponent
+                    onChange={(input) => {
+                      setConfirmPassword(input);
+                    }}
+                    value={confirmPassword}
+                    password={true}
+                    isForm
+                    className="primary-input"
+                    required
+                    placeholder="Confirm your password"
+                  />
                   <Form.Message className="field-invalid" match="valueMissing">
                     Please confirm your password
                   </Form.Message>
