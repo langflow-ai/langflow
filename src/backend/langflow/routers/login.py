@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
+
 from langflow.services.utils import get_session
 from langflow.database.models.token import Token
 from langflow.auth.auth import (
@@ -15,10 +16,12 @@ router = APIRouter()
 
 @router.post("/login", response_model=Token)
 async def login_to_get_access_token(
-    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_session)
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_session),
+    # _: Session = Depends(get_current_active_user)
 ):
-    if user := authenticate_user(db, form_data.username, form_data.password):
-        return create_user_tokens(user.username)
+    if user := authenticate_user(form_data.username, form_data.password, db):
+        return create_user_tokens(user_id=user.id, db=db)
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

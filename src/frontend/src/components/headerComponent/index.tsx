@@ -34,19 +34,24 @@ export default function Header() {
   return (
     <div className="header-arrangement">
       <div className="header-start-display">
-        <Link to="/">
-          <span className="ml-4 text-2xl">⛓️</span>
-        </Link>
-        <Button
-          onClick={() => {
-            logout();
-            navigate("/login");
-          }}
-          variant="outline"
-          className=""
-        >
-          Sign out
-        </Button>
+        {tabId === "" || !tabId ? (
+          <div className="ml-2">
+            <a
+              href="https://www.langflow.org/"
+              target="_blank"
+              rel="noreferrer"
+              className="header-waitlist-link-box"
+            >
+              <span className="pr-1 text-2xl">⛓️</span>
+              <span>Join The Waitlist</span>
+            </a>
+          </div>
+        ) : (
+          <Link to="/">
+            <span className="ml-4 text-2xl">⛓️</span>
+          </Link>
+        )}
+
         {flows.findIndex((f) => tabId === f.id) !== -1 && tabId !== "" && (
           <MenuBar flows={flows} tabId={tabId} />
         )}
