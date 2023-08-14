@@ -33,6 +33,16 @@ class BaseCacheManager(abc.ABC, Service):
         """
 
     @abc.abstractmethod
+    def upsert(self, key, value):
+        """
+        Add an item to the cache if it doesn't exist, or update it if it does.
+
+        Args:
+            key: The key of the item.
+            value: The value to cache.
+        """
+
+    @abc.abstractmethod
     def delete(self, key):
         """
         Remove an item from the cache.
