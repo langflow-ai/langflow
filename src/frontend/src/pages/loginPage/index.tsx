@@ -131,7 +131,7 @@ export default function LoginPage(): JSX.Element {
             </Form.Submit>
           </div>
           <div className="w-full">
-            <Link to="">
+            <Link to="/signup">
               <Button className="w-full" variant="outline">
                 Don't have an account?&nbsp;<b>Sign Up</b>
               </Button>

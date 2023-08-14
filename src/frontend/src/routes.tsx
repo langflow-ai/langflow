@@ -1,5 +1,4 @@
 import { Route, Routes } from "react-router-dom";
-import { ProtectedRoute } from "./components/authGuard";
 import { ProtectedLoginRoute } from "./components/authLoginGuard";
 import AdminPage from "./pages/AdminPage";
 import LoginAdminPage from "./pages/AdminPage/LoginPage";
@@ -9,6 +8,9 @@ import HomePage from "./pages/MainPage";
 import DeleteAccountPage from "./pages/deleteAccountPage";
 import LoginPage from "./pages/loginPage";
 import SignUp from "./pages/signUpPage";
+import { CatchAllRoute } from "./components/catchAllRoutes";
+import { ProtectedRoute } from "./components/authGuard";
+import { ProtectedAdminRoute } from "./components/authAdminGuard";
 
 const Router = () => {
   return (
@@ -43,7 +45,7 @@ const Router = () => {
         path="*"
         element={
           <ProtectedRoute>
-            <HomePage />
+            <CatchAllRoute />
           </ProtectedRoute>
         }
       />
@@ -76,9 +78,9 @@ const Router = () => {
       <Route
         path="/admin"
         element={
-          <ProtectedRoute>
+          <ProtectedAdminRoute>
             <AdminPage />
-          </ProtectedRoute>
+          </ProtectedAdminRoute>
         }
       />
 

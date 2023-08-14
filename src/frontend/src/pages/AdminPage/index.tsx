@@ -23,6 +23,7 @@ import {
 } from "../../controllers/API";
 import ConfirmationModal from "../../modals/ConfirmationModal";
 import UserManagementModal from "../../modals/UserManagementModal";
+import { AuthContext } from "../../contexts/authContext";
 
 export default function AdminPage() {
   const [inputValue, setInputValue] = useState("");
@@ -31,6 +32,7 @@ export default function AdminPage() {
   const [index, setPageIndex] = useState(0);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const { setErrorData, setSuccessData } = useContext(alertContext);
+  const { userData } = useContext(AuthContext);
 
   const userList = useRef([]);
 
@@ -136,8 +138,13 @@ export default function AdminPage() {
   }
 
   return (
+
     <>
-      <div className="main-page-panel">
+        {
+      userData && (
+
+    
+        <div className="main-page-panel">
         <div className="m-auto flex h-full flex-row justify-center">
           <div className="basis-5/6">
             <div className="m-auto flex h-full flex-col space-y-8 p-8 ">
@@ -249,14 +256,12 @@ export default function AdminPage() {
                               <Checkbox
                                 id="is_disabled"
                                 checked={user.is_disabled}
-                                disabled
                               />
                             </TableCell>
                             <TableCell className="relative left-5 truncate py-2">
                               <Checkbox
                                 id="is_superuser"
                                 checked={user.is_superuser}
-                                disabled
                               />
                             </TableCell>
                             <TableCell className="truncate py-2 ">
@@ -338,6 +343,9 @@ export default function AdminPage() {
           </div>
         </div>
       </div>
+      )
+    }
+
     </>
   );
 }
