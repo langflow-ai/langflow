@@ -33,6 +33,7 @@ export default function AdminPage() {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const { userData } = useContext(AuthContext);
+  const [totalRowsCount, setTotalRowsCount] = useState(0);
 
   const userList = useRef([]);
 
@@ -48,8 +49,9 @@ export default function AdminPage() {
     setLoadingUsers(true);
     getUsersPage(index, size)
       .then((users) => {
-        userList.current = users;
-        setFilterUserList(users);
+        setTotalRowsCount(users['total_count']);
+        userList.current = users['users'];
+        setFilterUserList(users['users']);
         setLoadingUsers(false);
       })
       .catch((error) => {
