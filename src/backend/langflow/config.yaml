@@ -104,6 +104,8 @@ embeddings:
     documentation: "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/sentence_transformers"
   CohereEmbeddings:
     documentation: "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/cohere"
+  VertexAIEmbeddings:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/google_vertex_ai_palm"
 llms:
   OpenAI:
     documentation: "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/openai"
@@ -127,8 +129,8 @@ llms:
   # There's a bug in this component deactivating until we get it sorted: _language_models.py", line 804, in send_message
   #     is_blocked=safety_attributes.get("blocked", False),
   # AttributeError: 'list' object has no attribute 'get'
-  # ChatVertexAI:
-  #   documentation: "https://python.langchain.com/docs/modules/model_io/models/chat/integrations/google_vertex_ai_palm"
+  ChatVertexAI:
+    documentation: "https://python.langchain.com/docs/modules/model_io/models/chat/integrations/google_vertex_ai_palm"
   ###
 memories:
   # https://github.com/supabase-community/supabase-py/issues/482
