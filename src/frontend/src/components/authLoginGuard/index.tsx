@@ -6,7 +6,7 @@ export const ProtectedLoginRoute = ({ children }) => {
   const { getAuthentication } = useContext(AuthContext);
 
   if (getAuthentication()) {
-    window.location.replace('/');
+    window.location.replace("/");
     return <Navigate to="/" replace />;
   }
 

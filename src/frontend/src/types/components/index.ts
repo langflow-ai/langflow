@@ -230,6 +230,6 @@ export type loginInputStateType = {
 export type UserInputType = {
   username: string;
   password: string;
-  is_disabled:boolean;
+  is_disabled: boolean;
   is_superuser: boolean;
 };

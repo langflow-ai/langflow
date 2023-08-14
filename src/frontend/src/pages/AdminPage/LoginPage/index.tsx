@@ -47,15 +47,17 @@ export default function LoginAdminPage() {
       });
   }
 
-  function getUser(){
-    if(getAuthentication){
+  function getUser() {
+    if (getAuthentication) {
       setTimeout(() => {
-        getLoggedUser().then((user) => {
-          setUserData(user);
-        }).catch((error) => {});
+        getLoggedUser()
+          .then((user) => {
+            setUserData(user);
+          })
+          .catch((error) => {});
       }, 1000);
+    }
   }
-}
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center bg-muted">

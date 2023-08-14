@@ -1,7 +1,6 @@
 import * as Form from "@radix-ui/react-form";
 import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -49,15 +48,17 @@ export default function LoginPage(): JSX.Element {
       });
   }
 
-  function getUser(){
-    if(getAuthentication){
+  function getUser() {
+    if (getAuthentication) {
       setTimeout(() => {
-        getLoggedUser().then((user) => {
-          setUserData(user);
-        }).catch((error) => {});
+        getLoggedUser()
+          .then((user) => {
+            setUserData(user);
+          })
+          .catch((error) => {});
       }, 1000);
+    }
   }
-}
 
   return (
     <Form.Root
@@ -126,9 +127,7 @@ export default function LoginPage(): JSX.Element {
           </div>
           <div className="w-full">
             <Form.Submit asChild>
-              <Button className="mr-3 mt-6 w-full">
-                Sign in
-              </Button>
+              <Button className="mr-3 mt-6 w-full">Sign in</Button>
             </Form.Submit>
           </div>
           <div className="w-full">

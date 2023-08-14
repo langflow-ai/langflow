@@ -4,6 +4,7 @@ import { useContext, useEffect, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { CONTROL_NEW_USER } from "../../constants/constants";
+import { AuthContext } from "../../contexts/authContext";
 import {
   UserInputType,
   UserManagementType,
@@ -11,7 +12,6 @@ import {
 } from "../../types/components";
 import { nodeIconsLucide } from "../../utils/styleUtils";
 import BaseModal from "../baseModal";
-import { AuthContext } from "../../contexts/authContext";
 
 export default function UserManagementModal({
   title,
@@ -24,7 +24,6 @@ export default function UserManagementModal({
   index,
   onConfirm,
 }: UserManagementType) {
-
   const Icon: any = nodeIconsLucide[icon];
   const [pwdVisible, setPwdVisible] = useState(false);
   const [confirmPwdVisible, setConfirmPwdVisible] = useState(false);
@@ -35,11 +34,9 @@ export default function UserManagementModal({
   const [isDisabled, setIsDisabled] = useState(data?.is_disabled ?? false);
   const [isSuperUser, setIsSuperUser] = useState(data?.is_superuser ?? false);
   const [inputState, setInputState] = useState<UserInputType>(CONTROL_NEW_USER);
-  const { userData} = useContext(AuthContext);
+  const { userData } = useContext(AuthContext);
 
-
-      console.log(userData);
-      
+  console.log(userData);
 
   function handleInput({
     target: { name, value },
@@ -50,8 +47,7 @@ export default function UserManagementModal({
   useEffect(() => {
     if (!data) {
       resetForm();
-    }
-    else{
+    } else {
       handleInput({ target: { name: "username", value: username } });
       handleInput({ target: { name: "is_disabled", value: isDisabled } });
       handleInput({ target: { name: "is_superuser", value: isSuperUser } });
@@ -138,16 +134,18 @@ export default function UserManagementModal({
                       </span>
                       {pwdVisible && (
                         <Eye
-                        onClick={() => setPwdVisible(!pwdVisible)}
-                        className="h-5 cursor-pointer" strokeWidth={1.5} />
+                          onClick={() => setPwdVisible(!pwdVisible)}
+                          className="h-5 cursor-pointer"
+                          strokeWidth={1.5}
+                        />
                       )}
-
-                        {!pwdVisible && (
+                      {!pwdVisible && (
                         <EyeOff
-                        onClick={() => setPwdVisible(!pwdVisible)}
-                        className="h-5 cursor-pointer" strokeWidth={1.5} />
+                          onClick={() => setPwdVisible(!pwdVisible)}
+                          className="h-5 cursor-pointer"
+                          strokeWidth={1.5}
+                        />
                       )}
-
                     </Form.Label>
                   </div>
                   <Form.Control asChild>
@@ -194,14 +192,21 @@ export default function UserManagementModal({
                       </span>
                       {confirmPwdVisible && (
                         <Eye
-                        onClick={() => setConfirmPwdVisible(!confirmPwdVisible)}
-                        className="h-5 cursor-pointer" strokeWidth={1.5} />
+                          onClick={() =>
+                            setConfirmPwdVisible(!confirmPwdVisible)
+                          }
+                          className="h-5 cursor-pointer"
+                          strokeWidth={1.5}
+                        />
                       )}
-
-                        {!confirmPwdVisible && (
+                      {!confirmPwdVisible && (
                         <EyeOff
-                        onClick={() => setConfirmPwdVisible(!confirmPwdVisible)}
-                        className="h-5 cursor-pointer" strokeWidth={1.5} />
+                          onClick={() =>
+                            setConfirmPwdVisible(!confirmPwdVisible)
+                          }
+                          className="h-5 cursor-pointer"
+                          strokeWidth={1.5}
+                        />
                       )}
                     </Form.Label>
                   </div>
@@ -242,30 +247,29 @@ export default function UserManagementModal({
                   </Form.Control>
                 </div>
               </Form.Field>
-                      {userData?.is_superuser && (
-              <Form.Field name="is_superuser">
-              <div>
-                <Form.Label className="data-[invalid]:label-invalid mr-3">
-                  Superuser
-                </Form.Label>
-                <Form.Control asChild>
-                  <Checkbox
-                    checked={isSuperUser}
-                    value={isSuperUser}
-                    id="is_superuser"
-                    className="relative top-0.5"
-                    onCheckedChange={(value) => {
-                      handleInput({
-                        target: { name: "is_superuser", value },
-                      });
-                      setIsSuperUser(value);
-                    }}
-                  />
-                </Form.Control>
-              </div>
-            </Form.Field>
-                      )}
-
+              {userData?.is_superuser && (
+                <Form.Field name="is_superuser">
+                  <div>
+                    <Form.Label className="data-[invalid]:label-invalid mr-3">
+                      Superuser
+                    </Form.Label>
+                    <Form.Control asChild>
+                      <Checkbox
+                        checked={isSuperUser}
+                        value={isSuperUser}
+                        id="is_superuser"
+                        className="relative top-0.5"
+                        onCheckedChange={(value) => {
+                          handleInput({
+                            target: { name: "is_superuser", value },
+                          });
+                          setIsSuperUser(value);
+                        }}
+                      />
+                    </Form.Control>
+                  </div>
+                </Form.Field>
+              )}
             </div>
           </div>
 
