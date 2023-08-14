@@ -10,13 +10,16 @@ import inspect
 import types
 from typing import Any, Dict, List, Optional
 from typing import TYPE_CHECKING
+from celery.result import AsyncResult
 
 if TYPE_CHECKING:
     from langflow.graph.edge.base import Edge
 
 
 class Vertex:
-    def __init__(self, data: Dict, base_type: Optional[str] = None) -> None:
+    def __init__(
+        self, data: Dict, base_type: Optional[str] = None, is_task: bool = False
+    ) -> None:
         self.id: str = data["id"]
         self._data = data
         self.edges: List["Edge"] = []
@@ -25,6 +28,8 @@ class Vertex:
         self._built_object = None
         self._built = False
         self.artifacts: Dict[str, Any] = {}
+        self.task_id: Optional[str] = None
+        self.is_task = is_task
 
     def _parse_data(self) -> None:
         self.data = self._data["data"]
@@ -168,11 +173,32 @@ class Vertex:
         """
         return all(self._is_node(node) for node in value)
 
+    def get_result(self, timeout=None) -> Any:
+        # Check if the Vertex was built already
+        if self._built:
+            return self._built_object
+
+        # Check if there's a task_id, which means it was sent to a Celery worker
+        if self.is_task and self.task_id is not None:
+            result = AsyncResult(self.task_id).get(
+                timeout=timeout
+            )  # Blocking until result is ready or timeout
+            if result is not None:  # If result is ready
+                self._update_built_object_and_artifacts(result)
+                return self._built_object
+            else:
+                # Handle the case when the result is not ready (retry, throw exception, etc.)
+                pass
+
+        # If there's no task_id, build the vertex locally
+        return self.build()
+
     def _build_node_and_update_params(self, key, node):
         """
         Builds a given node and updates the params dictionary accordingly.
         """
-        result = node.build()
+
+        result = node.get_result()
         self._handle_func(key, result)
         if isinstance(result, list):
             self._extend_params_list_with_result(key, result)
@@ -184,7 +210,7 @@ class Vertex:
         """
         self.params[key] = []
         for node in nodes:
-            built = node.build()
+            built = node.get_result()
             if isinstance(built, list):
                 if key not in self.params:
                     self.params[key] = []
