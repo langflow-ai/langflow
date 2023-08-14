@@ -77,11 +77,12 @@ psycopg = "^3.1.9"
 psycopg-binary = "^3.1.9"
 fastavro = "^1.8.0"
 langchain-experimental = "^0.0.8"
-celery = "^5.3.1"
-redis = "^4.6.0"
-flower = "^2.0.1"
+celery = { extras = ["redis"], version = "^5.3.1", optional = true }
+redis = { version = "^4.6.0", optional = true }
+flower = { version = "^2.0.0", optional = true }
 alembic = "^1.11.2"
 metaphor-python = "^0.1.11"
+
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
@@ -100,7 +101,7 @@ types-pyyaml = "^6.0.12.8"
 
 
 [tool.poetry.extras]
-deploy = ["langchain-serve"]
+deploy = ["langchain-serve", "celery", "redis", "flower"]
 local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
 all = ["deploy", "local"]
 
