@@ -29,7 +29,7 @@ export const INVALID_CHARACTERS = [
  */
 
 export const regexHighlight = /\{([^}]+)\}/g;
-export const specialCharsRegex = /[!@#$%^&*()\-_=+[\]{}|;:'",.<>/?\\]/;
+export const specialCharsRegex = /[!@#$%^&*()\-_=+[\]{}|;:'",.<>/?\\`´]/;
 
 export const programmingLanguages: languageMap = {
   javascript: ".js",
