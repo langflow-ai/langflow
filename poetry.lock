@@ -167,7 +167,7 @@ tz = ["python-dateutil"]
 name = "amqp"
 version = "5.1.1"
 description = "Low-level AMQP client for Python (fork of amqplib)."
-optional = false
+optional = true
 python-versions = ">=3.6"
 files = [
     {file = "amqp-5.1.1-py3-none-any.whl", hash = "sha256:6f0956d2c23d8fa6e7691934d8c3930eadb44972cbbd1a7ae3a520f735d43359"},
@@ -371,7 +371,7 @@ lxml = ["lxml"]
 name = "billiard"
 version = "4.1.0"
 description = "Python multiprocessing fork with improvements and bugfixes"
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "billiard-4.1.0-py3-none-any.whl", hash = "sha256:0f50d6be051c6b2b75bfbc8bfd85af195c5739c281d3f5b86a5640c65563614a"},
@@ -457,7 +457,7 @@ files = [
 name = "celery"
 version = "5.3.1"
 description = "Distributed Task Queue."
-optional = false
+optional = true
 python-versions = ">=3.8"
 files = [
     {file = "celery-5.3.1-py3-none-any.whl", hash = "sha256:27f8f3f3b58de6e0ab4f174791383bbd7445aff0471a43e99cfd77727940753f"},
@@ -472,6 +472,7 @@ click-plugins = ">=1.1.1"
 click-repl = ">=0.2.0"
 kombu = ">=5.3.1,<6.0"
 python-dateutil = ">=2.8.2"
+redis = {version = ">=4.5.2,<4.5.5 || >4.5.5", optional = true, markers = "extra == \"redis\""}
 tzdata = ">=2022.7"
 vine = ">=5.0.0,<6.0"
 
@@ -737,7 +738,7 @@ colorama = {version = "*", markers = "platform_system == \"Windows\""}
 name = "click-didyoumean"
 version = "0.3.0"
 description = "Enables git-like *did-you-mean* feature in click"
-optional = false
+optional = true
 python-versions = ">=3.6.2,<4.0.0"
 files = [
     {file = "click-didyoumean-0.3.0.tar.gz", hash = "sha256:f184f0d851d96b6d29297354ed981b7dd71df7ff500d82fa6d11f0856bee8035"},
@@ -765,7 +766,7 @@ click = "*"
 name = "click-plugins"
 version = "1.1.1"
 description = "An extension module for click to enable registering CLI commands via setuptools entry-points."
-optional = false
+optional = true
 python-versions = "*"
 files = [
     {file = "click-plugins-1.1.1.tar.gz", hash = "sha256:46ab999744a9d831159c3411bb0c79346d94a444df9a3a3742e9ed63645f264b"},
@@ -782,7 +783,7 @@ dev = ["coveralls", "pytest (>=3.6)", "pytest-cov", "wheel"]
 name = "click-repl"
 version = "0.3.0"
 description = "REPL plugin for Click"
-optional = false
+optional = true
 python-versions = ">=3.6"
 files = [
     {file = "click-repl-0.3.0.tar.gz", hash = "sha256:17849c23dba3d667247dc4defe1757fff98694e90fe37474f3feebb69ced26a9"},
@@ -1570,7 +1571,7 @@ files = [
 name = "flower"
 version = "2.0.1"
 description = "Celery Flower"
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "flower-2.0.1-py2.py3-none-any.whl", hash = "sha256:9db2c621eeefbc844c8dd88be64aef61e84e2deb29b271e02ab2b5b9f01068e2"},
@@ -2553,7 +2554,7 @@ pyreadline3 = {version = "*", markers = "sys_platform == \"win32\" and python_ve
 name = "humanize"
 version = "4.7.0"
 description = "Python humanize utilities"
-optional = false
+optional = true
 python-versions = ">=3.8"
 files = [
     {file = "humanize-4.7.0-py3-none-any.whl", hash = "sha256:df7c429c2d27372b249d3f26eb53b07b166b661326e0325793e0a988082e3889"},
@@ -3030,7 +3031,7 @@ testing = ["pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)",
 name = "kombu"
 version = "5.3.1"
 description = "Messaging library for Python."
-optional = false
+optional = true
 python-versions = ">=3.8"
 files = [
     {file = "kombu-5.3.1-py3-none-any.whl", hash = "sha256:48ee589e8833126fd01ceaa08f8a2041334e9f5894e5763c8486a550454551e9"},
@@ -5808,7 +5809,7 @@ websockets = ">=10.3,<11.0"
 name = "redis"
 version = "4.6.0"
 description = "Python client for Redis database and key-value store"
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "redis-4.6.0-py3-none-any.whl", hash = "sha256:e2b03db868160ee4591de3cb90d40ebb50a90dd302138775937f6a42b7ed183c"},
@@ -7354,7 +7355,7 @@ files = [
 name = "vine"
 version = "5.0.0"
 description = "Promises, promises, promises."
-optional = false
+optional = true
 python-versions = ">=3.6"
 files = [
     {file = "vine-5.0.0-py2.py3-none-any.whl", hash = "sha256:4c9dceab6f76ed92105027c49c823800dd33cacce13bdedc5b914e3514b7fb30"},
@@ -7846,10 +7847,10 @@ cffi = ["cffi (>=1.11)"]
 
 [extras]
 all = []
-deploy = ["langchain-serve"]
+deploy = ["celery", "flower", "langchain-serve", "redis"]
 local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "f19617ccd82d10dc15746a965b1dc74e3c79e6755f255ab1d03a1076e6c38e5f"
+content-hash = "00a3de3cc8916619f8434289b23a51e768b7b7c74f33e29c0ea3c61688ea3874"
