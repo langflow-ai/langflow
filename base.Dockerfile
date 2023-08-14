@@ -68,7 +68,7 @@ COPY ./src/backend ./src/backend
 COPY README.md .
 # install runtime deps - uses $POETRY_VIRTUALENVS_IN_PROJECT internally
 RUN --mount=type=cache,target=/root/.cache \
-    poetry install --without=dev
+    poetry install --without dev --with deploy
 
 
 ################################
