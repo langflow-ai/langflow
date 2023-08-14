@@ -241,7 +241,7 @@ def test_custom_component_get_function_entrypoint_return_type():
         code=code_default, function_entrypoint_name="build"
     )
     return_type = custom_component.get_function_entrypoint_return_type
-    assert return_type == "Document"
+    assert return_type == ["Document"]
 
 
 def test_custom_component_get_main_class_name():
@@ -436,7 +436,7 @@ class MyClass(CustomComponent):
 
     custom_component = CustomComponent(code=my_code, function_entrypoint_name="build")
     return_type = custom_component.get_function_entrypoint_return_type
-    assert return_type is None
+    assert return_type == []
 
 
 def test_custom_component_get_main_class_name_no_main_class():
@@ -469,7 +469,7 @@ def test_build_config_no_code():
     component = CustomComponent(code=None)
 
     assert component.get_function_entrypoint_args == ""
-    assert component.get_function_entrypoint_return_type == ""
+    assert component.get_function_entrypoint_return_type == []
 
 
 @pytest.fixture
