@@ -236,9 +236,9 @@ export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
 
 export function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>, inputValue: string | string[] | null, block: string)
 {
-  console.log("check key: ", e);
   
-  if (typeof inputValue === "string" && e.ctrlKey && e.key === "Backspace" && 
+  //condition to fix bug control+backspace on Windows/Linux
+  if (typeof inputValue === "string" && e.ctrlKey === true && e.key === "Backspace" && 
   (inputValue === block || inputValue?.charAt(inputValue?.length - 1) === ' '
   || specialCharsRegex.test(inputValue?.charAt(inputValue?.length - 1))
   )) {
@@ -246,7 +246,17 @@ export function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>, inputVal
     e.stopPropagation();
   }
 
-  if (e.ctrlKey && e.key === "Backspace" && inputValue === block) {
+  //condition to fix bug control+backspace on Mac
+  if (typeof inputValue === "string" && e.metaKey === true && e.key === "Backspace" && 
+  (inputValue === block || inputValue?.charAt(inputValue?.length - 1) === ' '
+  || specialCharsRegex.test(inputValue?.charAt(inputValue?.length - 1))
+  )) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  
+  if (e.ctrlKey === true && e.key === "Backspace" && inputValue === block) {
     e.preventDefault();
     e.stopPropagation();
   }
