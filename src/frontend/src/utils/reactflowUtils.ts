@@ -236,7 +236,8 @@ export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
 
 export function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>, inputValue: string | string[] | null, block: string)
 {
-
+  console.log("check key: ", e);
+  
   if (typeof inputValue === "string" && e.ctrlKey && e.key === "Backspace" && 
   (inputValue === block || inputValue?.charAt(inputValue?.length - 1) === ' '
   || specialCharsRegex.test(inputValue?.charAt(inputValue?.length - 1))
